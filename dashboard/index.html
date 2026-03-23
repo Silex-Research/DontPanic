@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS — Control Dashboard</title>
+  <link rel="stylesheet" href="core.css">
+  <link rel="stylesheet" href="pages/command-center/command-center.css">
+  <link rel="stylesheet" href="pages/mission-control/mission-control.css">
+  <link rel="stylesheet" href="pages/financial/financial.css">
+  <link rel="stylesheet" href="pages/cloud-costs/cloud-costs.css">
+  <link rel="stylesheet" href="pages/security/security.css">
+  <link rel="stylesheet" href="pages/settings/settings.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>JARVIS</h1>
+      <span class="subtitle">Personal Control Dashboard</span>
+    </div>
+    <div class="header-right">
+      <span id="sync-status" class="status-badge idle">Checking...</span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <nav class="view-nav" id="view-nav">
+    <!-- Tabs injected by page registration -->
+  </nav>
+
+  <div id="page-container">
+    <!-- Page content loaded dynamically -->
+  </div>
+
+  <footer>
+    <span>JARVIS v1.0 — Silex Research</span>
+    <span id="last-sync">Last sync: --</span>
+  </footer>
+
+  <script type="module" src="core.js"></script>
+</body>
+</html>

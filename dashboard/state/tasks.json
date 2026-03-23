@@ -1,0 +1,29 @@
+[
+  {
+    "id": "demo-1",
+    "title": "Deploy Jarvis dashboard",
+    "project": "infra",
+    "status": "in_progress",
+    "priority": "high",
+    "agent": "claude",
+    "created": "2026-03-22T20:00:00Z"
+  },
+  {
+    "id": "demo-2",
+    "title": "Port AXIOM financial analysis",
+    "project": "infra",
+    "status": "todo",
+    "priority": "medium",
+    "agent": null,
+    "created": "2026-03-22T20:00:00Z"
+  },
+  {
+    "id": "demo-3",
+    "title": "Styln release 2.1.0 QA",
+    "project": "styln",
+    "status": "todo",
+    "priority": "high",
+    "agent": null,
+    "created": "2026-03-22T18:00:00Z"
+  }
+]
