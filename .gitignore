@@ -1,0 +1,43 @@
+# Credentials and secrets — NEVER commit these
+.env
+.env.*
+*.p12
+*.pem
+*.key
+**/auth.json
+**/oauth_creds.json
+**/trustedFolders.json
+**/mcp-needs-auth-cache.json
+
+# Session data (large, ephemeral)
+**/history.jsonl
+**/debug/
+**/file-history/
+**/telemetry/
+**/stats-cache.json
+**/statsig/
+**/paste-cache/
+**/shell-snapshots/
+**/session-env/
+**/sessions/
+**/*.sqlite
+**/*.jsonl
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Codex auth/state
+codex/auth.json
+codex/logs_*.sqlite
+codex/history.jsonl
+
+# Gemini auth/state
+gemini/oauth_creds.json
+gemini/state.json
+gemini/google_accounts.json
+gemini/installation_id
+gemini/tmp/
+
+# Cursor project-specific
+cursor/projects/

@@ -1,0 +1,13 @@
+model = "gpt-5.4"
+[projects."/Users/bayesian/Documents/GitHub/Glam"]
+trust_level = "trusted"
+
+[projects."/Users/bayesian/Documents/GitHub/SpinDineSwift"]
+trust_level = "trusted"
+
+[projects."/Users/bayesian/Documents/GitHub"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.2-codex" = "gpt-5.3-codex"
+"gpt-5.3-codex" = "gpt-5.4"
