@@ -1,0 +1,33 @@
+{
+  "hosting": {
+    "public": "dashboard",
+    "ignore": [
+      "node_modules",
+      "package.json",
+      "package-lock.json",
+      "vitest.config.js",
+      "tests",
+      "lib"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
+        "source": "**/*.css",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
+    ]
+  }
+}
