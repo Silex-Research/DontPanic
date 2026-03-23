@@ -1,0 +1,377 @@
+/* ── JARVIS Settings Page — settings.css ──
+   Styles specific to the Settings page module.
+   Core layout, panel, and CSS vars live in core.css.
+   All selectors are prefixed .stg- to avoid collisions.           */
+
+/* ── Page layout ── */
+
+.stg-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Section shared ── */
+
+.stg-section-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.stg-section-desc code {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+/* ── Harness Sync List ── */
+
+.stg-harness-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stg-harness-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.stg-harness-row:last-child {
+  border-bottom: none;
+}
+
+.stg-harness-row:hover {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.stg-harness-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.stg-harness-dot--green  { background: var(--green);  box-shadow: 0 0 6px var(--green);  }
+.stg-harness-dot--yellow { background: var(--yellow); box-shadow: 0 0 5px var(--yellow); }
+.stg-harness-dot--red    { background: var(--red);    box-shadow: 0 0 5px var(--red);    }
+
+.stg-harness-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stg-harness-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.stg-harness-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stg-harness-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.stg-harness-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.stg-harness-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font);
+  opacity: 0.7;
+}
+
+.stg-harness-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.stg-sync-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.stg-sync-badge--green  { background: var(--green-dim);  color: var(--green);  }
+.stg-sync-badge--yellow { background: var(--yellow-dim); color: var(--yellow); }
+.stg-sync-badge--red    { background: var(--red-dim);    color: var(--red);    }
+
+.stg-harness-lastseen {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Project List ── */
+
+.stg-project-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stg-project-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.stg-project-row:last-child {
+  border-bottom: none;
+}
+
+.stg-project-row:hover {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.stg-project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stg-project-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stg-project-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stg-project-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stg-project-stack {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Dashboard Config Form ── */
+
+.stg-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stg-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stg-field:last-child {
+  border-bottom: none;
+}
+
+.stg-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 120px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.stg-field-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stg-select {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  width: fit-content;
+  min-width: 160px;
+  transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.stg-select:hover,
+.stg-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.stg-select option {
+  background: var(--bg-secondary);
+}
+
+.stg-field-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.stg-code {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--bg-primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+/* ── Save Row ── */
+
+.stg-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.stg-save-btn {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.stg-save-btn:hover {
+  opacity: 0.85;
+}
+
+.stg-save-btn:active {
+  transform: scale(0.97);
+}
+
+.stg-save-feedback {
+  font-size: 11px;
+  color: var(--green);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.stg-save-feedback--visible {
+  opacity: 1;
+}
+
+/* ── Light theme overrides (applied via [data-theme="light"] on <html>) ──
+   Minimal — swaps primary backgrounds to a light palette.
+   Full light-mode support can be expanded in a future iteration.     */
+
+[data-theme="light"] {
+  --bg-primary:    #f1f5f9;
+  --bg-secondary:  #ffffff;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border:        #e2e8f0;
+  --text-primary:  #0f172a;
+  --text-secondary:#475569;
+  --text-muted:    #94a3b8;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .stg-field {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stg-label {
+    width: auto;
+  }
+
+  .stg-harness-right {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .stg-harness-row,
+  .stg-project-row {
+    flex-wrap: wrap;
+  }
+
+  .stg-project-stack {
+    margin-left: 20px;
+  }
+}

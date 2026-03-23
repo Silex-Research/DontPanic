@@ -1,0 +1,1082 @@
+/* ── JARVIS — Financial Analysis Page Styles ──
+   Scoped to the financial page module.
+   Depends on CSS custom properties defined in core.css.
+   Covers: sub-tab navigation, watchlist sidebar, ticker detail,
+   search bar/dropdown, price header, timeframe buttons, price chart,
+   fundamentals grid, analyst ratings bar, earnings chart, dividends,
+   Deep Analysis layout, financial table, metrics grid, BM scorecard,
+   Bayesian/valuation layout, confidence sliders, analysis notes.
+*/
+
+/* ══════════════════════════════════════════════
+   Sub-tab Navigation
+   ══════════════════════════════════════════════ */
+
+.fin-sub-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.fin-sub-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.fin-sub-tab:hover {
+  color: var(--text-primary);
+}
+
+.fin-sub-tab.active {
+  color: var(--purple);
+  border-bottom-color: var(--purple);
+}
+
+.fin-subtab-view {
+  display: none;
+}
+
+.fin-subtab-view.active {
+  display: block;
+}
+
+/* ══════════════════════════════════════════════
+   Market Data: Layout
+   ══════════════════════════════════════════════ */
+
+.financial-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  padding: 16px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - 160px);
+}
+
+/* ══════════════════════════════════════════════
+   Watchlist Sidebar
+   ══════════════════════════════════════════════ */
+
+.watchlist-sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  height: fit-content;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.watchlist-sidebar h2 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.watchlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.watchlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.watchlist-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.watchlist-item.active {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.watchlist-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.watchlist-symbol {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.watchlist-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watchlist-item-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.watchlist-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.watchlist-change {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.watchlist-change.up   { color: var(--green); }
+.watchlist-change.down { color: var(--red); }
+
+.watchlist-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.watchlist-item:hover .watchlist-remove {
+  opacity: 1;
+}
+
+.watchlist-remove:hover {
+  color: var(--red);
+}
+
+/* ══════════════════════════════════════════════
+   Ticker Detail Column
+   ══════════════════════════════════════════════ */
+
+.ticker-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Search Bar ── */
+
+.fin-search-bar {
+  position: relative;
+}
+
+.fin-search-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.fin-search-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.fin-search-input:focus {
+  border-color: var(--accent);
+}
+
+.fin-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.fin-search-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.fin-search-btn:hover {
+  opacity: 0.85;
+}
+
+.fin-search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Search Dropdown ── */
+
+.search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.search-results-dropdown.hidden {
+  display: none;
+}
+
+.search-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.search-result-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.search-result-symbol {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.search-result-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex: 1;
+  margin-left: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-type {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* ── Ticker Empty State ── */
+
+.ticker-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ticker-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.3;
+}
+
+.ticker-empty-text {
+  font-size: 13px;
+}
+
+.ticker-content.hidden {
+  display: none;
+}
+
+/* ── Price Header ── */
+
+.fin-price-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.fin-price-symbol {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.fin-price-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.fin-price-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.fin-price-change {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding-bottom: 4px;
+}
+
+.fin-price-change.up   { color: var(--green); }
+.fin-price-change.down { color: var(--red); }
+
+.fin-price-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.fin-watchlist-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.fin-watchlist-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fin-watchlist-btn.in-watchlist {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ── Timeframe Buttons ── */
+
+.fin-timeframe-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.tf-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tf-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.tf-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── Price Chart ── */
+
+.fin-chart-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  height: 300px;
+  position: relative;
+}
+
+/* ── Info Grid (2-col) ── */
+
+.fin-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Fundamentals ── */
+
+.fundamentals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fundamental-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.fundamental-label {
+  color: var(--text-muted);
+}
+
+.fundamental-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ── Analyst Ratings Bar ── */
+
+.ratings-bar-container {
+  padding: 8px 0;
+}
+
+.ratings-bar {
+  display: flex;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.ratings-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 24px;
+  transition: flex 0.3s;
+}
+
+.ratings-segment.buy  { background: var(--green); }
+.ratings-segment.hold { background: var(--yellow); }
+.ratings-segment.sell { background: var(--red); }
+
+.ratings-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+}
+
+.ratings-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.ratings-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.ratings-dot.buy  { background: var(--green); }
+.ratings-dot.hold { background: var(--yellow); }
+.ratings-dot.sell { background: var(--red); }
+
+/* ── Earnings Chart ── */
+
+.fin-earnings-chart-container {
+  height: 200px;
+  position: relative;
+}
+
+/* ── Dividends ── */
+
+.dividends-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dividend-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dividend-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dividend-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+/* ── Skeleton Loading ── */
+
+.skeleton {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ══════════════════════════════════════════════
+   Deep Analysis Layout
+   ══════════════════════════════════════════════ */
+
+.da-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.da-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.da-company-selector {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 260px;
+}
+
+/* ── Tier Badges ── */
+
+.da-tier-badges {
+  display: flex;
+  gap: 6px;
+}
+
+.da-tier {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.da-tier.pass {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.da-tier.review {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.da-tier.fail {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
+.da-tier.active {
+  background: rgba(168, 85, 247, 0.2);
+  color: var(--purple);
+}
+
+/* ── Financial Data Table ── */
+
+.da-financials-panel {
+  overflow: hidden;
+}
+
+.da-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.da-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.da-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  text-align: right;
+}
+
+.da-table thead th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg-card);
+}
+
+.da-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.da-table tbody tr:nth-child(even) {
+  background: rgba(17, 24, 39, 0.3);
+}
+
+.da-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+.da-metric-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+  min-width: 220px;
+}
+
+.da-table tbody tr:nth-child(even) .da-metric-label {
+  background: #0f1520;
+}
+
+.da-table tbody tr:hover .da-metric-label {
+  background: var(--bg-card-hover);
+}
+
+.da-metric-value {
+  text-align: right;
+  padding: 6px 12px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.da-metric-value.negative {
+  color: var(--red);
+}
+
+/* ── Calculated Metrics Grid ── */
+
+.da-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.da-metric-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.da-metric-card-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.da-metric-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.da-metric-card-value.high { color: var(--green); }
+.da-metric-card-value.mid  { color: var(--yellow); }
+.da-metric-card-value.low  { color: var(--red); }
+
+.da-metric-card-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Buffett-Munger Scorecard (Radar + Details) ── */
+
+.da-scorecard-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.da-radar-container {
+  width: 300px;
+  height: 300px;
+  flex-shrink: 0;
+}
+
+.da-score-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.da-score-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.da-score-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.da-score-value {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.da-score-value.high { color: var(--green); }
+.da-score-value.mid  { color: var(--yellow); }
+.da-score-value.low  { color: var(--red); }
+
+.da-score-bar {
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.da-score-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--purple);
+  transition: width 0.6s ease;
+}
+
+/* ── Bayesian / Valuation Layout ── */
+
+.da-bayesian-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.da-valuation-summary {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.da-case {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.da-case-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.da-bull .da-case-label { color: var(--green); }
+.da-base .da-case-label { color: var(--accent); }
+.da-bear .da-case-label { color: var(--red); }
+
+.da-case-price {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.da-case-return {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.da-bull .da-case-return { color: var(--green); }
+.da-base .da-case-return { color: var(--accent); }
+.da-bear .da-case-return { color: var(--red); }
+
+.da-mos,
+.da-buy-point {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.da-mos-label,
+.da-buy-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.da-mos-value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.da-mos-value.sufficient { color: var(--green); }
+.da-mos-value.marginal   { color: var(--yellow); }
+
+.da-buy-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--purple);
+}
+
+/* ── Confidence Sliders ── */
+
+.da-confidence-sliders {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.da-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.da-slider-row label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.da-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.da-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--purple);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.4);
+}
+
+.da-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--purple);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.4);
+}
+
+.da-slider-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Analysis Notes ── */
+
+.da-notes {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* ══════════════════════════════════════════════
+   Shared Panel Overrides
+   (fin-* panels sit inside .panel from core.css)
+   ══════════════════════════════════════════════ */
+
+.fin-fundamentals,
+.fin-ratings,
+.fin-earnings,
+.fin-dividends {
+  /* Inherit .panel styles from core.css */
+  min-height: 0;
+}
+
+.da-financials-panel h2,
+.da-metrics-panel h2,
+.da-scorecard-panel h2,
+.da-bayesian-panel h2,
+.da-notes-panel h2 {
+  margin-bottom: 14px;
+}
+
+/* ══════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .financial-layout {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .watchlist-sidebar {
+    max-height: 200px;
+  }
+
+  .fin-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-price-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .fin-price-meta {
+    margin-left: 0;
+  }
+
+  .fin-watchlist-btn {
+    margin-left: 0;
+  }
+
+  .da-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .da-scorecard-layout {
+    flex-direction: column;
+  }
+
+  .da-radar-container {
+    width: 100%;
+    height: 250px;
+  }
+
+  .da-bayesian-layout {
+    flex-direction: column;
+  }
+
+  .da-layout {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fin-timeframe-bar {
+    flex-wrap: wrap;
+  }
+
+  .fundamentals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .da-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .da-tier-badges {
+    flex-wrap: wrap;
+  }
+}

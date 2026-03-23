@@ -1,0 +1,372 @@
+/* ── JARVIS Security Page — security.css ──
+   Styles specific to the Security page module.
+   Core layout, panel, status-badge, and CSS vars live in core.css.
+   All selectors are prefixed .sec- to avoid collisions.            */
+
+/* ── Page layout grid ── */
+
+.sec-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Full-width panels */
+.sec-decisions-panel,
+.sec-agent-overview-panel {
+  grid-column: 1 / -1;
+}
+
+/* ── Stat Cards ── */
+
+.sec-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.sec-stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+
+.sec-stat-card:hover {
+  border-color: var(--accent);
+}
+
+.sec-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.sec-stat-icon--red    { background: var(--red-dim);                      color: var(--red);    }
+.sec-stat-icon--yellow { background: var(--yellow-dim);                    color: var(--yellow); }
+.sec-stat-icon--green  { background: var(--green-dim);                     color: var(--green);  }
+.sec-stat-icon--accent { background: rgba(59, 130, 246, 0.15);             color: var(--accent); }
+
+.sec-stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sec-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sec-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* ── Hook Activity ── */
+
+.sec-hooks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sec-hook-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sec-hook-row:last-child {
+  border-bottom: none;
+}
+
+.sec-hook-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sec-hook-dot--green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sec-hook-dot--muted { background: var(--text-muted); }
+
+.sec-hook-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sec-hook-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font);
+}
+
+.sec-hook-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sec-hook-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sec-hook-stat {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+.sec-hook-stat--count  { background: rgba(59, 130, 246, 0.12); color: var(--accent); }
+.sec-hook-stat--blocks { background: var(--red-dim);            color: var(--red);    }
+.sec-hook-stat--time   { color: var(--text-muted); background: none; padding-left: 0; }
+
+.sec-hook-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sec-hook-badge--green { background: var(--green-dim); color: var(--green); }
+.sec-hook-badge--muted { background: rgba(100, 116, 139, 0.12); color: var(--text-muted); }
+
+/* ── Decision Audit Log ── */
+
+.sec-decision-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sec-tab {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.sec-tab:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.sec-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sec-tab-count {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-size: 9px;
+  margin-left: 4px;
+}
+
+.sec-tab.active .sec-tab-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sec-decision-list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.sec-decision-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sec-decision-item:last-child {
+  border-bottom: none;
+}
+
+.sec-action-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.sec-action-badge--red    { background: var(--red-dim);                  color: var(--red);    }
+.sec-action-badge--yellow { background: var(--yellow-dim);                color: var(--yellow); }
+.sec-action-badge--accent { background: rgba(59, 130, 246, 0.15);         color: var(--accent); }
+.sec-action-badge--green  { background: var(--green-dim);                 color: var(--green);  }
+
+.sec-decision-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sec-decision-reason {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.sec-decision-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sec-sev-chip {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.sec-sev-chip--red    { background: var(--red-dim);                  color: var(--red);    }
+.sec-sev-chip--yellow { background: var(--yellow-dim);                color: var(--yellow); }
+.sec-sev-chip--accent { background: rgba(59, 130, 246, 0.15);         color: var(--accent); }
+
+/* ── Agent Security Table ── */
+
+.sec-agent-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.sec-agent-table {
+  overflow-x: auto;
+}
+
+.sec-table-header,
+.sec-table-row {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, 1fr) 1.2fr;
+  gap: 8px;
+  padding: 8px 12px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.sec-table-header {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  font-size: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sec-table-row {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+
+.sec-table-row:hover {
+  background: var(--bg-secondary);
+}
+
+.sec-table-row:last-child {
+  border-bottom: none;
+}
+
+.sec-td--agent  { font-weight: 600; }
+.sec-td--red    { color: var(--red);    font-weight: 600; }
+.sec-td--yellow { color: var(--yellow); font-weight: 600; }
+.sec-td--accent { color: var(--accent); font-weight: 600; }
+.sec-td--muted  { color: var(--text-muted); }
+
+/* ── Agent Chart ── */
+
+.sec-agent-chart-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: relative;
+  height: 250px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .sec-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sec-decisions-panel,
+  .sec-agent-overview-panel {
+    grid-column: 1;
+  }
+
+  .sec-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sec-agent-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sec-agent-chart-container {
+    height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sec-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sec-stat-value {
+    font-size: 18px;
+  }
+
+  .sec-hook-stats {
+    display: none;
+  }
+}

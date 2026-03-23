@@ -1,0 +1,737 @@
+/* ── Mission Control Page — Jarvis Dashboard ──
+   3-column layout: Agent Sidebar | Mission Queue | Live Feed
+   Ported from AXIOM dashboard style.css, adapted for Jarvis module system.
+   Depends on core.css CSS variables. ──────────────────────────────────── */
+
+/* ══════════════════════════════════════════════
+   Layout
+   ══════════════════════════════════════════════ */
+
+#page-mission-control {
+  /* Override .page-view padding set in core.css so the layout is full-bleed */
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.mc-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  gap: 0;
+  height: calc(100vh - 104px); /* viewport minus header + nav */
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════
+   Shared Sidebar Header
+   ══════════════════════════════════════════════ */
+
+.mc-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════
+   Agent Sidebar (Left)
+   ══════════════════════════════════════════════ */
+
+.mc-agents-sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mc-badge {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.mc-agent-summary {
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.mc-agent-summary:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.mc-agent-summary.active {
+  background: var(--bg-card-hover);
+  color: var(--accent);
+}
+
+.mc-agent-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.mc-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.mc-agent-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.mc-agent-row.active {
+  background: rgba(59, 130, 246, 0.08);
+  border-left-color: var(--accent);
+}
+
+.mc-agent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mc-agent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-agent-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-role-badge {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.mc-role-badge.lead { background: rgba(59, 130, 246, 0.2);   color: var(--accent);  }
+.mc-role-badge.int  { background: rgba(168, 85, 247, 0.2);   color: var(--purple);  }
+.mc-role-badge.spc  { background: var(--green-dim);           color: var(--green);   }
+.mc-role-badge.ops  { background: rgba(249, 115, 22, 0.2);   color: var(--orange);  }
+
+.mc-agent-role {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-agent-status {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.mc-agent-status--working { background: var(--green-dim);                    color: var(--green);        }
+.mc-agent-status--idle    { background: rgba(100, 116, 139, 0.15);           color: var(--text-muted);   }
+.mc-agent-status--offline { background: var(--red-dim);                      color: var(--red);          }
+
+/* ══════════════════════════════════════════════
+   Mission Queue (Center)
+   ══════════════════════════════════════════════ */
+
+.mc-queue {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.mc-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mc-queue-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+.mc-queue-stats {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Status Pills ── */
+
+.mc-status-pills {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.mc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.mc-pill:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.mc-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.mc-pill-count {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ── Project Filters ── */
+
+.mc-project-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.mc-proj-filter {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.mc-proj-filter:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.mc-proj-filter.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* ══════════════════════════════════════════════
+   Kanban Board
+   ══════════════════════════════════════════════ */
+
+.mc-board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+  min-height: 0;
+}
+
+.mc-column {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+
+.mc-column:last-child {
+  border-right: none;
+}
+
+.mc-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.mc-col-title {
+  flex: 1;
+}
+
+.mc-col-count {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.mc-cards {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Kanban Card ── */
+
+.mc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mc-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.mc-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.mc-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.mc-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.mc-card-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mc-card-assignee {
+  font-size: 10px;
+  color: var(--text-secondary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-card-time {
+  font-size: 9px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Project Badge on Card ── */
+
+.mc-card-project {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.mc-card-project--styln    { background: rgba(168, 85, 247, 0.18); color: var(--purple);  }
+.mc-card-project--spindine { background: rgba(249, 115, 22, 0.18); color: var(--orange);  }
+.mc-card-project--quantre  { background: var(--green-dim);          color: var(--green);   }
+.mc-card-project--ibkr     { background: rgba(59, 130, 246, 0.18); color: var(--accent);  }
+.mc-card-project--infra    { background: rgba(100, 116, 139, 0.15);color: var(--text-secondary); }
+
+/* ── Priority Dot on Card ── */
+
+.mc-priority-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.mc-priority-dot--high   { background: var(--red);    box-shadow: 0 0 4px var(--red);    }
+.mc-priority-dot--medium { background: var(--yellow);                                     }
+.mc-priority-dot--low    { background: var(--text-muted);                                 }
+
+/* ── Empty Column State ── */
+
+.mc-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 8px;
+  font-style: italic;
+}
+
+.mc-empty--feed {
+  padding: 28px 14px;
+}
+
+/* ══════════════════════════════════════════════
+   Live Feed Sidebar (Right)
+   ══════════════════════════════════════════════ */
+
+.mc-feed-sidebar {
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mc-feed-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.mc-feed-pill {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.mc-feed-pill:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.mc-feed-pill.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.mc-feed-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.mc-feed-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.mc-feed-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.mc-feed-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+}
+
+.mc-feed-icon.deploy { background: var(--green-dim);              color: var(--green);      }
+.mc-feed-icon.task   { background: rgba(59, 130, 246, 0.15);      color: var(--accent);     }
+.mc-feed-icon.alert  { background: var(--red-dim);                 color: var(--red);        }
+.mc-feed-icon.sync   { background: var(--yellow-dim);              color: var(--yellow);     }
+.mc-feed-icon.info   { background: rgba(100, 116, 139, 0.15);     color: var(--text-muted); }
+
+.mc-feed-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-feed-text {
+  font-size: 11px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 3px;
+  word-break: break-word;
+}
+
+.mc-mention {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mc-feed-meta {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════
+   Shared Status Dots
+   ══════════════════════════════════════════════ */
+
+.mc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.mc-dot--green  { background: var(--green);        }
+.mc-dot--blue   { background: var(--accent);       }
+.mc-dot--yellow { background: var(--yellow);       }
+.mc-dot--red    { background: var(--red);          }
+.mc-dot--purple { background: var(--purple);       }
+.mc-dot--gray   { background: var(--text-muted);   }
+
+.mc-dot--pulse {
+  animation: mc-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mc-pulse {
+  0%,  100% { opacity: 1;   box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.4); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);   }
+}
+
+/* ══════════════════════════════════════════════
+   Task Detail Modal
+   ══════════════════════════════════════════════ */
+
+.mc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mc-modal.hidden {
+  display: none;
+}
+
+.mc-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(2px);
+}
+
+.mc-modal-panel {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 440px;
+  max-width: calc(100vw - 48px);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.mc-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mc-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.mc-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  padding-right: 32px;
+  line-height: 1.3;
+}
+
+.mc-modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mc-modal-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mc-modal-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  width: 90px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.mc-modal-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.mc-modal-priority {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: capitalize;
+}
+
+/* ══════════════════════════════════════════════
+   Responsive — collapse to single column below 900px
+   ══════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  .mc-layout {
+    grid-template-columns: 200px 1fr 260px;
+  }
+}
+
+@media (max-width: 900px) {
+  .mc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .mc-agents-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 200px;
+  }
+
+  .mc-queue {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mc-board {
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
+    overflow-x: auto;
+  }
+
+  .mc-feed-sidebar {
+    max-height: 300px;
+    border-top: 1px solid var(--border);
+  }
+}
