@@ -1,0 +1,13 @@
+model = "gpt-5.4"
+[projects."$HOME/Documents/GitHub/Glam"]
+trust_level = "trusted"
+
+[projects."$HOME/Documents/GitHub/SpinDineSwift"]
+trust_level = "trusted"
+
+[projects."$HOME/Documents/GitHub"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.2-codex" = "gpt-5.3-codex"
+"gpt-5.3-codex" = "gpt-5.4"
