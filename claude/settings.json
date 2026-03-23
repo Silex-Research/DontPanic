@@ -48,10 +48,6 @@
             "command": "~/.claude/hooks/session-summary.sh",
             "async": true,
             "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Blow.aiff"
           }
         ]
       }
