@@ -23,6 +23,10 @@
 **/*.sqlite
 **/*.jsonl
 
+# Node
+node_modules/
+package-lock.json
+
 # OS artifacts
 .DS_Store
 Thumbs.db

@@ -5,39 +5,9 @@
 // Harness sync reflects what `sync.sh status` would report by comparing
 // known harness IDs against agents present in state.agents.
 
-(() => {
-  // ── Known harnesses ──
+import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
 
-  const HARNESSES = [
-    {
-      id:    'claude',
-      label: 'Claude',
-      badge: 'Anthropic',
-      path:  '~/.claude/',
-      desc:  'Primary reasoning agent — Claude Code + Hooks',
-    },
-    {
-      id:    'codex',
-      label: 'Codex',
-      badge: 'OpenAI',
-      path:  '~/.codex/',
-      desc:  'Code generation and refactoring assistant',
-    },
-    {
-      id:    'gemini',
-      label: 'Gemini',
-      badge: 'Google',
-      path:  '~/.gemini/',
-      desc:  'Multi-modal analysis and vision tasks',
-    },
-    {
-      id:    'cursor',
-      label: 'Cursor',
-      badge: 'Anysphere',
-      path:  '~/.cursor/rules/',
-      desc:  'IDE-embedded agent for inline edits',
-    },
-  ];
+(() => {
 
   // ── Active projects ──
 
@@ -226,30 +196,18 @@
     const list = _el.querySelector('#stg-harness-list');
     if (!list) return;
 
-    // Build a set of agent IDs that are currently in state
-    const reportingIds = new Set((agents || []).map(a => (a.id || '').toLowerCase()));
-
     list.innerHTML = HARNESSES.map(h => {
-      const isReporting = reportingIds.has(h.id);
+      const status = deriveSyncStatus(h.id, agents);
 
-      // Determine sync state:
-      //   in-sync  — harness ID present in state.agents
-      //   missing  — harness not reporting (no entry in state.agents)
       let syncStatus, syncLabel, syncColor;
-      if (isReporting) {
-        const agent = agents.find(a => (a.id || '').toLowerCase() === h.id);
-        const isStale = agent && agent.lastSeen
-          ? (Date.now() - new Date(agent.lastSeen).getTime()) > 3600 * 1000
-          : false;
-        if (isStale) {
-          syncStatus = 'out-of-sync';
-          syncLabel  = 'stale';
-          syncColor  = 'yellow';
-        } else {
-          syncStatus = 'in-sync';
-          syncLabel  = 'in sync';
-          syncColor  = 'green';
-        }
+      if (status === 'in-sync') {
+        syncStatus = 'in-sync';
+        syncLabel  = 'in sync';
+        syncColor  = 'green';
+      } else if (status === 'stale') {
+        syncStatus = 'out-of-sync';
+        syncLabel  = 'stale';
+        syncColor  = 'yellow';
       } else {
         syncStatus = 'missing';
         syncLabel  = 'missing';

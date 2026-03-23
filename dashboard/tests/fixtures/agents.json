@@ -1,0 +1,62 @@
+[
+  {
+    "id": "claude",
+    "name": "Claude Code",
+    "role": "Primary AI Harness",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 1000000
+  },
+  {
+    "id": "codex",
+    "name": "Codex CLI",
+    "role": "OpenAI Agent",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 500000
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini CLI",
+    "role": "Google Agent",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 500000
+  },
+  {
+    "id": "grok",
+    "name": "Grok",
+    "role": "xAI Agent",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 250000
+  },
+  {
+    "id": "kimi",
+    "name": "Kimi 2.5",
+    "role": "Moonshot Agent",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 250000
+  },
+  {
+    "id": "qwen",
+    "name": "Qwen",
+    "role": "Alibaba Agent",
+    "status": "offline",
+    "currentTask": null,
+    "lastSeen": null,
+    "tokensUsed": 0,
+    "tokenBudget": 250000
+  }
+]
