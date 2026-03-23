@@ -2,51 +2,15 @@
 // Kanban-style project management with agent sidebar and live feed.
 // Reads from Jarvis.state.tasks, .agents, .activity — no Firestore dependency.
 
-const MC_COLUMNS = ['backlog', 'todo', 'in_progress', 'review', 'done'];
-
-const MC_COLUMN_META = {
-  backlog:     { label: 'INBOX',       dotClass: 'mc-dot--purple' },
-  todo:        { label: 'ASSIGNED',    dotClass: 'mc-dot--blue'   },
-  in_progress: { label: 'IN PROGRESS', dotClass: 'mc-dot--green'  },
-  review:      { label: 'REVIEW',      dotClass: 'mc-dot--yellow' },
-  done:        { label: 'DONE',        dotClass: 'mc-dot--gray'   },
-};
-
-// Status field on task → kanban column
-const STATUS_TO_COLUMN = {
-  backlog:     'backlog',
-  inbox:       'backlog',
-  pending:     'backlog',
-  todo:        'todo',
-  assigned:    'todo',
-  in_progress: 'in_progress',
-  active:      'in_progress',
-  review:      'review',
-  done:        'done',
-  completed:   'done',
-};
-
-const PROJECT_NAMES = {
-  spindine: 'Spin & Dine',
-  styln:    'Styln',
-  quantre:  'quantRE',
-  ibkr:     'IBKR',
-  infra:    'Infra',
-};
-
-// Agent identity palette — keyed by agent id from state
-const AGENT_META = {
-  claude:  { color: '#f97316', initials: 'CC', badge: 'LEAD',  badgeClass: 'lead' },
-  codex:   { color: '#3b82f6', initials: 'CX', badge: 'INT',   badgeClass: 'int'  },
-  gemini:  { color: '#22c55e', initials: 'GM', badge: 'SPC',   badgeClass: 'spc'  },
-  grok:    { color: '#a855f7', initials: 'GK', badge: 'INT',   badgeClass: 'int'  },
-  kimi:    { color: '#06b6d4', initials: 'KM', badge: 'SPC',   badgeClass: 'spc'  },
-  qwen:    { color: '#eab308', initials: 'QW', badge: 'OPS',   badgeClass: 'ops'  },
-};
-
-function getAgentMeta(agentId) {
-  return AGENT_META[agentId] || { color: '#64748b', initials: (agentId || '??').slice(0, 2).toUpperCase(), badge: 'AGT', badgeClass: 'int' };
-}
+import {
+  MC_COLUMNS,
+  MC_COLUMN_META,
+  STATUS_TO_COLUMN,
+  PROJECT_NAMES,
+  AGENT_META,
+  getAgentMeta,
+  deriveColumn,
+} from '../../lib/mission-control-logic.js';
 
 const FEED_ICONS = {
   deploy: '▲',
@@ -193,13 +157,6 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-// ── Column Derivation ──
-
-function deriveColumn(task) {
-  if (task.column && MC_COLUMNS.includes(task.column)) return task.column;
-  return STATUS_TO_COLUMN[task.status] || 'backlog';
 }
 
 // ── Render: Agent Sidebar ──

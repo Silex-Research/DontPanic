@@ -10,50 +10,17 @@
 //
 // No approval queue — single-user system; approvals happen in terminal.
 
+import {
+  ACTION_COLORS,
+  ACTION_LABELS,
+  SEVERITY_COLORS,
+  HOOK_DEFS,
+  aggregateStats,
+  aggregatePerAgent,
+  matchHookDecisions,
+} from '../../lib/security-logic.js';
+
 (() => {
-  // ── Constants ──
-
-  const ACTION_COLORS = {
-    block:            'red',
-    require_approval: 'yellow',
-    log:              'accent',
-    allow:            'green',
-  };
-
-  const ACTION_LABELS = {
-    block:            'BLOCK',
-    require_approval: 'APPROVAL',
-    log:              'LOG',
-    allow:            'ALLOW',
-  };
-
-  const SEVERITY_COLORS = {
-    high:   'red',
-    medium: 'yellow',
-    low:    'accent',
-  };
-
-  // Known Claude hooks that appear in state entries as agent/category fields
-  const HOOK_DEFS = [
-    {
-      id:          'security-gate',
-      label:       'security-gate.sh',
-      description: 'Pre-tool call gate — blocks destructive operations',
-      categories:  ['file_write', 'file_delete', 'shell_exec'],
-    },
-    {
-      id:          'git-safety',
-      label:       'git-safety.sh',
-      description: 'Git operation guard — prevents force-push, branch deletion',
-      categories:  ['git_push', 'git_branch', 'git_rebase'],
-    },
-    {
-      id:          'api-audit',
-      label:       'api-audit.sh',
-      description: 'Outbound API call auditor — logs external requests',
-      categories:  ['api_call', 'network_request'],
-    },
-  ];
 
   // ── Module state ──
 
@@ -132,10 +99,7 @@
     const grid = _el.querySelector('#sec-stats-grid');
     if (!grid) return;
 
-    const total     = decisions.length;
-    const blocks    = decisions.filter(d => d.action === 'block').length;
-    const approvals = decisions.filter(d => d.action === 'require_approval').length;
-    const logged    = decisions.filter(d => d.action === 'log').length;
+    const { total, blocks, approvals, logged } = aggregateStats(decisions);
 
     grid.innerHTML = `
       <div class="sec-stat-card">
@@ -176,16 +140,7 @@
     if (!list) return;
 
     list.innerHTML = HOOK_DEFS.map(hook => {
-      // Count decisions whose category matches this hook's known categories
-      const fired = decisions.filter(d =>
-        hook.categories.includes(d.category)
-      );
-      const count     = fired.length;
-      const lastFired = fired.reduce((latest, d) => {
-        if (!d.timestamp) return latest;
-        return (!latest || d.timestamp > latest) ? d.timestamp : latest;
-      }, null);
-      const blocks = fired.filter(d => d.action === 'block').length;
+      const { count, blocks, lastFired } = matchHookDecisions(hook, decisions);
 
       const statusClass  = count > 0 ? 'sec-hook--active' : 'sec-hook--idle';
       const statusLabel  = count > 0 ? 'active' : 'idle';
@@ -284,23 +239,7 @@
     const table = _el.querySelector('#sec-agent-table');
     if (!table) return;
 
-    // Aggregate per-agent
-    const agents = {};
-    for (const d of decisions) {
-      const name = d.agent || 'unknown';
-      if (!agents[name]) {
-        agents[name] = { total: 0, blocks: 0, approvals: 0, logged: 0, allowed: 0, last: null };
-      }
-      agents[name].total++;
-      if (d.action === 'block')            agents[name].blocks++;
-      else if (d.action === 'require_approval') agents[name].approvals++;
-      else if (d.action === 'log')         agents[name].logged++;
-      else if (d.action === 'allow')       agents[name].allowed++;
-      if (d.timestamp && (!agents[name].last || d.timestamp > agents[name].last)) {
-        agents[name].last = d.timestamp;
-      }
-    }
-
+    const agents     = aggregatePerAgent(decisions);
     const agentNames = Object.keys(agents).sort();
 
     if (!agentNames.length) {
@@ -339,17 +278,8 @@
     const canvas = _el.querySelector('#sec-agent-chart');
     if (!canvas) return;
 
-    // Aggregate per-agent
-    const agents = {};
-    for (const d of decisions) {
-      const name = d.agent || 'unknown';
-      if (!agents[name]) agents[name] = { blocks: 0, approvals: 0, logged: 0 };
-      if (d.action === 'block')            agents[name].blocks++;
-      else if (d.action === 'require_approval') agents[name].approvals++;
-      else if (d.action === 'log')         agents[name].logged++;
-    }
-
-    const names = Object.keys(agents).sort();
+    const agents = aggregatePerAgent(decisions);
+    const names  = Object.keys(agents).sort();
 
     if (_agentChart) {
       _agentChart.destroy();

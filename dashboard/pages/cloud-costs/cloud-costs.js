@@ -2,6 +2,17 @@
 // Renders GCP billing data from state/costs.json.
 // No Firebase/Cloud Function calls — data is written by an external bq CLI
 // cron job directly to state/costs.json, which core.js loads at startup.
+//
+// Pure logic lives in lib/cloud-costs-logic.js (imported below).
+import {
+  computeScorecardValues,
+  computeNetCost,
+  buildBreakdownDatasets,
+  normalizeTrendData,
+  fmtLabel,
+  BUDGET_MAP,
+  APP_COLORS,
+} from '../../lib/cloud-costs-logic.js';
 
 // Inject page stylesheet once
 (function injectStyles() {
@@ -14,20 +25,8 @@
   document.head.appendChild(link);
 })();
 
-// ── Constants ──
-
-const BUDGET_MAP = {
-  'Styln': 300,
-  'Spin & Dine': 100,
-  'QuantRE/Axiom': 25,
-};
-
-const APP_COLORS = {
-  'Styln': '#3b82f6',
-  'Spin & Dine': '#22c55e',
-  'QuantRE/Axiom': '#a855f7',
-  'Admin': '#64748b',
-};
+// ── Local constants ──
+// (BUDGET_MAP, APP_COLORS imported from lib/cloud-costs-logic.js above)
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -135,17 +134,8 @@ function esc(str) {
 function renderScorecards(totals) {
   if (!totals) return;
 
-  const stylnVal  = typeof totals['Styln']         === 'object' ? totals['Styln']?.net_cost         : (totals['Styln'] || 0);
-  const sdVal     = typeof totals['Spin & Dine']   === 'object' ? totals['Spin & Dine']?.net_cost   : (totals['Spin & Dine'] || 0);
-  const qrVal     = typeof totals['QuantRE/Axiom'] === 'object' ? totals['QuantRE/Axiom']?.net_cost : (totals['QuantRE/Axiom'] || 0);
-
-  // Use explicit Total field if present, otherwise sum the three apps
-  let totalVal = typeof totals['Total'] === 'object'
-    ? totals['Total']?.net_cost
-    : totals['Total'];
-  if (totalVal == null || totalVal === 0) {
-    totalVal = stylnVal + sdVal + qrVal;
-  }
+  const { styln: stylnVal, spinDine: sdVal, quantRe: qrVal, total: totalVal } =
+    computeScorecardValues(totals);
 
   const el = (id) => document.getElementById(id);
   if (el('cc-styln'))    el('cc-styln').textContent    = fmt(stylnVal);
@@ -155,8 +145,8 @@ function renderScorecards(totals) {
 
   // Budget threshold coloring
   const appValues = {
-    'Styln': stylnVal,
-    'Spin & Dine': sdVal,
+    'Styln':         stylnVal,
+    'Spin & Dine':   sdVal,
     'QuantRE/Axiom': qrVal,
   };
 
@@ -190,32 +180,8 @@ function renderBreakdownChart(breakdown) {
     return;
   }
 
-  // Group rows by service, accumulate cost per app
-  const serviceMap = {};
-  for (const row of breakdown) {
-    const svc = row.service || 'Unknown';
-    if (!serviceMap[svc]) serviceMap[svc] = {};
-    serviceMap[svc][row.app] = (serviceMap[svc][row.app] || 0) + (row.cost || 0);
-  }
-
-  // Sort by total cost descending, take top 10
-  const services = Object.entries(serviceMap)
-    .map(([svc, apps]) => ({
-      svc,
-      total: Object.values(apps).reduce((a, b) => a + b, 0),
-      apps,
-    }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
-
-  const labels = services.map(s => s.svc);
-  const apps = [...new Set(breakdown.map(r => r.app))].filter(Boolean);
-
-  const datasets = apps.map(app => ({
-    label: app,
-    data: services.map(s => s.apps[app] || 0),
-    backgroundColor: APP_COLORS[app] || '#94a3b8',
-  }));
+  const { services: svcList, datasets } = buildBreakdownDatasets(breakdown);
+  const labels = svcList;
 
   breakdownChart = new Chart(canvas, {
     type: 'bar',
@@ -273,46 +239,12 @@ function renderTrendChart(trend) {
     return;
   }
 
-  // Normalise: accept both array-of-objects-with-app-column and
-  // array-of-objects-with-per-app-columns (Jarvis state shape).
-  //
-  // Jarvis shape: [{ month: "2025-10", Styln: 200, "Spin & Dine": 40, ... }]
-  // AXIOM shape:  [{ month: "202510",  app: "Styln", cost: 200 }]
-
-  const appNames = Object.keys(APP_COLORS).filter(a => a !== 'Admin');
-
-  let normalised; // [{ month, app, cost }]
-
-  if (trend[0] && trend[0].app !== undefined) {
-    // AXIOM row-per-app shape
-    normalised = trend.filter(r => r.app && r.app !== 'Admin');
-  } else {
-    // Jarvis per-column shape — expand to row-per-app
-    normalised = [];
-    for (const row of trend) {
-      for (const app of appNames) {
-        if (row[app] != null) {
-          normalised.push({ month: row.month, app, cost: row[app] });
-        }
-      }
-    }
-  }
+  // Normalise: accept Jarvis per-column shape or AXIOM row-per-app shape.
+  // See lib/cloud-costs-logic.js for details.
+  const normalised = normalizeTrendData(trend);
 
   // Collect and sort unique months
   const months = [...new Set(normalised.map(r => r.month))].sort();
-
-  // Format month labels
-  //   "2025-10" → "Oct '25"
-  //   "202510"  → "Oct '25"
-  const fmtLabel = (m) => {
-    const s = String(m).replace('-', '');
-    if (s.length === 6) {
-      const yr = s.slice(2, 4);
-      const mo = parseInt(s.slice(4, 6), 10) - 1;
-      return `${MONTH_NAMES[mo]} '${yr}`;
-    }
-    return m;
-  };
 
   const apps = [...new Set(normalised.map(r => r.app))];
 
@@ -379,9 +311,9 @@ function renderTable(breakdown) {
   const sorted = [...breakdown].sort((a, b) => (b.cost || 0) - (a.cost || 0));
 
   tbody.innerHTML = sorted.map(row => {
-    const cost    = row.cost     || 0;
-    const credits = row.credits  || 0;
-    const netCost = row.netCost  ?? row.net_cost ?? (cost + credits);
+    const cost    = row.cost    || 0;
+    const credits = row.credits || 0;
+    const netCost = computeNetCost(row);
 
     // Credits are typically stored as negative numbers (discount).
     // Display as "-$X.XX" when negative, "$X.XX" when positive.

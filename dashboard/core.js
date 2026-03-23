@@ -2,6 +2,8 @@
 // Local-first: reads state from JSON files, no Firebase dependency.
 // Pages register themselves via Jarvis.registerPage().
 
+import { timeAgo, formatCurrency, formatNumber } from './lib/formatters.js';
+
 const Jarvis = {
   pages: [],
   currentPage: null,
@@ -159,14 +161,7 @@ const Jarvis = {
 
   // ── Helper: format relative time ──
   timeAgo(timestamp) {
-    if (!timestamp) return '--';
-    const now = Date.now();
-    const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
-    const diff = Math.floor((now - ts) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    return timeAgo(timestamp);
   },
 
   // ── Helper: get page container element ──
@@ -176,16 +171,12 @@ const Jarvis = {
 
   // ── Helper: format currency ──
   formatCurrency(val) {
-    if (val == null) return '--';
-    return '$' + Number(val).toFixed(2);
+    return formatCurrency(val);
   },
 
   // ── Helper: format large numbers ──
   formatNumber(val) {
-    if (val == null) return '--';
-    if (val >= 1e6) return (val / 1e6).toFixed(1) + 'M';
-    if (val >= 1e3) return (val / 1e3).toFixed(1) + 'K';
-    return val.toString();
+    return formatNumber(val);
   }
 };
 
