@@ -45,3 +45,4 @@ gemini/tmp/
 
 # Cursor project-specific
 cursor/projects/
+.firebase/
