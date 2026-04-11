@@ -1,0 +1,30 @@
+{
+  "_comment": "Copy this file to config.json (or any path) and customize for your workspace. Never commit secrets or personal identifiers to the template.",
+
+  "firebase": {
+    "project_id": "your-firebase-project-id"
+  },
+
+  "tenant_id": "default",
+
+  "firestore_path": "tenants/{tenant_id}/kronos_predictions/{symbol}",
+
+  "symbols": [
+    "SLV",
+    "F",
+    "T"
+  ],
+
+  "yfinance": {
+    "period": "60d",
+    "interval": "1d"
+  },
+
+  "kronos": {
+    "model_size": "small",
+    "pred_len": 24,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "sample_count": 1
+  }
+}

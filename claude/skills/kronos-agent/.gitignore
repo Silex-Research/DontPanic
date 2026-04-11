@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Local config copies — only the example is committed
+config.json
+config.local.json
