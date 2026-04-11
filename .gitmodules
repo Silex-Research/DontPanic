@@ -1,0 +1,3 @@
+[submodule "claude/skills/kronos-agent/vendor/kronos"]
+	path = claude/skills/kronos-agent/vendor/kronos
+	url = https://github.com/shiyu-coder/Kronos.git
