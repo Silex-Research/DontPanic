@@ -1,0 +1,24 @@
+{
+  "_comment": "Template for product-health-agent config. Copy to your workspace, customize, point setup_agent.py at it. Never commit a filled version with your real project IDs.",
+
+  "workspace": {
+    "project_id": "your-workspace-firebase-project",
+    "tenant_id": "default"
+  },
+
+  "apps": {
+    "glam": {
+      "project_id": "glam-ac11e",
+      "usage_metrics_collection": "usage_metrics",
+      "error_aggregates_collection": "error_aggregates",
+      "alerts_collection": "alerts",
+      "trending_cache_collection": "store_analytics_cache",
+      "trending_cache_doc": "global",
+      "key_collections": ["users", "outfits", "closet_items", "posts"]
+    },
+    "spindine": {
+      "project_id": "restaurant-attributes",
+      "key_collections": ["users", "favorites", "spin_history"]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Persisted agent IDs after one-time setup
+state/agent_ids.json
+state/*.json
+
+# Local config copies — only the example is committed
+config.json
+config.local.json
