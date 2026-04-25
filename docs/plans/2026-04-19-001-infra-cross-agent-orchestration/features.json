@@ -609,6 +609,34 @@
           "captured_at": "2026-04-26T00:00:00Z",
           "captured_by": "claude",
           "note": "F023 Step 1 supervisor-path test: dispatch_volley with scripted env-capturing executors confirms (1) one shared execution_env_root across implementer + auditor rounds, (2) JARVIS_EXECUTION_ENV_ROOT + ISOLATED_ENV_PATHS/FILES present and rooted under that dir, (3) target_env/target_project labels propagate (CLOUDSDK_CORE_PROJECT, JARVIS_TARGET_*), (4) audit validation_performed records the env root + targets, (5) cleanup on volley terminate."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/plan_target.py",
+          "captured_at": "2026-04-26T01:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 2 EC2 evidence: parse_target_section enforces visible plan.md `## Target` block with target_env in {dev,staging,prod} and target_project (string or `none` sentinel for host-local plans). Per D066 the contract lives in plan.md body, not frontmatter — schema v1.1 bump deferred. F023 Step 2 EC7 evidence: validate_prod_gates rejects target_env=prod plans missing pre_impl + on_escalation in human_gates. EC1 + EC3-EC6 + EC8 + EC11-EC13 remain incomplete; F023 feature-level passes stays false."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/plan_loader.py",
+          "captured_at": "2026-04-26T01:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 2 wiring: plan_loader.load() now invokes parse_target_section + validate_prod_gates, exposes LoadedPlan.target_env (str) and LoadedPlan.target_project (str | None — 'none' sentinel normalized to Python None). supervisor.dispatch_single_agent and dispatch_volley default target_env/target_project from the loaded plan when kwargs are unset; explicit kwargs still override (audit-trail escape hatch) and are recorded as target_source=kwarg vs target_source=plan in validation_performed."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_plan_target.py",
+          "captured_at": "2026-04-26T01:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 2 test evidence (17 tests): parser happy path + missing-heading/missing-yaml/invalid-env/missing-project rejections; target_project=none sentinel; prod-gate dev-skip + happy path + missing-pre_impl + missing-on_escalation rejections; LoadedPlan target field exposure + missing-Target/missing-prod-gates rejection + sentinel normalization to Python None; supervisor reads plan when kwargs unset; supervisor honors kwarg override; supervisor with target_project=none injects no project labels."
+        },
+        {
+          "type": "file",
+          "uri": "./plan.md",
+          "captured_at": "2026-04-26T01:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 2 backfill: parent plan + sub-plans (2026-04-25-001 firebase-bootstrap, 2026-04-25-002 trivial-orchestration-test) gained `## Target` sections. Real cloud plans → target_project: <firebase-project-id>; synthetic test plans → target_project: none. All three validate against agent-conventions v1.0 schemas (Target section is in plan.md body, not frontmatter, so no schema bump triggered)."
         }
       ],
       "depends_on": [

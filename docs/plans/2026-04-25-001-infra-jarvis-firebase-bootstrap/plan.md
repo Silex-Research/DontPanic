@@ -74,3 +74,10 @@ This plan is `signoff: true` when:
 ## Provenance
 
 User created `<firebase-project-id>` in Firebase console on 2026-04-25 from session continuation of parent plan `2026-04-19-001`. This sub-plan was approved during the same session ("execute in parallel where able").
+
+## Target
+
+```yaml
+target_env: dev
+target_project: <firebase-project-id>
+```

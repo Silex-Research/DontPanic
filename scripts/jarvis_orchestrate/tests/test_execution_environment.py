@@ -304,6 +304,13 @@ links:
 ---
 
 # F023 Step 1 supervisor env wiring synthetic
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
 """
     features = {
         "task_id": plan_id,

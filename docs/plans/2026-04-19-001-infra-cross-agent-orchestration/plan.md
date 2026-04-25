@@ -243,3 +243,10 @@ This plan emerged from a multi-turn design conversation on 2026-04-18 / 2026-04-
 - wterm as Phase 9 viewer layer
 
 The design chose hand-written JSON-first inception (this document + siblings) over using the existing Markdown-only `plan-artifacts` skill, to avoid inheriting stale patterns into the new system. The skill update (F003) follows the proven format.
+
+## Target
+
+```yaml
+target_env: dev
+target_project: <firebase-project-id>
+```
