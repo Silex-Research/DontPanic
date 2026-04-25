@@ -126,6 +126,13 @@ links:
 # Synthetic volley test
 
 Used by tests/test_volley_synthetic.py — no real CLI dispatch.
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
 """
     features = {
         "task_id": plan_id,

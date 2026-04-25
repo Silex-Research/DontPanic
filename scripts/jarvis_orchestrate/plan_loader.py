@@ -32,6 +32,12 @@ SCHEMAS_DIR = _find_schemas_dir()
 from models.features_model import Features  # noqa: E402
 from models.plan_model import Plan  # noqa: E402
 
+from jarvis_orchestrate.plan_target import (  # noqa: E402
+    normalize_target_project,
+    parse_target_section,
+    validate_prod_gates,
+)
+
 
 @dataclass
 class LoadedPlan:
@@ -40,6 +46,8 @@ class LoadedPlan:
     plan: Plan
     features: Features
     schemas_dir: Path
+    target_env: str = "dev"
+    target_project: str | None = None
 
     def feature(self, feature_id: str) -> dict[str, Any]:
         for f in self.features.features:
@@ -70,6 +78,7 @@ def load(plan_dir: Path) -> LoadedPlan:
     if not features_json.is_file():
         raise FileNotFoundError(features_json)
 
+    plan_md_text = plan_md.read_text()
     plan = Plan.model_validate(_frontmatter(plan_md))
     features = Features.model_validate(json.loads(features_json.read_text()))
 
@@ -78,10 +87,15 @@ def load(plan_dir: Path) -> LoadedPlan:
             f"task_id {features.task_id!r} != plan id {plan.id!r}"
         )
 
+    target = parse_target_section(plan_md_text)
+    validate_prod_gates(target["target_env"], plan.human_gates or [])
+
     return LoadedPlan(
         plan_dir=plan_dir,
         plan_id=plan.id,
         plan=plan,
         features=features,
         schemas_dir=SCHEMAS_DIR,
+        target_env=target["target_env"],
+        target_project=normalize_target_project(target["target_project"]),
     )

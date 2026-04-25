@@ -24,3 +24,10 @@ Used as the dispatch target for `python -m jarvis_orchestrate`. The "implementat
 ## Purpose
 
 Prove the orchestration pipe end-to-end: supervisor → Claude CLI → audit JSON → schema-valid file in `audit/`.
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```

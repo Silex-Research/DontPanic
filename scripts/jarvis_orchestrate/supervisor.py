@@ -85,10 +85,15 @@ def dispatch_single_agent(
     quota_pct, quota_line = _quota_gate("claude")
     print(quota_line)
 
+    effective_env = target_env if target_env is not None else loaded.target_env
+    effective_project = (
+        target_project if target_project is not None else loaded.target_project
+    )
+
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,
-        target_env=target_env,
-        target_project=target_project,
+        target_env=effective_env,
+        target_project=effective_project,
     ) as exec_env:
         task = DispatchTask(
             plan_id=loaded.plan_id,
@@ -115,7 +120,8 @@ def dispatch_single_agent(
                 f"captured stdout {len(result.raw_response)} bytes",
                 f"subprocess exit {0 if result.success else 'nonzero'}",
                 f"execution_env_root={exec_env.root}",
-                f"target_env={target_env or '(unset)'} target_project={target_project or '(unset)'}",
+                f"target_env={effective_env} target_project={effective_project or '(none)'}",
+                f"target_source=kwarg" if target_env is not None or target_project is not None else "target_source=plan",
             ],
         )
 
@@ -182,17 +188,31 @@ def dispatch_volley(
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
 
+    effective_env = target_env if target_env is not None else loaded.target_env
+    effective_project = (
+        target_project if target_project is not None else loaded.target_project
+    )
+    target_source = (
+        "kwarg" if (target_env is not None or target_project is not None) else "plan"
+    )
+
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,
-        target_env=target_env,
-        target_project=target_project,
+        target_env=effective_env,
+        target_project=effective_project,
     ) as exec_env:
-        print(f"[volley] execution_env_root={exec_env.root}")
+        print(
+            f"[volley] execution_env_root={exec_env.root} "
+            f"target_env={effective_env} "
+            f"target_project={effective_project or '(none)'} "
+            f"source={target_source}"
+        )
         round_subprocess_env = exec_env.subprocess_env()
         round_env_log = (
             f"execution_env_root={exec_env.root} "
-            f"target_env={target_env or '(unset)'} "
-            f"target_project={target_project or '(unset)'}"
+            f"target_env={effective_env} "
+            f"target_project={effective_project or '(none)'} "
+            f"target_source={target_source}"
         )
 
         for iteration in range(cap + 1):
