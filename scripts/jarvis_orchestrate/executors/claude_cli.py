@@ -31,6 +31,7 @@ class ClaudeCLIExecutor(BaseExecutor):
                 [self.binary, "-p", "--output-format", "json"],
                 input=prompt,
                 capture_output=True,
+                env=task.subprocess_env or None,
                 text=True,
                 timeout=600,
                 check=False,

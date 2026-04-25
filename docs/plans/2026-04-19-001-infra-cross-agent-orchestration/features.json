@@ -574,6 +574,43 @@
       ],
       "acceptance": "Synthetic concurrency test: 3 mock supervisors each get their own ExecutionEnvironment, run gcloud config set project <other-id> in their sandbox; verify each subprocess's gcloud config remains pinned to its declared target_project (CLOUDSDK_CONFIG isolation works). command_guard test: forbidden command patterns (gcloud config set project, firebase use, kubectl config use-context, gh auth switch, git config --global, etc.) all rejected; valid patterns with explicit flags accepted. Plan validator rejects plans missing target_env, and rejects target_env=prod plans missing pre_impl + on_escalation gates. Real volley with target_env=dev produces audit JSONs whose target_context.env==dev. environments.json starter files exist for Jarvis + at least one consumer (Glam or SpinDine).",
       "passes": false,
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/command_guard.py",
+          "captured_at": "2026-04-25T23:23:17Z",
+          "captured_by": "codex",
+          "note": "F023 Step 1 EC9 evidence only: command_guard rejects global project/config mutations including gcloud config set project, firebase use, kubectl config use-context, gh auth switch, package-manager config set, git config --global, and docker context use. EC1-EC8 and EC11-EC13 remain incomplete."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/execution_environment.py",
+          "captured_at": "2026-04-25T23:23:17Z",
+          "captured_by": "codex",
+          "note": "F023 Step 1 EC10 evidence only: ExecutionEnvironment creates isolated CLOUDSDK_CONFIG, XDG_CONFIG_HOME, CONFIGSTORE_DIR, KUBECONFIG, GH_CONFIG_DIR, NPM_CONFIG_USERCONFIG, DOCKER_CONFIG, GRADLE_USER_HOME, ANDROID_USER_HOME, ANDROID_AVD_HOME, and TF_DATA_DIR namespaces with target project/env overlay."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_execution_environment.py",
+          "captured_at": "2026-04-25T23:23:17Z",
+          "captured_by": "codex",
+          "note": "F023 Step 1 EC9/EC10 test evidence: two parallel isolated envs with different target_project values, fake gcloud config mutation containment, forbidden command rejection, soft env-var coverage, and executor subprocess env propagation."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T00:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 1 EC10 supervisor wiring (per D068): dispatch_single_agent and dispatch_volley open one ExecutionEnvironment per dispatch (volley shares env across rounds, cleans up on terminate), pass exec_env.subprocess_env() to DispatchTask.subprocess_env, and record execution_env_root + target labels in audit validation_performed. target_env / target_project are optional Python kwargs until EC2 lands the plan-level Target contract. EC1-EC8 and EC11-EC13 remain incomplete; F023 feature-level passes stays false."
+        },
+        {
+          "type": "log",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_execution_environment.py::test_supervisor_volley_threads_isolated_env_to_executors",
+          "captured_at": "2026-04-26T00:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 1 supervisor-path test: dispatch_volley with scripted env-capturing executors confirms (1) one shared execution_env_root across implementer + auditor rounds, (2) JARVIS_EXECUTION_ENV_ROOT + ISOLATED_ENV_PATHS/FILES present and rooted under that dir, (3) target_env/target_project labels propagate (CLOUDSDK_CORE_PROJECT, JARVIS_TARGET_*), (4) audit validation_performed records the env root + targets, (5) cleanup on volley terminate."
+        }
+      ],
       "depends_on": [
         "F005"
       ]
