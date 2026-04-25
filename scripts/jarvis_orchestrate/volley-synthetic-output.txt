@@ -1,0 +1,36 @@
+
+[test] iterates_then_signs_off ...
+[volley] feature=F001 impl=claude aud=codex cap=3
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=0 auditor verdict: needs_changes
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=1 auditor verdict: signed_off
+  ✓ final_status=signed_off, rounds=2, audits=4
+  ✓ findings threaded into round 1 implementer prompt
+
+[test] no_progress_termination ...
+[volley] feature=F001 impl=claude aud=codex cap=3
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=0 auditor verdict: needs_changes
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=1 auditor verdict: needs_changes
+  ✓ final_status=stopped_no_progress, rounds=2
+
+[test] iteration_cap_termination ...
+[volley] feature=F001 impl=claude aud=codex cap=1
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=0 auditor verdict: needs_changes
+[quota] claude: bypassed for synthetic test
+[quota] codex: bypassed for synthetic test
+[volley] iter=1 auditor verdict: inconclusive
+  ✓ final_status=stopped_cap, rounds=2
+
+[test] auditor_prose_extracts_status_and_findings ...
+  ✓ auditor prose produces needs_changes + structured finding
+
+✓ all 4 synthetic volley tests passed

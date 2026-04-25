@@ -1,4 +1,9 @@
-"""Claude Code CLI executor — invokes `claude -p --output-format json`."""
+"""Codex CLI executor — invokes `codex exec --json`.
+
+Codex emits newline-delimited JSON events to stdout; the agent's response is the
+`item.text` field of the `item.completed` event whose `item.type == agent_message`.
+Usage data appears in the `turn.completed` event.
+"""
 from __future__ import annotations
 
 import datetime as dt
@@ -12,11 +17,11 @@ from jarvis_orchestrate.executors.base import (
     DispatchTask,
 )
 
-DEFAULT_BIN = "claude"
+DEFAULT_BIN = "codex"
 
 
-class ClaudeCLIExecutor(BaseExecutor):
-    agent_name = "claude"
+class CodexCLIExecutor(BaseExecutor):
+    agent_name = "codex"
     cli_binary = DEFAULT_BIN
 
     def __init__(self, binary: str = DEFAULT_BIN) -> None:
@@ -28,8 +33,8 @@ class ClaudeCLIExecutor(BaseExecutor):
 
         try:
             proc = subprocess.run(
-                [self.binary, "-p", "--output-format", "json"],
-                input=prompt,
+                [self.binary, "exec", "--json", prompt],
+                input="",
                 capture_output=True,
                 text=True,
                 timeout=600,
@@ -64,25 +69,7 @@ class ClaudeCLIExecutor(BaseExecutor):
                 error=f"exit={proc.returncode}; stderr={proc.stderr[:300]}",
             )
 
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            return DispatchResult(
-                agent=self.agent_name,
-                agent_role=task.agent_role,
-                iteration=task.iteration,
-                started_at=_iso(started),
-                completed_at=_iso(completed),
-                success=False,
-                summary="",
-                raw_response=raw[:1000],
-                error=f"JSON decode: {exc}",
-            )
-
-        summary = (payload.get("result") or "").strip()
-        usage = payload.get("usage") or {}
-        model_usage = payload.get("modelUsage") or {}
-        model_version = next(iter(model_usage.keys()), None)
+        summary, usage = self._parse_event_stream(raw)
 
         return DispatchResult(
             agent=self.agent_name,
@@ -90,22 +77,40 @@ class ClaudeCLIExecutor(BaseExecutor):
             iteration=task.iteration,
             started_at=_iso(started),
             completed_at=_iso(completed),
-            success=bool(summary) and not payload.get("is_error", False),
+            success=bool(summary),
             summary=summary,
-            model_version=model_version,
+            model_version=None,  # codex CLI doesn't surface model version in event stream
             raw_response=raw,
             quota_consumed={
                 "tokens_in": int(usage.get("input_tokens") or 0)
-                + int(usage.get("cache_read_input_tokens") or 0)
-                + int(usage.get("cache_creation_input_tokens") or 0),
-                "tokens_out": int(usage.get("output_tokens") or 0),
-                "cost_usd": payload.get("total_cost_usd"),
-                "duration_ms": payload.get("duration_ms"),
+                + int(usage.get("cached_input_tokens") or 0),
+                "tokens_out": int(usage.get("output_tokens") or 0)
+                + int(usage.get("reasoning_output_tokens") or 0),
             },
         )
 
+    def _parse_event_stream(self, stdout: str) -> tuple[str, dict]:
+        """Walk newline-JSON events, extract last agent_message text + last turn usage."""
+        text = ""
+        usage: dict = {}
+        for line in stdout.splitlines():
+            line = line.strip()
+            if not line or not line.startswith("{"):
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            etype = event.get("type")
+            if etype == "item.completed":
+                item = event.get("item") or {}
+                if item.get("type") == "agent_message":
+                    text = (item.get("text") or "").strip()
+            elif etype == "turn.completed":
+                usage = event.get("usage") or {}
+        return text, usage
+
     def _build_prompt(self, task: DispatchTask) -> str:
-        # Supervisor may inject a fully-formed prompt for volley dispatches.
         override = (task.extra_context or {}).get("prompt_override")
         if override:
             return str(override)
@@ -113,15 +118,15 @@ class ClaudeCLIExecutor(BaseExecutor):
         return f"""You are the {task.agent_role} for plan {task.plan_id}, iteration {task.iteration}.
 
 Plan directory: {task.plan_dir}
-Feature to {task.agent_role[:-2] if task.agent_role.endswith('er') else task.agent_role}: {task.feature_id}
+Feature: {task.feature_id}
 Description: {task.feature_description}
 Acceptance: {task.feature_acceptance}
 
 Steps:
 {steps_block}
 
-Execute the feature. If verification commands are specified in steps, run them and confirm results.
-Then reply with a single concise paragraph (3-6 sentences) summarizing exactly what you did and the outcome.
+Execute the feature according to your role. If verification commands are specified, run them.
+Reply with a single concise paragraph (3-6 sentences) summarizing exactly what you did and the outcome.
 Do NOT output JSON; the supervisor wraps your reply.
 """
 
