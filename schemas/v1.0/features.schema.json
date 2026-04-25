@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/features.schema.json",
+  "title": "Features",
+  "description": "Machine-checkable ground truth for plan completion. Inviolable — agents may only flip passes false->true with evidence_refs.",
+  "type": "object",
+  "required": ["task_id", "schema_version", "features"],
+  "properties": {
+    "task_id": { "type": "string", "description": "Parent plan ID" },
+    "schema_version": { "const": "1.0" },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/feature" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "required": ["id", "category", "description", "acceptance", "passes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^F\\d{3}$",
+          "description": "F001, F002, ..."
+        },
+        "category": {
+          "enum": ["functional", "infra", "schema", "test", "doc", "security", "observability", "tooling"]
+        },
+        "description": { "type": "string", "minLength": 10 },
+        "steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Verification steps the verifier must perform end-to-end"
+        },
+        "acceptance": {
+          "type": "string",
+          "description": "Machine-checkable condition — the exact test for passes=true"
+        },
+        "passes": { "type": "boolean" },
+        "verified_by": {
+          "type": "array",
+          "items": { "type": "string", "description": "Agent names that verified" }
+        },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_ref" }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^F\\d{3}$" }
+        },
+        "phase": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "tier_override": {
+          "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"],
+          "description": "Force different audit tier for this feature only"
+        }
+      },
+      "allOf": [
+        {
+          "description": "If passes=true, evidence_refs and verified_by required",
+          "if": { "properties": { "passes": { "const": true } }, "required": ["passes"] },
+          "then": {
+            "required": ["verified_by", "verified_at", "evidence_refs"],
+            "properties": {
+              "evidence_refs": { "minItems": 1 },
+              "verified_by": { "minItems": 1 }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "evidence_ref": {
+      "type": "object",
+      "required": ["type", "uri"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log", "test_output", "diff", "audit_json", "commit", "url", "file"] },
+        "uri": { "type": "string", "description": "Relative path, git SHA, or Firebase Storage signed URL" },
+        "hash": { "type": "string", "description": "SHA-256 of content for integrity" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "captured_by": { "type": "string", "description": "Agent or tool that captured the evidence" },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
