@@ -36,6 +36,7 @@ class CodexCLIExecutor(BaseExecutor):
                 [self.binary, "exec", "--json", prompt],
                 input="",
                 capture_output=True,
+                env=task.subprocess_env or None,
                 text=True,
                 timeout=600,
                 check=False,

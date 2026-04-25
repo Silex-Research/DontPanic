@@ -28,6 +28,7 @@ class DispatchTask:
     agent_role: str  # implementer | auditor | verifier | security | currency | …
     iteration: int = 0
     extra_context: dict[str, Any] = field(default_factory=dict)
+    subprocess_env: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
