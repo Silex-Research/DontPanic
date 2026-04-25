@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/audit.schema.json",
+  "title": "Audit",
+  "description": "Single-agent audit report. Multiple audits per iteration are reconciled into a Signoff.",
+  "type": "object",
+  "required": ["task_id", "audit_id", "agent", "agent_role", "iteration", "audit_status", "started_at", "completed_at"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "audit_id": {
+      "type": "string",
+      "description": "task_id + agent + iteration (e.g., 2026-04-19-001...#codex#2)"
+    },
+    "agent": {
+      "enum": ["claude", "codex", "gemini", "grok", "oss-qwen", "oss-gemma4", "oss-nemotron", "oss-llama-guard", "oss-nomic-embed"]
+    },
+    "agent_role": {
+      "enum": ["implementer", "auditor", "verifier", "security", "currency", "redactor", "multimodal", "embeddings"]
+    },
+    "model_version": { "type": "string" },
+    "iteration": { "type": "integer", "minimum": 0 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "audit_status": {
+      "enum": ["signed_off", "needs_changes", "blocked", "inconclusive", "redaction_required"]
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "validation_performed": {
+      "type": "array",
+      "items": { "type": "string", "description": "Checks actually executed (e.g., 'ran npm test', 'grep for legacy pattern')" }
+    },
+    "quota_consumed": {
+      "type": "object",
+      "properties": {
+        "tokens_in": { "type": "integer" },
+        "tokens_out": { "type": "integer" },
+        "percent_weekly": { "type": "number" },
+        "api_calls": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "summary": { "type": "string", "description": "One-paragraph human-readable summary" }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": ["severity", "category", "issue"],
+      "properties": {
+        "severity": { "enum": ["critical", "high", "medium", "low", "advisory"] },
+        "category": {
+          "enum": ["correctness", "security", "performance", "architecture", "style", "currency", "redaction", "test_coverage", "documentation"]
+        },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "feature_id": { "type": "string", "pattern": "^F\\d{3}$" },
+        "issue": { "type": "string", "minLength": 10 },
+        "evidence": { "type": "string", "description": "What the agent actually observed" },
+        "recommendation": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
