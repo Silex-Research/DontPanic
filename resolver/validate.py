@@ -417,16 +417,33 @@ def check_conformance(
 
 
 def discover_skills(skills_dir: Path) -> dict[str, SkillFile]:
-    """Find and parse all .md files in the skills directory."""
+    """Find and parse skill files in the skills directory.
+
+    Supports two layouts:
+    - Flat: skills_dir/{name}.md (Styln/SpinDine commands)
+    - Nested: skills_dir/{name}/SKILL.md (Jarvis skills)
+    """
     skills: dict[str, SkillFile] = {}
     if not skills_dir.exists():
         return skills
 
+    # Flat layout: *.md files directly in the directory
     for md_file in sorted(skills_dir.glob("*.md")):
         if md_file.name.startswith(".") or md_file.name.upper() == "README.MD":
             continue
         skill = parse_skill(md_file)
         skills[skill.name] = skill
+
+    # Nested layout: {name}/SKILL.md subdirectories
+    for skill_dir in sorted(skills_dir.iterdir()):
+        if not skill_dir.is_dir() or skill_dir.name.startswith("."):
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if skill_md.exists():
+            skill = parse_skill(skill_md)
+            # Use directory name as skill name for nested layout
+            skill.name = skill_dir.name
+            skills[skill.name] = skill
 
     return skills
 
@@ -495,14 +512,14 @@ def print_report(report: ValidationReport, resolver_path: Path, skills_count: in
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate RESOLVER.md against skill files and conventions")
     parser.add_argument("--resolver", required=True, help="Path to RESOLVER.md")
-    parser.add_argument("--skills-dir", required=True, help="Path to skills/commands directory")
+    parser.add_argument("--skills-dir", required=True, nargs="+", help="Path(s) to skills/commands directories")
     parser.add_argument("--conventions-dir", required=True, help="Path to shared conventions directory")
     parser.add_argument("--local-conventions-dir", default=None, help="Path to project-local conventions directory")
     parser.add_argument("--project-root", default=None, help="Project root directory (defaults to resolver parent's parent)")
     args = parser.parse_args()
 
     resolver_path = Path(args.resolver).resolve()
-    skills_dir = Path(args.skills_dir).resolve()
+    skills_dirs = [Path(d).resolve() for d in args.skills_dir]
     conventions_dir = Path(args.conventions_dir).resolve()
     local_conventions_dir = Path(args.local_conventions_dir).resolve() if args.local_conventions_dir else None
 
@@ -517,9 +534,10 @@ def main() -> int:
         print(f"Error: Resolver file not found: {resolver_path}", file=sys.stderr)
         return 2
 
-    if not skills_dir.exists():
-        print(f"Error: Skills directory not found: {skills_dir}", file=sys.stderr)
-        return 2
+    for skills_dir in skills_dirs:
+        if not skills_dir.exists():
+            print(f"Error: Skills directory not found: {skills_dir}", file=sys.stderr)
+            return 2
 
     if not conventions_dir.exists():
         print(f"Error: Conventions directory not found: {conventions_dir}", file=sys.stderr)
@@ -527,7 +545,9 @@ def main() -> int:
 
     # Parse
     resolver_rows = parse_resolver(resolver_path)
-    skills = discover_skills(skills_dir)
+    skills: dict[str, SkillFile] = {}
+    for skills_dir in skills_dirs:
+        skills.update(discover_skills(skills_dir))
 
     if not skills:
         print(f"Warning: No skill files found in {skills_dir}", file=sys.stderr)

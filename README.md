@@ -1,4 +1,4 @@
-# claude-conventions
+# agent-conventions
 
 Shared conventions, resolver spec, and skill standards for Claude Code projects. Consumed via `git subtree` by Jarvis, Styln/Glam, SpinDine, and other iOS+Firebase projects.
 
@@ -32,14 +32,14 @@ claude-md/
 ```bash
 cd your-project
 git subtree add --prefix=.claude/shared \
-  git@github.com:yourorg/claude-conventions.git v1.0.0 --squash
+  git@github.com:yourorg/agent-conventions.git v1.0.0 --squash
 ```
 
 ### Updating to a new version
 
 ```bash
 git subtree pull --prefix=.claude/shared \
-  git@github.com:yourorg/claude-conventions.git v1.1.0 --squash
+  git@github.com:yourorg/agent-conventions.git v1.1.0 --squash
 ```
 
 ### Project layout after adoption
