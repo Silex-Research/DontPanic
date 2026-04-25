@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "jarvis-dashboard-silex"
+    "default": "jarvis-dashboard-silex",
+    "orchestrator": "<firebase-project-id>"
   }
 }

@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Jarvis orchestration evidence storage (<firebase-project-id>).
+// Writes: orchestrator service account only (Admin SDK bypasses these rules).
+// Reads: signed URLs only — no client-direct reads. Signed URLs are minted
+// by the supervisor with 1-hour TTL and embedded as evidence_refs in features.json.
+// See docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,10 @@
+
+[plan] 2026-04-19-001-infra-cross-agent-orchestration
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-04-25-001-infra-jarvis-firebase-bootstrap
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+✓ All plans validate against agent-conventions v1.0 schemas

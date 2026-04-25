@@ -1,0 +1,181 @@
+{
+  "task_id": "2026-04-25-001-infra-jarvis-firebase-bootstrap",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 0,
+      "description": "Operator creates new 'Jarvis' billing account and links to <firebase-project-id>",
+      "steps": [
+        "Operator: console.cloud.google.com/billing/create → name 'Jarvis', add payment method",
+        "Operator: report account ID (format XXXXXX-XXXXXX-XXXXXX)",
+        "Claude: gcloud beta billing projects link <firebase-project-id> --billing-account=<ID>",
+        "Verify: gcloud beta billing projects describe <firebase-project-id> → billingEnabled: true"
+      ],
+      "acceptance": "gcloud beta billing projects describe <firebase-project-id> returns billingEnabled: true with the new account name",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 1,
+      "description": "Enable required GCP APIs on <firebase-project-id>",
+      "steps": [
+        "gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com iam.googleapis.com iamcredentials.googleapis.com --project=<firebase-project-id>",
+        "Verify each service appears in: gcloud services list --enabled --project=<firebase-project-id>"
+      ],
+      "acceptance": "All 4 APIs listed as enabled",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 1,
+      "description": "Create default Cloud Storage bucket for <firebase-project-id>",
+      "steps": [
+        "gcloud storage buckets create gs://<firebase-project-id>.appspot.com --project=<firebase-project-id> --location=us-central1 --uniform-bucket-level-access",
+        "Or: firebase use orchestrator && firebase deploy --only storage (creates default if missing)"
+      ],
+      "acceptance": "gcloud storage buckets list --project=<firebase-project-id> shows one bucket",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 1,
+      "description": "Create orchestrator service account with required IAM roles",
+      "steps": [
+        "gcloud iam service-accounts create orchestrator --display-name='Jarvis Orchestrator' --project=<firebase-project-id>",
+        "Grant roles: roles/storage.admin, roles/datastore.user, roles/logging.logWriter, roles/iam.serviceAccountTokenCreator",
+        "Last role enables signed URL minting via IAM credentials API"
+      ],
+      "acceptance": "gcloud projects get-iam-policy <firebase-project-id> shows <orchestrator-service-account> with all 4 roles",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "security",
+      "phase": 2,
+      "description": "Generate service account JSON key, store in .secrets/, verify gitignored",
+      "steps": [
+        "gcloud iam service-accounts keys create .secrets/<firebase-project-id>-orchestrator.json --iam-account=<orchestrator-service-account>",
+        "git check-ignore .secrets/<firebase-project-id>-orchestrator.json (must succeed)",
+        "Operator action: mirror to 1Password vault 'Jarvis' as '<firebase-project-id> orchestrator key'"
+      ],
+      "acceptance": "Key file exists at expected path, git check-ignore returns 0, operator confirms 1Password entry created",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Deploy storage.rules to <firebase-project-id>",
+      "steps": [
+        "firebase deploy --only storage --project=orchestrator",
+        "Confirm rules deployed: firebase deploy output shows 'Deploy complete'"
+      ],
+      "acceptance": "firebase storage:rules:get --project=orchestrator returns deployed rule content matching repo storage.rules",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Python firebase_client.py + smoke_test_storage.py — F002 acceptance",
+      "steps": [
+        "firebase_client.py wraps firebase-admin SDK, reads creds from .secrets/, exposes upload(path, bytes) → signed_url(ttl)",
+        "smoke_test_storage.py: upload fixture to evidence/test-{timestamp}.json, request 1h signed URL, GET it, assert 200",
+        "Capture output to evidence/smoke-test-{timestamp}.log"
+      ],
+      "acceptance": "smoke test exits 0 with HTTP 200 from signed URL fetch; log artifact in evidence/",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F006"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "observability",
+      "phase": 2,
+      "description": "Patch refresh-costs.sh — add 'Jarvis' bucket and <firebase-project-id> project mapping",
+      "steps": [
+        "Add <firebase-project-id> to project→app mapping under app='Jarvis'",
+        "Add 'Jarvis' to totals object",
+        "Add UNION ALL for new billing-export table (commented placeholder; activates when operator confirms BigQuery export configured)",
+        "Run refresh-costs.sh: should succeed, show Jarvis: 0 (no export yet) or actual value if 24h+ have passed"
+      ],
+      "acceptance": "refresh-costs.sh exits 0, costs.json contains 'Jarvis' key in totals (value may be 0)",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "observability",
+      "phase": 2,
+      "description": "F020 — quota_check.py writes ~/.jarvis/quota_state.json with per-model weekly token consumption",
+      "steps": [
+        "Read Claude usage from ~/.claude/projects/*/sessions/*.jsonl (sum input+output tokens)",
+        "Read Codex usage from ~/.codex (CLI quota subcommand or local tally)",
+        "Read Gemini usage from gemini CLI state",
+        "Read Grok usage from local API call counter (file-based since no quota API)",
+        "Read Ollama from `ollama ps` (loaded models)",
+        "Compute week-to-date percent of weekly cap, write JSON",
+        "Cap thresholds: claude=Max plan estimate, codex=300/wk, gemini=AI Studio quota, grok=50/wk, ollama=unmetered"
+      ],
+      "acceptance": "python3 scripts/quota_check.py exits 0, ~/.jarvis/quota_state.json contains non-empty 'models' map with at least claude+ollama entries",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F010",
+      "category": "schema",
+      "phase": 2,
+      "description": "Update parent plan features.json (rename <firebase-project-id> → <firebase-project-id>) + log decision D036",
+      "steps": [
+        "Edit ../2026-04-19-001/features.json F002: replace '<firebase-project-id>' with '<firebase-project-id>' in description and steps",
+        "Append D036 to ../2026-04-19-001/decisions.jsonl: project ID rename, why (Firebase auto-suffix)",
+        "Re-run validate_plan.py against parent plan to confirm still valid"
+      ],
+      "acceptance": "Parent features.json F002 references <firebase-project-id>, decisions.jsonl has D036, validator passes",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F011",
+      "category": "test",
+      "phase": 3,
+      "description": "Flip parent F002 + F020 to passes:true with evidence_refs once SF007 + SF009 green",
+      "steps": [
+        "After SF007 green: edit parent F002 passes=true, evidence_refs=[smoke-test log]",
+        "After SF009 green: edit parent F020 passes=true, evidence_refs=[quota_state.json snapshot]",
+        "Append decisions.jsonl entry for each flip"
+      ],
+      "acceptance": "Parent features.json shows F002.passes=true and F020.passes=true with evidence_refs populated",
+      "passes": false,
+      "depends_on": [
+        "F007",
+        "F009"
+      ]
+    }
+  ]
+}
