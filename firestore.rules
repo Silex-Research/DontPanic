@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Jarvis orchestration metadata (jarvis-a6ee1).
+// All writes are server-side via the orchestrator service account (Admin SDK).
+// Single-operator project — no client SDK access.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

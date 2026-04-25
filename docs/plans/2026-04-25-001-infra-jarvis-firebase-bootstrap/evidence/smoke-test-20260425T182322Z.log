@@ -1,0 +1,5 @@
+timestamp: 20260425T182322Z
+gs_uri: gs://jarvis-a6ee1-evidence/evidence/smoke-test-20260425T182322Z.json
+http_status: 200
+bytes: 130
+result: PASS

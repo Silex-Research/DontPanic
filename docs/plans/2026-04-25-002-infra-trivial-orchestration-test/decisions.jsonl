@@ -1,0 +1,1 @@
+{"id": "D001", "date": "2026-04-25", "question": "Why a trivial test plan separate from F002 smoke?", "answer": "F002 smoke tests Storage end-to-end. F004 trivial test exercises supervisor → executor → audit JSON path. Different layer; needs its own minimal plan dir to dispatch against.", "status": "resolved"}

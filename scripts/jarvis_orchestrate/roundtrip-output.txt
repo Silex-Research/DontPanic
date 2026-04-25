@@ -1,0 +1,17 @@
+
+[roundtrip] 2026-04-19-001-infra-cross-agent-orchestration
+✓ plan.md (frontmatter data preserved; body unchanged)
+✓ features.json
+✓ decisions.jsonl
+
+[roundtrip] 2026-04-25-001-infra-jarvis-firebase-bootstrap
+✓ plan.md (frontmatter data preserved; body unchanged)
+✓ features.json
+✓ decisions.jsonl
+
+[roundtrip] 2026-04-25-002-infra-trivial-orchestration-test
+✓ plan.md (frontmatter data preserved; body unchanged)
+✓ features.json
+✓ decisions.jsonl
+
+✓ All round-trips clean

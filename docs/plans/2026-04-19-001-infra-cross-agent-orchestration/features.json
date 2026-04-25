@@ -1,0 +1,515 @@
+{
+  "task_id": "2026-04-19-001-infra-cross-agent-orchestration",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Four v1.0 JSON schemas (plan, features, audit, signoff) verified, promoted to agent-conventions/schemas/v1.0/, generated Pydantic models, subtree-pulled into Jarvis. Multi-vendor verification panel + multi-consumer subtree pulls deferred — see decisions.jsonl D034, D042, D043.",
+      "steps": [
+        "Inception schemas co-located in this plan's schemas/ subdir (done)",
+        "Verification (v1): Claude self-review against draft schemas + dogfood against existing plans. Multi-vendor panel (Codex/Gemini/Grok) deferred to Phase 2 supervisor per D034",
+        "Iterate on findings in decisions.jsonl",
+        "Promote to agent-conventions/schemas/v1.0/",
+        "Generate Pydantic models from JSON Schema (datamodel-code-generator → Pydantic v2 BaseModel)",
+        "Bump agent-conventions VERSION to 1.1.0, commit, tag",
+        "Subtree pull into Jarvis (claude/shared/) — done. Glam + SpinDine deferred per D043 (no orchestration plans yet); will pull on demand. AXIOM has no subtree yet — separate sub-plan"
+      ],
+      "acceptance": "All four schemas exist at agent-conventions/schemas/v1.0/*.schema.json; generated Pydantic validates this plan's own features.json with zero errors (F021 dogfood)",
+      "passes": true,
+      "verified_at": "2026-04-25T18:50:00Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "agent-conventions@dde0fb7",
+          "captured_at": "2026-04-25T18:50:00Z",
+          "captured_by": "claude",
+          "note": "agent-conventions v1.1.0 commit promoting schemas/v1.0/{plan,features,audit,signoff}.schema.json + Pydantic v2 models + validate.py"
+        },
+        {
+          "type": "file",
+          "uri": "claude/shared/schemas/v1.0/",
+          "captured_by": "claude",
+          "note": "Subtree pulled into Jarvis at v1.1.0 — see git log 'Squashed claude/shared/'"
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 0,
+      "description": "Firebase project jarvis-a6ee1 (Firebase auto-suffixed 'Jarvis') with Storage + Admin SDK credentials",
+      "steps": [
+        "Project jarvis-a6ee1 created in Firebase console (done 2026-04-25)",
+        "Operator: bilotto@silexr.com granted Owner role (done 2026-04-25)",
+        "Operator: create dedicated 'Jarvis' billing account, link to jarvis-a6ee1",
+        "Enable APIs: firestore, firebasestorage, iam, iamcredentials",
+        "Create service account orchestrator@jarvis-a6ee1.iam.gserviceaccount.com with Storage Admin + Firestore User + Logs Writer + Service Account Token Creator",
+        "Store credentials in Jarvis/.secrets/jarvis-a6ee1-orchestrator.json (gitignored) and 1Password vault Jarvis",
+        "Storage rules: full-deny (Admin SDK bypasses; signed-URL reads only)",
+        "Test upload + signed URL retrieval via scripts/jarvis_orchestrate/smoke_test_storage.py"
+      ],
+      "acceptance": "Python script uploads fixture to gs://jarvis-a6ee1-evidence/evidence/smoke-test-{ts}.json and retrieves via 1-hour signed URL with HTTP 200",
+      "passes": true,
+      "verified_at": "2026-04-25T18:23:22Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "log",
+          "uri": "../2026-04-25-001-infra-jarvis-firebase-bootstrap/evidence/smoke-test-20260425T182322Z.log",
+          "captured_at": "2026-04-25T18:23:22Z",
+          "captured_by": "claude",
+          "note": "smoke_test_storage.py round-trip: 130-byte upload, signed URL HTTP 200, JSON match"
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 1,
+      "description": "plan-artifacts skill updated to write directory-based plans validated against v1.0 schemas",
+      "steps": [
+        "Update ~/.claude/skills/plan-artifacts/SKILL.md",
+        "Add schema validation on write using generated Pydantic models",
+        "Skill produces: plan.md (frontmatter validated) + features.json + decisions.jsonl + evidence/ + audit/",
+        "Backward-compat: existing single-file .md plans remain readable as v0",
+        "Round-trip test against this plan's directory"
+      ],
+      "acceptance": "Skill reads 2026-04-19-001 directory, re-emits, diff is empty. New plans default to directory format",
+      "passes": true,
+      "verified_at": "2026-04-25T19:00:00Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "~/.claude/skills/plan-artifacts/SKILL.md",
+          "captured_at": "2026-04-25T19:00:00Z",
+          "captured_by": "claude",
+          "note": "Global skill rewritten for v1 directory format. Specifies plan.md frontmatter + features.json + decisions.jsonl + audit/ + evidence/ structure matching agent-conventions v1.0 schemas. Schema discovery priority order documented for cross-project portability."
+        },
+        {
+          "type": "file",
+          "uri": "claude/skills/plan-artifacts/SKILL.md",
+          "captured_by": "claude",
+          "note": "Jarvis-local copy synced to match global"
+        },
+        {
+          "type": "file",
+          "uri": "../../../../agent-conventions/scripts/roundtrip_test.py",
+          "captured_at": "2026-04-25T21:30:00Z",
+          "captured_by": "claude",
+          "note": "Read → canonicalize → diff harness per design phase1-skill-update.md §F021. Byte-level diff for JSON/JSONL (deterministic), structural diff for YAML frontmatter (semantic — no information loss). Initial run found short JSON arrays inline (e.g. [\"claude\"]) — canonicalized in place, second run green."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/roundtrip-output.txt",
+          "captured_at": "2026-04-25T21:30:00Z",
+          "captured_by": "claude",
+          "note": "All 3 plan dirs (parent + 2 sub-plans) round-trip clean: ✓ plan.md, ✓ features.json, ✓ decisions.jsonl. Schema validation also still green after canonicalization."
+        }
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Supervisor CLI (jarvis orchestrate) dispatches single-agent plan via CLI executors",
+      "steps": [
+        "Create Jarvis/scripts/jarvis_orchestrate/ package",
+        "Executors: ClaudeCLI (claude -p) implemented; CodexCLI / GeminiCLI / GrokAPI / OllamaLocal scaffold deferred to F005",
+        "Read plan directory, validate against schemas",
+        "Dispatch to one agent, capture stdout, build + validate audit JSON, write to audit/",
+        "End-to-end on trivial test plan"
+      ],
+      "acceptance": "jarvis orchestrate <trivial-test-plan> dispatches to Claude-only, produces audit/<agent>-<role>.json (e.g. claude-implementer.json) that validates against audit.schema.json",
+      "passes": true,
+      "verified_at": "2026-04-25T19:13:16Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "../2026-04-25-002-infra-trivial-orchestration-test/audit/claude-implementer.json",
+          "captured_at": "2026-04-25T19:13:16Z",
+          "captured_by": "claude",
+          "note": "Dispatched via `python -m jarvis_orchestrate 2026-04-25-002-infra-trivial-orchestration-test`. audit_status=signed_off, agent=claude, role=implementer, model=claude-opus-4-7[1m], tokens_in=32320, tokens_out=271. Audit.model_validate passes."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/{cli,supervisor,plan_loader,audit_writer,executors/{base,claude_cli}}.py",
+          "captured_by": "claude",
+          "note": "Supervisor MVP — single-agent dispatch. ClaudeCLIExecutor invokes `claude -p --output-format json`. plan_loader validates against Plan/Features models from agent-conventions v1.0. audit_writer derives audit_status, validates with Audit model, persists to plan_dir/audit/<agent>-<role>.json"
+        }
+      ],
+      "depends_on": [
+        "F001",
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Supervisor dispatches N-agent parallel audit and deterministically reconciles into signoff.json",
+      "steps": [
+        "Parallel execution via asyncio.gather",
+        "Reconciliation: aggregate findings by (file, severity, category); detect agreements (2+ agents) and disagreements",
+        "Apply tier-appropriate signoff math (2-of-3 / 3-of-4 + Codex security veto)",
+        "Write audit/disagreement.jsonl when agents conflict; supervisor records rationale",
+        "Produce signoff.json validating against signoff.schema.json"
+      ],
+      "acceptance": "Parallel audit of cross-cutting test plan with 3 agents produces signoff.json; synthetic disagreement test produces disagreement.jsonl with 1 entry",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Seven loop termination triggers with pause-not-stop semantics (except global circuit breaker, which is hard-stop)",
+      "steps": [
+        "Implement: iteration cap, budget ceiling, wall-clock timeout, no-progress detection, diminishing-returns detection, convergence collapse, global circuit breaker",
+        "Pause-for-approval (6 of 7): write diagnostic to INBOX.md, fire notification, await RESPONSE: edit, reset counters on approval",
+        "Global circuit breaker (hard): after 3 consecutive cap-hits in 24h across plans, pause all autonomous work",
+        "Synthetic tests for each trigger condition"
+      ],
+      "acceptance": "7 synthetic scenarios each trigger correct termination; 6 produce pause-and-resume behavior, 1 (global) produces hard stop with operator alert",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Per-tier quota caps enforced with reservation policy (20% interactive / 10% P0 / 50% autonomous / 20% headroom)",
+      "steps": [
+        "Supervisor reads ~/.jarvis/quota_state.json before dispatch (populated by F020/Task #698)",
+        "Enforce per-plan quota caps from plan frontmatter",
+        "Defer if per-model week-to-date > 70% threshold (configurable)",
+        "Interactive backoff: do not launch Claude-heavy work within 30 min of human's last Claude request"
+      ],
+      "acceptance": "Mock Claude weekly at 75% → cross-cutting plan defers; mock reset → plan launches. Mock human Claude request 15 min ago → Claude-heavy plan defers 15 min",
+      "passes": false,
+      "depends_on": [
+        "F006",
+        "F020"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "tooling",
+      "phase": 2,
+      "description": "INBOX.md + terminal-notifier async interaction channel",
+      "steps": [
+        "brew install terminal-notifier",
+        "Supervisor writes timestamped question block to Jarvis/INBOX.md",
+        "Fires terminal-notifier with title + one-line summary",
+        "Watches INBOX.md via watchdog; parses RESPONSE: lines; resumes execution",
+        "SessionStart hook surfaces unresolved INBOX items"
+      ],
+      "acceptance": "Supervisor pauses → INBOX.md has question → notification fires → manual RESPONSE: edit resumes supervisor",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "observability",
+      "phase": 3,
+      "description": "Playwright MCP configured for AXIOM gateway admin UI + dashboard verification",
+      "steps": [
+        "Add Playwright MCP server to Jarvis Claude config",
+        "Profile in agent-conventions/mcp-profiles/axiom.json",
+        "Supervisor test: Gemini via MCP navigates gateway admin, captures screenshot, uploads to jarvis-main://evidence/",
+        "URI added to features.json evidence_refs of the verified feature"
+      ],
+      "acceptance": "Test plan with UI feature triggers Playwright navigation + screenshot; URI lands in evidence_refs and is retrievable via signed URL",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "observability",
+      "phase": 3,
+      "description": "XcodeBuild MCP + simulator screenshot capture configured for Glam iOS",
+      "steps": [
+        "Add XcodeBuild MCP (xcodebuild wrapper) and iOS simulator screenshot MCP (xcrun simctl io)",
+        "Profile in agent-conventions/mcp-profiles/glam.json",
+        "Supervisor test: build Glam, boot simulator, launch app, capture screenshot"
+      ],
+      "acceptance": "Test plan triggers Xcode build + simulator launch + screenshot stored in evidence with valid hash",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F011",
+      "category": "observability",
+      "phase": 3,
+      "description": "Firebase Cloud Logging MCP for Functions introspection (Glam + AXIOM functions)",
+      "steps": [
+        "Add Firebase Cloud Logging MCP server",
+        "Profile exposes log_query tool scoped to functions namespace",
+        "Supervisor test: query last hour of aiProxy logs and return structured entries"
+      ],
+      "acceptance": "Agent queries Cloud Logging for Glam aiProxy and retrieves ≥1 structured log entry with severity, timestamp, jsonPayload",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F012",
+      "category": "infra",
+      "phase": 3,
+      "description": "init.sh per project (axiom, glam, styln, jarvis) from shared template",
+      "steps": [
+        "Write agent-conventions/templates/init.sh skeleton",
+        "axiom/init.sh: firebase emulators start + wrangler dev --local + dashboard static serve",
+        "glam/init.sh: xcrun simctl boot + open Xcode workspace",
+        "styln/init.sh: same pattern as glam",
+        "jarvis/init.sh: warm quota_check.py + start INBOX.md watcher"
+      ],
+      "acceptance": "Running init.sh in each repo brings dev environment to ready state in < 60s; agent sessions skip setup tokens",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F013",
+      "category": "doc",
+      "phase": 4,
+      "description": "docs/architecture/ scaffolded per project with domain map + layer contracts + Mermaid",
+      "steps": [
+        "Gemini (2M context) reads each repo, drafts architecture docs",
+        "Codex validates Mermaid dependency graph matches actual imports (pre-requisite for F014 lints)",
+        "CLAUDE.md in each repo gains pointer to docs/architecture/ (stays <120 lines)"
+      ],
+      "acceptance": "Each of axiom, glam, styln, jarvis has docs/architecture/ with domain-map.md (Mermaid) + layers.md + boundaries.md; Mermaid matches static analysis output",
+      "passes": false,
+      "depends_on": [
+        "F009",
+        "F011"
+      ]
+    },
+    {
+      "id": "F014",
+      "category": "infra",
+      "phase": 5,
+      "description": "packages/axiom-lints enforces AXIOM monorepo import boundaries with LLM-actionable error messages",
+      "steps": [
+        "Create axiom/packages/axiom-lints (ts-morph or eslint custom rules)",
+        "Rules: gateway cannot import from functions directly; router touches only KV; packages/shared is the only cross-package surface",
+        "Error messages formatted for LLM remediation: rule + violation + evidence + fix steps in one block",
+        "Wire into axiom CI + ~/.claude/hooks/security-gate.sh"
+      ],
+      "acceptance": "axiom-lints passes clean against current AXIOM codebase; synthetic violation produces error with all four fields structured for LLM parsing",
+      "passes": false,
+      "depends_on": [
+        "F013"
+      ]
+    },
+    {
+      "id": "F015",
+      "category": "tooling",
+      "phase": 6,
+      "description": "Stop hook detects plan status transitions and auto-spawns supervisor",
+      "steps": [
+        "Extend ~/.claude/hooks/session-summary.sh (async)",
+        "Scan docs/plans/*/plan.md frontmatter for status: ready_for_audit",
+        "Spawn jarvis orchestrate in background per plan",
+        "Append to Jarvis/docs/orchestration-log/YYYY-MM-DD.jsonl"
+      ],
+      "acceptance": "Flipping plan status to ready_for_audit and ending session triggers background supervisor within 10s",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F007"
+      ]
+    },
+    {
+      "id": "F016",
+      "category": "tooling",
+      "phase": 6,
+      "description": "SessionStart hook surfaces pending audit work + quota digest + INBOX items",
+      "steps": [
+        "Extend ~/.claude/hooks/session-start.sh",
+        "Read Jarvis/INBOX.md → print unresolved questions",
+        "Read ~/.jarvis/quota_state.json → print per-model % bars",
+        "List plans with signoff: false awaiting action",
+        "Link to Jarvis/docs/digests/YYYY-MM-DD.md if exists"
+      ],
+      "acceptance": "Opening Claude Code shows digest at top of session: quota bars + INBOX count + pending plans list",
+      "passes": false,
+      "depends_on": [
+        "F008"
+      ]
+    },
+    {
+      "id": "F017",
+      "category": "tooling",
+      "phase": 7,
+      "description": "Agent teams wired: feature-team (implementer + auditor + verifier), audit-team (diff-reviewer + security + signoff)",
+      "steps": [
+        "Use CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 (already set in ~/.claude/settings.json)",
+        "Jarvis/teams/feature-team.json: Claude (impl) + Codex (audit) + Gemini (verify)",
+        "Jarvis/teams/audit-team.json: Gemini (2M diff review) + Codex (security) + supervisor (signoff)",
+        "Map roles to supervisor executors so /team feature-team implement <plan-id> is one-liner"
+      ],
+      "acceptance": "/team feature-team implement <plan-id> dispatches full panel through supervisor without additional config",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F018",
+      "category": "tooling",
+      "phase": 8,
+      "description": "Scheduled hygiene via schedule skill (Sun-Tue window to preserve mid-week quota)",
+      "steps": [
+        "Use schedule skill to register weekly cron",
+        "Jobs: agent-conventions drift scan, stale-TODO sweep, small auto-mergeable PRs, per-project quota usage report",
+        "Each job produces a tier=trivial plan; auto-merges if CI green + OSS gate clean"
+      ],
+      "acceptance": "Weekly cron produces Jarvis/docs/digests/weekly/YYYY-WW.md summarizing findings + auto-merged PRs",
+      "passes": false,
+      "depends_on": [
+        "F015",
+        "F017"
+      ]
+    },
+    {
+      "id": "F019",
+      "category": "tooling",
+      "phase": 9,
+      "description": "wterm live dashboard (Next.js) renders supervisor event stream + active agents + plan artifact viewer",
+      "steps": [
+        "Create Jarvis/dashboard-live/ Next.js app using @wterm/react",
+        "Supervisor emits events to local WebSocket server (pluggable transport)",
+        "Three panes: live Claude terminal (wterm), live Codex terminal (wterm), plan artifact viewer (Markdown + JSON)",
+        "Served via portless at dashboard-live.jarvis.localhost"
+      ],
+      "acceptance": "jarvis orchestrate --dashboard opens local URL; three live panes render; human can interject typed commands into agent panes",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F020",
+      "category": "observability",
+      "phase": 2,
+      "description": "quota_check.py writes ~/.jarvis/quota_state.json (per-model weekly consumption) AND supervisor reads it before every dispatch. Tracking depth varies by vendor: Claude tokens via session log scan; Codex/Gemini/Grok via local tally; Ollama via loaded-model inventory. Polling-based variants + GPU/RAM utilization deferred to Task #698.",
+      "steps": [
+        "Claude Max: tally tokens locally from ~/.claude/projects/*/sessions/*.jsonl since week start",
+        "Codex: count entries in ~/.codex/history.jsonl since week start (CLI quota subcommand integration deferred)",
+        "Gemini: read ~/.config/gemini/state.json weekly_calls (AI Studio usage API integration deferred)",
+        "Grok: count API calls locally against ~/.jarvis/grok_calls.json",
+        "Ollama: list loaded models via `ollama ps` (GPU/RAM utilization deferred)",
+        "Supervisor reader: dispatch_single_agent() invokes _quota_gate(agent) which reads ~/.jarvis/quota_state.json before every dispatch, logs percent_weekly, soft-warns at ≥90% (hard-blocks if JARVIS_QUOTA_ENFORCE=hard)"
+      ],
+      "acceptance": "Running quota_check.py populates ~/.jarvis/quota_state.json with per-model percent_weekly; supervisor reads before every dispatch",
+      "passes": true,
+      "verified_at": "2026-04-25T21:35:00Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/quota_check.py",
+          "captured_by": "claude",
+          "note": "Writer side. Vendor tracking depth: Claude=session log tally; Codex=history line count; Gemini=state.json read; Grok=local counter file; Ollama=loaded-model inventory. Polling/GPU not implemented — Task #698 owns calibration + deeper tracking."
+        },
+        {
+          "type": "file",
+          "uri": "~/.jarvis/quota_state.json",
+          "captured_at": "2026-04-25T18:09:07Z",
+          "captured_by": "claude",
+          "note": "Live quota state — claude/codex/gemini/grok/ollama populated. Caps still estimates; calibration pending Task #698."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-25T21:35:00Z",
+          "captured_by": "claude",
+          "note": "Reader side: _quota_gate(agent) at top of dispatch_single_agent. Verified live — gate prints '[quota] claude: 370.21% of weekly cap … ⚠ above 90.0% soft threshold (proceeding)' (caps pending Task #698 calibration). Audit's validation_performed records the percent read."
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F021",
+      "category": "test",
+      "phase": 1,
+      "description": "Dogfood: this inception plan's artifacts validate against promoted schemas after Phase 0 completes",
+      "steps": [
+        "After F001 promotes schemas to agent-conventions/schemas/v1.0/",
+        "Run pydantic validation on this plan's plan.md frontmatter, features.json, and any audit JSONs",
+        "Zero validation errors = schemas can express what was needed at inception",
+        "If validation fails, schema has a gap → iterate F001"
+      ],
+      "acceptance": "Generated Pydantic from agent-conventions/schemas/v1.0/ validates 2026-04-19-001 artifacts with zero errors",
+      "passes": true,
+      "verified_at": "2026-04-25T18:50:00Z",
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/dogfood-validation-output.txt",
+          "captured_at": "2026-04-25T18:50:00Z",
+          "captured_by": "claude",
+          "note": "validate.py output: both 2026-04-19-001 (parent) and 2026-04-25-001 (sub-plan) pass; bootstrap loop iterated: schema caught real data violations (passed_at→verified_at, evidence_refs as objects, F011 category, sub-plan id pattern), data fixed, validation green"
+        }
+      ],
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ]
+    },
+    {
+      "id": "F022",
+      "category": "doc",
+      "phase": 8,
+      "description": "Open-source readiness: README + bootstrap.sh + jarvis doctor + LICENSE + CONTRIBUTING + CI",
+      "steps": [
+        "README.md at repo root: prereqs, quickstart, architecture diagram, project layout, setup checklist",
+        "bootstrap.sh codifying the gcloud/firebase/SA setup demonstrated on jarvis-a6ee1 (link billing, enable APIs, create SA, generate key, deploy rules, run smoke test)",
+        "scripts/jarvis_doctor.py preflight: verifies gcloud auth + firebase auth + Python deps + .secrets/ + schema validity + skill consistency",
+        "Sanitization pass: replace user-specific values (billing IDs, project IDs) with templated env vars in committed files",
+        "LICENSE (MIT or Apache-2.0 per user preference) + CONTRIBUTING.md + CODE_OF_CONDUCT.md",
+        "GitHub Actions CI: validate.py + Pydantic schema validation on PR"
+      ],
+      "acceptance": "Fresh clone on a clean machine: README quickstart followed end-to-end yields a working orchestration setup with jarvis doctor green; CI passes on a sample PR",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F012"
+      ]
+    }
+  ]
+}

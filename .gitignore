@@ -8,6 +8,8 @@
 **/oauth_creds.json
 **/trustedFolders.json
 **/mcp-needs-auth-cache.json
+.secrets/
+*.serviceaccount.json
 
 # Session data (large, ephemeral)
 **/history.jsonl
@@ -22,6 +24,14 @@
 **/sessions/
 **/*.sqlite
 **/*.jsonl
+
+# Orchestration plan artifacts (decisions, audit chains) — tracked, schema-validated
+!/docs/plans/**/*.jsonl
+!/docs/plans/*/decisions.jsonl
+
+# Python bytecode
+**/__pycache__/
+**/*.pyc
 
 # Node
 node_modules/

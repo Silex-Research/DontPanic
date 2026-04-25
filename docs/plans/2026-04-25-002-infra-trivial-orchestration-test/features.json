@@ -1,0 +1,20 @@
+{
+  "task_id": "2026-04-25-002-infra-trivial-orchestration-test",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "test",
+      "phase": 0,
+      "description": "Reply with a one-paragraph summary that references this plan ID. No code changes required.",
+      "steps": [
+        "Acknowledge you received the plan dispatch",
+        "Confirm the agent_role and iteration in your reply",
+        "Identify yourself as the implementer for this feature"
+      ],
+      "acceptance": "Supervisor receives non-empty summary from Claude and writes audit/claude-implementer.json that passes Audit.model_validate",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
