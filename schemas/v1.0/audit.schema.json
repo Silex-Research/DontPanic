@@ -42,7 +42,28 @@
       },
       "additionalProperties": false
     },
-    "summary": { "type": "string", "description": "One-paragraph human-readable summary" }
+    "summary": { "type": "string", "description": "One-paragraph human-readable summary" },
+    "target_context": {
+      "type": "object",
+      "description": "F023 EC6: declared target environment + project + side-effect commands the agent invoked. Supervisor cross-checks against plan target; mismatches trigger asymmetric reject (implementer → needs_changes + finding; auditor → blocked + stop volley).",
+      "required": ["env"],
+      "properties": {
+        "env": {
+          "enum": ["dev", "staging", "prod"],
+          "description": "Target env declared at dispatch time. Must match plan.target_env."
+        },
+        "project": {
+          "type": ["string", "null"],
+          "description": "Target project (null for host-local plans with no cloud project — the `none` sentinel in plan.md normalizes here)."
+        },
+        "commands_run": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Side-effect commands the agent invoked. Validated post-hoc against command_guard forbidden patterns; forbidden hits force asymmetric reject (implementer → needs_changes; auditor → blocked)."
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "$defs": {
     "finding": {
