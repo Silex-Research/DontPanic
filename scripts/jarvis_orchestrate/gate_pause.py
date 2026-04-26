@@ -97,6 +97,20 @@ def unmet_gates(plan_dir: Path, declared_gates: list[Any]) -> list[str]:
     return [g for g in declared_strs if g not in cleared]
 
 
+def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
+    """When the pause condition is fully resolved (every gate listed in
+    pause_gates has been cleared), drop the paused_at + pause_gates fields so
+    the state file matches ground truth. Called from approve / resume_all
+    after they update cleared_gates."""
+    pending = state.get("pause_gates") or []
+    if not pending:
+        return
+    cleared = set(state.get("cleared_gates") or [])
+    if all(g in cleared for g in pending):
+        state.pop("paused_at", None)
+        state.pop("pause_gates", None)
+
+
 def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "operator") -> bool:
     """Mark a single gate cleared. Idempotent — re-approving is a no-op
     (no INBOX append). Returns True if state changed."""
@@ -113,6 +127,7 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         {"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor}
     )
     state["history"] = history
+    _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
     return True
 
@@ -135,6 +150,7 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
             {"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor}
         )
     state["history"] = history
+    _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
     return newly
 

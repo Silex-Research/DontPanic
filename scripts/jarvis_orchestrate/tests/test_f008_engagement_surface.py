@@ -349,6 +349,175 @@ def test_e2e_pause_then_approve_then_resume() -> None:
             os.environ.pop(notify.DISABLE_ENV, None)
 
 
+# ──────────────────────────────  AC-honesty fixes (D073-amend)  ──────────────────────────────
+
+
+def test_cli_approve_no_false_warning_for_declared_gate() -> None:
+    """Fix#1: CLI approve must not warn when gate IS in plan.human_gates."""
+    print("\n[test] cli_approve_no_false_warning_for_declared_gate ...")
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-300-infra-cli-approve-warn", gates=["pre_impl"])
+        buf_out = io.StringIO()
+        buf_err = io.StringIO()
+        from contextlib import redirect_stderr
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            rc = cli.main(["approve", str(plan_dir), "pre_impl"])
+        assert rc == 0
+        assert "WARNING" not in buf_err.getvalue(), buf_err.getvalue()
+        # Sanity: an undeclared gate still warns
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            cli.main(["approve", str(plan_dir), "totally_made_up_gate"])
+        assert "WARNING" in buf_err.getvalue()
+    print("  ✓ declared gate → no warning; undeclared gate → warning")
+
+
+def test_signoff_writer_stopped_cap_maps_to_remediate() -> None:
+    """Fix#2: stopped_cap (what supervisor actually emits) must map to remediate."""
+    print("\n[test] signoff_writer_stopped_cap_maps_to_remediate ...")
+    with tempfile.TemporaryDirectory() as td:
+        pd = Path(td)
+        ad = pd / "audit"
+        ad.mkdir()
+        (ad / "claude-implementer-i0.json").write_text(json.dumps({
+            "task_id": "2026-04-26-301-infra-cap-mapping",
+            "audit_id": "2026-04-26-301-infra-cap-mapping#claude#0",
+            "agent": "claude", "agent_role": "implementer", "iteration": 0,
+            "started_at": _iso_now(), "completed_at": _iso_now(),
+            "audit_status": "needs_changes", "summary": "...",
+        }))
+        out = signoff_writer.write_signoff(
+            plan_id="2026-04-26-301-infra-cap-mapping",
+            tier="trivial", iteration=0,
+            agents_in_panel=["claude"],
+            audit_paths=sorted(ad.glob("*.json")),
+            plan_dir=pd,
+            volley_status="stopped_cap",
+        )
+        data = json.loads(out.read_text())
+        assert data["next_action"] == "remediate", data
+    print("  ✓ stopped_cap → next_action=remediate")
+
+
+def test_approve_clears_pause_marker_when_all_resolved() -> None:
+    """Fix#3: paused_at + pause_gates fields must be cleared once unmet set drops to []."""
+    print("\n[test] approve_clears_pause_marker_when_all_resolved ...")
+    with tempfile.TemporaryDirectory() as td:
+        pd = Path(td)
+        gate_pause.record_pause(pd, plan_id="p", pause_gates=["pre_impl"])
+        # Approve the only pause gate.
+        gate_pause.approve_gate(pd, "pre_impl", plan_id="p")
+        state = json.loads(gate_pause.gate_state_path(pd).read_text())
+        assert "paused_at" not in state, state
+        assert "pause_gates" not in state, state
+    print("  ✓ approving the last pause gate clears paused_at + pause_gates")
+
+
+def test_resume_clears_pause_marker_when_all_resolved() -> None:
+    """Fix#3 (resume_all variant)."""
+    print("\n[test] resume_clears_pause_marker_when_all_resolved ...")
+    with tempfile.TemporaryDirectory() as td:
+        pd = Path(td)
+        gate_pause.record_pause(pd, plan_id="p", pause_gates=["pre_impl", "on_escalation"])
+        gate_pause.resume_all(pd, plan_id="p", declared_gates=["pre_impl", "on_escalation"])
+        state = json.loads(gate_pause.gate_state_path(pd).read_text())
+        assert "paused_at" not in state and "pause_gates" not in state, state
+    print("  ✓ resume_all over all pause gates clears the marker")
+
+
+def test_partial_approve_keeps_pause_marker() -> None:
+    """Fix#3: marker must persist until ALL pause_gates are cleared."""
+    print("\n[test] partial_approve_keeps_pause_marker ...")
+    with tempfile.TemporaryDirectory() as td:
+        pd = Path(td)
+        gate_pause.record_pause(pd, plan_id="p", pause_gates=["pre_impl", "on_escalation"])
+        gate_pause.approve_gate(pd, "pre_impl", plan_id="p")
+        state = json.loads(gate_pause.gate_state_path(pd).read_text())
+        assert "pause_gates" in state and "on_escalation" in state["pause_gates"]
+    print("  ✓ partial clear keeps pause marker pending the rest")
+
+
+def test_quota_warn_inbox_event_fires_at_soft_threshold() -> None:
+    """Fix#4: supervisor emits INBOX quota_warn when pct ≥ SOFT_THRESHOLD_PERCENT."""
+    print("\n[test] quota_warn_inbox_event_fires_at_soft_threshold ...")
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-302-infra-quota-warn-event", gates=["pre_impl"])
+        # Pre-clear gates so volley enters the loop and the quota check fires.
+        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-302-infra-quota-warn-event",
+                              declared_gates=["pre_impl"])
+        impl = _CountingExecutor("claude")
+        aud = _CountingExecutor("codex")
+        saved_registry = dict(AGENT_REGISTRY)
+        saved_quota = supervisor._quota_gate
+        AGENT_REGISTRY["claude"] = lambda: impl
+        AGENT_REGISTRY["codex"] = lambda: aud
+        # Stub _quota_gate to return a soft-warn percentage.
+        supervisor._quota_gate = lambda agent: (95.0, f"[quota] {agent}: 95.0% (stubbed)")
+        os.environ[notify.DISABLE_ENV] = "1"
+        try:
+            result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            assert result.final_status == "signed_off", result
+            events = inbox.read_events(plan_dir)
+            warns = [e for e in events if e.event == "quota_warn"]
+            assert len(warns) >= 2, [e.event for e in events]  # impl + aud
+            agents_warned = {w.headers.get("agent") for w in warns}
+            assert agents_warned == {"claude", "codex"}, agents_warned
+        finally:
+            AGENT_REGISTRY.clear()
+            AGENT_REGISTRY.update(saved_registry)
+            supervisor._quota_gate = saved_quota
+            os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ both agent quota gates above threshold emit INBOX quota_warn")
+
+
+def test_error_inbox_event_fires_on_executor_failure() -> None:
+    """Fix#4: supervisor emits INBOX error when executor returns success=False."""
+    print("\n[test] error_inbox_event_fires_on_executor_failure ...")
+
+    class _FailingExecutor(BaseExecutor):
+        def __init__(self, agent: str) -> None:
+            super().__init__()
+            self.agent_name = agent
+            self.cli_binary = None
+        def is_available(self) -> bool:
+            return True
+        def dispatch(self, task: DispatchTask) -> DispatchResult:
+            return DispatchResult(
+                agent=self.agent_name, agent_role=task.agent_role,
+                iteration=task.iteration,
+                started_at=_iso_now(), completed_at=_iso_now(),
+                success=False, summary="", raw_response="",
+                error="synthetic CLI failure",
+            )
+
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-303-infra-error-event", gates=["pre_impl"])
+        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-303-infra-error-event",
+                              declared_gates=["pre_impl"])
+        impl = _FailingExecutor("claude")
+        aud = _CountingExecutor("codex")
+        saved_registry = dict(AGENT_REGISTRY)
+        saved_quota = _bypass_quota()
+        AGENT_REGISTRY["claude"] = lambda: impl
+        AGENT_REGISTRY["codex"] = lambda: aud
+        os.environ[notify.DISABLE_ENV] = "1"
+        try:
+            supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            events = inbox.read_events(plan_dir)
+            errors = [e for e in events if e.event == "error"]
+            assert len(errors) >= 1, [e.event for e in events]
+            assert errors[0].headers.get("agent") == "claude"
+            assert "synthetic CLI failure" in errors[0].body
+        finally:
+            AGENT_REGISTRY.clear()
+            AGENT_REGISTRY.update(saved_registry)
+            supervisor._quota_gate = saved_quota
+            os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ failed executor dispatch emits INBOX error with agent + cause")
+
+
 # ──────────────────────────────  driver  ──────────────────────────────
 
 
@@ -362,6 +531,13 @@ def main() -> int:
     test_signoff_writer_validates_against_schema()
     test_signoff_writer_blocked_state()
     test_e2e_pause_then_approve_then_resume()
+    test_cli_approve_no_false_warning_for_declared_gate()
+    test_signoff_writer_stopped_cap_maps_to_remediate()
+    test_approve_clears_pause_marker_when_all_resolved()
+    test_resume_clears_pause_marker_when_all_resolved()
+    test_partial_approve_keeps_pause_marker()
+    test_quota_warn_inbox_event_fires_at_soft_threshold()
+    test_error_inbox_event_fires_on_executor_failure()
     print("\n✓ F008 engagement-surface tests passed")
     return 0
 
