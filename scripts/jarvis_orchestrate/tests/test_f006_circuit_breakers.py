@@ -623,32 +623,3 @@ def test_breaker_approve_is_idempotent() -> None:
         ]
         assert len(approves) == 1, approves
     print("  ✓ second approve of cleared breaker is no-op (idempotent)")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_check_wall_clock()
-    test_check_budget_ceiling_reads_quota_state_file()
-    test_check_no_progress()
-    test_check_diminishing_returns()
-    test_check_convergence_collapse()
-    test_global_breaker_threshold()
-    test_global_breaker_window_pruning()
-    test_breaker_blocks_dispatch_via_gate_pause()
-    test_resume_all_clears_breakers()
-    test_supervisor_iteration_cap_pauses_via_breaker()
-    test_supervisor_global_breaker_hard_stops()
-    test_global_breaker_evaluates_before_executor_resolution()
-    test_cli_approve_breaker_no_false_warning()
-    test_cli_resume_clears_active_breakers_with_no_human_gates()
-    test_active_breaker_preempts_executor_resolution()
-    test_cli_approve_refuses_global_breaker()
-    test_breaker_approve_is_idempotent()
-    print("\n✓ F006 circuit-breaker tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

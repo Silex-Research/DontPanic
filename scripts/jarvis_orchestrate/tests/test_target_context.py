@@ -478,32 +478,3 @@ def test_supervisor_volley_audit_includes_target_context() -> None:
             (impl_audit.get("target_context") or {}).get("commands_run") or []
         )
     print("  ✓ supervisor populates target_context in every audit; commands_run parsed from prose")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_extract_commands_run_picks_up_dollar_lines()
-    test_extract_commands_run_empty_when_no_markers()
-    test_build_audit_populates_target_context()
-    test_build_audit_target_context_project_null_when_sentinel()
-    test_implementer_missing_env_declaration_downgraded_to_needs_changes()
-    test_auditor_env_mismatch_forces_blocked()
-    test_clean_implementer_unchanged()
-    test_implementer_forbidden_command_downgraded_with_finding()
-    test_auditor_forbidden_command_blocks_volley()
-    test_target_project_none_skips_project_declaration_check()
-    test_implementer_prompt_includes_target_declaration_rule()
-    test_implementer_prompt_lists_forbidden_commands()
-    test_auditor_prompt_includes_target_verification_rule()
-    test_implementer_prompt_handles_target_project_none()
-    test_supervisor_volley_implementer_mismatch_continues_to_auditor()
-    test_supervisor_volley_auditor_mismatch_blocks()
-    test_supervisor_volley_audit_includes_target_context()
-    print("\n✓ F023 Step 3 EC3/EC4/EC5/EC6 tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

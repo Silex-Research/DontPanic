@@ -164,22 +164,3 @@ def test_format_entries_pretty_print() -> None:
         text = aS.format_entries(aS.list_active())
         assert "(none)" in text and "(inherit)" in text
     print("  ✓ format_entries handles host-local sentinels gracefully")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_register_unregister_roundtrip()
-    test_unregister_filters_by_pid()
-    test_list_active_filters_dead_pid()
-    test_check_reentrancy_detects_running_plan()
-    test_ps_cli_empty_registry_message()
-    test_ps_cli_renders_table()
-    test_format_entries_pretty_print()
-    print("\n✓ F023 EC13 active-supervisor registry tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
