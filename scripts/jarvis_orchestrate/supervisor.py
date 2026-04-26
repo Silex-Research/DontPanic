@@ -9,6 +9,7 @@ soft-warn at >=90%; flip JARVIS_QUOTA_ENFORCE=hard to raise QuotaExceeded.
 from __future__ import annotations
 
 import atexit
+import datetime as dt
 import json
 import os
 import re
@@ -20,6 +21,7 @@ from typing import Any
 from jarvis_orchestrate import (
     active_supervisors,
     audit_writer,
+    circuit_breakers,
     command_guard,
     gate_pause,
     inbox,
@@ -45,6 +47,49 @@ SOFT_THRESHOLD_PERCENT = 90.0
 
 class QuotaExceeded(RuntimeError):
     pass
+
+
+def _trip_breaker(
+    plan_dir: Path,
+    plan_id: str,
+    feature_id: str,
+    kind: circuit_breakers.BreakerKind,
+    reason: str,
+) -> None:
+    """F006 — record the breaker hit. The 6 approval-required kinds add a
+    synthetic gate; all 7 (including the global hard-stop) record an INBOX
+    entry, fire terminal-notifier, and append to ~/.jarvis/breaker_history.jsonl
+    so the global breaker can count cap-hits across plans."""
+    circuit_breakers.record_global_hit(plan_id, kind)
+    if kind in circuit_breakers.APPROVAL_BREAKERS:
+        gate_pause.add_breaker(
+            plan_dir, circuit_breakers.gate_name(kind), plan_id=plan_id, reason=reason
+        )
+    inbox.append_event(
+        plan_dir,
+        event="breaker_tripped",
+        plan_id=plan_id,
+        body=(
+            f"Circuit breaker tripped: {kind.value}\n\n"
+            f"Reason: {reason}\n\n"
+            + (
+                "Operator clearance required: "
+                f"`jarvis approve {plan_id} breaker:{kind.value}` "
+                f"or `jarvis resume {plan_id}`."
+                if kind in circuit_breakers.APPROVAL_BREAKERS
+                else "Hard stop: global circuit breaker. No operator clearance "
+                "available — wait out the 24h window."
+            )
+        ),
+        breaker_kind=kind.value,
+        feature_id=feature_id,
+        approval_required=str(kind in circuit_breakers.APPROVAL_BREAKERS).lower(),
+    )
+    notify.notify(
+        title=f"jarvis: breaker {kind.value} — {plan_id}",
+        message=reason[:120],
+        subtitle=feature_id,
+    )
 
 
 def _maybe_emit_quota_warn(
@@ -384,6 +429,34 @@ def dispatch_volley(
     )
     print(registry_log)
 
+    # F006 — global circuit breaker. Hard stop when ≥3 iteration_cap hits in
+    # the last 24h across any plan. No operator clearance — operator waits.
+    global_state = circuit_breakers.evaluate_global()
+    if global_state.tripped:
+        reason = (
+            f"global circuit breaker tripped: {global_state.hits_in_window} "
+            f"iteration_cap hits in the last "
+            f"{global_state.window_seconds // 3600}h "
+            f"(threshold {global_state.threshold})"
+        )
+        _trip_breaker(
+            loaded.plan_dir, loaded.plan_id, feature_id,
+            circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER,
+            reason,
+        )
+        return _emit_volley_terminal(
+            VolleyResult(
+                circuit_breakers.TERMINAL_STATUS[
+                    circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER
+                ],
+                0,
+                reason,
+                audit_paths,
+            ),
+            loaded=loaded, feature_id=feature_id,
+            agents_in_panel=[impl_name, aud_name],
+        )
+
     # F008 Item 2 — gate-pause check. If plan declares human_gates that the
     # operator has not yet approved (or resumed all), pause without entering
     # ExecutionEnvironment or calling any executor. INBOX entry + notifier
@@ -458,7 +531,51 @@ def dispatch_volley(
             f"cwd={registry_repo_root or '(inherit)'}"
         )
 
+        # F006 — pre-loop setup for wall-clock + budget breakers
+        loop_caps = loaded.plan.loop_caps
+        wall_clock_hours = (
+            loop_caps.wall_clock_hours
+            if loop_caps and loop_caps.wall_clock_hours is not None
+            else circuit_breakers.DEFAULT_WALL_CLOCK_HOURS
+        )
+        per_agent_caps: dict[str, float] = {}
+        if loaded.plan.quota_caps:
+            for agent_field in ("claude", "codex", "gemini"):
+                v = getattr(loaded.plan.quota_caps, agent_field, None)
+                if v is not None:
+                    per_agent_caps[agent_field] = float(v)
+        volley_start = dt.datetime.now(dt.timezone.utc)
+
+        def _trip_and_return(
+            kind: circuit_breakers.BreakerKind, reason: str, rounds: int
+        ) -> "VolleyResult":
+            _trip_breaker(loaded.plan_dir, loaded.plan_id, feature_id, kind, reason)
+            return _emit_volley_terminal(
+                VolleyResult(
+                    circuit_breakers.TERMINAL_STATUS[kind], rounds, reason, audit_paths
+                ),
+                loaded=loaded, feature_id=feature_id,
+                agents_in_panel=[impl_name, aud_name],
+            )
+
         for iteration in range(cap + 1):
+            # F006 wall-clock + budget breakers — checked at the top of each
+            # iteration so a long-running prior round has a chance to trip.
+            wc_tripped, wc_reason = circuit_breakers.check_wall_clock(
+                volley_start, wall_clock_hours
+            )
+            if wc_tripped:
+                return _trip_and_return(
+                    circuit_breakers.BreakerKind.WALL_CLOCK, wc_reason, iteration
+                )
+            bd_tripped, bd_reason = circuit_breakers.check_budget_ceiling(
+                audit_paths, per_agent_caps
+            )
+            if bd_tripped:
+                return _trip_and_return(
+                    circuit_breakers.BreakerKind.BUDGET_CEILING, bd_reason, iteration
+                )
+
             # Implementer round
             try:
                 impl_pct, impl_quota_line = _quota_gate(impl_name)
@@ -582,39 +699,62 @@ def dispatch_volley(
                     agents_in_panel=[impl_name, aud_name],
                 )
 
+            # F006 — diminishing returns + convergence collapse heuristics.
+            # Run before the no-progress check so they're surfaced explicitly
+            # when their pattern fits, even if no_progress would also fire.
+            dr_tripped, dr_reason = circuit_breakers.check_diminishing_returns(audit_paths)
+            if dr_tripped:
+                transcript.append_terminal(
+                    loaded.plan_dir, feature_id,
+                    circuit_breakers.TERMINAL_STATUS[
+                        circuit_breakers.BreakerKind.DIMINISHING_RETURNS
+                    ],
+                    iteration + 1, reason=dr_reason,
+                )
+                return _trip_and_return(
+                    circuit_breakers.BreakerKind.DIMINISHING_RETURNS,
+                    dr_reason, iteration + 1,
+                )
+            cc_tripped, cc_reason = circuit_breakers.check_convergence_collapse(audit_paths)
+            if cc_tripped:
+                transcript.append_terminal(
+                    loaded.plan_dir, feature_id,
+                    circuit_breakers.TERMINAL_STATUS[
+                        circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE
+                    ],
+                    iteration + 1, reason=cc_reason,
+                )
+                return _trip_and_return(
+                    circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE,
+                    cc_reason, iteration + 1,
+                )
+
             # No-progress: auditor verdict identical to last round
-            if prior_aud_status is not None and aud_status == prior_aud_status:
+            np_tripped, np_reason = circuit_breakers.check_no_progress(
+                prior_aud_status, aud_status,
+            )
+            if np_tripped:
                 transcript.append_terminal(
                     loaded.plan_dir, feature_id, "stopped_no_progress", iteration + 1,
-                    reason=f"auditor verdict unchanged ({aud_status}) across 2 consecutive rounds",
+                    reason=np_reason,
                 )
-                return _emit_volley_terminal(
-                    VolleyResult(
-                        "stopped_no_progress",
-                        iteration + 1,
-                        f"auditor verdict unchanged ({aud_status}) across 2 consecutive rounds",
-                        audit_paths,
-                    ),
-                    loaded=loaded, feature_id=feature_id,
-                    agents_in_panel=[impl_name, aud_name],
+                return _trip_and_return(
+                    circuit_breakers.BreakerKind.NO_PROGRESS,
+                    np_reason, iteration + 1,
                 )
 
             prior_aud_path = aud_audit_path
             prior_aud_status = aud_status
 
+        # F006 — iteration cap. Triggers the breaker (counted toward the global
+        # circuit breaker's 24h window) and writes a synthetic gate so next-run
+        # dispatch is paused until the operator approves or resumes.
+        cap_reason = f"max_iterations={cap} reached without signoff"
         transcript.append_terminal(
-            loaded.plan_dir, feature_id, "stopped_cap", cap + 1,
-            reason=f"max_iterations={cap} reached without signoff",
+            loaded.plan_dir, feature_id, "stopped_cap", cap + 1, reason=cap_reason,
         )
-        return _emit_volley_terminal(
-            VolleyResult(
-                "stopped_cap",
-                cap + 1,
-                f"max_iterations={cap} reached without signoff",
-                audit_paths,
-            ),
-            loaded=loaded, feature_id=feature_id,
-            agents_in_panel=[impl_name, aud_name],
+        return _trip_and_return(
+            circuit_breakers.BreakerKind.ITERATION_CAP, cap_reason, cap + 1,
         )
 
 
