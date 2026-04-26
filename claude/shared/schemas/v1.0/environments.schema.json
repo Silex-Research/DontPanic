@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/environments.schema.json",
+  "title": "Environments",
+  "description": "Per-repo registry mapping {dev, staging, prod} envs to project + tool-specific deploy targets. Consumed by F023 supervisor pre-dispatch validation: plan target_env/target_project must match the declared registry. All env tiers and per-tool fields are optional; only declared tiers are reachable, and supervisor rejects dispatch to undeclared tiers. Loader enforces the cross-cutting constraint that at least one of dev/staging/prod must be declared.",
+  "type": "object",
+  "required": ["repo"],
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "Repo name. Advisory label; loader discovers the file via path-based walk-up from a plan dir."
+    },
+    "dev": { "$ref": "#/$defs/envBlock" },
+    "staging": { "$ref": "#/$defs/envBlock" },
+    "prod": { "$ref": "#/$defs/envBlock" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "envBlock": {
+      "type": "object",
+      "description": "One env tier's deployment surface. At least one of firebase_project or gcp_project must be set so the registry has a project anchor for supervisor pre-dispatch validation. Loader enforces this constraint in Python.",
+      "properties": {
+        "firebase_project": {
+          "type": "string",
+          "description": "Firebase project ID (e.g., glam-styln-dev). Identical to gcp_project when the project is Firebase-managed."
+        },
+        "gcp_project": {
+          "type": "string",
+          "description": "GCP project ID. Often equal to firebase_project for Firebase-on-GCP projects."
+        },
+        "xcode_scheme": {
+          "type": "string",
+          "description": "Xcode scheme name for iOS deploys (e.g., GlamSwift-Dev). Omit for non-iOS repos."
+        },
+        "bundle_id": {
+          "type": "string",
+          "description": "iOS bundle identifier for this tier. Omit for non-iOS repos."
+        },
+        "hosting_target": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "firebase.json hosting target names (e.g., ['admin', 'web']). Omit if the repo uses a single anonymous hosting block or has no Firebase Hosting."
+        },
+        "allowed_deploy_commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Operator policy: explicit deploy command patterns allowed for this tier. Reserved for F023 EC11/EC12 — may be omitted in EC1+EC8 starter files and added later."
+        },
+        "requires_gates": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Operator policy: human_gates names required before any dispatch to this tier. Reserved for F023 EC11/EC12 — may be omitted in EC1+EC8 starter files and added later."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
