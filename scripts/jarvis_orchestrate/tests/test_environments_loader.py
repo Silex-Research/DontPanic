@@ -423,6 +423,15 @@ def _run_volley_with_counting(plan_dir: Path):
     AGENT_REGISTRY["claude"] = lambda: impl
     AGENT_REGISTRY["codex"] = lambda: aud
     supervisor._quota_gate = lambda agent: (None, f"[quota] {agent}: bypassed")
+    # F008: pre-clear declared gates so the new gate-pause check doesn't pause
+    # this EC1 fixture (exercises env-registry validation, not gate-pause).
+    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    _loaded_for_gates = _pl.load(plan_dir)
+    gate_pause.resume_all(
+        plan_dir,
+        plan_id=_loaded_for_gates.plan_id,
+        declared_gates=list(_loaded_for_gates.plan.human_gates or []),
+    )
     try:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
     finally:

@@ -10,6 +10,10 @@ Volley dispatch (F005a — implementer/auditor pair, iterate until signoff or ca
 
 Active-supervisor registry (F023 EC13):
   python -m jarvis_orchestrate ps
+
+Engagement-surface gate handling (F008):
+  python -m jarvis_orchestrate approve <plan-id> <gate>   # clear one declared gate
+  python -m jarvis_orchestrate resume  <plan-id>          # clear every declared gate
 """
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from jarvis_orchestrate import active_supervisors, supervisor
+from jarvis_orchestrate import active_supervisors, gate_pause, inbox, plan_loader, supervisor
 from jarvis_orchestrate.supervisor import QuotaExceeded
 
 
@@ -40,10 +44,77 @@ def _ps_main(argv: list[str]) -> int:
     return 0
 
 
+def _approve_main(argv: list[str]) -> int:
+    """F008 Item 2: clear a single declared gate for a plan."""
+    if len(argv) != 2:
+        print("usage: jarvis-orchestrate approve <plan-id> <gate>", file=sys.stderr)
+        return 2
+    plan_arg, gate = argv
+    plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(plan_dir)
+    declared = list(loaded.plan.human_gates or [])
+    if gate not in declared:
+        print(
+            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared}; "
+            f"recording anyway",
+            file=sys.stderr,
+        )
+    changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+    if changed:
+        inbox.append_event(
+            plan_dir,
+            event="gate_cleared",
+            plan_id=loaded.plan_id,
+            body=f"Operator approved gate {gate!r} via `jarvis approve`.",
+            gate=gate,
+        )
+        print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
+    else:
+        print(f"[approve] gate {gate!r} was already cleared")
+    remaining = gate_pause.unmet_gates(plan_dir, declared)
+    print(f"[approve] remaining unmet gates: {remaining or '(none)'}")
+    return 0
+
+
+def _resume_main(argv: list[str]) -> int:
+    """F008 Item 2: clear every gate declared by the plan."""
+    if len(argv) != 1:
+        print("usage: jarvis-orchestrate resume <plan-id>", file=sys.stderr)
+        return 2
+    plan_arg = argv[0]
+    plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(plan_dir)
+    declared = list(loaded.plan.human_gates or [])
+    if not declared:
+        print(f"[resume] plan {loaded.plan_id} declares no human_gates — nothing to clear")
+        return 0
+    newly = gate_pause.resume_all(plan_dir, plan_id=loaded.plan_id, declared_gates=declared)
+    if newly:
+        inbox.append_event(
+            plan_dir,
+            event="resumed",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Operator cleared all declared gates via `jarvis resume`.\n"
+                f"Newly cleared: {newly}\n"
+                f"All declared : {declared}"
+            ),
+            cleared_gates=",".join(newly),
+        )
+        print(f"[resume] cleared {len(newly)} gates: {newly}")
+    else:
+        print("[resume] all declared gates were already cleared")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     if raw and raw[0] == "ps":
         return _ps_main(raw[1:])
+    if raw and raw[0] == "approve":
+        return _approve_main(raw[1:])
+    if raw and raw[0] == "resume":
+        return _resume_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

@@ -410,6 +410,15 @@ def _run_volley(plan_dir: Path, impl_summary: str, aud_summary: str, force_statu
         return path
 
     supervisor._run_round = maybe_force
+    # F008: pre-clear declared gates so this Step-3 fixture doesn't pause on
+    # the new engagement-surface gate-pause check.
+    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    _loaded_for_gates = _pl.load(plan_dir)
+    gate_pause.resume_all(
+        plan_dir,
+        plan_id=_loaded_for_gates.plan_id,
+        declared_gates=list(_loaded_for_gates.plan.human_gates or []),
+    )
     try:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
     finally:
