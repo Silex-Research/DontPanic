@@ -239,7 +239,11 @@ def test_iterates_then_signs_off() -> None:
 
 
 def test_no_progress_termination() -> None:
-    """Auditor returns needs_changes twice in a row → no_progress stop."""
+    """Auditor returns needs_changes twice in a row → trips no_progress OR
+    diminishing_returns. F006 added diminishing_returns which fires first when
+    the auditor's finding count is non-decreasing across needs_changes rounds
+    (the synthetic fixture's constant-shape audits match this); both are
+    valid F006 stop kinds for the same situation."""
     print("\n[test] no_progress_termination ...")
     _restore_supervisor()
     with tempfile.TemporaryDirectory() as td:
@@ -251,8 +255,9 @@ def test_no_progress_termination() -> None:
         _patch_supervisor_to_force_status(["needs_changes", "needs_changes", "signed_off"])
 
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=3)
-        assert result.final_status == "stopped_no_progress", f"got {result.final_status}"
-        assert result.rounds == 2, f"expected 2 rounds before no-progress trip, got {result.rounds}"
+        assert result.final_status in {"stopped_no_progress", "stopped_diminishing_returns"}, \
+            f"got {result.final_status}"
+        assert result.rounds == 2, f"expected 2 rounds before stop trip, got {result.rounds}"
         print(f"  ✓ final_status={result.final_status}, rounds={result.rounds}")
 
 

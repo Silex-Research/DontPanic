@@ -53,8 +53,16 @@ def _next_action_for(volley_status: str, signed_off: bool) -> str:
         "stopped_cap",
         "stopped_max_iterations",
         "stopped_no_progress",
+        "stopped_budget",
+        "stopped_wall_clock",
+        "stopped_diminishing_returns",
+        "stopped_convergence_collapse",
     }:
         return "remediate"
+    if volley_status == "stopped_global_breaker":
+        # Global circuit breaker is hard stop; operator can't approve, must
+        # wait. Closeout marks blocked_awaiting_human + signoff=false.
+        return "blocked_awaiting_human"
     return "defer"
 
 

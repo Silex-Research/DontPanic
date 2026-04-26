@@ -127,6 +127,18 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         {"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor}
     )
     state["history"] = history
+    # F006: clearing a breaker:<kind> approval pops it from active_breakers so
+    # next dispatch can proceed without re-prompting (and so a future trip of
+    # the same breaker re-pauses cleanly).
+    if gate_str.startswith("breaker:"):
+        breakers = [b for b in (state.get("active_breakers") or []) if b != gate_str]
+        if breakers:
+            state["active_breakers"] = breakers
+        else:
+            state.pop("active_breakers", None)
+        # Drop from cleared_gates too — breakers are transient, no need to
+        # accumulate them in the durable approval log.
+        state["cleared_gates"] = [c for c in cleared if c != gate_str]
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
     return True
@@ -149,10 +161,23 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
         history.append(
             {"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor}
         )
+    # F006: resume_all also clears every active breaker. Operator's intent is
+    # "all clear — proceed" — both plan.human_gates and pending breakers fit.
+    pending_breakers = list(state.get("active_breakers") or [])
+    for b in pending_breakers:
+        history.append(
+            {"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor}
+        )
+    if pending_breakers:
+        state.pop("active_breakers", None)
+        # Strip any breaker entries from cleared_gates too (transient).
+        state["cleared_gates"] = sorted(
+            c for c in state["cleared_gates"] if not c.startswith("breaker:")
+        )
     state["history"] = history
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
-    return newly
+    return newly + pending_breakers
 
 
 def record_pause(
@@ -196,16 +221,58 @@ class GateCheck:
 
 
 def evaluate(plan_dir: Path, declared_gates: list[Any]) -> GateCheck:
-    """Pure read of current gate state vs declared gates. Does not write."""
+    """Pure read of current gate state vs declared gates. Does not write.
+
+    F006 integration: any synthetic `breaker:<kind>` entries in the state file's
+    active_breakers list also block dispatch. The supervisor unions them with
+    plan.human_gates so a single approve/resume CLI flow clears both kinds.
+    """
     declared_strs = _stringify_gates(declared_gates)
-    cleared = cleared_gates(plan_dir)
-    unmet = [g for g in declared_strs if g not in cleared]
-    return GateCheck(paused=bool(unmet), declared=declared_strs, cleared=cleared, unmet=unmet)
+    state = _read_state(plan_dir)
+    cleared = list(state.get("cleared_gates") or [])
+    active_breakers = list(state.get("active_breakers") or [])
+    plan_unmet = [g for g in declared_strs if g not in cleared]
+    combined_declared = declared_strs + active_breakers
+    unmet = plan_unmet + active_breakers  # any active breaker is by-construction unmet
+    return GateCheck(paused=bool(unmet), declared=combined_declared, cleared=cleared, unmet=unmet)
+
+
+def add_breaker(plan_dir: Path, breaker_gate: str, *, plan_id: str, reason: str = "") -> bool:
+    """F006 — record that a circuit breaker tripped. Adds the synthetic
+    breaker:<kind> name to active_breakers. Idempotent: re-adding is a no-op.
+    Returns True if state changed.
+    """
+    state = _read_state(plan_dir)
+    state["plan_id"] = plan_id
+    breakers = list(state.get("active_breakers") or [])
+    if breaker_gate in breakers:
+        return False
+    breakers.append(breaker_gate)
+    state["active_breakers"] = breakers
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "breaker_trip",
+            "gate": breaker_gate,
+            "at": _now_iso(),
+            "actor": "supervisor",
+            "reason": reason,
+        }
+    )
+    state["history"] = history
+    _write_state(plan_dir, state)
+    return True
+
+
+def active_breakers(plan_dir: Path) -> list[str]:
+    return list(_read_state(plan_dir).get("active_breakers") or [])
 
 
 __all__ = [
     "GATE_STATE_FILENAME",
     "GateCheck",
+    "active_breakers",
+    "add_breaker",
     "approve_gate",
     "cleared_gates",
     "evaluate",

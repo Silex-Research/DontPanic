@@ -231,7 +231,51 @@
         "Synthetic tests for each trigger condition"
       ],
       "acceptance": "7 synthetic scenarios each trigger correct termination; 6 produce pause-and-resume behavior, 1 (global) produces hard stop with operator alert",
-      "passes": false,
+      "passes": true,
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 module: BreakerKind enum + APPROVAL_BREAKERS (6 of 7) + TERMINAL_STATUS map. check_wall_clock / check_budget_ceiling / check_no_progress / check_diminishing_returns / check_convergence_collapse for per-iteration triggers. evaluate_global / record_global_hit on ~/.jarvis/breaker_history.jsonl (24h sliding window, 3-hit threshold; only iteration_cap counts). gate_name() namespaces synthetic gates as breaker:<kind> for F008 gate-pause integration."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/gate_pause.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 gate-pause integration: new active_breakers state-file field, add_breaker helper. evaluate() unions plan.human_gates with active_breakers so either source pauses pre-dispatch. approve_gate detects breaker:* names and removes from active_breakers without leaving cleared_gates residue (transient lifecycle). resume_all clears every active breaker plus declared gates. Re-trip after clearance pauses again."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 supervisor wiring: _trip_breaker helper records hit + INBOX breaker_tripped + notify + global-history append (only iteration_cap is approval-required-skipped wording). Pre-dispatch global breaker check (after env-registry, before gate-pause) hard-stops dispatch when 3+ iteration_cap hits in 24h — no executor calls, no clearance offered. Per-iteration: wall_clock + budget_ceiling at top of loop; diminishing_returns + convergence_collapse + no_progress after auditor verdict; iteration_cap on loop exit. All six approval-required kinds use _trip_and_return helper that adds gate + emits volley_terminal."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/signoff_writer.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 next_action mapping: stopped_budget / stopped_wall_clock / stopped_diminishing_returns / stopped_convergence_collapse all join stopped_cap/stopped_no_progress/stopped_quota in the remediate bucket. stopped_global_breaker maps to blocked_awaiting_human (signoff=false) since the operator can't clear the hard stop."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 test evidence (11 tests): pure check_* functions for wall_clock / budget_ceiling / no_progress / diminishing_returns / convergence_collapse; global breaker threshold (3 hits trips, other kinds ignored) + 24h window pruning; gate-pause integration (breaker blocks dispatch, approve clears, re-trip pauses again, resume_all clears every breaker); supervisor end-to-end (iteration_cap → breaker_tripped INBOX + synthetic gate + global-history hit; global breaker hard-stops dispatch with no executor calls and approval_required=false in INBOX header)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_volley_synthetic.py",
+          "captured_at": "2026-04-26T09:00:00Z",
+          "captured_by": "claude",
+          "note": "F006 regression accommodation: the synthetic no_progress fixture's constant-finding-count needs_changes loop now matches diminishing_returns first (a more informative signal). Test relaxed to accept either stopped_no_progress or stopped_diminishing_returns as a valid F006 termination kind for the same observation."
+        }
+      ],
       "depends_on": [
         "F005"
       ]
