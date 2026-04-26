@@ -1,6 +1,6 @@
 """F008 — engagement-surface synthetic e2e + per-module tests.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_f008_engagement_surface
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py
 """
 from __future__ import annotations
 

@@ -8,7 +8,7 @@ without dispatching to real CLIs. Verifies the volley loop:
   4. Detects no-progress (verdict unchanged across 2 rounds)
   5. Threads prior auditor's findings into next implementer's prompt context
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_volley_synthetic
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_volley_synthetic.py
 """
 from __future__ import annotations
 

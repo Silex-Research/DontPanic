@@ -454,15 +454,12 @@ def dispatch_volley(
             agents_in_panel=[impl_name, aud_name],
         )
 
-    impl_executor = _resolve_executor(impl_name)
-    aud_executor = _resolve_executor(aud_name)
-
-    print(f"[volley] feature={feature_id} impl={impl_name} aud={aud_name} cap={cap}")
-
-    # F008 Item 2 — gate-pause check. If plan declares human_gates that the
-    # operator has not yet approved (or resumed all), pause without entering
-    # ExecutionEnvironment or calling any executor. INBOX entry + notifier
-    # fire so the operator sees the pending action.
+    # F008 Item 2 + F006 — gate-pause check. Evaluated BEFORE executor
+    # resolution so an active breaker:* gate (or any unmet plan-declared
+    # gate) reliably halts dispatch with paused_on_gate, even when
+    # AGENT_REGISTRY can't produce the named agents. Approval-required
+    # breakers must preempt resolution for the same reason the global
+    # breaker does — otherwise an empty registry KeyErrors before pausing.
     declared_gates = list(loaded.plan.human_gates or [])
     gate_check = gate_pause.evaluate(loaded.plan_dir, declared_gates)
     if gate_check.paused:
@@ -500,6 +497,11 @@ def dispatch_volley(
             f"`jarvis resume {loaded.plan_id}`",
             audit_paths,
         )
+
+    impl_executor = _resolve_executor(impl_name)
+    aud_executor = _resolve_executor(aud_name)
+
+    print(f"[volley] feature={feature_id} impl={impl_name} aud={aud_name} cap={cap}")
 
     inbox.append_event(
         loaded.plan_dir,

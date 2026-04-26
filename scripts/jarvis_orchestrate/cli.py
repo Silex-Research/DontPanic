@@ -57,6 +57,20 @@ def _approve_main(argv: list[str]) -> int:
         print("usage: jarvis-orchestrate approve <plan-id> <gate>", file=sys.stderr)
         return 2
     plan_arg, gate = argv
+    # F006: the global circuit breaker is hard-stop and intentionally has no
+    # operator clearance path. Refuse the approve so the CLI surface matches
+    # the spec ("APPROVAL_BREAKERS frozenset names the 6 pause-for-approval
+    # kinds; the 7th (global) is hard-stop"). Operators wait out the 24h
+    # window; there is no jarvis clear-global-breaker.
+    global_gate = f"breaker:{cb.BreakerKind.GLOBAL_CIRCUIT_BREAKER.value}"
+    if gate == global_gate:
+        print(
+            f"[approve] REFUSED gate {gate!r} — the global circuit breaker is "
+            "hard-stop and has no operator clearance path. Wait for the 24h "
+            "window to expire (see ~/.jarvis/breaker_history.jsonl).",
+            file=sys.stderr,
+        )
+        return 2
     plan_dir = _resolve_plan_dir(plan_arg)
     loaded = plan_loader.load(plan_dir)
     # plan.human_gates is a list of HumanGate enum members; compare on .value
@@ -65,9 +79,10 @@ def _approve_main(argv: list[str]) -> int:
     # F006: synthetic breaker:<kind> gates are valid declared names too — the
     # supervisor adds them to active_breakers on trip. Don't false-warn when
     # operator approves a known breaker name (either currently active or any
-    # known BreakerKind, in case the operator is pre-clearing).
+    # known approval-required BreakerKind, in case the operator is pre-clearing).
+    # The global kind is excluded above; the rest of APPROVAL_BREAKERS is fair game.
     active = gate_pause.active_breakers(plan_dir)
-    breaker_names = {f"breaker:{k.value}" for k in cb.BreakerKind}
+    breaker_names = {f"breaker:{k.value}" for k in cb.APPROVAL_BREAKERS}
     valid_targets = set(declared_strs) | set(active) | breaker_names
     if gate not in valid_targets:
         print(

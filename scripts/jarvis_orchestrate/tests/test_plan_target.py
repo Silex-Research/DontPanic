@@ -1,6 +1,6 @@
 """F023 Step 2 (EC2 + EC7) — plan-level Target contract + prod gate.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_plan_target
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_plan_target.py
 """
 from __future__ import annotations
 

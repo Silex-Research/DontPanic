@@ -1,6 +1,6 @@
 """F023 EC13 — active-supervisor registry + jarvis ps CLI.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_ec13_active_supervisors
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec13_active_supervisors.py
 """
 from __future__ import annotations
 
@@ -20,8 +20,16 @@ from jarvis_orchestrate import cli  # noqa: E402
 
 
 def _redirect_registry(td: Path) -> Path:
-    """Point the global REGISTRY_PATH at a tmp file for hermetic tests."""
+    """Point the active-supervisors registry at a tmp file for hermetic tests.
+
+    The conftest autouse fixture already sets JARVIS_ACTIVE_SUPERVISORS_PATH to
+    a per-test tmp_path; some EC13 tests still want their OWN tmp file (so
+    assertions on aS.REGISTRY_PATH.read_text() match what the test wrote).
+    Set both: env var (which _effective_registry_path() consults first) AND
+    the module attribute (so test code can read aS.REGISTRY_PATH directly).
+    """
     tmp_file = td / "active.jsonl"
+    os.environ["JARVIS_ACTIVE_SUPERVISORS_PATH"] = str(tmp_file)
     aS.REGISTRY_PATH = tmp_file
     return tmp_file
 

@@ -113,32 +113,52 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
 
 def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "operator") -> bool:
     """Mark a single gate cleared. Idempotent — re-approving is a no-op
-    (no INBOX append). Returns True if state changed."""
+    (no INBOX append). Returns True if state changed.
+
+    For plan-declared gates, idempotency is governed by `cleared_gates`.
+    For F006 breaker:<kind> gates, idempotency is governed by `active_breakers`:
+    once approved, the breaker is removed from active_breakers AND stripped
+    from cleared_gates (transient lifecycle — re-trip pauses cleanly). A
+    second approve of the same already-cleared breaker is therefore a no-op,
+    matching the function's documented contract.
+    """
     gate_str = _stringify_gates([gate])[0]
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
+    is_breaker = gate_str.startswith("breaker:")
     cleared = list(state.get("cleared_gates") or [])
-    if gate_str in cleared:
-        return False
-    cleared.append(gate_str)
-    state["cleared_gates"] = cleared
+    active = list(state.get("active_breakers") or [])
+
+    if is_breaker:
+        # No-op when the breaker isn't currently active. Either it was never
+        # tripped, or it was approved earlier and removed; either way there's
+        # nothing to clear.
+        if gate_str not in active:
+            return False
+    else:
+        if gate_str in cleared:
+            return False
+
     history = list(state.get("history") or [])
     history.append(
         {"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor}
     )
     state["history"] = history
-    # F006: clearing a breaker:<kind> approval pops it from active_breakers so
-    # next dispatch can proceed without re-prompting (and so a future trip of
-    # the same breaker re-pauses cleanly).
-    if gate_str.startswith("breaker:"):
-        breakers = [b for b in (state.get("active_breakers") or []) if b != gate_str]
-        if breakers:
-            state["active_breakers"] = breakers
+
+    if is_breaker:
+        # F006 transient lifecycle: pop from active_breakers; do NOT accumulate
+        # in cleared_gates so the next trip re-pauses without prior approval
+        # bleeding through.
+        active = [b for b in active if b != gate_str]
+        if active:
+            state["active_breakers"] = active
         else:
             state.pop("active_breakers", None)
-        # Drop from cleared_gates too — breakers are transient, no need to
-        # accumulate them in the durable approval log.
         state["cleared_gates"] = [c for c in cleared if c != gate_str]
+    else:
+        cleared.append(gate_str)
+        state["cleared_gates"] = cleared
+
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
     return True

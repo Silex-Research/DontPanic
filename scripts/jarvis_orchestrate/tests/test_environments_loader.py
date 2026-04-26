@@ -1,6 +1,6 @@
 """F023 EC1 — environments.json loader + supervisor pre-dispatch validator tests.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_environments_loader
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_environments_loader.py
 """
 from __future__ import annotations
 

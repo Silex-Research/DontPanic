@@ -14,7 +14,18 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-REGISTRY_PATH = Path.home() / ".jarvis" / "active_supervisors.jsonl"
+_DEFAULT_REGISTRY_PATH = Path.home() / ".jarvis" / "active_supervisors.jsonl"
+REGISTRY_PATH = _DEFAULT_REGISTRY_PATH
+
+
+def _effective_registry_path() -> Path:
+    """Honor JARVIS_ACTIVE_SUPERVISORS_PATH for hermetic test isolation;
+    fall back to the module-attribute path so legacy tests that monkey-patch
+    REGISTRY_PATH directly still work."""
+    env_override = os.environ.get("JARVIS_ACTIVE_SUPERVISORS_PATH")
+    if env_override:
+        return Path(env_override)
+    return REGISTRY_PATH
 
 
 @dataclass(frozen=True)
@@ -32,14 +43,15 @@ def _now_iso() -> str:
 
 
 def _ensure_parent() -> None:
-    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _effective_registry_path().parent.mkdir(parents=True, exist_ok=True)
 
 
 def _read_all() -> list[SupervisorEntry]:
-    if not REGISTRY_PATH.is_file():
+    path = _effective_registry_path()
+    if not path.is_file():
         return []
     out: list[SupervisorEntry] = []
-    for line in REGISTRY_PATH.read_text().splitlines():
+    for line in path.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
@@ -54,7 +66,7 @@ def _read_all() -> list[SupervisorEntry]:
 def _write_all(entries: list[SupervisorEntry]) -> None:
     _ensure_parent()
     body = "".join(json.dumps(asdict(e)) + "\n" for e in entries)
-    REGISTRY_PATH.write_text(body)
+    _effective_registry_path().write_text(body)
 
 
 def _is_pid_alive(pid: int) -> bool:

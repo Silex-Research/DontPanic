@@ -1,6 +1,6 @@
 """F023 EC11 — cwd discipline + .firebaserc invariant + prompt --project rule.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_ec11_cwd_firebaserc
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec11_cwd_firebaserc.py
 """
 from __future__ import annotations
 

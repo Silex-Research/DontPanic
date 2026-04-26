@@ -1,6 +1,6 @@
 """F023 Expansion B — requires_gates[] enforcement bridge to EC7.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_expansion_b_requires_gates
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_expansion_b_requires_gates.py
 """
 from __future__ import annotations
 
