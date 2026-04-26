@@ -45,7 +45,15 @@ def _next_action_for(volley_status: str, signed_off: bool) -> str:
         return "blocked_awaiting_human"
     if volley_status == "paused_on_gate":
         return "blocked_awaiting_human"
-    if volley_status in {"stopped_quota", "stopped_max_iterations", "stopped_no_progress"}:
+    # supervisor.dispatch_volley emits "stopped_cap" when iteration cap is
+    # reached; the legacy "stopped_max_iterations" alias is kept for callers
+    # that may emit it directly.
+    if volley_status in {
+        "stopped_quota",
+        "stopped_cap",
+        "stopped_max_iterations",
+        "stopped_no_progress",
+    }:
         return "remediate"
     return "defer"
 

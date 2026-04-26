@@ -47,6 +47,32 @@ class QuotaExceeded(RuntimeError):
     pass
 
 
+def _maybe_emit_quota_warn(
+    plan_dir: Path,
+    plan_id: str,
+    agent: str,
+    pct: float | None,
+    feature_id: str,
+) -> None:
+    """F008 Item 1 — emit INBOX quota_warn when soft threshold hit (enforce=soft)."""
+    if pct is None or pct < SOFT_THRESHOLD_PERCENT:
+        return
+    inbox.append_event(
+        plan_dir,
+        event="quota_warn",
+        plan_id=plan_id,
+        body=(
+            f"Quota soft-warn: {agent} at {pct}% of weekly cap "
+            f"(threshold {SOFT_THRESHOLD_PERCENT}%). Volley proceeding because "
+            "JARVIS_QUOTA_ENFORCE=soft (default). Set =hard to halt at threshold."
+        ),
+        agent=agent,
+        percent_weekly=pct,
+        threshold=SOFT_THRESHOLD_PERCENT,
+        feature_id=feature_id,
+    )
+
+
 @contextmanager
 def _registered_supervisor(
     plan_id: str,
@@ -437,12 +463,21 @@ def dispatch_volley(
             try:
                 impl_pct, impl_quota_line = _quota_gate(impl_name)
             except QuotaExceeded as exc:
+                inbox.append_event(
+                    loaded.plan_dir,
+                    event="error",
+                    plan_id=loaded.plan_id,
+                    body=f"Quota hard-block (implementer): {exc}",
+                    agent=impl_name,
+                    feature_id=feature_id,
+                )
                 return _emit_volley_terminal(
                     VolleyResult("stopped_quota", iteration, str(exc), audit_paths),
                     loaded=loaded, feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
             print(impl_quota_line)
+            _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id)
 
             impl_audit_path = _run_round(
                 loaded=loaded,
@@ -476,12 +511,21 @@ def dispatch_volley(
             try:
                 aud_pct, aud_quota_line = _quota_gate(aud_name)
             except QuotaExceeded as exc:
+                inbox.append_event(
+                    loaded.plan_dir,
+                    event="error",
+                    plan_id=loaded.plan_id,
+                    body=f"Quota hard-block (auditor): {exc}",
+                    agent=aud_name,
+                    feature_id=feature_id,
+                )
                 return _emit_volley_terminal(
                     VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths),
                     loaded=loaded, feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
             print(aud_quota_line)
+            _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id)
 
             aud_audit_path = _run_round(
                 loaded=loaded,
@@ -712,6 +756,22 @@ def _run_round(
     # to use volley prompts we need executors to honor extra_context["prompt_override"].
     # See codex_cli/claude_cli for the override hook below.
     result = executor.dispatch(task)
+
+    if not result.success:
+        inbox.append_event(
+            loaded.plan_dir,
+            event="error",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Executor {agent_name} ({role}) iteration {iteration} reported "
+                f"failure: {result.error or '(no error string)'}.\nVolley continues "
+                "and the audit JSON below records the failure surface."
+            ),
+            agent=agent_name,
+            role=role,
+            iteration=iteration,
+            feature_id=feature["id"],
+        )
 
     target_context = None
     if target_env is not None:

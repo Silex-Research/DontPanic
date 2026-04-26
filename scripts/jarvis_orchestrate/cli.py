@@ -52,10 +52,12 @@ def _approve_main(argv: list[str]) -> int:
     plan_arg, gate = argv
     plan_dir = _resolve_plan_dir(plan_arg)
     loaded = plan_loader.load(plan_dir)
-    declared = list(loaded.plan.human_gates or [])
-    if gate not in declared:
+    # plan.human_gates is a list of HumanGate enum members; compare on .value
+    # so the user-supplied string CLI arg matches the declared set.
+    declared_strs = [g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])]
+    if gate not in declared_strs:
         print(
-            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared}; "
+            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared_strs}; "
             f"recording anyway",
             file=sys.stderr,
         )
@@ -71,7 +73,7 @@ def _approve_main(argv: list[str]) -> int:
         print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
     else:
         print(f"[approve] gate {gate!r} was already cleared")
-    remaining = gate_pause.unmet_gates(plan_dir, declared)
+    remaining = gate_pause.unmet_gates(plan_dir, declared_strs)
     print(f"[approve] remaining unmet gates: {remaining or '(none)'}")
     return 0
 
