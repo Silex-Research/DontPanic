@@ -1,6 +1,6 @@
 """F006 — 7 loop termination triggers.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_f006_circuit_breakers
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py
 """
 from __future__ import annotations
 
@@ -543,6 +543,88 @@ target_project: none
     print("  ✓ resume clears active breakers even when plan declares no human_gates")
 
 
+# ──────────────────────────────  D074-amend2 fixes  ──────────────────────────────
+
+
+def test_active_breaker_preempts_executor_resolution() -> None:
+    """D074-amend2 Fix#1: an active breaker:* gate must pause dispatch BEFORE
+    _resolve_executor runs. Reproduces the reviewer's case: with breaker:wall_clock
+    active and AGENT_REGISTRY empty, dispatch must return paused_on_gate, not
+    KeyError."""
+    print("\n[test] active_breaker_preempts_executor_resolution ...")
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-413-infra-f006-preempt")
+        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-413-infra-f006-preempt",
+                                declared_gates=["pre_impl"])
+        # Plant the breaker explicitly so dispatch hits an unmet gate from start.
+        gate_pause.add_breaker(plan_dir, "breaker:wall_clock",
+                               plan_id="2026-04-26-413-infra-f006-preempt")
+        # Empty registry → KeyError if executor resolution runs before gate-pause.
+        saved_registry = dict(AGENT_REGISTRY)
+        saved_quota = _bypass_quota()
+        AGENT_REGISTRY.clear()
+        os.environ[notify.DISABLE_ENV] = "1"
+        try:
+            result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            assert result.final_status == "paused_on_gate", result
+            assert "breaker:wall_clock" in result.reason
+        finally:
+            AGENT_REGISTRY.clear()
+            AGENT_REGISTRY.update(saved_registry)
+            supervisor._quota_gate = saved_quota
+            os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ active breaker pauses dispatch even with empty AGENT_REGISTRY")
+
+
+def test_cli_approve_refuses_global_breaker() -> None:
+    """D074-amend2 Fix#2: the global circuit breaker is hard-stop with no
+    operator clearance. `jarvis approve <plan> breaker:global_circuit_breaker`
+    must refuse with a non-zero exit code rather than print 'cleared gate'."""
+    print("\n[test] cli_approve_refuses_global_breaker ...")
+    from jarvis_orchestrate import cli
+    from contextlib import redirect_stderr
+    buf_out = io.StringIO()
+    buf_err = io.StringIO()
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-414-infra-f006-no-global-clear")
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            rc = cli.main(["approve", str(plan_dir), "breaker:global_circuit_breaker"])
+        assert rc != 0, "approve must fail for the global breaker"
+        assert "REFUSED" in buf_err.getvalue() or "hard-stop" in buf_err.getvalue()
+        assert "cleared gate" not in buf_out.getvalue()
+    print("  ✓ approve refuses breaker:global_circuit_breaker")
+
+
+def test_breaker_approve_is_idempotent() -> None:
+    """D074-amend2 Fix#3: approve_gate's idempotency contract must hold for
+    breaker:* gates too. After a breaker is approved (popped from
+    active_breakers), a second approve of the same gate must return False
+    and append no second history entry."""
+    print("\n[test] breaker_approve_is_idempotent ...")
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-415-infra-f006-idem")
+        plan_id = "2026-04-26-415-infra-f006-idem"
+        gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id=plan_id)
+        first = gate_pause.approve_gate(plan_dir, "breaker:wall_clock", plan_id=plan_id)
+        assert first is True
+        second = gate_pause.approve_gate(plan_dir, "breaker:wall_clock", plan_id=plan_id)
+        assert second is False, "second approve of cleared breaker must be a no-op"
+        # And a third, just to be sure
+        third = gate_pause.approve_gate(plan_dir, "breaker:wall_clock", plan_id=plan_id)
+        assert third is False
+        # History should hold exactly one approve entry for this breaker
+        state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
+        approves = [
+            h for h in state.get("history", [])
+            if h.get("action") == "approve" and h.get("gate") == "breaker:wall_clock"
+        ]
+        assert len(approves) == 1, approves
+    print("  ✓ second approve of cleared breaker is no-op (idempotent)")
+
+
 # ──────────────────────────────  driver  ──────────────────────────────
 
 
@@ -561,6 +643,9 @@ def main() -> int:
     test_global_breaker_evaluates_before_executor_resolution()
     test_cli_approve_breaker_no_false_warning()
     test_cli_resume_clears_active_breakers_with_no_human_gates()
+    test_active_breaker_preempts_executor_resolution()
+    test_cli_approve_refuses_global_breaker()
+    test_breaker_approve_is_idempotent()
     print("\n✓ F006 circuit-breaker tests passed")
     return 0
 

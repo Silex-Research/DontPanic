@@ -1,6 +1,6 @@
 """F023 Step 1 synthetic tests for EC9/EC10.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_execution_environment
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_execution_environment.py
 """
 from __future__ import annotations
 

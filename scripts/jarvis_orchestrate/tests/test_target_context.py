@@ -1,6 +1,6 @@
 """F023 Step 3 (EC3 + EC4 + EC5 + EC6) — target_context + asymmetric reject + post-hoc command_guard.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_target_context
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_target_context.py
 """
 from __future__ import annotations
 

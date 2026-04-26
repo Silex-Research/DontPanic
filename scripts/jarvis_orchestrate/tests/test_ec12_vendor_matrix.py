@@ -1,6 +1,6 @@
 """F023 EC12 — expanded command_guard vendor coverage matrix.
 
-Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_ec12_vendor_matrix
+Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec12_vendor_matrix.py
 """
 from __future__ import annotations
 
