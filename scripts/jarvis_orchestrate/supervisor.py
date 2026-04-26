@@ -16,6 +16,11 @@ from pathlib import Path
 from typing import Any
 
 from jarvis_orchestrate import audit_writer, command_guard, plan_loader, prompts, transcript
+from jarvis_orchestrate.environments_loader import (
+    find_repo_root_for_plan,
+    load_environments,
+    validate_target,
+)
 from jarvis_orchestrate.execution_environment import ExecutionEnvironment
 from jarvis_orchestrate.executors import ClaudeCLIExecutor, get_executor
 from jarvis_orchestrate.executors.base import BaseExecutor, DispatchTask
@@ -26,6 +31,30 @@ SOFT_THRESHOLD_PERCENT = 90.0
 
 class QuotaExceeded(RuntimeError):
     pass
+
+
+def _validate_environment_registry(
+    plan_dir: Path, target_env: str, target_project: str | None
+) -> tuple[str | None, str]:
+    """F023 EC1+A pre-dispatch check.
+
+    Returns (registry_repo_label_or_None, log_line). Raises
+    EnvironmentsTargetMismatchError / EnvironmentsValidationError to halt dispatch
+    before ExecutionEnvironment opens or any executor is called. Host-local plans
+    (target_project=None) and plans living outside any environments.json scope
+    skip silently.
+    """
+    if target_project is None:
+        return None, "[env-registry] target_project=None (host-local) — skip"
+    repo_root = find_repo_root_for_plan(plan_dir)
+    if repo_root is None:
+        return None, "[env-registry] no environments.json on path — skip"
+    env = load_environments(repo_root)
+    validate_target(env, target_env, target_project)
+    return env.repo, (
+        f"[env-registry] {env.repo} ({repo_root}): "
+        f"{target_env} → {target_project} validated"
+    )
 
 
 def _read_quota_state() -> dict | None:
@@ -91,6 +120,11 @@ def dispatch_single_agent(
         target_project if target_project is not None else loaded.target_project
     )
 
+    registry_repo, registry_log = _validate_environment_registry(
+        loaded.plan_dir, effective_env, effective_project
+    )
+    print(registry_log)
+
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,
         target_env=effective_env,
@@ -123,6 +157,7 @@ def dispatch_single_agent(
                 f"execution_env_root={exec_env.root}",
                 f"target_env={effective_env} target_project={effective_project or '(none)'}",
                 f"target_source=kwarg" if target_env is not None or target_project is not None else "target_source=plan",
+                f"env_registry={registry_repo or '(none)'}",
             ],
             target_context={
                 "env": effective_env,
@@ -207,6 +242,11 @@ def dispatch_volley(
         "kwarg" if (target_env is not None or target_project is not None) else "plan"
     )
 
+    registry_repo, registry_log = _validate_environment_registry(
+        loaded.plan_dir, effective_env, effective_project
+    )
+    print(registry_log)
+
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,
         target_env=effective_env,
@@ -223,7 +263,8 @@ def dispatch_volley(
             f"execution_env_root={exec_env.root} "
             f"target_env={effective_env} "
             f"target_project={effective_project or '(none)'} "
-            f"target_source={target_source}"
+            f"target_source={target_source} "
+            f"env_registry={registry_repo or '(none)'}"
         )
 
         for iteration in range(cap + 1):
