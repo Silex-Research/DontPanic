@@ -5,6 +5,12 @@ Implementer template (round N≥1): includes prior auditor's findings, instructe
   to address each.
 Auditor template: includes implementer's audit JSON path + git diff context, asks
   for findings list per audit.schema.json semantics.
+
+F023 EC5 (Step 3): both templates require agents to declare {repo, env, project}
+at the top of the response and prefix every side-effect command with `$ ` so the
+supervisor can extract commands_run for post-hoc command_guard validation. The
+forbidden-command list is copied into both prompts so agents pre-emptively refuse
+process-global mutators (gcloud config set project, firebase use, etc.).
 """
 from __future__ import annotations
 
@@ -13,12 +19,62 @@ from pathlib import Path
 from typing import Any
 
 
+# F023 EC3/EC9: kept in sync with command_guard._reject patterns. Update both
+# when adding a new forbidden CLI shape so prompt + post-hoc check agree.
+FORBIDDEN_COMMAND_PATTERNS = [
+    "gcloud config set project ...",
+    "gcloud config configurations activate ...  (without isolated CLOUDSDK_CONFIG)",
+    "firebase use [...]",
+    "kubectl config use-context ...",
+    "gh auth switch",
+    "npm/yarn/pnpm config set ...",
+    "git config --global ...",
+    "docker context use ...",
+]
+
+
+def _target_block(target_env: str | None, target_project: str | None) -> str:
+    """Render the F023 EC5 declaration + accountability rules used by both prompts."""
+    project_line = (
+        f"target_project = `{target_project}`"
+        if target_project is not None
+        else "target_project = (host-local — no cloud project; declare `Project: (none)`)"
+    )
+    forbidden = "\n".join(f"  - {p}" for p in FORBIDDEN_COMMAND_PATTERNS)
+    return f"""
+## Target accountability (F023 EC5)
+
+Dispatched target:
+  target_env = `{target_env}`
+  {project_line}
+
+Before any side-effect tool call, declare in your reply:
+  Repo: <name>
+  Env: {target_env}
+  Project: {target_project if target_project is not None else "(none)"}
+  Command: <the exact command you intend to run>
+
+List every side-effect command you actually invoked, one per line, prefixed with
+`$ ` (standard shell prompt). The supervisor extracts these into the audit's
+target_context.commands_run for post-hoc validation. Example:
+
+  $ gcloud services list --project={target_project or "PROJECT"}
+  $ firebase deploy --project {target_project or "PROJECT"} --only hosting
+
+Forbidden command shapes (the supervisor will downgrade or block your audit if
+any of these appear in commands_run — use the explicit-flag equivalent):
+{forbidden}
+"""
+
+
 def implementer_prompt(
     plan_id: str,
     plan_dir: Path,
     feature: dict[str, Any],
     iteration: int,
     prior_auditor_path: Path | None = None,
+    target_env: str | None = None,
+    target_project: str | None = None,
 ) -> str:
     steps = "\n".join(f"- {s}" for s in (feature.get("steps") or [])) or "(none specified)"
     base = f"""You are the implementer for plan {plan_id}, iteration {iteration}.
@@ -31,15 +87,17 @@ Acceptance: {feature['acceptance']}
 Steps:
 {steps}
 """
+    target_section = _target_block(target_env, target_project) if target_env is not None else ""
+
     if iteration == 0 or prior_auditor_path is None:
-        return base + (
+        return base + target_section + (
             "\nImplement the feature. Run any verification commands specified in steps.\n"
             "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
             "Do NOT output JSON; the supervisor wraps your reply.\n"
         )
 
     findings_block = _findings_block(prior_auditor_path)
-    return base + (
+    return base + target_section + (
         f"\nPrior round's auditor produced findings (full JSON at {prior_auditor_path}):\n"
         f"{findings_block}\n"
         "Address each finding. Make code changes as needed. Run verification commands.\n"
@@ -54,8 +112,12 @@ def auditor_prompt(
     feature: dict[str, Any],
     iteration: int,
     implementer_audit_path: Path,
+    target_env: str | None = None,
+    target_project: str | None = None,
 ) -> str:
     steps = "\n".join(f"- {s}" for s in (feature.get("steps") or [])) or "(none specified)"
+    target_section = _target_block(target_env, target_project) if target_env is not None else ""
+    project_line = target_project if target_project is not None else "(none)"
     return f"""You are the auditor for plan {plan_id}, iteration {iteration}.
 
 Plan directory: {plan_dir}
@@ -70,17 +132,23 @@ The implementer just claimed completion. Their audit JSON is at:
 
 Your job:
 1. Read the implementer's audit summary at the path above.
-2. Inspect the actual code changes (run `git diff HEAD~1` or `git status` from {plan_dir.parent.parent}).
-3. Run any tests/lints/checks the steps specify, or that you'd expect for this category of work.
-4. Compare what was claimed against what was actually done.
-5. List concrete findings — each with severity (critical|high|medium|low|advisory),
+2. Verify the implementer declared {{Repo, Env: {target_env}, Project: {project_line}}}
+   correctly in their summary; if a declaration is missing or mismatched, raise a
+   FINDING (high, correctness) — the supervisor will also catch this post-hoc.
+3. Inspect target_context.commands_run in the implementer audit; flag any
+   forbidden command shapes (see list below).
+4. Inspect the actual code changes (run `git diff HEAD~1` or `git status` from {plan_dir.parent.parent}).
+5. Run any tests/lints/checks the steps specify, or that you'd expect for this category of work.
+6. Compare what was claimed against what was actually done.
+7. List concrete findings — each with severity (critical|high|medium|low|advisory),
    category (correctness|security|performance|architecture|style|test_coverage|documentation),
    issue (one sentence), evidence (what you observed), recommendation (what to fix).
-
+{target_section}
 Reply with a concise paragraph that:
-- States overall verdict (signed_off | needs_changes | blocked)
-- Lists each finding inline with severity (e.g. "FINDING (high, test_coverage): ...")
-- Mentions any tests/checks you actually ran
+- Begins with your own {{Repo, Env: {target_env}, Project: {project_line}}} declaration block.
+- States overall verdict (signed_off | needs_changes | blocked).
+- Lists each finding inline with severity (e.g. "FINDING (high, test_coverage): ...").
+- Mentions any tests/checks you actually ran with `$ ` line prefixes.
 
 Do NOT output JSON; the supervisor extracts findings from your prose and wraps the result.
 """
@@ -108,4 +176,4 @@ def _findings_block(audit_path: Path) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["implementer_prompt", "auditor_prompt"]
+__all__ = ["FORBIDDEN_COMMAND_PATTERNS", "implementer_prompt", "auditor_prompt"]
