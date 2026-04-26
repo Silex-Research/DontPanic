@@ -309,16 +309,3 @@ def test_auditor_prose_extracts_status_and_findings() -> None:
         assert audit["findings"][0]["severity"] == "high", audit
         assert audit["findings"][0]["category"] == "test_coverage", audit
         print("  ✓ auditor prose produces needs_changes + structured finding")
-
-
-def main() -> int:
-    test_iterates_then_signs_off()
-    test_no_progress_termination()
-    test_iteration_cap_termination()
-    test_auditor_prose_extracts_status_and_findings()
-    print("\n✓ all 4 synthetic volley tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

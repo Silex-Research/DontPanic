@@ -553,37 +553,3 @@ def test_supervisor_project_mismatch_blocks_pre_dispatch() -> None:
             AGENT_REGISTRY.clear()
             AGENT_REGISTRY.update(saved_registry)
             supervisor._quota_gate = saved_quota
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_load_environments_full_three_tier()
-    test_load_environments_sparse_dev_only()
-    test_load_environments_missing_file_raises()
-    test_load_environments_malformed_json_raises()
-    test_load_environments_extra_field_rejected()
-    test_load_environments_no_tiers_rejected()
-    test_load_environments_tier_without_project_rejected()
-    test_load_environments_missing_repo_field_rejected()
-    test_find_repo_root_at_plan_root()
-    test_find_repo_root_walks_up()
-    test_find_repo_root_returns_none_when_absent()
-    test_validate_target_happy()
-    test_validate_target_undeclared_tier_raises()
-    test_validate_target_project_mismatch_raises()
-    test_validate_target_host_local_skipped()
-    test_validate_target_matches_gcp_project_field()
-    test_validate_target_invalid_env_label_raises()
-    test_supervisor_host_local_skips_registry_check()
-    test_supervisor_no_registry_skips_silently()
-    test_supervisor_registry_match_records_evidence()
-    test_supervisor_undeclared_tier_blocks_pre_dispatch()
-    test_supervisor_project_mismatch_blocks_pre_dispatch()
-    print("\n✓ F023 EC1 environments_loader tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

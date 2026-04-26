@@ -516,31 +516,3 @@ def test_error_inbox_event_fires_on_executor_failure() -> None:
             supervisor._quota_gate = saved_quota
             os.environ.pop(notify.DISABLE_ENV, None)
     print("  ✓ failed executor dispatch emits INBOX error with agent + cause")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_inbox_round_trip()
-    test_inbox_tolerant_of_operator_body_edits()
-    test_notify_disable_env_short_circuits()
-    test_notify_missing_binary_returns_false()
-    test_gate_pause_evaluate_and_clear()
-    test_gate_pause_record_pause_writes_history()
-    test_signoff_writer_validates_against_schema()
-    test_signoff_writer_blocked_state()
-    test_e2e_pause_then_approve_then_resume()
-    test_cli_approve_no_false_warning_for_declared_gate()
-    test_signoff_writer_stopped_cap_maps_to_remediate()
-    test_approve_clears_pause_marker_when_all_resolved()
-    test_resume_clears_pause_marker_when_all_resolved()
-    test_partial_approve_keeps_pause_marker()
-    test_quota_warn_inbox_event_fires_at_soft_threshold()
-    test_error_inbox_event_fires_on_executor_failure()
-    print("\n✓ F008 engagement-surface tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

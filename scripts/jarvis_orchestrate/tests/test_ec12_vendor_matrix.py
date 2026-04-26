@@ -116,23 +116,3 @@ def test_check_required_flags_helper() -> None:
     assert check_required_flags("firebase deploy --project foo") is None
     assert check_required_flags("git status") is None  # tool not in rules
     print("  ✓ check_required_flags exposed and returns reason str / None")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_firebase_deploy_requires_project_flag()
-    test_xcodebuild_requires_all_four_flags()
-    test_terraform_apply_requires_backend()
-    test_kubectl_mutating_requires_context()
-    test_gradle_requires_user_home()
-    test_npm_registry_mutation_rejected()
-    test_git_force_push_to_protected_branch_rejected()
-    test_check_required_flags_helper()
-    print("\n✓ F023 EC12 vendor matrix tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

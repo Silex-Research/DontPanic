@@ -190,22 +190,3 @@ def test_loader_registry_no_requires_gates_falls_back() -> None:
             print("  ✓ registry without requires_gates → hardcoded prod gate enforced")
             return
     raise AssertionError("expected PlanTargetError from hardcoded prod gate")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_no_override_keeps_hardcoded_prod_gate()
-    test_override_supersedes_for_prod()
-    test_override_applies_to_non_prod_tier()
-    test_empty_override_means_no_gates()
-    test_loader_consults_registry_requires_gates()
-    test_loader_falls_back_to_hardcoded_when_no_registry()
-    test_loader_registry_no_requires_gates_falls_back()
-    print("\n✓ F023 Expansion B requires_gates bridge tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -419,32 +419,3 @@ def test_supervisor_target_project_none_injects_no_project_labels() -> None:
             )
             assert "CLOUDSDK_CORE_PROJECT" not in env
     print("  ✓ target_project=none means: env_env labels still set, no project labels injected")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_parse_target_section_happy_path()
-    test_parse_target_section_missing_heading_raises()
-    test_parse_target_section_missing_yaml_block_raises()
-    test_parse_target_section_invalid_env_raises()
-    test_parse_target_section_missing_project_raises()
-    test_parse_target_section_none_sentinel_allowed()
-    test_validate_prod_gates_dev_skips_check()
-    test_validate_prod_gates_prod_with_both_gates_ok()
-    test_validate_prod_gates_prod_missing_pre_impl_raises()
-    test_validate_prod_gates_prod_missing_on_escalation_raises()
-    test_loader_exposes_target_fields()
-    test_loader_rejects_plan_missing_target_section()
-    test_loader_rejects_prod_plan_missing_gates()
-    test_loader_target_project_none_returns_python_none()
-    test_supervisor_reads_target_from_plan_when_kwargs_unset()
-    test_supervisor_kwargs_override_plan_target()
-    test_supervisor_target_project_none_injects_no_project_labels()
-    print("\n✓ F023 Step 2 EC2 + EC7 tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

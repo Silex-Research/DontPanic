@@ -140,23 +140,3 @@ def test_prompt_required_flag_patterns_module_export() -> None:
     assert any("firebase deploy" in p for p in prompts.REQUIRED_FLAG_PATTERNS)
     assert any("xcodebuild" in p for p in prompts.REQUIRED_FLAG_PATTERNS)
     print("  ✓ REQUIRED_FLAG_PATTERNS module-level list exported")
-
-
-# ──────────────────────────────  driver  ──────────────────────────────
-
-
-def main() -> int:
-    test_dispatch_task_carries_cwd()
-    test_firebaserc_skip_when_absent()
-    test_firebaserc_happy_path()
-    test_firebaserc_mismatch_raises()
-    test_firebaserc_malformed_raises()
-    test_firebaserc_empty_projects_skip()
-    test_prompt_target_block_has_required_flag_section()
-    test_prompt_required_flag_patterns_module_export()
-    print("\n✓ F023 EC11 cwd + firebaserc + prompt tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

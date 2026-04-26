@@ -419,17 +419,3 @@ def test_supervisor_volley_threads_isolated_env_to_executors() -> None:
         AGENT_REGISTRY.clear()
         AGENT_REGISTRY.update(saved_registry)
         sup._quota_gate = saved_quota_gate
-
-
-def main() -> int:
-    test_parallel_envs_isolate_gcloud_mutations()
-    test_command_guard_forbidden_rejections()
-    test_soft_env_var_coverage()
-    test_executor_subprocess_receives_isolated_env()
-    test_supervisor_volley_threads_isolated_env_to_executors()
-    print("\n✓ F023 Step 1 EC9/EC10 synthetic tests passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
