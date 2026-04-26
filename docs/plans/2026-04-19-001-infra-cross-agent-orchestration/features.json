@@ -223,14 +223,14 @@
       "id": "F006",
       "category": "tooling",
       "phase": 2,
-      "description": "Seven loop termination triggers with pause-not-stop semantics (except global circuit breaker, which is hard-stop)",
+      "description": "Seven loop termination triggers with pause-for-approval semantics (except global circuit breaker, which is hard-stop). Six approval-required triggers integrate with F008's gate-pause framework via synthetic `breaker:<kind>` gate names; operators clear via `jarvis approve <plan-id> breaker:<kind>` or `jarvis resume <plan-id>`. Global breaker uses ~/.jarvis/breaker_history.jsonl with a 24h sliding window.",
       "steps": [
         "Implement: iteration cap, budget ceiling, wall-clock timeout, no-progress detection, diminishing-returns detection, convergence collapse, global circuit breaker",
-        "Pause-for-approval (6 of 7): write diagnostic to INBOX.md, fire notification, await RESPONSE: edit, reset counters on approval",
-        "Global circuit breaker (hard): after 3 consecutive cap-hits in 24h across plans, pause all autonomous work",
+        "Pause-for-approval (6 of 7): supervisor records the breaker via gate_pause.add_breaker (synthetic `breaker:<kind>` entry in <plan_dir>/audit/gate-state.json's active_breakers list), writes INBOX breaker_tripped event, fires terminal-notifier; operator clears via `jarvis approve <plan-id> breaker:<kind>` or `jarvis resume <plan-id>`. Re-trip after clearance pauses again (transient lifecycle).",
+        "Global circuit breaker (hard): after 3 iteration_cap hits in 24h across plans, pause all autonomous work. No operator clearance — supervisor returns stopped_global_breaker before executor resolution.",
         "Synthetic tests for each trigger condition"
       ],
-      "acceptance": "7 synthetic scenarios each trigger correct termination; 6 produce pause-and-resume behavior, 1 (global) produces hard stop with operator alert",
+      "acceptance": "7 synthetic scenarios each trigger correct termination; 6 produce pause-and-resume behavior via `breaker:<kind>` gates clearable through `jarvis approve` or `jarvis resume`, 1 (global) produces hard stop with operator alert and no clearance path. Global breaker check runs before executor resolution so a tripped breaker halts dispatch even with an empty AGENT_REGISTRY. budget_ceiling reads ~/.jarvis/quota_state.json (the F020-populated source) for per-agent percent_weekly observed values, not phantom audit fields.",
       "passes": true,
       "evidence_refs": [
         {

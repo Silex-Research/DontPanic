@@ -152,18 +152,20 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
     state["plan_id"] = plan_id
     cleared = set(state.get("cleared_gates") or [])
     newly = [g for g in declared_strs if g not in cleared]
-    if not newly:
+    pending_breakers = list(state.get("active_breakers") or [])
+    # F006: don't early-return when declared_gates were already cleared if
+    # pending_breakers still exist — operator's "resume all" intent must reach
+    # the breakers too.
+    if not newly and not pending_breakers:
         return []
-    cleared.update(newly)
-    state["cleared_gates"] = sorted(cleared)
+    if newly:
+        cleared.update(newly)
+        state["cleared_gates"] = sorted(cleared)
     history = list(state.get("history") or [])
     for g in newly:
         history.append(
             {"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor}
         )
-    # F006: resume_all also clears every active breaker. Operator's intent is
-    # "all clear — proceed" — both plan.human_gates and pending breakers fit.
-    pending_breakers = list(state.get("active_breakers") or [])
     for b in pending_breakers:
         history.append(
             {"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor}
@@ -172,7 +174,8 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
         state.pop("active_breakers", None)
         # Strip any breaker entries from cleared_gates too (transient).
         state["cleared_gates"] = sorted(
-            c for c in state["cleared_gates"] if not c.startswith("breaker:")
+            c for c in (state.get("cleared_gates") or [])
+            if not c.startswith("breaker:")
         )
     state["history"] = history
     _maybe_clear_pause_marker(state)

@@ -5,10 +5,12 @@ Run: PYTHONPATH=scripts python3 -m jarvis_orchestrate.tests.test_f006_circuit_br
 from __future__ import annotations
 
 import datetime as dt
+import io
 import json
 import os
 import sys
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
@@ -43,29 +45,49 @@ def test_check_wall_clock() -> None:
     print("  ✓ wall_clock fires when elapsed > max, passes when fresh")
 
 
-def test_check_budget_ceiling() -> None:
-    print("\n[test] check_budget_ceiling ...")
+def test_check_budget_ceiling_reads_quota_state_file() -> None:
+    """F006 fix#1: budget_ceiling now reads the F020-populated
+    ~/.jarvis/quota_state.json, not a phantom field on audit JSONs."""
+    print("\n[test] check_budget_ceiling_reads_quota_state_file ...")
     with tempfile.TemporaryDirectory() as td:
-        ad = Path(td)
+        ad = Path(td) / "audits"
+        ad.mkdir()
+        # Real-shape audit (no percent_weekly — the bug the fix closes).
         (ad / "claude-implementer-i0.json").write_text(json.dumps({
             "task_id": "t", "audit_id": "t#claude#0",
             "agent": "claude", "agent_role": "implementer", "iteration": 0,
             "started_at": _iso_now(), "completed_at": _iso_now(),
             "audit_status": "needs_changes",
-            "quota_consumed": {"percent_weekly": 80.0},
+            "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
+        }))
+        # quota_state.json supplied via the new explicit kwarg
+        qs = Path(td) / "quota_state.json"
+        qs.write_text(json.dumps({
+            "models": {"claude": {"percent_weekly": 80.0, "plan": "x"}}
         }))
         # No caps → no trip
-        assert not cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)[0]
-        # Cap=50 → trip (80 > 50)
+        assert not cb.check_budget_ceiling(sorted(ad.glob("*.json")), None,
+                                            quota_state_path=qs)[0]
+        # Cap=50 → trip (state says 80%)
         tripped, reason = cb.check_budget_ceiling(
-            sorted(ad.glob("*.json")), {"claude": 50.0}
+            sorted(ad.glob("*.json")), {"claude": 50.0},
+            quota_state_path=qs,
         )
-        assert tripped and "claude" in reason and "80" in reason
+        assert tripped, reason
+        assert "claude" in reason and "80" in reason and "quota_state.json" in reason
         # Cap=90 → no trip
         assert not cb.check_budget_ceiling(
-            sorted(ad.glob("*.json")), {"claude": 90.0}
+            sorted(ad.glob("*.json")), {"claude": 90.0},
+            quota_state_path=qs,
         )[0]
-    print("  ✓ budget_ceiling trips per-agent vs declared caps")
+        # Agent absent from this volley's audits → no trip even at over-cap state
+        empty = Path(td) / "empty"
+        empty.mkdir()
+        assert not cb.check_budget_ceiling(
+            sorted(empty.glob("*.json")), {"claude": 50.0},
+            quota_state_path=qs,
+        )[0]
+    print("  ✓ budget_ceiling reads quota_state.json + scoped to participating agents")
 
 
 def test_check_no_progress() -> None:
@@ -133,55 +155,45 @@ def test_check_convergence_collapse() -> None:
 
 
 def test_global_breaker_threshold() -> None:
+    """conftest's autouse fixture redirects JARVIS_BREAKER_HISTORY_PATH per-test;
+    cb._effective_history_path() returns it. No manual monkeypatching needed."""
     print("\n[test] global_breaker_threshold ...")
-    with tempfile.TemporaryDirectory() as td:
-        # Redirect history file for hermetic test
-        saved = cb.GLOBAL_HISTORY_PATH
-        cb.GLOBAL_HISTORY_PATH = Path(td) / "history.jsonl"
-        try:
-            # Empty → not tripped
-            assert not cb.evaluate_global().tripped
-            # Two hits → not tripped
-            cb.record_global_hit("p1", cb.BreakerKind.ITERATION_CAP)
-            cb.record_global_hit("p2", cb.BreakerKind.ITERATION_CAP)
-            assert not cb.evaluate_global().tripped
-            # Third → tripped
-            cb.record_global_hit("p3", cb.BreakerKind.ITERATION_CAP)
-            state = cb.evaluate_global()
-            assert state.tripped and state.hits_in_window == 3
-            # Other breaker kinds don't count toward the threshold
-            cb.GLOBAL_HISTORY_PATH.unlink()
-            for _ in range(5):
-                cb.record_global_hit("p", cb.BreakerKind.NO_PROGRESS)
-            assert not cb.evaluate_global().tripped
-        finally:
-            cb.GLOBAL_HISTORY_PATH = saved
+    history = cb._effective_history_path()
+    # Empty → not tripped
+    assert not cb.evaluate_global().tripped
+    # Two hits → not tripped
+    cb.record_global_hit("p1", cb.BreakerKind.ITERATION_CAP)
+    cb.record_global_hit("p2", cb.BreakerKind.ITERATION_CAP)
+    assert not cb.evaluate_global().tripped
+    # Third → tripped
+    cb.record_global_hit("p3", cb.BreakerKind.ITERATION_CAP)
+    state = cb.evaluate_global()
+    assert state.tripped and state.hits_in_window == 3
+    # Other breaker kinds don't count toward the threshold
+    history.unlink()
+    for _ in range(5):
+        cb.record_global_hit("p", cb.BreakerKind.NO_PROGRESS)
+    assert not cb.evaluate_global().tripped
     print("  ✓ global breaker fires at 3+ iteration_cap hits; other kinds ignored for threshold")
 
 
 def test_global_breaker_window_pruning() -> None:
     print("\n[test] global_breaker_window_pruning ...")
-    with tempfile.TemporaryDirectory() as td:
-        saved = cb.GLOBAL_HISTORY_PATH
-        cb.GLOBAL_HISTORY_PATH = Path(td) / "history.jsonl"
-        try:
-            # Manually plant a stale entry outside the window
-            cb.GLOBAL_HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-            stale = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=48)).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
-            with cb.GLOBAL_HISTORY_PATH.open("w") as f:
-                for _ in range(5):
-                    f.write(json.dumps({
-                        "plan_id": "old", "kind": "iteration_cap", "at": stale,
-                    }) + "\n")
-            # Even 5 stale hits don't trip the breaker
-            assert not cb.evaluate_global().tripped
-            # One fresh hit alone doesn't either
-            cb.record_global_hit("new", cb.BreakerKind.ITERATION_CAP)
-            assert not cb.evaluate_global().tripped
-        finally:
-            cb.GLOBAL_HISTORY_PATH = saved
+    history = cb._effective_history_path()
+    history.parent.mkdir(parents=True, exist_ok=True)
+    stale = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=48)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    with history.open("w") as f:
+        for _ in range(5):
+            f.write(json.dumps({
+                "plan_id": "old", "kind": "iteration_cap", "at": stale,
+            }) + "\n")
+    # Even 5 stale hits don't trip the breaker
+    assert not cb.evaluate_global().tripped
+    # One fresh hit alone doesn't either
+    cb.record_global_hit("new", cb.BreakerKind.ITERATION_CAP)
+    assert not cb.evaluate_global().tripped
     print("  ✓ entries older than the 24h window don't count")
 
 
@@ -335,11 +347,9 @@ def _force_auditor_status(force: str):
 
 
 def test_supervisor_iteration_cap_pauses_via_breaker() -> None:
+    """Global history is isolated per-test by the conftest autouse fixture."""
     print("\n[test] supervisor_iteration_cap_pauses_via_breaker ...")
     with tempfile.TemporaryDirectory() as td:
-        # Redirect global history + active-supervisors to tmp
-        saved_history = cb.GLOBAL_HISTORY_PATH
-        cb.GLOBAL_HISTORY_PATH = Path(td) / "history.jsonl"
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-400-infra-f006-cap", cap=0)
         gate_pause.resume_all(plan_dir, plan_id="2026-04-26-400-infra-f006-cap",
@@ -370,7 +380,6 @@ def test_supervisor_iteration_cap_pauses_via_breaker() -> None:
             AGENT_REGISTRY.update(saved_registry)
             supervisor._quota_gate = saved_quota
             supervisor._run_round = saved_run
-            cb.GLOBAL_HISTORY_PATH = saved_history
             os.environ.pop(notify.DISABLE_ENV, None)
     print("  ✓ iteration_cap → breaker_tripped INBOX + synthetic gate + global history hit")
 
@@ -378,8 +387,6 @@ def test_supervisor_iteration_cap_pauses_via_breaker() -> None:
 def test_supervisor_global_breaker_hard_stops() -> None:
     print("\n[test] supervisor_global_breaker_hard_stops ...")
     with tempfile.TemporaryDirectory() as td:
-        saved_history = cb.GLOBAL_HISTORY_PATH
-        cb.GLOBAL_HISTORY_PATH = Path(td) / "history.jsonl"
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-401-infra-f006-global")
         gate_pause.resume_all(plan_dir, plan_id="2026-04-26-401-infra-f006-global",
@@ -407,9 +414,133 @@ def test_supervisor_global_breaker_hard_stops() -> None:
             AGENT_REGISTRY.clear()
             AGENT_REGISTRY.update(saved_registry)
             supervisor._quota_gate = saved_quota
-            cb.GLOBAL_HISTORY_PATH = saved_history
             os.environ.pop(notify.DISABLE_ENV, None)
     print("  ✓ global breaker hard-stops dispatch — no executors called, no clearance offered")
+
+
+# ──────────────────────────────  AC-honesty fixes (D074-amend)  ──────────────────────────────
+
+
+def test_global_breaker_evaluates_before_executor_resolution() -> None:
+    """Fix#2: global breaker must trip BEFORE _resolve_executor; an empty
+    AGENT_REGISTRY with a tripped global breaker should produce
+    stopped_global_breaker, not KeyError."""
+    print("\n[test] global_breaker_evaluates_before_executor_resolution ...")
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-410-infra-f006-order")
+        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-410-infra-f006-order",
+                                declared_gates=["pre_impl"])
+        for _ in range(3):
+            cb.record_global_hit("p", cb.BreakerKind.ITERATION_CAP)
+        # Critically: clear AGENT_REGISTRY so executor resolution would KeyError
+        # if reached before the global breaker check.
+        saved_registry = dict(AGENT_REGISTRY)
+        saved_quota = _bypass_quota()
+        AGENT_REGISTRY.clear()
+        os.environ[notify.DISABLE_ENV] = "1"
+        try:
+            result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            assert result.final_status == "stopped_global_breaker", result
+        finally:
+            AGENT_REGISTRY.clear()
+            AGENT_REGISTRY.update(saved_registry)
+            supervisor._quota_gate = saved_quota
+            os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ tripped global breaker halts dispatch before executor resolution")
+
+
+def test_cli_approve_breaker_no_false_warning() -> None:
+    """Fix#3a: jarvis approve <plan-id> breaker:<kind> must not warn that the
+    name isn't in plan.human_gates."""
+    print("\n[test] cli_approve_breaker_no_false_warning ...")
+    from jarvis_orchestrate import cli
+    from contextlib import redirect_stderr
+    buf_out = io.StringIO()
+    buf_err = io.StringIO()
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        plan_dir = _make_plan(repo, "2026-04-26-411-infra-f006-cli-approve")
+        # Trip the breaker so it's in active_breakers (gives the CLI two
+        # parallel paths to recognize the name as valid: known BreakerKind +
+        # currently active).
+        gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id="2026-04-26-411-infra-f006-cli-approve")
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            rc = cli.main(["approve", str(plan_dir), "breaker:wall_clock"])
+        assert rc == 0
+        assert "WARNING" not in buf_err.getvalue(), buf_err.getvalue()
+        # Sanity: a totally bogus name still warns.
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            cli.main(["approve", str(plan_dir), "breaker:totally_made_up_kind"])
+        # That name IS in BreakerKind only if the kind name matches; "totally_made_up_kind"
+        # doesn't, so it should warn. Active_breakers also doesn't have it.
+        assert "WARNING" in buf_err.getvalue() or "totally_made_up_kind" in buf_err.getvalue()
+    print("  ✓ CLI approve recognizes breaker:* as a valid declared name; bogus names still warn")
+
+
+def test_cli_resume_clears_active_breakers_with_no_human_gates() -> None:
+    """Fix#3b: jarvis resume must continue past the no-declared-gates short-circuit
+    when active_breakers is non-empty."""
+    print("\n[test] cli_resume_clears_active_breakers_with_no_human_gates ...")
+    from jarvis_orchestrate import cli
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        # Plan with empty human_gates list
+        plan_id = "2026-04-26-412-infra-f006-resume-no-gates"
+        plan_dir = repo / "docs" / "plans" / plan_id
+        plan_dir.mkdir(parents=True)
+        plan_md = f"""---
+id: {plan_id}
+title: F006 fix synthetic
+type: infra
+tier: trivial
+status: active
+date: "2026-04-26"
+description: Synthetic plan for fix#3b — no human_gates, only breakers.
+agents_required:
+  - claude
+  - codex
+human_gates: []
+loop_caps:
+  max_iterations: 1
+  hard_stop: false
+privacy_tier: internal
+links:
+  features: ./features.json
+---
+
+# F006 fix synthetic
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
+"""
+        (plan_dir / "plan.md").write_text(plan_md)
+        (plan_dir / "features.json").write_text(json.dumps({
+            "task_id": plan_id,
+            "schema_version": "1.0",
+            "features": [{
+                "id": "F001", "category": "test", "phase": 0,
+                "description": "Synthetic feature for F006 fix#3b.",
+                "steps": ["scripted"],
+                "acceptance": "resume clears active breakers.",
+                "passes": False, "depends_on": [],
+            }],
+        }, indent=2) + "\n")
+        # Trip a breaker but leave human_gates empty
+        gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id=plan_id)
+        assert "breaker:wall_clock" in gate_pause.active_breakers(plan_dir)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = cli.main(["resume", str(plan_dir)])
+        assert rc == 0
+        # After resume, active breakers must be cleared
+        assert "breaker:wall_clock" not in gate_pause.active_breakers(plan_dir), \
+            gate_pause.active_breakers(plan_dir)
+    print("  ✓ resume clears active breakers even when plan declares no human_gates")
 
 
 # ──────────────────────────────  driver  ──────────────────────────────
@@ -417,7 +548,7 @@ def test_supervisor_global_breaker_hard_stops() -> None:
 
 def main() -> int:
     test_check_wall_clock()
-    test_check_budget_ceiling()
+    test_check_budget_ceiling_reads_quota_state_file()
     test_check_no_progress()
     test_check_diminishing_returns()
     test_check_convergence_collapse()
@@ -427,6 +558,9 @@ def main() -> int:
     test_resume_all_clears_breakers()
     test_supervisor_iteration_cap_pauses_via_breaker()
     test_supervisor_global_breaker_hard_stops()
+    test_global_breaker_evaluates_before_executor_resolution()
+    test_cli_approve_breaker_no_false_warning()
+    test_cli_resume_clears_active_breakers_with_no_human_gates()
     print("\n✓ F006 circuit-breaker tests passed")
     return 0
 
