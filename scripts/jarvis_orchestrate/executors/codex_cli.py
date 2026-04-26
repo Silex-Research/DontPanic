@@ -37,6 +37,7 @@ class CodexCLIExecutor(BaseExecutor):
                 input="",
                 capture_output=True,
                 env=task.subprocess_env or None,
+                cwd=str(task.cwd) if task.cwd else None,
                 text=True,
                 timeout=600,
                 check=False,

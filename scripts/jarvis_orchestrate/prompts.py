@@ -28,8 +28,22 @@ FORBIDDEN_COMMAND_PATTERNS = [
     "kubectl config use-context ...",
     "gh auth switch",
     "npm/yarn/pnpm config set ...",
+    "npm/yarn/pnpm config set registry ...",
     "git config --global ...",
+    "git push --force ... main|master  (or -f to those branches)",
     "docker context use ...",
+]
+
+
+# F023 EC11+EC12: positive-flag-required CLI shapes the supervisor will reject
+# post-hoc if invoked without their required flags. Kept aligned with
+# command_guard.check_required_flags() — update both when changing.
+REQUIRED_FLAG_PATTERNS = [
+    "firebase deploy ...  → must include `--project <project_id>`",
+    "xcodebuild build|archive|test ...  → must include `-scheme <X> -configuration <Y> -destination <Z> -derivedDataPath <P>`",
+    "gradle assemble*|bundle*|test|publish ...  → must include `--gradle-user-home <DIR>` plus an explicit flavor/buildType",
+    "terraform apply|plan|destroy ...  → must include explicit `-state` or workspace selection (`terraform workspace select <NAME>` first) and explicit `-backend-config=`",
+    "kubectl apply|delete|edit ...  → must include `--context <CTX>`",
 ]
 
 
@@ -41,6 +55,7 @@ def _target_block(target_env: str | None, target_project: str | None) -> str:
         else "target_project = (host-local — no cloud project; declare `Project: (none)`)"
     )
     forbidden = "\n".join(f"  - {p}" for p in FORBIDDEN_COMMAND_PATTERNS)
+    required = "\n".join(f"  - {p}" for p in REQUIRED_FLAG_PATTERNS)
     return f"""
 ## Target accountability (F023 EC5)
 
@@ -64,6 +79,13 @@ target_context.commands_run for post-hoc validation. Example:
 Forbidden command shapes (the supervisor will downgrade or block your audit if
 any of these appear in commands_run — use the explicit-flag equivalent):
 {forbidden}
+
+Required-flag command shapes (the supervisor will downgrade or block your audit
+if these binaries appear in commands_run without the listed flags). EC11 cwd
+discipline: the supervisor sets your cwd to the consumer repo root when an
+environments.json registry resolves; rely on `--project`/`-scheme`/`--context`
+flags rather than ambient state, and never re-cd inside the agent shell:
+{required}
 """
 
 
@@ -176,4 +198,9 @@ def _findings_block(audit_path: Path) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["FORBIDDEN_COMMAND_PATTERNS", "implementer_prompt", "auditor_prompt"]
+__all__ = [
+    "FORBIDDEN_COMMAND_PATTERNS",
+    "REQUIRED_FLAG_PATTERNS",
+    "implementer_prompt",
+    "auditor_prompt",
+]

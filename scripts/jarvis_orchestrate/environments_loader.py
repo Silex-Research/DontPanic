@@ -120,6 +120,34 @@ def load_environments(repo_root: Path) -> Environments:
     return env
 
 
+def check_firebaserc_consistency(repo_root: Path, target_project: str) -> str | None:
+    """F023 EC11: optional consistency check between target_project and the
+    consumer repo's .firebaserc.
+
+    Returns a status string on success/skip; raises EnvironmentsTargetMismatchError
+    if .firebaserc declares projects but none of them resolve to target_project.
+    Skips silently when .firebaserc is absent or has no projects block.
+    """
+    fr = repo_root / ".firebaserc"
+    if not fr.is_file():
+        return None
+    try:
+        data = json.loads(fr.read_text())
+    except json.JSONDecodeError as exc:
+        raise EnvironmentsValidationError(
+            f"{fr}: malformed JSON — {exc}"
+        ) from exc
+    projects = (data.get("projects") or {}) if isinstance(data, dict) else {}
+    if not projects:
+        return None
+    if target_project not in set(projects.values()):
+        raise EnvironmentsTargetMismatchError(
+            f"{fr} does not declare target_project={target_project!r}; "
+            f"declared aliases→projects: {dict(sorted(projects.items()))}"
+        )
+    return f".firebaserc reaches {target_project}"
+
+
 def validate_target(
     env: Environments,
     target_env: str,
@@ -162,6 +190,7 @@ __all__ = [
     "EnvironmentsTargetMismatchError",
     "EnvironmentsValidationError",
     "SCHEMAS_DIR",
+    "check_firebaserc_consistency",
     "find_repo_root_for_plan",
     "load_environments",
     "validate_target",

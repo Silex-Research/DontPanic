@@ -573,7 +573,7 @@
         "EC13: active-supervisor registry at ~/.jarvis/active_supervisors.jsonl with PID, plan_id, target_project, target_env, started_at, supervisor_config_dir; jarvis ps lists running supervisors; re-entrancy warning on same plan_id; cleanup via atexit"
       ],
       "acceptance": "Synthetic concurrency test: 3 mock supervisors each get their own ExecutionEnvironment, run gcloud config set project <other-id> in their sandbox; verify each subprocess's gcloud config remains pinned to its declared target_project (CLOUDSDK_CONFIG isolation works). command_guard test: forbidden command patterns (gcloud config set project, firebase use, kubectl config use-context, gh auth switch, git config --global, etc.) all rejected; valid patterns with explicit flags accepted. Plan validator rejects plans missing target_env, and rejects target_env=prod plans missing pre_impl + on_escalation gates. Real volley with target_env=dev produces audit JSONs whose target_context.env==dev. environments.json starter files exist for Jarvis + at least one consumer (Glam or SpinDine).",
-      "passes": false,
+      "passes": true,
       "evidence_refs": [
         {
           "type": "file",
@@ -735,6 +735,111 @@
           "captured_at": "2026-04-26T04:00:00Z",
           "captured_by": "claude",
           "note": "F023 EC8 starter file: axiom dev only → axiom-workspace-5eebd. Verified from .firebaserc default project. axiom is mostly Cloudflare Workers (axiom-gateway, axiom-router); only the dashboard folder is Firebase-hosted, no iOS targets, no staging/prod Firebase tiers."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/executors/base.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC11 evidence: DispatchTask gains optional cwd: Path | None field; ClaudeCLIExecutor + CodexCLIExecutor propagate to subprocess.run(cwd=...). Supervisor sets task.cwd=registry_repo_root when the env registry resolves so agent subprocesses inherit a cwd where the consumer repo's .firebaserc / xcconfig resolve naturally — no agent-side cd required."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/environments_loader.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC11 evidence: new check_firebaserc_consistency(repo_root, target_project) raises EnvironmentsTargetMismatchError when .firebaserc has projects declared but none equal target_project. Skips silently when .firebaserc is absent or has empty projects block. Wired into supervisor._validate_environment_registry between validate_target and ExecutionEnvironment open."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/prompts.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC11 + EC12 prompt evidence: REQUIRED_FLAG_PATTERNS module-level list embeds firebase deploy / xcodebuild / gradle / terraform / kubectl explicit-flag rules into both implementer and auditor templates so agents pre-emptively use --project / -scheme / --context flags rather than ambient state. FORBIDDEN_COMMAND_PATTERNS expanded with npm/yarn/pnpm registry mutation + git push --force to main|master."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/command_guard.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC12 evidence: check_required_flags() adds positive-flag enforcement via _REQUIRED_FLAG_RULES — firebase deploy without --project; xcodebuild build/archive/test without -scheme/-configuration/-destination/-derivedDataPath; gradle assemble*/bundle*/test/publish without --gradle-user-home; terraform apply/plan/destroy without -backend-config or -state; kubectl apply/delete/edit/scale/rollout/patch/replace without --context. New forbid patterns: package-manager registry mutation, git push --force* to protected branches main|master."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_ec11_cwd_firebaserc.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC11 test evidence (8 tests): DispatchTask cwd field carries Path or None; check_firebaserc_consistency happy/skip-absent/skip-empty/mismatch-raises/malformed-raises; prompt embeds REQUIRED_FLAG_PATTERNS + module exports list."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_ec12_vendor_matrix.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC12 test evidence (8 tests): firebase deploy --project enforcement; xcodebuild four-flag enforcement; terraform backend/state enforcement; kubectl mutating-verb --context enforcement; gradle --gradle-user-home enforcement; npm/yarn/pnpm config set rejection; git force-push protected-branch rejection; check_required_flags helper export."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/plan_target.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Expansion B evidence: validate_prod_gates gains optional required_override parameter. When non-None, override supersedes hardcoded PROD_REQUIRED_GATES set and applies regardless of target_env (so non-prod tiers can declare their own required gates via environments.json requires_gates[]). When None, original behavior holds."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/plan_loader.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Expansion B wiring: plan_loader.load() now calls _registry_required_gates(plan_dir, target_env) which walks up from plan dir, loads environments.json (if present), and returns the dispatched tier's requires_gates[] list (or None). Result is passed as required_override to validate_prod_gates so the registry's policy supersedes hardcoded prod-only gating when present."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_expansion_b_requires_gates.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Expansion B test evidence (7 tests): no override keeps hardcoded prod gate; override supersedes for prod (with rejection on missing override gate); override applies to non-prod tier (staging gates enforced); explicit empty override silences enforcement; plan_loader propagates registry requires_gates as override; no environments.json falls back to hardcoded prod gate; registry without requires_gates falls back to hardcoded prod gate."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/active_supervisors.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC13 evidence: register/unregister/list_active/check_reentrancy/format_entries against ~/.jarvis/active_supervisors.jsonl. list_active filters dead PIDs via os.kill(pid, 0) and prunes the file as a side effect. check_reentrancy returns the active entry sharing plan_id (any PID) for supervisor warning."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC13 supervisor wiring: _registered_supervisor context manager wraps both dispatch_single_agent and dispatch_volley. Surfaces re-entrancy warnings when another live PID has the same plan_id. atexit cleanup registered on entry; idempotent unregister on context exit even if atexit fires first."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/cli.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC13 jarvis ps subcommand: `python -m jarvis_orchestrate ps` reads ~/.jarvis/active_supervisors.jsonl, prunes dead PIDs, prints the live entries as a fixed-width table (PID | PLAN_ID | ENV | PROJECT | STARTED | CONFIG_DIR)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_ec13_active_supervisors.py",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC13 test evidence (7 tests): register/unregister roundtrip; unregister filters by (plan_id, pid); list_active filters dead PID + prunes file; check_reentrancy detects running plan; jarvis ps empty-registry message; jarvis ps table render contains headers + entry; format_entries handles host-local sentinels."
+        },
+        {
+          "type": "file",
+          "uri": "./2026-04-26-006-infra-f023-ec5-evidence/audit/claude-implementer-i0.json",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 acceptance — behavioral EC5 evidence: real claude-implementer audit produced by `python -m jarvis_orchestrate 2026-04-26-006-infra-f023-ec5-evidence --volley --max-iterations 1`. target_context.env=='dev' and target_context.project=='jarvis-a6ee1' as required. validation_performed records execution_env_root + target labels + target_source=plan + env_registry=Jarvis + cwd=/Users/bayesian/Documents/GitHub/Jarvis (EC1 + EC11 wiring observable in real subprocess)."
+        },
+        {
+          "type": "file",
+          "uri": "./2026-04-26-006-infra-f023-ec5-evidence/audit/codex-auditor-i0.json",
+          "captured_at": "2026-04-26T05:00:00Z",
+          "captured_by": "codex",
+          "note": "F023 acceptance — behavioral EC5 evidence: real codex-auditor audit produced by the same volley. target_context.env=='dev', target_context.project=='jarvis-a6ee1', commands_run captures the actual shell commands codex ran (jq, git status, git diff, jq -e on target_context fields) — demonstrating EC6 commands_run parser working end-to-end against a real CLI subprocess. audit_status=signed_off."
         }
       ],
       "depends_on": [
