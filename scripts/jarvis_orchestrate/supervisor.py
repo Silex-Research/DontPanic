@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from jarvis_orchestrate import audit_writer, plan_loader, prompts, transcript
+from jarvis_orchestrate import audit_writer, command_guard, plan_loader, prompts, transcript
 from jarvis_orchestrate.execution_environment import ExecutionEnvironment
 from jarvis_orchestrate.executors import ClaudeCLIExecutor, get_executor
 from jarvis_orchestrate.executors.base import BaseExecutor, DispatchTask
@@ -123,6 +124,16 @@ def dispatch_single_agent(
                 f"target_env={effective_env} target_project={effective_project or '(none)'}",
                 f"target_source=kwarg" if target_env is not None or target_project is not None else "target_source=plan",
             ],
+            target_context={
+                "env": effective_env,
+                "project": effective_project,
+            },
+        )
+        _apply_target_accountability(
+            audit,
+            role=agent_role,
+            plan_target_env=effective_env,
+            plan_target_project=effective_project,
         )
 
         return audit_writer.write(audit, loaded.plan_dir)
@@ -236,6 +247,8 @@ def dispatch_volley(
                     feature=feature,
                     iteration=iteration,
                     prior_auditor_path=prior_aud_path,
+                    target_env=effective_env,
+                    target_project=effective_project,
                 ),
                 extra_validation=[
                     f"quota gate impl={impl_pct}",
@@ -243,6 +256,8 @@ def dispatch_volley(
                     round_env_log,
                 ],
                 subprocess_env=round_subprocess_env,
+                target_env=effective_env,
+                target_project=effective_project,
             )
             audit_paths.append(impl_audit_path)
 
@@ -266,6 +281,8 @@ def dispatch_volley(
                     feature=feature,
                     iteration=iteration,
                     implementer_audit_path=impl_audit_path,
+                    target_env=effective_env,
+                    target_project=effective_project,
                 ),
                 extra_validation=[
                     f"quota gate aud={aud_pct}",
@@ -273,6 +290,8 @@ def dispatch_volley(
                     round_env_log,
                 ],
                 subprocess_env=round_subprocess_env,
+                target_env=effective_env,
+                target_project=effective_project,
             )
             audit_paths.append(aud_audit_path)
 
@@ -323,6 +342,103 @@ def dispatch_volley(
         )
 
 
+def _apply_target_accountability(
+    audit: dict[str, Any],
+    role: str,
+    plan_target_env: str,
+    plan_target_project: str | None,
+) -> None:
+    """F023 EC3 + EC5: post-hoc accountability check on a built audit dict.
+
+    Asymmetric reject:
+      - implementer: any violation downgrades status to needs_changes (non-terminal)
+      - auditor: any violation forces blocked (volley-terminal)
+
+    Mutates `audit` in place. Adds findings (severity=high) describing each
+    violation. Three classes of violation:
+      1. Summary missing `Env: <plan_target_env>` declaration line.
+      2. Summary missing `Project: <plan_target_project>` declaration line
+         (skipped when plan_target_project is None — host-local plan).
+      3. Any command in target_context.commands_run rejected by command_guard.
+    """
+    summary = audit.get("summary") or ""
+    findings: list[dict[str, Any]] = list(audit.get("findings") or [])
+    new_findings: list[dict[str, Any]] = []
+
+    if not _summary_declares(summary, "Env", plan_target_env):
+        new_findings.append(
+            {
+                "severity": "high",
+                "category": "correctness",
+                "issue": (
+                    f"Missing or mismatched `Env: {plan_target_env}` declaration in summary; "
+                    "F023 EC5 requires {repo, env, project, command} declaration before side-effect calls."
+                ),
+                "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+                "recommendation": f"Add a line `Env: {plan_target_env}` near the top of the summary.",
+            }
+        )
+
+    if plan_target_project is not None and not _summary_declares(
+        summary, "Project", plan_target_project
+    ):
+        new_findings.append(
+            {
+                "severity": "high",
+                "category": "correctness",
+                "issue": (
+                    f"Missing or mismatched `Project: {plan_target_project}` declaration in summary; "
+                    "F023 EC5 requires the declared target_project to match plan target."
+                ),
+                "evidence": "Parsed agent summary did not contain a matching `Project:` line.",
+                "recommendation": f"Add a line `Project: {plan_target_project}` near the top of the summary.",
+            }
+        )
+
+    target_ctx = audit.get("target_context") or {}
+    for cmd in target_ctx.get("commands_run") or []:
+        guard = command_guard.check_command(cmd)
+        if not guard.allowed:
+            new_findings.append(
+                {
+                    "severity": "high",
+                    "category": "security",
+                    "issue": f"Forbidden command in commands_run: {cmd!r}",
+                    "evidence": f"command_guard: {guard.reason}",
+                    "recommendation": (
+                        "Use the explicit-flag equivalent (e.g. --project / --context) "
+                        "rather than mutating shared CLI state."
+                    ),
+                }
+            )
+
+    if not new_findings:
+        return
+
+    audit["findings"] = findings + new_findings
+    if role == "auditor":
+        audit["audit_status"] = "blocked"
+    else:
+        if audit.get("audit_status") == "signed_off":
+            audit["audit_status"] = "needs_changes"
+
+
+_DECLARATION_RE_CACHE: dict[tuple[str, str], "re.Pattern[str]"] = {}
+
+
+def _summary_declares(summary: str, key: str, value: str) -> bool:
+    """Check whether `summary` contains a line `<key>: <value>` (case-insensitive on key, exact on value)."""
+    cache_key = (key, value)
+    pattern = _DECLARATION_RE_CACHE.get(cache_key)
+    if pattern is None:
+        pattern = re.compile(
+            rf"^[ \t]*{re.escape(key)}\s*:\s*{re.escape(value)}\s*$",
+            re.MULTILINE | re.IGNORECASE,
+        )
+        _DECLARATION_RE_CACHE[cache_key] = pattern
+    return bool(pattern.search(summary))
+
+
 def _resolve_executor(agent_name: str) -> BaseExecutor:
     executor = get_executor(agent_name)
     if not executor.is_available():
@@ -342,6 +458,8 @@ def _run_round(
     prompt: str,
     extra_validation: list[str],
     subprocess_env: dict[str, str] | None = None,
+    target_env: str | None = None,
+    target_project: str | None = None,
 ) -> Path:
     task = DispatchTask(
         plan_id=loaded.plan_id,
@@ -361,6 +479,10 @@ def _run_round(
     # See codex_cli/claude_cli for the override hook below.
     result = executor.dispatch(task)
 
+    target_context = None
+    if target_env is not None:
+        target_context = {"env": target_env, "project": target_project}
+
     audit = audit_writer.build_audit(
         loaded=loaded,
         result=result,
@@ -370,7 +492,15 @@ def _run_round(
             *extra_validation,
             f"captured stdout {len(result.raw_response)} bytes",
         ],
+        target_context=target_context,
     )
+    if target_env is not None:
+        _apply_target_accountability(
+            audit,
+            role=role,
+            plan_target_env=target_env,
+            plan_target_project=target_project,
+        )
     audit_path = audit_writer.write(audit, loaded.plan_dir)
 
     transcript.append_round(

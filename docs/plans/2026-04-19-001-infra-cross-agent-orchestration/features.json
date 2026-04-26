@@ -637,6 +637,48 @@
           "captured_at": "2026-04-26T01:00:00Z",
           "captured_by": "claude",
           "note": "F023 Step 2 backfill: parent plan + sub-plans (2026-04-25-001 firebase-bootstrap, 2026-04-25-002 trivial-orchestration-test) gained `## Target` sections. Real cloud plans → target_project: <firebase-project-id>; synthetic test plans → target_project: none. All three validate against agent-conventions v1.0 schemas (Target section is in plan.md body, not frontmatter, so no schema bump triggered)."
+        },
+        {
+          "type": "commit",
+          "uri": "agent-conventions@9bd8730",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 3 EC6 schema bump (per D070 path A, not sidecar): agent-conventions v1.2.0 adds optional target_context: {env, project, commands_run[]} to audit.schema.json + Pydantic Audit model. Backward compatible — existing audits without target_context still validate. Subtree pulled into Jarvis claude/shared at v1.2.0."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/audit_writer.py",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 3 EC6 wiring: build_audit accepts target_context kwarg; new extract_commands_run helper parses `$ <cmd>` line markers from agent prose into target_context.commands_run."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 3 EC3 + EC5 + EC6 supervisor wiring: dispatch_single_agent and dispatch_volley populate target_context from effective env/project; new _apply_target_accountability runs post-build with asymmetric reject (implementer mismatch/forbidden command → needs_changes + high finding, non-terminal; auditor mismatch/forbidden command → blocked + stop volley). Host-local plans (target_project=None) skip the project-declaration check. Helper _summary_declares regex-checks summary for `Env:` and `Project:` declaration lines (EC5)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/prompts.py",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 3 EC5 + EC3 prompt rule: implementer + auditor templates embed Target accountability block listing dispatched env/project, the {Repo, Env, Project, Command} declaration rule, the `$ ` line-prefix convention for commands_run, and the FORBIDDEN_COMMAND_PATTERNS list (single source of truth kept in sync with command_guard._reject patterns). Auditor template adds explicit verification step against plan target."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_target_context.py",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 Step 3 test evidence (17 tests): extract_commands_run parser; build_audit target_context population + sentinel handling; _apply_target_accountability asymmetric reject — implementer missing-Env-declaration + forbidden-command both downgrade to needs_changes + high-severity finding; auditor env-mismatch + forbidden-command both force blocked; clean implementer untouched; host-local sentinel skips project check; prompt content (declaration rule + forbidden list + auditor verification + sentinel handling); supervisor end-to-end — implementer mismatch produces needs_changes audit and auditor still dispatched; auditor mismatch forces blocked + stops volley; clean volley populates target_context in every audit with parsed commands_run."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/execution_environment.py",
+          "captured_at": "2026-04-26T03:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC4 evidence (tag-along, no code change in Step 3 — small correctness accounting fix per feedback_scope_change_protocol). EC4 spec: 'supervisor injects env vars (CLOUDSDK_CORE_PROJECT, FIREBASE_PROJECT, JARVIS_TARGET_ENV, JARVIS_TARGET_PROJECT) so agents read declared target, not ambient shell state.' Satisfied by Step 1's overlay (TARGET_ENV_KEYS = {CLOUDSDK_CORE_PROJECT, FIREBASE_PROJECT, GOOGLE_CLOUD_PROJECT, GCLOUD_PROJECT, JARVIS_TARGET_PROJECT}) + Step 2's plan-driven supervisor wiring. Step 3 records this accounting; no new code."
         }
       ],
       "depends_on": [

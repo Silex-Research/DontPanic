@@ -21,8 +21,15 @@ def build_audit(
     feature_id: str,
     validation_performed: list[str],
     extra: dict[str, Any] | None = None,
+    target_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Compose an audit dict. Validation happens in write()."""
+    """Compose an audit dict. Validation happens in write().
+
+    F023 EC6: when target_context is provided, embed it in the audit and
+    populate target_context.commands_run by parsing `$ <cmd>` lines from
+    the agent's prose summary. Supervisor performs the cross-check of
+    declared env/project + forbidden-command detection post-build.
+    """
     audit_id = f"{loaded.plan_id}#{result.agent}#{result.iteration}"
     findings = (extra or {}).get("findings") or []
     status_hint = None
@@ -53,7 +60,30 @@ def build_audit(
         },
         "summary": _summary(result, feature_id),
     }
+    if target_context is not None:
+        commands_run = list(target_context.get("commands_run") or [])
+        if not commands_run and result.summary:
+            commands_run = extract_commands_run(result.summary)
+        audit["target_context"] = {
+            "env": target_context["env"],
+            "project": target_context.get("project"),
+            "commands_run": commands_run,
+        }
     return {k: v for k, v in audit.items() if v is not None}
+
+
+_COMMAND_LINE_RE = re.compile(r"^[ \t]*\$[ \t]+(.+?)[ \t]*$", re.MULTILINE)
+
+
+def extract_commands_run(summary: str) -> list[str]:
+    """Parse `$ <cmd>` line markers from an agent's prose summary.
+
+    Used by build_audit to populate target_context.commands_run when
+    callers pass target_context without an explicit list. Convention is
+    standard shell prompt prefix; agents are instructed via prompt to
+    list every side-effect command this way (F023 EC5).
+    """
+    return [m.group(1) for m in _COMMAND_LINE_RE.finditer(summary or "")]
 
 
 def _derive_status(
