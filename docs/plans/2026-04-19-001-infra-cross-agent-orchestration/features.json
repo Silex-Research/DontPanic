@@ -258,18 +258,70 @@
       "id": "F008",
       "category": "tooling",
       "phase": 2,
-      "description": "INBOX.md + terminal-notifier async interaction channel",
+      "description": "Engagement-surface — operator-facing async interaction channel that closes the loop opened by F023's accountability contract. Scope expanded from the original 'INBOX.md + terminal-notifier' shorthand to cover INBOX semantics, gate-pause protocol, terminal-notifier wiring, and signoff.json closeout. Locked B2 scope per D073: items 1-4 below required to flip; item 5 (jarvis ps state extension) explicitly deferred to engagement-surface v2 along with live TUI, multi-plan aggregation, and remote notification adapters (Slack/email/push).",
       "steps": [
-        "brew install terminal-notifier",
-        "Supervisor writes timestamped question block to Jarvis/INBOX.md",
-        "Fires terminal-notifier with title + one-line summary",
-        "Watches INBOX.md via watchdog; parses RESPONSE: lines; resumes execution",
-        "SessionStart hook surfaces unresolved INBOX items"
+        "Item 1 (B2): INBOX.md format documented, append-only, parseable; supervisor writes entries on key events (volley_terminal, gate_hit, quota_warn, error, resumed)",
+        "Item 2 (B2): gate-pause protocol — supervisor pauses dispatch at iteration boundary when a plan.human_gates entry is unmet; writes audit/gate-pause.json marker + INBOX entry + fires terminal-notifier; jarvis approve <plan-id> <gate> clears single gate; jarvis resume <plan-id> clears the pause and lets next-tick supervisor continue",
+        "Item 3 (B2): terminal-notifier wrapper with graceful fallback when binary absent or non-mac; honors JARVIS_NOTIFY_DISABLE env to silence",
+        "Item 4 (B2): signoff.json closeout — when dispatch_volley returns signed_off, write audit/signoff-<task_id>.json per agent-conventions Signoff schema; aggregates per-iteration audit JSONs; validates against Pydantic Signoff model",
+        "Item 5 (DEFERRED to engagement-surface v2): jarvis ps extended state column (in-flight / waiting-on-gate / signed-off)"
       ],
-      "acceptance": "Supervisor pauses → INBOX.md has question → notification fires → manual RESPONSE: edit resumes supervisor",
-      "passes": false,
+      "acceptance": "Synthetic end-to-end volley pauses at a declared human_gate, writes gate-pause marker + INBOX entry, fires (or gracefully no-ops) terminal-notifier; jarvis approve <plan-id> <gate> clears the marker; supervisor resumes; audit JSONs unchanged from F005a expectations; signoff.json schema-validates against agent-conventions Signoff model. INBOX entries are parseable round-trip. F008 flips on items 1-4 only; item 5 stays explicitly deferred.",
+      "passes": true,
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/inbox.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 Item 1: append-only INBOX.md writer with parseable header blocks (timestamp/event/plan_id/extra) + body. read_events round-trips entries; latest_event filters by event type. Tolerant of operator-added body content."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/notify.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 Item 3: terminal-notifier wrapper. is_available + notify return False / no-op when binary absent or JARVIS_NOTIFY_DISABLE=1. Never raises — INBOX.md is the durable channel; notifications are advisory."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/gate_pause.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 Item 2: gate-pause protocol. State at <plan_dir>/audit/gate-state.json (cleared_gates list + history + pause record). evaluate / approve_gate / resume_all / record_pause / unmet_gates. Stringifies enum-valued gates so loaded.plan.human_gates flows through cleanly."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/signoff_writer.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 Item 4: signoff.json closeout writer. Aggregates per-iteration audit JSONs into <plan_dir>/audit/signoff-<task_id>.json validated against agent-conventions Signoff Pydantic model. signed_off → next_action=merge; blocked / paused_on_gate → blocked_awaiting_human; quota/cap stops → remediate."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 supervisor wiring: dispatch_volley evaluates declared human_gates before ExecutionEnvironment opens; unmet gates → record_pause + INBOX gate_hit + notify + return VolleyResult('paused_on_gate'). Volley start writes INBOX volley_start. _emit_volley_terminal helper fires INBOX volley_terminal + notify + signoff_writer.write_signoff on every terminal branch (signed_off, blocked, stopped_quota, stopped_no_progress, stopped_cap)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/cli.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 CLI: `jarvis-orchestrate approve <plan-id> <gate>` clears one declared gate (idempotent; appends INBOX gate_cleared on first clear). `jarvis-orchestrate resume <plan-id>` clears every declared gate (appends INBOX resumed). Both warn when gate not declared in plan but record anyway."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py",
+          "captured_at": "2026-04-26T07:00:00Z",
+          "captured_by": "claude",
+          "note": "F008 test evidence (9 tests): inbox round-trip + operator-body-edit tolerance; notify disable-env + missing-binary fallback; gate_pause evaluate/approve/resume/idempotent + record_pause history; signoff_writer signed_off + blocked schema validation; e2e — first dispatch pauses with no executor calls + INBOX gate_hit + gate-state written; partial approve still pauses on remaining gate; resume_all → executors run + signoff.json signed=true; INBOX captures full progression (gate_hit, gate_cleared, resumed, volley_start, volley_terminal)."
+        }
+      ],
       "depends_on": [
-        "F005"
+        "F005",
+        "F023"
       ]
     },
     {

@@ -353,6 +353,16 @@ def _force_signoff_volley(plan_dir: Path, **kwargs):
         return path
 
     supervisor._run_round = force_signoff
+    # F008: pre-clear all declared human_gates so the new gate-pause check
+    # doesn't pause this Step-2 volley fixture (which exercises target/prod-gate
+    # semantics, not engagement-surface).
+    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    _loaded_for_gates = _pl.load(plan_dir)
+    gate_pause.resume_all(
+        plan_dir,
+        plan_id=_loaded_for_gates.plan_id,
+        declared_gates=list(_loaded_for_gates.plan.human_gates or []),
+    )
     try:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1, **kwargs)
     finally:

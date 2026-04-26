@@ -21,8 +21,12 @@ from jarvis_orchestrate import (
     active_supervisors,
     audit_writer,
     command_guard,
+    gate_pause,
+    inbox,
+    notify,
     plan_loader,
     prompts,
+    signoff_writer,
     transcript,
 )
 from jarvis_orchestrate.environments_loader import (
@@ -238,10 +242,58 @@ def dispatch_single_agent(
 
 @dataclass
 class VolleyResult:
-    final_status: str           # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress"
+    final_status: str           # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate"
     rounds: int                 # number of (implementer, auditor) pairs completed
     reason: str                 # human-readable termination reason
     audit_paths: list[Path]     # all audit JSONs produced, in order
+
+
+def _emit_volley_terminal(
+    result: VolleyResult,
+    *,
+    loaded: plan_loader.LoadedPlan,
+    feature_id: str,
+    agents_in_panel: list[str],
+) -> VolleyResult:
+    """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
+    any volley terminal state. Returns the input result unchanged so callers
+    can `return _emit_volley_terminal(...)`.
+    """
+    plan_dir = loaded.plan_dir
+    inbox.append_event(
+        plan_dir,
+        event="volley_terminal",
+        plan_id=loaded.plan_id,
+        body=(
+            f"final_status: {result.final_status}\n"
+            f"rounds: {result.rounds}\n"
+            f"audits: {[p.name for p in result.audit_paths]}\n"
+            f"reason: {result.reason}"
+        ),
+        final_status=result.final_status,
+        rounds=result.rounds,
+        feature_id=feature_id,
+    )
+    notify.notify(
+        title=f"jarvis: {result.final_status} — {loaded.plan_id}",
+        message=result.reason[:120],
+        subtitle=feature_id,
+    )
+    if result.audit_paths:
+        try:
+            signoff_writer.write_signoff(
+                plan_id=loaded.plan_id,
+                tier=loaded.plan.tier.value if hasattr(loaded.plan.tier, "value") else str(loaded.plan.tier),
+                iteration=max(0, result.rounds - 1),
+                agents_in_panel=agents_in_panel,
+                audit_paths=list(result.audit_paths),
+                plan_dir=plan_dir,
+                volley_status=result.final_status,
+                signoff_reason=result.reason,
+            )
+        except signoff_writer.SignoffWriteError as exc:
+            print(f"[volley] signoff_writer skipped: {exc}")
+    return result
 
 
 def dispatch_volley(
@@ -306,6 +358,56 @@ def dispatch_volley(
     )
     print(registry_log)
 
+    # F008 Item 2 — gate-pause check. If plan declares human_gates that the
+    # operator has not yet approved (or resumed all), pause without entering
+    # ExecutionEnvironment or calling any executor. INBOX entry + notifier
+    # fire so the operator sees the pending action.
+    declared_gates = list(loaded.plan.human_gates or [])
+    gate_check = gate_pause.evaluate(loaded.plan_dir, declared_gates)
+    if gate_check.paused:
+        gate_pause.record_pause(
+            loaded.plan_dir, plan_id=loaded.plan_id, pause_gates=gate_check.unmet
+        )
+        inbox.append_event(
+            loaded.plan_dir,
+            event="gate_hit",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Supervisor paused before iteration 0.\n\n"
+                f"Declared gates: {gate_check.declared}\n"
+                f"Cleared gates : {gate_check.cleared}\n"
+                f"Awaiting      : {gate_check.unmet}\n\n"
+                f"Clear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
+                f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} <gate>"
+            ),
+            unmet_gates=",".join(gate_check.unmet),
+            target_env=effective_env,
+            target_project=effective_project or "(none)",
+            feature_id=feature_id,
+        )
+        notify.notify(
+            title=f"jarvis: gate pause — {loaded.plan_id}",
+            message=f"Awaiting: {', '.join(gate_check.unmet)}",
+            subtitle=feature_id,
+        )
+        print(f"[volley] PAUSED on gates: {gate_check.unmet}")
+        return VolleyResult(
+            "paused_on_gate",
+            0,
+            f"unmet gates: {gate_check.unmet}; "
+            f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+            f"`jarvis resume {loaded.plan_id}`",
+            audit_paths,
+        )
+
+    inbox.append_event(
+        loaded.plan_dir,
+        event="volley_start",
+        plan_id=loaded.plan_id,
+        body=f"impl={impl_name} aud={aud_name} cap={cap} target_env={effective_env} target_project={effective_project or '(none)'}",
+        feature_id=feature_id,
+    )
+
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,
         target_env=effective_env,
@@ -335,7 +437,11 @@ def dispatch_volley(
             try:
                 impl_pct, impl_quota_line = _quota_gate(impl_name)
             except QuotaExceeded as exc:
-                return VolleyResult("stopped_quota", iteration, str(exc), audit_paths)
+                return _emit_volley_terminal(
+                    VolleyResult("stopped_quota", iteration, str(exc), audit_paths),
+                    loaded=loaded, feature_id=feature_id,
+                    agents_in_panel=[impl_name, aud_name],
+                )
             print(impl_quota_line)
 
             impl_audit_path = _run_round(
@@ -370,7 +476,11 @@ def dispatch_volley(
             try:
                 aud_pct, aud_quota_line = _quota_gate(aud_name)
             except QuotaExceeded as exc:
-                return VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths)
+                return _emit_volley_terminal(
+                    VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths),
+                    loaded=loaded, feature_id=feature_id,
+                    agents_in_panel=[impl_name, aud_name],
+                )
             print(aud_quota_line)
 
             aud_audit_path = _run_round(
@@ -411,14 +521,22 @@ def dispatch_volley(
                     loaded.plan_dir, feature_id, aud_status, iteration + 1,
                     reason="auditor signed off",
                 )
-                return VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths)
+                return _emit_volley_terminal(
+                    VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
+                    loaded=loaded, feature_id=feature_id,
+                    agents_in_panel=[impl_name, aud_name],
+                )
 
             if aud_status == "blocked":
                 transcript.append_terminal(
                     loaded.plan_dir, feature_id, aud_status, iteration + 1,
                     reason="auditor blocked",
                 )
-                return VolleyResult("blocked", iteration + 1, "auditor blocked", audit_paths)
+                return _emit_volley_terminal(
+                    VolleyResult("blocked", iteration + 1, "auditor blocked", audit_paths),
+                    loaded=loaded, feature_id=feature_id,
+                    agents_in_panel=[impl_name, aud_name],
+                )
 
             # No-progress: auditor verdict identical to last round
             if prior_aud_status is not None and aud_status == prior_aud_status:
@@ -426,11 +544,15 @@ def dispatch_volley(
                     loaded.plan_dir, feature_id, "stopped_no_progress", iteration + 1,
                     reason=f"auditor verdict unchanged ({aud_status}) across 2 consecutive rounds",
                 )
-                return VolleyResult(
-                    "stopped_no_progress",
-                    iteration + 1,
-                    f"auditor verdict unchanged ({aud_status}) across 2 consecutive rounds",
-                    audit_paths,
+                return _emit_volley_terminal(
+                    VolleyResult(
+                        "stopped_no_progress",
+                        iteration + 1,
+                        f"auditor verdict unchanged ({aud_status}) across 2 consecutive rounds",
+                        audit_paths,
+                    ),
+                    loaded=loaded, feature_id=feature_id,
+                    agents_in_panel=[impl_name, aud_name],
                 )
 
             prior_aud_path = aud_audit_path
@@ -440,11 +562,15 @@ def dispatch_volley(
             loaded.plan_dir, feature_id, "stopped_cap", cap + 1,
             reason=f"max_iterations={cap} reached without signoff",
         )
-        return VolleyResult(
-            "stopped_cap",
-            cap + 1,
-            f"max_iterations={cap} reached without signoff",
-            audit_paths,
+        return _emit_volley_terminal(
+            VolleyResult(
+                "stopped_cap",
+                cap + 1,
+                f"max_iterations={cap} reached without signoff",
+                audit_paths,
+            ),
+            loaded=loaded, feature_id=feature_id,
+            agents_in_panel=[impl_name, aud_name],
         )
 
 
