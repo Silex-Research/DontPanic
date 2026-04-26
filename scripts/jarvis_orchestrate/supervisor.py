@@ -8,15 +8,25 @@ soft-warn at >=90%; flip JARVIS_QUOTA_ENFORCE=hard to raise QuotaExceeded.
 """
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from jarvis_orchestrate import audit_writer, command_guard, plan_loader, prompts, transcript
+from jarvis_orchestrate import (
+    active_supervisors,
+    audit_writer,
+    command_guard,
+    plan_loader,
+    prompts,
+    transcript,
+)
 from jarvis_orchestrate.environments_loader import (
+    check_firebaserc_consistency,
     find_repo_root_for_plan,
     load_environments,
     validate_target,
@@ -33,27 +43,72 @@ class QuotaExceeded(RuntimeError):
     pass
 
 
+@contextmanager
+def _registered_supervisor(
+    plan_id: str,
+    target_env: str,
+    target_project: str | None,
+    config_dir: str | None,
+):
+    """F023 EC13: register the running supervisor in
+    ~/.jarvis/active_supervisors.jsonl on entry, unregister on exit. Re-entrancy
+    against the same plan_id surfaces a warning (not a hard block — the operator
+    may legitimately want overlapping runs against different cloud projects but
+    the same plan structure)."""
+    existing = active_supervisors.check_reentrancy(plan_id)
+    if existing is not None and existing.pid != os.getpid():
+        print(
+            f"[supervisor-registry] WARNING re-entrancy: another supervisor "
+            f"(pid={existing.pid}, env={existing.target_env}, "
+            f"project={existing.target_project or '(none)'}) is already active "
+            f"on plan {plan_id!r}. Audits may interleave."
+        )
+    entry = active_supervisors.register(
+        plan_id=plan_id,
+        target_env=target_env,
+        target_project=target_project,
+        supervisor_config_dir=config_dir,
+    )
+    cleanup_done = {"flag": False}
+
+    def _cleanup() -> None:
+        if cleanup_done["flag"]:
+            return
+        cleanup_done["flag"] = True
+        active_supervisors.unregister(plan_id, pid=entry.pid)
+
+    atexit.register(_cleanup)
+    try:
+        yield entry
+    finally:
+        _cleanup()
+
+
 def _validate_environment_registry(
     plan_dir: Path, target_env: str, target_project: str | None
-) -> tuple[str | None, str]:
-    """F023 EC1+A pre-dispatch check.
+) -> tuple[str | None, Path | None, str]:
+    """F023 EC1+A + EC11 pre-dispatch check.
 
-    Returns (registry_repo_label_or_None, log_line). Raises
-    EnvironmentsTargetMismatchError / EnvironmentsValidationError to halt dispatch
-    before ExecutionEnvironment opens or any executor is called. Host-local plans
-    (target_project=None) and plans living outside any environments.json scope
-    skip silently.
+    Returns (registry_repo_label_or_None, registry_repo_root_or_None, log_line).
+    Raises EnvironmentsTargetMismatchError / EnvironmentsValidationError to halt
+    dispatch before ExecutionEnvironment opens or any executor is called. Host-
+    local plans (target_project=None) and plans living outside any
+    environments.json scope skip silently. When the registry resolves and the
+    consumer repo has a .firebaserc, EC11 also verifies the target project is
+    reachable via that file.
     """
     if target_project is None:
-        return None, "[env-registry] target_project=None (host-local) — skip"
+        return None, None, "[env-registry] target_project=None (host-local) — skip"
     repo_root = find_repo_root_for_plan(plan_dir)
     if repo_root is None:
-        return None, "[env-registry] no environments.json on path — skip"
+        return None, None, "[env-registry] no environments.json on path — skip"
     env = load_environments(repo_root)
     validate_target(env, target_env, target_project)
-    return env.repo, (
+    fr_status = check_firebaserc_consistency(repo_root, target_project)
+    fr_tail = f" + {fr_status}" if fr_status else ""
+    return env.repo, repo_root, (
         f"[env-registry] {env.repo} ({repo_root}): "
-        f"{target_env} → {target_project} validated"
+        f"{target_env} → {target_project} validated{fr_tail}"
     )
 
 
@@ -120,7 +175,7 @@ def dispatch_single_agent(
         target_project if target_project is not None else loaded.target_project
     )
 
-    registry_repo, registry_log = _validate_environment_registry(
+    registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
         loaded.plan_dir, effective_env, effective_project
     )
     print(registry_log)
@@ -129,7 +184,9 @@ def dispatch_single_agent(
         plan_id=loaded.plan_id,
         target_env=effective_env,
         target_project=effective_project,
-    ) as exec_env:
+    ) as exec_env, _registered_supervisor(
+        loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+    ):
         task = DispatchTask(
             plan_id=loaded.plan_id,
             plan_dir=loaded.plan_dir,
@@ -140,6 +197,7 @@ def dispatch_single_agent(
             agent_role=agent_role,
             iteration=iteration,
             subprocess_env=exec_env.subprocess_env(),
+            cwd=registry_repo_root,
         )
 
         executor = ClaudeCLIExecutor()
@@ -158,6 +216,7 @@ def dispatch_single_agent(
                 f"target_env={effective_env} target_project={effective_project or '(none)'}",
                 f"target_source=kwarg" if target_env is not None or target_project is not None else "target_source=plan",
                 f"env_registry={registry_repo or '(none)'}",
+                f"cwd={registry_repo_root or '(inherit)'}",
             ],
             target_context={
                 "env": effective_env,
@@ -242,7 +301,7 @@ def dispatch_volley(
         "kwarg" if (target_env is not None or target_project is not None) else "plan"
     )
 
-    registry_repo, registry_log = _validate_environment_registry(
+    registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
         loaded.plan_dir, effective_env, effective_project
     )
     print(registry_log)
@@ -251,12 +310,15 @@ def dispatch_volley(
         plan_id=loaded.plan_id,
         target_env=effective_env,
         target_project=effective_project,
-    ) as exec_env:
+    ) as exec_env, _registered_supervisor(
+        loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+    ):
         print(
             f"[volley] execution_env_root={exec_env.root} "
             f"target_env={effective_env} "
             f"target_project={effective_project or '(none)'} "
-            f"source={target_source}"
+            f"source={target_source} "
+            f"cwd={registry_repo_root or '(inherit)'}"
         )
         round_subprocess_env = exec_env.subprocess_env()
         round_env_log = (
@@ -264,7 +326,8 @@ def dispatch_volley(
             f"target_env={effective_env} "
             f"target_project={effective_project or '(none)'} "
             f"target_source={target_source} "
-            f"env_registry={registry_repo or '(none)'}"
+            f"env_registry={registry_repo or '(none)'} "
+            f"cwd={registry_repo_root or '(inherit)'}"
         )
 
         for iteration in range(cap + 1):
@@ -299,6 +362,7 @@ def dispatch_volley(
                 subprocess_env=round_subprocess_env,
                 target_env=effective_env,
                 target_project=effective_project,
+                cwd=registry_repo_root,
             )
             audit_paths.append(impl_audit_path)
 
@@ -333,6 +397,7 @@ def dispatch_volley(
                 subprocess_env=round_subprocess_env,
                 target_env=effective_env,
                 target_project=effective_project,
+                cwd=registry_repo_root,
             )
             audit_paths.append(aud_audit_path)
 
@@ -501,6 +566,7 @@ def _run_round(
     subprocess_env: dict[str, str] | None = None,
     target_env: str | None = None,
     target_project: str | None = None,
+    cwd: Path | None = None,
 ) -> Path:
     task = DispatchTask(
         plan_id=loaded.plan_id,
@@ -513,6 +579,7 @@ def _run_round(
         iteration=iteration,
         extra_context={"prompt_override": prompt},
         subprocess_env=dict(subprocess_env) if subprocess_env else {},
+        cwd=cwd,
     )
     # Override the prompt builder by monkey-patching at task level —
     # cleaner: pass prompt directly. For now, executors build their own;

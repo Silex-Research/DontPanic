@@ -39,6 +39,32 @@ from jarvis_orchestrate.plan_target import (  # noqa: E402
 )
 
 
+def _registry_required_gates(plan_dir: Path, target_env: str) -> list[str] | None:
+    """F023 Expansion B: pull requires_gates[] from environments.json for the
+    declared tier when present. Returns None if no registry / no tier / no
+    requires_gates declared, leaving validate_prod_gates on its hardcoded path.
+    """
+    # Imported here to avoid a circular dependency at module load.
+    from jarvis_orchestrate.environments_loader import (
+        EnvironmentsError,
+        find_repo_root_for_plan,
+        load_environments,
+    )
+    repo_root = find_repo_root_for_plan(plan_dir)
+    if repo_root is None:
+        return None
+    try:
+        env = load_environments(repo_root)
+    except EnvironmentsError:
+        return None
+    block = getattr(env, target_env, None)
+    if block is None:
+        return None
+    if not block.requires_gates:
+        return None
+    return list(block.requires_gates)
+
+
 @dataclass
 class LoadedPlan:
     plan_dir: Path
@@ -88,7 +114,12 @@ def load(plan_dir: Path) -> LoadedPlan:
         )
 
     target = parse_target_section(plan_md_text)
-    validate_prod_gates(target["target_env"], plan.human_gates or [])
+    required_override = _registry_required_gates(plan_dir, target["target_env"])
+    validate_prod_gates(
+        target["target_env"],
+        plan.human_gates or [],
+        required_override=required_override,
+    )
 
     return LoadedPlan(
         plan_dir=plan_dir,

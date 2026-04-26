@@ -7,6 +7,9 @@ Volley dispatch (F005a — implementer/auditor pair, iterate until signoff or ca
   python -m jarvis_orchestrate <plan-id> --volley [--feature F001]
                                                   [--implementer claude] [--auditor codex]
                                                   [--max-iterations 3]
+
+Active-supervisor registry (F023 EC13):
+  python -m jarvis_orchestrate ps
 """
 from __future__ import annotations
 
@@ -14,7 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from jarvis_orchestrate import supervisor
+from jarvis_orchestrate import active_supervisors, supervisor
 from jarvis_orchestrate.supervisor import QuotaExceeded
 
 
@@ -28,7 +31,20 @@ def _resolve_plan_dir(plan_arg: str) -> Path:
     raise SystemExit(f"plan not found: {plan_arg}")
 
 
+def _ps_main(argv: list[str]) -> int:
+    """F023 EC13: list live supervisors registered in
+    ~/.jarvis/active_supervisors.jsonl. Filters dead PIDs and prunes the file
+    as a side effect."""
+    entries = active_supervisors.list_active()
+    print(active_supervisors.format_entries(entries))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
+    raw = argv if argv is not None else sys.argv[1:]
+    if raw and raw[0] == "ps":
+        return _ps_main(raw[1:])
+
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
     p.add_argument("--feature", default="F001", help="Feature ID to dispatch (default F001)")
@@ -38,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--implementer", default=None, help="Volley mode: implementer agent (default: agents_required[0])")
     p.add_argument("--auditor", default=None, help="Volley mode: auditor agent (default: agents_required[1])")
     p.add_argument("--max-iterations", type=int, default=None, help="Volley mode: override loop_caps.max_iterations")
-    args = p.parse_args(argv)
+    args = p.parse_args(raw)
 
     plan_dir = _resolve_plan_dir(args.plan)
     print(f"[supervisor] plan_dir={plan_dir}")

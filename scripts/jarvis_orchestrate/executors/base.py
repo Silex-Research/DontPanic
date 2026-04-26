@@ -29,6 +29,10 @@ class DispatchTask:
     iteration: int = 0
     extra_context: dict[str, Any] = field(default_factory=dict)
     subprocess_env: dict[str, str] = field(default_factory=dict)
+    # F023 EC11: agent subprocess cwd. Supervisor sets this to the consumer
+    # repo root when the env registry resolves so .firebaserc / xcconfig / etc.
+    # are picked up naturally. None means inherit supervisor cwd.
+    cwd: Path | None = None
 
 
 @dataclass

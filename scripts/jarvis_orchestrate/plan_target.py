@@ -87,15 +87,31 @@ def parse_target_section(plan_md_text: str) -> dict[str, str]:
     return {"target_env": target_env, "target_project": target_project}
 
 
-def validate_prod_gates(target_env: str, human_gates: list[str] | None) -> None:
-    """EC7 prod gate: target_env=prod requires pre_impl AND on_escalation in human_gates."""
-    if target_env != "prod":
+def validate_prod_gates(
+    target_env: str,
+    human_gates: list[str] | None,
+    required_override: list[str] | None = None,
+) -> None:
+    """EC7 prod gate + Expansion B (requires_gates[] bridge from environments.json).
+
+    When required_override is provided (non-None), it supersedes the hardcoded
+    PROD_REQUIRED_GATES set and applies regardless of target_env (so a non-prod
+    tier can declare its own required gates via environments.json). When
+    required_override is None, the original behavior holds: only target_env=prod
+    is gated, and the required set is the hardcoded PROD_REQUIRED_GATES.
+    """
+    if required_override is not None:
+        required = list(required_override)
+    elif target_env == "prod":
+        required = list(PROD_REQUIRED_GATES)
+    else:
         return
     gates = set(human_gates or [])
-    missing = [g for g in PROD_REQUIRED_GATES if g not in gates]
+    missing = [g for g in required if g not in gates]
     if missing:
+        source = "environments.json requires_gates" if required_override is not None else "hardcoded PROD gate"
         raise PlanTargetError(
-            f"target_env=prod requires human_gates {list(PROD_REQUIRED_GATES)}; "
+            f"target_env={target_env} requires human_gates {required} ({source}); "
             f"missing: {missing}"
         )
 

@@ -1,0 +1,19 @@
+{
+  "task_id": "2026-04-26-006-infra-f023-ec5-evidence",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "test",
+      "phase": 0,
+      "description": "Trivial dogfood feature for F023 behavioral EC5 evidence: confirm that a real volley against <firebase-project-id> produces audit JSONs whose target_context.env == 'dev'.",
+      "steps": [
+        "Implementer: state in one paragraph that you would do nothing destructive; produce a clean one-liner summary so the auditor can sign off.",
+        "Auditor: confirm the implementer's prose satisfies the trivial acceptance and respond with audit_status=signed_off."
+      ],
+      "acceptance": "Audit JSONs written to ./audit/ have target_context.env == 'dev' and target_context.project == '<firebase-project-id>'.",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
