@@ -679,6 +679,62 @@
           "captured_at": "2026-04-26T03:00:00Z",
           "captured_by": "claude",
           "note": "F023 EC4 evidence (tag-along, no code change in Step 3 — small correctness accounting fix per feedback_scope_change_protocol). EC4 spec: 'supervisor injects env vars (CLOUDSDK_CORE_PROJECT, FIREBASE_PROJECT, JARVIS_TARGET_ENV, JARVIS_TARGET_PROJECT) so agents read declared target, not ambient shell state.' Satisfied by Step 1's overlay (TARGET_ENV_KEYS = {CLOUDSDK_CORE_PROJECT, FIREBASE_PROJECT, GOOGLE_CLOUD_PROJECT, GCLOUD_PROJECT, JARVIS_TARGET_PROJECT}) + Step 2's plan-driven supervisor wiring. Step 3 records this accounting; no new code."
+        },
+        {
+          "type": "commit",
+          "uri": "agent-conventions@v1.3.0",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC1 schema bump (per D071): agent-conventions v1.3.0 adds environments.schema.json + Pydantic Environments model. Top-level repo + optional dev/staging/prod tier blocks; per-tier optional firebase_project/gcp_project/xcode_scheme/bundle_id/hosting_target[]/allowed_deploy_commands[]/requires_gates[]. Cross-cutting constraints (≥1 tier declared, ≥1 of firebase_project|gcp_project per tier) enforced at consumer loader layer in Python (codegen 0.56.1 incompatibility with top-level anyOf-against-$ref'd-defs). Local-only tag — no remote yet (agent-conventions task #697)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/environments_loader.py",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC1 evidence: load_environments(repo_root) Pydantic-validates + enforces cross-cutting constraints; find_repo_root_for_plan(plan_dir) walks up to find environments.json; validate_target(env, target_env, target_project) checks declared-tier + project-anchor match. Typed errors EnvironmentsNotFoundError / EnvironmentsValidationError / EnvironmentsTargetMismatchError. Schemas resolved via the same SCHEMA_CANDIDATES priority list as plan_loader."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC1+A (Expansion A — supervisor integration approved per D071): _validate_environment_registry runs in dispatch_single_agent and dispatch_volley before ExecutionEnvironment opens and before any executor is called. Host-local plans (target_project=None) and plans outside environments.json scope skip silently. Mismatched (env, project) pairs raise EnvironmentsTargetMismatchError pre-dispatch — no env-root mint, no executor.dispatch call. validation_performed records env_registry=<repo|none>."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_orchestrate/tests/test_environments_loader.py",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC1+A test evidence (22 tests): 8 schema/loader (full three-tier load, sparse single-tier, missing file → EnvironmentsNotFoundError, malformed JSON / extra-field / no-tier / project-anchorless / missing-repo-field rejections); 3 path discovery (env file at plan root, walks up from nested plan dir, returns None when absent); 6 validate_target (happy, undeclared tier raises with declared-tiers list, project-mismatch raises with surfaced candidates, host-local skip, gcp_project-only match, invalid env label raises); 5 supervisor end-to-end (host-local skip dispatches normally, no-registry skip dispatches normally, registry match tags audit validation_performed with env_registry=<repo>, undeclared tier blocks pre-dispatch with executor.dispatch_count==0, project mismatch blocks pre-dispatch with executor.dispatch_count==0)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../Jarvis/environments.json",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC8 starter file: Jarvis dev only → jarvis-a6ee1 (per memory; Jarvis is single-env orchestrator infra, no staging/prod tiers). Verified from /Users/bayesian/Documents/GitHub/Jarvis/.firebaserc orchestrator alias."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../Glam/environments.json",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC8 starter file: Glam full three-tier verified from Config/Development.xcconfig + Config/Staging.xcconfig + Config/Production.xcconfig. dev=glam-styln-dev/GlamSwift-Dev/com.silexholdings.glam.dev, staging=glam-styln-staging/GlamSwift-Staging/com.silexholdings.glam, prod=glam-ac11e/GlamSwift-Prod/com.silexholdings.glam."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../SpinDineSwift/environments.json",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC8 starter file: SpinDineSwift staging+prod verified from .firebaserc + firebase.json hosting targets. staging=spin-dine-dev (hosting=[admin]), prod=restaurant-attributes (hosting=[admin,web]). SpinDineSwift's .firebaserc alias remains 'production' unchanged (G3 option a per session-2 lock); environments.json registry name 'prod' maps to project ID 'restaurant-attributes' so supervisor.validate_target works without requiring an alias rename. No dev tier (no dev project exists). Single Xcode scheme/bundle (SpinDineSwift / SilexResearch.SpinDineSwift) — same value across staging+prod."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../axiom/environments.json",
+          "captured_at": "2026-04-26T04:00:00Z",
+          "captured_by": "claude",
+          "note": "F023 EC8 starter file: axiom dev only → axiom-workspace-5eebd. Verified from .firebaserc default project. axiom is mostly Cloudflare Workers (axiom-gateway, axiom-router); only the dashboard folder is Firebase-hosted, no iOS targets, no staging/prod Firebase tiers."
         }
       ],
       "depends_on": [
