@@ -21,7 +21,14 @@ import argparse
 import sys
 from pathlib import Path
 
-from jarvis_orchestrate import active_supervisors, gate_pause, inbox, plan_loader, supervisor
+from jarvis_orchestrate import (
+    active_supervisors,
+    circuit_breakers as cb,
+    gate_pause,
+    inbox,
+    plan_loader,
+    supervisor,
+)
 from jarvis_orchestrate.supervisor import QuotaExceeded
 
 
@@ -55,10 +62,17 @@ def _approve_main(argv: list[str]) -> int:
     # plan.human_gates is a list of HumanGate enum members; compare on .value
     # so the user-supplied string CLI arg matches the declared set.
     declared_strs = [g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])]
-    if gate not in declared_strs:
+    # F006: synthetic breaker:<kind> gates are valid declared names too — the
+    # supervisor adds them to active_breakers on trip. Don't false-warn when
+    # operator approves a known breaker name (either currently active or any
+    # known BreakerKind, in case the operator is pre-clearing).
+    active = gate_pause.active_breakers(plan_dir)
+    breaker_names = {f"breaker:{k.value}" for k in cb.BreakerKind}
+    valid_targets = set(declared_strs) | set(active) | breaker_names
+    if gate not in valid_targets:
         print(
-            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared_strs}; "
-            f"recording anyway",
+            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared_strs} "
+            f"and not a known breaker:* name; recording anyway",
             file=sys.stderr,
         )
     changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
@@ -79,7 +93,8 @@ def _approve_main(argv: list[str]) -> int:
 
 
 def _resume_main(argv: list[str]) -> int:
-    """F008 Item 2: clear every gate declared by the plan."""
+    """F008 Item 2 + F006: clear every plan-declared gate AND every active
+    breaker. Returns success even when both sets are empty (idempotent)."""
     if len(argv) != 1:
         print("usage: jarvis-orchestrate resume <plan-id>", file=sys.stderr)
         return 2
@@ -87,9 +102,12 @@ def _resume_main(argv: list[str]) -> int:
     plan_dir = _resolve_plan_dir(plan_arg)
     loaded = plan_loader.load(plan_dir)
     declared = list(loaded.plan.human_gates or [])
-    if not declared:
-        print(f"[resume] plan {loaded.plan_id} declares no human_gates — nothing to clear")
+    active = gate_pause.active_breakers(plan_dir)
+    if not declared and not active:
+        print(f"[resume] plan {loaded.plan_id} has no plan-declared gates and no active breakers — nothing to clear")
         return 0
+    # gate_pause.resume_all clears declared_gates AND every active breaker, so
+    # passing declared (even when empty) is enough to reach active_breakers.
     newly = gate_pause.resume_all(plan_dir, plan_id=loaded.plan_id, declared_gates=declared)
     if newly:
         inbox.append_event(
@@ -97,9 +115,10 @@ def _resume_main(argv: list[str]) -> int:
             event="resumed",
             plan_id=loaded.plan_id,
             body=(
-                f"Operator cleared all declared gates via `jarvis resume`.\n"
+                f"Operator cleared all gates via `jarvis resume`.\n"
                 f"Newly cleared: {newly}\n"
-                f"All declared : {declared}"
+                f"Plan-declared: {declared}\n"
+                f"Active breakers (pre-clear): {active}"
             ),
             cleared_gates=",".join(newly),
         )

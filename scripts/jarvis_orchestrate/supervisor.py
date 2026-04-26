@@ -407,11 +407,6 @@ def dispatch_volley(
         loop_caps = loaded.plan.loop_caps
         cap = (loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1)
 
-    impl_executor = _resolve_executor(impl_name)
-    aud_executor = _resolve_executor(aud_name)
-
-    print(f"[volley] feature={feature_id} impl={impl_name} aud={aud_name} cap={cap}")
-
     audit_paths: list[Path] = []
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
@@ -430,7 +425,9 @@ def dispatch_volley(
     print(registry_log)
 
     # F006 — global circuit breaker. Hard stop when ≥3 iteration_cap hits in
-    # the last 24h across any plan. No operator clearance — operator waits.
+    # the last 24h across any plan. Evaluated BEFORE executor resolution so a
+    # tripped breaker reliably halts dispatch even when AGENT_REGISTRY can't
+    # produce the named agents (KeyError previously masked the breaker).
     global_state = circuit_breakers.evaluate_global()
     if global_state.tripped:
         reason = (
@@ -456,6 +453,11 @@ def dispatch_volley(
             loaded=loaded, feature_id=feature_id,
             agents_in_panel=[impl_name, aud_name],
         )
+
+    impl_executor = _resolve_executor(impl_name)
+    aud_executor = _resolve_executor(aud_name)
+
+    print(f"[volley] feature={feature_id} impl={impl_name} aud={aud_name} cap={cap}")
 
     # F008 Item 2 — gate-pause check. If plan declares human_gates that the
     # operator has not yet approved (or resumed all), pause without entering

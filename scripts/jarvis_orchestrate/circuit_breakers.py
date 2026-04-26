@@ -17,13 +17,27 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Iterable
 
-GLOBAL_HISTORY_PATH = Path.home() / ".jarvis" / "breaker_history.jsonl"
+# F006 history path. Test isolation: set JARVIS_BREAKER_HISTORY_PATH to a
+# tempfile in test setup so synthetic dispatches don't pollute the operator's
+# real ~/.jarvis state. Module attribute remains assignable for legacy callers
+# that monkey-patch it directly; the env var takes precedence when set.
+_DEFAULT_GLOBAL_HISTORY_PATH = Path.home() / ".jarvis" / "breaker_history.jsonl"
+GLOBAL_HISTORY_PATH = _DEFAULT_GLOBAL_HISTORY_PATH
+QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
+
+
+def _effective_history_path() -> Path:
+    env_override = os.environ.get("JARVIS_BREAKER_HISTORY_PATH")
+    if env_override:
+        return Path(env_override)
+    return GLOBAL_HISTORY_PATH
 GLOBAL_WINDOW_SECONDS = 24 * 3600
 GLOBAL_THRESHOLD_HITS = 3
 
@@ -85,32 +99,68 @@ def gate_name(kind: BreakerKind) -> str:
 # ──────────────────────────────  per-iteration checks  ──────────────────────────────
 
 
-def check_budget_ceiling(
-    audit_paths: Iterable[Path], per_agent_caps: dict[str, float] | None
-) -> tuple[bool, str]:
-    """True if any agent's max observed percent_weekly across audits exceeds its
-    per-agent cap. Caps come from plan.quota_caps. When unset, no enforcement.
+def _read_quota_state(path: Path | None = None) -> dict:
+    """Read ~/.jarvis/quota_state.json (F020-populated). Returns empty dict on
+    missing/malformed file so callers can no-op safely."""
+    p = path if path is not None else QUOTA_STATE_PATH
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
 
-    Returns (tripped, reason)."""
+
+def check_budget_ceiling(
+    audit_paths: Iterable[Path],
+    per_agent_caps: dict[str, float] | None,
+    *,
+    quota_state_path: Path | None = None,
+) -> tuple[bool, str]:
+    """F006 budget breaker — read F020's ~/.jarvis/quota_state.json (the canonical
+    source of percent_weekly per agent) and trip when any agent that participated
+    in this volley has exceeded its plan-declared cap.
+
+    audit_paths is used only to determine which agents participated (audit_writer
+    emits agent + tokens_in/tokens_out, not percent_weekly — which is why the
+    earlier implementation read a phantom field and never tripped on real data).
+    Per-agent caps come from plan.quota_caps. When unset → no enforcement.
+
+    Returns (tripped, reason).
+    """
     if not per_agent_caps:
         return False, ""
-    max_pct: dict[str, float] = {}
+    state = _read_quota_state(quota_state_path)
+    if not state:
+        return False, ""
+    models = (state.get("models") or {}) if isinstance(state, dict) else {}
+
+    # Restrict the cap check to agents that actually showed up in this volley's
+    # audits — a global cap-overrun unrelated to the current dispatch shouldn't
+    # trip the per-volley breaker.
+    participating: set[str] = set()
     for ap in audit_paths:
         try:
             data = json.loads(ap.read_text())
         except (OSError, json.JSONDecodeError):
             continue
         agent = data.get("agent")
-        pct = (data.get("quota_consumed") or {}).get("percent_weekly")
-        if agent and isinstance(pct, (int, float)):
-            max_pct[agent] = max(max_pct.get(agent, 0.0), float(pct))
+        if agent:
+            participating.add(agent)
+
     for agent, cap in per_agent_caps.items():
         if cap is None:
             continue
-        observed = max_pct.get(agent, 0.0)
+        if agent not in participating:
+            continue
+        info = models.get(agent) or {}
+        observed = info.get("percent_weekly")
+        if not isinstance(observed, (int, float)):
+            continue
         if observed > cap:
             return True, (
-                f"{agent} observed {observed:.1f}% weekly cap exceeds plan-declared "
+                f"{agent} percent_weekly {float(observed):.1f}% (from "
+                f"~/.jarvis/quota_state.json) exceeds plan-declared "
                 f"budget {cap:.1f}%"
             )
     return False, ""
@@ -206,10 +256,11 @@ class GlobalBreakerState:
 
 
 def _read_history() -> list[dict]:
-    if not GLOBAL_HISTORY_PATH.is_file():
+    path = _effective_history_path()
+    if not path.is_file():
         return []
     out: list[dict] = []
-    for line in GLOBAL_HISTORY_PATH.read_text().splitlines():
+    for line in path.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
@@ -221,16 +272,18 @@ def _read_history() -> list[dict]:
 
 
 def record_global_hit(plan_id: str, kind: BreakerKind) -> None:
-    """Append to ~/.jarvis/breaker_history.jsonl. Per F006 spec only iteration_cap
-    hits count toward the global threshold; other breakers are recorded for
-    forensics but don't trip the global hard stop on their own."""
-    GLOBAL_HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    """Append to ~/.jarvis/breaker_history.jsonl (or JARVIS_BREAKER_HISTORY_PATH
+    override, when set). Per F006 spec only iteration_cap hits count toward the
+    global threshold; other breakers are recorded for forensics but don't trip
+    the global hard stop on their own."""
+    path = _effective_history_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     entry = {
         "plan_id": plan_id,
         "kind": kind.value,
         "at": _iso(_now()),
     }
-    with GLOBAL_HISTORY_PATH.open("a") as f:
+    with path.open("a") as f:
         f.write(json.dumps(entry) + "\n")
 
 
@@ -270,6 +323,7 @@ __all__ = [
     "GLOBAL_THRESHOLD_HITS",
     "GLOBAL_WINDOW_SECONDS",
     "GlobalBreakerState",
+    "QUOTA_STATE_PATH",
     "TERMINAL_STATUS",
     "check_budget_ceiling",
     "check_convergence_collapse",
