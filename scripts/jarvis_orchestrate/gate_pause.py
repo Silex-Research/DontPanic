@@ -98,15 +98,36 @@ def unmet_gates(plan_dir: Path, declared_gates: list[Any]) -> list[str]:
 
 
 def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
-    """When the pause condition is fully resolved (every gate listed in
-    pause_gates has been cleared), drop the paused_at + pause_gates fields so
-    the state file matches ground truth. Called from approve / resume_all
-    after they update cleared_gates."""
+    """When the pause condition is fully resolved, drop the paused_at +
+    pause_gates fields so the state file matches ground truth. Called from
+    approve / resume_all / reconcile_defers after they mutate the relevant
+    set.
+
+    A gate is "resolved" by lifecycle:
+      - plan-declared gate    → resolved when in cleared_gates
+      - F006 breaker:<kind>   → resolved when NOT in active_breakers
+      - F007 defer:<kind>     → resolved when NOT in active_defers
+
+    Without this, transient gates (which are intentionally not added to
+    cleared_gates after approval) leave paused_at / pause_gates stale —
+    evaluate() ignores those fields so dispatch still proceeds, but the
+    state file misrepresents ground truth.
+    """
     pending = state.get("pause_gates") or []
     if not pending:
         return
     cleared = set(state.get("cleared_gates") or [])
-    if all(g in cleared for g in pending):
+    active_breakers_set = set(state.get("active_breakers") or [])
+    active_defers_set = set(state.get("active_defers") or [])
+
+    def _is_resolved(gate: str) -> bool:
+        if gate.startswith("breaker:"):
+            return gate not in active_breakers_set
+        if gate.startswith("defer:"):
+            return gate not in active_defers_set
+        return gate in cleared
+
+    if all(_is_resolved(g) for g in pending):
         state.pop("paused_at", None)
         state.pop("pause_gates", None)
 
@@ -412,6 +433,12 @@ def reconcile_defers(
         else:
             state.pop("active_defers", None)
         state["history"] = history
+        # Auto-clear the pause marker if every gate the supervisor recorded
+        # as pending is now resolved. Reconcile may auto-drop a defer whose
+        # condition resolved between dispatches; without this call, paused_at
+        # / pause_gates stay stale on the state file even though dispatch
+        # would proceed.
+        _maybe_clear_pause_marker(state)
         _write_state(plan_dir, state)
     return added, removed
 

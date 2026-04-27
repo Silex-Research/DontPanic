@@ -50,6 +50,15 @@ class QuotaExceeded(RuntimeError):
     pass
 
 
+class PausedOnGate(RuntimeError):
+    """F007 Slice 2: raised by dispatch_single_agent when pre-dispatch
+    admission or plan-declared gates leave at least one entry unmet. The
+    volley path returns a VolleyResult instead since it has a structured
+    terminal type; single-agent dispatch returns Path on success, so the
+    pause case is signaled via exception instead."""
+    pass
+
+
 def _trip_breaker(
     plan_dir: Path,
     plan_id: str,
@@ -235,6 +244,7 @@ def dispatch_single_agent(
     iteration: int = 0,
     target_env: str | None = None,
     target_project: str | None = None,
+    mode: str | None = None,
 ) -> Path:
     """F004 path: dispatch one agent (Claude), produce + validate audit JSON.
 
@@ -243,6 +253,11 @@ def dispatch_single_agent(
     state. target_env / target_project remain optional until EC2 lands a plan-
     level Target contract; when unset, isolation still applies but no project
     label is injected into the subprocess env.
+
+    F007 Slice 2: pre-dispatch admission applies here too. Single-agent dispatch
+    is always Claude (F004 hardcodes ClaudeCLIExecutor); the admission check
+    therefore evaluates against ["claude"] only, but the runtime class /
+    bypass / transient-gate semantics match dispatch_volley.
     """
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
@@ -259,6 +274,67 @@ def dispatch_single_agent(
         loaded.plan_dir, effective_env, effective_project
     )
     print(registry_log)
+
+    # F007 Slice 2 — pre-dispatch admission for single-agent path.
+    plan_tier_str = (
+        loaded.plan.tier.value if hasattr(loaded.plan.tier, "value")
+        else str(loaded.plan.tier or "")
+    )
+    admission = quota_admission.evaluate(
+        plan_tier_str, agents=["claude"], mode_override=mode
+    )
+    print(
+        f"[admission] class={admission.dispatch_class.value} "
+        f"quota_over={admission.quota.over_threshold} "
+        f"backoff_within={admission.interactive.within_backoff}"
+    )
+    reason_for: dict[str, str] = {}
+    if admission.quota.over_threshold:
+        reason_for[quota_admission.gate_name(quota_admission.DeferKind.QUOTA_THRESHOLD)] = (
+            f"{admission.quota.offending_agent} percent_weekly "
+            f"{admission.quota.observed_pct:.1f}% > threshold "
+            f"{admission.quota.threshold:.1f}%"
+        )
+    if admission.interactive.within_backoff:
+        reason_for[quota_admission.gate_name(quota_admission.DeferKind.INTERACTIVE_BACKOFF)] = (
+            f"interactive backoff active for claude — "
+            f"{admission.interactive.minutes_remaining:.1f} min remaining"
+        )
+    gate_pause.reconcile_defers(
+        loaded.plan_dir,
+        set(admission.active_gates),
+        plan_id=loaded.plan_id,
+        reason_for=reason_for,
+    )
+    declared_gates = list(loaded.plan.human_gates or [])
+    gate_check = gate_pause.evaluate(loaded.plan_dir, declared_gates)
+    if gate_check.paused:
+        gate_pause.record_pause(
+            loaded.plan_dir, plan_id=loaded.plan_id, pause_gates=gate_check.unmet
+        )
+        inbox.append_event(
+            loaded.plan_dir,
+            event="gate_hit",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Single-agent dispatch paused before run.\n\n"
+                f"Awaiting: {gate_check.unmet}\n\n"
+                f"Clear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
+                f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} <gate>"
+            ),
+            unmet_gates=",".join(gate_check.unmet),
+            feature_id=feature_id,
+        )
+        notify.notify(
+            title=f"jarvis: gate pause — {loaded.plan_id}",
+            message=f"Awaiting: {', '.join(gate_check.unmet)}",
+            subtitle=feature_id,
+        )
+        raise PausedOnGate(
+            f"single-agent paused on gates {gate_check.unmet}; "
+            f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+            f"`jarvis resume {loaded.plan_id}`"
+        )
 
     with ExecutionEnvironment(
         plan_id=loaded.plan_id,

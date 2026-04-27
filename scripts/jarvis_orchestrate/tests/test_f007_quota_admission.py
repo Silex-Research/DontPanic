@@ -486,3 +486,149 @@ def test_cli_approve_recognizes_defer_names_no_warning() -> None:
         assert "WARNING" not in buf_err.getvalue(), buf_err.getvalue()
         assert "defer:quota_threshold" not in gate_pause.active_defers(plan_dir)
     print("  ✓ CLI approve recognizes defer:* names + no false-warning")
+
+
+# ──────────────────────────────  D075-amend fixes  ──────────────────────────────
+
+
+def test_pause_marker_clears_when_only_defer_was_pending() -> None:
+    """D075-amend Fix#1: approving a defer:* whose name is the only pending
+    pause_gate must drop the stale paused_at + pause_gates fields. Same for
+    breakers — _maybe_clear_pause_marker now considers transient state, not
+    just cleared_gates."""
+    print("\n[test] pause_marker_clears_when_only_defer_was_pending ...")
+    with tempfile.TemporaryDirectory() as td:
+        plan_dir = _make_plan(Path(td), "2026-04-26-520-infra-f007-pause-mark")
+        plan_id = "2026-04-26-520-infra-f007-pause-mark"
+        gate_pause.add_defer(plan_dir, "defer:quota_threshold", plan_id=plan_id)
+        # Simulate the supervisor recording a pause on this defer.
+        gate_pause.record_pause(
+            plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"]
+        )
+        state_path = gate_pause.gate_state_path(plan_dir)
+        before = json.loads(state_path.read_text())
+        assert "paused_at" in before and before.get("pause_gates") == ["defer:quota_threshold"]
+        # Approve clears the defer; the marker should drop because every
+        # pending gate is now resolved (defer:* not in active_defers).
+        gate_pause.approve_gate(plan_dir, "defer:quota_threshold", plan_id=plan_id)
+        after = json.loads(state_path.read_text())
+        assert "paused_at" not in after, after
+        assert "pause_gates" not in after, after
+    print("  ✓ approve clears stale pause marker for transient gates")
+
+
+def test_pause_marker_clears_via_reconcile_auto_remove() -> None:
+    """D075-amend Fix#1b: reconcile_defers auto-clearing the last pending
+    defer must also drop the stale pause marker (without operator action)."""
+    print("\n[test] pause_marker_clears_via_reconcile_auto_remove ...")
+    with tempfile.TemporaryDirectory() as td:
+        plan_dir = _make_plan(Path(td), "2026-04-26-521-infra-f007-rec-mark")
+        plan_id = "2026-04-26-521-infra-f007-rec-mark"
+        gate_pause.add_defer(plan_dir, "defer:quota_threshold", plan_id=plan_id)
+        gate_pause.record_pause(
+            plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"]
+        )
+        state_path = gate_pause.gate_state_path(plan_dir)
+        assert "paused_at" in json.loads(state_path.read_text())
+        # Simulate next dispatch: condition cleared, reconcile drops the defer.
+        gate_pause.reconcile_defers(plan_dir, set(), plan_id=plan_id)
+        after = json.loads(state_path.read_text())
+        assert gate_pause.active_defers(plan_dir) == []
+        assert "paused_at" not in after
+        assert "pause_gates" not in after
+    print("  ✓ auto-reconcile clears stale pause marker on its own")
+
+
+def test_dispatch_single_agent_pauses_on_quota_threshold() -> None:
+    """D075-amend Fix#2: F007 admission applies to dispatch_single_agent too —
+    not volley-only. Mock claude=75% → PausedOnGate; --mode interactive bypass."""
+    print("\n[test] dispatch_single_agent_pauses_on_quota_threshold ...")
+    _write_quota_state(75.0)
+    saved_quota = _bypass_quota_gate()
+    saved_registry = dict(AGENT_REGISTRY)
+    impl = _ScriptedExecutor("claude", role="implementer", summaries=["x"])
+    AGENT_REGISTRY["claude"] = lambda: impl
+    os.environ[notify.DISABLE_ENV] = "1"
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            plan_dir = _setup_volley(Path(td), "2026-04-26-522-infra-f007-single")
+            try:
+                supervisor.dispatch_single_agent(plan_dir, "F001")
+                raise AssertionError("expected PausedOnGate, got success")
+            except supervisor.PausedOnGate as exc:
+                assert "defer:quota_threshold" in str(exc), exc
+            assert "defer:quota_threshold" in gate_pause.active_defers(plan_dir)
+    finally:
+        AGENT_REGISTRY.clear()
+        AGENT_REGISTRY.update(saved_registry)
+        supervisor._quota_gate = saved_quota
+        os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ dispatch_single_agent honors F007 admission")
+
+
+def test_cli_approve_remaining_unmet_includes_active_defers() -> None:
+    """D075-amend Fix#3: jarvis approve's '[approve] remaining unmet gates'
+    line must reflect every active transient gate too — not just unmet
+    plan-declared gates. Otherwise operator can be told '(none)' remain
+    while another defer:*/breaker:* is still active."""
+    print("\n[test] cli_approve_remaining_unmet_includes_active_defers ...")
+    buf_out = io.StringIO()
+    buf_err = io.StringIO()
+    with tempfile.TemporaryDirectory() as td:
+        plan_dir = _make_plan(Path(td), "2026-04-26-523-infra-f007-rem")
+        plan_id = "2026-04-26-523-infra-f007-rem"
+        gate_pause.add_defer(plan_dir, "defer:quota_threshold", plan_id=plan_id)
+        gate_pause.add_defer(plan_dir, "defer:interactive_backoff", plan_id=plan_id)
+        with redirect_stdout(buf_out), redirect_stderr(buf_err):
+            rc = cli.main(["approve", str(plan_dir), "defer:quota_threshold"])
+        assert rc == 0
+        out = buf_out.getvalue()
+        # Approving quota_threshold; backoff defer is still active and must
+        # appear in the remaining-unmet line (not "(none)").
+        assert "defer:interactive_backoff" in out, out
+        assert "(none)" not in out, out
+    print("  ✓ remaining-unmet output reflects active defers + breakers")
+
+
+def test_e2e_interactive_backoff_expires_auto_clear() -> None:
+    """D075-amend Fix#4: AC #6 second leg — touch claude beyond the backoff
+    window → autonomous plan dispatches without operator action; defer:
+    interactive_backoff auto-clears via reconcile."""
+    print("\n[test] e2e_interactive_backoff_expires_auto_clear ...")
+    _write_quota_state(50.0)
+    saved_registry = dict(AGENT_REGISTRY)
+    saved_quota = _bypass_quota_gate()
+    saved_run = _force_auditor_signed_off()
+    os.environ[notify.DISABLE_ENV] = "1"
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            plan_dir = _setup_volley(Path(td), "2026-04-26-524-infra-f007-bo-ac")
+
+            # Run 1: touch 15 min ago → defer
+            fifteen_ago = dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=15)
+            interactive_state.touch("claude", at=fifteen_ago)
+            r1 = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            assert r1.final_status == "paused_on_gate"
+            assert "defer:interactive_backoff" in gate_pause.active_defers(plan_dir)
+
+            # Run 2: touch is now 35 min old (past 30 min default window)
+            past_window = dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=35)
+            interactive_state.touch("claude", at=past_window)
+            r2 = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+            # Reconcile auto-removed defer:interactive_backoff; dispatch proceeds.
+            assert r2.final_status != "paused_on_gate", r2
+            assert "defer:interactive_backoff" not in gate_pause.active_defers(plan_dir)
+            events = inbox.read_events(plan_dir)
+            cleared = [
+                e for e in events
+                if e.event == "defer_cleared"
+                and e.headers.get("defer_gate") == "defer:interactive_backoff"
+            ]
+            assert cleared, "expected a defer_cleared event for interactive_backoff"
+    finally:
+        AGENT_REGISTRY.clear()
+        AGENT_REGISTRY.update(saved_registry)
+        supervisor._quota_gate = saved_quota
+        supervisor._run_round = saved_run
+        os.environ.pop(notify.DISABLE_ENV, None)
+    print("  ✓ interactive backoff auto-clears once the touch ages past the window")
