@@ -151,7 +151,7 @@ def _force_auditor_signed_off():
 
 
 def test_classify_dispatch_precedence() -> None:
-    """mode_override > JARVIS_RUN_MODE > plan.tier == p0 > autonomous"""
+    """mode_override (interactive|autonomous) > env > plan.tier=p0 > autonomous"""
     print("\n[test] classify_dispatch_precedence ...")
     # Default → autonomous
     assert quota_admission.classify_dispatch(None) == quota_admission.DispatchClass.AUTONOMOUS
@@ -173,6 +173,58 @@ def test_classify_dispatch_precedence() -> None:
     finally:
         os.environ.pop("JARVIS_RUN_MODE", None)
     print("  ✓ precedence: mode_override > env > plan.tier=p0 > autonomous")
+
+
+def test_p0_is_plan_derived_only_not_overridable() -> None:
+    """D075-amend2: p0 is plan-derived only. mode_override='p0' and
+    JARVIS_RUN_MODE=p0 are ignored — they would silently expand the
+    emergency-lane bypass surface to non-P0 plans."""
+    print("\n[test] p0_is_plan_derived_only_not_overridable ...")
+    # mode_override='p0' on a non-P0 plan must NOT promote.
+    assert quota_admission.classify_dispatch(
+        "trivial", mode_override="p0"
+    ) == quota_admission.DispatchClass.AUTONOMOUS
+    # Same via env.
+    os.environ["JARVIS_RUN_MODE"] = "p0"
+    try:
+        assert quota_admission.classify_dispatch(
+            "trivial"
+        ) == quota_admission.DispatchClass.AUTONOMOUS
+    finally:
+        os.environ.pop("JARVIS_RUN_MODE", None)
+    # And the override doesn't even shadow plan-derived P0 (irrelevant
+    # value drops through to the next rule).
+    os.environ["JARVIS_RUN_MODE"] = "p0"
+    try:
+        assert quota_admission.classify_dispatch(
+            "p0"
+        ) == quota_admission.DispatchClass.P0
+    finally:
+        os.environ.pop("JARVIS_RUN_MODE", None)
+    # Plain plan-derived P0 still works (the legitimate path).
+    assert quota_admission.classify_dispatch("p0") == quota_admission.DispatchClass.P0
+    print("  ✓ p0 is plan-derived only; CLI/env 'p0' values are ignored")
+
+
+def test_cli_mode_argparse_rejects_p0() -> None:
+    """The CLI argparse choices must reject --mode p0 with a non-zero exit
+    code (argparse exits 2 on choice violations). Belt-and-suspenders with
+    classify_dispatch's library-level guard."""
+    print("\n[test] cli_mode_argparse_rejects_p0 ...")
+    import contextlib
+    from jarvis_orchestrate import cli as cli_mod
+    buf_err = io.StringIO()
+    with tempfile.TemporaryDirectory() as td:
+        plan_dir = _make_plan(Path(td), "2026-04-26-525-infra-f007-no-p0-cli")
+        with contextlib.redirect_stderr(buf_err):
+            try:
+                rc = cli_mod.main([str(plan_dir), "--mode", "p0", "--volley"])
+            except SystemExit as exc:
+                rc = exc.code
+        # argparse choice rejection → exit 2
+        assert rc == 2, rc
+        assert "invalid choice" in buf_err.getvalue() or "'p0'" in buf_err.getvalue(), buf_err.getvalue()
+    print("  ✓ argparse choices reject --mode p0 at the CLI boundary")
 
 
 def test_evaluate_quota_threshold_default_70() -> None:
