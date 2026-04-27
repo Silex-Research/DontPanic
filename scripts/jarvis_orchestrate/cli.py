@@ -215,9 +215,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--mode",
         default=None,
-        choices=["interactive", "autonomous", "p0"],
+        choices=["interactive", "autonomous"],
         help="F007: runtime dispatch class override. interactive=bypass admission gates; "
-             "p0=bypass admission gates (overrides plan.tier); autonomous=enforce. "
+             "autonomous=enforce. P0 is plan-derived only (plan.tier=p0) and cannot be "
+             "forced via this flag — that would silently expand emergency-lane scope. "
              "Default: derived from plan.tier (p0 → p0; else autonomous).",
     )
     args = p.parse_args(raw)

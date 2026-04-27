@@ -79,24 +79,39 @@ class DispatchClass(str, Enum):
     AUTONOMOUS = "autonomous"
 
 
+# Per the F007 Slice 2 lock: P0 is *plan-derived only* (plan.tier == "p0").
+# Operators cannot promote a non-P0 plan to the P0 admission lane via CLI
+# flag or env; that would silently expand emergency-lane scope. The
+# override surface only switches between the two non-P0 classes.
+_OVERRIDE_VALUES: frozenset[str] = frozenset(
+    {DispatchClass.INTERACTIVE.value, DispatchClass.AUTONOMOUS.value}
+)
+
+
 def classify_dispatch(plan_tier: str | None, *, mode_override: str | None = None) -> DispatchClass:
-    """Resolve the runtime class.
+    """Resolve the runtime class per the F007 Slice 2 lock.
 
     Precedence:
-      1. mode_override == "interactive" (CLI flag wins over everything)
-      2. JARVIS_RUN_MODE env (interactive | autonomous | p0)
-      3. plan.tier == "p0" → DispatchClass.P0
-      4. fallback DispatchClass.AUTONOMOUS
+      1. mode_override ∈ {interactive, autonomous}  (CLI --mode flag)
+      2. JARVIS_RUN_MODE env, same allowed set
+      3. plan.tier == "p0"  →  DispatchClass.P0
+      4. fallback              DispatchClass.AUTONOMOUS
 
-    P0 from env / kwarg also wins, so an operator can force a non-p0 plan
-    through the p0 path in an emergency.
+    NOTE: P0 is intentionally NOT a CLI/env override target. The lock
+    framed P0 as the plan's emergency lane, derived from the plan-author's
+    declared tier; allowing operators to force-promote a non-P0 plan
+    would silently expand the bypass surface for both admission gates.
+    Any "p0" value passed via mode_override or JARVIS_RUN_MODE is
+    therefore ignored (falls through to the next precedence rule).
+    argparse on the CLI restricts --mode to the same set, so the kwarg
+    only takes "p0" via direct programmatic call.
     """
     if mode_override:
         m = mode_override.lower()
-        if m in {c.value for c in DispatchClass}:
+        if m in _OVERRIDE_VALUES:
             return DispatchClass(m)
     env_mode = (os.environ.get("JARVIS_RUN_MODE") or "").lower()
-    if env_mode in {c.value for c in DispatchClass}:
+    if env_mode in _OVERRIDE_VALUES:
         return DispatchClass(env_mode)
     if (plan_tier or "").lower() == "p0":
         return DispatchClass.P0
