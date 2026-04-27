@@ -101,8 +101,13 @@ def gate_name(kind: BreakerKind) -> str:
 
 def _read_quota_state(path: Path | None = None) -> dict:
     """Read ~/.jarvis/quota_state.json (F020-populated). Returns empty dict on
-    missing/malformed file so callers can no-op safely."""
-    p = path if path is not None else QUOTA_STATE_PATH
+    missing/malformed file so callers can no-op safely. Honors
+    JARVIS_QUOTA_STATE_PATH for hermetic test isolation."""
+    if path is None:
+        env_override = os.environ.get("JARVIS_QUOTA_STATE_PATH")
+        p = Path(env_override) if env_override else QUOTA_STATE_PATH
+    else:
+        p = path
     if not p.is_file():
         return {}
     try:

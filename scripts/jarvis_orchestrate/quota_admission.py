@@ -1,0 +1,237 @@
+"""F007 Slice 2 — admission policy for autonomous dispatches.
+
+This module is *admission*, not allocation: it does NOT track 20/10/50/20
+cross-plan tier budgets. It computes which `defer:*` gates should be active
+right now given:
+
+  - the current ~/.jarvis/quota_state.json (F020),
+  - the current ~/.jarvis/interactive_state.json (this slice),
+  - the runtime dispatch class derived from the plan and CLI flags.
+
+Two synthetic `defer:*` gates live in this slice:
+
+  - defer:quota_threshold       — any participating agent's percent_weekly
+                                   exceeds JARVIS_QUOTA_DEFER_THRESHOLD
+                                   (default 70.0). Bypassed by class p0 and
+                                   class interactive.
+  - defer:interactive_backoff   — Claude is in agents_required and the
+                                   operator touched it within the backoff
+                                   window. Bypassed by class p0 and
+                                   class interactive.
+
+Lifecycle is *transient* — the supervisor reconciles `active_defers` in
+gate-state.json on every dispatch:
+
+  - condition true  + not active → add (this dispatch will pause)
+  - condition true  + already active → leave alone
+  - condition false + active → drop (auto-clear without operator action)
+  - condition false + not active → no-op
+
+Operator approve via `jarvis approve <plan> defer:<kind>` pops the entry
+from active_defers. On the very next dispatch the reconcile re-evaluates the
+underlying condition; if still true the gate fires again. This matches
+F006's known approve-vs-persistent-condition trade-off (D074-amend2) — the
+escape hatches for the operator are wait-it-out, `--mode interactive`, or
+class p0 (via plan.tier).
+"""
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Iterable
+
+from jarvis_orchestrate import interactive_state
+
+DEFAULT_QUOTA_DEFER_THRESHOLD = 70.0
+_DEFAULT_QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
+QUOTA_STATE_PATH = _DEFAULT_QUOTA_STATE_PATH
+
+
+def _effective_quota_state_path() -> Path:
+    """Honor JARVIS_QUOTA_STATE_PATH for hermetic test isolation; matches the
+    breaker_history / active_supervisors / interactive_state pattern."""
+    env_override = os.environ.get("JARVIS_QUOTA_STATE_PATH")
+    if env_override:
+        return Path(env_override)
+    return QUOTA_STATE_PATH
+
+
+class DeferKind(str, Enum):
+    QUOTA_THRESHOLD = "quota_threshold"
+    INTERACTIVE_BACKOFF = "interactive_backoff"
+
+
+def gate_name(kind: DeferKind) -> str:
+    """Synthetic gate name for the F008 gate-pause integration."""
+    return f"defer:{kind.value}"
+
+
+# Runtime dispatch classification — NOT a plan.tier value. The existing
+# plan.tier schema (trivial | local | cross-cutting | architectural | p0) is
+# untouched; this is a *runtime* layer the supervisor computes from
+# (plan.tier, CLI mode flag, env override).
+class DispatchClass(str, Enum):
+    P0 = "p0"
+    INTERACTIVE = "interactive"
+    AUTONOMOUS = "autonomous"
+
+
+def classify_dispatch(plan_tier: str | None, *, mode_override: str | None = None) -> DispatchClass:
+    """Resolve the runtime class.
+
+    Precedence:
+      1. mode_override == "interactive" (CLI flag wins over everything)
+      2. JARVIS_RUN_MODE env (interactive | autonomous | p0)
+      3. plan.tier == "p0" → DispatchClass.P0
+      4. fallback DispatchClass.AUTONOMOUS
+
+    P0 from env / kwarg also wins, so an operator can force a non-p0 plan
+    through the p0 path in an emergency.
+    """
+    if mode_override:
+        m = mode_override.lower()
+        if m in {c.value for c in DispatchClass}:
+            return DispatchClass(m)
+    env_mode = (os.environ.get("JARVIS_RUN_MODE") or "").lower()
+    if env_mode in {c.value for c in DispatchClass}:
+        return DispatchClass(env_mode)
+    if (plan_tier or "").lower() == "p0":
+        return DispatchClass.P0
+    return DispatchClass.AUTONOMOUS
+
+
+def _quota_threshold() -> float:
+    raw = os.environ.get("JARVIS_QUOTA_DEFER_THRESHOLD")
+    if raw is None:
+        return DEFAULT_QUOTA_DEFER_THRESHOLD
+    try:
+        v = float(raw)
+        return v if v > 0 else DEFAULT_QUOTA_DEFER_THRESHOLD
+    except ValueError:
+        return DEFAULT_QUOTA_DEFER_THRESHOLD
+
+
+def _read_quota_state(path: Path | None = None) -> dict:
+    p = path if path is not None else _effective_quota_state_path()
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+@dataclass(frozen=True)
+class QuotaCheck:
+    over_threshold: bool
+    offending_agent: str | None
+    observed_pct: float | None
+    threshold: float
+
+
+def evaluate_quota_threshold(
+    agents: Iterable[str],
+    *,
+    quota_state_path: Path | None = None,
+) -> QuotaCheck:
+    """Returns whether ANY agent in `agents` is over the configured threshold."""
+    threshold = _quota_threshold()
+    state = _read_quota_state(quota_state_path)
+    models = (state.get("models") or {}) if isinstance(state, dict) else {}
+    for agent in agents:
+        info = models.get(agent) or {}
+        pct = info.get("percent_weekly")
+        if isinstance(pct, (int, float)) and float(pct) > threshold:
+            return QuotaCheck(
+                over_threshold=True,
+                offending_agent=agent,
+                observed_pct=float(pct),
+                threshold=threshold,
+            )
+    return QuotaCheck(False, None, None, threshold)
+
+
+@dataclass(frozen=True)
+class InteractiveCheck:
+    within_backoff: bool
+    minutes_remaining: float | None
+
+
+def evaluate_interactive_backoff(agents: Iterable[str]) -> InteractiveCheck:
+    """Returns whether Claude is participating AND its touch is within the
+    backoff window. Other agents don't enter this slice's check."""
+    if "claude" not in set(agents):
+        return InteractiveCheck(False, None)
+    within, remaining = interactive_state.is_within_backoff("claude")
+    return InteractiveCheck(within, remaining)
+
+
+@dataclass(frozen=True)
+class AdmissionCheck:
+    """Computed defer set + supporting context, suitable for INBOX bodies."""
+    dispatch_class: DispatchClass
+    quota: QuotaCheck
+    interactive: InteractiveCheck
+    active_gates: frozenset[str]  # gate_name(...) for each defer:* that should fire
+
+
+def evaluate(
+    plan_tier: str | None,
+    agents: Iterable[str],
+    *,
+    mode_override: str | None = None,
+    quota_state_path: Path | None = None,
+) -> AdmissionCheck:
+    """Top-level pre-dispatch admission evaluation.
+
+    Returns the runtime class, the underlying check structs (so callers can
+    surface reasons), and the SET of defer gate names that should be active
+    *given the class*. The supervisor reconciles gate-state.json against this
+    set: any gate in this set that isn't already active gets added; any
+    active defer gate NOT in this set gets dropped (auto-clear).
+    """
+    klass = classify_dispatch(plan_tier, mode_override=mode_override)
+    agent_list = list(agents)
+
+    # p0 and interactive both bypass everything in this slice.
+    if klass in (DispatchClass.P0, DispatchClass.INTERACTIVE):
+        return AdmissionCheck(
+            dispatch_class=klass,
+            quota=QuotaCheck(False, None, None, _quota_threshold()),
+            interactive=InteractiveCheck(False, None),
+            active_gates=frozenset(),
+        )
+
+    # autonomous: enforce both
+    quota = evaluate_quota_threshold(agent_list, quota_state_path=quota_state_path)
+    interactive = evaluate_interactive_backoff(agent_list)
+    gates: set[str] = set()
+    if quota.over_threshold:
+        gates.add(gate_name(DeferKind.QUOTA_THRESHOLD))
+    if interactive.within_backoff:
+        gates.add(gate_name(DeferKind.INTERACTIVE_BACKOFF))
+    return AdmissionCheck(
+        dispatch_class=klass,
+        quota=quota,
+        interactive=interactive,
+        active_gates=frozenset(gates),
+    )
+
+
+__all__ = [
+    "AdmissionCheck",
+    "DEFAULT_QUOTA_DEFER_THRESHOLD",
+    "DeferKind",
+    "DispatchClass",
+    "InteractiveCheck",
+    "QUOTA_STATE_PATH",
+    "QuotaCheck",
+    "classify_dispatch",
+    "evaluate",
+    "evaluate_interactive_backoff",
+    "evaluate_quota_threshold",
+    "gate_name",
+]

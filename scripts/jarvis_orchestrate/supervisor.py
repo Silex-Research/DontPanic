@@ -28,6 +28,7 @@ from jarvis_orchestrate import (
     notify,
     plan_loader,
     prompts,
+    quota_admission,
     signoff_writer,
     transcript,
 )
@@ -188,10 +189,14 @@ def _validate_environment_registry(
 
 
 def _read_quota_state() -> dict | None:
-    if not QUOTA_STATE_PATH.is_file():
+    """F020 quota gate read. Honors JARVIS_QUOTA_STATE_PATH for hermetic
+    test isolation (matches F006/F007 admission paths)."""
+    env_override = os.environ.get("JARVIS_QUOTA_STATE_PATH")
+    p = Path(env_override) if env_override else QUOTA_STATE_PATH
+    if not p.is_file():
         return None
     try:
-        return json.loads(QUOTA_STATE_PATH.read_text())
+        return json.loads(p.read_text())
     except (OSError, json.JSONDecodeError):
         return None
 
@@ -375,6 +380,7 @@ def dispatch_volley(
     max_iterations: int | None = None,
     target_env: str | None = None,
     target_project: str | None = None,
+    mode: str | None = None,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
 
@@ -454,9 +460,81 @@ def dispatch_volley(
             agents_in_panel=[impl_name, aud_name],
         )
 
-    # F008 Item 2 + F006 — gate-pause check. Evaluated BEFORE executor
-    # resolution so an active breaker:* gate (or any unmet plan-declared
-    # gate) reliably halts dispatch with paused_on_gate, even when
+    # F007 Slice 2 — pre-dispatch admission reconcile. Evaluates runtime
+    # dispatch class (p0 from plan.tier, interactive from --mode/env, else
+    # autonomous) and computes which defer:* gates should be active given
+    # current ~/.jarvis/quota_state.json + ~/.jarvis/interactive_state.json.
+    # Reconciles active_defers in gate-state.json: auto-adds gates whose
+    # condition is true, auto-removes gates whose condition is no longer
+    # true. Must run BEFORE the gate_pause.evaluate() check so the
+    # paused_on_gate path picks up the freshly reconciled defers.
+    plan_tier_str = (
+        loaded.plan.tier.value if hasattr(loaded.plan.tier, "value")
+        else str(loaded.plan.tier or "")
+    )
+    admission = quota_admission.evaluate(
+        plan_tier_str,
+        agents=[impl_name, aud_name],
+        mode_override=mode,
+    )
+    print(
+        f"[admission] class={admission.dispatch_class.value} "
+        f"quota_over={admission.quota.over_threshold} "
+        f"backoff_within={admission.interactive.within_backoff}"
+    )
+    reason_for: dict[str, str] = {}
+    if admission.quota.over_threshold:
+        reason_for[quota_admission.gate_name(quota_admission.DeferKind.QUOTA_THRESHOLD)] = (
+            f"{admission.quota.offending_agent} percent_weekly "
+            f"{admission.quota.observed_pct:.1f}% > threshold "
+            f"{admission.quota.threshold:.1f}%"
+        )
+    if admission.interactive.within_backoff:
+        reason_for[quota_admission.gate_name(quota_admission.DeferKind.INTERACTIVE_BACKOFF)] = (
+            f"interactive backoff active for claude — "
+            f"{admission.interactive.minutes_remaining:.1f} min remaining"
+        )
+    added, removed = gate_pause.reconcile_defers(
+        loaded.plan_dir,
+        set(admission.active_gates),
+        plan_id=loaded.plan_id,
+        reason_for=reason_for,
+    )
+    for gate in added:
+        body = f"Admission defer activated: {gate}\n\n"
+        body += f"Reason: {reason_for.get(gate, '(see gate-state.json)')}\n"
+        body += (
+            f"\nClear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
+            f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} {gate}"
+        )
+        inbox.append_event(
+            loaded.plan_dir,
+            event="defer_tripped",
+            plan_id=loaded.plan_id,
+            body=body,
+            defer_gate=gate,
+            dispatch_class=admission.dispatch_class.value,
+            feature_id=feature_id,
+        )
+        notify.notify(
+            title=f"jarvis: defer {gate} — {loaded.plan_id}",
+            message=reason_for.get(gate, gate)[:120],
+            subtitle=feature_id,
+        )
+    for gate in removed:
+        inbox.append_event(
+            loaded.plan_dir,
+            event="defer_cleared",
+            plan_id=loaded.plan_id,
+            body=f"Admission defer auto-cleared (condition no longer true): {gate}",
+            defer_gate=gate,
+            dispatch_class=admission.dispatch_class.value,
+            feature_id=feature_id,
+        )
+
+    # F008 Item 2 + F006 + F007 — gate-pause check. Evaluated BEFORE executor
+    # resolution so an active breaker:* / defer:* gate (or any unmet plan-
+    # declared gate) reliably halts dispatch with paused_on_gate, even when
     # AGENT_REGISTRY can't produce the named agents. Approval-required
     # breakers must preempt resolution for the same reason the global
     # breaker does — otherwise an empty registry KeyErrors before pausing.
