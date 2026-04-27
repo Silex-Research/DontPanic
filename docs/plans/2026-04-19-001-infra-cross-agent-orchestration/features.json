@@ -284,15 +284,18 @@
       "id": "F007",
       "category": "tooling",
       "phase": 2,
-      "description": "Per-tier quota caps enforced with reservation policy (20% interactive / 10% P0 / 50% autonomous / 20% headroom)",
+      "description": "Per-tier admission policy enforced as PRE-DISPATCH ADMISSION (not allocation). Runtime dispatch class derived at supervisor entry: p0 from existing plan.tier=p0, interactive from --mode flag or JARVIS_RUN_MODE env, autonomous as default. Two synthetic defer:* gates routed through F008 gate-pause framework: defer:quota_threshold (any participating agent percent_weekly > JARVIS_QUOTA_DEFER_THRESHOLD, default 70.0%, read from ~/.jarvis/quota_state.json) and defer:interactive_backoff (Claude in agents_required AND human Claude touch within JARVIS_INTERACTIVE_BACKOFF_MINUTES, default 30 min, read from ~/.jarvis/interactive_state.json). Operator records human Claude requests via the claude-touch CLI subcommand. Bypass matrix: p0 bypasses both, interactive bypasses both, autonomous enforces both. Transient lifecycle: pre-dispatch reconcile auto-adds gates whose condition is true and auto-removes gates whose condition is no longer true; operator approve via the approve CLI pops from active_defers, with re-trip on next dispatch if condition persists (matches F006 breaker semantics). Reservation language (20% interactive / 10% P0 / 50% autonomous / 20% headroom) describes intent only — Slice 2 ships admission policy against current state, not cross-plan allocation accounting.",
       "steps": [
-        "Supervisor reads ~/.jarvis/quota_state.json before dispatch (populated by F020/Task #698)",
-        "Enforce per-plan quota caps from plan frontmatter",
-        "Defer if per-model week-to-date > 70% threshold (configurable)",
-        "Interactive backoff: do not launch Claude-heavy work within 30 min of human's last Claude request"
+        "New module quota_admission.py: DispatchClass enum + classify_dispatch + evaluate (admission policy)",
+        "New module interactive_state.py: touch / last_human_request_at / is_within_backoff with JARVIS_INTERACTIVE_STATE_PATH env override",
+        "gate_pause.py: parallel active_defers field + add_defer / active_defers / reconcile_defers; approve_gate handles defer:* with transient lifecycle; resume_all clears active_defers",
+        "supervisor.dispatch_volley: pre-dispatch admission reconcile after global-breaker, before gate-pause + executor resolution",
+        "cli.py: claude-touch subcommand, --mode flag on volley, approve/resume recognize defer:* names",
+        "conftest.py: redirect JARVIS_INTERACTIVE_STATE_PATH and JARVIS_QUOTA_STATE_PATH per-test for hermetic isolation",
+        "Tests: 14 covering all 6 AC scenarios + lifecycle (auto-add/auto-remove/approve/re-trip) + bypass + idempotency + CLI"
       ],
-      "acceptance": "Mock Claude weekly at 75% → cross-cutting plan defers; mock reset → plan launches. Mock human Claude request 15 min ago → Claude-heavy plan defers 15 min",
-      "passes": false,
+      "acceptance": "Mock quota_state.json claude=75% → autonomous plan returns paused_on_gate with defer:quota_threshold; same mock + tier=p0 dispatches; same mock + interactive mode dispatches. Touch claude 15 min ago + Claude in agents_required + autonomous → paused_on_gate with defer:interactive_backoff (alone, not quota_threshold); same touch + tier=p0 dispatches; same touch + interactive mode dispatches. After threshold drop or backoff window elapses, defer:* auto-clears on next dispatch without operator action. CLI surfaces: claude-touch subcommand, --mode flag on volley, approve/resume recognize defer:* names with no false-warning.",
+      "passes": true,
       "depends_on": [
         "F006",
         "F020"

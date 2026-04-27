@@ -115,25 +115,35 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
     """Mark a single gate cleared. Idempotent — re-approving is a no-op
     (no INBOX append). Returns True if state changed.
 
-    For plan-declared gates, idempotency is governed by `cleared_gates`.
-    For F006 breaker:<kind> gates, idempotency is governed by `active_breakers`:
-    once approved, the breaker is removed from active_breakers AND stripped
-    from cleared_gates (transient lifecycle — re-trip pauses cleanly). A
-    second approve of the same already-cleared breaker is therefore a no-op,
-    matching the function's documented contract.
+    Three lifecycles, distinguished by name prefix:
+
+      - plan-declared gate (e.g. "pre_impl"):
+        durable; tracked via `cleared_gates`. Re-approve is no-op.
+
+      - F006 breaker:<kind>:
+        transient; tracked via `active_breakers`. Approve pops it; re-trip
+        re-adds. Re-approve when already cleared is no-op.
+
+      - F007 defer:<kind>:
+        transient; tracked via `active_defers`. Same approve semantics as
+        breakers; the supervisor's pre-dispatch admission reconcile may
+        re-add the entry on the next dispatch if the underlying condition
+        is still true.
     """
     gate_str = _stringify_gates([gate])[0]
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
     is_breaker = gate_str.startswith("breaker:")
+    is_defer = gate_str.startswith("defer:")
     cleared = list(state.get("cleared_gates") or [])
-    active = list(state.get("active_breakers") or [])
+    active_breakers_list = list(state.get("active_breakers") or [])
+    active_defers_list = list(state.get("active_defers") or [])
 
     if is_breaker:
-        # No-op when the breaker isn't currently active. Either it was never
-        # tripped, or it was approved earlier and removed; either way there's
-        # nothing to clear.
-        if gate_str not in active:
+        if gate_str not in active_breakers_list:
+            return False
+    elif is_defer:
+        if gate_str not in active_defers_list:
             return False
     else:
         if gate_str in cleared:
@@ -149,11 +159,20 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         # F006 transient lifecycle: pop from active_breakers; do NOT accumulate
         # in cleared_gates so the next trip re-pauses without prior approval
         # bleeding through.
-        active = [b for b in active if b != gate_str]
-        if active:
-            state["active_breakers"] = active
+        active_breakers_list = [b for b in active_breakers_list if b != gate_str]
+        if active_breakers_list:
+            state["active_breakers"] = active_breakers_list
         else:
             state.pop("active_breakers", None)
+        state["cleared_gates"] = [c for c in cleared if c != gate_str]
+    elif is_defer:
+        # F007 transient lifecycle, mirrors breakers: pop from active_defers,
+        # never accumulate in cleared_gates.
+        active_defers_list = [d for d in active_defers_list if d != gate_str]
+        if active_defers_list:
+            state["active_defers"] = active_defers_list
+        else:
+            state.pop("active_defers", None)
         state["cleared_gates"] = [c for c in cleared if c != gate_str]
     else:
         cleared.append(gate_str)
@@ -165,18 +184,18 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
 
 
 def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor: str = "operator") -> list[str]:
-    """Clear every declared gate. Returns the list of gates newly cleared
-    (excludes ones that were already cleared)."""
+    """Clear every declared gate AND every active transient gate (breakers +
+    F007 defers). Returns the list of names newly cleared in this call."""
     declared_strs = _stringify_gates(declared_gates)
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
     cleared = set(state.get("cleared_gates") or [])
     newly = [g for g in declared_strs if g not in cleared]
     pending_breakers = list(state.get("active_breakers") or [])
-    # F006: don't early-return when declared_gates were already cleared if
-    # pending_breakers still exist — operator's "resume all" intent must reach
-    # the breakers too.
-    if not newly and not pending_breakers:
+    pending_defers = list(state.get("active_defers") or [])
+    # Don't early-return when declared_gates were already cleared if any
+    # transient gate still exists — operator's "resume all" must reach those.
+    if not newly and not pending_breakers and not pending_defers:
         return []
     if newly:
         cleared.update(newly)
@@ -190,17 +209,25 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
         history.append(
             {"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor}
         )
+    for d in pending_defers:
+        history.append(
+            {"action": "resume_all", "gate": d, "at": _now_iso(), "actor": actor}
+        )
     if pending_breakers:
         state.pop("active_breakers", None)
-        # Strip any breaker entries from cleared_gates too (transient).
+    if pending_defers:
+        state.pop("active_defers", None)
+    if pending_breakers or pending_defers:
+        # Strip transient entries from cleared_gates too (they should never
+        # accumulate there).
         state["cleared_gates"] = sorted(
             c for c in (state.get("cleared_gates") or [])
-            if not c.startswith("breaker:")
+            if not c.startswith("breaker:") and not c.startswith("defer:")
         )
     state["history"] = history
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
-    return newly + pending_breakers
+    return newly + pending_breakers + pending_defers
 
 
 def record_pause(
@@ -246,17 +273,22 @@ class GateCheck:
 def evaluate(plan_dir: Path, declared_gates: list[Any]) -> GateCheck:
     """Pure read of current gate state vs declared gates. Does not write.
 
-    F006 integration: any synthetic `breaker:<kind>` entries in the state file's
-    active_breakers list also block dispatch. The supervisor unions them with
-    plan.human_gates so a single approve/resume CLI flow clears both kinds.
+    Three sources can pause dispatch:
+      - plan-declared gates (durable, cleared via approve/resume)
+      - F006 active_breakers (transient, set by supervisor on circuit-breaker trip)
+      - F007 active_defers   (transient, set by pre-dispatch admission reconcile)
+
+    Any unmet plan-declared gate plus any active transient gate is by-
+    construction "unmet" — the supervisor pauses with paused_on_gate.
     """
     declared_strs = _stringify_gates(declared_gates)
     state = _read_state(plan_dir)
     cleared = list(state.get("cleared_gates") or [])
-    active_breakers = list(state.get("active_breakers") or [])
+    active_breakers_list = list(state.get("active_breakers") or [])
+    active_defers_list = list(state.get("active_defers") or [])
     plan_unmet = [g for g in declared_strs if g not in cleared]
-    combined_declared = declared_strs + active_breakers
-    unmet = plan_unmet + active_breakers  # any active breaker is by-construction unmet
+    combined_declared = declared_strs + active_breakers_list + active_defers_list
+    unmet = plan_unmet + active_breakers_list + active_defers_list
     return GateCheck(paused=bool(unmet), declared=combined_declared, cleared=cleared, unmet=unmet)
 
 
@@ -291,16 +323,112 @@ def active_breakers(plan_dir: Path) -> list[str]:
     return list(_read_state(plan_dir).get("active_breakers") or [])
 
 
+def add_defer(plan_dir: Path, defer_gate: str, *, plan_id: str, reason: str = "") -> bool:
+    """F007 — record that an admission-policy defer should fire. Adds the
+    synthetic defer:<kind> name to active_defers. Idempotent."""
+    state = _read_state(plan_dir)
+    state["plan_id"] = plan_id
+    defers = list(state.get("active_defers") or [])
+    if defer_gate in defers:
+        return False
+    defers.append(defer_gate)
+    state["active_defers"] = defers
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "defer_trip",
+            "gate": defer_gate,
+            "at": _now_iso(),
+            "actor": "supervisor",
+            "reason": reason,
+        }
+    )
+    state["history"] = history
+    _write_state(plan_dir, state)
+    return True
+
+
+def active_defers(plan_dir: Path) -> list[str]:
+    return list(_read_state(plan_dir).get("active_defers") or [])
+
+
+def reconcile_defers(
+    plan_dir: Path,
+    desired: set[str],
+    *,
+    plan_id: str,
+    reason_for: dict[str, str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """F007 — make active_defers match `desired` (the set computed from
+    quota_admission.evaluate). Returns (added, removed) for logging.
+
+    Transient lifecycle:
+      - desired ∋ gate, not currently active → add (records defer_trip)
+      - desired ∌ gate, currently active     → remove (records defer_clear,
+                                                actor='supervisor', reason='condition_cleared')
+      - intersection                          → leave alone
+
+    Operator approve/resume_all between dispatches still works the same —
+    they pop entries from active_defers; the next reconcile re-adds anything
+    whose underlying condition is still true.
+    """
+    state = _read_state(plan_dir)
+    state["plan_id"] = plan_id
+    current = list(state.get("active_defers") or [])
+    current_set = set(current)
+    added: list[str] = []
+    removed: list[str] = []
+    history = list(state.get("history") or [])
+    now_iso = _now_iso()
+
+    for gate in sorted(desired - current_set):
+        current.append(gate)
+        added.append(gate)
+        history.append(
+            {
+                "action": "defer_trip",
+                "gate": gate,
+                "at": now_iso,
+                "actor": "supervisor",
+                "reason": (reason_for or {}).get(gate, ""),
+            }
+        )
+    for gate in sorted(current_set - desired):
+        current = [g for g in current if g != gate]
+        removed.append(gate)
+        history.append(
+            {
+                "action": "defer_clear",
+                "gate": gate,
+                "at": now_iso,
+                "actor": "supervisor",
+                "reason": "condition_cleared",
+            }
+        )
+
+    if added or removed:
+        if current:
+            state["active_defers"] = current
+        else:
+            state.pop("active_defers", None)
+        state["history"] = history
+        _write_state(plan_dir, state)
+    return added, removed
+
+
 __all__ = [
     "GATE_STATE_FILENAME",
     "GateCheck",
     "active_breakers",
+    "active_defers",
     "add_breaker",
+    "add_defer",
     "approve_gate",
     "cleared_gates",
     "evaluate",
     "gate_state_path",
     "is_gate_cleared",
+    "reconcile_defers",
     "record_pause",
     "reset_for_test",
     "resume_all",

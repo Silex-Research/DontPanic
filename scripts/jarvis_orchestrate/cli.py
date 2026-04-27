@@ -7,13 +7,17 @@ Volley dispatch (F005a — implementer/auditor pair, iterate until signoff or ca
   python -m jarvis_orchestrate <plan-id> --volley [--feature F001]
                                                   [--implementer claude] [--auditor codex]
                                                   [--max-iterations 3]
+                                                  [--mode interactive|p0|autonomous]
 
 Active-supervisor registry (F023 EC13):
   python -m jarvis_orchestrate ps
 
-Engagement-surface gate handling (F008):
+Engagement-surface gate handling (F008 + F006 + F007):
   python -m jarvis_orchestrate approve <plan-id> <gate>   # clear one declared gate
   python -m jarvis_orchestrate resume  <plan-id>          # clear every declared gate
+
+Interactive backoff touch (F007 Slice 2):
+  python -m jarvis_orchestrate claude-touch               # record human Claude request now
 """
 from __future__ import annotations
 
@@ -26,7 +30,9 @@ from jarvis_orchestrate import (
     circuit_breakers as cb,
     gate_pause,
     inbox,
+    interactive_state,
     plan_loader,
+    quota_admission,
     supervisor,
 )
 from jarvis_orchestrate.supervisor import QuotaExceeded
@@ -81,9 +87,19 @@ def _approve_main(argv: list[str]) -> int:
     # operator approves a known breaker name (either currently active or any
     # known approval-required BreakerKind, in case the operator is pre-clearing).
     # The global kind is excluded above; the rest of APPROVAL_BREAKERS is fair game.
-    active = gate_pause.active_breakers(plan_dir)
+    # F007: same treatment for synthetic defer:<kind> gates added by the
+    # admission reconcile.
+    active_breakers = gate_pause.active_breakers(plan_dir)
+    active_defers = gate_pause.active_defers(plan_dir)
     breaker_names = {f"breaker:{k.value}" for k in cb.APPROVAL_BREAKERS}
-    valid_targets = set(declared_strs) | set(active) | breaker_names
+    defer_names = {quota_admission.gate_name(k) for k in quota_admission.DeferKind}
+    valid_targets = (
+        set(declared_strs)
+        | set(active_breakers)
+        | set(active_defers)
+        | breaker_names
+        | defer_names
+    )
     if gate not in valid_targets:
         print(
             f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared_strs} "
@@ -108,8 +124,9 @@ def _approve_main(argv: list[str]) -> int:
 
 
 def _resume_main(argv: list[str]) -> int:
-    """F008 Item 2 + F006: clear every plan-declared gate AND every active
-    breaker. Returns success even when both sets are empty (idempotent)."""
+    """F008 Item 2 + F006 + F007: clear every plan-declared gate AND every
+    active transient gate (breakers + defers). Returns success even when all
+    sets are empty (idempotent)."""
     if len(argv) != 1:
         print("usage: jarvis-orchestrate resume <plan-id>", file=sys.stderr)
         return 2
@@ -117,12 +134,16 @@ def _resume_main(argv: list[str]) -> int:
     plan_dir = _resolve_plan_dir(plan_arg)
     loaded = plan_loader.load(plan_dir)
     declared = list(loaded.plan.human_gates or [])
-    active = gate_pause.active_breakers(plan_dir)
-    if not declared and not active:
-        print(f"[resume] plan {loaded.plan_id} has no plan-declared gates and no active breakers — nothing to clear")
+    active_breakers = gate_pause.active_breakers(plan_dir)
+    active_defers = gate_pause.active_defers(plan_dir)
+    if not declared and not active_breakers and not active_defers:
+        print(
+            f"[resume] plan {loaded.plan_id} has no plan-declared gates, "
+            f"no active breakers, and no active defers — nothing to clear"
+        )
         return 0
-    # gate_pause.resume_all clears declared_gates AND every active breaker, so
-    # passing declared (even when empty) is enough to reach active_breakers.
+    # gate_pause.resume_all clears declared_gates + active breakers + active
+    # defers; passing declared (even when empty) is enough to reach the rest.
     newly = gate_pause.resume_all(plan_dir, plan_id=loaded.plan_id, declared_gates=declared)
     if newly:
         inbox.append_event(
@@ -133,13 +154,37 @@ def _resume_main(argv: list[str]) -> int:
                 f"Operator cleared all gates via `jarvis resume`.\n"
                 f"Newly cleared: {newly}\n"
                 f"Plan-declared: {declared}\n"
-                f"Active breakers (pre-clear): {active}"
+                f"Active breakers (pre-clear): {active_breakers}\n"
+                f"Active defers (pre-clear): {active_defers}"
             ),
             cleared_gates=",".join(newly),
         )
         print(f"[resume] cleared {len(newly)} gates: {newly}")
     else:
         print("[resume] all declared gates were already cleared")
+    return 0
+
+
+def _claude_touch_main(argv: list[str]) -> int:
+    """F007 Slice 2: record that a human just made a Claude request. The
+    supervisor's autonomous-class admission check reads this state and pauses
+    via defer:interactive_backoff for JARVIS_INTERACTIVE_BACKOFF_MINUTES (30
+    min default) after the touch.
+
+    No args. Touches `claude` only — future agent variants can ride a later
+    slice. State path overridable via JARVIS_INTERACTIVE_STATE_PATH for
+    hermetic tests; conftest autouse fixture sets it per-test.
+    """
+    if argv:
+        print("usage: jarvis-orchestrate claude-touch", file=sys.stderr)
+        return 2
+    ts = interactive_state.touch("claude")
+    minutes = interactive_state.backoff_minutes()
+    print(
+        f"[claude-touch] recorded human Claude request at {ts} "
+        f"(backoff window {minutes:g} min). Autonomous Claude-heavy "
+        "dispatches will defer until the window elapses."
+    )
     return 0
 
 
@@ -151,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
         return _approve_main(raw[1:])
     if raw and raw[0] == "resume":
         return _resume_main(raw[1:])
+    if raw and raw[0] == "claude-touch":
+        return _claude_touch_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
@@ -161,13 +208,26 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--implementer", default=None, help="Volley mode: implementer agent (default: agents_required[0])")
     p.add_argument("--auditor", default=None, help="Volley mode: auditor agent (default: agents_required[1])")
     p.add_argument("--max-iterations", type=int, default=None, help="Volley mode: override loop_caps.max_iterations")
+    p.add_argument(
+        "--mode",
+        default=None,
+        choices=["interactive", "autonomous", "p0"],
+        help="F007: runtime dispatch class override. interactive=bypass admission gates; "
+             "p0=bypass admission gates (overrides plan.tier); autonomous=enforce. "
+             "Default: derived from plan.tier (p0 → p0; else autonomous).",
+    )
     args = p.parse_args(raw)
 
     plan_dir = _resolve_plan_dir(args.plan)
     print(f"[supervisor] plan_dir={plan_dir}")
 
     if args.volley:
-        print(f"[supervisor] mode=volley feature={args.feature} impl={args.implementer or '(plan default)'} aud={args.auditor or '(plan default)'}")
+        print(
+            f"[supervisor] mode=volley feature={args.feature} "
+            f"impl={args.implementer or '(plan default)'} "
+            f"aud={args.auditor or '(plan default)'} "
+            f"runtime_class={args.mode or '(derived)'}"
+        )
         try:
             result = supervisor.dispatch_volley(
                 plan_dir=plan_dir,
@@ -175,6 +235,7 @@ def main(argv: list[str] | None = None) -> int:
                 implementer_agent=args.implementer,
                 auditor_agent=args.auditor,
                 max_iterations=args.max_iterations,
+                mode=args.mode,
             )
         except QuotaExceeded as exc:
             print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
