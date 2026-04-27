@@ -118,7 +118,11 @@ def _approve_main(argv: list[str]) -> int:
         print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
     else:
         print(f"[approve] gate {gate!r} was already cleared")
-    remaining = gate_pause.unmet_gates(plan_dir, declared_strs)
+    # Remaining unmet = unmet plan-declared + every still-active breaker +
+    # every still-active defer. unmet_gates() considers only plan-declared
+    # gates, which used to give operators a misleading "(none)" while a
+    # transient breaker:* / defer:* was still blocking dispatch.
+    remaining = gate_pause.evaluate(plan_dir, declared_strs).unmet
     print(f"[approve] remaining unmet gates: {remaining or '(none)'}")
     return 0
 
@@ -250,18 +254,25 @@ def main(argv: list[str] | None = None) -> int:
         # Exit 0 only if signed_off; non-zero for any non-success terminal
         return 0 if result.final_status == "signed_off" else 3
 
-    # Single-agent path (F004)
-    print(f"[supervisor] mode=single feature={args.feature} role={args.role} iter={args.iteration}")
+    # Single-agent path (F004 + F007 admission)
+    print(
+        f"[supervisor] mode=single feature={args.feature} role={args.role} "
+        f"iter={args.iteration} runtime_class={args.mode or '(derived)'}"
+    )
     try:
         audit_path = supervisor.dispatch_single_agent(
             plan_dir=plan_dir,
             feature_id=args.feature,
             agent_role=args.role,
             iteration=args.iteration,
+            mode=args.mode,
         )
     except QuotaExceeded as exc:
         print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
         return 2
+    except supervisor.PausedOnGate as exc:
+        print(f"[supervisor] PAUSED on gate: {exc}", file=sys.stderr)
+        return 3
     except (FileNotFoundError, KeyError, ValueError) as exc:
         print(f"[supervisor] ERROR: {exc}", file=sys.stderr)
         return 1
