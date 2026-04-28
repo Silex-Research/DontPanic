@@ -42,26 +42,65 @@ fi
 # ── Step 2: Copy code (excluding sensitive files) ──
 echo "→ Copying code..."
 
-# Files/dirs to EXCLUDE from public
+# Files/dirs to EXCLUDE from public.
+# rsync ignores .gitignore by default — anything that's gitignored locally
+# but exists on disk (environments.json, .secrets/, scripts/maintainer/, …)
+# would otherwise leak into the public repo. List every such path here.
 EXCLUDE=(
+  # version control + dep caches
   ".git"
   "node_modules"
   "package-lock.json"
+  ".firebase"
+  # Firebase project alias — F022 untracked this; private maintainers
+  # regenerate it via bootstrap.sh. Belt-and-suspenders even though the
+  # file no longer exists in the tracked surface.
   ".firebaserc"
+  ".firebaserc.example"
+  # Per-repo environments registry — F022 untracked. Never publish.
+  "environments.json"
+  # Service account keys — gitignored, but rsync would copy.
+  ".secrets"
+  # Local env override files
+  ".env"
+  ".env.*"
+  # Live dashboard state (replaced by demo writes in Step 3)
   "dashboard/state"
   "dashboard/node_modules"
   "dashboard/package-lock.json"
+  # Maintainer-private scripts. F022 moved refresh-costs.sh under
+  # scripts/maintainer/; keep the legacy single-file entry as a guard
+  # in case anything else lands at the old path.
+  "scripts/maintainer"
   "scripts/refresh-costs.sh"
+  # The publish + private-side sanitizer themselves
   "scripts/publish-oss.sh"
+  "scripts/sanitization_check.py"
+  # Claude / Codex / Gemini local state
   "claude/settings.json"
   "claude/hooks"
   "claude/scripts"
   "claude/registry"
-  "codex/config.toml"
-  "gemini/settings.json"
+  "claude/projects"
   ".claude"
-  ".firebase"
+  "codex/config.toml"
+  "codex/auth.json"
+  "gemini/settings.json"
+  "gemini/oauth_creds.json"
+  "gemini/google_accounts.json"
+  "gemini/state.json"
+  "gemini/installation_id"
+  "gemini/tmp"
+  # Personal context
   "USER.md"
+  # Private audit chain — D076–D079 contain campaign IDs by design
+  # (sanitization_check allowlists docs/plans for the private repo).
+  # The OSS mirror gets a curated narrative, not the verbatim history.
+  "docs/plans"
+  # Personal research + tracking artifacts
+  "research"
+  "tracking"
+  "memory"
 )
 
 RSYNC_EXCLUDES=""
@@ -252,6 +291,45 @@ gemini/state.json
 GITIGNORE
 fi
 
+# ── Step 5b: Sanitization preflight on the public tree ──
+# Scans the entire public dir (excluding .git) for the same campaign
+# patterns sanitization_check.py guards in the private repo. The
+# PUBLIC tree gets ZERO allowlist — plan dirs and campaign-private
+# scripts must already be excluded above; if any pattern remains here,
+# something slipped past EXCLUDE and we abort before commit.
+echo "→ Running sanitization preflight on public tree..."
+
+if ! $DRY_RUN; then
+  # Patterns assembled from parts so this script doesn't match itself
+  # when grep walks scripts/ inside the public copy (note: this script
+  # itself is excluded, but defense in depth).
+  PROJECT_PAT="jarvis-""a6ee1"
+  BILLING_PAT="01EA42-""C7164E-""236F6E"
+  USER_PAT="bil""otto"
+
+  HITS=$(grep -rIln \
+    -e "$PROJECT_PAT" \
+    -e "$BILLING_PAT" \
+    -e "$USER_PAT" \
+    --exclude-dir=.git \
+    "$PUBLIC_DIR" 2>/dev/null || true)
+
+  if [[ -n "$HITS" ]]; then
+    echo ""
+    echo "ERROR: Sanitization preflight FAILED — the public tree contains" >&2
+    echo "private patterns. Refusing to commit/push. Offending files:" >&2
+    echo "" >&2
+    echo "$HITS" >&2
+    echo "" >&2
+    echo "Fix: add the offending paths to EXCLUDE in scripts/publish-oss.sh," >&2
+    echo "or sanitize the source file in the private repo, then re-run." >&2
+    exit 1
+  fi
+  echo "  ✓ no private patterns in public tree"
+else
+  echo "  (skipped under --dry-run)"
+fi
+
 # ── Step 6: Commit and push ──
 echo "→ Committing..."
 
@@ -286,7 +364,10 @@ echo "  ✓ Setup instructions (README)"
 echo ""
 echo "What's excluded:"
 echo "  ✗ Real billing data (state/costs.json)"
-echo "  ✗ Firebase project config (.firebaserc)"
-echo "  ✗ Harness settings (claude/settings.json)"
-echo "  ✗ Hooks and scripts with credentials"
-echo "  ✗ refresh-costs.sh (real BigQuery tables)"
+echo "  ✗ Firebase project config (.firebaserc, .firebaserc.example)"
+echo "  ✗ Per-repo environments registry (environments.json)"
+echo "  ✗ Service account keys (.secrets/)"
+echo "  ✗ Maintainer-private scripts (scripts/maintainer/, refresh-costs.sh)"
+echo "  ✗ Harness settings + state (claude/, codex/, gemini/ local files)"
+echo "  ✗ Private audit chain (docs/plans/)"
+echo "  ✗ Personal research + tracking (research/, tracking/, memory/, USER.md)"
