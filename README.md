@@ -47,8 +47,6 @@ Python deps: `pip3 install firebase-admin pydantic jsonschema pyyaml datamodel-c
 
 ## Quickstart
 
-> **Coming soon:** `./bootstrap.sh` will codify the manual steps below into a single interactive script. Tracked as parent plan F022.
-
 ### 1. Clone
 
 ```bash
@@ -56,59 +54,50 @@ git clone https://github.com/Silex-Research/Jarvis.git
 cd Jarvis
 ```
 
-### 2. Set up evidence storage (one-time)
+### 2. Bootstrap your own GCP/Firebase project
 
-You need a Firebase/GCP project for orchestration evidence. Walk through:
+Pick a fresh GCP project ID (do NOT reuse the maintainer's campaign project)
+and a billing account, then run:
 
 ```bash
-# Auth
 gcloud auth login
+gcloud auth application-default login
 firebase login
 
-# Create or pick a project (replace <id> with your project ID)
-gcloud projects create <id> --name=Jarvis-evidence
-firebase use <id>
+scripts/bootstrap.sh \
+  --project your-project-id \
+  --billing-account XXXXXX-XXXXXX-XXXXXX
+```
 
-# Link a billing account (required for Storage + Firestore)
-gcloud beta billing accounts list
-gcloud beta billing projects link <id> --billing-account=<billing-id>
+The script links billing, enables required APIs, creates the orchestrator
+service account with scoped roles, deploys storage + firestore rules, and
+generates a local `environments.json` + `.firebaserc` from the tracked
+`.example` templates. SA keys are **off by default** — pass `--create-key`
+explicitly if your local agents need one (the script verifies `.secrets/`
+is gitignored before writing).
 
-# Enable APIs
-gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com \
-  iam.googleapis.com iamcredentials.googleapis.com --project=<id>
+Pass `--dry-run` to preview every command without executing.
 
-# Storage bucket for evidence > 100KB
-gcloud storage buckets create gs://<id>-evidence --project=<id> \
-  --location=us-central1 --uniform-bucket-level-access
+### 3. Verify
 
-# Service account for orchestrator runtime
-gcloud iam service-accounts create orchestrator \
-  --display-name="Jarvis Orchestrator" --project=<id>
-SA="orchestrator@<id>.iam.gserviceaccount.com"
-for ROLE in roles/storage.admin roles/datastore.user roles/logging.logWriter \
-            roles/iam.serviceAccountTokenCreator; do
-  gcloud projects add-iam-policy-binding <id> \
-    --member="serviceAccount:$SA" --role="$ROLE" --condition=None
-done
+```bash
+export JARVIS_FIREBASE_PROJECT=your-project-id
 
-# Generate key (gitignored under .secrets/)
-mkdir -p .secrets
-gcloud iam service-accounts keys create .secrets/<id>-orchestrator.json \
-  --iam-account="$SA"
+# Full check — needs `gcloud auth login` + `firebase login` first
+python3 scripts/jarvis_doctor.py
 
-# Smoke test the pipeline
+# Or, before you've authenticated the CLIs (fresh clone smoke):
+python3 scripts/jarvis_doctor.py --skip-auth
+```
+
+Both modes should print `✓ N/N checks passed — Jarvis is ready`. Each
+red check includes a remediation line. Then run the storage smoke test:
+
+```bash
 PYTHONPATH=scripts python3 -m jarvis_orchestrate.smoke_test_storage
 ```
 
-If the smoke test prints `✓ F002 acceptance PASS`, evidence storage is wired.
-
-### 3. Configure billing tracking (optional, ~24h to populate)
-
-For the dashboard to show GCP cost over time, configure BigQuery export from your billing account:
-
-1. Open https://console.cloud.google.com/billing/<billing-id>/export/bigquery
-2. **Standard usage cost** → Edit settings → Project: `<your-billing-export-project>`, Dataset: `billing_export`
-3. After ~24h, run `bash scripts/refresh-costs.sh` to populate `dashboard/state/costs.json`.
+If it prints `✓ F002 acceptance PASS`, evidence storage is wired.
 
 ### 4. Validate your first plan
 
@@ -118,6 +107,18 @@ python3 claude/shared/schemas/v1.0/validate.py \
 ```
 
 Should print all green checkmarks.
+
+### 5. Run the test suite
+
+```bash
+PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/ -q
+ruff check scripts/
+ruff format --check scripts/
+```
+
+These four commands are the exact local equivalents of the
+[GitHub Actions CI workflow](.github/workflows/ci.yml). See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor flow.
 
 ---
 
@@ -153,15 +154,18 @@ Jarvis/
 │       └── evidence/                # small artifacts (large → Firebase Storage)
 │
 ├── scripts/
-│   ├── jarvis_orchestrate/          # supervisor runtime (in progress)
-│   ├── refresh-costs.sh             # GCP $ → dashboard/state/costs.json
+│   ├── jarvis_orchestrate/          # supervisor runtime
+│   ├── bootstrap.sh                 # one-shot GCP/Firebase setup
+│   ├── jarvis_doctor.py             # preflight health checks
+│   ├── sanitization_check.py        # sanitization regression guard
 │   └── quota_check.py               # LLM tokens → ~/.jarvis/quota_state.json
 │
 ├── dashboard/                       # Firebase Hosting static SPA
-│   └── state/                       # agents.json, tasks.json, costs.json, …
+│   └── state/                       # agents.json, tasks.json, …
 │
-├── .secrets/                        # gitignored — service account keys
-└── .firebaserc / firebase.json      # multi-project alias config
+├── .secrets/                        # gitignored — service account keys (created by bootstrap --create-key)
+├── environments.json                # gitignored; generated from environments.json.example
+└── .firebaserc                      # gitignored; generated from .firebaserc.example
 ```
 
 ---
@@ -192,10 +196,10 @@ Jarvis tracks cost on two independent axes:
 
 | Axis | Source | Output | Use |
 |---|---|---|---|
-| GCP $ | `silexr-billing` BigQuery export | `dashboard/state/costs.json` | Cloud-spend dashboard |
+| GCP $ | Your billing-account BigQuery export | `dashboard/state/costs.json` | Cloud-spend dashboard (operator-supplied refresh script; not bundled) |
 | LLM tokens | Per-model session logs (Claude/Codex/Gemini/Grok) + Ollama probe | `~/.jarvis/quota_state.json` | Circuit breakers (defer dispatch when weekly quota near cap) |
 
-Run `bash scripts/refresh-costs.sh` for GCP $ (daily cron recommended) and `python3 scripts/quota_check.py` for LLM tokens (every ~30 min during active work).
+Run `python3 scripts/quota_check.py` for LLM tokens (every ~30 min during active work). GCP $ refresh is operator-specific (project list, app categorization, billing-export project all vary) and is not shipped as a bundled script.
 
 ---
 

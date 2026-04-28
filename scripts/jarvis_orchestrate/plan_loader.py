@@ -1,4 +1,5 @@
 """Load + validate a plan directory against agent-conventions v1.0 schemas."""
+
 from __future__ import annotations
 
 import json
@@ -50,6 +51,7 @@ def _registry_required_gates(plan_dir: Path, target_env: str) -> list[str] | Non
         find_repo_root_for_plan,
         load_environments,
     )
+
     repo_root = find_repo_root_for_plan(plan_dir)
     if repo_root is None:
         return None
@@ -109,9 +111,7 @@ def load(plan_dir: Path) -> LoadedPlan:
     features = Features.model_validate(json.loads(features_json.read_text()))
 
     if features.task_id != plan.id:
-        raise ValueError(
-            f"task_id {features.task_id!r} != plan id {plan.id!r}"
-        )
+        raise ValueError(f"task_id {features.task_id!r} != plan id {plan.id!r}")
 
     target = parse_target_section(plan_md_text)
     required_override = _registry_required_gates(plan_dir, target["target_env"])

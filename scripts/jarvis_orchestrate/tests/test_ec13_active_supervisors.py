@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec13_active_supervisors.py
 """
+
 from __future__ import annotations
 
 import io

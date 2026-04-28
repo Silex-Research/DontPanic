@@ -5,12 +5,13 @@ no-op (returning False) when the binary is missing or non-mac. Honors
 `JARVIS_NOTIFY_DISABLE=1` to silence all notifications, useful in tests +
 CI where the desktop notification UX is meaningless.
 """
+
 from __future__ import annotations
 
 import os
 import shutil
 import subprocess
-from typing import Mapping
+from collections.abc import Mapping
 
 NOTIFIER_BINARY = "terminal-notifier"
 DISABLE_ENV = "JARVIS_NOTIFY_DISABLE"

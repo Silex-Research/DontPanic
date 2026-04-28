@@ -4,6 +4,7 @@ Codex emits newline-delimited JSON events to stdout; the agent's response is the
 `item.text` field of the `item.completed` event whose `item.type == agent_message`.
 Usage data appears in the `turn.completed` event.
 """
+
 from __future__ import annotations
 
 import datetime as dt

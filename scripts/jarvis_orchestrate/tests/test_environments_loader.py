@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_environments_loader.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -29,7 +30,6 @@ from jarvis_orchestrate.executors.base import (  # noqa: E402
     DispatchResult,
     DispatchTask,
 )
-
 
 # ──────────────────────────────  fixtures  ──────────────────────────────
 
@@ -425,7 +425,9 @@ def _run_volley_with_counting(plan_dir: Path):
     supervisor._quota_gate = lambda agent: (None, f"[quota] {agent}: bypassed")
     # F008: pre-clear declared gates so the new gate-pause check doesn't pause
     # this EC1 fixture (exercises env-registry validation, not gate-pause).
-    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    from jarvis_orchestrate import gate_pause
+    from jarvis_orchestrate import plan_loader as _pl
+
     _loaded_for_gates = _pl.load(plan_dir)
     gate_pause.resume_all(
         plan_dir,
@@ -457,7 +459,9 @@ def test_supervisor_no_registry_skips_silently() -> None:
     print("\n[test] supervisor_no_registry_skips_silently ...")
     with tempfile.TemporaryDirectory() as td:
         # Plan claims a project but there's no environments.json on the path
-        plan_dir = _make_plan(Path(td), "2026-04-26-002-infra-no-registry", target_project="some-proj")
+        plan_dir = _make_plan(
+            Path(td), "2026-04-26-002-infra-no-registry", target_project="some-proj"
+        )
         result, impl, aud = _run_volley_with_counting(plan_dir)
         # Walk-up may escape tmp scope, so we accept either: signed_off (no host-tree
         # registry found upward) or a typed mismatch (host-tree registry was found).
@@ -475,7 +479,9 @@ def test_supervisor_registry_match_records_evidence() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         _write_env_file(repo, _jarvis_dev_only())
-        plan_dir = _make_plan(repo, "2026-04-26-003-infra-registry-match", target_project="<firebase-project-id>")
+        plan_dir = _make_plan(
+            repo, "2026-04-26-003-infra-registry-match", target_project="<firebase-project-id>"
+        )
         result, impl, aud = _run_volley_with_counting(plan_dir)
         assert result.final_status == "signed_off", result
         assert impl.dispatch_count == 1 and aud.dispatch_count == 1
@@ -493,7 +499,9 @@ def test_supervisor_undeclared_tier_blocks_pre_dispatch() -> None:
         repo = Path(td)
         # Registry declares only dev; plan asks for staging
         _write_env_file(repo, _jarvis_dev_only())
-        plan_dir = _make_plan(repo, "2026-04-26-004-infra-tier-undeclared", target_project="<firebase-project-id>")
+        plan_dir = _make_plan(
+            repo, "2026-04-26-004-infra-tier-undeclared", target_project="<firebase-project-id>"
+        )
         # Override target_env via supervisor kwarg to staging
         impl = _DispatchCountingExecutor("claude")
         aud = _DispatchCountingExecutor("codex")
@@ -505,7 +513,8 @@ def test_supervisor_undeclared_tier_blocks_pre_dispatch() -> None:
         try:
             try:
                 supervisor.dispatch_volley(
-                    plan_dir, "F001",
+                    plan_dir,
+                    "F001",
                     target_env="staging",
                     max_iterations=1,
                 )
@@ -530,7 +539,9 @@ def test_supervisor_project_mismatch_blocks_pre_dispatch() -> None:
         repo = Path(td)
         # Registry declares dev → <firebase-project-id>; plan claims target_project=other-proj
         _write_env_file(repo, _jarvis_dev_only())
-        plan_dir = _make_plan(repo, "2026-04-26-005-infra-project-mismatch", target_project="other-proj")
+        plan_dir = _make_plan(
+            repo, "2026-04-26-005-infra-project-mismatch", target_project="other-proj"
+        )
         impl = _DispatchCountingExecutor("claude")
         aud = _DispatchCountingExecutor("codex")
         saved_registry = dict(AGENT_REGISTRY)

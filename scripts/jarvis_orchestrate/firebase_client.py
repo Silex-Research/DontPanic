@@ -1,12 +1,18 @@
-"""Firebase Admin SDK wrapper for Jarvis orchestrator (<firebase-project-id>).
+"""Firebase Admin SDK wrapper for Jarvis orchestrator.
 
-Loads service account credentials from Jarvis/.secrets/, exposes a small
-upload + signed-URL-mint API for the supervisor and audit pipelines.
+Project, bucket, and SA key path are resolved from environment variables
+(no hardcoded campaign defaults). Required:
+
+    JARVIS_FIREBASE_PROJECT      — required
+    JARVIS_FIREBASE_BUCKET       — optional, defaults to {project}-evidence
+    JARVIS_SERVICE_ACCOUNT_KEY   — optional, defaults to
+                                   <repo>/.secrets/{project}-orchestrator.json
 
 Used by:
 - smoke_test_storage.py (F002 acceptance)
 - supervisor.py (writes evidence > 100KB to Storage, embeds signed URLs in features.json)
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -19,29 +25,51 @@ import firebase_admin
 from firebase_admin import credentials, storage
 from google.cloud.storage import Blob, Bucket
 
-PROJECT_ID = "<firebase-project-id>"
-DEFAULT_BUCKET = "<firebase-project-id>-evidence"  # vanilla GCS bucket; IAM-controlled (no Firebase Storage rules)
-DEFAULT_KEY_PATH = (
-    Path(__file__).resolve().parents[2]
-    / ".secrets"
-    / "<firebase-project-id>-orchestrator.json"
-)
-
 _app: firebase_admin.App | None = None
 
 
-def init_app(key_path: Path | None = None, bucket: str = DEFAULT_BUCKET) -> firebase_admin.App:
-    """Initialize the firebase_admin app once. Idempotent."""
+def _required_project() -> str:
+    project = os.environ.get("JARVIS_FIREBASE_PROJECT")
+    if not project:
+        raise RuntimeError(
+            "JARVIS_FIREBASE_PROJECT is not set. Set it explicitly, e.g.:\n"
+            "    export JARVIS_FIREBASE_PROJECT=your-project-id\n"
+            "Or run: scripts/bootstrap.sh --project your-project-id "
+            "--billing-account XXXXXX-XXXXXX-XXXXXX"
+        )
+    return project
+
+
+def _default_bucket(project: str) -> str:
+    return os.environ.get("JARVIS_FIREBASE_BUCKET") or f"{project}-evidence"
+
+
+def _default_key_path(project: str) -> Path:
+    explicit = os.environ.get("JARVIS_SERVICE_ACCOUNT_KEY")
+    if explicit:
+        return Path(explicit)
+    return Path(__file__).resolve().parents[2] / ".secrets" / f"{project}-orchestrator.json"
+
+
+def init_app(key_path: Path | None = None, bucket: str | None = None) -> firebase_admin.App:
+    """Initialize the firebase_admin app once. Idempotent.
+
+    Resolves project/bucket/key from JARVIS_* env vars; raises with
+    remediation if JARVIS_FIREBASE_PROJECT is unset.
+    """
     global _app
     if _app is not None:
         return _app
 
-    key_path = key_path or DEFAULT_KEY_PATH
+    project = _required_project()
+    bucket = bucket or _default_bucket(project)
+    key_path = key_path or _default_key_path(project)
     if not key_path.exists():
         raise FileNotFoundError(
             f"Service account key not found at {key_path}. "
             f"Run: gcloud iam service-accounts keys create {key_path} "
-            f"--iam-account=orchestrator@{PROJECT_ID}.iam.gserviceaccount.com"
+            f"--iam-account=orchestrator@{project}.iam.gserviceaccount.com\n"
+            "Or re-run scripts/bootstrap.sh --create-key (loud, gitignore-verified)."
         )
 
     cred = credentials.Certificate(str(key_path))
@@ -92,8 +120,6 @@ def upload_and_sign(
 
 
 __all__ = [
-    "PROJECT_ID",
-    "DEFAULT_BUCKET",
     "init_app",
     "get_bucket",
     "upload_bytes",

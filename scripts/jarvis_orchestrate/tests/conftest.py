@@ -30,6 +30,7 @@ corresponding *_effective_*_path() helpers in each module.
 Tests that want a specific quota state can write to
 $JARVIS_QUOTA_STATE_PATH explicitly (it's a known per-test path).
 """
+
 from __future__ import annotations
 
 import pytest

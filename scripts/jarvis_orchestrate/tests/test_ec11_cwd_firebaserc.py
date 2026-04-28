@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec11_cwd_firebaserc.py
 """
+
 from __future__ import annotations
 
 import json
@@ -41,16 +42,25 @@ def _firebaserc(repo: Path, projects: dict) -> Path:
 def test_dispatch_task_carries_cwd() -> None:
     print("\n[test] dispatch_task_carries_cwd ...")
     t = DispatchTask(
-        plan_id="p", plan_dir=Path("/tmp/p"),
-        feature_id="F001", feature_description="d", feature_acceptance="a",
-        feature_steps=[], agent_role="implementer", cwd=Path("/tmp/repo"),
+        plan_id="p",
+        plan_dir=Path("/tmp/p"),
+        feature_id="F001",
+        feature_description="d",
+        feature_acceptance="a",
+        feature_steps=[],
+        agent_role="implementer",
+        cwd=Path("/tmp/repo"),
     )
     assert t.cwd == Path("/tmp/repo"), t.cwd
     # Default is None
     t2 = DispatchTask(
-        plan_id="p", plan_dir=Path("/tmp/p"),
-        feature_id="F001", feature_description="d", feature_acceptance="a",
-        feature_steps=[], agent_role="implementer",
+        plan_id="p",
+        plan_dir=Path("/tmp/p"),
+        feature_id="F001",
+        feature_description="d",
+        feature_acceptance="a",
+        feature_steps=[],
+        agent_role="implementer",
     )
     assert t2.cwd is None
     print("  ✓ DispatchTask.cwd carries Path or None")

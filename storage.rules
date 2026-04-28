@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Jarvis orchestration evidence storage (<firebase-project-id>).
+// Jarvis orchestration evidence storage.
 // Writes: orchestrator service account only (Admin SDK bypasses these rules).
 // Reads: signed URLs only — no client-direct reads. Signed URLs are minted
 // by the supervisor with 1-hour TTL and embedded as evidence_refs in features.json.

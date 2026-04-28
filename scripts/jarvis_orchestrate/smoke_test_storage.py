@@ -1,11 +1,14 @@
 """F002 acceptance harness — uploads a fixture, retrieves via signed URL, asserts 200.
 
 Acceptance per parent plan 2026-04-19-001 features.json F002:
-  'Python script uploads fixture to <firebase-project-id>://evidence/test.json
+  'Python script uploads fixture to {project}://evidence/test.json
    and retrieves via 1-hour signed URL'
 
-Project ID corrected: <firebase-project-id> → <firebase-project-id> (see decisions.jsonl D036).
+Reads target project from JARVIS_FIREBASE_PROJECT (see firebase_client.py).
+Historical project ID notes are tracked in the bootstrap sub-plan's
+decisions.jsonl, not in this file.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -28,7 +31,9 @@ def main() -> int:
     payload = json.dumps(fixture, indent=2).encode("utf-8")
 
     print(f"[1/3] Uploading {len(payload)} bytes to {blob_path}...")
-    gs_uri, url = upload_and_sign(blob_path, payload, content_type="application/json", ttl_seconds=3600)
+    gs_uri, url = upload_and_sign(
+        blob_path, payload, content_type="application/json", ttl_seconds=3600
+    )
     print(f"      gs URI:     {gs_uri}")
     print(f"      signed URL: {url[:80]}...")
 
@@ -45,7 +50,13 @@ def main() -> int:
     assert status == 200, f"expected 200, got {status}"
 
     # Persist evidence log
-    evidence_dir = Path(__file__).resolve().parents[2] / "docs" / "plans" / "2026-04-25-001-infra-jarvis-firebase-bootstrap" / "evidence"
+    evidence_dir = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "plans"
+        / "2026-04-25-001-infra-jarvis-firebase-bootstrap"
+        / "evidence"
+    )
     evidence_dir.mkdir(parents=True, exist_ok=True)
     log_path = evidence_dir / f"smoke-test-{timestamp}.log"
     log_path.write_text(

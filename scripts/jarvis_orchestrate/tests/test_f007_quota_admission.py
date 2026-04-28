@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f007_quota_admission.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -10,7 +11,7 @@ import json
 import os
 import sys
 import tempfile
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
@@ -26,8 +27,11 @@ from jarvis_orchestrate import (  # noqa: E402
     supervisor,
 )
 from jarvis_orchestrate.executors import AGENT_REGISTRY  # noqa: E402
-from jarvis_orchestrate.executors.base import BaseExecutor, DispatchResult, DispatchTask  # noqa: E402
-
+from jarvis_orchestrate.executors.base import (  # noqa: E402
+    BaseExecutor,
+    DispatchResult,
+    DispatchTask,
+)
 
 # ────────────────────────  test infrastructure  ────────────────────────
 
@@ -79,17 +83,28 @@ target_project: none
 ```
 """
     (plan_dir / "plan.md").write_text(plan_md)
-    (plan_dir / "features.json").write_text(json.dumps({
-        "task_id": plan_id,
-        "schema_version": "1.0",
-        "features": [{
-            "id": "F001", "category": "test", "phase": 0,
-            "description": "Synthetic feature for F007 admission tests.",
-            "steps": ["scripted"],
-            "acceptance": "admission gates trip on quota threshold and interactive backoff.",
-            "passes": False, "depends_on": [],
-        }],
-    }, indent=2) + "\n")
+    (plan_dir / "features.json").write_text(
+        json.dumps(
+            {
+                "task_id": plan_id,
+                "schema_version": "1.0",
+                "features": [
+                    {
+                        "id": "F001",
+                        "category": "test",
+                        "phase": 0,
+                        "description": "Synthetic feature for F007 admission tests.",
+                        "steps": ["scripted"],
+                        "acceptance": "admission gates trip on quota threshold and interactive backoff.",
+                        "passes": False,
+                        "depends_on": [],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     return plan_dir
 
 
@@ -114,10 +129,14 @@ class _ScriptedExecutor(BaseExecutor):
         self.idx += 1
         s = self.summaries[i] if i < len(self.summaries) else self.summaries[-1]
         return DispatchResult(
-            agent=self.agent_name, agent_role=task.agent_role,
+            agent=self.agent_name,
+            agent_role=task.agent_role,
             iteration=task.iteration,
-            started_at=_iso_now(), completed_at=_iso_now(),
-            success=True, summary=s, raw_response=s,
+            started_at=_iso_now(),
+            completed_at=_iso_now(),
+            success=True,
+            summary=s,
+            raw_response=s,
             quota_consumed={"tokens_in": 1, "tokens_out": 1},
         )
 
@@ -159,17 +178,26 @@ def test_classify_dispatch_precedence() -> None:
     # plan.tier == p0 → P0
     assert quota_admission.classify_dispatch("p0") == quota_admission.DispatchClass.P0
     # mode_override beats tier
-    assert quota_admission.classify_dispatch("p0", mode_override="interactive") == quota_admission.DispatchClass.INTERACTIVE
+    assert (
+        quota_admission.classify_dispatch("p0", mode_override="interactive")
+        == quota_admission.DispatchClass.INTERACTIVE
+    )
     # JARVIS_RUN_MODE beats tier (when no mode_override)
     os.environ["JARVIS_RUN_MODE"] = "interactive"
     try:
-        assert quota_admission.classify_dispatch("trivial") == quota_admission.DispatchClass.INTERACTIVE
+        assert (
+            quota_admission.classify_dispatch("trivial")
+            == quota_admission.DispatchClass.INTERACTIVE
+        )
     finally:
         os.environ.pop("JARVIS_RUN_MODE", None)
     # mode_override beats env
     os.environ["JARVIS_RUN_MODE"] = "interactive"
     try:
-        assert quota_admission.classify_dispatch(None, mode_override="autonomous") == quota_admission.DispatchClass.AUTONOMOUS
+        assert (
+            quota_admission.classify_dispatch(None, mode_override="autonomous")
+            == quota_admission.DispatchClass.AUTONOMOUS
+        )
     finally:
         os.environ.pop("JARVIS_RUN_MODE", None)
     print("  ✓ precedence: mode_override > env > plan.tier=p0 > autonomous")
@@ -181,24 +209,23 @@ def test_p0_is_plan_derived_only_not_overridable() -> None:
     emergency-lane bypass surface to non-P0 plans."""
     print("\n[test] p0_is_plan_derived_only_not_overridable ...")
     # mode_override='p0' on a non-P0 plan must NOT promote.
-    assert quota_admission.classify_dispatch(
-        "trivial", mode_override="p0"
-    ) == quota_admission.DispatchClass.AUTONOMOUS
+    assert (
+        quota_admission.classify_dispatch("trivial", mode_override="p0")
+        == quota_admission.DispatchClass.AUTONOMOUS
+    )
     # Same via env.
     os.environ["JARVIS_RUN_MODE"] = "p0"
     try:
-        assert quota_admission.classify_dispatch(
-            "trivial"
-        ) == quota_admission.DispatchClass.AUTONOMOUS
+        assert (
+            quota_admission.classify_dispatch("trivial") == quota_admission.DispatchClass.AUTONOMOUS
+        )
     finally:
         os.environ.pop("JARVIS_RUN_MODE", None)
     # And the override doesn't even shadow plan-derived P0 (irrelevant
     # value drops through to the next rule).
     os.environ["JARVIS_RUN_MODE"] = "p0"
     try:
-        assert quota_admission.classify_dispatch(
-            "p0"
-        ) == quota_admission.DispatchClass.P0
+        assert quota_admission.classify_dispatch("p0") == quota_admission.DispatchClass.P0
     finally:
         os.environ.pop("JARVIS_RUN_MODE", None)
     # Plain plan-derived P0 still works (the legitimate path).
@@ -212,7 +239,9 @@ def test_cli_mode_argparse_rejects_p0() -> None:
     classify_dispatch's library-level guard."""
     print("\n[test] cli_mode_argparse_rejects_p0 ...")
     import contextlib
+
     from jarvis_orchestrate import cli as cli_mod
+
     buf_err = io.StringIO()
     with tempfile.TemporaryDirectory() as td:
         plan_dir = _make_plan(Path(td), "2026-04-26-525-infra-f007-no-p0-cli")
@@ -223,7 +252,9 @@ def test_cli_mode_argparse_rejects_p0() -> None:
                 rc = exc.code
         # argparse choice rejection → exit 2
         assert rc == 2, rc
-        assert "invalid choice" in buf_err.getvalue() or "'p0'" in buf_err.getvalue(), buf_err.getvalue()
+        assert "invalid choice" in buf_err.getvalue() or "'p0'" in buf_err.getvalue(), (
+            buf_err.getvalue()
+        )
     print("  ✓ argparse choices reject --mode p0 at the CLI boundary")
 
 
@@ -479,7 +510,8 @@ def test_approve_breaker_idempotent_extends_to_defer() -> None:
         # State integrity: only one approve in history for the cleared gate.
         state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
         approves = [
-            h for h in state.get("history", [])
+            h
+            for h in state.get("history", [])
             if h.get("action") == "approve" and h.get("gate") == "defer:quota_threshold"
         ]
         assert len(approves) == 1
@@ -529,7 +561,8 @@ def test_cli_approve_recognizes_defer_names_no_warning() -> None:
     with tempfile.TemporaryDirectory() as td:
         plan_dir = _make_plan(Path(td), "2026-04-26-512-infra-f007-cli-app")
         gate_pause.add_defer(
-            plan_dir, "defer:quota_threshold",
+            plan_dir,
+            "defer:quota_threshold",
             plan_id="2026-04-26-512-infra-f007-cli-app",
         )
         with redirect_stdout(buf_out), redirect_stderr(buf_err):
@@ -554,9 +587,7 @@ def test_pause_marker_clears_when_only_defer_was_pending() -> None:
         plan_id = "2026-04-26-520-infra-f007-pause-mark"
         gate_pause.add_defer(plan_dir, "defer:quota_threshold", plan_id=plan_id)
         # Simulate the supervisor recording a pause on this defer.
-        gate_pause.record_pause(
-            plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"]
-        )
+        gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"])
         state_path = gate_pause.gate_state_path(plan_dir)
         before = json.loads(state_path.read_text())
         assert "paused_at" in before and before.get("pause_gates") == ["defer:quota_threshold"]
@@ -577,9 +608,7 @@ def test_pause_marker_clears_via_reconcile_auto_remove() -> None:
         plan_dir = _make_plan(Path(td), "2026-04-26-521-infra-f007-rec-mark")
         plan_id = "2026-04-26-521-infra-f007-rec-mark"
         gate_pause.add_defer(plan_dir, "defer:quota_threshold", plan_id=plan_id)
-        gate_pause.record_pause(
-            plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"]
-        )
+        gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=["defer:quota_threshold"])
         state_path = gate_pause.gate_state_path(plan_dir)
         assert "paused_at" in json.loads(state_path.read_text())
         # Simulate next dispatch: condition cleared, reconcile drops the defer.
@@ -672,7 +701,8 @@ def test_e2e_interactive_backoff_expires_auto_clear() -> None:
             assert "defer:interactive_backoff" not in gate_pause.active_defers(plan_dir)
             events = inbox.read_events(plan_dir)
             cleared = [
-                e for e in events
+                e
+                for e in events
                 if e.event == "defer_cleared"
                 and e.headers.get("defer_gate") == "defer:interactive_backoff"
             ]

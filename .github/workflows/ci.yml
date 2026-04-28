@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python:
+    name: Python — lint + format + tests + schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pydantic pyyaml firebase-admin google-cloud-storage
+
+      - name: ruff check (lint)
+        run: ruff check scripts/
+
+      - name: ruff format --check
+        run: ruff format --check scripts/
+
+      - name: Pydantic schema imports
+        # Loads every promoted v1.0 Pydantic model. Same set jarvis_doctor checks.
+        run: |
+          PYTHONPATH=claude/shared/schemas/v1.0 \
+            python -c "from models import plan_model, features_model, audit_model, environments_model, signoff_model; print('schema models import OK')"
+
+      - name: pytest
+        run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/ -q
+
+      - name: jarvis_doctor — structural checks (gcloud/firebase auth omitted)
+        # CI runs --skip-auth: gcloud + firebase aren't authenticated here, but
+        # every structural check (schemas, Pydantic models, parent plan, .secrets/
+        # gitignore) must still be green.
+        run: python scripts/jarvis_doctor.py --skip-auth
+
+      - name: Sanitization — no campaign IDs in committed surface
+        # Scans every file that would land in `git add .` (tracked, staged,
+        # and untracked-not-ignored) for the campaign project ID, billing
+        # account, and maintainer-personal identifiers. Allowed only under
+        # docs/plans (audit/evidence), tests (fixtures), dashboard/state,
+        # and the CONTRIBUTING note that explicitly references the campaign
+        # as a counter-example. See scripts/sanitization_check.py for the
+        # full allowlist.
+        run: python3 scripts/sanitization_check.py
+
+  shell:
+    name: Shell — bootstrap.sh syntax + arg validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n (syntax)
+        run: bash -n scripts/bootstrap.sh
+
+      - name: bootstrap.sh aborts when --project missing
+        run: |
+          set +e
+          out=$(bash scripts/bootstrap.sh 2>&1)
+          rc=$?
+          [ $rc -eq 2 ] || { echo "expected exit 2, got $rc"; echo "$out"; exit 1; }
+          echo "$out" | grep -q "missing --project" || { echo "missing remediation message"; exit 1; }
+
+      - name: bootstrap.sh aborts when --billing-account missing
+        run: |
+          set +e
+          out=$(bash scripts/bootstrap.sh --project test-id 2>&1)
+          rc=$?
+          [ $rc -eq 2 ] || { echo "expected exit 2, got $rc"; echo "$out"; exit 1; }
+          echo "$out" | grep -q "missing --billing-account" || { echo "missing remediation message"; exit 1; }
+
+      - name: bootstrap.sh rejects malformed billing account
+        run: |
+          set +e
+          out=$(bash scripts/bootstrap.sh --project test-id --billing-account not-an-id 2>&1)
+          rc=$?
+          [ $rc -eq 2 ] || { echo "expected exit 2, got $rc"; echo "$out"; exit 1; }
+          echo "$out" | grep -q "does not look like" || { echo "missing format hint"; exit 1; }

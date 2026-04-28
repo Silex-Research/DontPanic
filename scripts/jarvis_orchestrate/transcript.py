@@ -4,11 +4,11 @@ Each round of a volley appends one line. `tail -f audit/transcript.md` shows liv
 progress. The audit JSONs are the authoritative artifacts; the transcript is a
 human-friendly index.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
-
 
 HEADER = """# Volley transcript
 
@@ -61,4 +61,6 @@ def append_terminal(
     transcript = ensure_header(plan_dir)
     ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with transcript.open("a") as f:
-        f.write(f"\n**{ts}** — feature **{feature_id}** terminal: `{final_status}` after {rounds} round(s) — {reason}\n\n")
+        f.write(
+            f"\n**{ts}** — feature **{feature_id}** terminal: `{final_status}` after {rounds} round(s) — {reason}\n\n"
+        )

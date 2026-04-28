@@ -1,0 +1,7 @@
+{
+  "repo": "Jarvis",
+  "dev": {
+    "firebase_project": "your-firebase-project-id",
+    "gcp_project": "your-gcp-project-id"
+  }
+}

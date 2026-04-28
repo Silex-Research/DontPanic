@@ -30,6 +30,7 @@ Mid-volley runtime checks (e.g., re-pause when auditor returns
 needs_changes and on_escalation hasn't been re-cleared) are an
 engagement-surface v2 concern.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -171,9 +172,7 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
             return False
 
     history = list(state.get("history") or [])
-    history.append(
-        {"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor}
-    )
+    history.append({"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor})
     state["history"] = history
 
     if is_breaker:
@@ -204,7 +203,9 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
     return True
 
 
-def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor: str = "operator") -> list[str]:
+def resume_all(
+    plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor: str = "operator"
+) -> list[str]:
     """Clear every declared gate AND every active transient gate (breakers +
     F007 defers). Returns the list of names newly cleared in this call."""
     declared_strs = _stringify_gates(declared_gates)
@@ -223,17 +224,11 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
         state["cleared_gates"] = sorted(cleared)
     history = list(state.get("history") or [])
     for g in newly:
-        history.append(
-            {"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor}
-        )
+        history.append({"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor})
     for b in pending_breakers:
-        history.append(
-            {"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor}
-        )
+        history.append({"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor})
     for d in pending_defers:
-        history.append(
-            {"action": "resume_all", "gate": d, "at": _now_iso(), "actor": actor}
-        )
+        history.append({"action": "resume_all", "gate": d, "at": _now_iso(), "actor": actor})
     if pending_breakers:
         state.pop("active_breakers", None)
     if pending_defers:
@@ -242,7 +237,8 @@ def resume_all(plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor
         # Strip transient entries from cleared_gates too (they should never
         # accumulate there).
         state["cleared_gates"] = sorted(
-            c for c in (state.get("cleared_gates") or [])
+            c
+            for c in (state.get("cleared_gates") or [])
             if not c.startswith("breaker:") and not c.startswith("defer:")
         )
     state["history"] = history

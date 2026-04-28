@@ -5,12 +5,12 @@ of plan.md (NOT frontmatter — the schema v1.1 bump is deferred). This module
 parses that section, normalizes the host-local sentinel, and enforces the
 EC7 prod gate.
 """
+
 from __future__ import annotations
 
 import re
 
 import yaml
-
 
 VALID_TARGET_ENVS = {"dev", "staging", "prod"}
 TARGET_PROJECT_NONE_SENTINEL = "none"
@@ -44,7 +44,7 @@ def parse_target_section(plan_md_text: str) -> dict[str, str]:
         raise PlanTargetError(
             "plan.md missing required `## Target` section. "
             "Add a section like:\n\n## Target\n\n```yaml\n"
-            "target_env: dev\ntarget_project: <firebase-project-id>\n```"
+            "target_env: dev\ntarget_project: your-project-id\n```"
         )
 
     body = section_match.group("body")
@@ -61,9 +61,7 @@ def parse_target_section(plan_md_text: str) -> dict[str, str]:
         raise PlanTargetError(f"Target yaml block failed to parse: {exc}") from exc
 
     if not isinstance(parsed, dict):
-        raise PlanTargetError(
-            f"Target yaml block must be a mapping; got {type(parsed).__name__}"
-        )
+        raise PlanTargetError(f"Target yaml block must be a mapping; got {type(parsed).__name__}")
 
     target_env = parsed.get("target_env")
     target_project = parsed.get("target_project")
@@ -109,7 +107,11 @@ def validate_prod_gates(
     gates = set(human_gates or [])
     missing = [g for g in required if g not in gates]
     if missing:
-        source = "environments.json requires_gates" if required_override is not None else "hardcoded PROD gate"
+        source = (
+            "environments.json requires_gates"
+            if required_override is not None
+            else "hardcoded PROD gate"
+        )
         raise PlanTargetError(
             f"target_env={target_env} requires human_gates {required} ({source}); "
             f"missing: {missing}"

@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Jarvis orchestration metadata (<firebase-project-id>).
+// Jarvis orchestration metadata.
 // All writes are server-side via the orchestrator service account (Admin SDK).
 // Single-operator project — no client SDK access.
 

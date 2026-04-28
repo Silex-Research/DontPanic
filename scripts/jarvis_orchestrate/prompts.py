@@ -12,12 +12,12 @@ supervisor can extract commands_run for post-hoc command_guard validation. The
 forbidden-command list is copied into both prompts so agents pre-emptively refuse
 process-global mutators (gcloud config set project, firebase use, etc.).
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
-
 
 # F023 EC3/EC9: kept in sync with command_guard._reject patterns. Update both
 # when adding a new forbidden CLI shape so prompt + post-hoc check agree.
@@ -102,9 +102,9 @@ def implementer_prompt(
     base = f"""You are the implementer for plan {plan_id}, iteration {iteration}.
 
 Plan directory: {plan_dir}
-Feature: {feature['id']}
-Description: {feature['description']}
-Acceptance: {feature['acceptance']}
+Feature: {feature["id"]}
+Description: {feature["description"]}
+Acceptance: {feature["acceptance"]}
 
 Steps:
 {steps}
@@ -112,19 +112,27 @@ Steps:
     target_section = _target_block(target_env, target_project) if target_env is not None else ""
 
     if iteration == 0 or prior_auditor_path is None:
-        return base + target_section + (
-            "\nImplement the feature. Run any verification commands specified in steps.\n"
-            "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
-            "Do NOT output JSON; the supervisor wraps your reply.\n"
+        return (
+            base
+            + target_section
+            + (
+                "\nImplement the feature. Run any verification commands specified in steps.\n"
+                "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
+                "Do NOT output JSON; the supervisor wraps your reply.\n"
+            )
         )
 
     findings_block = _findings_block(prior_auditor_path)
-    return base + target_section + (
-        f"\nPrior round's auditor produced findings (full JSON at {prior_auditor_path}):\n"
-        f"{findings_block}\n"
-        "Address each finding. Make code changes as needed. Run verification commands.\n"
-        "Reply with a concise paragraph naming each finding ID and how you addressed it.\n"
-        "Do NOT output JSON; the supervisor wraps your reply.\n"
+    return (
+        base
+        + target_section
+        + (
+            f"\nPrior round's auditor produced findings (full JSON at {prior_auditor_path}):\n"
+            f"{findings_block}\n"
+            "Address each finding. Make code changes as needed. Run verification commands.\n"
+            "Reply with a concise paragraph naming each finding ID and how you addressed it.\n"
+            "Do NOT output JSON; the supervisor wraps your reply.\n"
+        )
     )
 
 
@@ -143,8 +151,8 @@ def auditor_prompt(
     return f"""You are the auditor for plan {plan_id}, iteration {iteration}.
 
 Plan directory: {plan_dir}
-Feature: {feature['id']}
-Acceptance: {feature['acceptance']}
+Feature: {feature["id"]}
+Acceptance: {feature["acceptance"]}
 
 Steps required:
 {steps}

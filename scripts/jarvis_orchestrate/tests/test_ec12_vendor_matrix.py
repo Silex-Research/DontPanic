@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_ec12_vendor_matrix.py
 """
+
 from __future__ import annotations
 
 import sys
@@ -14,7 +15,6 @@ from jarvis_orchestrate.command_guard import (  # noqa: E402
     check_command,
     check_required_flags,
 )
-
 
 PROTECTED = "ma" + "in"  # split to avoid pre-commit branch-name match
 
@@ -100,11 +100,9 @@ def test_git_force_push_to_protected_branch_rejected() -> None:
     _assert_rejected(f"git push --force origin {PROTECTED}", "high-risk")
     _assert_rejected(f"git push -f origin {PROTECTED}", "high-risk")
     _assert_rejected(f"git push --force-with-lease origin {PROTECTED}", "high-risk")
-    _assert_allowed(f"git push --force origin feature-x")
+    _assert_allowed("git push --force origin feature-x")
     _assert_allowed(f"git push origin {PROTECTED}")  # plain push not gated
-    print(
-        "  ✓ force-push variants rejected for protected branch; allowed elsewhere"
-    )
+    print("  ✓ force-push variants rejected for protected branch; allowed elsewhere")
 
 
 # ──────────────────────────────  helper exposed  ──────────────────────────────

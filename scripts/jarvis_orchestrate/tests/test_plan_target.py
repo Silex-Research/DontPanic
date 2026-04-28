@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_plan_target.py
 """
+
 from __future__ import annotations
 
 import json
@@ -20,12 +21,11 @@ from jarvis_orchestrate.executors.base import (  # noqa: E402
     DispatchTask,
 )
 from jarvis_orchestrate.plan_target import (  # noqa: E402
-    PlanTargetError,
     TARGET_PROJECT_NONE_SENTINEL,
+    PlanTargetError,
     parse_target_section,
     validate_prod_gates,
 )
-
 
 # ──────────────────────────────  fixtures  ──────────────────────────────
 
@@ -258,9 +258,7 @@ def test_loader_exposes_target_fields() -> None:
 def test_loader_rejects_plan_missing_target_section() -> None:
     print("\n[test] loader_rejects_plan_missing_target_section ...")
     with tempfile.TemporaryDirectory() as td:
-        plan_dir = _write_plan(
-            Path(td), "2026-04-26-002-infra-target-missing", target_block=None
-        )
+        plan_dir = _write_plan(Path(td), "2026-04-26-002-infra-target-missing", target_block=None)
         try:
             plan_loader.load(plan_dir)
         except PlanTargetError as exc:
@@ -356,7 +354,9 @@ def _force_signoff_volley(plan_dir: Path, **kwargs):
     # F008: pre-clear all declared human_gates so the new gate-pause check
     # doesn't pause this Step-2 volley fixture (which exercises target/prod-gate
     # semantics, not engagement-surface).
-    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    from jarvis_orchestrate import gate_pause
+    from jarvis_orchestrate import plan_loader as _pl
+
     _loaded_for_gates = _pl.load(plan_dir)
     gate_pause.resume_all(
         plan_dir,
@@ -381,7 +381,9 @@ def test_supervisor_reads_target_from_plan_when_kwargs_unset() -> None:
         assert result.final_status == "signed_off"
         for env in (*impl.captured_envs, *aud.captured_envs):
             assert env.get("JARVIS_TARGET_ENV") == "dev", env.get("JARVIS_TARGET_ENV")
-            assert env.get("JARVIS_TARGET_PROJECT") == "<firebase-project-id>", env.get("JARVIS_TARGET_PROJECT")
+            assert env.get("JARVIS_TARGET_PROJECT") == "<firebase-project-id>", env.get(
+                "JARVIS_TARGET_PROJECT"
+            )
             assert env.get("CLOUDSDK_CORE_PROJECT") == "<firebase-project-id>"
     print("  ✓ supervisor pulls target_env/target_project from plan when kwargs absent")
 

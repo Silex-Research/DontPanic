@@ -6,11 +6,11 @@ to enforce per-tier quota caps + interactive backoff (parent plan F007).
 
 Caps below are configurable estimates — refine as we get real Max plan reset signals.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 import json
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,10 +19,10 @@ from typing import Any
 # Weekly caps (estimates — Task #698 will refine via real reset cadence).
 CAPS: dict[str, dict[str, Any]] = {
     "claude": {"limit": 1_000_000_000, "unit": "tokens", "plan": "Max ~1B/wk estimate"},
-    "codex":  {"limit": 300,           "unit": "calls",  "plan": "300/week ChatGPT Plus"},
-    "gemini": {"limit": 1_500,         "unit": "calls",  "plan": "AI Studio free tier daily; weekly approx"},
-    "grok":   {"limit": 50,            "unit": "calls",  "plan": "self-imposed soft cap"},
-    "ollama": {"limit": None,          "unit": None,     "plan": "unmetered (local)"},
+    "codex": {"limit": 300, "unit": "calls", "plan": "300/week ChatGPT Plus"},
+    "gemini": {"limit": 1_500, "unit": "calls", "plan": "AI Studio free tier daily; weekly approx"},
+    "grok": {"limit": 50, "unit": "calls", "plan": "self-imposed soft cap"},
+    "ollama": {"limit": None, "unit": None, "plan": "unmetered (local)"},
 }
 
 WEEK_START = dt.datetime.now(dt.timezone.utc) - dt.timedelta(
@@ -50,11 +50,7 @@ def _claude_tokens_this_week() -> int:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                usage = (
-                    entry.get("message", {}).get("usage")
-                    or entry.get("usage")
-                    or {}
-                )
+                usage = entry.get("message", {}).get("usage") or entry.get("usage") or {}
                 total += int(usage.get("input_tokens") or 0)
                 total += int(usage.get("output_tokens") or 0)
                 total += int(usage.get("cache_read_input_tokens") or 0)

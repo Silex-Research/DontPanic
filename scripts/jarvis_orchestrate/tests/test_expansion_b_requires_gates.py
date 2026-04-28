@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_expansion_b_requires_gates.py
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,6 @@ HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
 from jarvis_orchestrate.plan_target import PlanTargetError, validate_prod_gates  # noqa: E402
-
 
 # ──────────────────────────────  validate_prod_gates with override  ──────────────────────────────
 
@@ -39,7 +39,9 @@ def test_override_supersedes_for_prod() -> None:
     validate_prod_gates("prod", ["custom_gate"], required_override=["custom_gate"])
     # registry override missing
     try:
-        validate_prod_gates("prod", ["custom_gate"], required_override=["custom_gate", "missing_gate"])
+        validate_prod_gates(
+            "prod", ["custom_gate"], required_override=["custom_gate", "missing_gate"]
+        )
     except PlanTargetError as exc:
         assert "missing_gate" in str(exc) and "environments.json" in str(exc)
         print("  ✓ registry override replaces hardcoded set for prod and is enforced")
@@ -50,10 +52,15 @@ def test_override_supersedes_for_prod() -> None:
 def test_override_applies_to_non_prod_tier() -> None:
     print("\n[test] override_applies_to_non_prod_tier ...")
     # staging tier with explicit requires_gates
-    validate_prod_gates("staging", ["pre_impl", "security_review"],
-                        required_override=["pre_impl", "security_review"])
+    validate_prod_gates(
+        "staging",
+        ["pre_impl", "security_review"],
+        required_override=["pre_impl", "security_review"],
+    )
     try:
-        validate_prod_gates("staging", ["pre_impl"], required_override=["pre_impl", "security_review"])
+        validate_prod_gates(
+            "staging", ["pre_impl"], required_override=["pre_impl", "security_review"]
+        )
     except PlanTargetError as exc:
         assert "security_review" in str(exc) and "staging" in str(exc)
         print("  ✓ non-prod tier with override gates still enforced")
@@ -71,7 +78,9 @@ def test_empty_override_means_no_gates() -> None:
 # ──────────────────────────────  plan_loader integration  ──────────────────────────────
 
 
-def _write_plan(tmp: Path, plan_id: str, target_env: str, target_project: str, human_gates: list[str]) -> Path:
+def _write_plan(
+    tmp: Path, plan_id: str, target_env: str, target_project: str, human_gates: list[str]
+) -> Path:
     plan_dir = tmp / "docs" / "plans" / plan_id
     plan_dir.mkdir(parents=True)
     gates_yaml = "\n".join(f"  - {g}" for g in human_gates)
@@ -133,18 +142,24 @@ def _write_environments(repo: Path, payload: dict) -> None:
 def test_loader_consults_registry_requires_gates() -> None:
     print("\n[test] loader_consults_registry_requires_gates ...")
     from jarvis_orchestrate import plan_loader
+
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
-        _write_environments(repo, {
-            "repo": "Test",
-            "staging": {
-                "firebase_project": "test-staging",
-                "requires_gates": ["pre_impl", "security_review"],
+        _write_environments(
+            repo,
+            {
+                "repo": "Test",
+                "staging": {
+                    "firebase_project": "test-staging",
+                    "requires_gates": ["pre_impl", "security_review"],
+                },
             },
-        })
+        )
         # plan declares pre_impl only — loader should reject because registry
         # demands security_review for staging
-        plan_dir = _write_plan(repo, "2026-04-26-300-infra-exp-b-loader", "staging", "test-staging", ["pre_impl"])
+        plan_dir = _write_plan(
+            repo, "2026-04-26-300-infra-exp-b-loader", "staging", "test-staging", ["pre_impl"]
+        )
         try:
             plan_loader.load(plan_dir)
         except PlanTargetError as exc:
@@ -158,11 +173,13 @@ def test_loader_consults_registry_requires_gates() -> None:
 def test_loader_falls_back_to_hardcoded_when_no_registry() -> None:
     print("\n[test] loader_falls_back_to_hardcoded_when_no_registry ...")
     from jarvis_orchestrate import plan_loader
+
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         # No environments.json — prod still requires pre_impl + on_escalation
-        plan_dir = _write_plan(repo, "2026-04-26-301-infra-exp-b-no-reg",
-                                "prod", "no-reg-proj", ["pre_impl"])
+        plan_dir = _write_plan(
+            repo, "2026-04-26-301-infra-exp-b-no-reg", "prod", "no-reg-proj", ["pre_impl"]
+        )
         try:
             plan_loader.load(plan_dir)
         except PlanTargetError as exc:
@@ -175,14 +192,19 @@ def test_loader_falls_back_to_hardcoded_when_no_registry() -> None:
 def test_loader_registry_no_requires_gates_falls_back() -> None:
     print("\n[test] loader_registry_no_requires_gates_falls_back ...")
     from jarvis_orchestrate import plan_loader
+
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
-        _write_environments(repo, {
-            "repo": "Test",
-            "prod": {"firebase_project": "test-prod"},  # no requires_gates declared
-        })
-        plan_dir = _write_plan(repo, "2026-04-26-302-infra-exp-b-no-reqgates",
-                                "prod", "test-prod", ["pre_impl"])
+        _write_environments(
+            repo,
+            {
+                "repo": "Test",
+                "prod": {"firebase_project": "test-prod"},  # no requires_gates declared
+            },
+        )
+        plan_dir = _write_plan(
+            repo, "2026-04-26-302-infra-exp-b-no-reqgates", "prod", "test-prod", ["pre_impl"]
+        )
         try:
             plan_loader.load(plan_dir)
         except PlanTargetError as exc:

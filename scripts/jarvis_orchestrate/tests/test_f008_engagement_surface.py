@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -25,7 +26,11 @@ from jarvis_orchestrate import (  # noqa: E402
     supervisor,
 )
 from jarvis_orchestrate.executors import AGENT_REGISTRY  # noqa: E402
-from jarvis_orchestrate.executors.base import BaseExecutor, DispatchResult, DispatchTask  # noqa: E402
+from jarvis_orchestrate.executors.base import (  # noqa: E402
+    BaseExecutor,
+    DispatchResult,
+    DispatchTask,
+)
 
 
 def _iso_now() -> str:
@@ -39,8 +44,10 @@ def test_inbox_round_trip() -> None:
     print("\n[test] inbox_round_trip ...")
     with tempfile.TemporaryDirectory() as td:
         pd = Path(td)
-        e1 = inbox.append_event(pd, event="volley_start", plan_id="p1", body="iter 0 starting")
-        e2 = inbox.append_event(pd, event="gate_hit", plan_id="p1", gate="pre_impl", body="needs approval")
+        inbox.append_event(pd, event="volley_start", plan_id="p1", body="iter 0 starting")
+        inbox.append_event(
+            pd, event="gate_hit", plan_id="p1", gate="pre_impl", body="needs approval"
+        )
         events = inbox.read_events(pd)
         assert len(events) == 2
         assert events[0].event == "volley_start"
@@ -58,7 +65,9 @@ def test_inbox_tolerant_of_operator_body_edits() -> None:
         # Operator opens INBOX.md and adds a note in the body.
         path = inbox.inbox_path(pd)
         content = path.read_text()
-        path.write_text(content.replace("original body", "original body\n\n(operator note: investigated, ok)"))
+        path.write_text(
+            content.replace("original body", "original body\n\n(operator note: investigated, ok)")
+        )
         events = inbox.read_events(pd)
         assert len(events) == 1 and events[0].headers["event"] == "gate_hit"
         assert "operator note" in events[0].body
@@ -141,14 +150,22 @@ def test_signoff_writer_validates_against_schema() -> None:
         ad = pd / "audit"
         ad.mkdir()
         for ag, role in [("claude", "implementer"), ("codex", "auditor")]:
-            (ad / f"{ag}-{role}-i0.json").write_text(json.dumps({
-                "task_id": "2026-04-26-100-infra-signoff-smoke",
-                "audit_id": f"2026-04-26-100-infra-signoff-smoke#{ag}#0",
-                "agent": ag, "agent_role": role, "iteration": 0,
-                "started_at": _iso_now(), "completed_at": _iso_now(),
-                "audit_status": "signed_off", "summary": "ok",
-                "quota_consumed": {"percent_weekly": 1.0},
-            }))
+            (ad / f"{ag}-{role}-i0.json").write_text(
+                json.dumps(
+                    {
+                        "task_id": "2026-04-26-100-infra-signoff-smoke",
+                        "audit_id": f"2026-04-26-100-infra-signoff-smoke#{ag}#0",
+                        "agent": ag,
+                        "agent_role": role,
+                        "iteration": 0,
+                        "started_at": _iso_now(),
+                        "completed_at": _iso_now(),
+                        "audit_status": "signed_off",
+                        "summary": "ok",
+                        "quota_consumed": {"percent_weekly": 1.0},
+                    }
+                )
+            )
         out = signoff_writer.write_signoff(
             plan_id="2026-04-26-100-infra-signoff-smoke",
             tier="trivial",
@@ -172,13 +189,21 @@ def test_signoff_writer_blocked_state() -> None:
         pd = Path(td)
         ad = pd / "audit"
         ad.mkdir()
-        (ad / "claude-implementer-i0.json").write_text(json.dumps({
-            "task_id": "2026-04-26-101-infra-signoff-blocked",
-            "audit_id": "2026-04-26-101-infra-signoff-blocked#claude#0",
-            "agent": "claude", "agent_role": "implementer", "iteration": 0,
-            "started_at": _iso_now(), "completed_at": _iso_now(),
-            "audit_status": "blocked", "summary": "blocked",
-        }))
+        (ad / "claude-implementer-i0.json").write_text(
+            json.dumps(
+                {
+                    "task_id": "2026-04-26-101-infra-signoff-blocked",
+                    "audit_id": "2026-04-26-101-infra-signoff-blocked#claude#0",
+                    "agent": "claude",
+                    "agent_role": "implementer",
+                    "iteration": 0,
+                    "started_at": _iso_now(),
+                    "completed_at": _iso_now(),
+                    "audit_status": "blocked",
+                    "summary": "blocked",
+                }
+            )
+        )
         out = signoff_writer.write_signoff(
             plan_id="2026-04-26-101-infra-signoff-blocked",
             tier="local",
@@ -200,7 +225,9 @@ def test_signoff_writer_blocked_state() -> None:
 _PLAN_ID_TEMPLATE = "2026-04-26-{n:03d}-infra-{slug}"
 
 
-def _make_plan(repo: Path, plan_id: str, *, target_project: str = "none", gates: list[str] | None = None) -> Path:
+def _make_plan(
+    repo: Path, plan_id: str, *, target_project: str = "none", gates: list[str] | None = None
+) -> Path:
     plan_dir = repo / "docs" / "plans" / plan_id
     plan_dir.mkdir(parents=True)
     gates_yaml = "\n".join(f"  - {g}" for g in (gates or ["pre_impl"]))
@@ -239,11 +266,14 @@ target_project: {target_project}
         "schema_version": "1.0",
         "features": [
             {
-                "id": "F001", "category": "test", "phase": 0,
+                "id": "F001",
+                "category": "test",
+                "phase": 0,
                 "description": "Synthetic feature for F008 e2e.",
                 "steps": ["scripted"],
                 "acceptance": "Engagement surface fires.",
-                "passes": False, "depends_on": [],
+                "passes": False,
+                "depends_on": [],
             }
         ],
     }
@@ -291,7 +321,9 @@ def test_e2e_pause_then_approve_then_resume() -> None:
     print("\n[test] e2e_pause_then_approve_then_resume ...")
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
-        plan_dir = _make_plan(repo, "2026-04-26-200-infra-e2e-pause", gates=["pre_impl", "on_escalation"])
+        plan_dir = _make_plan(
+            repo, "2026-04-26-200-infra-e2e-pause", gates=["pre_impl", "on_escalation"]
+        )
         impl = _CountingExecutor("claude")
         aud = _CountingExecutor("codex")
         saved_registry = dict(AGENT_REGISTRY)
@@ -309,7 +341,9 @@ def test_e2e_pause_then_approve_then_resume() -> None:
             assert any(e.event == "gate_hit" for e in events), [e.event for e in events]
             state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
             assert "pause_gates" in state and "pre_impl" in state["pause_gates"]
-            print("  ✓ first dispatch paused; no executor called; INBOX gate_hit + state file written")
+            print(
+                "  ✓ first dispatch paused; no executor called; INBOX gate_hit + state file written"
+            )
 
             # Step 2: operator approves one gate via CLI; supervisor should still pause.
             buf = io.StringIO()
@@ -339,9 +373,17 @@ def test_e2e_pause_then_approve_then_resume() -> None:
             # Step 5: INBOX events include the full progression.
             events = inbox.read_events(plan_dir)
             event_types = [e.event for e in events]
-            for required in ("gate_hit", "gate_cleared", "resumed", "volley_start", "volley_terminal"):
+            for required in (
+                "gate_hit",
+                "gate_cleared",
+                "resumed",
+                "volley_start",
+                "volley_terminal",
+            ):
                 assert required in event_types, (required, event_types)
-            print("  ✓ INBOX captures gate_hit, gate_cleared, resumed, volley_start, volley_terminal")
+            print(
+                "  ✓ INBOX captures gate_hit, gate_cleared, resumed, volley_start, volley_terminal"
+            )
         finally:
             AGENT_REGISTRY.clear()
             AGENT_REGISTRY.update(saved_registry)
@@ -361,6 +403,7 @@ def test_cli_approve_no_false_warning_for_declared_gate() -> None:
         buf_out = io.StringIO()
         buf_err = io.StringIO()
         from contextlib import redirect_stderr
+
         with redirect_stdout(buf_out), redirect_stderr(buf_err):
             rc = cli.main(["approve", str(plan_dir), "pre_impl"])
         assert rc == 0
@@ -379,16 +422,25 @@ def test_signoff_writer_stopped_cap_maps_to_remediate() -> None:
         pd = Path(td)
         ad = pd / "audit"
         ad.mkdir()
-        (ad / "claude-implementer-i0.json").write_text(json.dumps({
-            "task_id": "2026-04-26-301-infra-cap-mapping",
-            "audit_id": "2026-04-26-301-infra-cap-mapping#claude#0",
-            "agent": "claude", "agent_role": "implementer", "iteration": 0,
-            "started_at": _iso_now(), "completed_at": _iso_now(),
-            "audit_status": "needs_changes", "summary": "...",
-        }))
+        (ad / "claude-implementer-i0.json").write_text(
+            json.dumps(
+                {
+                    "task_id": "2026-04-26-301-infra-cap-mapping",
+                    "audit_id": "2026-04-26-301-infra-cap-mapping#claude#0",
+                    "agent": "claude",
+                    "agent_role": "implementer",
+                    "iteration": 0,
+                    "started_at": _iso_now(),
+                    "completed_at": _iso_now(),
+                    "audit_status": "needs_changes",
+                    "summary": "...",
+                }
+            )
+        )
         out = signoff_writer.write_signoff(
             plan_id="2026-04-26-301-infra-cap-mapping",
-            tier="trivial", iteration=0,
+            tier="trivial",
+            iteration=0,
             agents_in_panel=["claude"],
             audit_paths=sorted(ad.glob("*.json")),
             plan_dir=pd,
@@ -444,8 +496,9 @@ def test_quota_warn_inbox_event_fires_at_soft_threshold() -> None:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-302-infra-quota-warn-event", gates=["pre_impl"])
         # Pre-clear gates so volley enters the loop and the quota check fires.
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-302-infra-quota-warn-event",
-                              declared_gates=["pre_impl"])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-302-infra-quota-warn-event", declared_gates=["pre_impl"]
+        )
         impl = _CountingExecutor("claude")
         aud = _CountingExecutor("codex")
         saved_registry = dict(AGENT_REGISTRY)
@@ -480,22 +533,29 @@ def test_error_inbox_event_fires_on_executor_failure() -> None:
             super().__init__()
             self.agent_name = agent
             self.cli_binary = None
+
         def is_available(self) -> bool:
             return True
+
         def dispatch(self, task: DispatchTask) -> DispatchResult:
             return DispatchResult(
-                agent=self.agent_name, agent_role=task.agent_role,
+                agent=self.agent_name,
+                agent_role=task.agent_role,
                 iteration=task.iteration,
-                started_at=_iso_now(), completed_at=_iso_now(),
-                success=False, summary="", raw_response="",
+                started_at=_iso_now(),
+                completed_at=_iso_now(),
+                success=False,
+                summary="",
+                raw_response="",
                 error="synthetic CLI failure",
             )
 
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-303-infra-error-event", gates=["pre_impl"])
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-303-infra-error-event",
-                              declared_gates=["pre_impl"])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-303-infra-error-event", declared_gates=["pre_impl"]
+        )
         impl = _FailingExecutor("claude")
         aud = _CountingExecutor("codex")
         saved_registry = dict(AGENT_REGISTRY)
