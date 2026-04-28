@@ -16,15 +16,26 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
-from models.signoff_model import Signoff  # noqa: E402
-from pydantic import ValidationError
+# Resolve agent-conventions schemas dir so `from models.*` works regardless
+# of which sibling module imported first. Same candidate list as
+# plan_loader.py / environments_loader.py — kept inline rather than
+# extracted to keep the bootstrap surface flat.
+_SCHEMA_CANDIDATES = [
+    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
+    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
+    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
+]
+for _candidate in _SCHEMA_CANDIDATES:
+    if (_candidate / "models").is_dir():
+        sys.path.insert(0, str(_candidate))
+        break
 
-# Reuse the same SCHEMAS_DIR discovery as plan_loader so this module is
-# usable in isolation.
-from jarvis_orchestrate.plan_loader import SCHEMAS_DIR  # noqa: F401  (side-effect: sys.path)
+from models.signoff_model import Signoff  # noqa: E402
+from pydantic import ValidationError  # noqa: E402
 
 VALID_TIERS = {"trivial", "local", "cross-cutting", "architectural", "p0"}
 
