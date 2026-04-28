@@ -31,6 +31,7 @@ Reserved event types (not enforced — extra types are passed through):
   - quota_warn
   - error
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -107,7 +108,9 @@ def append_event(
     path = inbox_path(plan_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.is_file():
-        path.write_text(f"# INBOX — {plan_id}\n\nOperator-facing event log written by the supervisor.\n\n")
+        path.write_text(
+            f"# INBOX — {plan_id}\n\nOperator-facing event log written by the supervisor.\n\n"
+        )
     with path.open("a") as f:
         f.write(chunk)
 

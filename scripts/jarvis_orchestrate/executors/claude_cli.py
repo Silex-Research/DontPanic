@@ -1,4 +1,5 @@
 """Claude Code CLI executor — invokes `claude -p --output-format json`."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -115,7 +116,7 @@ class ClaudeCLIExecutor(BaseExecutor):
         return f"""You are the {task.agent_role} for plan {task.plan_id}, iteration {task.iteration}.
 
 Plan directory: {task.plan_dir}
-Feature to {task.agent_role[:-2] if task.agent_role.endswith('er') else task.agent_role}: {task.feature_id}
+Feature to {task.agent_role[:-2] if task.agent_role.endswith("er") else task.agent_role}: {task.feature_id}
 Description: {task.feature_description}
 Acceptance: {task.feature_acceptance}
 

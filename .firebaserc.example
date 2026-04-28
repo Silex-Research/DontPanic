@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "your-firebase-project-id",
+    "orchestrator": "your-firebase-project-id"
+  }
+}

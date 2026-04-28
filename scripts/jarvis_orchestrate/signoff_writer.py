@@ -11,21 +11,20 @@ terminal states the writer can still produce a record (with signoff=false
 and an appropriate next_action) so operators get a single artifact summary
 of the volley regardless of outcome.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 import json
-import sys
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from models.signoff_model import Signoff  # noqa: E402
 from pydantic import ValidationError
 
 # Reuse the same SCHEMAS_DIR discovery as plan_loader so this module is
 # usable in isolation.
 from jarvis_orchestrate.plan_loader import SCHEMAS_DIR  # noqa: F401  (side-effect: sys.path)
-
-from models.signoff_model import Signoff  # noqa: E402
 
 VALID_TIERS = {"trivial", "local", "cross-cutting", "architectural", "p0"}
 
@@ -108,8 +107,11 @@ def _quota_totals(audit_paths: list[Path]) -> dict[str, float]:
             totals[key] = max(totals.get(key, 0.0), float(pct))
     # Filter to fields the schema knows about (claude_percent / codex_percent /
     # gemini_percent only; grok_calls counted separately).
-    keep = {k: v for k, v in totals.items()
-            if k in {"claude_percent", "codex_percent", "gemini_percent"}}
+    keep = {
+        k: v
+        for k, v in totals.items()
+        if k in {"claude_percent", "codex_percent", "gemini_percent"}
+    }
     return keep
 
 
@@ -127,9 +129,7 @@ def build_signoff_dict(
     if not audit_paths:
         raise SignoffWriteError("cannot write signoff: no audit paths")
     if tier not in VALID_TIERS:
-        raise SignoffWriteError(
-            f"tier {tier!r} not in {sorted(VALID_TIERS)}"
-        )
+        raise SignoffWriteError(f"tier {tier!r} not in {sorted(VALID_TIERS)}")
     signed_off = volley_status == "signed_off"
     audits_rel = [_audit_relpath(p, plan_dir) for p in audit_paths]
 

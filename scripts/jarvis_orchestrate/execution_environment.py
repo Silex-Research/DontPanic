@@ -3,15 +3,15 @@
 ExecutionEnvironment owns a temporary namespace for mutable CLI state. It does
 not parse plan targets or enforce production gates; those are later F023 steps.
 """
+
 from __future__ import annotations
 
 import os
 import shutil
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping
-
 
 ISOLATED_ENV_PATHS = {
     "CLOUDSDK_CONFIG": ("gcloud",),
@@ -51,11 +51,9 @@ class ExecutionEnvironment:
     _created_root: bool = field(default=False, init=False)
     _active: bool = field(default=False, init=False)
 
-    def __enter__(self) -> "ExecutionEnvironment":
+    def __enter__(self) -> ExecutionEnvironment:
         if self.root is None:
-            safe_plan_id = "".join(
-                c if c.isalnum() or c in "._-" else "-" for c in self.plan_id
-            )
+            safe_plan_id = "".join(c if c.isalnum() or c in "._-" else "-" for c in self.plan_id)
             self.root = Path(tempfile.mkdtemp(prefix=f"jarvis-exec-{safe_plan_id}-"))
             self._created_root = True
         else:
@@ -86,15 +84,9 @@ class ExecutionEnvironment:
         self._require_active()
         assert self.root is not None
 
-        env = {
-            key: str(self.root.joinpath(*parts))
-            for key, parts in ISOLATED_ENV_PATHS.items()
-        }
+        env = {key: str(self.root.joinpath(*parts)) for key, parts in ISOLATED_ENV_PATHS.items()}
         env.update(
-            {
-                key: str(self.root.joinpath(*parts))
-                for key, parts in ISOLATED_ENV_FILES.items()
-            }
+            {key: str(self.root.joinpath(*parts)) for key, parts in ISOLATED_ENV_FILES.items()}
         )
         env["JARVIS_EXECUTION_ENV_ROOT"] = str(self.root)
         if self.target_env:

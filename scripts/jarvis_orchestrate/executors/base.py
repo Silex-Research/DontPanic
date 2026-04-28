@@ -8,6 +8,7 @@ Subclasses override `dispatch()` and may override `is_available()`. The default
 `is_available()` checks if the CLI binary is on PATH; override for richer probes
 (auth state, env vars, network reachability).
 """
+
 from __future__ import annotations
 
 import shutil
@@ -40,19 +41,19 @@ class DispatchResult:
     agent: str
     agent_role: str
     iteration: int
-    started_at: str          # ISO8601 UTC
-    completed_at: str        # ISO8601 UTC
-    success: bool            # subprocess exit 0 + non-empty response
-    summary: str             # one-paragraph human-readable
+    started_at: str  # ISO8601 UTC
+    completed_at: str  # ISO8601 UTC
+    success: bool  # subprocess exit 0 + non-empty response
+    summary: str  # one-paragraph human-readable
     model_version: str | None = None
-    raw_response: str = ""   # full stdout from CLI
+    raw_response: str = ""  # full stdout from CLI
     error: str | None = None
     quota_consumed: dict[str, Any] = field(default_factory=dict)
 
 
 class BaseExecutor(ABC):
-    agent_name: str = ""             # subclass: "claude" | "codex" | "gemini" | "grok" | "ollama" | …
-    cli_binary: str | None = None    # subclass: name of the CLI binary on PATH
+    agent_name: str = ""  # subclass: "claude" | "codex" | "gemini" | "grok" | "ollama" | …
+    cli_binary: str | None = None  # subclass: name of the CLI binary on PATH
 
     @abstractmethod
     def dispatch(self, task: DispatchTask) -> DispatchResult:

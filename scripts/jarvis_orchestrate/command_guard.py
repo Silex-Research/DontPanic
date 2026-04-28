@@ -1,10 +1,11 @@
 """Guardrails for commands that mutate process-global tool state."""
+
 from __future__ import annotations
 
 import shlex
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
 
 
 class CommandRejected(ValueError):
@@ -34,17 +35,13 @@ def check_command(
             "pass --project or CLOUDSDK_CORE_PROJECT"
         )
 
-    if _matches(
-        argv, "gcloud", "config", "configurations", "activate"
-    ) and not env.get("CLOUDSDK_CONFIG"):
-        return _reject(
-            "gcloud config configurations activate requires isolated CLOUDSDK_CONFIG"
-        )
+    if _matches(argv, "gcloud", "config", "configurations", "activate") and not env.get(
+        "CLOUDSDK_CONFIG"
+    ):
+        return _reject("gcloud config configurations activate requires isolated CLOUDSDK_CONFIG")
 
     if _matches(argv, "firebase", "use"):
-        return _reject(
-            "firebase use mutates configstore state; pass --project explicitly"
-        )
+        return _reject("firebase use mutates configstore state; pass --project explicitly")
 
     if _matches(argv, "kubectl", "config", "use-context"):
         return _reject(
@@ -53,29 +50,20 @@ def check_command(
 
     if _matches(argv, "gh", "auth", "switch"):
         return _reject(
-            "gh auth switch mutates GitHub CLI auth state; "
-            "set GH_CONFIG_DIR or GH_TOKEN explicitly"
+            "gh auth switch mutates GitHub CLI auth state; set GH_CONFIG_DIR or GH_TOKEN explicitly"
         )
 
-    if (
-        tool in {"npm", "yarn", "pnpm"}
-        and len(argv) >= 3
-        and argv[1:3] == ["config", "set"]
-    ):
+    if tool in {"npm", "yarn", "pnpm"} and len(argv) >= 3 and argv[1:3] == ["config", "set"]:
         return _reject(
             f"{tool} config set mutates package-manager state; "
             "use a project-local config or env override"
         )
 
     if _matches(argv, "git", "config") and "--global" in argv[2:]:
-        return _reject(
-            "git config --global mutates user state; use --local in the target worktree"
-        )
+        return _reject("git config --global mutates user state; use --local in the target worktree")
 
     if _matches(argv, "docker", "context", "use"):
-        return _reject(
-            "docker context use mutates Docker CLI state; pass --context explicitly"
-        )
+        return _reject("docker context use mutates Docker CLI state; pass --context explicitly")
 
     # F023 EC12: forbid registry mutation via package managers.
     if (
@@ -92,8 +80,10 @@ def check_command(
     # F023 EC12: gate dangerous push forms targeting protected branches.
     if tool == "git" and len(argv) >= 2 and argv[1] == "push":
         rest = argv[2:]
-        force = ("--force" in rest) or ("-f" in rest) or any(
-            r.startswith("--force-with-lease") for r in rest
+        force = (
+            ("--force" in rest)
+            or ("-f" in rest)
+            or any(r.startswith("--force-with-lease") for r in rest)
         )
         if force:
             # Branch ref is the last positional arg following the remote name.
@@ -121,6 +111,7 @@ def _action_includes(*actions: str):
     def predicate(argv: Sequence[str]) -> bool:
         rest = argv[1:]
         return any(a in rest for a in actions)
+
     return predicate
 
 
@@ -133,13 +124,16 @@ def _has_flag(*flag_aliases: str):
             if any(arg.startswith(f"{f}=") for arg in argv):
                 return True
         return False
+
     return predicate
 
 
 def _has_any(*group: str):
     """At-least-one-of group flag check (positional or --flag form)."""
+
     def predicate(argv: Sequence[str]) -> bool:
         return any(g in argv or any(a.startswith(f"{g}=") for a in argv) for g in group)
+
     return predicate
 
 
@@ -148,8 +142,7 @@ _REQUIRED_FLAG_RULES: list[tuple[str, callable, list[tuple[str, callable]]]] = [
     # can never silently inherit ambient configstore state.
     (
         "firebase",
-        _action_includes("deploy", "emulators:exec", "functions:shell",
-                          "hosting:channel:deploy"),
+        _action_includes("deploy", "emulators:exec", "functions:shell", "hosting:channel:deploy"),
         [("--project", _has_flag("--project", "-P"))],
     ),
     # xcodebuild's build/archive/test must pin scheme + configuration +
@@ -169,8 +162,7 @@ _REQUIRED_FLAG_RULES: list[tuple[str, callable, list[tuple[str, callable]]]] = [
     # flavor/buildType (any of common shapes).
     (
         "gradle",
-        lambda argv: any(t.startswith(("assemble", "bundle", "publish", "test"))
-                         for t in argv[1:]),
+        lambda argv: any(t.startswith(("assemble", "bundle", "publish", "test")) for t in argv[1:]),
         [
             ("--gradle-user-home", _has_flag("--gradle-user-home")),
         ],
@@ -183,8 +175,7 @@ _REQUIRED_FLAG_RULES: list[tuple[str, callable, list[tuple[str, callable]]]] = [
         [
             (
                 "-backend-config / TF_DATA_DIR",
-                lambda argv: _has_flag("-backend-config")(argv)
-                or _has_flag("-state")(argv),
+                lambda argv: _has_flag("-backend-config")(argv) or _has_flag("-state")(argv),
             ),
         ],
     ),
@@ -193,8 +184,7 @@ _REQUIRED_FLAG_RULES: list[tuple[str, callable, list[tuple[str, callable]]]] = [
     # still needs to be pinned).
     (
         "kubectl",
-        _action_includes("apply", "delete", "edit", "scale", "rollout",
-                          "patch", "replace"),
+        _action_includes("apply", "delete", "edit", "scale", "rollout", "patch", "replace"),
         [("--context", _has_flag("--context"))],
     ),
 ]

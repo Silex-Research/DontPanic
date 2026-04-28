@@ -11,6 +11,7 @@ intentionally stays simple so codegen output is clean):
 1. At least one of dev / staging / prod must be declared.
 2. Each declared env block must have at least one of firebase_project / gcp_project.
 """
+
 from __future__ import annotations
 
 import json
@@ -81,9 +82,7 @@ def find_repo_root_for_plan(plan_dir: Path) -> Path | None:
 
 def _check_declared_tiers(env: Environments) -> list[tuple[str, EnvBlock]]:
     declared: list[tuple[str, EnvBlock]] = [
-        (tier, getattr(env, tier))
-        for tier in DECLARABLE_TIERS
-        if getattr(env, tier) is not None
+        (tier, getattr(env, tier)) for tier in DECLARABLE_TIERS if getattr(env, tier) is not None
     ]
     if not declared:
         raise EnvironmentsValidationError(
@@ -134,9 +133,7 @@ def check_firebaserc_consistency(repo_root: Path, target_project: str) -> str | 
     try:
         data = json.loads(fr.read_text())
     except json.JSONDecodeError as exc:
-        raise EnvironmentsValidationError(
-            f"{fr}: malformed JSON — {exc}"
-        ) from exc
+        raise EnvironmentsValidationError(f"{fr}: malformed JSON — {exc}") from exc
     projects = (data.get("projects") or {}) if isinstance(data, dict) else {}
     if not projects:
         return None

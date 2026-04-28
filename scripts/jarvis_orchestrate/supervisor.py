@@ -6,6 +6,7 @@ F005a: dispatch_volley — implementer/auditor pair, iterate until signoff or ca
 Both read ~/.jarvis/quota_state.json before each dispatch (F020 gate) and
 soft-warn at >=90%; flip JARVIS_QUOTA_ENFORCE=hard to raise QuotaExceeded.
 """
+
 from __future__ import annotations
 
 import atexit
@@ -56,6 +57,7 @@ class PausedOnGate(RuntimeError):
     volley path returns a VolleyResult instead since it has a structured
     terminal type; single-agent dispatch returns Path on success, so the
     pause case is signaled via exception instead."""
+
     pass
 
 
@@ -191,9 +193,13 @@ def _validate_environment_registry(
     validate_target(env, target_env, target_project)
     fr_status = check_firebaserc_consistency(repo_root, target_project)
     fr_tail = f" + {fr_status}" if fr_status else ""
-    return env.repo, repo_root, (
-        f"[env-registry] {env.repo} ({repo_root}): "
-        f"{target_env} → {target_project} validated{fr_tail}"
+    return (
+        env.repo,
+        repo_root,
+        (
+            f"[env-registry] {env.repo} ({repo_root}): "
+            f"{target_env} → {target_project} validated{fr_tail}"
+        ),
     )
 
 
@@ -266,9 +272,7 @@ def dispatch_single_agent(
     print(quota_line)
 
     effective_env = target_env if target_env is not None else loaded.target_env
-    effective_project = (
-        target_project if target_project is not None else loaded.target_project
-    )
+    effective_project = target_project if target_project is not None else loaded.target_project
 
     registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
         loaded.plan_dir, effective_env, effective_project
@@ -277,12 +281,11 @@ def dispatch_single_agent(
 
     # F007 Slice 2 — pre-dispatch admission for single-agent path.
     plan_tier_str = (
-        loaded.plan.tier.value if hasattr(loaded.plan.tier, "value")
+        loaded.plan.tier.value
+        if hasattr(loaded.plan.tier, "value")
         else str(loaded.plan.tier or "")
     )
-    admission = quota_admission.evaluate(
-        plan_tier_str, agents=["claude"], mode_override=mode
-    )
+    admission = quota_admission.evaluate(plan_tier_str, agents=["claude"], mode_override=mode)
     print(
         f"[admission] class={admission.dispatch_class.value} "
         f"quota_over={admission.quota.over_threshold} "
@@ -336,12 +339,15 @@ def dispatch_single_agent(
             f"`jarvis resume {loaded.plan_id}`"
         )
 
-    with ExecutionEnvironment(
-        plan_id=loaded.plan_id,
-        target_env=effective_env,
-        target_project=effective_project,
-    ) as exec_env, _registered_supervisor(
-        loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+    with (
+        ExecutionEnvironment(
+            plan_id=loaded.plan_id,
+            target_env=effective_env,
+            target_project=effective_project,
+        ) as exec_env,
+        _registered_supervisor(
+            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+        ),
     ):
         task = DispatchTask(
             plan_id=loaded.plan_id,
@@ -370,7 +376,9 @@ def dispatch_single_agent(
                 f"subprocess exit {0 if result.success else 'nonzero'}",
                 f"execution_env_root={exec_env.root}",
                 f"target_env={effective_env} target_project={effective_project or '(none)'}",
-                f"target_source=kwarg" if target_env is not None or target_project is not None else "target_source=plan",
+                "target_source=kwarg"
+                if target_env is not None or target_project is not None
+                else "target_source=plan",
                 f"env_registry={registry_repo or '(none)'}",
                 f"cwd={registry_repo_root or '(inherit)'}",
             ],
@@ -394,10 +402,10 @@ def dispatch_single_agent(
 
 @dataclass
 class VolleyResult:
-    final_status: str           # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate"
-    rounds: int                 # number of (implementer, auditor) pairs completed
-    reason: str                 # human-readable termination reason
-    audit_paths: list[Path]     # all audit JSONs produced, in order
+    final_status: str  # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate"
+    rounds: int  # number of (implementer, auditor) pairs completed
+    reason: str  # human-readable termination reason
+    audit_paths: list[Path]  # all audit JSONs produced, in order
 
 
 def _emit_volley_terminal(
@@ -435,7 +443,9 @@ def _emit_volley_terminal(
         try:
             signoff_writer.write_signoff(
                 plan_id=loaded.plan_id,
-                tier=loaded.plan.tier.value if hasattr(loaded.plan.tier, "value") else str(loaded.plan.tier),
+                tier=loaded.plan.tier.value
+                if hasattr(loaded.plan.tier, "value")
+                else str(loaded.plan.tier),
                 iteration=max(0, result.rounds - 1),
                 agents_in_panel=agents_in_panel,
                 audit_paths=list(result.audit_paths),
@@ -487,19 +497,15 @@ def dispatch_volley(
     cap = max_iterations
     if cap is None:
         loop_caps = loaded.plan.loop_caps
-        cap = (loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1)
+        cap = loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1
 
     audit_paths: list[Path] = []
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
 
     effective_env = target_env if target_env is not None else loaded.target_env
-    effective_project = (
-        target_project if target_project is not None else loaded.target_project
-    )
-    target_source = (
-        "kwarg" if (target_env is not None or target_project is not None) else "plan"
-    )
+    effective_project = target_project if target_project is not None else loaded.target_project
+    target_source = "kwarg" if (target_env is not None or target_project is not None) else "plan"
 
     registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
         loaded.plan_dir, effective_env, effective_project
@@ -519,7 +525,9 @@ def dispatch_volley(
             f"(threshold {global_state.threshold})"
         )
         _trip_breaker(
-            loaded.plan_dir, loaded.plan_id, feature_id,
+            loaded.plan_dir,
+            loaded.plan_id,
+            feature_id,
             circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER,
             reason,
         )
@@ -532,7 +540,8 @@ def dispatch_volley(
                 reason,
                 audit_paths,
             ),
-            loaded=loaded, feature_id=feature_id,
+            loaded=loaded,
+            feature_id=feature_id,
             agents_in_panel=[impl_name, aud_name],
         )
 
@@ -545,7 +554,8 @@ def dispatch_volley(
     # true. Must run BEFORE the gate_pause.evaluate() check so the
     # paused_on_gate path picks up the freshly reconciled defers.
     plan_tier_str = (
-        loaded.plan.tier.value if hasattr(loaded.plan.tier, "value")
+        loaded.plan.tier.value
+        if hasattr(loaded.plan.tier, "value")
         else str(loaded.plan.tier or "")
     )
     admission = quota_admission.evaluate(
@@ -665,12 +675,15 @@ def dispatch_volley(
         feature_id=feature_id,
     )
 
-    with ExecutionEnvironment(
-        plan_id=loaded.plan_id,
-        target_env=effective_env,
-        target_project=effective_project,
-    ) as exec_env, _registered_supervisor(
-        loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+    with (
+        ExecutionEnvironment(
+            plan_id=loaded.plan_id,
+            target_env=effective_env,
+            target_project=effective_project,
+        ) as exec_env,
+        _registered_supervisor(
+            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+        ),
     ):
         print(
             f"[volley] execution_env_root={exec_env.root} "
@@ -706,13 +719,12 @@ def dispatch_volley(
 
         def _trip_and_return(
             kind: circuit_breakers.BreakerKind, reason: str, rounds: int
-        ) -> "VolleyResult":
+        ) -> VolleyResult:
             _trip_breaker(loaded.plan_dir, loaded.plan_id, feature_id, kind, reason)
             return _emit_volley_terminal(
-                VolleyResult(
-                    circuit_breakers.TERMINAL_STATUS[kind], rounds, reason, audit_paths
-                ),
-                loaded=loaded, feature_id=feature_id,
+                VolleyResult(circuit_breakers.TERMINAL_STATUS[kind], rounds, reason, audit_paths),
+                loaded=loaded,
+                feature_id=feature_id,
                 agents_in_panel=[impl_name, aud_name],
             )
 
@@ -748,7 +760,8 @@ def dispatch_volley(
                 )
                 return _emit_volley_terminal(
                     VolleyResult("stopped_quota", iteration, str(exc), audit_paths),
-                    loaded=loaded, feature_id=feature_id,
+                    loaded=loaded,
+                    feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
             print(impl_quota_line)
@@ -796,7 +809,8 @@ def dispatch_volley(
                 )
                 return _emit_volley_terminal(
                     VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths),
-                    loaded=loaded, feature_id=feature_id,
+                    loaded=loaded,
+                    feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
             print(aud_quota_line)
@@ -837,23 +851,31 @@ def dispatch_volley(
 
             if aud_status == "signed_off":
                 transcript.append_terminal(
-                    loaded.plan_dir, feature_id, aud_status, iteration + 1,
+                    loaded.plan_dir,
+                    feature_id,
+                    aud_status,
+                    iteration + 1,
                     reason="auditor signed off",
                 )
                 return _emit_volley_terminal(
                     VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
-                    loaded=loaded, feature_id=feature_id,
+                    loaded=loaded,
+                    feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
 
             if aud_status == "blocked":
                 transcript.append_terminal(
-                    loaded.plan_dir, feature_id, aud_status, iteration + 1,
+                    loaded.plan_dir,
+                    feature_id,
+                    aud_status,
+                    iteration + 1,
                     reason="auditor blocked",
                 )
                 return _emit_volley_terminal(
                     VolleyResult("blocked", iteration + 1, "auditor blocked", audit_paths),
-                    loaded=loaded, feature_id=feature_id,
+                    loaded=loaded,
+                    feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
                 )
 
@@ -863,42 +885,53 @@ def dispatch_volley(
             dr_tripped, dr_reason = circuit_breakers.check_diminishing_returns(audit_paths)
             if dr_tripped:
                 transcript.append_terminal(
-                    loaded.plan_dir, feature_id,
+                    loaded.plan_dir,
+                    feature_id,
                     circuit_breakers.TERMINAL_STATUS[
                         circuit_breakers.BreakerKind.DIMINISHING_RETURNS
                     ],
-                    iteration + 1, reason=dr_reason,
+                    iteration + 1,
+                    reason=dr_reason,
                 )
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.DIMINISHING_RETURNS,
-                    dr_reason, iteration + 1,
+                    dr_reason,
+                    iteration + 1,
                 )
             cc_tripped, cc_reason = circuit_breakers.check_convergence_collapse(audit_paths)
             if cc_tripped:
                 transcript.append_terminal(
-                    loaded.plan_dir, feature_id,
+                    loaded.plan_dir,
+                    feature_id,
                     circuit_breakers.TERMINAL_STATUS[
                         circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE
                     ],
-                    iteration + 1, reason=cc_reason,
+                    iteration + 1,
+                    reason=cc_reason,
                 )
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE,
-                    cc_reason, iteration + 1,
+                    cc_reason,
+                    iteration + 1,
                 )
 
             # No-progress: auditor verdict identical to last round
             np_tripped, np_reason = circuit_breakers.check_no_progress(
-                prior_aud_status, aud_status,
+                prior_aud_status,
+                aud_status,
             )
             if np_tripped:
                 transcript.append_terminal(
-                    loaded.plan_dir, feature_id, "stopped_no_progress", iteration + 1,
+                    loaded.plan_dir,
+                    feature_id,
+                    "stopped_no_progress",
+                    iteration + 1,
                     reason=np_reason,
                 )
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.NO_PROGRESS,
-                    np_reason, iteration + 1,
+                    np_reason,
+                    iteration + 1,
                 )
 
             prior_aud_path = aud_audit_path
@@ -909,10 +942,16 @@ def dispatch_volley(
         # dispatch is paused until the operator approves or resumes.
         cap_reason = f"max_iterations={cap} reached without signoff"
         transcript.append_terminal(
-            loaded.plan_dir, feature_id, "stopped_cap", cap + 1, reason=cap_reason,
+            loaded.plan_dir,
+            feature_id,
+            "stopped_cap",
+            cap + 1,
+            reason=cap_reason,
         )
         return _trip_and_return(
-            circuit_breakers.BreakerKind.ITERATION_CAP, cap_reason, cap + 1,
+            circuit_breakers.BreakerKind.ITERATION_CAP,
+            cap_reason,
+            cap + 1,
         )
 
 
@@ -997,7 +1036,7 @@ def _apply_target_accountability(
             audit["audit_status"] = "needs_changes"
 
 
-_DECLARATION_RE_CACHE: dict[tuple[str, str], "re.Pattern[str]"] = {}
+_DECLARATION_RE_CACHE: dict[tuple[str, str], re.Pattern[str]] = {}
 
 
 def _summary_declares(summary: str, key: str, value: str) -> bool:
@@ -1016,9 +1055,7 @@ def _summary_declares(summary: str, key: str, value: str) -> bool:
 def _resolve_executor(agent_name: str) -> BaseExecutor:
     executor = get_executor(agent_name)
     if not executor.is_available():
-        raise RuntimeError(
-            f"agent {agent_name!r} not available — {executor.availability_hint()}"
-        )
+        raise RuntimeError(f"agent {agent_name!r} not available — {executor.availability_hint()}")
     return executor
 
 

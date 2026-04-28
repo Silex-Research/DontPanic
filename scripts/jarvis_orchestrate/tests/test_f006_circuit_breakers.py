@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -18,14 +19,19 @@ sys.path.insert(0, str(HERE.parents[2]))
 
 from jarvis_orchestrate import (  # noqa: E402
     circuit_breakers as cb,
+)
+from jarvis_orchestrate import (  # noqa: E402
     gate_pause,
     inbox,
     notify,
-    signoff_writer,
     supervisor,
 )
 from jarvis_orchestrate.executors import AGENT_REGISTRY  # noqa: E402
-from jarvis_orchestrate.executors.base import BaseExecutor, DispatchResult, DispatchTask  # noqa: E402
+from jarvis_orchestrate.executors.base import (  # noqa: E402
+    BaseExecutor,
+    DispatchResult,
+    DispatchTask,
+)
 
 
 def _iso_now() -> str:
@@ -53,38 +59,46 @@ def test_check_budget_ceiling_reads_quota_state_file() -> None:
         ad = Path(td) / "audits"
         ad.mkdir()
         # Real-shape audit (no percent_weekly — the bug the fix closes).
-        (ad / "claude-implementer-i0.json").write_text(json.dumps({
-            "task_id": "t", "audit_id": "t#claude#0",
-            "agent": "claude", "agent_role": "implementer", "iteration": 0,
-            "started_at": _iso_now(), "completed_at": _iso_now(),
-            "audit_status": "needs_changes",
-            "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
-        }))
+        (ad / "claude-implementer-i0.json").write_text(
+            json.dumps(
+                {
+                    "task_id": "t",
+                    "audit_id": "t#claude#0",
+                    "agent": "claude",
+                    "agent_role": "implementer",
+                    "iteration": 0,
+                    "started_at": _iso_now(),
+                    "completed_at": _iso_now(),
+                    "audit_status": "needs_changes",
+                    "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
+                }
+            )
+        )
         # quota_state.json supplied via the new explicit kwarg
         qs = Path(td) / "quota_state.json"
-        qs.write_text(json.dumps({
-            "models": {"claude": {"percent_weekly": 80.0, "plan": "x"}}
-        }))
+        qs.write_text(json.dumps({"models": {"claude": {"percent_weekly": 80.0, "plan": "x"}}}))
         # No caps → no trip
-        assert not cb.check_budget_ceiling(sorted(ad.glob("*.json")), None,
-                                            quota_state_path=qs)[0]
+        assert not cb.check_budget_ceiling(sorted(ad.glob("*.json")), None, quota_state_path=qs)[0]
         # Cap=50 → trip (state says 80%)
         tripped, reason = cb.check_budget_ceiling(
-            sorted(ad.glob("*.json")), {"claude": 50.0},
+            sorted(ad.glob("*.json")),
+            {"claude": 50.0},
             quota_state_path=qs,
         )
         assert tripped, reason
         assert "claude" in reason and "80" in reason and "quota_state.json" in reason
         # Cap=90 → no trip
         assert not cb.check_budget_ceiling(
-            sorted(ad.glob("*.json")), {"claude": 90.0},
+            sorted(ad.glob("*.json")),
+            {"claude": 90.0},
             quota_state_path=qs,
         )[0]
         # Agent absent from this volley's audits → no trip even at over-cap state
         empty = Path(td) / "empty"
         empty.mkdir()
         assert not cb.check_budget_ceiling(
-            sorted(empty.glob("*.json")), {"claude": 50.0},
+            sorted(empty.glob("*.json")),
+            {"claude": 50.0},
             quota_state_path=qs,
         )[0]
     print("  ✓ budget_ceiling reads quota_state.json + scoped to participating agents")
@@ -103,16 +117,24 @@ def test_check_no_progress() -> None:
 
 def _write_auditor_audit(ad: Path, iteration: int, *, status: str, findings: int) -> Path:
     p = ad / f"codex-auditor-i{iteration}.json"
-    p.write_text(json.dumps({
-        "task_id": "t", "audit_id": f"t#codex#{iteration}",
-        "agent": "codex", "agent_role": "auditor", "iteration": iteration,
-        "started_at": _iso_now(), "completed_at": _iso_now(),
-        "audit_status": status,
-        "findings": [
-            {"severity": "low", "category": "style", "issue": f"finding {i}-aaaaaaa"}
-            for i in range(findings)
-        ],
-    }))
+    p.write_text(
+        json.dumps(
+            {
+                "task_id": "t",
+                "audit_id": f"t#codex#{iteration}",
+                "agent": "codex",
+                "agent_role": "auditor",
+                "iteration": iteration,
+                "started_at": _iso_now(),
+                "completed_at": _iso_now(),
+                "audit_status": status,
+                "findings": [
+                    {"severity": "low", "category": "style", "issue": f"finding {i}-aaaaaaa"}
+                    for i in range(findings)
+                ],
+            }
+        )
+    )
     return p
 
 
@@ -186,9 +208,16 @@ def test_global_breaker_window_pruning() -> None:
     )
     with history.open("w") as f:
         for _ in range(5):
-            f.write(json.dumps({
-                "plan_id": "old", "kind": "iteration_cap", "at": stale,
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "plan_id": "old",
+                        "kind": "iteration_cap",
+                        "at": stale,
+                    }
+                )
+                + "\n"
+            )
     # Even 5 stale hits don't trip the breaker
     assert not cb.evaluate_global().tripped
     # One fresh hit alone doesn't either
@@ -204,8 +233,9 @@ def test_breaker_blocks_dispatch_via_gate_pause() -> None:
     print("\n[test] breaker_blocks_dispatch_via_gate_pause ...")
     with tempfile.TemporaryDirectory() as td:
         pd = Path(td)
-        gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK),
-                                plan_id="p", reason="elapsed > 1h")
+        gate_pause.add_breaker(
+            pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK), plan_id="p", reason="elapsed > 1h"
+        )
         check = gate_pause.evaluate(pd, ["pre_impl"])
         assert check.paused
         assert "breaker:wall_clock" in check.unmet
@@ -219,8 +249,9 @@ def test_breaker_blocks_dispatch_via_gate_pause() -> None:
         assert "active_breakers" not in state or not state.get("active_breakers")
         assert all(not c.startswith("breaker:") for c in (state.get("cleared_gates") or []))
         # Re-tripping the same breaker must pause again
-        gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK),
-                                plan_id="p", reason="re-hit")
+        gate_pause.add_breaker(
+            pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK), plan_id="p", reason="re-hit"
+        )
         assert "breaker:wall_clock" in gate_pause.evaluate(pd, ["pre_impl"]).unmet
     print("  ✓ breakers union with plan.human_gates, approve clears, re-trip pauses again")
 
@@ -229,10 +260,10 @@ def test_resume_all_clears_breakers() -> None:
     print("\n[test] resume_all_clears_breakers ...")
     with tempfile.TemporaryDirectory() as td:
         pd = Path(td)
-        gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.NO_PROGRESS),
-                                plan_id="p", reason="x")
-        gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK),
-                                plan_id="p", reason="y")
+        gate_pause.add_breaker(
+            pd, cb.gate_name(cb.BreakerKind.NO_PROGRESS), plan_id="p", reason="x"
+        )
+        gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK), plan_id="p", reason="y")
         gate_pause.resume_all(pd, plan_id="p", declared_gates=["pre_impl"])
         check = gate_pause.evaluate(pd, ["pre_impl"])
         assert not check.paused, check
@@ -278,28 +309,44 @@ target_project: none
 def _make_plan(repo: Path, plan_id: str, *, cap: int = 1, wall_clock_hours: float = 1.0) -> Path:
     plan_dir = repo / "docs" / "plans" / plan_id
     plan_dir.mkdir(parents=True)
-    (plan_dir / "plan.md").write_text(_PLAN_TEMPLATE.format(
-        plan_id=plan_id, cap=cap, wall_clock_hours=wall_clock_hours,
-    ))
-    (plan_dir / "features.json").write_text(json.dumps({
-        "task_id": plan_id,
-        "schema_version": "1.0",
-        "features": [{
-            "id": "F001", "category": "test", "phase": 0,
-            "description": "Synthetic feature for F006 tests.",
-            "steps": ["scripted"],
-            "acceptance": "Volley terminates per breaker.",
-            "passes": False, "depends_on": [],
-        }],
-    }, indent=2) + "\n")
+    (plan_dir / "plan.md").write_text(
+        _PLAN_TEMPLATE.format(
+            plan_id=plan_id,
+            cap=cap,
+            wall_clock_hours=wall_clock_hours,
+        )
+    )
+    (plan_dir / "features.json").write_text(
+        json.dumps(
+            {
+                "task_id": plan_id,
+                "schema_version": "1.0",
+                "features": [
+                    {
+                        "id": "F001",
+                        "category": "test",
+                        "phase": 0,
+                        "description": "Synthetic feature for F006 tests.",
+                        "steps": ["scripted"],
+                        "acceptance": "Volley terminates per breaker.",
+                        "passes": False,
+                        "depends_on": [],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     return plan_dir
 
 
 class _ScriptedExecutor(BaseExecutor):
     """Returns scripted summaries with an optional findings-count knob (auditor)."""
 
-    def __init__(self, agent: str, *, role: str, summaries: list[str],
-                 statuses: list[str] | None = None) -> None:
+    def __init__(
+        self, agent: str, *, role: str, summaries: list[str], statuses: list[str] | None = None
+    ) -> None:
         super().__init__()
         self.agent_name = agent
         self.cli_binary = None
@@ -316,10 +363,14 @@ class _ScriptedExecutor(BaseExecutor):
         self.idx += 1
         s = self.summaries[i] if i < len(self.summaries) else self.summaries[-1]
         return DispatchResult(
-            agent=self.agent_name, agent_role=task.agent_role,
+            agent=self.agent_name,
+            agent_role=task.agent_role,
             iteration=task.iteration,
-            started_at=_iso_now(), completed_at=_iso_now(),
-            success=True, summary=s, raw_response=s,
+            started_at=_iso_now(),
+            completed_at=_iso_now(),
+            success=True,
+            summary=s,
+            raw_response=s,
             quota_consumed={"tokens_in": 1, "tokens_out": 1},
         )
 
@@ -352,12 +403,13 @@ def test_supervisor_iteration_cap_pauses_via_breaker() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-400-infra-f006-cap", cap=0)
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-400-infra-f006-cap",
-                                declared_gates=["pre_impl"])
-        impl = _ScriptedExecutor("claude", role="implementer",
-                                  summaries=["Synthetic implementer summary."])
-        aud = _ScriptedExecutor("codex", role="auditor",
-                                 summaries=["Synthetic auditor summary."])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-400-infra-f006-cap", declared_gates=["pre_impl"]
+        )
+        impl = _ScriptedExecutor(
+            "claude", role="implementer", summaries=["Synthetic implementer summary."]
+        )
+        aud = _ScriptedExecutor("codex", role="auditor", summaries=["Synthetic auditor summary."])
         saved_registry = dict(AGENT_REGISTRY)
         saved_quota = _bypass_quota()
         saved_run = _force_auditor_status("needs_changes")
@@ -389,8 +441,9 @@ def test_supervisor_global_breaker_hard_stops() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-401-infra-f006-global")
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-401-infra-f006-global",
-                                declared_gates=["pre_impl"])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-401-infra-f006-global", declared_gates=["pre_impl"]
+        )
         # Pre-load 3 iteration_cap hits
         for i in range(3):
             cb.record_global_hit(f"p{i}", cb.BreakerKind.ITERATION_CAP)
@@ -429,8 +482,9 @@ def test_global_breaker_evaluates_before_executor_resolution() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-410-infra-f006-order")
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-410-infra-f006-order",
-                                declared_gates=["pre_impl"])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-410-infra-f006-order", declared_gates=["pre_impl"]
+        )
         for _ in range(3):
             cb.record_global_hit("p", cb.BreakerKind.ITERATION_CAP)
         # Critically: clear AGENT_REGISTRY so executor resolution would KeyError
@@ -454,8 +508,10 @@ def test_cli_approve_breaker_no_false_warning() -> None:
     """Fix#3a: jarvis approve <plan-id> breaker:<kind> must not warn that the
     name isn't in plan.human_gates."""
     print("\n[test] cli_approve_breaker_no_false_warning ...")
-    from jarvis_orchestrate import cli
     from contextlib import redirect_stderr
+
+    from jarvis_orchestrate import cli
+
     buf_out = io.StringIO()
     buf_err = io.StringIO()
     with tempfile.TemporaryDirectory() as td:
@@ -464,7 +520,9 @@ def test_cli_approve_breaker_no_false_warning() -> None:
         # Trip the breaker so it's in active_breakers (gives the CLI two
         # parallel paths to recognize the name as valid: known BreakerKind +
         # currently active).
-        gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id="2026-04-26-411-infra-f006-cli-approve")
+        gate_pause.add_breaker(
+            plan_dir, "breaker:wall_clock", plan_id="2026-04-26-411-infra-f006-cli-approve"
+        )
         with redirect_stdout(buf_out), redirect_stderr(buf_err):
             rc = cli.main(["approve", str(plan_dir), "breaker:wall_clock"])
         assert rc == 0
@@ -483,6 +541,7 @@ def test_cli_resume_clears_active_breakers_with_no_human_gates() -> None:
     when active_breakers is non-empty."""
     print("\n[test] cli_resume_clears_active_breakers_with_no_human_gates ...")
     from jarvis_orchestrate import cli
+
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         # Plan with empty human_gates list
@@ -519,17 +578,28 @@ target_project: none
 ```
 """
         (plan_dir / "plan.md").write_text(plan_md)
-        (plan_dir / "features.json").write_text(json.dumps({
-            "task_id": plan_id,
-            "schema_version": "1.0",
-            "features": [{
-                "id": "F001", "category": "test", "phase": 0,
-                "description": "Synthetic feature for F006 fix#3b.",
-                "steps": ["scripted"],
-                "acceptance": "resume clears active breakers.",
-                "passes": False, "depends_on": [],
-            }],
-        }, indent=2) + "\n")
+        (plan_dir / "features.json").write_text(
+            json.dumps(
+                {
+                    "task_id": plan_id,
+                    "schema_version": "1.0",
+                    "features": [
+                        {
+                            "id": "F001",
+                            "category": "test",
+                            "phase": 0,
+                            "description": "Synthetic feature for F006 fix#3b.",
+                            "steps": ["scripted"],
+                            "acceptance": "resume clears active breakers.",
+                            "passes": False,
+                            "depends_on": [],
+                        }
+                    ],
+                },
+                indent=2,
+            )
+            + "\n"
+        )
         # Trip a breaker but leave human_gates empty
         gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id=plan_id)
         assert "breaker:wall_clock" in gate_pause.active_breakers(plan_dir)
@@ -538,8 +608,9 @@ target_project: none
             rc = cli.main(["resume", str(plan_dir)])
         assert rc == 0
         # After resume, active breakers must be cleared
-        assert "breaker:wall_clock" not in gate_pause.active_breakers(plan_dir), \
+        assert "breaker:wall_clock" not in gate_pause.active_breakers(plan_dir), (
             gate_pause.active_breakers(plan_dir)
+        )
     print("  ✓ resume clears active breakers even when plan declares no human_gates")
 
 
@@ -555,11 +626,13 @@ def test_active_breaker_preempts_executor_resolution() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-413-infra-f006-preempt")
-        gate_pause.resume_all(plan_dir, plan_id="2026-04-26-413-infra-f006-preempt",
-                                declared_gates=["pre_impl"])
+        gate_pause.resume_all(
+            plan_dir, plan_id="2026-04-26-413-infra-f006-preempt", declared_gates=["pre_impl"]
+        )
         # Plant the breaker explicitly so dispatch hits an unmet gate from start.
-        gate_pause.add_breaker(plan_dir, "breaker:wall_clock",
-                               plan_id="2026-04-26-413-infra-f006-preempt")
+        gate_pause.add_breaker(
+            plan_dir, "breaker:wall_clock", plan_id="2026-04-26-413-infra-f006-preempt"
+        )
         # Empty registry → KeyError if executor resolution runs before gate-pause.
         saved_registry = dict(AGENT_REGISTRY)
         saved_quota = _bypass_quota()
@@ -582,8 +655,10 @@ def test_cli_approve_refuses_global_breaker() -> None:
     operator clearance. `jarvis approve <plan> breaker:global_circuit_breaker`
     must refuse with a non-zero exit code rather than print 'cleared gate'."""
     print("\n[test] cli_approve_refuses_global_breaker ...")
-    from jarvis_orchestrate import cli
     from contextlib import redirect_stderr
+
+    from jarvis_orchestrate import cli
+
     buf_out = io.StringIO()
     buf_err = io.StringIO()
     with tempfile.TemporaryDirectory() as td:
@@ -618,7 +693,8 @@ def test_breaker_approve_is_idempotent() -> None:
         # History should hold exactly one approve entry for this breaker
         state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
         approves = [
-            h for h in state.get("history", [])
+            h
+            for h in state.get("history", [])
             if h.get("action") == "approve" and h.get("gate") == "breaker:wall_clock"
         ]
         assert len(approves) == 1, approves

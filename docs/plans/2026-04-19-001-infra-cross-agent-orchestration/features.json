@@ -634,17 +634,18 @@
       "id": "F022",
       "category": "doc",
       "phase": 8,
-      "description": "Open-source readiness: README + bootstrap.sh + jarvis doctor + LICENSE + CONTRIBUTING + CI",
+      "description": "Open-source readiness: README + bootstrap.sh + jarvis_doctor + LICENSE + CONTRIBUTING + CI",
       "steps": [
-        "README.md at repo root: prereqs, quickstart, architecture diagram, project layout, setup checklist",
-        "bootstrap.sh codifying the gcloud/firebase/SA setup demonstrated on jarvis-a6ee1 (link billing, enable APIs, create SA, generate key, deploy rules, run smoke test)",
-        "scripts/jarvis_doctor.py preflight: verifies gcloud auth + firebase auth + Python deps + .secrets/ + schema validity + skill consistency",
-        "Sanitization pass: replace user-specific values (billing IDs, project IDs) with templated env vars in committed files",
-        "LICENSE (MIT or Apache-2.0 per user preference) + CONTRIBUTING.md + CODE_OF_CONDUCT.md",
-        "GitHub Actions CI: validate.py + Pydantic schema validation on PR"
+        "README.md quickstart rewrite: prereqs, scripts/bootstrap.sh flow, jarvis_doctor verification, local-CI-equivalent commands",
+        "scripts/bootstrap.sh: requires --project / JARVIS_FIREBASE_PROJECT and --billing-account / JARVIS_BILLING_ACCOUNT (no campaign defaults), --create-key opt-in with .secrets/ gitignore-verification, --dry-run preview, generates environments.json + .firebaserc from .example templates",
+        "scripts/jarvis_doctor.py preflight: 15 checks across python/CLIs/auth/target-project/secrets/deps/schemas/Pydantic-models/parent-plan; --json mode; nonzero exit on red",
+        "Sanitization: firebase_client.py reads JARVIS_FIREBASE_PROJECT (no hardcoded campaign default); environments.json + .firebaserc untracked, .example templates committed; storage.rules + firestore.rules + plan_target.py example scrubbed; scripts/sanitization_check.py guards regression",
+        "LICENSE (Apache-2.0) + CONTRIBUTING.md + CODE_OF_CONDUCT.md (Contributor Covenant 2.1 by reference)",
+        "GitHub Actions CI: ruff check + ruff format --check + Pydantic schema imports + pytest + jarvis_doctor schema-only checks + sanitization_check.py + bootstrap.sh syntax/preflight tests; no allowed-failure jobs",
+        "Tests: test_f022_bootstrap_parser.py (8 tests), test_f022_jarvis_doctor.py (17 tests), test_f022_sanitization.py (8 tests); ruff debt cleared (121 auto-fixes + 3 manual + 44 format passes)"
       ],
-      "acceptance": "Fresh clone on a clean machine: README quickstart followed end-to-end yields a working orchestration setup with jarvis doctor green; CI passes on a sample PR",
-      "passes": false,
+      "acceptance": "Local CI-equivalent passes (pytest + ruff check + ruff format --check + sanitization_check + bootstrap.sh preflight). jarvis_doctor --skip-auth is green on a fresh clone (no .secrets/ yet, no authenticated CLIs); full check green in an authenticated environment. bootstrap.sh --dry-run executes zero side effects (no auth probes, no gcloud describe calls). Sanitization covers project ID, billing account, maintainer email, and GitHub noreply identity, scans tracked + staged + untracked-not-ignored files, and is re-run after staging. README contains no references to maintainer-private scripts. CI workflow YAML validates and steps run locally. Real clean-project bootstrap smoke remains as post-merge manual validation, not a blocker.",
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",

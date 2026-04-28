@@ -19,6 +19,7 @@ Engagement-surface gate handling (F008 + F006 + F007):
 Interactive backoff touch (F007 Slice 2):
   python -m jarvis_orchestrate claude-touch               # record human Claude request now
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,13 +28,15 @@ from pathlib import Path
 
 from jarvis_orchestrate import (
     active_supervisors,
-    circuit_breakers as cb,
     gate_pause,
     inbox,
     interactive_state,
     plan_loader,
     quota_admission,
     supervisor,
+)
+from jarvis_orchestrate import (
+    circuit_breakers as cb,
 )
 from jarvis_orchestrate.supervisor import QuotaExceeded
 
@@ -81,7 +84,9 @@ def _approve_main(argv: list[str]) -> int:
     loaded = plan_loader.load(plan_dir)
     # plan.human_gates is a list of HumanGate enum members; compare on .value
     # so the user-supplied string CLI arg matches the declared set.
-    declared_strs = [g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])]
+    declared_strs = [
+        g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
+    ]
     # F006: synthetic breaker:<kind> gates are valid declared names too — the
     # supervisor adds them to active_breakers on trip. Don't false-warn when
     # operator approves a known breaker name (either currently active or any
@@ -94,11 +99,7 @@ def _approve_main(argv: list[str]) -> int:
     breaker_names = {f"breaker:{k.value}" for k in cb.APPROVAL_BREAKERS}
     defer_names = {quota_admission.gate_name(k) for k in quota_admission.DeferKind}
     valid_targets = (
-        set(declared_strs)
-        | set(active_breakers)
-        | set(active_defers)
-        | breaker_names
-        | defer_names
+        set(declared_strs) | set(active_breakers) | set(active_defers) | breaker_names | defer_names
     )
     if gate not in valid_targets:
         print(
@@ -206,20 +207,39 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
     p.add_argument("--feature", default="F001", help="Feature ID to dispatch (default F001)")
-    p.add_argument("--role", default="implementer", help="Single-agent mode: agent role (default implementer)")
-    p.add_argument("--iteration", type=int, default=0, help="Single-agent mode: iteration number (default 0)")
-    p.add_argument("--volley", action="store_true", help="Volley mode: implementer/auditor pair iterating until signoff or cap")
-    p.add_argument("--implementer", default=None, help="Volley mode: implementer agent (default: agents_required[0])")
-    p.add_argument("--auditor", default=None, help="Volley mode: auditor agent (default: agents_required[1])")
-    p.add_argument("--max-iterations", type=int, default=None, help="Volley mode: override loop_caps.max_iterations")
+    p.add_argument(
+        "--role", default="implementer", help="Single-agent mode: agent role (default implementer)"
+    )
+    p.add_argument(
+        "--iteration", type=int, default=0, help="Single-agent mode: iteration number (default 0)"
+    )
+    p.add_argument(
+        "--volley",
+        action="store_true",
+        help="Volley mode: implementer/auditor pair iterating until signoff or cap",
+    )
+    p.add_argument(
+        "--implementer",
+        default=None,
+        help="Volley mode: implementer agent (default: agents_required[0])",
+    )
+    p.add_argument(
+        "--auditor", default=None, help="Volley mode: auditor agent (default: agents_required[1])"
+    )
+    p.add_argument(
+        "--max-iterations",
+        type=int,
+        default=None,
+        help="Volley mode: override loop_caps.max_iterations",
+    )
     p.add_argument(
         "--mode",
         default=None,
         choices=["interactive", "autonomous"],
         help="F007: runtime dispatch class override. interactive=bypass admission gates; "
-             "autonomous=enforce. P0 is plan-derived only (plan.tier=p0) and cannot be "
-             "forced via this flag — that would silently expand emergency-lane scope. "
-             "Default: derived from plan.tier (p0 → p0; else autonomous).",
+        "autonomous=enforce. P0 is plan-derived only (plan.tier=p0) and cannot be "
+        "forced via this flag — that would silently expand emergency-lane scope. "
+        "Default: derived from plan.tier (p0 → p0; else autonomous).",
     )
     args = p.parse_args(raw)
 
@@ -249,7 +269,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[supervisor] ERROR: {exc}", file=sys.stderr)
             return 1
 
-        print(f"\n[supervisor] volley terminal: {result.final_status} after {result.rounds} round(s)")
+        print(
+            f"\n[supervisor] volley terminal: {result.final_status} after {result.rounds} round(s)"
+        )
         print(f"[supervisor] reason: {result.reason}")
         print(f"[supervisor] {len(result.audit_paths)} audit JSONs written")
         # Exit 0 only if signed_off; non-zero for any non-success terminal

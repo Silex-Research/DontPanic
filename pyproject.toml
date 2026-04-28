@@ -1,0 +1,41 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+# Tracked Python lives in scripts/. Vendored upstream code under
+# claude/shared/ is maintained in agent-conventions and is excluded from
+# our enforcement surface.
+extend-exclude = [
+  "claude/shared",
+  "**/__pycache__",
+  ".secrets",
+  "research",
+  "codex",
+  "gemini",
+]
+
+[tool.ruff.lint]
+# Curated rule set, scoped honestly. Expanding rules later is cheap;
+# starting with too much is what produces "allowed-failure" jobs.
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes (unused imports, undefined names, …)
+  "W",   # pycodestyle warnings
+  "I",   # import sorting
+  "UP",  # pyupgrade — modernize syntax
+  "B",   # flake8-bugbear — likely-bug patterns
+]
+ignore = [
+  "E501",  # line length — relax; format handles wrapping
+  "B008",  # function-call default arg (used intentionally for argparse, click)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are allowed to use unused fixture-style locals + asserts that
+# would otherwise read as bugbear false positives.
+"**/tests/**" = ["B011"]
+
+[tool.ruff.format]
+# Default style; explicit so future updates don't surprise us.
+quote-style = "double"
+indent-style = "space"

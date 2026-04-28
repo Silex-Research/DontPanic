@@ -34,14 +34,15 @@ F006's known approve-vs-persistent-condition trade-off (D074-amend2) — the
 escape hatches for the operator are wait-it-out, `--mode interactive`, or
 class p0 (via plan.tier).
 """
+
 from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Iterable
 
 from jarvis_orchestrate import interactive_state
 
@@ -187,6 +188,7 @@ def evaluate_interactive_backoff(agents: Iterable[str]) -> InteractiveCheck:
 @dataclass(frozen=True)
 class AdmissionCheck:
     """Computed defer set + supporting context, suitable for INBOX bodies."""
+
     dispatch_class: DispatchClass
     quota: QuotaCheck
     interactive: InteractiveCheck

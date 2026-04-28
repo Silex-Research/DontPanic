@@ -1,4 +1,5 @@
 """Build, validate, and persist Audit JSONs."""
+
 from __future__ import annotations
 
 import json
@@ -6,13 +7,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+# Re-import via plan_loader sys.path.insert side effect
+from models.audit_model import Audit  # noqa: E402
 from pydantic import ValidationError
 
 from jarvis_orchestrate.executors.base import DispatchResult
 from jarvis_orchestrate.plan_loader import LoadedPlan
-
-# Re-import via plan_loader sys.path.insert side effect
-from models.audit_model import Audit  # noqa: E402
 
 
 def build_audit(
@@ -93,9 +93,7 @@ def _derive_status(
 ) -> str:
     if not result.success:
         return "blocked"
-    has_critical = any(
-        f.get("severity") in {"critical", "high"} for f in findings
-    )
+    has_critical = any(f.get("severity") in {"critical", "high"} for f in findings)
     if has_critical:
         return "needs_changes"
     if status_hint in {"needs_changes", "blocked", "inconclusive", "redaction_required"}:
@@ -156,8 +154,7 @@ def write(audit: dict[str, Any], plan_dir: Path) -> Path:
         Audit.model_validate(audit)
     except ValidationError as exc:
         msg = "; ".join(
-            f"{'.'.join(str(x) for x in e['loc'])}: {e['msg']}"
-            for e in exc.errors()[:5]
+            f"{'.'.join(str(x) for x in e['loc'])}: {e['msg']}" for e in exc.errors()[:5]
         )
         raise ValueError(f"Audit validation failed: {msg}") from exc
 
@@ -165,7 +162,5 @@ def write(audit: dict[str, Any], plan_dir: Path) -> Path:
     audit_dir.mkdir(parents=True, exist_ok=True)
     iteration = audit.get("iteration", 0)
     out = audit_dir / f"{audit['agent']}-{audit['agent_role']}-i{iteration}.json"
-    out.write_text(
-        json.dumps(audit, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
-    )
+    out.write_text(json.dumps(audit, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
     return out

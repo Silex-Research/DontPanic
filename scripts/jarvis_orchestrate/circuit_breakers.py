@@ -13,16 +13,16 @@ all autonomous dispatch is refused. Tracking lives in
 ~/.jarvis/breaker_history.jsonl and is cross-plan. Operators wait out the
 window; there is intentionally no `jarvis clear-global-breaker` command.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 import json
 import os
-from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Iterable
 
 # F006 history path. Test isolation: set JARVIS_BREAKER_HISTORY_PATH to a
 # tempfile in test setup so synthetic dispatches don't pollute the operator's
@@ -38,6 +38,8 @@ def _effective_history_path() -> Path:
     if env_override:
         return Path(env_override)
     return GLOBAL_HISTORY_PATH
+
+
 GLOBAL_WINDOW_SECONDS = 24 * 3600
 GLOBAL_THRESHOLD_HITS = 3
 
@@ -312,7 +314,9 @@ def evaluate_global(
         if entry.get("kind") in counted_values:
             hits += 1
     return GlobalBreakerState(
-        tripped=hits >= threshold, hits_in_window=hits, threshold=threshold,
+        tripped=hits >= threshold,
+        hits_in_window=hits,
+        threshold=threshold,
         window_seconds=window_seconds,
     )
 

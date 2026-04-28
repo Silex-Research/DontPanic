@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_execution_environment.py
 """
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -19,9 +20,9 @@ sys.path.insert(0, str(HERE.parents[2]))
 
 from jarvis_orchestrate.command_guard import CommandRejected, assert_allowed  # noqa: E402
 from jarvis_orchestrate.execution_environment import (  # noqa: E402
-    ExecutionEnvironment,
     ISOLATED_ENV_FILES,
     ISOLATED_ENV_PATHS,
+    ExecutionEnvironment,
 )
 from jarvis_orchestrate.executors.base import (  # noqa: E402
     BaseExecutor,
@@ -29,7 +30,6 @@ from jarvis_orchestrate.executors.base import (  # noqa: E402
     DispatchTask,
 )
 from jarvis_orchestrate.executors.claude_cli import ClaudeCLIExecutor  # noqa: E402
-
 
 FAKE_GCLOUD = """#!/usr/bin/env python3
 import os
@@ -133,9 +133,7 @@ def test_parallel_envs_isolate_gcloud_mutations() -> None:
         targets = ["jarvis-dev-a", "jarvis-dev-b"]
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-            results = list(
-                pool.map(lambda p: _run_mutating_fake_gcloud(fake_gcloud, p), targets)
-            )
+            results = list(pool.map(lambda p: _run_mutating_fake_gcloud(fake_gcloud, p), targets))
 
     for target_project, effective_project, config_project in results:
         assert effective_project == target_project, (target_project, effective_project)
@@ -198,15 +196,19 @@ def test_soft_env_var_coverage() -> None:
         ) as env:
             overlay = env.overlay()
 
-        expected = set(ISOLATED_ENV_PATHS) | set(ISOLATED_ENV_FILES) | {
-            "CLOUDSDK_CORE_PROJECT",
-            "FIREBASE_PROJECT",
-            "GCLOUD_PROJECT",
-            "GOOGLE_CLOUD_PROJECT",
-            "JARVIS_EXECUTION_ENV_ROOT",
-            "JARVIS_TARGET_ENV",
-            "JARVIS_TARGET_PROJECT",
-        }
+        expected = (
+            set(ISOLATED_ENV_PATHS)
+            | set(ISOLATED_ENV_FILES)
+            | {
+                "CLOUDSDK_CORE_PROJECT",
+                "FIREBASE_PROJECT",
+                "GCLOUD_PROJECT",
+                "GOOGLE_CLOUD_PROJECT",
+                "JARVIS_EXECUTION_ENV_ROOT",
+                "JARVIS_TARGET_ENV",
+                "JARVIS_TARGET_PROJECT",
+            }
+        )
         missing = expected - set(overlay)
         assert not missing, f"missing env keys: {sorted(missing)}"
         assert overlay["JARVIS_TARGET_ENV"] == "staging"
@@ -241,9 +243,7 @@ def test_executor_subprocess_receives_isolated_env() -> None:
                 feature_acceptance="Fake Claude receives JARVIS_TARGET_PROJECT.",
                 feature_steps=[],
                 agent_role="implementer",
-                subprocess_env=env.subprocess_env(
-                    {"PATH": os.environ.get("PATH", "")}
-                ),
+                subprocess_env=env.subprocess_env({"PATH": os.environ.get("PATH", "")}),
             )
             result = ClaudeCLIExecutor(binary=str(fake_claude)).dispatch(task)
 
@@ -396,7 +396,10 @@ def test_supervisor_volley_threads_isolated_env_to_executors() -> None:
                     assert env.get(key, "").startswith(env["JARVIS_EXECUTION_ENV_ROOT"]), key
 
             # All four rounds shared one env root (cleanup-on-volley-terminate contract).
-            roots = {env["JARVIS_EXECUTION_ENV_ROOT"] for env in (*impl.captured_envs, *aud.captured_envs)}
+            roots = {
+                env["JARVIS_EXECUTION_ENV_ROOT"]
+                for env in (*impl.captured_envs, *aud.captured_envs)
+            }
             assert len(roots) == 1, roots
             shared_root = next(iter(roots))
 

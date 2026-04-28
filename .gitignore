@@ -41,6 +41,14 @@ package-lock.json
 .DS_Store
 Thumbs.db
 
+# Per-repo environments registry (real project IDs). Committed shape is
+# environments.json.example with placeholders. Real values are generated
+# locally (manual edit or scripts/bootstrap.sh) and never committed.
+/environments.json
+
+# Local campaign convenience overrides (billing accounts, project shortcuts)
+.env.local
+
 # Codex auth/state
 codex/auth.json
 codex/logs_*.sqlite
@@ -56,3 +64,10 @@ gemini/tmp/
 # Cursor project-specific
 cursor/projects/
 .firebase/
+
+# Firebase project alias config — local per maintainer; tracked as .firebaserc.example
+/.firebaserc
+
+# Maintainer-private convenience scripts (campaign-specific billing queries,
+# personal cron wrappers, etc.) — clearly out of the OSS surface.
+/scripts/maintainer/

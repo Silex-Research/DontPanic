@@ -10,6 +10,7 @@ without dispatching to real CLIs. Verifies the volley loop:
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_volley_synthetic.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -17,7 +18,6 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
 # Bootstrap import path
 HERE = Path(__file__).resolve()
@@ -158,7 +158,9 @@ target_project: none
     return plan_dir
 
 
-def _override_status(plan_dir: Path, target_role: str, target_iteration: int, new_status: str) -> None:
+def _override_status(
+    plan_dir: Path, target_role: str, target_iteration: int, new_status: str
+) -> None:
     """Post-process: rewrite a freshly-written audit JSON to the scripted status.
     Schema doesn't enforce validation chain, so this is fine for the synthetic test."""
     audits_dir = plan_dir / "audit"
@@ -171,42 +173,47 @@ def _override_status(plan_dir: Path, target_role: str, target_iteration: int, ne
 def _patch_supervisor_to_force_status(verdict_script: list[str]) -> None:
     """Wrap supervisor._run_round to override auditor status post-write."""
     import jarvis_orchestrate.supervisor as sup
+
     orig = sup._run_round
     counter = {"i": 0}
 
     def wrapped(*args, **kwargs):
         path = orig(*args, **kwargs)
         role = kwargs.get("role")
-        iteration = kwargs.get("iteration")
+        kwargs.get("iteration")
         if role == "auditor":
             idx = counter["i"]
             counter["i"] += 1
             verdict = verdict_script[idx] if idx < len(verdict_script) else verdict_script[-1]
             data = json.loads(path.read_text())
             data["audit_status"] = verdict
-            path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
-            )
+            path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
         return path
 
     sup._run_round = wrapped
 
 
 def _restore_supervisor() -> None:
-    import importlib, jarvis_orchestrate.supervisor as sup
+    import importlib
+
+    import jarvis_orchestrate.supervisor as sup
+
     importlib.reload(sup)
 
 
 def _disable_quota_gate() -> None:
     import jarvis_orchestrate.supervisor as sup
+
     sup._quota_gate = lambda agent: (None, f"[quota] {agent}: bypassed for synthetic test")
 
 
-def _register_scripted(impl_calls: int, aud_calls: int) -> tuple[_ScriptedExecutor, _ScriptedExecutor]:
+def _register_scripted(
+    impl_calls: int, aud_calls: int
+) -> tuple[_ScriptedExecutor, _ScriptedExecutor]:
     impl = _ScriptedExecutor("claude", ["ok"] * impl_calls)
     aud = _ScriptedExecutor("codex", ["ok"] * aud_calls)
     AGENT_REGISTRY["claude"] = lambda i=impl: i  # type: ignore[assignment]
-    AGENT_REGISTRY["codex"] = lambda a=aud: a    # type: ignore[assignment]
+    AGENT_REGISTRY["codex"] = lambda a=aud: a  # type: ignore[assignment]
     return impl, aud
 
 
@@ -227,15 +234,20 @@ def test_iterates_then_signs_off() -> None:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=3)
         assert result.final_status == "signed_off", f"got {result.final_status}"
         assert result.rounds == 2, f"expected 2 rounds, got {result.rounds}"
-        assert len(result.audit_paths) == 4, f"expected 4 audit files, got {len(result.audit_paths)}"
+        assert len(result.audit_paths) == 4, (
+            f"expected 4 audit files, got {len(result.audit_paths)}"
+        )
 
         # Round 1's implementer prompt should reference round 0's auditor path
         round1_impl_prompt = impl.received_prompts[1]
-        assert "auditor produced findings" in round1_impl_prompt or "Prior round" in round1_impl_prompt, \
-            "round 1 implementer prompt should thread prior auditor findings"
+        assert (
+            "auditor produced findings" in round1_impl_prompt or "Prior round" in round1_impl_prompt
+        ), "round 1 implementer prompt should thread prior auditor findings"
 
-        print(f"  ✓ final_status={result.final_status}, rounds={result.rounds}, audits={len(result.audit_paths)}")
-        print(f"  ✓ findings threaded into round 1 implementer prompt")
+        print(
+            f"  ✓ final_status={result.final_status}, rounds={result.rounds}, audits={len(result.audit_paths)}"
+        )
+        print("  ✓ findings threaded into round 1 implementer prompt")
 
 
 def test_no_progress_termination() -> None:
@@ -255,8 +267,9 @@ def test_no_progress_termination() -> None:
         _patch_supervisor_to_force_status(["needs_changes", "needs_changes", "signed_off"])
 
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=3)
-        assert result.final_status in {"stopped_no_progress", "stopped_diminishing_returns"}, \
+        assert result.final_status in {"stopped_no_progress", "stopped_diminishing_returns"}, (
             f"got {result.final_status}"
+        )
         assert result.rounds == 2, f"expected 2 rounds before stop trip, got {result.rounds}"
         print(f"  ✓ final_status={result.final_status}, rounds={result.rounds}")
 

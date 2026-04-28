@@ -2,6 +2,7 @@
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_target_context.py
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -20,7 +21,6 @@ from jarvis_orchestrate.executors.base import (  # noqa: E402
     DispatchResult,
     DispatchTask,
 )
-
 
 # ──────────────────────────────  fixtures  ──────────────────────────────
 
@@ -158,7 +158,9 @@ def test_build_audit_populates_target_context() -> None:
 def test_build_audit_target_context_project_null_when_sentinel() -> None:
     print("\n[test] build_audit_target_context_project_null_when_sentinel ...")
     with tempfile.TemporaryDirectory() as td:
-        plan_dir = _make_plan(Path(td), "2026-04-26-009-infra-target-context-sentinel", target_project="none")
+        plan_dir = _make_plan(
+            Path(td), "2026-04-26-009-infra-target-context-sentinel", target_project="none"
+        )
         loaded = plan_loader.load(plan_dir)
         result = _result("implementer", "Repo: Jarvis\nEnv: dev\nProject: (host-local)")
         audit = audit_writer.build_audit(
@@ -189,7 +191,9 @@ def test_implementer_missing_env_declaration_downgraded_to_needs_changes() -> No
     )
     assert audit["audit_status"] == "needs_changes", audit["audit_status"]
     assert any("Env" in f.get("issue", "") for f in audit["findings"]), audit["findings"]
-    print("  ✓ implementer summary missing `Env:` declaration → needs_changes + finding (non-terminal)")
+    print(
+        "  ✓ implementer summary missing `Env:` declaration → needs_changes + finding (non-terminal)"
+    )
 
 
 def test_auditor_env_mismatch_forces_blocked() -> None:
@@ -247,10 +251,16 @@ def test_implementer_forbidden_command_downgraded_with_finding() -> None:
         "forbidden" in f.get("issue", "").lower() or "command" in f.get("issue", "").lower()
         for f in audit["findings"]
     ), audit["findings"]
-    fin = next(f for f in audit["findings"] if "command" in f.get("issue", "").lower() or "forbidden" in f.get("issue", "").lower())
+    fin = next(
+        f
+        for f in audit["findings"]
+        if "command" in f.get("issue", "").lower() or "forbidden" in f.get("issue", "").lower()
+    )
     assert fin["severity"] in {"high", "critical"}, fin["severity"]
     assert fin["category"] == "security", fin["category"]
-    print("  ✓ implementer commands_run with forbidden pattern → needs_changes + high/security finding")
+    print(
+        "  ✓ implementer commands_run with forbidden pattern → needs_changes + high/security finding"
+    )
 
 
 def test_auditor_forbidden_command_blocks_volley() -> None:
@@ -305,7 +315,9 @@ def test_implementer_prompt_includes_target_declaration_rule() -> None:
     assert "Repo:" in out and "Env:" in out and "Project:" in out, out
     assert "$ " in out, out  # Command-line marker convention documented
     assert "dev" in out and "jarvis-a6ee1" in out, "must inject the actual target"
-    print("  ✓ implementer prompt includes {repo, env, project} declaration rule + `$ ` marker convention")
+    print(
+        "  ✓ implementer prompt includes {repo, env, project} declaration rule + `$ ` marker convention"
+    )
 
 
 def test_implementer_prompt_lists_forbidden_commands() -> None:
@@ -388,7 +400,9 @@ class _FixedSummaryExecutor(BaseExecutor):
         )
 
 
-def _run_volley(plan_dir: Path, impl_summary: str, aud_summary: str, force_status: str | None = None):
+def _run_volley(
+    plan_dir: Path, impl_summary: str, aud_summary: str, force_status: str | None = None
+):
     impl = _FixedSummaryExecutor("claude", [impl_summary])
     aud = _FixedSummaryExecutor("codex", [aud_summary])
     saved_registry = dict(AGENT_REGISTRY)
@@ -412,7 +426,9 @@ def _run_volley(plan_dir: Path, impl_summary: str, aud_summary: str, force_statu
     supervisor._run_round = maybe_force
     # F008: pre-clear declared gates so this Step-3 fixture doesn't pause on
     # the new engagement-surface gate-pause check.
-    from jarvis_orchestrate import gate_pause, plan_loader as _pl
+    from jarvis_orchestrate import gate_pause
+    from jarvis_orchestrate import plan_loader as _pl
+
     _loaded_for_gates = _pl.load(plan_dir)
     gate_pause.resume_all(
         plan_dir,
