@@ -393,6 +393,38 @@ def test_real_claude_implementer_writes_in_cwd(tmp_path):
 
 
 @_real_claude
+def test_real_claude_auditor_read_success(tmp_path):
+    """Real Claude CLI with auditor flags reads a fixture file successfully and
+    reports its content. Critical for the changelog dogfood: Codex (and Claude
+    when used as auditor) must be able to actually inspect files — 'no timeout
+    on a denied write' isn't sufficient evidence that the auditor role works
+    for its real job, which is reading and reporting on content."""
+    fixture = tmp_path / "fixture.txt"
+    fixture_content = "MAGIC_TOKEN_ALPHA_7841"
+    fixture.write_text(f"This is a test file.\nContents: {fixture_content}\n")
+    ex = ClaudeCLIExecutor()
+    task = _make_task(tmp_path, role="auditor")
+    task.extra_context = {
+        "prompt_override": (
+            f"Use the Read tool to read the file fixture.txt in the current "
+            f"working directory. Then reply with one short sentence that "
+            f"includes the literal token after 'Contents: ' from the file."
+        )
+    }
+    result = ex.dispatch(task)
+    assert result.error is None or "TimeoutExpired" not in (result.error or ""), (
+        f"real Claude auditor read dispatch hit TimeoutExpired: {result.error}"
+    )
+    assert fixture_content in (result.summary or ""), (
+        f"real Claude auditor failed to read and report fixture content; "
+        f"summary={result.summary!r}"
+    )
+    # Read-only allowlist must NOT have written anything.
+    new_files = [p.name for p in tmp_path.iterdir() if p.name != "fixture.txt"]
+    assert not new_files, f"auditor wrote unexpected files: {new_files}"
+
+
+@_real_claude
 def test_real_claude_auditor_edit_attempt_denies_no_timeout(tmp_path):
     """Real Claude CLI with auditor flags (Read-only) asked to perform an Edit
     must complete in <15s (no TimeoutExpired) AND must NOT produce a write —
@@ -455,6 +487,40 @@ def test_real_codex_implementer_writes_in_cwd(tmp_path):
     result = ex.dispatch(task)
     assert result.error is None or "TimeoutExpired" not in (result.error or "")
     assert (tmp_path / "real-impl-sentinel.txt").is_file()
+
+
+@_real_codex
+def test_real_codex_auditor_read_success(tmp_path):
+    """Real Codex CLI with auditor flags (--sandbox read-only) reads a fixture
+    file. The read-only sandbox blocks writes at the OS level but must allow
+    reads — without this guarantee, Codex can't audit anything in the
+    changelog dogfood."""
+    _git_init_tmp(tmp_path)
+    fixture = tmp_path / "fixture.txt"
+    fixture_content = "MAGIC_TOKEN_BRAVO_3392"
+    fixture.write_text(f"This is a test file.\nContents: {fixture_content}\n")
+    ex = CodexCLIExecutor()
+    task = _make_task(tmp_path, role="auditor")
+    task.extra_context = {
+        "prompt_override": (
+            f"Read the file fixture.txt in the current working directory and "
+            f"reply with one short sentence that includes the literal token "
+            f"after 'Contents: ' from the file."
+        )
+    }
+    result = ex.dispatch(task)
+    assert result.error is None or "TimeoutExpired" not in (result.error or ""), (
+        f"real Codex auditor read dispatch hit TimeoutExpired: {result.error}"
+    )
+    assert fixture_content in (result.summary or ""), (
+        f"real Codex auditor failed to read and report fixture content; "
+        f"summary={result.summary!r}"
+    )
+    # Read-only sandbox must NOT have written anything beyond fixture + git.
+    written = sorted(
+        p.name for p in tmp_path.iterdir() if p.name not in {"fixture.txt", ".git"}
+    )
+    assert not written, f"auditor wrote unexpected files: {written}"
 
 
 @_real_codex
