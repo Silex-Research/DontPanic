@@ -4,11 +4,13 @@ cachedir: .pytest_cache
 rootdir: /Users/bayesian/Documents/GitHub/Jarvis
 configfile: pyproject.toml
 plugins: anyio-4.12.1, typeguard-4.5.1
-collecting ... collected 27 items / 23 deselected / 4 selected
+collecting ... collected 29 items / 23 deselected / 6 selected
 
-scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_claude_implementer_writes_in_cwd PASSED [ 25%]
+scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_claude_implementer_writes_in_cwd PASSED [ 16%]
+scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_claude_auditor_read_success PASSED [ 33%]
 scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_claude_auditor_edit_attempt_denies_no_timeout PASSED [ 50%]
-scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_codex_implementer_writes_in_cwd PASSED [ 75%]
+scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_codex_implementer_writes_in_cwd PASSED [ 66%]
+scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_codex_auditor_read_success PASSED [ 83%]
 scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py::test_real_codex_auditor_write_attempt_sandbox_deny_no_timeout PASSED [100%]
 
-====================== 4 passed, 23 deselected in 41.35s =======================
+================= 6 passed, 23 deselected in 67.14s (0:01:07) ==================
