@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-04-29-001-feat-changelog-skill",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 2,
+      "description": "changelog skill at claude/skills/changelog/. Reads a git revision range (--from <ref> --to <ref>; default last-tag → HEAD) and renders a markdown changelog grouped by Conventional Commits prefix (feat / fix / refactor / docs / test / chore / etc.) with a per-group file-change summary and per-commit blurb. Deterministic — no LLM calls during operation; pure git parsing + template rendering. Fixture mode reads tests/fixtures/<name>/git_log.txt instead of running git, so fresh-clone tests need zero git history. Conforms to claude/shared/skill-standard/CONFORMANCE.md. Registered in claude/RESOLVER.md.",
+      "steps": [
+        "Create claude/skills/changelog/SKILL.md with required frontmatter (name, description, trigger_keywords, file_patterns, applicable_agents, phase) and required sections (Purpose, Arguments, Prerequisites, Steps, Output, Examples)",
+        "Create claude/skills/changelog/changelog.py implementing parse_git_log, group_by_type, render_markdown, render_json — no I/O outside the documented input paths",
+        "Create claude/skills/changelog/tests/ with fixtures covering: nominal commit range with mixed prefixes, range with no commits (empty changelog), range with non-Conventional commits (graceful fallback to 'other' group), single-commit range, range crossing a merge commit, fixture-mode flag",
+        "Add claude/RESOLVER.md row with trigger_keywords = ['changelog', 'release notes', 'commit summary', 'what changed']",
+        "Run claude/shared/resolver/validate.py — must exit 0 with no NEW errors/warnings (baseline-only acceptable per D007)",
+        "Run scripts/sanitization_check.py — must exit 0",
+        "Run scripts/jarvis_doctor.py --skip-auth — must exit 0",
+        "Run pytest claude/skills/changelog/tests/ — all green",
+        "Capture evidence: pytest output, validator outputs, sample run output against the nominal fixture"
+      ],
+      "acceptance": "From a fresh clone, running `python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/` produces a markdown changelog whose section headings, commit count, and per-group summaries match the recorded golden output byte-for-byte (deterministic given fixture). Empty-range fixture produces an empty-changelog report (exit 0, never a stack trace). Non-Conventional commits fall under an 'other' group rather than being dropped. Tests pass without git history, without LLM calls, without secrets. Skill is registered in claude/RESOLVER.md and validate.py exits 0 with zero NEW issues vs the post-#692 baseline.",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
