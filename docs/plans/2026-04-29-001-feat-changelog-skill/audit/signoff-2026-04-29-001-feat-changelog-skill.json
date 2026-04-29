@@ -1,0 +1,24 @@
+{
+  "task_id": "2026-04-29-001-feat-changelog-skill",
+  "signoff_id": "2026-04-29-001-feat-changelog-skill#signoff#0",
+  "iteration": 0,
+  "tier": "local",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-i0.json",
+    "audit/codex-auditor-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 2,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "claude percent_weekly 299.7% (from ~/.jarvis/quota_state.json) exceeds plan-declared budget 2.0%",
+  "next_action": "remediate",
+  "decided_at": "2026-04-29T21:57:29Z"
+}

@@ -1,0 +1,19 @@
+# Pre-dispatch baseline of protected_paths
+# Captured: 2026-04-29T21:22:54Z
+# Plan: 2026-04-29-001-feat-changelog-skill
+
+## sha256 of file contents
+5100bcb4964772ad7c7fe3638ca3d2230733910e7fc86355e0cc4047c9965e00  claude/PORTABILITY.md
+f78f6227f96d157aeed214c232ffcd2b976b34ca54f11c8ac4d78c1585c84579  claude/scripts/sync-harness.sh
+912ea995140c92ccb68d2508f22480e5b21497b9a9f5c368a658a88bde327e6b  dashboard/state/costs.json
+3f94cdbd485eabc2281261326d953edd1827dafbbb4eceb666b57fe4a3d6b5db  scripts/quota_check.py
+dfa69ef161af985c90349765b28c527af9fd82f3b80a7b2f7c97b9ab972ffe87  scripts/maintainer/refresh-costs.sh
+
+## git diff --stat (working tree vs HEAD) for protected paths
+ claude/PORTABILITY.md          | 15 ++++++++++
+ claude/scripts/sync-harness.sh | 51 ++++++++++++++++++++++++++++++++++
+ dashboard/state/costs.json     | 62 +++++++++++++++++++++++++-----------------
+ 3 files changed, 103 insertions(+), 25 deletions(-)
+
+## HEAD commit
+9cc66975a2532034104124d416442df78f35659b
