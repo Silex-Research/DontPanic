@@ -1,0 +1,5 @@
+{
+  "generated": "2026-04-28T11:00:00Z",
+  "week_start": "2026-04-27T00:00:00+00:00",
+  "models": {"claude": {"used": 50000000, "limit": 1000000000, "unit": "tokens", "percent_weekly": 5.0, "plan": "Max"}}
+}

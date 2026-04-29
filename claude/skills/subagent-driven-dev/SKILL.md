@@ -1,5 +1,5 @@
 ---
-name: subagent-driven-development
+name: subagent-driven-dev
 description: Structured pattern for dispatching focused subagents per task with two-stage review. Use when implementing a plan with 3+ independent steps, or when parallelizable work spans multiple files/domains.
 ---
 

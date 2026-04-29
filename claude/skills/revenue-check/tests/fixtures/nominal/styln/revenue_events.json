@@ -1,0 +1,9 @@
+{
+  "events": [
+    {"month": "2026-04", "amount_usd": 320.50, "category": "finalized", "last_event_at": "2026-04-25T14:00:00Z"},
+    {"month": "2026-04", "amount_usd": 180.00, "category": "estimated", "last_event_at": "2026-04-27T22:00:00Z"},
+    {"month": "2026-04", "amount_usd": 50.00, "category": "pending", "last_event_at": "2026-04-28T01:00:00Z"},
+    {"month": "2026-04", "amount_usd": -30.00, "category": "refunded", "last_event_at": "2026-04-20T08:00:00Z"},
+    {"month": "2026-03", "amount_usd": 425.00, "category": "finalized", "last_event_at": "2026-03-30T18:00:00Z"}
+  ]
+}

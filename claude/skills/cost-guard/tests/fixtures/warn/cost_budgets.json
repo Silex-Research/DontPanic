@@ -1,0 +1,5 @@
+{
+  "apps": {"Styln": {"gcp_monthly_budget_usd": 1000}},
+  "llm_models": {},
+  "thresholds": {"warn": 0.80, "breach": 1.00}
+}

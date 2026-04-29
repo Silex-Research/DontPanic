@@ -1,0 +1,5 @@
+{
+  "events": [
+    {"month": "2026-03", "amount_usd": 100.00, "category": "finalized", "last_event_at": "2026-03-15T10:00:00Z"}
+  ]
+}

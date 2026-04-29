@@ -1,0 +1,92 @@
+{
+  "task_id": "2026-04-28-001-infra-financial-observability",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "observability",
+      "phase": 2,
+      "description": "cost-model skill at claude/skills/cost-model/. Reads ~/.jarvis/quota_state.json (LLM tokens) + dashboard/state/costs.json (GCP $) + (optional) dashboard/state/revenue.json (when F003 has run). Projects month-end and next-month spend per app and per LLM provider using straight-line trajectory from week-to-date / month-to-date burn. Writes a markdown report + machine-readable JSON to evidence/<run-id>/cost-model-<ts>.{md,json}. Pure read; no mutation of inputs. Conforms to claude/shared/skill-standard/CONFORMANCE.md. Registered in claude/RESOLVER.md.",
+      "steps": [
+        "Create claude/skills/cost-model/SKILL.md with required frontmatter (name, description, trigger_keywords, file_patterns, applicable_agents, phase) and required sections (Purpose, Arguments, Prerequisites, Steps, Output, Examples)",
+        "Create claude/skills/cost-model/cost_model.py implementing the projection (functions: load_state, project_monthly, project_next_month, render_report) — no I/O outside the documented input paths",
+        "Create claude/skills/cost-model/tests/ with fixtures for quota_state.json + costs.json + revenue.json covering: nominal burn, missing revenue.json, stale state (>24h), zero-spend month, end-of-month projection",
+        "Add claude/RESOLVER.md row with trigger_keywords = ['cost projection', 'spend forecast', 'cost model', 'project costs']",
+        "Run claude/shared/resolver/validate.py — must exit 0",
+        "Run scripts/sanitization_check.py — must exit 0",
+        "Run scripts/jarvis_doctor.py — must exit 0",
+        "Capture evidence: test output, validator output, sample run output, against a freshly-cloned tree (anchor per public-boundary lesson)"
+      ],
+      "acceptance": "From a fresh clone with no .jarvis/ secrets directory, running `python -m claude.skills.cost-model.cost_model --fixtures claude/skills/cost-model/tests/fixtures/nominal/` produces a valid markdown report + JSON whose projected_month_end and projected_next_month numerics match the recorded golden output byte-for-byte. The same command run against the empty-fixture set produces a `data_unavailable` report (exit 0) — never a stack trace. SKILL.md passes claude/shared/resolver/validate.py with zero NEW errors/warnings (baseline-only — see D007) and is registered in claude/RESOLVER.md.",
+      "passes": true,
+      "verified_at": "2026-04-28T21:38:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "claude/skills/cost-model/SKILL.md", "captured_by": "claude", "note": "F001 SKILL.md — frontmatter validates against shared skill-standard/CONFORMANCE.md (verified by claude/shared/resolver/validate.py — no new issues)."},
+        {"type": "file", "uri": "claude/skills/cost-model/cost_model.py", "captured_by": "claude", "note": "F001 implementation. Pure-read; deterministic when --as-of supplied. Default paths: dashboard/state/costs.json + ~/.jarvis/quota_state.json + dashboard/state/revenue.json."},
+        {"type": "test_output", "uri": "evidence/F001/pytest-output.txt", "captured_by": "claude", "note": "14 tests pass — covers nominal+revenue, cost-only, data_unavailable, stale, zero-spend, end-of-month, unmetered models, deterministic markdown, CLI integration, invalid as_of, calendar-month parametrization."},
+        {"type": "file", "uri": "evidence/F001/sample-run/", "captured_by": "claude", "note": "Sample run against the nominal fixture with --as-of 2026-04-28T12:00:00Z producing cost-model-*.md + .json under a deterministic run-id directory. mode=with-revenue."}
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "observability",
+      "phase": 2,
+      "description": "cost-guard skill at claude/skills/cost-guard/. Reads costs.json + quota_state.json + config/cost_budgets.json (new template file with sentinel zeros). Compares observed run-rate to per-app warn_threshold (default 80%) and breach_threshold (default 100%) for both GCP $ and LLM tokens. On breach or warn, appends a structured entry to the existing INBOX.md surface owned by F008 (kind: cost_warn or cost_breach). Idempotent within a calendar week — same (app, threshold_kind, week_start) tuple deduplicates. Stale-data guard: state files >24h old emit data_stale finding instead of false-positive breach. Conforms to claude/shared/skill-standard/CONFORMANCE.md. Registered in claude/RESOLVER.md.",
+      "steps": [
+        "Create config/cost_budgets.json template with apps: Styln, Spin & Dine, QuantRE/Axiom, Jarvis — gcp_monthly_budget_usd: 0, llm_weekly_token_budget: 0 (sentinel zeros)",
+        "Create claude/skills/cost-guard/SKILL.md with required frontmatter + sections",
+        "Create claude/skills/cost-guard/cost_guard.py — reuse F008's INBOX writer module (scripts/jarvis_orchestrate/inbox.py) rather than re-implementing INBOX format",
+        "Implement idempotency: dedupe key = sha256(f'{app}|{kind}|{week_start_iso}'); skill maintains state/cost_guard_seen.json (gitignored) to avoid duplicate INBOX entries within a week",
+        "Implement stale-data check: compare quota_state.json `generated` and costs.json `generated` to now; if >24h, emit data_stale and short-circuit",
+        "Implement zero-budget short-circuit: if all budgets in config are 0, emit single `no_budgets_configured` finding and exit 0",
+        "Create claude/skills/cost-guard/tests/ with fixtures covering: nominal under-budget, warn-threshold breach, hard-breach, idempotent re-run within week, stale data, zero-budget config, mixed configured/unconfigured apps",
+        "Add claude/RESOLVER.md row with trigger_keywords = ['cost alert', 'budget guard', 'cost guard', 'check budget', 'budget breach']",
+        "Run validate.py + sanitization_check.py + jarvis_doctor.py — all exit 0 from fresh-clone state"
+      ],
+      "acceptance": "From a fresh clone, populating config/cost_budgets.json with a fixture above-threshold and running `python -m claude.skills.cost-guard.cost_guard` (1) appends exactly one INBOX entry per breached (app, kind) tuple, (2) re-running within the same calendar week appends zero new entries, (3) running against fixtures with `generated` > 24h ago emits a single data_stale finding and no breach entries, (4) running with default zero-budget config emits no_budgets_configured and exits 0. Tests pass without secrets. Skill registered in claude/RESOLVER.md and passes validate.py with zero NEW issues (baseline-only — see D007).",
+      "passes": true,
+      "verified_at": "2026-04-28T21:38:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "claude/skills/cost-guard/SKILL.md", "captured_by": "claude", "note": "F002 SKILL.md — frontmatter conforms; references the F008 INBOX surface explicitly."},
+        {"type": "file", "uri": "claude/skills/cost-guard/cost_guard.py", "captured_by": "claude", "note": "F002 implementation. Reuses scripts/jarvis_orchestrate/inbox.py via importlib (D008). Pure evaluate() + side-effecting emit_findings(). Idempotent via sha256(scope|kind|week_start) keys persisted in cost_guard_seen.json."},
+        {"type": "file", "uri": "config/cost_budgets.json", "captured_by": "claude", "note": "F002 budget template — sentinel zeros (D004); cost-guard short-circuits with no_budgets_configured when all values are 0."},
+        {"type": "test_output", "uri": "evidence/F002/pytest-output.txt", "captured_by": "claude", "note": "12 tests pass — covers under-threshold quiet, warn band, breach, zero-budget, stale-data short-circuit, idempotency within week, dedupe reset across week boundary, CLI integration for all 4 lock-AC scenarios, invalid as_of, threshold override."},
+        {"type": "file", "uri": "evidence/F002/sample-run/", "captured_by": "claude", "note": "Sample run against the breach fixture: 2 INBOX entries appended (app:Styln cost_breach + llm:claude cost_breach) with synthetic plan_id=cost-guard. cost_guard_seen.json populated."}
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "observability",
+      "phase": 2,
+      "description": "revenue-check skill at claude/skills/revenue-check/. Pulls product revenue per app from app-specific Firestore collections (Glam: creatorEngagementEvents + commerce subscription docs from Phase J0-J7; SpinDine: per D001 recon — fallback is documented stub). Aggregates to monthly revenue per app. Writes dashboard/state/revenue.json (NEW; outside the protected dirty-files list). Produces a cash-flow markdown report that reads costs.json + revenue.json and computes net = revenue − cost per app. Read-only against Firestore; uses existing firebase_client.py + ADC. Stub-mode runs entirely from fixtures so fresh-clone tests need no credentials.",
+      "steps": [
+        "Recon: confirm SpinDine revenue source (D001). Default to Glam-only with explicit SpinDineSwift TODO if SpinDine revenue surface is absent — do not block F003 on it",
+        "Create claude/skills/revenue-check/SKILL.md per skill-standard",
+        "Create claude/skills/revenue-check/revenue_check.py with --stub flag that reads tests/fixtures/<app>/ instead of Firestore, so fresh-clone tests pass with no creds",
+        "Implement Firestore pulls behind a thin adapter (RevenueAdapter protocol with FirestoreAdapter + FixtureAdapter implementations) so the test path is exercised by default",
+        "Write dashboard/state/revenue.json with shape: { generated, by_app: { <app>: { monthly_revenue_usd, source, granularity, last_event_at } } }",
+        "Render cash-flow report: per-app net = revenue − GCP cost − pro-rated LLM cost; output evidence/<run-id>/cash-flow-<ts>.{md,json}",
+        "Create tests/fixtures/<app>/ with synthetic Firestore exports covering: nominal month, zero-revenue month, partial month, missing collection",
+        "Add claude/RESOLVER.md row with trigger_keywords = ['revenue', 'cash flow', 'revenue check', 'profitability']",
+        "Run validate.py + sanitization_check.py + jarvis_doctor.py — all exit 0",
+        "Sanity: confirm the new dashboard/state/revenue.json file is NOT in the three known-dirty-files list (it is not — that list contains dashboard/state/costs.json only)"
+      ],
+      "acceptance": "From a fresh clone, running `python -m claude.skills.revenue-check.revenue_check --stub` against the bundled nominal-month fixtures (1) writes dashboard/state/revenue.json with the documented shape, (2) produces a cash-flow markdown report whose net values match the golden output byte-for-byte, (3) handles the missing-collection fixture by emitting source: 'unavailable' and monthly_revenue_usd: null without crashing. Live execution is reachable only via explicit `--live` and requires ADC for Firestore-backed apps; tests exercise FixtureAdapter + DeferredAdapter + adapter resolver + a no-credentials `--live` deferred-app CLI path. Skill is registered in claude/RESOLVER.md and passes validate.py with zero NEW issues (baseline-only — see D007). D001 is closed as deferred per the user-pre-approved fallback path: SpinDine has no Firestore-mirrored revenue surface (StoreKit 2 / App Store Connect), DeferredAdapter handles it, follow-up task to be opened at acceptance time.",
+      "passes": true,
+      "verified_at": "2026-04-28T21:38:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "claude/skills/revenue-check/SKILL.md", "captured_by": "claude", "note": "F003 SKILL.md — frontmatter conforms; argument table documents stub vs explicit --live mode and the live-refusal-without-explicit-flag default."},
+        {"type": "file", "uri": "claude/skills/revenue-check/revenue_check.py", "captured_by": "claude", "note": "F003 implementation. Adapter protocol with FixtureAdapter + GlamLedgerAdapter + DeferredAdapter. Live mode imports google-cloud-firestore lazily; stub mode is creds-free."},
+        {"type": "test_output", "uri": "evidence/F003/pytest-output.txt", "captured_by": "claude", "note": "16 tests pass — adapter behavior (finalized+estimated only, zero-revenue month, missing fixture, deferred reason), resolver dispatch, build_revenue_state shape, render_cash_flow with/without costs, CLI integration covering --stub, explicit --live deferred path, stub/live conflict, the live-refusal default, invalid as_of, and SpinDine fixture-missing path."},
+        {"type": "file", "uri": "evidence/F003/sample-run/", "captured_by": "claude", "note": "Sample run --stub against the nominal fixture: revenue.json writes Styln=$500.50; cash-flow-*.md/.json render under the deterministic run-id directory."},
+        {"type": "file", "uri": "decisions.jsonl", "captured_by": "claude", "note": "D001 closed as deferred — SpinDine StoreKit 2 has no Firestore mirror; DeferredAdapter wired; follow-up to ingest App Store Connect monthly summaries to be opened at acceptance."}
+      ],
+      "depends_on": []
+    }
+  ]
+}
