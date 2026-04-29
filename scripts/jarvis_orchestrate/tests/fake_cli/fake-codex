@@ -1,0 +1,50 @@
+#!/bin/bash
+# F005b fake-codex shim — stands in for `codex exec --json` in fake-CLI smoke tests.
+#
+# Behavior:
+#   - echoes the full argv to stderr so tests can assert flag presence/order
+#     including the global-flags-before-subcommand convention
+#   - emits a minimal newline-delimited JSON event stream to stdout so the
+#     executor's _parse_event_stream extracts a non-empty summary
+#   - decides whether to write a sentinel file based on the role flags it sees:
+#       implementer (--sandbox workspace-write) → writes sentinel-implementer.txt
+#       auditor     (--sandbox read-only)       → does NOT write
+#       neither                                 → does NOT write (legacy)
+set -euo pipefail
+
+# Echo argv to stderr for argv-shape assertions.
+printf 'fake-codex argv:' >&2
+for a in "$@"; do
+  printf ' %q' "$a" >&2
+done
+printf '\n' >&2
+
+# Detect role from sandbox flag.
+ROLE="none"
+prev=""
+for a in "$@"; do
+  if [[ "$prev" == "--sandbox" && "$a" == "workspace-write" ]]; then
+    ROLE="implementer"
+  fi
+  if [[ "$prev" == "--sandbox" && "$a" == "read-only" ]]; then
+    ROLE="auditor"
+  fi
+  prev="$a"
+done
+
+# Verify global-flags-before-subcommand: the `exec` token must appear AFTER
+# any --ask-for-approval / --sandbox flags. If a future change reorders this,
+# the shim still works but the argv echo lets the test catch the regression.
+
+# Implementer shim writes a sentinel; auditor / none do not.
+if [[ "$ROLE" == "implementer" ]]; then
+  echo "fake-codex wrote sentinel-implementer.txt at $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > sentinel-implementer.txt
+fi
+
+# Emit a minimal codex event-stream: one item.completed (agent_message) then
+# one turn.completed (with usage). Executor's _parse_event_stream picks both up.
+cat <<EOF
+{"type":"item.completed","item":{"type":"agent_message","text":"fake-codex $ROLE: argv echoed to stderr; sentinel = $ROLE"}}
+{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1,"cached_input_tokens":0,"reasoning_output_tokens":0}}
+EOF

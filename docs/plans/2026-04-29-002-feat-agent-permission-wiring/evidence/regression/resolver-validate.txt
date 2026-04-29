@@ -1,0 +1,66 @@
+
+============================================================
+Resolver Validation Report
+============================================================
+  Resolver:  /Users/bayesian/Documents/GitHub/Jarvis/claude/RESOLVER.md
+  Skills:    27
+  Rows:      35
+
+  ✓ Reachability: PASS
+  ✓ Mece: PASS
+  ✓ File Existence: PASS
+  ! Convention Referencing: 1 warning(s)
+    ! Skill 'yahoo-finance' mentions security topics (rate\s*limit) but does not reference conventions/security.md. Consider adding: See `.claude/shared/conventions/security.md` [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/yahoo-finance/SKILL.md]
+  ! Conformance: 48 warning(s)
+    ! Skill 'agent-browser' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/agent-browser/SKILL.md]
+    ! Skill 'agent-browser' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/agent-browser/SKILL.md]
+    ! Skill 'autoresearch' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/autoresearch/SKILL.md]
+    ! Skill 'autoresearch' missing sections: Purpose, Arguments, Steps [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/autoresearch/SKILL.md]
+    ! Skill 'brainstorm-gate' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/brainstorm-gate/SKILL.md]
+    ! Skill 'brainstorm-gate' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/brainstorm-gate/SKILL.md]
+    ! Skill 'browser-use' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/browser-use/SKILL.md]
+    ! Skill 'browser-use' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/browser-use/SKILL.md]
+    ! Skill 'continuous-learning' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/continuous-learning/SKILL.md]
+    ! Skill 'continuous-learning' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/continuous-learning/SKILL.md]
+    ! Skill 'eval-harness' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/eval-harness/SKILL.md]
+    ! Skill 'eval-harness' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/eval-harness/SKILL.md]
+    ! Skill 'git-essentials' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/git-essentials/SKILL.md]
+    ! Skill 'git-essentials' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/git-essentials/SKILL.md]
+    ! Skill 'github-pr' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/github-pr/SKILL.md]
+    ! Skill 'github-pr' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/github-pr/SKILL.md]
+    ! Skill 'kronos-agent' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/kronos-agent/SKILL.md]
+    ! Skill 'kronos-agent' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/kronos-agent/SKILL.md]
+    ! Skill 'migration-planner' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/migration-planner/SKILL.md]
+    ! Skill 'migration-planner' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/migration-planner/SKILL.md]
+    ! Skill 'plan-artifacts' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/plan-artifacts/SKILL.md]
+    ! Skill 'plan-artifacts' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/plan-artifacts/SKILL.md]
+    ! Skill 'pr-reviewer' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/pr-reviewer/SKILL.md]
+    ! Skill 'pr-reviewer' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/pr-reviewer/SKILL.md]
+    ! Skill 'proactive-agent' missing frontmatter fields: name, description, trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/proactive-agent/SKILL.md]
+    ! Skill 'proactive-agent' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/proactive-agent/SKILL.md]
+    ! Skill 'product-health-agent' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/product-health-agent/SKILL.md]
+    ! Skill 'product-health-agent' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/product-health-agent/SKILL.md]
+    ! Skill 'prompt-optimizer' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/prompt-optimizer/SKILL.md]
+    ! Skill 'prompt-optimizer' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/prompt-optimizer/SKILL.md]
+    ! Skill 'remotion-video-toolkit' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/remotion-video-toolkit/SKILL.md]
+    ! Skill 'remotion-video-toolkit' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/remotion-video-toolkit/SKILL.md]
+    ! Skill 'security-review' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/security-review/SKILL.md]
+    ! Skill 'security-review' missing sections: Purpose, Arguments, Steps [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/security-review/SKILL.md]
+    ! Skill 'self-improving-agent' missing frontmatter fields: name, description, trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/self-improving-agent/SKILL.md]
+    ! Skill 'self-improving-agent' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/self-improving-agent/SKILL.md]
+    ! Skill 'skill-creator' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/skill-creator/SKILL.md]
+    ! Skill 'skill-creator' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/skill-creator/SKILL.md]
+    ! Skill 'subagent-driven-dev' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/subagent-driven-dev/SKILL.md]
+    ! Skill 'subagent-driven-dev' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/subagent-driven-dev/SKILL.md]
+    ! Skill 'test-runner' missing frontmatter fields: name, description, trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/test-runner/SKILL.md]
+    ! Skill 'test-runner' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/test-runner/SKILL.md]
+    ! Skill 'token-budget-tracker' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/token-budget-tracker/SKILL.md]
+    ! Skill 'token-budget-tracker' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/token-budget-tracker/SKILL.md]
+    ! Skill 'worktree-isolation' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/worktree-isolation/SKILL.md]
+    ! Skill 'worktree-isolation' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/worktree-isolation/SKILL.md]
+    ! Skill 'yahoo-finance' missing frontmatter fields: trigger_keywords, applicable_agents, phase [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/yahoo-finance/SKILL.md]
+    ! Skill 'yahoo-finance' missing sections: Purpose, Arguments, Steps, Output [/Users/bayesian/Documents/GitHub/Jarvis/claude/skills/yahoo-finance/SKILL.md]
+
+  Result: WARN (0 errors, 49 warnings)
+============================================================
+

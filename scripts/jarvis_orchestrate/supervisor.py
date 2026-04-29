@@ -41,7 +41,11 @@ from jarvis_orchestrate.environments_loader import (
 )
 from jarvis_orchestrate.execution_environment import ExecutionEnvironment
 from jarvis_orchestrate.executors import ClaudeCLIExecutor, get_executor
-from jarvis_orchestrate.executors.base import BaseExecutor, DispatchTask
+from jarvis_orchestrate.executors.base import (
+    BaseExecutor,
+    DispatchTask,
+    _derive_permission_policy,
+)
 
 QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
 SOFT_THRESHOLD_PERCENT = 90.0
@@ -360,6 +364,7 @@ def dispatch_single_agent(
             iteration=iteration,
             subprocess_env=exec_env.subprocess_env(),
             cwd=registry_repo_root,
+            permission_policy=_derive_permission_policy(agent_role),
         )
 
         executor = ClaudeCLIExecutor()
@@ -1085,6 +1090,7 @@ def _run_round(
         extra_context={"prompt_override": prompt},
         subprocess_env=dict(subprocess_env) if subprocess_env else {},
         cwd=cwd,
+        permission_policy=_derive_permission_policy(role),
     )
     # Override the prompt builder by monkey-patching at task level —
     # cleaner: pass prompt directly. For now, executors build their own;

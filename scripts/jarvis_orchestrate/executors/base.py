@@ -15,7 +15,43 @@ import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, Optional
+
+# F005b — non-interactive permission policy.
+# Forbidden flags shortcut the permission system entirely and would defeat
+# the role allowlist. Both Claude bypass flags + the Codex bypass.
+FORBIDDEN_FLAGS: frozenset[str] = frozenset({
+    "--dangerously-skip-permissions",
+    "--allow-dangerously-skip-permissions",
+    "--dangerously-bypass-approvals-and-sandbox",
+})
+
+
+def check_forbidden_flags(argv: list[str]) -> None:
+    """Raise ValueError if any forbidden bypass flag is in argv.
+
+    Called by every executor before subprocess.run as a final pre-dispatch
+    assertion. Defense-in-depth — produced argv should never contain these,
+    but if a future change introduces an override path the guard catches it.
+    """
+    for flag in argv:
+        if flag in FORBIDDEN_FLAGS:
+            raise ValueError(f"forbidden flag in argv: {flag}")
+
+
+# F005b — single source of truth for role → permission_policy mapping.
+# Used by BOTH dispatch_single_agent (supervisor.py ~line 352) and
+# dispatch_volley (supervisor.py ~line 1076). Unknown roles fall through
+# to None so legacy code paths and synthetic-disagreement mocks behave
+# exactly as before this change.
+def _derive_permission_policy(
+    agent_role: str | None,
+) -> Optional[Literal["implementer", "auditor"]]:
+    if agent_role == "implementer":
+        return "implementer"
+    if agent_role == "auditor":
+        return "auditor"
+    return None
 
 
 @dataclass
@@ -34,6 +70,10 @@ class DispatchTask:
     # repo root when the env registry resolves so .firebaserc / xcconfig / etc.
     # are picked up naturally. None means inherit supervisor cwd.
     cwd: Path | None = None
+    # F005b: non-interactive permission policy derived from agent_role.
+    # None = legacy / explicit no-policy (executors emit no permission flags,
+    # preserving pre-F005b behavior for synthetic-disagreement mocks etc.).
+    permission_policy: Optional[Literal["implementer", "auditor"]] = None
 
 
 @dataclass

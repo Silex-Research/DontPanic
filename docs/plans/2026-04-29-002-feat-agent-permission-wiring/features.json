@@ -1,0 +1,102 @@
+{
+  "task_id": "2026-04-29-002-feat-agent-permission-wiring",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 2,
+      "description": "DispatchTask.permission_policy contract surface, wired in BOTH dispatch paths. Add an optional field to DispatchTask (scripts/jarvis_orchestrate/executors/base.py) carrying the role string. Type: Optional[Literal['implementer', 'auditor']] (None = legacy / explicit no-policy for tests). Both `dispatch_volley` (multi-agent build/audit loop, supervisor.py:461+ constructing tasks at supervisor.py:1076) AND `dispatch_single_agent` (single-shot dispatch with explicit `agent_role` parameter, supervisor.py:246-359 constructing task at supervisor.py:352) populate permission_policy by deriving it from agent_role: agent_role='implementer' → permission_policy='implementer', agent_role='auditor' → permission_policy='auditor', anything else → None (legacy fallback). No plan-level schema expansion in this slice — defaults are hardcoded by role inside the executors per locked design.",
+      "steps": [
+        "Add `permission_policy: Optional[Literal['implementer', 'auditor']] = None` to DispatchTask dataclass in base.py",
+        "Add a small helper `_derive_permission_policy(agent_role: str) -> Optional[Literal['implementer', 'auditor']]` in base.py that maps known roles and returns None otherwise — single source of truth for the mapping",
+        "Update `dispatch_volley` to call the helper when constructing DispatchTask (supervisor.py:1076-1083 area), so both implementer and auditor dispatches in the volley get the right policy",
+        "Update `dispatch_single_agent` to call the same helper when constructing DispatchTask (supervisor.py:352 area), so single-shot dispatches with agent_role='implementer' or 'auditor' get the right policy",
+        "Confirm legacy/F005a-6 mock paths still work with permission_policy=None (executors fall back to current no-flag behavior so existing tests don't regress)",
+        "Add unit tests for the helper directly: implementer→'implementer', auditor→'auditor', 'reviewer'→None, ''→None, None→None",
+        "Add unit tests asserting both dispatch_volley and dispatch_single_agent set permission_policy correctly: each path tested with implementer and auditor agent_role values"
+      ],
+      "acceptance": "DispatchTask.permission_policy field exists with type Optional[Literal['implementer','auditor']]. _derive_permission_policy helper exists and is the single mapping point. BOTH dispatch_volley AND dispatch_single_agent set permission_policy correctly via the helper (verified by 4 unit tests: 2 paths × 2 roles). Existing 187 jarvis_orchestrate tests still pass with no modification.",
+      "passes": true,
+      "verified_at": "2026-04-29T11:35:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/executors/base.py", "captured_by": "claude", "note": "F001 contract — DispatchTask.permission_policy field added; _derive_permission_policy helper added as single source of truth for role→policy mapping; FORBIDDEN_FLAGS frozenset + check_forbidden_flags helper added (consumed by F003)."},
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/supervisor.py", "captured_by": "claude", "note": "Both dispatch paths wired: dispatch_single_agent (line ~363) and _run_round/dispatch_volley (line ~1088) now call _derive_permission_policy at DispatchTask construction."},
+        {"type": "test_output", "uri": "evidence/F001/pytest-output.txt", "captured_by": "claude", "note": "12 tests pass: helper parametrized over 6 inputs; DispatchTask field accepts the new type; _run_round captures task with correct policy for implementer/auditor/legacy-role; both dispatch paths source-verified to call the helper."}
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "ClaudeCLIExecutor + CodexCLIExecutor argv translation per role. Both executors read DispatchTask.permission_policy and emit role-appropriate CLI flags using the syntax probed and confirmed against the locally-installed CLIs on 2026-04-29. Claude implementer: `--permission-mode acceptEdits --allowedTools \"Read Edit Write Bash\"`. **Claude auditor: `--permission-mode dontAsk --allowedTools \"Read\"` — Read-only, no command execution.** Rationale: Claude has no OS-level sandbox available to the orchestrator; allowing any Bash matcher (even narrow ones) is not truly read-only because pytest writes caches, python is arbitrary code execution, and matcher semantics may not block shell redirection. For the first dogfood, file-content review only on the Claude side; command-running audit lives on Codex where `--sandbox read-only` enforces at the OS level. Codex implementer: `--ask-for-approval never --sandbox workspace-write` as global flags BEFORE `exec --json`. Codex auditor: `--ask-for-approval never --sandbox read-only` BEFORE exec --json. Includes a smoke that asserts `--permission-mode dontAsk` denies (rather than prompts) on out-of-allowlist Claude tool requests; if dontAsk prompts, F005b is BLOCKED.",
+      "steps": [
+        "Update ClaudeCLIExecutor.dispatch to inspect task.permission_policy and prepend the right flags to the argv before `-p`. Implementer: `--permission-mode acceptEdits --allowedTools \"Read Edit Write Bash\"`. Auditor: `--permission-mode dontAsk --allowedTools \"Read\"` (Read only, no Bash matchers).",
+        "Update CodexCLIExecutor.dispatch to inspect task.permission_policy and insert the global flags BEFORE the `exec` subcommand (Codex CLI convention; verified via `codex --help`)",
+        "Preserve legacy behavior when permission_policy=None (no flags added) so existing tests don't regress",
+        "Add a `dontAsk` behavior smoke: invoke real `claude -p --permission-mode dontAsk --allowedTools \"Read\"` against a one-shot prompt that requests Edit (not in allowlist) with timeout=15s; assert it exits with denial NOT TimeoutExpired. If this smoke fails, F002 fails — surface in plan as a hard block."
+      ],
+      "acceptance": "Unit tests assert exact argv for all 4 (executor, role) pairs (Claude implementer with Read+Edit+Write+Bash, Claude auditor with ONLY Read, Codex implementer workspace-write, Codex auditor read-only) using a fake-binary path; tests don't actually invoke real CLIs. Existing test for permission_policy=None continues to produce the legacy argv shape unchanged. The dontAsk-denies-not-prompts smoke passes against the real Claude CLI (skipped if `claude` not on PATH or env var JARVIS_RUN_REAL_CLI_TESTS unset) within 15s.",
+      "passes": true,
+      "verified_at": "2026-04-29T11:35:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/executors/claude_cli.py", "captured_by": "claude", "note": "F002 Claude wiring — _IMPLEMENTER_FLAGS uses --permission-mode acceptEdits + --allowedTools \"Read Edit Write Bash\"; _AUDITOR_FLAGS uses --permission-mode dontAsk + --allowedTools \"Read\" (Read-only per D012)."},
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/executors/codex_cli.py", "captured_by": "claude", "note": "F002 Codex wiring — global flags inserted BEFORE the exec subcommand: implementer = --ask-for-approval never --sandbox workspace-write; auditor = --ask-for-approval never --sandbox read-only."},
+        {"type": "test_output", "uri": "evidence/F002/pytest-output-fake-cli.txt", "captured_by": "claude", "note": "23 tests pass + 4 real-CLI tests skip cleanly when JARVIS_RUN_REAL_CLI_TESTS unset; 4 (executor, role) argv shapes verified exactly; legacy None preserves no-flag argv."},
+        {"type": "test_output", "uri": "evidence/F004/pytest-output-real-cli.txt", "captured_by": "claude", "note": "All 4 real-CLI tests pass with JARVIS_RUN_REAL_CLI_TESTS=1: Claude implementer wrote sentinel; Claude auditor Edit attempt denied (dontAsk denies-not-prompts confirmed — D001 hard-block resolved); Codex implementer wrote sentinel; Codex auditor write attempt sandbox-denied. All within 15s timeout."}
+      ],
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "security",
+      "phase": 2,
+      "description": "Forbidden-flag guard. Three flags are explicitly forbidden, runtime-guarded, and tested: `--dangerously-skip-permissions` (Claude), `--allow-dangerously-skip-permissions` (Claude — the enabling flag for the bypass), `--dangerously-bypass-approvals-and-sandbox` (Codex). A guard function check_forbidden_flags(argv) in scripts/jarvis_orchestrate/executors/base.py raises ValueError if any forbidden flag is present. Both executors call the guard before subprocess.run as a final pre-dispatch assertion. Tests cover (a) the helper rejects each forbidden flag directly, and (b) no produced argv across all role combinations contains any forbidden flag.",
+      "steps": [
+        "Add a module-level FORBIDDEN_FLAGS frozenset in base.py with the three flags",
+        "Add a check_forbidden_flags(argv: list[str]) -> None helper that raises ValueError(f'forbidden flag in argv: {flag}') if any FORBIDDEN_FLAGS member is in argv",
+        "Wire the helper into ClaudeCLIExecutor.dispatch and CodexCLIExecutor.dispatch as a final pre-subprocess assertion",
+        "Add a direct unit test: check_forbidden_flags(['claude', '--dangerously-skip-permissions']) raises ValueError; same for the other two flags",
+        "Add a parameterized produced-argv test sweeping role ∈ {implementer, auditor, None} × executor ∈ {Claude, Codex} = 6 cases; assert NO forbidden flag appears in the produced argv for any combination"
+      ],
+      "acceptance": "FORBIDDEN_FLAGS frozenset contains exactly the three documented flags. check_forbidden_flags helper raises ValueError on direct injection (3 unit tests, one per forbidden flag). Produced-argv sweep covers all 6 (executor, role) combinations and asserts none contain a forbidden flag. Both executors call the guard before subprocess.run (verified by a test that monkey-patches subprocess.run to record calls).",
+      "passes": true,
+      "verified_at": "2026-04-29T11:35:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/executors/base.py", "captured_by": "claude", "note": "F003 guard — FORBIDDEN_FLAGS frozenset + check_forbidden_flags helper. Three flags forbidden: --dangerously-skip-permissions, --allow-dangerously-skip-permissions, --dangerously-bypass-approvals-and-sandbox."},
+        {"type": "test_output", "uri": "evidence/F002/pytest-output-fake-cli.txt", "captured_by": "claude", "note": "F003 evidence (in same test file as F002): 3 direct-injection tests pass; 6-case (executor × role) produced-argv sweep confirms no forbidden flag appears anywhere; guard-runs-before-subprocess test confirms order."}
+      ],
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F004",
+      "category": "test",
+      "phase": 2,
+      "description": "First-class no-hang invariant test for all four (executor, role) paths, with sentinel write/no-write assertions. Two test layers per the locked acceptance: (a) fake-CLI shim tests in the default pytest suite covering the argv-shape end-to-end for each (executor, role) combination, fast and version-independent — these assert the shim received the expected role flags AND wrote/didn't-write a sentinel file consistent with the role; (b) real-CLI integration tests gated by env var `JARVIS_RUN_REAL_CLI_TESTS=1` (NOT a global pytest config change), which actually invoke `claude -p` and `codex exec` with implementer AND auditor flags against minimal write/read tasks with timeout=15s. The auditor real-CLI tests additionally assert that an out-of-allowlist tool attempt exits with denial rather than TimeoutExpired AND no sentinel file was created. 'No timeout' alone is not sufficient — the success cases must show evidence the agent actually attempted tool use (sentinel file present), and the deny cases must show the file was NOT created.",
+      "steps": [
+        "Add tests/fake-cli/{fake-claude,fake-codex} shell scripts that echo argv to stderr, parse role hint from argv, and write evidence/sentinel-<role>.txt in cwd ONLY when the role flags indicate write capability (implementer for both, NOT for either auditor)",
+        "Add test_executor_permission_smoke.py: invokes ClaudeCLIExecutor + CodexCLIExecutor with role ∈ {implementer, auditor} using fake-CLI binaries; 4 cases total. Each asserts dispatch returns success AND verifies sentinel presence: implementer cases assert sentinel-implementer.txt EXISTS; auditor cases assert sentinel-auditor.txt does NOT exist (the shim refused to write because role flags were Read-only).",
+        "Add test_executor_real_cli_no_hang.py gated by `os.environ.get('JARVIS_RUN_REAL_CLI_TESTS') == '1'` (skip otherwise) with 6 cases: (1) Claude implementer write task — assert no TimeoutExpired AND sentinel file written; (2) Claude auditor read task — assert no TimeoutExpired AND no file written AND response contains read content; (3) Claude auditor Edit-attempt — assert no TimeoutExpired AND target file NOT created AND response indicates denial; (4) Codex implementer write task — same as (1) with Codex; (5) Codex auditor read task — same as (2) with Codex; (6) Codex auditor write-attempt — same as (3) with Codex (sandbox-deny instead of dontAsk-deny).",
+        "Do NOT modify pyproject.toml or pytest config addopts. The slow tests use the env-var gate so default `pytest` runs them as no-ops without the env var, and CI can opt in selectively without changing global config.",
+        "Document in test docstrings: 'a real subprocess invocation must not block on a permission prompt AND must show sentinel write/no-write consistent with the role' is the regression criterion. Show the manual command: `JARVIS_RUN_REAL_CLI_TESTS=1 pytest scripts/jarvis_orchestrate/tests/test_executor_real_cli_no_hang.py`."
+      ],
+      "acceptance": "(a) Fake-CLI shim test: 4 (executor, role) cases pass in default pytest suite, each <2s, and each verifies sentinel write (implementer) or no-write (auditor) — not just no-timeout. (b) Real-CLI no-hang test exists with 4 cases (gated by JARVIS_RUN_REAL_CLI_TESTS=1 env var per D014, NOT addopts); when run with the env var set and both CLIs installed, all 4 complete within 15s without TimeoutExpired AND each asserts sentinel write/no-write consistent with the role. (c) Default `pytest scripts/jarvis_orchestrate/tests/ -q` (without the env var) reports 222 tests passing + 4 real-CLI skipped cleanly. (d) pyproject.toml addopts unchanged. (e) Test file docstrings explicitly state both regression criteria (no-timeout AND sentinel-consistent).",
+      "passes": true,
+      "verified_at": "2026-04-29T11:35:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/tests/fake_cli/fake-claude", "captured_by": "claude", "note": "Fake Claude shim — echoes argv to stderr, writes sentinel-implementer.txt only when implementer flags present (proves executor produces correct flags)."},
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/tests/fake_cli/fake-codex", "captured_by": "claude", "note": "Fake Codex shim — same pattern, detects role from --sandbox value."},
+        {"type": "file", "uri": "scripts/jarvis_orchestrate/tests/test_f005b_executor_argv.py", "captured_by": "claude", "note": "F002+F003+F004 in one file: argv assertions, forbidden-flag sweep, fake-CLI sentinel checks, env-var-gated real-CLI integration."},
+        {"type": "test_output", "uri": "evidence/F002/pytest-output-fake-cli.txt", "captured_by": "claude", "note": "Default pytest run: 23 passed, 4 real-CLI skipped cleanly without env var."},
+        {"type": "test_output", "uri": "evidence/F004/pytest-output-real-cli.txt", "captured_by": "claude", "note": "JARVIS_RUN_REAL_CLI_TESTS=1: all 4 real-CLI tests pass within 15s. Deny cases produce no file (permission system enforced); success cases produce sentinel files (tool use actually attempted)."},
+        {"type": "test_output", "uri": "evidence/regression/pytest-full.txt", "captured_by": "claude", "note": "222 tests pass + 4 real-CLI skip cleanly. No regressions to the 187 pre-F005b tests."}
+      ],
+      "depends_on": ["F002", "F003"]
+    }
+  ]
+}
