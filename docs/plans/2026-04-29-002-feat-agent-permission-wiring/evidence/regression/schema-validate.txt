@@ -1,0 +1,6 @@
+
+[plan] 2026-04-29-002-feat-agent-permission-wiring
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+✓ All plans validate against agent-conventions v1.0 schemas

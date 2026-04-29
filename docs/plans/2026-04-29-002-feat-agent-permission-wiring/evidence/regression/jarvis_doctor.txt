@@ -1,0 +1,15 @@
+[32m✓[0m python>=3.10           Python 3.10
+[32m✓[0m cli:gcloud             gcloud found
+[32m✓[0m cli:firebase           firebase found
+[32m✓[0m cli:jq                 jq found
+[32m✓[0m cli:git                git found
+[32m✓[0m target-project         environments.json dev=<firebase-project-id>
+[32m✓[0m secrets-dir            .secrets/ exists, gitignored
+[32m✓[0m py:pydantic            pydantic OK
+[32m✓[0m py:yaml                yaml OK
+[32m✓[0m py:firebase_admin      firebase_admin OK
+[32m✓[0m schemas                5 core schemas present at claude/shared/schemas/v1.0
+[32m✓[0m pydantic-models        plan/features/audit/environments/signoff models import clean
+[32m✓[0m parent-plan            parent orchestration plan validates
+
+[32m✓[0m 13/13 checks passed — Jarvis is ready

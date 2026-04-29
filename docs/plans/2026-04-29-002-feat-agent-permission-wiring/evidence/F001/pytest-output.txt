@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python3.10
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 12 items
+
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[implementer-implementer] PASSED [  8%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[auditor-auditor] PASSED [ 16%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[reviewer-None] PASSED [ 25%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[verifier-None] PASSED [ 33%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[-None] PASSED [ 41%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_derive_permission_policy[None-None] PASSED [ 50%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_dispatch_task_accepts_permission_policy_field PASSED [ 58%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_run_round_sets_permission_policy_from_role_implementer PASSED [ 66%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_run_round_sets_permission_policy_from_role_auditor PASSED [ 75%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_run_round_legacy_role_yields_none_permission_policy PASSED [ 83%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_dispatch_single_agent_calls_derive_permission_policy PASSED [ 91%]
+scripts/jarvis_orchestrate/tests/test_f005b_permission_policy.py::test_run_round_calls_derive_permission_policy PASSED [100%]
+
+============================== 12 passed in 0.11s ==============================

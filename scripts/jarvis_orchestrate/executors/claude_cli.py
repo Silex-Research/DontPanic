@@ -1,4 +1,10 @@
-"""Claude Code CLI executor — invokes `claude -p --output-format json`."""
+"""Claude Code CLI executor — invokes `claude -p --output-format json`.
+
+F005b: role-aware permission policy. When task.permission_policy is set,
+the executor prepends non-interactive permission flags so subprocess
+dispatch doesn't deadlock on permission prompts. None preserves legacy
+behavior (no flags) for synthetic-disagreement mocks and pre-F005b tests.
+"""
 
 from __future__ import annotations
 
@@ -11,9 +17,34 @@ from jarvis_orchestrate.executors.base import (
     BaseExecutor,
     DispatchResult,
     DispatchTask,
+    check_forbidden_flags,
 )
 
 DEFAULT_BIN = "claude"
+
+# F005b — Claude implementer: writes inside cwd auto-allowed, broad Bash + Read.
+# Auditor: Read-only, no Bash matchers (matcher-restricted Bash is not truly
+# read-only; pytest writes caches, python is arbitrary code execution. See D012.)
+_IMPLEMENTER_FLAGS: tuple[str, ...] = (
+    "--permission-mode",
+    "acceptEdits",
+    "--allowedTools",
+    "Read Edit Write Bash",
+)
+_AUDITOR_FLAGS: tuple[str, ...] = (
+    "--permission-mode",
+    "dontAsk",
+    "--allowedTools",
+    "Read",
+)
+
+
+def _permission_flags(policy: str | None) -> tuple[str, ...]:
+    if policy == "implementer":
+        return _IMPLEMENTER_FLAGS
+    if policy == "auditor":
+        return _AUDITOR_FLAGS
+    return ()
 
 
 class ClaudeCLIExecutor(BaseExecutor):
@@ -27,9 +58,14 @@ class ClaudeCLIExecutor(BaseExecutor):
         prompt = self._build_prompt(task)
         started = dt.datetime.now(dt.timezone.utc)
 
+        argv = [self.binary, "-p", "--output-format", "json"]
+        argv.extend(_permission_flags(task.permission_policy))
+        # F005b — final pre-dispatch assertion that no bypass flag slipped in.
+        check_forbidden_flags(argv)
+
         try:
             proc = subprocess.run(
-                [self.binary, "-p", "--output-format", "json"],
+                argv,
                 input=prompt,
                 capture_output=True,
                 env=task.subprocess_env or None,

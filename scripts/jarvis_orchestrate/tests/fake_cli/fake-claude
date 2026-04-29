@@ -1,0 +1,53 @@
+#!/bin/bash
+# F005b fake-claude shim — stands in for `claude -p` in fake-CLI smoke tests.
+#
+# Behavior:
+#   - echoes the full argv to stderr so tests can assert flag presence/order
+#   - emits a minimal valid JSON response to stdout (matches `claude -p
+#     --output-format json` shape) so the executor parses cleanly
+#   - decides whether to write a sentinel file based on the role flags it sees:
+#       implementer → writes sentinel-implementer.txt in cwd (proves the
+#         executor passed Edit/Write-capable flags)
+#       auditor     → does NOT write (proves the executor passed Read-only
+#         flags; if a future change accidentally widens the auditor allowlist,
+#         this test fails because the file appears)
+#       neither     → does NOT write (legacy / no-flag path)
+set -euo pipefail
+
+# Echo argv to stderr for argv-shape assertions.
+printf 'fake-claude argv:' >&2
+for a in "$@"; do
+  printf ' %q' "$a" >&2
+done
+printf '\n' >&2
+
+# Detect role from flags.
+ROLE="none"
+prev=""
+for a in "$@"; do
+  if [[ "$prev" == "--permission-mode" && "$a" == "acceptEdits" ]]; then
+    ROLE="implementer"
+  fi
+  if [[ "$prev" == "--permission-mode" && "$a" == "dontAsk" ]]; then
+    ROLE="auditor"
+  fi
+  prev="$a"
+done
+
+# Implementer shim writes a sentinel; auditor / none do not.
+if [[ "$ROLE" == "implementer" ]]; then
+  echo "fake-claude wrote sentinel-implementer.txt at $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > sentinel-implementer.txt
+fi
+
+# Emit a minimal `claude -p --output-format json` response shape.
+cat <<EOF
+{
+  "result": "fake-claude $ROLE: argv echoed to stderr; sentinel = $ROLE",
+  "is_error": false,
+  "usage": {"input_tokens": 1, "output_tokens": 1, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
+  "modelUsage": {"claude-fake-1.0": {}},
+  "duration_ms": 5,
+  "total_cost_usd": 0.0
+}
+EOF

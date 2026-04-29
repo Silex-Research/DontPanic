@@ -3,6 +3,11 @@
 Codex emits newline-delimited JSON events to stdout; the agent's response is the
 `item.text` field of the `item.completed` event whose `item.type == agent_message`.
 Usage data appears in the `turn.completed` event.
+
+F005b: role-aware permission policy. Global flags (--ask-for-approval,
+--sandbox) are inserted BEFORE the `exec` subcommand per Codex CLI
+convention; `codex --help` confirms these are global, not subcommand-local.
+None preserves legacy behavior (no flags) for synthetic-disagreement mocks.
 """
 
 from __future__ import annotations
@@ -16,9 +21,36 @@ from jarvis_orchestrate.executors.base import (
     BaseExecutor,
     DispatchResult,
     DispatchTask,
+    check_forbidden_flags,
 )
 
 DEFAULT_BIN = "codex"
+
+# F005b — Codex implementer: workspace-write sandbox enforces edit-in-cwd at
+# the OS level. Auditor: read-only sandbox refuses any write at the OS level
+# regardless of what command Codex tries — the right place for command-running
+# audit (pytest --collect-only, git log/diff/status, etc.) since the kernel
+# enforces no-mutation. See D012.
+_IMPLEMENTER_FLAGS: tuple[str, ...] = (
+    "--ask-for-approval",
+    "never",
+    "--sandbox",
+    "workspace-write",
+)
+_AUDITOR_FLAGS: tuple[str, ...] = (
+    "--ask-for-approval",
+    "never",
+    "--sandbox",
+    "read-only",
+)
+
+
+def _permission_flags(policy: str | None) -> tuple[str, ...]:
+    if policy == "implementer":
+        return _IMPLEMENTER_FLAGS
+    if policy == "auditor":
+        return _AUDITOR_FLAGS
+    return ()
 
 
 class CodexCLIExecutor(BaseExecutor):
@@ -32,9 +64,16 @@ class CodexCLIExecutor(BaseExecutor):
         prompt = self._build_prompt(task)
         started = dt.datetime.now(dt.timezone.utc)
 
+        # Global flags MUST come before the `exec` subcommand per Codex CLI.
+        argv: list[str] = [self.binary]
+        argv.extend(_permission_flags(task.permission_policy))
+        argv.extend(["exec", "--json", prompt])
+        # F005b — final pre-dispatch assertion that no bypass flag slipped in.
+        check_forbidden_flags(argv)
+
         try:
             proc = subprocess.run(
-                [self.binary, "exec", "--json", prompt],
+                argv,
                 input="",
                 capture_output=True,
                 env=task.subprocess_env or None,
