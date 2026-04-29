@@ -1,0 +1,48 @@
+{
+  "plan_id": "2026-04-29-001-feat-changelog-skill",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-04-29T21:38:08Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl",
+        "pre_merge"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-04-29T21:38:30Z",
+      "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-04-29T21:41:27Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-04-29T21:48:14Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-04-29T21:57:29Z",
+      "actor": "supervisor",
+      "reason": "claude percent_weekly 299.7% (from ~/.jarvis/quota_state.json) exceeds plan-declared budget 2.0%"
+    }
+  ],
+  "active_breakers": [
+    "breaker:budget_ceiling"
+  ]
+}

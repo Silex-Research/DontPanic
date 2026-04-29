@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 19 items
+
+claude/skills/changelog/tests/test_changelog.py::test_fixture_matches_golden_markdown[nominal] PASSED [  5%]
+claude/skills/changelog/tests/test_changelog.py::test_fixture_matches_golden_markdown[empty] PASSED [ 10%]
+claude/skills/changelog/tests/test_changelog.py::test_fixture_matches_golden_markdown[non_conventional] PASSED [ 15%]
+claude/skills/changelog/tests/test_changelog.py::test_fixture_matches_golden_markdown[single_commit] PASSED [ 21%]
+claude/skills/changelog/tests/test_changelog.py::test_fixture_matches_golden_markdown[merge_commit] PASSED [ 26%]
+claude/skills/changelog/tests/test_changelog.py::test_nominal_json_matches_golden PASSED [ 31%]
+claude/skills/changelog/tests/test_changelog.py::test_empty_range_clean_exit PASSED [ 36%]
+claude/skills/changelog/tests/test_changelog.py::test_non_conventional_commits_grouped_as_other PASSED [ 42%]
+claude/skills/changelog/tests/test_changelog.py::test_single_commit_fixture PASSED [ 47%]
+claude/skills/changelog/tests/test_changelog.py::test_merge_commit_recognized_and_not_dropped PASSED [ 52%]
+claude/skills/changelog/tests/test_changelog.py::test_classify_known_prefixes_are_normalized PASSED [ 57%]
+claude/skills/changelog/tests/test_changelog.py::test_classify_strips_scope_and_breaking_marker PASSED [ 63%]
+claude/skills/changelog/tests/test_changelog.py::test_classify_unknown_type_falls_back_to_other PASSED [ 68%]
+claude/skills/changelog/tests/test_changelog.py::test_parse_extracts_files_in_status_order PASSED [ 73%]
+claude/skills/changelog/tests/test_changelog.py::test_parse_handles_multiline_body PASSED [ 78%]
+claude/skills/changelog/tests/test_changelog.py::test_main_writes_to_out_path PASSED [ 84%]
+claude/skills/changelog/tests/test_changelog.py::test_main_missing_fixture_returns_2 PASSED [ 89%]
+claude/skills/changelog/tests/test_changelog.py::test_main_explicit_from_to_overrides_meta PASSED [ 94%]
+claude/skills/changelog/tests/test_changelog.py::test_module_does_not_import_network_libs PASSED [100%]
+
+============================== 19 passed in 0.03s ==============================
