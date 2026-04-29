@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3.10
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 16 items
+
+claude/skills/revenue-check/tests/test_revenue_check.py::test_fixture_adapter_aggregates_finalized_and_estimated_only PASSED [  6%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_fixture_adapter_zero_revenue_month PASSED [ 12%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_fixture_adapter_missing_fixture_returns_none PASSED [ 18%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_deferred_adapter_returns_unavailable_with_reason PASSED [ 25%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_resolve_adapter_picks_glam_for_styln_in_live_mode PASSED [ 31%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_resolve_adapter_picks_deferred_for_spindine_in_live_mode PASSED [ 37%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_resolve_adapter_picks_fixture_when_stub_set PASSED [ 43%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_build_revenue_state_shape PASSED [ 50%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_render_cash_flow_computes_net PASSED [ 56%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_render_cash_flow_handles_missing_cost_gracefully PASSED [ 62%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_stub_writes_revenue_json_and_evidence PASSED [ 68%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_refuses_live_without_explicit_flag PASSED [ 75%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_live_flag_reaches_deferred_adapter_without_credentials PASSED [ 81%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_rejects_stub_and_live_together PASSED [ 87%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_invalid_as_of_returns_2 PASSED [ 93%]
+claude/skills/revenue-check/tests/test_revenue_check.py::test_main_handles_spindine_deferral_in_stub_mode_gracefully PASSED [100%]
+
+============================== 16 passed in 0.04s ==============================

@@ -1,0 +1,11 @@
+{
+  "generated": "2026-04-28T11:00:00Z",
+  "week_start": "2026-04-27T00:00:00+00:00",
+  "models": {
+    "claude": {"used": 250000000, "limit": 1000000000, "unit": "tokens", "percent_weekly": 25.0, "plan": "Max ~1B/wk estimate"},
+    "codex": {"used": 30, "limit": 300, "unit": "calls", "percent_weekly": 10.0, "plan": "300/week ChatGPT Plus"},
+    "gemini": {"used": 100, "limit": 1500, "unit": "calls", "percent_weekly": 6.67, "plan": "AI Studio free tier daily; weekly approx"},
+    "grok": {"used": 5, "limit": 50, "unit": "calls", "percent_weekly": 10.0, "plan": "self-imposed soft cap"},
+    "ollama": {"loaded_models": [], "limit": null, "unit": null, "percent_weekly": null, "plan": "unmetered (local)"}
+  }
+}

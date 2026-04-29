@@ -1,0 +1,91 @@
+{
+  "as_of": "2026-04-28T12:00:00Z",
+  "by_app": {
+    "Jarvis": {
+      "daily_rate_usd": 0.4286,
+      "days_in_month": 30,
+      "days_into_month": 28,
+      "mtd_usd": 12.0,
+      "projected_month_end_usd": 12.86,
+      "projected_next_month_usd": 13.29
+    },
+    "QuantRE/Axiom": {
+      "daily_rate_usd": 0.0,
+      "days_in_month": 30,
+      "days_into_month": 28,
+      "mtd_usd": 0.0,
+      "projected_month_end_usd": 0.0,
+      "projected_next_month_usd": 0.0
+    },
+    "Spin & Dine": {
+      "daily_rate_usd": 5.3257,
+      "days_in_month": 30,
+      "days_into_month": 28,
+      "monthly_revenue_usd": 200.0,
+      "mtd_usd": 149.12,
+      "projected_month_end_usd": 159.77,
+      "projected_net_month_end_usd": 40.23,
+      "projected_next_month_usd": 165.1
+    },
+    "Styln": {
+      "daily_rate_usd": 8.3371,
+      "days_in_month": 30,
+      "days_into_month": 28,
+      "monthly_revenue_usd": 850.0,
+      "mtd_usd": 233.44,
+      "projected_month_end_usd": 250.11,
+      "projected_net_month_end_usd": 599.89,
+      "projected_next_month_usd": 258.45
+    }
+  },
+  "by_llm": {
+    "claude": {
+      "limit": 1000000000,
+      "percent_of_cap_monthly": 116.67,
+      "percent_of_cap_week_end": 116.67,
+      "projected_monthly": 5051666668,
+      "projected_week_end": 1166666667,
+      "unit": "tokens",
+      "used": 250000000
+    },
+    "codex": {
+      "limit": 300,
+      "percent_of_cap_monthly": 46.65,
+      "percent_of_cap_week_end": 46.67,
+      "projected_monthly": 606,
+      "projected_week_end": 140,
+      "unit": "calls",
+      "used": 30
+    },
+    "gemini": {
+      "limit": 1500,
+      "percent_of_cap_monthly": 31.13,
+      "percent_of_cap_week_end": 31.13,
+      "projected_monthly": 2022,
+      "projected_week_end": 467,
+      "unit": "calls",
+      "used": 100
+    },
+    "grok": {
+      "limit": 50,
+      "percent_of_cap_monthly": 46.19,
+      "percent_of_cap_week_end": 46.0,
+      "projected_monthly": 100,
+      "projected_week_end": 23,
+      "unit": "calls",
+      "used": 5
+    },
+    "ollama": {
+      "limit": null,
+      "percent_of_cap_monthly": null,
+      "percent_of_cap_week_end": null,
+      "projected_monthly": 0,
+      "projected_week_end": 0,
+      "unit": null,
+      "used": 0
+    }
+  },
+  "generated": "2026-04-28T12:00:00Z",
+  "mode": "with-revenue",
+  "notes": []
+}

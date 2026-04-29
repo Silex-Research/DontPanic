@@ -1,0 +1,5 @@
+{
+  "apps": {"Styln": {"gcp_monthly_budget_usd": 1000}},
+  "llm_models": {"claude": {"weekly_token_budget": 1000000000}},
+  "thresholds": {"warn": 0.80, "breach": 1.00}
+}

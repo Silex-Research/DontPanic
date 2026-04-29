@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3.10
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 14 items
+
+claude/skills/cost-model/tests/test_cost_model.py::test_nominal_with_revenue_produces_with_revenue_mode PASSED [  7%]
+claude/skills/cost-model/tests/test_cost_model.py::test_no_revenue_falls_back_to_cost_only PASSED [ 14%]
+claude/skills/cost-model/tests/test_cost_model.py::test_empty_inputs_yields_data_unavailable_and_exit_zero PASSED [ 21%]
+claude/skills/cost-model/tests/test_cost_model.py::test_stale_inputs_emit_note_but_still_render PASSED [ 28%]
+claude/skills/cost-model/tests/test_cost_model.py::test_zero_spend_app_has_zero_projection PASSED [ 35%]
+claude/skills/cost-model/tests/test_cost_model.py::test_end_of_month_projection_equals_mtd PASSED [ 42%]
+claude/skills/cost-model/tests/test_cost_model.py::test_llm_projection_handles_unmetered_models PASSED [ 50%]
+claude/skills/cost-model/tests/test_cost_model.py::test_render_markdown_is_deterministic_for_fixed_as_of PASSED [ 57%]
+claude/skills/cost-model/tests/test_cost_model.py::test_main_writes_outputs_and_exits_zero PASSED [ 64%]
+claude/skills/cost-model/tests/test_cost_model.py::test_main_with_no_inputs_exits_zero_and_writes_data_unavailable PASSED [ 71%]
+claude/skills/cost-model/tests/test_cost_model.py::test_invalid_as_of_returns_2 PASSED [ 78%]
+claude/skills/cost-model/tests/test_cost_model.py::test_calendar_month_lengths[1-15-31-28] PASSED [ 85%]
+claude/skills/cost-model/tests/test_cost_model.py::test_calendar_month_lengths[2-1-28-31] PASSED [ 92%]
+claude/skills/cost-model/tests/test_cost_model.py::test_calendar_month_lengths[12-31-31-31] PASSED [100%]
+
+============================== 14 passed in 0.03s ==============================

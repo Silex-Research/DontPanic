@@ -42,6 +42,9 @@ On-demand skills matched by user intent keywords.
 | "forecast", "time series", "ohlc", "kronos" | kronos-agent | `claude/skills/kronos-agent/SKILL.md` | 1 |
 | "video", "remotion", "render video", "animation" | remotion-video-toolkit | `claude/skills/remotion-video-toolkit/SKILL.md` | 1 |
 | "health", "production health", "app metrics" | product-health-agent | `claude/skills/product-health-agent/SKILL.md` | 1 |
+| "cost projection", "spend forecast", "cost model", "project costs" | cost-model | `claude/skills/cost-model/SKILL.md` | 1 |
+| "cost alert", "budget guard", "cost guard", "check budget", "budget breach" | cost-guard | `claude/skills/cost-guard/SKILL.md` | 1 |
+| "revenue", "cash flow", "revenue check", "profitability" | revenue-check | `claude/skills/revenue-check/SKILL.md` | 1 |
 | "build fix", "fix build", "compile error" | build-fix | `claude/commands/build-fix.md` | 1 |
 | "clean up", "cleanup", "de-sloppify" | cleanup | `claude/commands/cleanup.md` | 1 |
 | "plan", "implementation plan" | plan | `claude/commands/plan.md` | 3 |

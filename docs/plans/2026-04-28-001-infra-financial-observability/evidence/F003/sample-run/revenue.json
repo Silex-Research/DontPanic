@@ -1,0 +1,11 @@
+{
+  "by_app": {
+    "Styln": {
+      "granularity": "monthly",
+      "last_event_at": "2026-04-27T22:00:00Z",
+      "monthly_revenue_usd": 500.5,
+      "source": "fixture"
+    }
+  },
+  "generated": "2026-04-28T12:00:00Z"
+}

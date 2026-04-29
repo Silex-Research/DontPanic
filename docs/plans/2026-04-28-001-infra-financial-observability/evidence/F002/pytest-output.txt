@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3.10
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 12 items
+
+claude/skills/cost-guard/tests/test_cost_guard.py::test_nominal_under_threshold_emits_no_findings PASSED [  8%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_warn_emits_cost_warn PASSED [ 16%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_breach_emits_cost_breach PASSED [ 25%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_zero_budget_emits_no_budgets_configured_only PASSED [ 33%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_stale_short_circuits_to_data_stale PASSED [ 41%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_idempotent_within_week PASSED [ 50%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_dedupe_resets_for_new_week PASSED [ 58%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_main_writes_inbox_and_exits_zero PASSED [ 66%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_main_zero_budget_exits_zero_with_single_finding PASSED [ 75%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_main_stale_inputs_no_breach PASSED [ 83%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_main_invalid_as_of_returns_2 PASSED [ 91%]
+claude/skills/cost-guard/tests/test_cost_guard.py::test_thresholds_can_be_overridden_via_budget_config PASSED [100%]
+
+============================== 12 passed in 0.05s ==============================

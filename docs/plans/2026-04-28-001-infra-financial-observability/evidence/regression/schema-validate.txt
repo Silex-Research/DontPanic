@@ -1,0 +1,6 @@
+
+[plan] 2026-04-28-001-infra-financial-observability
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+✓ All plans validate against agent-conventions v1.0 schemas

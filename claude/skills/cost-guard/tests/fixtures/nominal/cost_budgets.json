@@ -1,0 +1,13 @@
+{
+  "apps": {
+    "Styln": {"gcp_monthly_budget_usd": 1000},
+    "Spin & Dine": {"gcp_monthly_budget_usd": 500},
+    "QuantRE/Axiom": {"gcp_monthly_budget_usd": 0},
+    "Jarvis": {"gcp_monthly_budget_usd": 100}
+  },
+  "llm_models": {
+    "claude": {"weekly_token_budget": 1000000000},
+    "codex": {"weekly_call_budget": 300}
+  },
+  "thresholds": {"warn": 0.80, "breach": 1.00}
+}
