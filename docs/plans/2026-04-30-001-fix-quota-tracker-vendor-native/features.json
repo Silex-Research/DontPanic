@@ -1,0 +1,121 @@
+{
+  "task_id": "2026-04-30-001-fix-quota-tracker-vendor-native",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Per-vendor signal extraction in scripts/quota_check.py. New helpers: _claude_usage_v2(window) walks ~/.claude/projects/**/*.jsonl with cache reads weighted at 0.1x and groups by message.model scoped to the window; _codex_usage_v2(window) queries ~/.codex/state_5.sqlite via SELECT model, SUM(tokens_used) FROM threads WHERE updated_at > ? GROUP BY model; _gemini_usage_v2() walks ~/.gemini/tmp/<projectHash>/chats/session-*.json files per day (NOT ~/.config/gemini/state.json which does not exist); _grok_usage_v2() returns signal:absent unless ~/.grok/ exists or XAI_API_KEY env is set. Drop the existing _codex_calls_this_week() line-counter entirely. F001 verifies tokens.total presence in a freshly-created Gemini session file before relying on it; if absent, gemini helper returns message count only with diagnostics.tokens_total=null.",
+      "steps": [
+        "Add _claude_usage_v2(window: 'rolling_7d'|'rolling_5h') with cache_read weighted 0.1x and per-model grouping",
+        "Add _codex_usage_v2(window: 'rolling_5h'|'rolling_7d') querying ~/.codex/state_5.sqlite threads table",
+        "Add _gemini_usage_v2() walking ~/.gemini/tmp/<hash>/chats/session-*.json with daily aggregation",
+        "Add _grok_usage_v2() with presence-only detection",
+        "Verify tokens.total presence in a fresh Gemini session; document fallback path",
+        "Remove _codex_calls_this_week() and the dead-code week-filter branch on its lines 80-83"
+      ],
+      "acceptance": "(1) Each new helper has a unit test against a fixture file/db. (2) On this machine, _codex_usage_v2 returns non-zero rolling_5h tokens grouped by model. (3) _gemini_usage_v2 returns non-zero session count for any day with chat activity. (4) _grok_usage_v2 returns signal:absent on this machine where neither ~/.grok/ nor XAI_API_KEY exists. (5) Old _codex_calls_this_week is gone from the file.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "quota_state.json schema v2: per-vendor block keyed by detected tier; per-window child block with kind, observed_native, observed_unit, models{}, optional calibration{} (Claude only) and diagnostics{} (Gemini tokens.total). Top-level schema_version field set to 2. Backwards-compat shim: continue to emit flat models.{name}.percent_weekly mirror for one release so the existing F006 breaker path still works during cutover. Loader function in circuit_breakers reads vendor block first, falls back to legacy on KeyError with a deprecation log line.",
+      "steps": [
+        "Define the v2 block layout in code (no JSON schema file — internal state, not a published contract)",
+        "Update main() in quota_check.py to populate the v2 vendors{} block alongside legacy models{} mirror",
+        "Add internal docstring describing the v2 → legacy mirror mapping",
+        "Add a legacy-shape fallback path in circuit_breakers consumer (will be exercised in F006)"
+      ],
+      "acceptance": "(1) ~/.jarvis/quota_state.json after a refresh contains both vendors{} and models{} blocks. (2) The vendors{} block contains entries for claude+codex+gemini+grok with correct tier labels. (3) schema_version: 2 is present. (4) Legacy models{} block fields are unchanged from current shape (no breaking shift).",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Tier detection. Codex: parse JWT id_token in ~/.codex/auth.json (best-effort, no signature verify — pyjwt or manual base64 decode), extract chatgpt_plan_type claim, map to {plus, pro, pro_5x, pro_20x, business, enterprise}. Gemini: presence of ~/.gemini/oauth_creds.json → tier='code_assist_individuals' (sub-tier distinction Pro/Ultra/Standard explicitly deferred — current detection collapses all OAuth-personal); GEMINI_API_KEY env → tier='ai_studio_api'. Claude: no detection signal exists; tier read from ~/.jarvis/quota_caps.json operator-set value, default 'max_20x'. Grok: presence-only, tier='absent' unless ~/.grok/user-settings.json exists or XAI_API_KEY env is set.",
+      "steps": [
+        "Add _detect_codex_tier() reading ~/.codex/auth.json id_token JWT payload",
+        "Add _detect_gemini_tier() with oauth_creds.json vs env precedence",
+        "Add _detect_claude_tier() reading from quota_caps.json (default max_20x)",
+        "Add _detect_grok_tier() (absent vs api vs cli-installed)",
+        "Wire all four into the v2 vendors{} block tier field"
+      ],
+      "acceptance": "(1) On this machine, codex tier resolves to 'plus' (per the JWT claim observed in research). (2) gemini tier resolves to 'code_assist_individuals'. (3) grok tier resolves to 'absent'. (4) Detection is fail-soft: malformed auth.json returns tier='unknown' and logs the parse error, never crashes quota_check.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Operator-editable caps file at ~/.jarvis/quota_caps.json. Schema: {schema_version: 1, <vendor>: {<tier>: {<window>: {cap: number, unit: string}}}}. NOT in repo (gitignored via ~/.jarvis/ being outside the tree). NOT reusing dashboard/state/costs.json (that's $-spend on GCP, separate concern). New CLI subcommands on `python -m jarvis_orchestrate`: `quota-caps init` writes a starter file with researched defaults (claude.max_20x: rolling_7d cap=100 unit=percent_of_plan, rolling_5h cap=100 unit=percent_of_plan; codex.plus: rolling_5h cap=80 unit=messages_estimate; gemini.code_assist_individuals: rolling_24h cap=1000 unit=requests; grok.absent: {}); `quota-caps show` prints effective resolved caps; loader validates the file against expected vendor/tier/window keys at startup, rejects unknowns with a clear error.",
+      "steps": [
+        "Define the JSON shape (in-code, not a published JSON schema)",
+        "Implement quota_caps_loader.py with load(), get(vendor, tier, window), validate()",
+        "Add `quota-caps init` CLI subcommand",
+        "Add `quota-caps show` CLI subcommand",
+        "Add unit tests for loader (validation rejects unknown keys, get() returns expected cap)"
+      ],
+      "acceptance": "(1) `quota-caps init` creates ~/.jarvis/quota_caps.json with the documented defaults. (2) `quota-caps show` prints effective caps in a readable format including the operator file path and unit per cap. (3) Loader rejects a file with an unknown vendor key or an unknown window key under a known vendor, with an error message naming the offending key. (4) Loader does not require Claude tier to be detected — Claude tier is operator-set, default max_20x.",
+      "passes": false,
+      "depends_on": ["F003"]
+    },
+    {
+      "id": "F005",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Claude calibration command. `python -m jarvis_orchestrate calibrate-claude --dashboard-pct N [--window rolling_7d]`. Reads current observed_native for the named window from quota_state.json, computes ratio = dashboard_pct / observed_native, writes a calibration block back into quota_state.json under vendors.claude.windows[<window>].calibration: {ratio, confidence: 'manual', source: 'operator_dashboard_sample', stamped_at: <iso utc>}. Confidence levels: uncalibrated (default 0.0 ratio = no calibration applied), manual (operator-sampled), auto (reserved — NOT implemented because no Anthropic API exists). Tracker output always surfaces confidence label + stamped_at; warns to stderr if stamped_at is >7 days old. Re-calibration cadence is operator's responsibility — plan does not auto-trigger.",
+      "steps": [
+        "Add calibrate-claude CLI subcommand with --dashboard-pct (required) + --window (default rolling_7d)",
+        "Implement ratio computation + calibration block writeback into quota_state.json",
+        "Update _claude_usage_v2 output (and tracker print summary) to surface calibration.confidence + stamped_at",
+        "Add stale-calibration warning (>7 days) to stderr",
+        "Add unit test for the calibrate command (uses a fixture quota_state.json)"
+      ],
+      "acceptance": "(1) Calibrate command writes a valid calibration block with all four fields. (2) Subsequent quota_check runs apply the ratio and surface 'confidence: manual, stamped 2026-04-30' in the printed summary. (3) After artificially aging the timestamp >7 days, the next run prints a stderr warning recommending re-cal. (4) Without calibration, output shows 'confidence: uncalibrated' and applies ratio=1.0.",
+      "passes": false,
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Breaker rewrite in scripts/jarvis_orchestrate/circuit_breakers.py. check_budget_ceiling(plan, agent): for each window in state.vendors[agent].windows, compute (observed_native * (calibration.ratio or 1.0)) / cap_from_quota_caps_json; trip if any window > 1.0. INBOX wording surfaces (a) which window tripped, (b) tier, (c) observed vs cap, (d) calibration confidence label. Backward-compat fallback: if state.vendors block missing (legacy state shape), use old percent_weekly path with deprecation log. Plan-level quota_caps field still consulted as a per-plan override IF present, else fall back to operator caps file (operator caps file is the source of truth for defaults; per-plan override remains supported for plans that already declare it, but no new plan needs to declare it). Plan 004's open D001 ('which of three semantics') is answered structurally: per-vendor per-window absolute usage ceiling, semantic (1) generalized.",
+      "steps": [
+        "Rewrite check_budget_ceiling to read v2 state shape, with legacy fallback",
+        "Look up cap from operator caps file via quota_caps_loader.get(vendor, tier, window)",
+        "Apply calibration ratio when present",
+        "Compute per-window pct, trip on first > 1.0, record which window tripped",
+        "Update INBOX gate-pause event wording to surface window + tier + observed/cap + confidence",
+        "Update existing F006 budget_ceiling tests to cover (a) v2 path with caps file, (b) legacy fallback, (c) calibrated Claude path, (d) per-plan override still works"
+      ],
+      "acceptance": "(1) Check_budget_ceiling trips correctly when any window's observed * ratio > cap from caps file. (2) INBOX 'breaker_tripped' event includes window+tier+observed+cap+confidence. (3) Legacy state shape (no vendors block) still works via fallback with a deprecation warning. (4) All existing F006 budget_ceiling tests green; 4 new tests for v2 path scenarios green. (5) On this machine after F005 calibration, breaker does NOT falsely trip on Claude when the dashboard shows <80% (current behavior trips at any non-trivial use).",
+      "passes": false,
+      "depends_on": ["F002", "F004", "F005"]
+    },
+    {
+      "id": "F007",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Tests + dogfood verification. Synthetic fixtures per vendor: mock Claude session JSONL with known tokens + cache reads, mock Codex SQLite with known thread token totals, mock Gemini chat dir with known session count. Live verification on this machine: run python scripts/quota_check.py, confirm Claude (after manual calibration) within ±10% of dashboard, Codex within ±5% (locally counted), Gemini exact (locally counted). Re-run the changelog plan iteration 1 dispatch to confirm F005a/F006/F008 still cohere with the new state shape. No code changes in F007 — it is verification + evidence capture only.",
+      "steps": [
+        "Write synthetic fixture files for claude/codex/gemini",
+        "Add tests/test_quota_check_v2.py covering all 3 helpers + state shape + tier detection + calibration + caps file integration",
+        "Add tests/test_circuit_breakers_budget_v2.py covering breaker rewrite",
+        "Run python scripts/quota_check.py against this machine; capture output as evidence",
+        "Operator runs calibrate-claude with a dashboard sample; capture before/after",
+        "Re-dispatch changelog plan iteration 1; confirm no schema mismatch errors; capture transcript",
+        "Regression sweep: run all 10 existing test modules to confirm no breakage"
+      ],
+      "acceptance": "(1) Synthetic fixture tests green. (2) Live tracker output on this machine shows Claude calibrated within ±10% of operator-supplied dashboard sample, Codex matches state_5.sqlite query exactly, Gemini matches session-file count exactly, Grok shows signal:absent. (3) Changelog plan re-dispatch completes iteration 1 without quota state schema mismatch (passes the F006 breaker that previously falsely tripped). (4) All 10 prior test modules still green.",
+      "passes": false,
+      "depends_on": ["F001", "F002", "F003", "F004", "F005", "F006"]
+    }
+  ]
+}
