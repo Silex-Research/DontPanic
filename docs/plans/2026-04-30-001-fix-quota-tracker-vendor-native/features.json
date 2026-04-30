@@ -140,16 +140,57 @@
       "id": "F004",
       "category": "tooling",
       "phase": 2,
-      "description": "Operator-editable caps file at ~/.jarvis/quota_caps.json. Schema: {schema_version: 1, <vendor>: {<tier>: {<window>: {cap: number, unit: string}}}}. NOT in repo (gitignored via ~/.jarvis/ being outside the tree). NOT reusing dashboard/state/costs.json (that's $-spend on GCP, separate concern). New CLI subcommands on `python -m jarvis_orchestrate`: `quota-caps init` writes a starter file with researched defaults (claude.max_20x: rolling_7d cap=100 unit=percent_of_plan, rolling_5h cap=100 unit=percent_of_plan; codex.plus: rolling_5h cap=80 unit=messages_estimate; gemini.code_assist_individuals: rolling_24h cap=1000 unit=requests; grok.absent: {}); `quota-caps show` prints effective resolved caps; loader validates the file against expected vendor/tier/window keys at startup, rejects unknowns with a clear error.",
+      "description": "Operator-editable caps file at ~/.jarvis/quota_caps.json. Schema: {schema_version: 1, defaults: {claude_tier}, <vendor>: {<tier>: {<window>: {cap, unit, _note?}}}}. NOT in repo (lives in ~/.jarvis/, outside the tree). NOT reusing dashboard/state/costs.json (different audience: app-level GCP $-spend vs per-vendor agent quota — see feedback_operator_config_separation.md). Sibling subcommands on `python -m jarvis_orchestrate`: `quota-caps init [--overwrite]` writes a starter file (samples current Codex rolling_5h via _codex_usage_v2 to derive cap = ceil(observed * 1.25); falls back to high provisional 1B tokens if no sample; refuses to overwrite without flag); `quota-caps show` reads + validates the file and prints effective caps. Starter caps: claude.max_20x rolling_7d/rolling_5h cap=100 unit=percent_of_plan with _note flagging the F006 uncalibrated-skip requirement; codex.plus.rolling_5h unit=tokens_local_proxy (NOT messages_estimate — F006 compares against observed_native which is tokens, so messages_estimate would silently false-trip); gemini.code_assist_individuals.rolling_24h cap=1000 unit=requests; grok={} (empty until F003 detects a real signal). Loader validates schema_version + KNOWN_VENDORS/TIERS/WINDOWS/UNITS at load-time; rejects unknowns with named-key errors. Permits underscore-prefixed keys (_note, _owner) so operators can comment inline. defaults.claude_tier informs _detect_claude_tier (F003) so the cap-key tier and the v2 vendors{} block tier match without a separate config.",
       "steps": [
-        "Define the JSON shape (in-code, not a published JSON schema)",
-        "Implement quota_caps_loader.py with load(), get(vendor, tier, window), validate()",
-        "Add `quota-caps init` CLI subcommand",
-        "Add `quota-caps show` CLI subcommand",
-        "Add unit tests for loader (validation rejects unknown keys, get() returns expected cap)"
+        "Define KNOWN_VENDORS/TIERS/WINDOWS/UNITS vocabularies in quota_caps_loader.py",
+        "Implement starter_caps() with codex_observed_5h derivation and high provisional fallback",
+        "Implement validate() rejecting unknown keys + permitting underscore-prefixed siblings",
+        "Implement load() / get() / init_starter_file() / show()",
+        "Wire quota-caps init / quota-caps show subcommands in jarvis_orchestrate.cli (sibling pattern with ps/approve/resume/claude-touch)",
+        "Lazy-import quota_check in cli to sample codex without circular dependency",
+        "Add tests covering starter generation, schema validation rejections, load round-trip, init refuse-overwrite, get() segment-miss handling, show() rendering"
       ],
-      "acceptance": "(1) `quota-caps init` creates ~/.jarvis/quota_caps.json with the documented defaults. (2) `quota-caps show` prints effective caps in a readable format including the operator file path and unit per cap. (3) Loader rejects a file with an unknown vendor key or an unknown window key under a known vendor, with an error message naming the offending key. (4) Loader does not require Claude tier to be detected — Claude tier is operator-set, default max_20x.",
-      "passes": false,
+      "acceptance": "(1) `quota-caps init` writes ~/.jarvis/quota_caps.json with starter shape; codex.plus.rolling_5h.cap derived from observed rolling_5h * 1.25 when sample available, else CODEX_PROVISIONAL_CAP. (2) `quota-caps show` prints effective caps with vendor/tier/window/cap/unit/note, no traceback on missing file (clear QuotaCapsError instead). (3) Loader rejects unknown vendor/tier/window/unit keys at validate-time with named-key errors. (4) defaults.claude_tier='max_20x' is read by _detect_claude_tier so the vendors{} block tier matches the cap key. (5) Codex starter cap unit is tokens_local_proxy (matches the v2 observed_unit), NOT messages_estimate. (6) init refuses to overwrite an existing file without --overwrite. (7) Underscore-prefixed sibling keys (_note, _owner) ignored by validator.",
+      "passes": true,
+      "verified_at": "2026-04-30T18:00:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/quota_caps_loader.py",
+          "captured_at": "2026-04-30T18:00:00Z",
+          "captured_by": "claude",
+          "note": "New module with KNOWN_VENDORS/TIERS/WINDOWS/UNITS vocabularies + starter_caps + validate + load + get + init_starter_file + show. Codex starter unit set to tokens_local_proxy (corrected from initially-proposed messages_estimate per operator feedback — observed_native unit must match cap unit or F006 false-trips immediately). Claude windows carry _note flagging F006's uncalibrated-skip requirement. Underscore-prefixed sibling keys permitted by validator so operators can comment inline."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_at": "2026-04-30T18:00:00Z",
+          "captured_by": "claude",
+          "note": "Added _quota_caps_main subcommand handler routing init/show. Lazy-imports quota_check to sample current Codex rolling_5h without circular dep. Init reports the derived cap on success; show prints the loaded data via quota_caps_loader.show(). Errors surface as exit 2 with a clear `[quota-caps]` prefix."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_quota_caps_loader.py",
+          "captured_at": "2026-04-30T18:00:00Z",
+          "captured_by": "claude",
+          "note": "20 tests covering: starter codex cap derivation (with + without sample), uncalibrated warning in Claude _note, defaults.claude_tier compatibility with F003, validate accepts starter, parametrized validate rejection of 6 mutations (schema_version, vendor, cap negative, unit unknown, window unknown, tier unknown), underscore-key permissiveness, init round-trip, init refuse-without-overwrite, load on missing/invalid/validation-error, get() segment-miss handling, show() rendering."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-04-30T18:00:00Z",
+          "captured_by": "claude",
+          "note": "252 passed, 6 skipped (was 232+6 before F004; +20 new loader tests). Full orchestrate sweep regression-clean."
+        },
+        {
+          "type": "test_output",
+          "uri": "init_starter_file smoke + show()",
+          "captured_at": "2026-04-30T18:00:00Z",
+          "captured_by": "claude",
+          "note": "Live invocation with codex_observed_5h=237258206 derived cap=296572758 = ceil(237258206 * 1.25). show() output rendered all 4 vendors + tier + window + cap + unit + _note correctly, with grok showing '(no caps configured)' as expected for empty block."
+        }
+      ],
       "depends_on": ["F003"]
     },
     {
@@ -172,16 +213,21 @@
       "id": "F006",
       "category": "tooling",
       "phase": 2,
-      "description": "Breaker rewrite in scripts/jarvis_orchestrate/circuit_breakers.py. check_budget_ceiling(plan, agent): for each window in state.vendors[agent].windows, compute (observed_native * (calibration.ratio or 1.0)) / cap_from_quota_caps_json; trip if any window > 1.0. INBOX wording surfaces (a) which window tripped, (b) tier, (c) observed vs cap, (d) calibration confidence label. Backward-compat fallback: if state.vendors block missing (legacy state shape), use old percent_weekly path with deprecation log. Plan-level quota_caps field still consulted as a per-plan override IF present, else fall back to operator caps file (operator caps file is the source of truth for defaults; per-plan override remains supported for plans that already declare it, but no new plan needs to declare it). Plan 004's open D001 ('which of three semantics') is answered structurally: per-vendor per-window absolute usage ceiling, semantic (1) generalized.",
+      "description": "Breaker rewrite in scripts/jarvis_orchestrate/circuit_breakers.py + migration of three sibling orchestrator-side consumers (supervisor._quota_gate, quota_admission, signoff_writer) per the rg consumer scan in F002. check_budget_ceiling(plan, agent): for each window in state.vendors[agent].windows, look up cap+unit via quota_caps_loader.get(vendor, tier, window); compute (observed_native * (calibration.ratio or 1.0)) / cap; trip if any window > 1.0. CRITICAL CALIBRATION-SAFETY RULE: when the window has a calibration block AND calibration.confidence == 'uncalibrated', SKIP the budget_ceiling check for that window and emit an INBOX `calibration_required` event with body pointing operators at `python -m jarvis_orchestrate calibrate-claude --dashboard-pct N` (F005). This prevents Claude weighted_tokens_local_proxy values (hundreds of millions) from false-tripping against percent_of_plan caps (max 100) before F005 calibration runs. INBOX 'breaker_tripped' wording surfaces (a) which window tripped, (b) tier, (c) observed vs cap, (d) calibration confidence label. Backward-compat fallback: if state.vendors block missing (legacy state shape), use old models{}.percent_weekly path with a single-shot deprecation log. Plan-level quota_caps field still consulted as a per-plan override IF present (most plans now omit per D010); else fall back to operator caps file as source of truth. Plan 004's original D001 ('which of three semantics') is answered structurally: per-vendor per-window absolute usage ceiling, semantic (1) generalized. Three sibling consumers also migrate in this slice: supervisor._quota_gate(agent) reads vendors{}.<agent>.windows for soft-warn at >=90% (autonomous tier), prefer rolling_5h primary; quota_admission.QuotaCheck reads vendors{} for defer:quota_threshold; signoff_writer summarizes per-vendor per-window observed values instead of flat percent_weekly. All three keep the legacy models{} fallback path active (writer-side mirror still emits per F002 D011 mirror policy).",
       "steps": [
-        "Rewrite check_budget_ceiling to read v2 state shape, with legacy fallback",
-        "Look up cap from operator caps file via quota_caps_loader.get(vendor, tier, window)",
-        "Apply calibration ratio when present",
-        "Compute per-window pct, trip on first > 1.0, record which window tripped",
-        "Update INBOX gate-pause event wording to surface window + tier + observed/cap + confidence",
-        "Update existing F006 budget_ceiling tests to cover (a) v2 path with caps file, (b) legacy fallback, (c) calibrated Claude path, (d) per-plan override still works"
+        "Rewrite check_budget_ceiling to read v2 state shape via vendors{}.<agent>.windows",
+        "Add calibration-safety: skip window when calibration.confidence == 'uncalibrated', emit INBOX calibration_required event",
+        "Look up cap from operator caps file via quota_caps_loader.get(vendor, tier, window); fall back to plan.quota_caps[agent] if declared",
+        "Apply calibration.ratio (default 1.0 for uncalibrated, treated as no-op since window is skipped anyway)",
+        "Compute per-window pct, trip on first window > 1.0, record window+tier+observed+cap+confidence in trip reason",
+        "Update INBOX gate-pause event wording (breaker_tripped + calibration_required)",
+        "Migrate supervisor._quota_gate to read vendors{} primarily, legacy models{} fallback, single deprecation log per process",
+        "Migrate quota_admission to read vendors{}.<agent>.windows for defer:quota_threshold, prefer rolling_5h primary",
+        "Migrate signoff_writer to surface per-vendor per-window observed values (claude_rolling_7d_pct, codex_rolling_5h_observed, etc.) without dropping the legacy claude_percent / codex_percent fields the audit schema currently expects",
+        "Update existing F006/F007 test fixtures to v2 state shape; keep mirror-fallback tests for legacy fallback coverage",
+        "Add new tests: uncalibrated-Claude window skip, calibrated-Claude trips correctly, codex rolling_5h cap-from-caps-file trip, gemini requests cap, vendors-block-missing legacy fallback, plan.quota_caps per-plan override path"
       ],
-      "acceptance": "(1) Check_budget_ceiling trips correctly when any window's observed * ratio > cap from caps file. (2) INBOX 'breaker_tripped' event includes window+tier+observed+cap+confidence. (3) Legacy state shape (no vendors block) still works via fallback with a deprecation warning. (4) All existing F006 budget_ceiling tests green; 4 new tests for v2 path scenarios green. (5) On this machine after F005 calibration, breaker does NOT falsely trip on Claude when the dashboard shows <80% (current behavior trips at any non-trivial use).",
+      "acceptance": "(1) check_budget_ceiling trips correctly when any window's calibrated observed > cap from caps file; window+tier+cap surfaced in trip reason. (2) Uncalibrated Claude windows are SKIPPED (no trip), and an INBOX calibration_required event fires once per dispatch. (3) INBOX breaker_tripped event includes window+tier+observed+cap+confidence. (4) Legacy state shape (no vendors block) still works via fallback with a deprecation log. (5) supervisor._quota_gate reads vendors{} for soft-warn; quota_admission reads vendors{} for defer:quota_threshold; signoff_writer surfaces v2 fields without breaking the existing audit/signoff schema. (6) Existing F006 + F007 + F008 + signoff tests pass after fixture updates. (7) New v2-path tests added (uncalibrated skip, calibrated trip, per-vendor cap, legacy fallback, per-plan override). (8) On this machine post-F005 calibration: Claude rolling_7d does NOT falsely trip when the dashboard shows <80%; Codex rolling_5h trips at observed > cap=296M (the F004 starter cap derived at this date).",
       "passes": false,
       "depends_on": ["F002", "F004", "F005"]
     },

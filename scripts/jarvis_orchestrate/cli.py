@@ -18,6 +18,10 @@ Engagement-surface gate handling (F008 + F006 + F007):
 
 Interactive backoff touch (F007 Slice 2):
   python -m jarvis_orchestrate claude-touch               # record human Claude request now
+
+Operator quota caps (plan 2026-04-30-001 F004):
+  python -m jarvis_orchestrate quota-caps init [--overwrite]
+  python -m jarvis_orchestrate quota-caps show
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ from jarvis_orchestrate import (
     interactive_state,
     plan_loader,
     quota_admission,
+    quota_caps_loader,
     supervisor,
 )
 from jarvis_orchestrate import (
@@ -193,6 +198,72 @@ def _claude_touch_main(argv: list[str]) -> int:
     return 0
 
 
+def _quota_caps_main(argv: list[str]) -> int:
+    """Plan 2026-04-30-001 F004: operator-editable per-vendor quota caps.
+
+    Subcommands:
+      init    Write starter ~/.jarvis/quota_caps.json. Samples current Codex
+              rolling_5h usage to derive a generous starter cap (* 1.25).
+              Refuses to overwrite without --overwrite.
+      show    Read + validate the file, print effective caps.
+    """
+    if not argv or argv[0] not in {"init", "show"}:
+        print(
+            "usage: jarvis-orchestrate quota-caps {init|show} [--overwrite]",
+            file=sys.stderr,
+        )
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "init":
+        overwrite = "--overwrite" in rest
+        # Sample codex rolling_5h via quota_check (sibling of jarvis_orchestrate
+        # under scripts/). Lazy-import to keep the loader decoupled.
+        codex_observed: int | None = None
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+            import quota_check as qc
+
+            sample = qc._codex_usage_v2("rolling_5h")
+            codex_observed = int(sample.get("observed_native") or 0) or None
+        except (ImportError, OSError, RuntimeError) as exc:
+            print(
+                f"[quota-caps] codex sample failed ({exc}); using high provisional cap",
+                file=sys.stderr,
+            )
+            codex_observed = None
+        try:
+            data = quota_caps_loader.init_starter_file(
+                codex_observed_5h=codex_observed,
+                overwrite=overwrite,
+            )
+        except quota_caps_loader.QuotaCapsError as exc:
+            print(f"[quota-caps] {exc}", file=sys.stderr)
+            return 2
+        print(f"[quota-caps] wrote {quota_caps_loader.CAPS_FILE}")
+        if codex_observed is not None:
+            cap = data["codex"]["plus"]["rolling_5h"]["cap"]
+            print(
+                f"[quota-caps] codex.plus.rolling_5h cap={cap} "
+                f"(observed {codex_observed} * 1.25)"
+            )
+        else:
+            print(
+                "[quota-caps] codex cap = high provisional; re-run after some "
+                "usage exists to derive a tighter cap"
+            )
+        return 0
+
+    # show
+    try:
+        print(quota_caps_loader.show())
+    except quota_caps_loader.QuotaCapsError as exc:
+        print(f"[quota-caps] {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     if raw and raw[0] == "ps":
@@ -203,6 +274,8 @@ def main(argv: list[str] | None = None) -> int:
         return _resume_main(raw[1:])
     if raw and raw[0] == "claude-touch":
         return _claude_touch_main(raw[1:])
+    if raw and raw[0] == "quota-caps":
+        return _quota_caps_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
