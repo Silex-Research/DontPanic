@@ -22,6 +22,9 @@ Interactive backoff touch (F007 Slice 2):
 Operator quota caps (plan 2026-04-30-001 F004):
   python -m jarvis_orchestrate quota-caps init [--overwrite]
   python -m jarvis_orchestrate quota-caps show
+
+Claude calibration (plan 2026-04-30-001 F005):
+  python -m jarvis_orchestrate calibrate-claude --dashboard-pct N [--window rolling_7d|rolling_5h]
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ from pathlib import Path
 
 from jarvis_orchestrate import (
     active_supervisors,
+    calibration_loader,
     gate_pause,
     inbox,
     interactive_state,
@@ -264,6 +268,94 @@ def _quota_caps_main(argv: list[str]) -> int:
     return 0
 
 
+def _calibrate_claude_main(argv: list[str]) -> int:
+    """Plan 2026-04-30-001 F005: write Claude calibration ratio to the sticky
+    file at ~/.jarvis/quota_calibration.json so F006 can convert the local
+    weighted_tokens_local_proxy signal into a comparable percent_of_plan number.
+
+    Reads observed_native from the requested window of the current
+    ~/.jarvis/quota_state.json. The operator supplies the matching dashboard
+    percent (claude.ai/settings/usage). Ratio = dashboard_pct / observed_native.
+    """
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate calibrate-claude",
+        description=__doc__,
+    )
+    parser.add_argument(
+        "--dashboard-pct",
+        type=float,
+        required=True,
+        help=(
+            "Current weekly% (rolling_7d) or session% (rolling_5h) shown on "
+            "claude.ai/settings/usage. Must be in (0, 100]."
+        ),
+    )
+    parser.add_argument(
+        "--window",
+        default="rolling_7d",
+        choices=sorted(calibration_loader.SUPPORTED_WINDOWS),
+        help="Window to calibrate (default: rolling_7d).",
+    )
+    args = parser.parse_args(argv)
+
+    # Read the corresponding observed_native from current quota state. We need
+    # the latest tracker output; if missing, ask operator to refresh first.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    try:
+        import quota_check as qc
+    except ImportError as exc:
+        print(f"[calibrate-claude] failed to import quota_check: {exc}", file=sys.stderr)
+        return 2
+
+    state_path = Path.home() / ".jarvis" / "quota_state.json"
+    if not state_path.is_file():
+        print(
+            f"[calibrate-claude] {state_path} missing; run "
+            "`python3 scripts/quota_check.py` first to generate it",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        import json as _json
+        state = _json.loads(state_path.read_text())
+    except (OSError, _json.JSONDecodeError) as exc:
+        print(f"[calibrate-claude] failed to read quota_state: {exc}", file=sys.stderr)
+        return 2
+
+    claude_block = state.get("vendors", {}).get("claude", {})
+    window_block = claude_block.get("windows", {}).get(args.window, {})
+    observed_native = window_block.get("observed_native")
+    if not isinstance(observed_native, (int, float)) or observed_native <= 0:
+        print(
+            f"[calibrate-claude] vendors.claude.windows.{args.window}.observed_native "
+            f"is missing or zero in {state_path}; refresh tracker first or pick the "
+            "other window. Calibrating against zero observed is meaningless.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        entry = calibration_loader.write_calibration(
+            vendor="claude",
+            window=args.window,
+            dashboard_pct=args.dashboard_pct,
+            observed_native=float(observed_native),
+        )
+    except calibration_loader.CalibrationError as exc:
+        print(f"[calibrate-claude] {exc}", file=sys.stderr)
+        return 2
+
+    print(
+        f"[calibrate-claude] wrote {calibration_loader.CALIBRATION_FILE}\n"
+        f"  vendor=claude window={args.window}\n"
+        f"  dashboard_pct={entry['dashboard_pct']}  observed_native={int(entry['observed_native'])}\n"
+        f"  ratio={entry['ratio']:.6e}  confidence={entry['confidence']}\n"
+        f"  stamped_at={entry['stamped_at']}\n"
+        "Re-run `python3 scripts/quota_check.py` to see the calibrated state."
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     if raw and raw[0] == "ps":
@@ -276,6 +368,8 @@ def main(argv: list[str] | None = None) -> int:
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
+    if raw and raw[0] == "calibrate-claude":
+        return _calibrate_claude_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

@@ -197,16 +197,64 @@
       "id": "F005",
       "category": "tooling",
       "phase": 2,
-      "description": "Claude calibration command. `python -m jarvis_orchestrate calibrate-claude --dashboard-pct N [--window rolling_7d]`. Reads current observed_native for the named window from quota_state.json, computes ratio = dashboard_pct / observed_native, writes a calibration block back into quota_state.json under vendors.claude.windows[<window>].calibration: {ratio, confidence: 'manual', source: 'operator_dashboard_sample', stamped_at: <iso utc>}. Confidence levels: uncalibrated (default 0.0 ratio = no calibration applied), manual (operator-sampled), auto (reserved — NOT implemented because no Anthropic API exists). Tracker output always surfaces confidence label + stamped_at; warns to stderr if stamped_at is >7 days old. Re-calibration cadence is operator's responsibility — plan does not auto-trigger.",
+      "description": "Claude calibration command + sticky storage. CLI: `python -m jarvis_orchestrate calibrate-claude --dashboard-pct N [--window rolling_7d|rolling_5h]` (default rolling_7d). Reads observed_native for the named window from current ~/.jarvis/quota_state.json. Computes ratio = dashboard_pct / observed_native. Writes the calibration to a SEPARATE sticky file at ~/.jarvis/quota_calibration.json (NOT in-place mutation of quota_state.json — that file is generated state, overwritten on every quota_check.py refresh; calibration is operator configuration that must survive refreshes). Sticky shape: {schema_version: 1, claude: {<window>: {ratio, confidence:'manual', source:'operator_dashboard_sample', dashboard_pct, observed_native, stamped_at}}}. quota_check._build_state lazy-imports calibration_loader.load() (fail-soft, returns {} on any missing/malformed input) and merges matching block into vendors.claude.windows.<window>.calibration via get_for_window which projects to the breaker shape (ratio/confidence/source/stamped_at — drops dashboard_pct + observed_native operator-input metadata). When no sticky entry exists, the uncalibrated default block (ratio:null, confidence:'uncalibrated', source:null, stamped_at:null) is preserved. Confidence levels: uncalibrated (default), manual (this command's output), auto (RESERVED — never set automatically; would require a vendor API that does not exist for the consumer Max plan). Guardrails: dashboard_pct must be in (0, 100], observed_native must be positive (rejects zero), --window restricted to {rolling_7d, rolling_5h} (Claude has no 24h window). quota_check.py main() emits stderr warning when any Claude calibration is older than 7 days (STALE_WARNING_DAYS); operator owns re-cal cadence. Aged calibration still applies (no auto-revert) — warning prompts re-sample.",
       "steps": [
-        "Add calibrate-claude CLI subcommand with --dashboard-pct (required) + --window (default rolling_7d)",
-        "Implement ratio computation + calibration block writeback into quota_state.json",
-        "Update _claude_usage_v2 output (and tracker print summary) to surface calibration.confidence + stamped_at",
-        "Add stale-calibration warning (>7 days) to stderr",
-        "Add unit test for the calibrate command (uses a fixture quota_state.json)"
+        "Create scripts/jarvis_orchestrate/calibration_loader.py with load (fail-soft), get_for_window (breaker-shape projection), write_calibration (validate + ratio compute + atomic merge), is_stale (with timezone-aware fromisoformat fallback)",
+        "Add calibrate-claude CLI subcommand in jarvis_orchestrate.cli with argparse for --dashboard-pct + --window",
+        "CLI handler: lazy-import quota_check, read observed_native from current state file, validate >0, call write_calibration, print confirmation with all 4 fields",
+        "Modify scripts/quota_check.py _build_state to lazy-import calibration_loader and merge sticky entry into Claude windows; rolling_5h/rolling_7d both pass through _with_calibration with their window name",
+        "Add stale-calibration stderr warning in main() iterating vendors.claude.windows, calling is_stale on each manual entry",
+        "Update existing v2-shape test fixtures to monkeypatch calibration_loader.load → {} for hermetic isolation from operator-set sticky file",
+        "Add tests covering load fail-soft (missing/malformed/wrong schema), write round-trip, write_calibration input validation (8 parametrized cases), get_for_window breaker-shape projection + miss handling, is_stale boundary, end-to-end _build_state integration test"
       ],
-      "acceptance": "(1) Calibrate command writes a valid calibration block with all four fields. (2) Subsequent quota_check runs apply the ratio and surface 'confidence: manual, stamped 2026-04-30' in the printed summary. (3) After artificially aging the timestamp >7 days, the next run prints a stderr warning recommending re-cal. (4) Without calibration, output shows 'confidence: uncalibrated' and applies ratio=1.0.",
-      "passes": false,
+      "acceptance": "(1) Calibrate command writes ~/.jarvis/quota_calibration.json with schema_version: 1 + claude.<window>.{ratio,confidence,source,dashboard_pct,observed_native,stamped_at}. (2) Subsequent quota_check.py runs apply the ratio; vendors.claude.windows.<window>.calibration.confidence=='manual' and ratio matches dashboard_pct/observed_native. (3) Sticky file survives quota_check.py refreshes (no in-place mutation of generated state). (4) Calibrating rolling_5h does not erase rolling_7d entry (and vice versa). (5) Guardrails reject dashboard_pct ∉ (0, 100], observed_native ≤ 0, unknown window. (6) Stamped_at older than 7 days produces stderr warning during quota_check.py run. (7) Without sticky calibration, vendors.claude.windows.<window>.calibration stays uncalibrated default. (8) Live verification on this machine: calibrate-claude --dashboard-pct 13 --window rolling_7d → quota_check.py shows calibration=manual on rolling_7d, calibration=uncalibrated on rolling_5h, ratio ≈ 2.22e-08 (= 13.0 / 585M weighted_tokens_local_proxy).",
+      "passes": true,
+      "verified_at": "2026-04-30T23:25:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/calibration_loader.py",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "New module: load (fail-soft, never raises during quota refresh), get_for_window (breaker-shape projection — strips dashboard_pct/observed_native operator metadata), write_calibration (input validation + atomic merge preserving sibling windows), is_stale (timezone-aware boundary check, missing/malformed timestamps treated as not-stale). CONFIDENCE_LEVELS = {uncalibrated, manual, auto} with auto reserved. SUPPORTED_WINDOWS restricted to rolling_7d + rolling_5h (Claude-only — no 24h)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "Added _calibrate_claude_main subcommand handler. Reads observed_native from current ~/.jarvis/quota_state.json (refuses if missing or zero); computes ratio; writes sticky file via calibration_loader.write_calibration. Prints confirmation with vendor + window + dashboard_pct + observed_native + ratio + confidence + stamped_at."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/quota_check.py",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "_build_state lazy-imports calibration_loader and merges sticky entries via get_for_window into Claude windows; uncalibrated default preserved when no sticky entry. main() emits stderr warning per Claude window with calibration.confidence == 'manual' AND is_stale(>7 days). _with_calibration signature gained the window_name arg so the merge can route to the right sticky entry."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_calibration_loader.py",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "17 tests covering: load fail-soft (3 cases — missing/malformed/wrong-schema), write round-trip, sibling-window preservation, parametrized input validation (8 cases — dashboard_pct out of bounds, observed_native ≤ 0, unknown window, unknown confidence), get_for_window breaker-shape projection, get_for_window miss handling, is_stale boundary (3-day fresh, 8-day aged, 7d+1s edge, missing/malformed/None timestamps), end-to-end quota_check integration test (writes sticky, monkeypatches CALIBRATION_FILE + helpers, asserts rolling_7d gets manual calibration and rolling_5h stays uncalibrated)."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "269 passed, 6 skipped (was 252+6 before F005; +17 new calibration tests). Existing v2 test fixture in test_quota_check_v2.py updated to monkeypatch calibration_loader.load → {} so state-shape tests stay hermetic regardless of operator-set sticky file."
+        },
+        {
+          "type": "test_output",
+          "uri": "live: python -m jarvis_orchestrate calibrate-claude --dashboard-pct 13 --window rolling_7d",
+          "captured_at": "2026-04-30T23:25:00Z",
+          "captured_by": "claude",
+          "note": "Wrote ~/.jarvis/quota_calibration.json with ratio=2.220128e-08 = 13.0 / 585551755 weighted_tokens_local_proxy. Subsequent python3 scripts/quota_check.py shows: claude rolling_7d calibration=manual, claude rolling_5h calibration=uncalibrated. Stale-warning verified by manually aging stamped_at to 8 days ago — stderr emitted single ⚠ line per stale window pointing at the calibrate command. Restored stamped_at to current after verification."
+        }
+      ],
       "depends_on": ["F002"]
     },
     {

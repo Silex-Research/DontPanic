@@ -250,6 +250,12 @@ def _stub_helpers(monkeypatch) -> None:
     monkeypatch.setattr(qc, "_detect_codex_tier", lambda *a, **k: {"tier": "plus", "source": "/fake", "signal": "ok"})
     monkeypatch.setattr(qc, "_detect_gemini_tier", lambda *a, **k: {"tier": "code_assist_individuals", "source": "/fake", "signal": "oauth"})
     monkeypatch.setattr(qc, "_detect_grok_tier", lambda *a, **k: {"tier": "absent", "source": "/fake", "signal": "absent"})
+    # Hermetic isolation from operator-set ~/.jarvis/quota_calibration.json (F005):
+    # _build_state lazy-imports calibration_loader and calls .load() with no args
+    # → reads the real file. Patch .load to return {} so the v2 state-shape tests
+    # always see uncalibrated default blocks regardless of operator state.
+    from jarvis_orchestrate import calibration_loader as _cal
+    monkeypatch.setattr(_cal, "load", lambda *a, **k: {})
 
 
 def test_build_state_emits_schema_v2_with_vendors_block(monkeypatch) -> None:
