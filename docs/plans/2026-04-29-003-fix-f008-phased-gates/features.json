@@ -1,0 +1,25 @@
+{
+  "task_id": "2026-04-29-003-fix-f008-phased-gates",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Phased gate evaluation in dispatch_volley. pre_impl-phase gates are checked before iteration 0 (current behavior). pre_merge-phase gates are checked ONLY after the volley terminates with final_status=signed_off, and BEFORE any merge step would land. Other terminal states (stopped_*, paused_on_gate, blocked) skip pre_merge entirely. A small phase-classification mapping lives alongside gate_pause; unknown gate names default to pre_impl for backward compatibility. INBOX events for pre_merge pauses reference the signoff_id so the operator knows what they are approving.",
+      "steps": [
+        "Add gate-phase classification helper (e.g. gate_pause.classify_phase(name) -> 'pre_impl'|'pre_merge') with default-to-pre_impl for unknown names",
+        "Refactor supervisor.dispatch_volley so the upfront _check_gates evaluates only pre_impl-phase gates",
+        "Add post-signoff pre_merge evaluation in _emit_volley_terminal (or equivalent) gated on final_status == 'signed_off'",
+        "Update INBOX gate_hit writer for pre_merge to include signoff_id and post-iteration timing context",
+        "Decide pre_merge behavior on needs_changes / re-iterate paths (likely: pre_merge does NOT fire — sign-off is binary)",
+        "Update existing F008 tests that asserted upfront pre_merge pause; add new tests for post-signoff timing and skip-on-non-signoff terminals",
+        "Run regression sweep across all F008 + supervisor test modules",
+        "Empirical re-run: changelog plan or a fresh trivial sub-plan, confirm phased semantics in audit/gate-state.json + INBOX.md"
+      ],
+      "acceptance": "(1) Synthetic plan with always-sign-off mock executor pauses only on pre_impl before iter 0; after clearing pre_impl, volley signs off, then supervisor re-pauses on pre_merge with INBOX event referencing the signoff_id. (2) Synthetic plan that terminates with stopped_budget produces NO pre_merge pause; gate-state.json shows pre_merge as still un-cleared but supervisor terminates without re-prompting. (3) All F008 + supervisor tests green. (4) Dogfood re-run confirms phased semantics empirically.",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
