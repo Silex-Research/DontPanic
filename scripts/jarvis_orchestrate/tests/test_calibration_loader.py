@@ -39,6 +39,25 @@ def test_load_returns_empty_on_wrong_schema_version(tmp_path: Path) -> None:
     print("  ✓ schema_version != 1 ignored (forward-incompat safety)")
 
 
+def test_write_calibration_is_atomic(tmp_path: Path) -> None:
+    """write_calibration uses tmp+os.replace so a concurrent reader never
+    sees a partially-written file. Verify the .tmp sibling is gone after a
+    successful write."""
+    print("\n[test] write_calibration_is_atomic ...")
+    p = tmp_path / "quota_calibration.json"
+    cal.write_calibration(
+        vendor="claude", window="rolling_7d",
+        dashboard_pct=13.0, observed_native=585_000_000, now=NOW, path=p,
+    )
+    assert p.is_file()
+    # .tmp sibling cleaned up by os.replace
+    assert not (tmp_path / "quota_calibration.json.tmp").exists()
+    # File contains valid JSON (not truncated)
+    parsed = json.loads(p.read_text())
+    assert parsed["claude"]["rolling_7d"]["dashboard_pct"] == 13.0
+    print("  ✓ atomic write + tmp cleanup + valid JSON post-write")
+
+
 def test_write_calibration_round_trip(tmp_path: Path) -> None:
     print("\n[test] write_calibration_round_trip ...")
     p = tmp_path / "quota_calibration.json"
