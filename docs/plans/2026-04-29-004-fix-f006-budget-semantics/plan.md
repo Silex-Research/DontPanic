@@ -3,7 +3,7 @@ id: 2026-04-29-004-fix-f006-budget-semantics
 title: F006 budget semantics — quota_caps schema/breaker mismatch
 type: fix
 tier: local
-status: draft
+status: blocked
 date: "2026-04-29"
 description: |
   The plan-level `quota_caps` field is bounded `[0, 100]` in both `claude/shared/schemas/v1.0/plan.schema.json` (`maximum: 100`) and `claude/shared/schemas/v1.0/models/plan_model.py` (`confloat(ge=0.0, le=100.0)`), but the runtime telemetry it is compared against — `percent_weekly` from `~/.jarvis/quota_state.json` — is unbounded above 100% (the weekly cap is a soft estimate, not a hard subscription limit). When real usage exceeds 100% (claude is currently at 320.6%), no plan-declared budget can clear F006 `budget_ceiling` without violating the schema. This is a real design flaw, not a small numbers tweak. Fix: redefine the field semantics rather than blindly raise the bound.
@@ -33,6 +33,7 @@ protected_paths:
 dependencies:
   - 2026-04-19-001-infra-cross-agent-orchestration
   - 2026-04-29-001-feat-changelog-skill
+  - 2026-04-30-001-fix-quota-tracker-vendor-native
 links:
   features: ./features.json
   decisions: ./decisions.jsonl
@@ -41,6 +42,14 @@ links:
 ---
 
 # F006 budget semantics — quota_caps schema/breaker mismatch
+
+> **Status: blocked (2026-04-30) — superseded by `2026-04-30-001-fix-quota-tracker-vendor-native`**
+>
+> Operator review of the Anthropic Max dashboard on 2026-04-30 surfaced that the underlying signal `percent_weekly` is wrong by ~25× (cache-token weighting + arbitrary 1B-token divisor + wrong window), and the same misalignment exists across all four vendors. The "which of three semantics" framing of D001-D004 below assumed `percent_weekly` was a usable signal that just needed a schema bound aligned to it. That premise no longer holds.
+>
+> The new plan replaces `quota_check.py` with per-vendor native windows + units + an operator caps file at `~/.jarvis/quota_caps.json`, and rewrites F006 `check_budget_ceiling` to read the new state shape. Once that lands, this plan reactivates as a small follow-up: remove the now-vestigial `quota_caps` field from `claude/shared/schemas/v1.0/plan.schema.json` + `plan_model.py`, update F006/F007 description text in the parent plan to reflect the per-vendor per-window model, and backfill any plan still declaring `quota_caps`. The original D001-D004 below become moot — the semantic is answered structurally (per-vendor per-window absolute usage ceiling), not picked.
+>
+> See decisions.jsonl D005 for the full pause record + reactivation criterion.
 
 ## Thesis
 
