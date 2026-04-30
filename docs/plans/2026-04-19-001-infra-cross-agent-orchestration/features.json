@@ -213,6 +213,13 @@
           "uri": "scripts/jarvis_orchestrate/tests/test_volley_synthetic.py",
           "captured_by": "claude",
           "note": "ScriptedExecutor (mock) + monkey-patched _run_round to inject auditor verdicts. Tests verify loop iteration, prompt threading, no-progress detection, cap termination."
+        },
+        {
+          "type": "commit",
+          "uri": "Jarvis@8995dee",
+          "captured_at": "2026-04-29T22:30:00Z",
+          "captured_by": "claude",
+          "note": "Changelog-skill dogfood — first supervised orchestrator dispatch with both implementer (claude) and auditor (codex). Iteration 0 ran end-to-end: audit/claude-implementer-i0.json + audit/codex-auditor-i0.json + signoff-...json + INBOX.md + transcript.md all landed with correct shape; F006 budget_ceiling fired correctly post-iteration on real quota_state.json data; command_guard discipline held (5 protected-path SHA-256 hashes unchanged). See docs/plans/2026-04-29-001-feat-changelog-skill/ for plan + decisions."
         }
       ],
       "depends_on": [
@@ -274,6 +281,13 @@
           "captured_at": "2026-04-26T09:00:00Z",
           "captured_by": "claude",
           "note": "F006 regression accommodation: the synthetic no_progress fixture's constant-finding-count needs_changes loop now matches diminishing_returns first (a more informative signal). Test relaxed to accept either stopped_no_progress or stopped_diminishing_returns as a valid F006 termination kind for the same observation."
+        },
+        {
+          "type": "commit",
+          "uri": "Jarvis@8995dee",
+          "captured_at": "2026-04-29T22:30:00Z",
+          "captured_by": "claude",
+          "note": "Changelog-skill dogfood — first supervised orchestrator dispatch with both implementer (claude) and auditor (codex). Iteration 0 ran end-to-end: audit/claude-implementer-i0.json + audit/codex-auditor-i0.json + signoff-...json + INBOX.md + transcript.md all landed with correct shape; F006 budget_ceiling fired correctly post-iteration on real quota_state.json data; command_guard discipline held (5 protected-path SHA-256 hashes unchanged). See docs/plans/2026-04-29-001-feat-changelog-skill/ for plan + decisions."
         }
       ],
       "depends_on": [
@@ -299,6 +313,15 @@
       "depends_on": [
         "F006",
         "F020"
+      ],
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "Jarvis@8995dee",
+          "captured_at": "2026-04-29T22:30:00Z",
+          "captured_by": "claude",
+          "note": "Changelog-skill dogfood — first supervised orchestrator dispatch with both implementer (claude) and auditor (codex). Iteration 0 ran end-to-end: audit/claude-implementer-i0.json + audit/codex-auditor-i0.json + signoff-...json + INBOX.md + transcript.md all landed with correct shape; F006 budget_ceiling fired correctly post-iteration on real quota_state.json data; command_guard discipline held (5 protected-path SHA-256 hashes unchanged). See docs/plans/2026-04-29-001-feat-changelog-skill/ for plan + decisions."
+        }
       ]
     },
     {
@@ -364,6 +387,13 @@
           "captured_at": "2026-04-26T07:00:00Z",
           "captured_by": "claude",
           "note": "F008 test evidence (9 tests): inbox round-trip + operator-body-edit tolerance; notify disable-env + missing-binary fallback; gate_pause evaluate/approve/resume/idempotent + record_pause history; signoff_writer signed_off + blocked schema validation; e2e — first dispatch pauses with no executor calls + INBOX gate_hit + gate-state written; partial approve still pauses on remaining gate; resume_all → executors run + signoff.json signed=true; INBOX captures full progression (gate_hit, gate_cleared, resumed, volley_start, volley_terminal)."
+        },
+        {
+          "type": "commit",
+          "uri": "Jarvis@8995dee",
+          "captured_at": "2026-04-29T22:30:00Z",
+          "captured_by": "claude",
+          "note": "Changelog-skill dogfood — first supervised orchestrator dispatch with both implementer (claude) and auditor (codex). Iteration 0 ran end-to-end: audit/claude-implementer-i0.json + audit/codex-auditor-i0.json + signoff-...json + INBOX.md + transcript.md all landed with correct shape; F006 budget_ceiling fired correctly post-iteration on real quota_state.json data; command_guard discipline held (5 protected-path SHA-256 hashes unchanged). See docs/plans/2026-04-29-001-feat-changelog-skill/ for plan + decisions."
         }
       ],
       "depends_on": [
@@ -940,6 +970,13 @@
           "captured_at": "2026-04-26T05:00:00Z",
           "captured_by": "codex",
           "note": "F023 acceptance — behavioral EC5 evidence: real codex-auditor audit produced by the same volley. target_context.env=='dev', target_context.project=='<firebase-project-id>', commands_run captures the actual shell commands codex ran (jq, git status, git diff, jq -e on target_context fields) — demonstrating EC6 commands_run parser working end-to-end against a real CLI subprocess. audit_status=signed_off."
+        },
+        {
+          "type": "commit",
+          "uri": "Jarvis@8995dee",
+          "captured_at": "2026-04-29T22:30:00Z",
+          "captured_by": "claude",
+          "note": "Changelog-skill dogfood — first supervised orchestrator dispatch with both implementer (claude) and auditor (codex). Iteration 0 ran end-to-end: audit/claude-implementer-i0.json + audit/codex-auditor-i0.json + signoff-...json + INBOX.md + transcript.md all landed with correct shape; F006 budget_ceiling fired correctly post-iteration on real quota_state.json data; command_guard discipline held (5 protected-path SHA-256 hashes unchanged). See docs/plans/2026-04-29-001-feat-changelog-skill/ for plan + decisions."
         }
       ],
       "depends_on": [

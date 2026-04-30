@@ -1,0 +1,25 @@
+{
+  "task_id": "2026-04-29-004-fix-f006-budget-semantics",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Realign quota_caps schema and breaker semantics. Pick one of three candidate semantics (absolute usage ceiling / remaining-budget floor / per-volley delta ceiling), document the choice, then update schema (claude/shared/schemas/v1.0/plan.schema.json maximum bound + claude/shared/schemas/v1.0/models/plan_model.py confloat bound) AND circuit_breakers.check_budget_ceiling to match. Bump agent-conventions to v1.x, subtree-pull into Jarvis, backfill all existing plans that declare quota_caps so they validate under the new schema. Dogfood re-run on the changelog plan confirms the F005a/F005b/F006/F008 surfaces still cohere end-to-end.",
+      "steps": [
+        "Pre-impl: write up the three candidate semantics with tradeoffs (absolute usage ceiling / remaining-budget floor / per-volley delta ceiling); pick one and record in decisions.jsonl",
+        "If field rename is chosen, design validator-side compat shim (one-release deprecation window) OR coordinate full backfill before bump",
+        "Update agent-conventions: plan.schema.json maximum bound + plan_model.py confloat bound + VERSION bump",
+        "Update circuit_breakers.check_budget_ceiling to match chosen semantic (with new tests)",
+        "Subtree-pull new agent-conventions into Jarvis claude/shared/ (same pattern as v1.1.0/v1.2.0/v1.3.0 pulls)",
+        "Backfill quota_caps in all existing Jarvis plans: 2026-04-19-001, 2026-04-25-001, 2026-04-26-006, 2026-04-28-001, 2026-04-29-001, 2026-04-29-002, 2026-04-29-003, this plan",
+        "Update existing F006 tests + add new tests for new boundary conditions",
+        "Dogfood re-run: changelog plan iteration 1 dispatches without schema rejection; post-iteration breaker fires correctly under new semantic"
+      ],
+      "acceptance": "(1) Schema bound and breaker code agree on a single named semantic; decision recorded in decisions.jsonl. (2) Real-world quota_caps values that previously failed validation now pass (e.g. claude:370 under semantic 1, OR cap:5 under semantic 3). (3) circuit_breakers.check_budget_ceiling test suite green; new tests cover cap==observed, cap<observed, cap==0, cap>100 (if applicable). (4) All existing Jarvis plans validate under the new schema. (5) Dogfood: changelog plan iteration 1 dispatch validates and runs.",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
