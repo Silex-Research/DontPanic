@@ -42,11 +42,24 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
 CAPS_FILE = Path.home() / ".jarvis" / "quota_caps.json"
 CAPS_SCHEMA_VERSION = 1
+
+
+def _effective_caps_path(path: Path | None) -> Path:
+    """Honor JARVIS_QUOTA_CAPS_PATH for hermetic test isolation, mirroring the
+    JARVIS_QUOTA_STATE_PATH / JARVIS_BREAKER_HISTORY_PATH / etc. pattern. An
+    explicit path arg always wins."""
+    if path is not None:
+        return path
+    env_override = os.environ.get("JARVIS_QUOTA_CAPS_PATH")
+    if env_override:
+        return Path(env_override)
+    return CAPS_FILE
 
 KNOWN_VENDORS = {"claude", "codex", "gemini", "grok"}
 
@@ -214,7 +227,7 @@ def validate(data: Any) -> list[str]:
 
 def load(path: Path | None = None) -> dict[str, Any]:
     """Read + validate caps file. Raises QuotaCapsError on any issue."""
-    p = path or CAPS_FILE
+    p = _effective_caps_path(path)
     if not p.is_file():
         raise QuotaCapsError(
             f"caps file not found at {p}; "

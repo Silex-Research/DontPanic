@@ -743,12 +743,19 @@ def dispatch_volley(
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.WALL_CLOCK, wc_reason, iteration
                 )
-            bd_tripped, bd_reason = circuit_breakers.check_budget_ceiling(
+            bd_result = circuit_breakers.check_budget_ceiling(
                 audit_paths, per_agent_caps
             )
-            if bd_tripped:
+            if bd_result.tripped:
+                # F006a returns a structured BudgetCeilingResult; F006b will
+                # route on bd_result.kind to emit the right INBOX event
+                # (calibration_required vs unit_mismatch vs config_required vs
+                # standard breaker pause). For now, all non-OK kinds funnel
+                # through breaker:budget_ceiling which is the safe default.
                 return _trip_and_return(
-                    circuit_breakers.BreakerKind.BUDGET_CEILING, bd_reason, iteration
+                    circuit_breakers.BreakerKind.BUDGET_CEILING,
+                    bd_result.reason,
+                    iteration,
                 )
 
             # Implementer round

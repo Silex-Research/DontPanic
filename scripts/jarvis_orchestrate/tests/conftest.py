@@ -54,4 +54,15 @@ def _isolate_jarvis_state(tmp_path, monkeypatch):
         "JARVIS_QUOTA_STATE_PATH",
         str(tmp_path / "quota_state.json"),
     )
+    # F006a: caps file path isolation matches the four above. Plus reset the
+    # circuit_breakers _warned_once dedup cache so warning assertions don't
+    # become order-dependent across tests.
+    monkeypatch.setenv(
+        "JARVIS_QUOTA_CAPS_PATH",
+        str(tmp_path / "quota_caps.json"),
+    )
+    from jarvis_orchestrate import circuit_breakers
+
+    circuit_breakers.reset_warning_cache()
     yield
+    circuit_breakers.reset_warning_cache()

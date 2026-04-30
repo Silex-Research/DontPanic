@@ -19,10 +19,14 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import sys
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import Any
+
+from jarvis_orchestrate import calibration_loader, quota_caps_loader
 
 # F006 history path. Test isolation: set JARVIS_BREAKER_HISTORY_PATH to a
 # tempfile in test setup so synthetic dispatches don't pollute the operator's
@@ -98,6 +102,75 @@ def gate_name(kind: BreakerKind) -> str:
     return f"breaker:{kind.value}"
 
 
+# ──────────────────────  F006a budget_ceiling structured result  ──────────────────────
+#
+# check_budget_ceiling returns a frozen dataclass so callers (supervisor today,
+# F006b sibling consumers tomorrow) can route per-kind to different INBOX
+# events without parsing the reason string. The checker is intentionally pure:
+# it observes state + caps + calibration and returns a verdict; INBOX writes
+# happen in the caller. Idempotence requirement: the checker can be invoked
+# more than once per volley, and the same state must produce the same kind
+# (the once-per-process warning de-dup is the only stateful side-effect, and
+# it's reset between tests via reset_warning_cache()).
+
+
+class BudgetCeilingKind(str, Enum):
+    OK = "ok"  # all participating windows under cap
+    TRIPPED = "tripped"  # observed * ratio > cap somewhere
+    CONFIG_REQUIRED = "config_required"  # caps file absent or invalid
+    CALIBRATION_REQUIRED = "calibration_required"  # Claude percent_of_plan + uncalibrated
+    UNIT_MISMATCH = "unit_mismatch"  # cap.unit != observed_unit (non-Claude)
+
+
+@dataclass(frozen=True)
+class BudgetCeilingResult:
+    """Structured outcome of check_budget_ceiling.
+
+    `tripped` is True for every non-OK kind so existing callers (`if tripped:`)
+    keep working unchanged. F006b will route on `kind` in the supervisor to
+    emit specific INBOX events (calibration_required → operator-action-required
+    pause; unit_mismatch → config-fix pause; tripped → standard breaker pause).
+    """
+
+    kind: BudgetCeilingKind
+    tripped: bool
+    reason: str
+    agent: str | None = None
+    tier: str | None = None
+    window: str | None = None
+    observed_native: float | None = None
+    observed_unit: str | None = None
+    cap: float | None = None
+    cap_unit: str | None = None
+    confidence: str | None = None
+    fallback_used: bool = False
+    details: dict[str, Any] = field(default_factory=dict)
+
+
+# Once-per-process warning de-dup keyed by (consumer, agent, condition).
+# Conditions used by F006a: legacy_fallback, no_cap_for_<window>, stale_<window>.
+# F006b consumers (supervisor._quota_gate, quota_admission) will share this set
+# under their own consumer keys.
+_warned_once: set[tuple[str, str, str]] = set()
+
+
+def _warn_once(consumer: str, agent: str, condition: str, message: str) -> None:
+    """Emit `message` to stderr at most once per (consumer, agent, condition)
+    triple per process. Test isolation: call reset_warning_cache() between
+    tests (the autouse fixture in conftest.py does this)."""
+    key = (consumer, agent, condition)
+    if key in _warned_once:
+        return
+    _warned_once.add(key)
+    print(message, file=sys.stderr)
+
+
+def reset_warning_cache() -> None:
+    """Clear the once-per-process warning de-dup state. Tests call this in an
+    autouse fixture so warning assertions don't become order-dependent."""
+    _warned_once.clear()
+
+
 # ──────────────────────────────  per-iteration checks  ──────────────────────────────
 
 
@@ -118,34 +191,8 @@ def _read_quota_state(path: Path | None = None) -> dict:
         return {}
 
 
-def check_budget_ceiling(
-    audit_paths: Iterable[Path],
-    per_agent_caps: dict[str, float] | None,
-    *,
-    quota_state_path: Path | None = None,
-) -> tuple[bool, str]:
-    """F006 budget breaker — read F020's ~/.jarvis/quota_state.json (the canonical
-    source of percent_weekly per agent) and trip when any agent that participated
-    in this volley has exceeded its plan-declared cap.
-
-    audit_paths is used only to determine which agents participated (audit_writer
-    emits agent + tokens_in/tokens_out, not percent_weekly — which is why the
-    earlier implementation read a phantom field and never tripped on real data).
-    Per-agent caps come from plan.quota_caps. When unset → no enforcement.
-
-    Returns (tripped, reason).
-    """
-    if not per_agent_caps:
-        return False, ""
-    state = _read_quota_state(quota_state_path)
-    if not state:
-        return False, ""
-    models = (state.get("models") or {}) if isinstance(state, dict) else {}
-
-    # Restrict the cap check to agents that actually showed up in this volley's
-    # audits — a global cap-overrun unrelated to the current dispatch shouldn't
-    # trip the per-volley breaker.
-    participating: set[str] = set()
+def _participating_agents(audit_paths: Iterable[Path]) -> set[str]:
+    out: set[str] = set()
     for ap in audit_paths:
         try:
             data = json.loads(ap.read_text())
@@ -153,24 +200,279 @@ def check_budget_ceiling(
             continue
         agent = data.get("agent")
         if agent:
-            participating.add(agent)
+            out.add(agent)
+    return out
 
-    for agent, cap in per_agent_caps.items():
-        if cap is None:
+
+def _check_budget_v2(
+    state: dict,
+    vendors: dict,
+    participating: set[str],
+    caps_path: Path | None,
+) -> BudgetCeilingResult:
+    """V2 path: per-vendor per-window cap lookup against operator caps file.
+
+    Plan-level quota_caps are intentionally ignored here per plan
+    2026-04-30-001 D010 + the F006a operator decision: those values are tied
+    to the broken percent_weekly model and would reintroduce the bug if they
+    overrode the operator caps file. Per-plan overrides remain available only
+    on the legacy fallback path (state.vendors{} missing).
+    """
+    try:
+        caps = quota_caps_loader.load(caps_path)
+    except quota_caps_loader.QuotaCapsError as exc:
+        return BudgetCeilingResult(
+            kind=BudgetCeilingKind.CONFIG_REQUIRED,
+            tripped=True,
+            reason=(
+                f"caps file unavailable: {exc}. Run "
+                "`python -m jarvis_orchestrate quota-caps init` to seed."
+            ),
+            details={"error": str(exc)},
+        )
+
+    # Iterate participating agents in deterministic order so test assertions
+    # against window-of-first-trip don't become order-dependent.
+    for agent in sorted(participating):
+        vblock = vendors.get(agent)
+        if not isinstance(vblock, dict):
             continue
-        if agent not in participating:
+        tier = vblock.get("tier") or "unknown"
+        windows = vblock.get("windows") or {}
+        if not isinstance(windows, dict):
+            continue
+        for window_name, window in windows.items():
+            if not isinstance(window, dict):
+                continue
+            cap_block = quota_caps_loader.get(caps, agent, tier, window_name)
+            if cap_block is None:
+                _warn_once(
+                    "budget_ceiling",
+                    agent,
+                    f"no_cap_for_{window_name}",
+                    f"[budget_ceiling] no cap for {agent}.{tier}.{window_name} "
+                    "in ~/.jarvis/quota_caps.json — skipping window. Operator "
+                    "may want to add it via `quota-caps init` or hand-edit.",
+                )
+                continue
+            observed_native = window.get("observed_native")
+            observed_unit = window.get("observed_unit")
+            if (
+                not isinstance(observed_native, (int, float))
+                or observed_native <= 0
+            ):
+                continue  # window has no signal; nothing to compare
+            cap_value = cap_block.get("cap")
+            cap_unit = cap_block.get("unit")
+            if not isinstance(cap_value, (int, float)) or cap_value <= 0:
+                # Defensive — quota_caps_loader.validate() should reject this.
+                continue
+            calibration = window.get("calibration") or {}
+            confidence = calibration.get("confidence") or "uncalibrated"
+            ratio = calibration.get("ratio")
+
+            if cap_unit == "percent_of_plan":
+                # Claude case. Calibration MUST be manual to convert
+                # weighted_tokens_local_proxy → percent_of_plan. Without it,
+                # observed (millions) / cap (100) false-trips immediately.
+                if confidence != "manual" or not isinstance(
+                    ratio, (int, float)
+                ):
+                    return BudgetCeilingResult(
+                        kind=BudgetCeilingKind.CALIBRATION_REQUIRED,
+                        tripped=True,
+                        reason=(
+                            f"{agent}.{tier}.{window_name} cap unit is "
+                            f"percent_of_plan but calibration.confidence="
+                            f"{confidence!r}; run `python -m "
+                            "jarvis_orchestrate calibrate-claude --dashboard-pct"
+                            f" N --window {window_name}`"
+                        ),
+                        agent=agent,
+                        tier=tier,
+                        window=window_name,
+                        observed_native=float(observed_native),
+                        observed_unit=observed_unit,
+                        cap=float(cap_value),
+                        cap_unit=cap_unit,
+                        confidence=confidence,
+                    )
+                # Calibration is manual + has a real ratio. Stale is a warn
+                # (operator already informed via quota_check.py stderr); we
+                # apply the ratio anyway because no-action is more dangerous.
+                if calibration_loader.is_stale(calibration):
+                    _warn_once(
+                        "budget_ceiling",
+                        agent,
+                        f"stale_{window_name}",
+                        f"[budget_ceiling] {agent}.{window_name} calibration "
+                        f"stale (stamped_at={calibration.get('stamped_at')}); "
+                        "applying ratio anyway. Re-run calibrate-claude when "
+                        "convenient.",
+                    )
+                effective = float(observed_native) * float(ratio)
+            else:
+                # Non-Claude vendors: cap.unit must equal observed_unit.
+                # Mismatch is an operator config error, not silently skipped.
+                if cap_unit != observed_unit:
+                    return BudgetCeilingResult(
+                        kind=BudgetCeilingKind.UNIT_MISMATCH,
+                        tripped=True,
+                        reason=(
+                            f"{agent}.{tier}.{window_name} cap.unit="
+                            f"{cap_unit!r} does not match observed_unit="
+                            f"{observed_unit!r}. Fix "
+                            "~/.jarvis/quota_caps.json so cap.unit "
+                            "matches what quota_check.py emits."
+                        ),
+                        agent=agent,
+                        tier=tier,
+                        window=window_name,
+                        observed_native=float(observed_native),
+                        observed_unit=observed_unit,
+                        cap=float(cap_value),
+                        cap_unit=cap_unit,
+                        confidence=confidence,
+                    )
+                effective = float(observed_native)
+
+            if effective > float(cap_value):
+                return BudgetCeilingResult(
+                    kind=BudgetCeilingKind.TRIPPED,
+                    tripped=True,
+                    reason=(
+                        f"{agent}.{tier}.{window_name} observed "
+                        f"{effective:.4g} {cap_unit} > cap {cap_value} "
+                        f"{cap_unit} (confidence={confidence})"
+                    ),
+                    agent=agent,
+                    tier=tier,
+                    window=window_name,
+                    observed_native=float(observed_native),
+                    observed_unit=observed_unit,
+                    cap=float(cap_value),
+                    cap_unit=cap_unit,
+                    confidence=confidence,
+                )
+
+    return BudgetCeilingResult(
+        kind=BudgetCeilingKind.OK,
+        tripped=False,
+        reason="all participating-agent windows under operator cap",
+    )
+
+
+def _check_budget_legacy(
+    state: dict,
+    participating: set[str],
+    per_agent_caps: dict[str, float] | None,
+) -> BudgetCeilingResult:
+    """Legacy fallback when state.vendors{} is missing.
+
+    Preserves the F020/F006-original behavior: read state.models[agent].
+    percent_weekly + plan.quota_caps[agent], trip on >cap. This is the path
+    that lets cost-model + cost-guard skills keep working unchanged during
+    the F002 mirror-policy cutover. Plan 2026-04-29-004 reactivation will
+    drop it once those skills migrate to vendors{}.
+    """
+    if not per_agent_caps:
+        return BudgetCeilingResult(
+            kind=BudgetCeilingKind.OK,
+            tripped=False,
+            reason="legacy fallback: no plan.quota_caps to enforce",
+            fallback_used=True,
+        )
+    models = (state.get("models") or {}) if isinstance(state, dict) else {}
+    for agent, cap in per_agent_caps.items():
+        if cap is None or agent not in participating:
             continue
         info = models.get(agent) or {}
         observed = info.get("percent_weekly")
         if not isinstance(observed, (int, float)):
             continue
         if observed > cap:
-            return True, (
-                f"{agent} percent_weekly {float(observed):.1f}% (from "
-                f"~/.jarvis/quota_state.json) exceeds plan-declared "
-                f"budget {cap:.1f}%"
+            return BudgetCeilingResult(
+                kind=BudgetCeilingKind.TRIPPED,
+                tripped=True,
+                reason=(
+                    f"{agent} percent_weekly {float(observed):.1f}% (from "
+                    f"~/.jarvis/quota_state.json legacy mirror) exceeds "
+                    f"plan-declared budget {cap:.1f}%"
+                ),
+                agent=agent,
+                observed_native=float(observed),
+                observed_unit="percent_weekly_legacy",
+                cap=float(cap),
+                cap_unit="percent_weekly_legacy",
+                fallback_used=True,
             )
-    return False, ""
+    return BudgetCeilingResult(
+        kind=BudgetCeilingKind.OK,
+        tripped=False,
+        reason="legacy fallback: all participating agents under plan cap",
+        fallback_used=True,
+    )
+
+
+def check_budget_ceiling(
+    audit_paths: Iterable[Path],
+    per_agent_caps: dict[str, float] | None,
+    *,
+    quota_state_path: Path | None = None,
+    caps_path: Path | None = None,
+) -> BudgetCeilingResult:
+    """F006 budget breaker — v2-aware.
+
+    Reads ~/.jarvis/quota_state.json (F020/F002). When the v2 vendors{}
+    block is present, looks up per-window caps from
+    ~/.jarvis/quota_caps.json (F004) and applies the F005 calibration ratio
+    for Claude windows. When the v2 block is absent, falls back to the
+    legacy models{}.percent_weekly path with plan.quota_caps as the
+    authority (preserves pre-F002 behavior).
+
+    Returns BudgetCeilingResult with .kind ∈ BudgetCeilingKind. The caller
+    routes on .kind for INBOX events (F006b will wire this in supervisor +
+    quota_admission). The function is pure w.r.t. INBOX writes; only side
+    effects are stderr warnings via _warn_once for non-fatal conditions
+    (no_cap_for_<window>, stale_<window>, legacy_fallback) — those are
+    de-duplicated per process. Tests reset via reset_warning_cache().
+
+    Per-plan quota_caps:
+      - V2 path: IGNORED. Operator caps file is the source of truth (D010
+        + F006 operator decision: plan-level values were tied to the
+        broken percent_weekly model and would reintroduce the bug).
+      - Legacy fallback: HONORED. Preserves the F006-original behavior
+        until cost-model + cost-guard skills migrate (plan 004 reactivation).
+    """
+    state = _read_quota_state(quota_state_path)
+    if not state:
+        return BudgetCeilingResult(
+            kind=BudgetCeilingKind.OK,
+            tripped=False,
+            reason="no quota state file (run scripts/quota_check.py)",
+        )
+
+    participating = _participating_agents(audit_paths)
+    if not participating:
+        return BudgetCeilingResult(
+            kind=BudgetCeilingKind.OK,
+            tripped=False,
+            reason="no participating agents in audit_paths",
+        )
+
+    vendors = state.get("vendors")
+    if isinstance(vendors, dict) and vendors:
+        return _check_budget_v2(state, vendors, participating, caps_path)
+
+    _warn_once(
+        "budget_ceiling",
+        "_global",
+        "legacy_fallback",
+        "[budget_ceiling] vendors{} block missing in quota_state.json; using "
+        "legacy models{}.percent_weekly path. Re-run scripts/quota_check.py "
+        "to refresh to v2 schema.",
+    )
+    return _check_budget_legacy(state, participating, per_agent_caps)
 
 
 def check_wall_clock(start: dt.datetime, max_hours: float) -> tuple[bool, str]:
