@@ -48,15 +48,58 @@
       "id": "F002",
       "category": "tooling",
       "phase": 2,
-      "description": "quota_state.json schema v2: per-vendor block keyed by detected tier; per-window child block with kind, observed_native, observed_unit, models{}, optional calibration{} (Claude only) and diagnostics{} (Gemini tokens.total). Top-level schema_version field set to 2. Backwards-compat shim: continue to emit flat models.{name}.percent_weekly mirror for one release so the existing F006 breaker path still works during cutover. Loader function in circuit_breakers reads vendor block first, falls back to legacy on KeyError with a deprecation log line.",
+      "description": "quota_state.json schema v2: per-vendor block keyed by detected tier; per-window child block with kind, observed_native, observed_unit, models{}, optional calibration{} (Claude only) and diagnostics{} (Gemini tokens.total). Top-level schema_version field set to 2. Mirror policy: continue to emit legacy models{} block alongside vendors{} until BOTH the orchestrator-side consumers (F006 of this plan) AND the financial-observability skills (cost-model + cost-guard, deferred to plan 2026-04-29-004 reactivation per its D011) are migrated. F006 reads vendors{} primarily with fallback to models{} for safety; cost-model + cost-guard keep reading models{} until D011 work lands. Codex legacy mirror uses rolling_7d (parity with post-F001 weekly framing); vendors{}.codex.windows.rolling_5h is what F006 will read for the breaker (Codex's actual subscriber-tier native window). Null-tolerance audit (rg consumer scan): all five legacy consumers tolerate percent_weekly=null (cost-model + cost-guard read used/limit/unit only; quota_admission + supervisor + signoff_writer guard via isinstance/None checks), so codex + grok stay at percent_weekly=null without restoration of a deprecated numeric approximation.",
       "steps": [
-        "Define the v2 block layout in code (no JSON schema file — internal state, not a published contract)",
-        "Update main() in quota_check.py to populate the v2 vendors{} block alongside legacy models{} mirror",
-        "Add internal docstring describing the v2 → legacy mirror mapping",
-        "Add a legacy-shape fallback path in circuit_breakers consumer (will be exercised in F006)"
+        "Refactor main() into _build_state(now) + main() so the state shape is testable without I/O",
+        "Define UNCALIBRATED_BLOCK + LEGACY_MIRROR_NOTE module-level constants",
+        "Compose vendors{} from F001 helpers + F003 tier detectors; Claude windows wrap with uncalibrated calibration block",
+        "Codex emits both rolling_5h (F006 primary) and rolling_7d (legacy mirror parity) in vendors{}",
+        "Keep legacy models{} block emitting unchanged from F001 shape; codex_used reads rolling_7d",
+        "Add _legacy_mirror_note pointing at plan 004 D011 reactivation as removal trigger",
+        "Run rg 'percent_weekly|quota_state|models' consumer scan; confirm null-tolerance across all 5 legacy consumers",
+        "Add 4 v2-shape tests (schema_version, vendors keys, claude calibration block, grok empty windows + signal, legacy mirror codex on rolling_7d)"
       ],
-      "acceptance": "(1) ~/.jarvis/quota_state.json after a refresh contains both vendors{} and models{} blocks. (2) The vendors{} block contains entries for claude+codex+gemini+grok with correct tier labels. (3) schema_version: 2 is present. (4) Legacy models{} block fields are unchanged from current shape (no breaking shift).",
-      "passes": false,
+      "acceptance": "(1) ~/.jarvis/quota_state.json after a refresh contains both vendors{} and models{} blocks plus _legacy_mirror_note + schema_version: 2. (2) The vendors{} block contains entries for claude+codex+gemini+grok with correct tier labels (claude=max_20x, codex=plus, gemini=code_assist_individuals, grok=absent). (3) Claude windows carry explicit-uncalibrated calibration block; other vendors' windows do not. (4) Legacy models{} block keys unchanged (claude/codex/gemini/grok/ollama); codex.used reads rolling_7d for parity with post-F001 weekly framing. (5) Full orchestrate test sweep green (regression).",
+      "passes": true,
+      "verified_at": "2026-04-30T17:00:00Z",
+      "verified_by": ["claude"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/quota_check.py",
+          "captured_at": "2026-04-30T17:00:00Z",
+          "captured_by": "claude",
+          "note": "Added SCHEMA_VERSION=2, UNCALIBRATED_BLOCK, LEGACY_MIRROR_NOTE constants. Refactored main() into _build_state(now) + main(). _build_state composes vendors{} block with per-vendor tier + per-window observed signal; Claude windows wrap with explicit-uncalibrated calibration block. Codex emits both rolling_5h (F006 primary) and rolling_7d (legacy parity) in vendors{}; legacy models{}.codex.used reads rolling_7d to preserve post-F001 weekly framing. Print summary surfaces vendors{} with tier + window + calibration label; legacy mirror flagged as deprecated."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_quota_check_v2.py",
+          "captured_at": "2026-04-30T17:00:00Z",
+          "captured_by": "claude",
+          "note": "Added 4 hermetic _build_state tests: schema_version_with_vendors_block, claude_windows_have_uncalibrated_block, grok_empty_windows_with_signal, preserves_legacy_models_mirror (verifies codex legacy uses rolling_7d=200 stub vs vendors rolling_5h=50 stub). Stub helpers cover Claude/Codex/Gemini/Grok usage + tier detectors + ollama."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-04-30T17:00:00Z",
+          "captured_by": "claude",
+          "note": "232 passed, 6 skipped (was 228+6 before F002; +4 new state-shape tests). Full orchestrate regression green; no consumer breakage from the v2 block addition."
+        },
+        {
+          "type": "test_output",
+          "uri": "python3 scripts/quota_check.py",
+          "captured_at": "2026-04-30T17:00:00Z",
+          "captured_by": "claude",
+          "note": "Live run wrote schema_version: 2 quota_state.json. Output shows: claude rolling_7d=575M weighted_tokens_local_proxy uncalibrated, claude rolling_5h=9M uncalibrated, codex rolling_5h=237M tokens_local_proxy (F006 primary), codex rolling_7d=580M (legacy mirror parity), gemini rolling_24h=0 requests, grok signal:absent. Legacy models{} mirror keys unchanged; deprecation note present pointing at plan 004 D011."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-04-29-004-fix-f006-budget-semantics/decisions.jsonl",
+          "captured_at": "2026-04-30T17:00:00Z",
+          "captured_by": "claude",
+          "note": "Added D011 to plan 004 recording the cost-model + cost-guard migration scope expansion at reactivation. D011 cites the rg consumer scan (5 legacy consumers found, 2 outside this plan's blast radius), the rolling_7d codex parity decision, and the linear migration sequence (orchestrator-side first in 2026-04-30-001 F006, skills + writer-side mirror removal + schema cleanup at 004 reactivation)."
+        }
+      ],
       "depends_on": ["F001"]
     },
     {

@@ -41,6 +41,24 @@ WINDOWS: dict[str, dt.timedelta] = {
 
 CACHE_READ_WEIGHT = 0.1
 
+# F002 v2 state shape — emitted alongside legacy models{} mirror until plan
+# 2026-04-29-004 reactivation migrates cost-model + cost-guard to read vendors{}.
+# See decisions.jsonl D011 of plan 2026-04-29-004 for the migration trigger.
+SCHEMA_VERSION = 2
+
+UNCALIBRATED_BLOCK: dict[str, Any] = {
+    "ratio": None,
+    "confidence": "uncalibrated",
+    "source": None,
+    "stamped_at": None,
+}
+
+LEGACY_MIRROR_NOTE = (
+    "deprecated: legacy models{} block preserved for cost-model + cost-guard "
+    "skills. Will be removed when plan 2026-04-29-004 reactivates and migrates "
+    "those skills to read vendors{} (see plan 004 D011)."
+)
+
 
 def _utcnow() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
@@ -435,77 +453,175 @@ def _percent(used: int, limit: int | None) -> float | None:
     return round(100.0 * used / limit, 2)
 
 
-def main() -> int:
-    now = dt.datetime.now(dt.timezone.utc)
+def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
+    """Compose ~/.jarvis/quota_state.json contents.
 
-    claude_usage = _claude_usage_v2("rolling_7d", now=now)
-    claude_used = int(claude_usage.get("observed_native") or 0)
-    codex_usage = _codex_usage_v2("rolling_7d", now=now)
-    codex_used = int(codex_usage.get("observed_native") or 0)
-    gemini_usage = _gemini_usage_v2(now=now)
-    gemini_used = int(gemini_usage.get("observed_native") or 0)
+    Schema v2 emits two top-level blocks:
+
+    - vendors{}: per-vendor (claude/codex/gemini/grok) tier + per-window observed
+      signal. Each window carries kind, observed_native, observed_unit, models{},
+      diagnostics{}. Claude windows additionally carry an uncalibrated calibration
+      block; F005 (calibrate-claude CLI) writes ratio/confidence/source/stamped_at
+      back into that block.
+
+    - models{} (legacy mirror): the F020 v1 shape (used/limit/unit/percent_weekly/
+      plan per model). Preserved unchanged for cost-model + cost-guard skills until
+      plan 2026-04-29-004 reactivation migrates those consumers. The orchestrator-
+      side consumers (circuit_breakers/supervisor/quota_admission/signoff_writer)
+      will move to vendors{} in F006 of this plan with a fallback to models{}; the
+      mirror only drops once cost-model + cost-guard are migrated too.
+
+    Mirror null tolerance audit (2026-04-30): all five legacy consumers tolerate
+    percent_weekly=null via isinstance/None guards or by not reading the field at
+    all (cost-model + cost-guard read used/limit/unit only). F001 left codex +
+    grok at percent_weekly=null which is therefore safe; no deprecated numeric
+    approximation needs synthesizing.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+
+    claude_7d = _claude_usage_v2("rolling_7d", now=now)
+    claude_5h = _claude_usage_v2("rolling_5h", now=now)
+    codex_5h = _codex_usage_v2("rolling_5h", now=now)
+    # rolling_7d for legacy mirror parity (cost-model/cost-guard read used as a
+    # weekly figure). rolling_5h above is the Codex subscriber-tier native window
+    # F006 budget_ceiling will read.
+    codex_7d = _codex_usage_v2("rolling_7d", now=now)
+    gemini_24h = _gemini_usage_v2(now=now)
     grok_usage = _grok_usage_v2()
     ollama_loaded = _ollama_models_loaded()
 
-    state = {
-        "generated": now.isoformat(),
-        "week_start": WEEK_START.isoformat(),
-        "models": {
-            "claude": {
-                "used": claude_used,
-                "limit": CAPS["claude"]["limit"],
-                "unit": claude_usage.get("observed_unit") or CAPS["claude"]["unit"],
-                "percent_weekly": _percent(claude_used, CAPS["claude"]["limit"]),
-                "plan": CAPS["claude"]["plan"],
-            },
-            "codex": {
-                "used": codex_used,
-                "limit": None,
-                "unit": codex_usage.get("observed_unit") or CAPS["codex"]["unit"],
-                "percent_weekly": None,
-                "plan": "local SQLite token proxy; v2 caps pending",
-            },
-            "gemini": {
-                "used": gemini_used,
-                "limit": 1_000,
-                "unit": gemini_usage.get("observed_unit") or CAPS["gemini"]["unit"],
-                "percent_weekly": _percent(gemini_used, 1_000),
-                "plan": "Code Assist Individuals daily request cap",
-            },
-            "grok": {
-                "used": None,
-                "limit": None,
-                "unit": None,
-                "percent_weekly": None,
-                "plan": f"signal: {grok_usage['diagnostics']['signal']}",
-            },
-            "ollama": {
-                "loaded_models": ollama_loaded,
-                "limit": None,
-                "unit": None,
-                "percent_weekly": None,
-                "plan": CAPS["ollama"]["plan"],
+    claude_tier = _detect_claude_tier()
+    codex_tier = _detect_codex_tier()
+    gemini_tier = _detect_gemini_tier()
+    grok_tier = _detect_grok_tier()
+
+    def _with_calibration(window: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(window)
+        merged["calibration"] = dict(UNCALIBRATED_BLOCK)
+        return merged
+
+    vendors: dict[str, Any] = {
+        "claude": {
+            "tier": claude_tier["tier"],
+            "tier_signal": claude_tier["signal"],
+            "tier_source": claude_tier["source"],
+            "windows": {
+                "rolling_7d": _with_calibration(claude_7d),
+                "rolling_5h": _with_calibration(claude_5h),
             },
         },
+        "codex": {
+            "tier": codex_tier["tier"],
+            "tier_signal": codex_tier["signal"],
+            "tier_source": codex_tier["source"],
+            "windows": {
+                "rolling_5h": codex_5h,
+                "rolling_7d": codex_7d,
+            },
+        },
+        "gemini": {
+            "tier": gemini_tier["tier"],
+            "tier_signal": gemini_tier["signal"],
+            "tier_source": gemini_tier["source"],
+            "windows": {
+                "rolling_24h": gemini_24h,
+            },
+        },
+        "grok": {
+            "tier": grok_tier["tier"],
+            "tier_signal": grok_tier["signal"],
+            "tier_source": grok_tier["source"],
+            "windows": {},
+            "signal": grok_usage["diagnostics"]["signal"],
+        },
     }
+
+    claude_used = int(claude_7d.get("observed_native") or 0)
+    # Mirror uses rolling_7d for codex to preserve the post-F001 legacy shape
+    # (weekly framing the field name implies); F006 reads rolling_5h via
+    # vendors{}.codex.windows.rolling_5h.
+    codex_used = int(codex_7d.get("observed_native") or 0)
+    gemini_used = int(gemini_24h.get("observed_native") or 0)
+
+    legacy_models: dict[str, Any] = {
+        "claude": {
+            "used": claude_used,
+            "limit": CAPS["claude"]["limit"],
+            "unit": claude_7d.get("observed_unit") or CAPS["claude"]["unit"],
+            "percent_weekly": _percent(claude_used, CAPS["claude"]["limit"]),
+            "plan": CAPS["claude"]["plan"],
+        },
+        "codex": {
+            "used": codex_used,
+            "limit": None,
+            "unit": codex_5h.get("observed_unit") or CAPS["codex"]["unit"],
+            "percent_weekly": None,
+            "plan": "local SQLite token proxy; v2 caps pending",
+        },
+        "gemini": {
+            "used": gemini_used,
+            "limit": 1_000,
+            "unit": gemini_24h.get("observed_unit") or CAPS["gemini"]["unit"],
+            "percent_weekly": _percent(gemini_used, 1_000),
+            "plan": "Code Assist Individuals daily request cap",
+        },
+        "grok": {
+            "used": None,
+            "limit": None,
+            "unit": None,
+            "percent_weekly": None,
+            "plan": f"signal: {grok_usage['diagnostics']['signal']}",
+        },
+        "ollama": {
+            "loaded_models": ollama_loaded,
+            "limit": None,
+            "unit": None,
+            "percent_weekly": None,
+            "plan": CAPS["ollama"]["plan"],
+        },
+    }
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated": now.isoformat(),
+        "week_start": WEEK_START.isoformat(),
+        "vendors": vendors,
+        "models": legacy_models,
+        "_legacy_mirror_note": LEGACY_MIRROR_NOTE,
+    }
+
+
+def main() -> int:
+    state = _build_state()
 
     out_dir = Path.home() / ".jarvis"
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / "quota_state.json"
     out_path.write_text(json.dumps(state, indent=2))
 
-    print(f"✓ Wrote {out_path}")
-    for model, info in state["models"].items():
-        used = info.get("used")
-        pct = info.get("percent_weekly")
-        unit = info.get("unit") or "—"
-        if pct is not None:
-            print(f"  {model:<8} {used:>12} {unit:<6} ({pct}% of weekly)")
-        elif used is not None:
-            print(f"  {model:<8} {used:>12} {unit:<18} ({info.get('plan', '')})")
-        else:
-            extra = info.get("loaded_models") or info.get("plan", "")
-            print(f"  {model:<8} {str(extra):>30}")
+    print(f"✓ Wrote {out_path} (schema_version: {state['schema_version']})")
+    print("  vendors:")
+    for vendor, block in state["vendors"].items():
+        tier = block.get("tier", "?")
+        windows = block.get("windows", {})
+        if not windows:
+            sig = block.get("signal") or block.get("tier_signal", "?")
+            print(f"    {vendor:<8} tier={tier:<24} (signal: {sig})")
+            continue
+        for wname, w in windows.items():
+            obs = w.get("observed_native")
+            unit = w.get("observed_unit") or "—"
+            cal = w.get("calibration") or {}
+            cal_label = (
+                f" calibration={cal.get('confidence')}"
+                if cal and "confidence" in cal
+                else ""
+            )
+            print(
+                f"    {vendor:<8} tier={tier:<24} {wname:<11} "
+                f"{obs!s:>14} {unit}{cal_label}"
+            )
+    print(f"  models{{}} mirror: {LEGACY_MIRROR_NOTE}")
     return 0
 
 
