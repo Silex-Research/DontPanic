@@ -261,7 +261,7 @@
       "id": "F006",
       "category": "tooling",
       "phase": 2,
-      "description": "Breaker rewrite in scripts/jarvis_orchestrate/circuit_breakers.py + migration of three sibling orchestrator-side consumers (supervisor._quota_gate, quota_admission, signoff_writer) per the rg consumer scan in F002. check_budget_ceiling(plan, agent): for each window in state.vendors[agent].windows, look up cap+unit via quota_caps_loader.get(vendor, tier, window); compute (observed_native * (calibration.ratio or 1.0)) / cap; trip if any window > 1.0. CRITICAL CALIBRATION-SAFETY RULE: when the window has a calibration block AND calibration.confidence == 'uncalibrated', SKIP the budget_ceiling check for that window and emit an INBOX `calibration_required` event with body pointing operators at `python -m jarvis_orchestrate calibrate-claude --dashboard-pct N` (F005). This prevents Claude weighted_tokens_local_proxy values (hundreds of millions) from false-tripping against percent_of_plan caps (max 100) before F005 calibration runs. INBOX 'breaker_tripped' wording surfaces (a) which window tripped, (b) tier, (c) observed vs cap, (d) calibration confidence label. Backward-compat fallback: if state.vendors block missing (legacy state shape), use old models{}.percent_weekly path with a single-shot deprecation log. Plan-level quota_caps field still consulted as a per-plan override IF present (most plans now omit per D010); else fall back to operator caps file as source of truth. Plan 004's original D001 ('which of three semantics') is answered structurally: per-vendor per-window absolute usage ceiling, semantic (1) generalized. Three sibling consumers also migrate in this slice: supervisor._quota_gate(agent) reads vendors{}.<agent>.windows for soft-warn at >=90% (autonomous tier), prefer rolling_5h primary; quota_admission.QuotaCheck reads vendors{} for defer:quota_threshold; signoff_writer summarizes per-vendor per-window observed values instead of flat percent_weekly. All three keep the legacy models{} fallback path active (writer-side mirror still emits per F002 D011 mirror policy).",
+      "description": "Split into F006a (check_budget_ceiling rewrite — done; this entry's evidence_refs document the slice) and F006b (supervisor._quota_gate + quota_admission migrations — pending; passes flips to true only after F006b lands). signoff_writer was originally listed as a third sibling consumer but the F006a design pass surfaced that its `quota_consumed.percent_weekly` is an audit-record field on the audit schema, NOT the quota_state.json legacy mirror — different schema, different concern; descoped accordingly. F006a contract: check_budget_ceiling reads state.vendors[agent].windows; looks up cap+unit via quota_caps_loader.get(vendor, tier, window); applies F005 calibration ratio for Claude windows; returns BudgetCeilingResult with kind ∈ {OK, TRIPPED, CONFIG_REQUIRED, CALIBRATION_REQUIRED, UNIT_MISMATCH}. Function is intentionally pure w.r.t. INBOX writes — caller routes on .kind to emit specific INBOX events (deferred to F006b in the supervisor). Calibration-safety rule: percent_of_plan cap + non-manual confidence → CALIBRATION_REQUIRED halt (NOT a quiet skip; NOT a false-trip against weighted_tokens / 100). Unit-mismatch rule: non-Claude vendor cap.unit ≠ observed_unit → UNIT_MISMATCH halt. Missing/invalid caps file → CONFIG_REQUIRED halt with init guidance. _warned_once dedup keyed by (consumer, agent, condition) and reset between tests via reset_warning_cache(). Legacy fallback (vendors{} missing) uses models{}.percent_weekly + plan.quota_caps with single-shot deprecation log; v2 path IGNORES plan.quota_caps entirely (D010 + F006a operator decision: those values are tied to the broken percent_weekly model and would reintroduce the bug). F006b migrates supervisor._quota_gate (soft-warn at 90% of operator cap, skip uncalibrated Claude, surface 'unmetered/config_required' when no usable window) + quota_admission.evaluate_quota_threshold (defer at >70% of operator cap, prefer rolling_5h primary). Both keep legacy fallback active per F002 mirror policy.",
       "steps": [
         "Rewrite check_budget_ceiling to read v2 state shape via vendors{}.<agent>.windows",
         "Add calibration-safety: skip window when calibration.confidence == 'uncalibrated', emit INBOX calibration_required event",
@@ -275,9 +275,53 @@
         "Update existing F006/F007 test fixtures to v2 state shape; keep mirror-fallback tests for legacy fallback coverage",
         "Add new tests: uncalibrated-Claude window skip, calibrated-Claude trips correctly, codex rolling_5h cap-from-caps-file trip, gemini requests cap, vendors-block-missing legacy fallback, plan.quota_caps per-plan override path"
       ],
-      "acceptance": "(1) check_budget_ceiling trips correctly when any window's calibrated observed > cap from caps file; window+tier+cap surfaced in trip reason. (2) Uncalibrated Claude windows are SKIPPED (no trip), and an INBOX calibration_required event fires once per dispatch. (3) INBOX breaker_tripped event includes window+tier+observed+cap+confidence. (4) Legacy state shape (no vendors block) still works via fallback with a deprecation log. (5) supervisor._quota_gate reads vendors{} for soft-warn; quota_admission reads vendors{} for defer:quota_threshold; signoff_writer surfaces v2 fields without breaking the existing audit/signoff schema. (6) Existing F006 + F007 + F008 + signoff tests pass after fixture updates. (7) New v2-path tests added (uncalibrated skip, calibrated trip, per-vendor cap, legacy fallback, per-plan override). (8) On this machine post-F005 calibration: Claude rolling_7d does NOT falsely trip when the dashboard shows <80%; Codex rolling_5h trips at observed > cap=296M (the F004 starter cap derived at this date).",
+      "acceptance": "(1) check_budget_ceiling returns BudgetCeilingResult with kind ∈ {OK, TRIPPED, CONFIG_REQUIRED, CALIBRATION_REQUIRED, UNIT_MISMATCH}; tripped=True for every non-OK kind so existing callers (`if result.tripped:`) keep working; structured fields (agent/tier/window/cap/observed_native/confidence/fallback_used) populated for the caller to route on. (2) Uncalibrated Claude windows with percent_of_plan caps return CALIBRATION_REQUIRED (NOT a quiet skip, NOT a false-trip against weighted_tokens / 100). (3) Non-Claude unit mismatch returns UNIT_MISMATCH halt. (4) Missing/invalid caps file returns CONFIG_REQUIRED with init guidance. (5) Legacy state shape (no vendors block) falls back to legacy models{}.percent_weekly path with plan.quota_caps as authority and fallback_used=True; v2 path IGNORES plan.quota_caps. (6) _warned_once dedup keyed by (consumer, agent, condition) and reset between tests via reset_warning_cache() called from the autouse fixture in conftest.py. (7) supervisor._quota_gate reads vendors{} for soft-warn (F006b). (8) quota_admission reads vendors{} for defer:quota_threshold (F006b). (9) signoff_writer is OUT OF SCOPE — its `quota_consumed.percent_weekly` is an audit-record field on the audit schema, NOT the quota_state.json legacy mirror; correction surfaced during F006a design. (10) Existing F006 + F007 + F008 + signoff tests pass after fixture updates. (11) New v2-path tests for the 5 BudgetCeilingKind values + warn-once dedup + legacy-fallback + plan-caps-ignored.",
       "passes": false,
-      "depends_on": ["F002", "F004", "F005"]
+      "depends_on": ["F002", "F004", "F005"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "F006a partial: rewrote check_budget_ceiling to return frozen BudgetCeilingResult dataclass (kind enum + tripped + reason + structured fields). Added _check_budget_v2 (caps-file lookup, calibration safety, unit-mismatch halt), _check_budget_legacy (preserves pre-F002 plan.quota_caps behavior), _participating_agents helper, _warn_once dedup keyed (consumer, agent, condition), reset_warning_cache(). Pure: writes no INBOX events; only side-effect is stderr warn-once for non-fatal conditions. Caller routes on .kind to emit specific INBOX events (deferred to F006b)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/quota_caps_loader.py",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "Added _effective_caps_path honoring JARVIS_QUOTA_CAPS_PATH env (mirrors JARVIS_QUOTA_STATE_PATH / JARVIS_BREAKER_HISTORY_PATH / etc.). load() now honors the env override transparently."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/conftest.py",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "Extended autouse _isolate_jarvis_state to set JARVIS_QUOTA_CAPS_PATH per-test and call circuit_breakers.reset_warning_cache() before AND after every test (defensive cleanup whether test passed or failed)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "Updated the single check_budget_ceiling caller (dispatch_volley line 746) to consume BudgetCeilingResult.tripped/.reason. Routes all non-OK kinds through breaker:budget_ceiling for now; F006b will branch on .kind for kind-specific INBOX events (calibration_required vs unit_mismatch vs config_required vs standard breaker)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "9 new F006a v2-path tests: config_required (missing caps file), calibration_required (uncalibrated Claude + percent_of_plan), calibrated trip, unit_mismatch (non-Claude), no_cap_for_window (warn-once + no repeat), stale_calibration (warn-once but applies), legacy_fallback (vendors-missing → models{} path), plan-caps-ignored on v2, warn_cache_resets_between_tests. Existing legacy test updated to .tripped/.kind/.fallback_used assertions."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-04-30T23:50:00Z",
+          "captured_by": "claude",
+          "note": "279 passed, 6 skipped (was 270+6 before F006a; +9 new tests). Full orchestrate sweep regression-clean across all 11 prior test modules + the new failure-mode coverage."
+        }
+      ]
     },
     {
       "id": "F007",

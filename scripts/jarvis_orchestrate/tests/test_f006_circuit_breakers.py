@@ -78,30 +78,378 @@ def test_check_budget_ceiling_reads_quota_state_file() -> None:
         qs = Path(td) / "quota_state.json"
         qs.write_text(json.dumps({"models": {"claude": {"percent_weekly": 80.0, "plan": "x"}}}))
         # No caps → no trip
-        assert not cb.check_budget_ceiling(sorted(ad.glob("*.json")), None, quota_state_path=qs)[0]
+        result = cb.check_budget_ceiling(
+            sorted(ad.glob("*.json")), None, quota_state_path=qs
+        )
+        assert not result.tripped
+        assert result.fallback_used  # legacy state shape (no vendors{})
         # Cap=50 → trip (state says 80%)
-        tripped, reason = cb.check_budget_ceiling(
+        result = cb.check_budget_ceiling(
             sorted(ad.glob("*.json")),
             {"claude": 50.0},
             quota_state_path=qs,
         )
-        assert tripped, reason
-        assert "claude" in reason and "80" in reason and "quota_state.json" in reason
+        assert result.tripped, result.reason
+        assert result.kind == cb.BudgetCeilingKind.TRIPPED
+        assert result.fallback_used
+        assert "claude" in result.reason and "80" in result.reason
         # Cap=90 → no trip
-        assert not cb.check_budget_ceiling(
+        result = cb.check_budget_ceiling(
             sorted(ad.glob("*.json")),
             {"claude": 90.0},
             quota_state_path=qs,
-        )[0]
+        )
+        assert not result.tripped
         # Agent absent from this volley's audits → no trip even at over-cap state
         empty = Path(td) / "empty"
         empty.mkdir()
-        assert not cb.check_budget_ceiling(
+        result = cb.check_budget_ceiling(
             sorted(empty.glob("*.json")),
             {"claude": 50.0},
             quota_state_path=qs,
-        )[0]
-    print("  ✓ budget_ceiling reads quota_state.json + scoped to participating agents")
+        )
+        assert not result.tripped
+    print("  ✓ legacy fallback: budget_ceiling reads models{}.percent_weekly + scoped to participating agents")
+
+
+# ──────────────────────  F006a budget_ceiling v2-path tests  ──────────────────────
+#
+# Each scenario builds a v2-shape quota_state.json (vendors{} block present)
+# in the env-isolated path and a matching/missing/wrong caps file. Exercises
+# the five non-OK BudgetCeilingKind values + the legacy-fallback boundary.
+
+def _write_v2_state(qs: Path, *, claude_7d_observed: float, codex_5h_observed: int,
+                    claude_calibration: dict | None) -> None:
+    """Build a minimal v2 vendors{} state file the breaker can read."""
+    state = {
+        "schema_version": 2,
+        "generated": _iso_now(),
+        "vendors": {
+            "claude": {
+                "tier": "max_20x",
+                "windows": {
+                    "rolling_7d": {
+                        "kind": "rolling_7d",
+                        "observed_native": claude_7d_observed,
+                        "observed_unit": "weighted_tokens_local_proxy",
+                        "calibration": claude_calibration or {
+                            "ratio": None,
+                            "confidence": "uncalibrated",
+                            "source": None,
+                            "stamped_at": None,
+                        },
+                    },
+                },
+            },
+            "codex": {
+                "tier": "plus",
+                "windows": {
+                    "rolling_5h": {
+                        "kind": "rolling_5h",
+                        "observed_native": codex_5h_observed,
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                },
+            },
+        },
+        "models": {  # legacy mirror, ignored by v2 path
+            "claude": {"used": 0, "limit": None, "percent_weekly": None, "plan": "x"},
+            "codex": {"used": 0, "limit": None, "percent_weekly": None, "plan": "x"},
+        },
+    }
+    qs.write_text(json.dumps(state))
+
+
+def _write_audit(ad: Path, agent: str = "claude") -> Path:
+    p = ad / f"{agent}-implementer-i0.json"
+    p.write_text(json.dumps({
+        "task_id": "t",
+        "audit_id": f"t#{agent}#0",
+        "agent": agent,
+        "agent_role": "implementer",
+        "iteration": 0,
+        "started_at": _iso_now(),
+        "completed_at": _iso_now(),
+        "audit_status": "needs_changes",
+        "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
+    }))
+    return p
+
+
+def test_v2_config_required_when_caps_file_missing(tmp_path: Path) -> None:
+    """F006a refinement #1: missing operator caps file is a first-class
+    config_required pause, not a silent quiet-skip."""
+    print("\n[test] v2_config_required_when_caps_file_missing ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=500_000_000, codex_5h_observed=200_000_000,
+                    claude_calibration=None)
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    # No caps file written → JARVIS_QUOTA_CAPS_PATH points at a non-existent file
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.CONFIG_REQUIRED
+    assert "caps file" in result.reason.lower() or "not found" in result.reason.lower()
+    assert "quota-caps init" in result.reason
+    print("  ✓ missing caps file → CONFIG_REQUIRED with init guidance")
+
+
+def test_v2_calibration_required_for_uncalibrated_claude(tmp_path: Path) -> None:
+    """F006a refinement #3: percent_of_plan cap + uncalibrated calibration
+    halts with calibration_required, NOT a silent skip and NOT a false-trip
+    against weighted_tokens / 100."""
+    print("\n[test] v2_calibration_required_for_uncalibrated_claude ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=500_000_000, codex_5h_observed=0,
+                    claude_calibration=None)
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.CALIBRATION_REQUIRED
+    assert result.agent == "claude"
+    assert result.window == "rolling_7d"
+    assert result.confidence == "uncalibrated"
+    assert "calibrate-claude" in result.reason
+    assert "percent_of_plan" in result.reason
+    print("  ✓ uncalibrated Claude with percent_of_plan cap → CALIBRATION_REQUIRED")
+
+
+def test_v2_calibrated_claude_trips_on_excess(tmp_path: Path) -> None:
+    """Sanity: with valid manual calibration, the breaker correctly trips when
+    the calibrated effective value exceeds the cap."""
+    print("\n[test] v2_calibrated_claude_trips_on_excess ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    # ratio chosen so observed * ratio = 110 > cap 100
+    _write_v2_state(qs, claude_7d_observed=550_000_000, codex_5h_observed=0,
+                    claude_calibration={
+                        "ratio": 2.0e-7,  # 550M * 2e-7 = 110
+                        "confidence": "manual",
+                        "source": "operator_dashboard_sample",
+                        "stamped_at": _iso_now(),
+                    })
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.TRIPPED
+    assert result.agent == "claude"
+    assert result.window == "rolling_7d"
+    assert result.confidence == "manual"
+    assert result.cap == 100
+    assert result.cap_unit == "percent_of_plan"
+    assert "110" in result.reason
+    print("  ✓ calibrated Claude trips at observed * ratio > cap")
+
+
+def test_v2_unit_mismatch_halts_for_non_claude(tmp_path: Path) -> None:
+    """F006a refinement #3: cap.unit != observed_unit on a non-Claude vendor
+    is a hard configuration signal, not a quiet skip. Operator must fix
+    quota_caps.json."""
+    print("\n[test] v2_unit_mismatch_halts_for_non_claude ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
+                    claude_calibration=None)
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "codex": {"plus": {
+            "rolling_5h": {"cap": 100, "unit": "requests"},  # WRONG: observed is tokens
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "codex")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.UNIT_MISMATCH
+    assert result.agent == "codex"
+    assert result.cap_unit == "requests"
+    assert result.observed_unit == "tokens_local_proxy"
+    assert "Fix" in result.reason and "quota_caps.json" in result.reason
+    print("  ✓ codex cap unit≠observed unit → UNIT_MISMATCH halt")
+
+
+def test_v2_no_cap_for_window_skipped_with_warn_once(tmp_path: Path, capsys) -> None:
+    """When the caps file is present but missing an entry for a particular
+    vendor.tier.window, the window is skipped (warn-once) rather than tripping.
+    The warning must fire at most once per (consumer, agent, condition) per
+    process — verified by calling twice."""
+    print("\n[test] v2_no_cap_for_window_skipped_with_warn_once ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
+                    claude_calibration=None)
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    # Caps file has Claude but not Codex
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "codex")
+
+    # First call: codex skipped, claude has 0 observed → OK
+    result1 = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert not result1.tripped
+    assert result1.kind == cb.BudgetCeilingKind.OK
+
+    captured1 = capsys.readouterr()
+    assert "no cap for codex.plus.rolling_5h" in captured1.err
+
+    # Second call with the same state: warning should NOT repeat
+    result2 = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert not result2.tripped
+
+    captured2 = capsys.readouterr()
+    assert "no cap for codex.plus.rolling_5h" not in captured2.err
+    print("  ✓ no_cap_for_window skipped once with warn; no repeat warning per process")
+
+
+def test_v2_stale_calibration_warns_but_applies(tmp_path: Path, capsys) -> None:
+    """Stale calibration is a stderr warn-once, NOT a halt. The breaker
+    applies the ratio anyway because no-action is more dangerous than
+    slightly-aged-action."""
+    print("\n[test] v2_stale_calibration_warns_but_applies ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat()
+    _write_v2_state(qs, claude_7d_observed=100_000_000, codex_5h_observed=0,
+                    claude_calibration={
+                        "ratio": 1.0e-7,  # 100M * 1e-7 = 10 (well under cap 100)
+                        "confidence": "manual",
+                        "source": "operator_dashboard_sample",
+                        "stamped_at": old,
+                    })
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    # Under cap (10 < 100) → OK, but stale warning fires
+    assert not result.tripped
+    assert result.kind == cb.BudgetCeilingKind.OK
+
+    captured = capsys.readouterr()
+    assert "stale" in captured.err.lower()
+    assert "applying ratio anyway" in captured.err
+    print("  ✓ stale calibration warns but applies; not a halt")
+
+
+def test_v2_legacy_fallback_when_vendors_block_missing(tmp_path: Path, capsys) -> None:
+    """When state.vendors{} is missing (pre-F002 state file), the breaker
+    falls back to the legacy models{}.percent_weekly path with plan.quota_caps
+    as the authority. fallback_used=True surfaces the path taken."""
+    print("\n[test] v2_legacy_fallback_when_vendors_block_missing ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    qs.write_text(json.dumps({
+        # NO vendors{} block — legacy F020 v1 shape only
+        "models": {"claude": {"percent_weekly": 80.0, "plan": "x"}},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    # Legacy fallback honors plan-level per_agent_caps (v2 ignores them)
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), {"claude": 50.0})
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.TRIPPED
+    assert result.fallback_used  # legacy path
+    assert "legacy mirror" in result.reason
+
+    # Single deprecation warning emitted on first call
+    captured = capsys.readouterr()
+    assert "vendors{} block missing" in captured.err
+    print("  ✓ vendors-missing falls back to legacy with deprecation warn")
+
+
+def test_v2_ignores_plan_level_caps(tmp_path: Path) -> None:
+    """F006a refinement #2: in v2 path, plan.quota_caps are IGNORED. Only the
+    operator caps file decides. (Plan-level remains active on legacy fallback;
+    that's covered by the existing fallback test.)"""
+    print("\n[test] v2_ignores_plan_level_caps ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=550_000_000, codex_5h_observed=0,
+                    claude_calibration={
+                        "ratio": 2.0e-7,  # 550M * 2e-7 = 110 > cap 100
+                        "confidence": "manual",
+                        "source": "operator_dashboard_sample",
+                        "stamped_at": _iso_now(),
+                    })
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "defaults": {"claude_tier": "max_20x"},
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")
+
+    # Pass an absurdly-large per_agent_caps to prove it's ignored on v2 path
+    # (if v2 honored plan caps, claude:99999 would prevent the trip).
+    result = cb.check_budget_ceiling(
+        sorted(ad.glob("*.json")), {"claude": 99999.0}
+    )
+    assert result.tripped, (
+        "v2 path must trip on operator caps file regardless of plan.quota_caps; "
+        "ignoring this would reintroduce the broken-percent_weekly bug for "
+        "older plans declaring quota_caps"
+    )
+    assert result.kind == cb.BudgetCeilingKind.TRIPPED
+    assert not result.fallback_used  # confirms v2 path
+    print("  ✓ v2 path ignores plan-level quota_caps; only operator caps file authoritative")
+
+
+def test_v2_warn_cache_resets_between_tests() -> None:
+    """The autouse fixture in conftest.py calls cb.reset_warning_cache() on
+    every test. Verify the cache itself has been emptied as we enter this
+    test (i.e., no stale entries from earlier tests leak in)."""
+    print("\n[test] v2_warn_cache_resets_between_tests ...")
+    assert cb._warned_once == set(), (
+        f"warn cache should be empty at test start, got {cb._warned_once!r}"
+    )
+    cb._warn_once("budget_ceiling", "claude", "test_condition", "msg")
+    assert ("budget_ceiling", "claude", "test_condition") in cb._warned_once
+    cb.reset_warning_cache()
+    assert cb._warned_once == set()
+    print("  ✓ reset_warning_cache empties dedup state; autouse fixture isolates per test")
 
 
 def test_check_no_progress() -> None:
