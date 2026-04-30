@@ -3,7 +3,7 @@ id: 2026-04-29-003-fix-f008-phased-gates
 title: F008 phased gates — split pre_impl and pre_merge across the volley lifecycle
 type: fix
 tier: local
-status: draft
+status: active
 date: "2026-04-29"
 description: |
   The supervisor currently evaluates ALL declared `human_gates` upfront before iteration 0 of any volley. That makes pre_merge a duplicate operator-confirmation gate alongside pre_impl rather than a true post-implementation merge checkpoint. This fix splits gate evaluation across the volley lifecycle: pre_impl gates fire before round 0; pre_merge gates fire only after the volley terminates with `signed_off` (and therefore never fire on `paused_on_gate` or `stopped_*` terminals). Other lifecycle-phase gates can be added the same way.
@@ -65,13 +65,13 @@ target_project: jarvis-a6ee1
 - Recorded as: D003-update-1 (gate-pacing observation) and D003-update-2 (semantic compromise on pre_merge for the dogfood) in that plan's decisions.jsonl.
 - F008 originally landed in commits `[F008-engagement: ...]` series (parent F008, signed off 2026-04-26+).
 
-## Approach (proposal — refine before lock)
+## Approach (locked 2026-04-29 — see decisions.jsonl D001/D002/D003)
 
 1. **Categorize declared gates by lifecycle phase.** A small mapping in `gate_pause` (or a sibling module) that classifies each declared gate name into a phase: `pre_impl` (before iteration 0), `mid_volley` (between iterations — reserved, no current consumers), `pre_merge` (after `signed_off` only, before any merge step), `post_merge` (reserved). Unknown gate names default to `pre_impl` for backward compatibility.
 2. **Split the upfront check.** `dispatch_volley` evaluates only `pre_impl`-phase gates before round 0. `pre_merge`-phase gates are evaluated in `_emit_volley_terminal` (or equivalent) only when `final_status == 'signed_off'`. Other terminal states (`stopped_*`, `paused_on_gate`, `blocked`) skip pre_merge entirely — pre_merge has nothing to confirm if no merge is on the table.
 3. **Update INBOX + gate-state semantics.** The pause event for pre_merge should reference iteration count + signoff_id so the operator knows what they're approving. Cleared-gates list in `audit/gate-state.json` retains both phases.
 4. **Backwards compatibility.** Existing plans with `human_gates: [pre_impl, pre_merge]` keep working; behavior change is timing only (pre_merge fires later, not at all if no signoff). Existing tests that asserted upfront pre_merge pauses get updated to assert post-signoff pause.
-5. **Open question.** Should `pre_merge` fire on `needs_changes` terminals (auditor not signed off, but wants another round)? Probably not — the sign-off semantic is binary. Recorded as a draft decision item.
+5. **Resolved at lock-time (D002).** `pre_merge` does NOT fire on `needs_changes` terminals — sign-off is binary. needs_changes means the auditor wants another round, not that there is something to merge.
 
 ## Acceptance
 
@@ -90,4 +90,4 @@ target_project: jarvis-a6ee1
 
 - **Test churn.** Any synthetic test that asserted "pre_merge pauses upfront" needs updating. Should be small — F008 tests already grew during the engagement-surface work.
 - **Operator habit.** Operators expect both gates to pause before iteration 0; the new behavior delays pre_merge until after sign-off. INBOX wording should make the new timing explicit.
-- **Edge case: pre_merge flips a previously-signed-off run.** If pre_merge is rejected post-sign-off, what's the supervisor's recovery? Probably write a `pre_merge_rejected` signoff variant + INBOX event + status:blocked. To be specified during impl.
+- **Edge case: pre_merge flips a previously-signed-off run.** Resolved at lock-time (D003): amend signoff.json with `pre_merge_rejected: true` + timestamp + actor; emit `gate_rejected` INBOX event; set plan status to `blocked` so a normal `jarvis resume` cannot override. CLI: `jarvis-orchestrate reject <plan-id> pre_merge [--reason '...']`. WIP stays in workspace as draft (not auto-reverted); operator decides revisit path.
