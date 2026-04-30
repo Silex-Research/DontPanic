@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -117,12 +118,14 @@ def write_calibration(
     now: dt.datetime | None = None,
     path: Path | None = None,
 ) -> dict[str, Any]:
-    """Validate inputs, compute ratio, merge into the sticky file, return the
-    written entry. Preserves any other vendor/window entries already present.
+    """Validate inputs, compute ratio, merge into the sticky file via atomic
+    tmp+os.replace, return the written entry. Preserves any other
+    vendor/window entries already present.
 
     Raises CalibrationError on validation failures. Window name is restricted
     to SUPPORTED_WINDOWS so we don't quietly accept rolling_24h etc. (Claude
-    has no 24h window in the v2 vendors block).
+    has no 24h window in the v2 vendors block). The atomic-write is what makes
+    this safe to run while quota_check.py may be reading the same file.
     """
     if not (0 < dashboard_pct <= 100):
         raise CalibrationError(
@@ -173,7 +176,14 @@ def write_calibration(
         vendors = existing[vendor] = {}
     vendors[window] = entry
 
-    p.write_text(json.dumps(existing, indent=2) + "\n")
+    # Atomic write: tmp file in the same directory + os.replace. Prevents
+    # quota_check.py from reading a half-written file if it runs mid-write,
+    # and prevents data loss if the process is interrupted between truncate
+    # and write. Same-dir tmp is required for os.replace to be atomic on
+    # the same filesystem.
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(existing, indent=2) + "\n")
+    os.replace(tmp, p)
     return entry
 
 
