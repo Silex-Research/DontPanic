@@ -3,7 +3,7 @@ id: 2026-04-30-001-fix-quota-tracker-vendor-native
 title: Vendor-native quota tracker — per-vendor window+unit observed signal with operator caps file
 type: fix
 tier: local
-status: draft
+status: active
 date: "2026-04-30"
 description: |
   `scripts/quota_check.py` reports claude=320.6%, codex=538.0%, gemini=0%, grok=0% — all wrong against the corresponding vendor dashboards. Three independent root causes per vendor (cache-token weighting at 1.0× when Anthropic meters ≪1×, line-counting `~/.codex/history.jsonl` instead of reading per-thread tokens from `~/.codex/state_5.sqlite`, wrong path `~/.config/gemini/` instead of `~/.gemini/`, no metering source for Grok). Replace single-window raw-token approach with per-vendor native windows and units: Claude (rolling 7d weekly + 5h session, calibrated cost-weighted "messages"), Codex (rolling 5h messages from state_5.sqlite, tier from auth.json JWT), Gemini (rolling 24h requests, tier from oauth_creds.json vs env), Grok (stub until local CLI/API key path exists). Caps move out of the plan-frontmatter `quota_caps` field into operator-editable `~/.jarvis/quota_caps.json` keyed by vendor+window+tier. Subsumes plan 004's open D001 — once vendor-native, plan-level `quota_caps` schema becomes vestigial and 004 collapses to schema cleanup + F006/F007 consumer update.
@@ -15,9 +15,6 @@ agents_required:
 human_gates:
   - pre_impl
   - pre_merge
-quota_caps:
-  claude: 3
-  codex: 2
 loop_caps:
   max_iterations: 3
   no_progress_threshold: 2
