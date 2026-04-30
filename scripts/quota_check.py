@@ -495,9 +495,31 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
     gemini_tier = _detect_gemini_tier()
     grok_tier = _detect_grok_tier()
 
-    def _with_calibration(window: dict[str, Any]) -> dict[str, Any]:
+    # F005: read sticky operator calibration from ~/.jarvis/quota_calibration.json
+    # if present. Fail-soft via calibration_loader.load() (returns {} on any
+    # missing/malformed input) so the tracker never crashes on calibration
+    # issues. Lazy import keeps quota_check standalone-runnable when only
+    # scripts/ is on PYTHONPATH (the calibration_loader module lives under the
+    # jarvis_orchestrate package).
+    calibration_data: dict[str, Any] = {}
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from jarvis_orchestrate import calibration_loader  # noqa: E402
+
+        calibration_data = calibration_loader.load()
+    except (ImportError, OSError):
+        calibration_data = {}
+
+    def _with_calibration(window: dict[str, Any], window_name: str) -> dict[str, Any]:
         merged = dict(window)
-        merged["calibration"] = dict(UNCALIBRATED_BLOCK)
+        try:
+            sticky = calibration_loader.get_for_window(
+                calibration_data, "claude", window_name
+            )
+        except (NameError, AttributeError):
+            sticky = None
+        merged["calibration"] = sticky if sticky else dict(UNCALIBRATED_BLOCK)
         return merged
 
     vendors: dict[str, Any] = {
@@ -506,8 +528,8 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
             "tier_signal": claude_tier["signal"],
             "tier_source": claude_tier["source"],
             "windows": {
-                "rolling_7d": _with_calibration(claude_7d),
-                "rolling_5h": _with_calibration(claude_5h),
+                "rolling_7d": _with_calibration(claude_7d, "rolling_7d"),
+                "rolling_5h": _with_calibration(claude_5h, "rolling_5h"),
             },
         },
         "codex": {
@@ -592,12 +614,37 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
 
 
 def main() -> int:
+    import sys as _sys
+
     state = _build_state()
 
     out_dir = Path.home() / ".jarvis"
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / "quota_state.json"
     out_path.write_text(json.dumps(state, indent=2))
+
+    # F005 stale-calibration warning: emit a single stderr line per stale
+    # window. Lazy-import the loader to share the same path manipulation as
+    # _build_state.
+    try:
+        _sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from jarvis_orchestrate import calibration_loader  # noqa: E402
+
+        for wname, w in (
+            state.get("vendors", {}).get("claude", {}).get("windows", {}).items()
+        ):
+            cal = w.get("calibration") or {}
+            if cal.get("confidence") == "manual" and calibration_loader.is_stale(cal):
+                print(
+                    f"⚠ claude.{wname} calibration is older than "
+                    f"{calibration_loader.STALE_WARNING_DAYS} days "
+                    f"(stamped_at={cal.get('stamped_at')}); re-run "
+                    "`python -m jarvis_orchestrate calibrate-claude --dashboard-pct N "
+                    f"--window {wname}`",
+                    file=_sys.stderr,
+                )
+    except (ImportError, OSError):
+        pass
 
     print(f"✓ Wrote {out_path} (schema_version: {state['schema_version']})")
     print("  vendors:")
