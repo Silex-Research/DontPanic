@@ -221,6 +221,100 @@ def _read_quota_state() -> dict | None:
         return None
 
 
+def _format_admission_quota_reason(quota: quota_admission.QuotaCheck) -> str:
+    """F006b fix#1: render the admission defer reason without crashing on
+    observed_pct=None. Numeric path keeps the historical 'percent_weekly N%
+    > threshold M%' shape so existing INBOX log parsing works; cause path
+    surfaces the structured cause for caps_file_missing / calibration_required
+    / unit_mismatch / missing_vendor_block / no_cap_for_signal."""
+    pct = quota.observed_pct
+    threshold = quota.threshold
+    agent = quota.offending_agent or "?"
+    if isinstance(pct, (int, float)):
+        return f"{agent} percent_weekly {float(pct):.1f}% > threshold {threshold:.1f}%"
+    cause = quota.cause or "unknown"
+    return (
+        f"{agent} defer:{cause} (no numeric observed_pct; see "
+        "~/.jarvis/quota_state.json + ~/.jarvis/quota_caps.json or run "
+        "`python -m jarvis_orchestrate quota-caps init`)"
+    )
+
+
+def _emit_budget_kind_specific_event(
+    plan_dir: Path,
+    plan_id: str,
+    bd_result: circuit_breakers.BudgetCeilingResult,
+    feature_id: str,
+) -> None:
+    """F006b fix#1: emit a kind-specific INBOX event BEFORE the generic
+    breaker_tripped event from _trip_breaker. Keeps the F008 gate-pause
+    semantics unchanged (volley still pauses on breaker:budget_ceiling) while
+    giving operators a clear action signal in INBOX:
+
+      - CALIBRATION_REQUIRED → 'calibration_required' event with
+        calibrate-claude command
+      - UNIT_MISMATCH → 'unit_mismatch' event pointing at quota_caps.json
+      - CONFIG_REQUIRED → 'config_required' event with details.cause
+        (caps_file_missing / no_cap_for_signal / missing_vendor_block)
+      - TRIPPED → no extra event (the breaker_tripped one is sufficient)
+    """
+    kind = bd_result.kind
+    if kind == circuit_breakers.BudgetCeilingKind.CALIBRATION_REQUIRED:
+        inbox.append_event(
+            plan_dir,
+            event="calibration_required",
+            plan_id=plan_id,
+            body=(
+                f"Calibration required for {bd_result.agent}.{bd_result.window} "
+                f"(confidence={bd_result.confidence!r}). The breaker cannot "
+                f"convert weighted_tokens_local_proxy into percent_of_plan "
+                "without a manual calibration sample. Run:\n\n"
+                f"  python -m jarvis_orchestrate calibrate-claude "
+                f"--window {bd_result.window} --dashboard-pct N\n\n"
+                "where N is the current percent shown on "
+                "claude.ai/settings/usage for the matching window."
+            ),
+            agent=bd_result.agent or "",
+            window=bd_result.window or "",
+            feature_id=feature_id,
+        )
+    elif kind == circuit_breakers.BudgetCeilingKind.UNIT_MISMATCH:
+        inbox.append_event(
+            plan_dir,
+            event="unit_mismatch",
+            plan_id=plan_id,
+            body=(
+                f"Unit mismatch for {bd_result.agent}.{bd_result.tier}."
+                f"{bd_result.window}: cap.unit={bd_result.cap_unit!r} ≠ "
+                f"observed_unit={bd_result.observed_unit!r}. Edit "
+                "~/.jarvis/quota_caps.json so cap.unit matches what "
+                "quota_check.py emits."
+            ),
+            agent=bd_result.agent or "",
+            window=bd_result.window or "",
+            feature_id=feature_id,
+        )
+    elif kind == circuit_breakers.BudgetCeilingKind.CONFIG_REQUIRED:
+        cause = (bd_result.details or {}).get("cause", "unknown")
+        inbox.append_event(
+            plan_dir,
+            event="config_required",
+            plan_id=plan_id,
+            body=(
+                f"Quota config required (cause={cause}). "
+                + (bd_result.reason or "")
+                + "\n\nRun `python -m jarvis_orchestrate quota-caps init` to "
+                "seed defaults, hand-edit ~/.jarvis/quota_caps.json for "
+                "no_cap_for_signal, or re-run scripts/quota_check.py for "
+                "missing_vendor_block."
+            ),
+            cause=cause,
+            feature_id=feature_id,
+        )
+    # TRIPPED falls through — the breaker_tripped INBOX event from
+    # _trip_breaker carries enough for the operator to act on.
+
+
 def _quota_gate(agent: str) -> tuple[float | None, str]:
     """Returns (percent_of_primary_cap, decision_log_line). Raises QuotaExceeded
     if hard-blocked.
@@ -393,9 +487,7 @@ def dispatch_single_agent(
     reason_for: dict[str, str] = {}
     if admission.quota.over_threshold:
         reason_for[quota_admission.gate_name(quota_admission.DeferKind.QUOTA_THRESHOLD)] = (
-            f"{admission.quota.offending_agent} percent_weekly "
-            f"{admission.quota.observed_pct:.1f}% > threshold "
-            f"{admission.quota.threshold:.1f}%"
+            _format_admission_quota_reason(admission.quota)
         )
     if admission.interactive.within_backoff:
         reason_for[quota_admission.gate_name(quota_admission.DeferKind.INTERACTIVE_BACKOFF)] = (
@@ -671,9 +763,7 @@ def dispatch_volley(
     reason_for: dict[str, str] = {}
     if admission.quota.over_threshold:
         reason_for[quota_admission.gate_name(quota_admission.DeferKind.QUOTA_THRESHOLD)] = (
-            f"{admission.quota.offending_agent} percent_weekly "
-            f"{admission.quota.observed_pct:.1f}% > threshold "
-            f"{admission.quota.threshold:.1f}%"
+            _format_admission_quota_reason(admission.quota)
         )
     if admission.interactive.within_backoff:
         reason_for[quota_admission.gate_name(quota_admission.DeferKind.INTERACTIVE_BACKOFF)] = (
@@ -842,11 +932,18 @@ def dispatch_volley(
                 audit_paths, per_agent_caps
             )
             if bd_result.tripped:
-                # F006a returns a structured BudgetCeilingResult; F006b will
-                # route on bd_result.kind to emit the right INBOX event
-                # (calibration_required vs unit_mismatch vs config_required vs
-                # standard breaker pause). For now, all non-OK kinds funnel
-                # through breaker:budget_ceiling which is the safe default.
+                # F006b fix#1: emit kind-specific INBOX event BEFORE the
+                # generic breaker_tripped event so operators see a clear
+                # action signal (calibration_required / unit_mismatch /
+                # config_required) alongside the gate-pause notification.
+                # All kinds still funnel through breaker:budget_ceiling for
+                # the F008 pause-and-resume contract.
+                _emit_budget_kind_specific_event(
+                    loaded.plan_dir,
+                    loaded.plan_id,
+                    bd_result,
+                    feature_id,
+                )
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.BUDGET_CEILING,
                     bd_result.reason,

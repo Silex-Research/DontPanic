@@ -234,6 +234,19 @@ def _evaluate_quota_threshold_v2(
             agent=agent, vendors=vendors, caps=caps,
         )
         if report.terminal is not None:
+            # F006b fix#1: TRIPPED is numeric — surface its .pct_of_cap so the
+            # supervisor admission reason builder can format observed_pct
+            # without falling into the cause-path. Other terminal outcomes
+            # (CALIBRATION_REQUIRED, UNIT_MISMATCH) have no meaningful percent
+            # and route through the cause path.
+            if report.terminal.outcome == circuit_breakers.WindowOutcome.TRIPPED:
+                pct_percent = float(report.terminal.pct_of_cap or 0.0) * 100.0
+                return QuotaCheck(
+                    over_threshold=True,
+                    offending_agent=agent,
+                    observed_pct=pct_percent,
+                    threshold=threshold,
+                )
             return QuotaCheck(
                 over_threshold=True,
                 offending_agent=agent,

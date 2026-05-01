@@ -414,6 +414,34 @@
           "captured_at": "2026-05-01T02:30:00Z",
           "captured_by": "claude",
           "note": "F006b: 292 passed, 6 skipped (was 286+6 after fix#2; +6 new F006b tests). Full orchestrate sweep regression-clean across all 12 prior test modules."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-05-01T03:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b fix#1: (a) added _format_admission_quota_reason helper that handles observed_pct=None without TypeError — both admission reason builders (dispatch_single_agent + dispatch_volley) now route through it. Pre-fix would have crashed during F007 dogfood whenever caps were missing or any non-numeric defer cause fired. (b) added _emit_budget_kind_specific_event helper that writes calibration_required / unit_mismatch / config_required INBOX events BEFORE the generic breaker_tripped event from _trip_breaker. F008 gate-pause contract unchanged (still pauses on breaker:budget_ceiling). dispatch_volley calls the helper in front of _trip_and_return so operators see actionable guidance in INBOX."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/quota_admission.py",
+          "captured_at": "2026-05-01T03:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b fix#1: TRIPPED outcome now treated as numeric over-threshold — surfaces report.terminal.pct_of_cap*100 as observed_pct and leaves cause=None. Pre-fix dropped the percent for TRIPPED and the supervisor reason builder would fall into the cause path even though the percent was knowable. CALIBRATION_REQUIRED + UNIT_MISMATCH stay on the cause path (no meaningful percent for those)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_at": "2026-05-01T03:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b fix#1: 6 new tests covering the supervisor reason builder helper (numeric + cause paths without crash); quota_admission TRIPPED returns numeric observed_pct (no cause); _emit_budget_kind_specific_event writes calibration_required / unit_mismatch / config_required INBOX events with actionable bodies; TRIPPED is a no-op in the helper (no double-emit alongside _trip_breaker)."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-05-01T03:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b fix#1: 298 passed, 6 skipped (was 292+6 after F006b initial; +6 new fix#1 tests). Closes the three blocking integration gaps surfaced by operator review of F006b: TypeError on observed_pct=None, missing kind-specific INBOX routing, TRIPPED-as-non-numeric admission telemetry loss."
         }
       ]
     },

@@ -934,6 +934,183 @@ def test_v2_quota_admission_threshold_uses_collect_agent_coverage(
     print("  ✓ quota_admission v2 defers numeric + surfaces cause for config issues")
 
 
+def test_v2_supervisor_admission_reason_handles_cause_path() -> None:
+    """F006b fix#1: supervisor._format_admission_quota_reason must not crash
+    on observed_pct=None when QuotaCheck carries a cause (caps_file_missing,
+    calibration_required, unit_mismatch, missing_vendor_block, no_cap_for_signal).
+    The pre-fix code formatted with :.1f and would TypeError under any of
+    these conditions during F007 dogfood."""
+    print("\n[test] v2_supervisor_admission_reason_handles_cause_path ...")
+    from jarvis_orchestrate import quota_admission, supervisor
+
+    # Numeric path — preserves the historical 'percent_weekly N% > threshold M%' shape
+    numeric = quota_admission.QuotaCheck(
+        over_threshold=True, offending_agent="codex",
+        observed_pct=85.0, threshold=70.0,
+    )
+    line = supervisor._format_admission_quota_reason(numeric)
+    assert "codex" in line
+    assert "85.0%" in line
+    assert "threshold 70.0%" in line
+
+    # Cause path — observed_pct is None, no crash, surfaces structured cause
+    cause = quota_admission.QuotaCheck(
+        over_threshold=True, offending_agent="codex",
+        observed_pct=None, threshold=70.0, cause="caps_file_missing",
+    )
+    line = supervisor._format_admission_quota_reason(cause)
+    assert "codex" in line
+    assert "defer:caps_file_missing" in line
+    assert "quota-caps init" in line
+    print("  ✓ admission reason builder handles both numeric and cause paths")
+
+
+def test_v2_quota_admission_tripped_returns_numeric() -> None:
+    """F006b fix#1: TRIPPED outcome surfaces .pct_of_cap as observed_pct
+    (numeric path), not a cause. CALIBRATION_REQUIRED / UNIT_MISMATCH stay
+    on the cause path. Distinguishes truly numeric over-threshold from
+    config-issue defers in admission telemetry."""
+    print("\n[test] v2_quota_admission_tripped_returns_numeric ...")
+    from jarvis_orchestrate import quota_admission
+
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    # Codex at 150% of cap — TRIPPED outcome
+    qs.write_text(json.dumps({
+        "schema_version": 2,
+        "vendors": {
+            "codex": {
+                "tier": "plus",
+                "windows": {
+                    "rolling_5h": {
+                        "kind": "rolling_5h",
+                        "observed_native": 150_000_000,
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                },
+            },
+        },
+    }))
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
+    }))
+
+    result = quota_admission.evaluate_quota_threshold(["codex"])
+    assert result.over_threshold
+    assert result.offending_agent == "codex"
+    # F006b fix#1: TRIPPED carries numeric observed_pct (150%), no cause
+    assert result.observed_pct is not None
+    assert 149.9 <= result.observed_pct <= 150.1
+    assert result.cause is None  # numeric path
+    print("  ✓ TRIPPED outcome → numeric observed_pct, no cause (admission telemetry preserved)")
+
+
+def test_v2_emit_budget_kind_specific_event_calibration_required(tmp_path: Path) -> None:
+    """F006b fix#1: dispatch_volley emits a kind-specific INBOX event before
+    the generic breaker_tripped event. Verifies the calibration_required
+    branch writes the right event name + actionable body. Same pattern
+    covers unit_mismatch + config_required (next two tests)."""
+    print("\n[test] v2_emit_budget_kind_specific_event_calibration_required ...")
+    from jarvis_orchestrate import inbox, supervisor
+
+    plan_dir = tmp_path / "plan"
+    plan_dir.mkdir()
+    (plan_dir / "audit").mkdir()
+
+    bd_result = cb.BudgetCeilingResult(
+        kind=cb.BudgetCeilingKind.CALIBRATION_REQUIRED,
+        tripped=True,
+        reason="claude.max_20x.rolling_7d cap is percent_of_plan but uncalibrated",
+        agent="claude",
+        tier="max_20x",
+        window="rolling_7d",
+        confidence="uncalibrated",
+    )
+    supervisor._emit_budget_kind_specific_event(
+        plan_dir, "test-plan", bd_result, feature_id="F001",
+    )
+    inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
+    assert "calibration_required" in inbox_text
+    assert "calibrate-claude" in inbox_text
+    assert "rolling_7d" in inbox_text
+    print("  ✓ CALIBRATION_REQUIRED → calibration_required event + calibrate-claude command")
+
+
+def test_v2_emit_budget_kind_specific_event_unit_mismatch(tmp_path: Path) -> None:
+    print("\n[test] v2_emit_budget_kind_specific_event_unit_mismatch ...")
+    from jarvis_orchestrate import inbox, supervisor
+
+    plan_dir = tmp_path / "plan"
+    plan_dir.mkdir()
+    (plan_dir / "audit").mkdir()
+
+    bd_result = cb.BudgetCeilingResult(
+        kind=cb.BudgetCeilingKind.UNIT_MISMATCH,
+        tripped=True,
+        reason="codex cap.unit='requests' != observed_unit='tokens_local_proxy'",
+        agent="codex", tier="plus", window="rolling_5h",
+        cap_unit="requests", observed_unit="tokens_local_proxy",
+    )
+    supervisor._emit_budget_kind_specific_event(
+        plan_dir, "test-plan", bd_result, feature_id="F001",
+    )
+    inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
+    assert "unit_mismatch" in inbox_text
+    assert "quota_caps.json" in inbox_text
+    assert "codex" in inbox_text
+    print("  ✓ UNIT_MISMATCH → unit_mismatch event + caps-edit guidance")
+
+
+def test_v2_emit_budget_kind_specific_event_config_required(tmp_path: Path) -> None:
+    print("\n[test] v2_emit_budget_kind_specific_event_config_required ...")
+    from jarvis_orchestrate import inbox, supervisor
+
+    plan_dir = tmp_path / "plan"
+    plan_dir.mkdir()
+    (plan_dir / "audit").mkdir()
+
+    bd_result = cb.BudgetCeilingResult(
+        kind=cb.BudgetCeilingKind.CONFIG_REQUIRED,
+        tripped=True,
+        reason="caps file unavailable: caps file not found",
+        details={"cause": "caps_file_missing"},
+    )
+    supervisor._emit_budget_kind_specific_event(
+        plan_dir, "test-plan", bd_result, feature_id="F001",
+    )
+    inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
+    assert "config_required" in inbox_text
+    assert "caps_file_missing" in inbox_text
+    assert "quota-caps init" in inbox_text
+    print("  ✓ CONFIG_REQUIRED → config_required event + cause + remediation")
+
+
+def test_v2_emit_budget_kind_specific_event_tripped_no_extra_event(tmp_path: Path) -> None:
+    """TRIPPED is not given a kind-specific event — the generic
+    breaker_tripped event from _trip_breaker carries enough. Verifies the
+    helper is a no-op for TRIPPED so we don't double-emit."""
+    print("\n[test] v2_emit_budget_kind_specific_event_tripped_no_extra_event ...")
+    from jarvis_orchestrate import inbox, supervisor
+
+    plan_dir = tmp_path / "plan"
+    plan_dir.mkdir()
+    (plan_dir / "audit").mkdir()
+
+    bd_result = cb.BudgetCeilingResult(
+        kind=cb.BudgetCeilingKind.TRIPPED, tripped=True,
+        reason="claude rolling_7d 110% > 100%", agent="claude",
+        tier="max_20x", window="rolling_7d",
+    )
+    supervisor._emit_budget_kind_specific_event(
+        plan_dir, "test-plan", bd_result, feature_id="F001",
+    )
+    inbox_path = plan_dir / inbox.INBOX_FILENAME
+    # No event written — _trip_breaker handles the breaker_tripped emit
+    assert not inbox_path.exists() or "calibration_required" not in inbox_path.read_text()
+    print("  ✓ TRIPPED is a no-op in the helper (breaker_tripped is the operative event)")
+
+
 def test_v2_warn_cache_resets_between_tests() -> None:
     """The autouse fixture in conftest.py calls cb.reset_warning_cache() on
     every test. Verify the cache itself has been emptied as we enter this
