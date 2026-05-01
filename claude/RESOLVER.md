@@ -28,8 +28,8 @@ On-demand skills matched by user intent keywords.
 | "tdd", "red green", "test driven" | tdd | `claude/commands/tdd.md` | 2 |
 | "security", "vulnerability", "owasp" | security-review | `claude/skills/security-review/SKILL.md` | 1 |
 | "review code", "code review", "review changes" | code-review | `claude/commands/code-review.md` | 1 |
-| "research", "investigate", "deep dive" | autoresearch | `claude/skills/autoresearch/SKILL.md` | 1 |
-| "research", "search", "look up" | research | `claude/commands/research.md` | 2 |
+| "optimize against metric", "hill-climb", "sweep parameter", "autoresearch" | autoresearch | `claude/skills/autoresearch/SKILL.md` | 1 |
+| "research", "investigate", "deep dive", "search", "look up" | research | `claude/commands/research.md` | 1 |
 | "optimize prompt", "improve prompt", "tune prompt" | prompt-optimizer | `claude/skills/prompt-optimizer/SKILL.md` | 1 |
 | "browse", "scrape", "web page", "screenshot" | browser-use | `claude/skills/browser-use/SKILL.md` | 1 |
 | "agent browse", "structured extraction" | agent-browser | `claude/skills/agent-browser/SKILL.md` | 1 |
@@ -51,7 +51,8 @@ On-demand skills matched by user intent keywords.
 | "verify", "check build", "lint" | verify | `claude/commands/verify.md` | 1 |
 | "improve self", "self improve", "learn from" | self-improving-agent | `claude/skills/self-improving-agent/SKILL.md` | 1 |
 | "git", "branch", "merge", "rebase", "stash" | git-essentials | `claude/skills/git-essentials/SKILL.md` | 1 |
+| "changelog", "release notes", "commit summary", "what changed" | changelog | `claude/skills/changelog/SKILL.md` | 1 |
 
 <!-- overlap: "plan" matches brainstorm-gate (P1, design-first gate), plan-artifacts (P2, artifact trail), and plan (P3, implementation plan). Precedence resolves: ambiguous → brainstorm-gate; explicit implementation → plan-artifacts; simple plan → plan command -->
-<!-- overlap: "research" matches autoresearch (P1, experiment loop) and research (P2, web search). autoresearch for code optimization; research for information lookup -->
+<!-- overlap: metric-shaped optimization requests match autoresearch (P1, experiment loop); generic "research", "investigate", and "deep dive" route to the read-only research command. -->
 <!-- overlap: "tdd" matches test-runner (P1, run tests) and tdd (P2, TDD workflow). test-runner for running; tdd for the full red/green cycle -->

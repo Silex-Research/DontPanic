@@ -19,6 +19,12 @@ Multi-agent panel + bounds   ← Claude / Codex / Gemini / Grok / OSS  +  CAWP t
 
 Each layer's output becomes the next layer's contract. Plans live in `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `features.json` as inviolable machine-checkable ground truth. Different model families audit each other so no single vendor self-approves.
 
+The platform thesis is captured in [`docs/PLATFORM.md`](./docs/PLATFORM.md):
+Jarvis is portable trust infrastructure for bounded agent work. It routes intent
+through reusable skills and learned memory, turns non-trivial work into
+machine-checkable plans, executes those plans across model/vendor boundaries, and
+preserves proof through audits, evidence, signoff, and protected-path checks.
+
 ---
 
 ## Prerequisites
@@ -119,6 +125,22 @@ ruff format --check scripts/
 These four commands are the exact local equivalents of the
 [GitHub Actions CI workflow](.github/workflows/ci.yml). See
 [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor flow.
+
+### 6. Preview your first volley
+
+Before authorizing a real dispatch, the `dispatch-from-plan` subcommand prints a
+10-field pre-flight context block (resolved plan path, target_env, declared
+gates, quota readiness, etc.) and exits without dispatching:
+
+```bash
+PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan <plan-id>
+```
+
+Add `--confirm` to actually dispatch via `supervisor.dispatch_volley` (in-process,
+no subprocess shell-out). Forwarded flags: `--feature`, `--implementer`,
+`--auditor`, `--max-iterations`, `--mode`. A full operator walkthrough — quota
+calibration, INBOX, gate approvals — lands with the onboarding-UX plan
+([`2026-05-01-001-feat-onboarding-ux`](./docs/plans/2026-05-01-001-feat-onboarding-ux/plan.md), F001).
 
 ---
 
