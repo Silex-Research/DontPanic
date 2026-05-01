@@ -401,6 +401,144 @@ _TERMINAL_OUTCOME_TO_KIND: dict[WindowOutcome, BudgetCeilingKind] = {
 }
 
 
+# F006b: deterministic window priority for "primary" selection. Subscriber-tier
+# native windows come first (rolling_5h is what Codex Plus / ChatGPT subscribers
+# see; rolling_2h is Grok's native if/when wired; rolling_24h is Gemini's daily
+# cap). rolling_7d is last because it's the "weekly summary" view, slower to
+# react. Consumers (supervisor soft-warn, quota_admission defer-threshold) pick
+# the highest-priority window that produced an OK or TRIPPED outcome and use
+# its .pct_of_cap for threshold decisions. This is explicit, not dict-iteration-
+# order-dependent — operator review specifically called out the latter as
+# brittle.
+DEFAULT_WINDOW_PRIORITY: tuple[str, ...] = (
+    "rolling_5h", "rolling_2h", "rolling_24h", "rolling_7d",
+)
+
+
+@dataclass(frozen=True)
+class AgentCoverageReport:
+    """Aggregated WindowEvaluation outcomes for one (agent, tier). Consumers
+    decide what verdict to draw based on their own thresholds:
+
+      - check_budget_ceiling: any .terminal → TRIPPED/CAL_REQ/UNIT_MISMATCH;
+        else .config_cause → CONFIG_REQUIRED; else OK.
+      - supervisor._quota_gate: .terminal → block-or-warn; else use
+        .primary.pct_of_cap for soft-warn at 0.9.
+      - quota_admission.evaluate_quota_threshold: .terminal → defer (config
+        issue, dispatch shouldn't proceed); else .primary.pct_of_cap >
+        threshold/100 → defer.
+
+    Shared per-agent collection prevents the three consumers from drifting
+    on calibration safety / unit check / no-cap-for-signal / missing-vendor-
+    block handling — that logic lives in evaluate_window + this collector,
+    not in each consumer.
+    """
+
+    agent: str
+    tier: str
+    # All evaluations the agent's windows produced, in iteration order.
+    # Empty when vendors[agent] is missing OR has empty windows{}.
+    evaluations: tuple[WindowEvaluation, ...]
+    # First terminal (TRIPPED / CALIBRATION_REQUIRED / UNIT_MISMATCH).
+    terminal: WindowEvaluation | None
+    # Highest-priority window (per window_priority) that produced OK or
+    # TRIPPED. Consumers use .pct_of_cap on this for threshold decisions.
+    primary: WindowEvaluation | None
+    # Per-agent CONFIG_REQUIRED classification, or None when covered/benign.
+    config_cause: str | None  # "missing_vendor_block" | "no_cap_for_signal"
+
+    @property
+    def has_signal(self) -> bool:
+        """True if any window observed > 0."""
+        return any(
+            isinstance(ev.observed_native, (int, float)) and ev.observed_native > 0
+            for ev in self.evaluations
+        )
+
+
+def collect_agent_coverage(
+    *,
+    agent: str,
+    vendors: dict,
+    caps: dict,
+    window_priority: tuple[str, ...] | None = None,
+) -> AgentCoverageReport:
+    """Pure per-agent aggregator over evaluate_window outcomes.
+
+    Iterates vendors[agent].windows; calls evaluate_window per window;
+    collects outcomes. No I/O, no warning emission — caller (or the
+    aggregator wrapper that drives this) handles side effects.
+
+    window_priority controls .primary selection: highest-priority window
+    that produced OK or TRIPPED wins. Default DEFAULT_WINDOW_PRIORITY
+    puts rolling_5h first (Codex/Claude subscriber-tier native window).
+    """
+    priority = window_priority or DEFAULT_WINDOW_PRIORITY
+    vblock = vendors.get(agent)
+    if not isinstance(vblock, dict):
+        return AgentCoverageReport(
+            agent=agent, tier="unknown",
+            evaluations=(), terminal=None, primary=None,
+            config_cause="missing_vendor_block",
+        )
+    tier = vblock.get("tier") or "unknown"
+    windows = vblock.get("windows") or {}
+    if not isinstance(windows, dict) or not windows:
+        return AgentCoverageReport(
+            agent=agent, tier=tier,
+            evaluations=(), terminal=None, primary=None,
+            config_cause="missing_vendor_block",
+        )
+
+    evaluations: list[WindowEvaluation] = []
+    terminal: WindowEvaluation | None = None
+    has_ok = False
+    has_no_cap = False
+
+    for window_name, window in windows.items():
+        if not isinstance(window, dict):
+            continue
+        cap_block = quota_caps_loader.get(caps, agent, tier, window_name)
+        ev = evaluate_window(
+            agent=agent, tier=tier, window_name=window_name,
+            window=window, cap_block=cap_block,
+        )
+        evaluations.append(ev)
+        if ev.outcome in _TERMINAL_OUTCOME_TO_KIND and terminal is None:
+            terminal = ev
+        if ev.outcome == WindowOutcome.OK:
+            has_ok = True
+        elif ev.outcome == WindowOutcome.NO_CAP:
+            has_no_cap = True
+
+    # Primary = highest-priority window with OK or TRIPPED outcome.
+    # Deterministic via the priority tuple (was dict iteration order).
+    by_window = {ev.window: ev for ev in evaluations}
+    primary: WindowEvaluation | None = None
+    for wname in priority:
+        ev = by_window.get(wname)
+        if ev is not None and ev.outcome in (
+            WindowOutcome.OK, WindowOutcome.TRIPPED,
+        ):
+            primary = ev
+            break
+
+    # config_cause classification — None when covered (any OK) or benign
+    # (only NO_SIGNAL, no consumption to cap).
+    config_cause: str | None = None
+    if not has_ok:
+        if has_no_cap:
+            config_cause = "no_cap_for_signal"
+        # else: only NO_SIGNAL — benign, no escalation
+
+    return AgentCoverageReport(
+        agent=agent, tier=tier,
+        evaluations=tuple(evaluations),
+        terminal=terminal, primary=primary,
+        config_cause=config_cause,
+    )
+
+
 def _eval_to_result(ev: WindowEvaluation) -> BudgetCeilingResult:
     """Project a terminal WindowEvaluation into a BudgetCeilingResult."""
     return BudgetCeilingResult(
@@ -457,76 +595,47 @@ def _check_budget_v2(
             details={"cause": "caps_file_missing", "error": str(exc)},
         )
 
-    # Per-agent tracking. agent_outcomes[agent] is the set of WindowOutcomes
-    # encountered; an empty set means the agent had no vblock or empty
-    # windows{} (fix#2: missing_vendor_block escalation).
-    agent_outcomes: dict[str, set[WindowOutcome]] = {a: set() for a in participating}
+    # F006b refactor: drive the per-agent collection through the shared
+    # collect_agent_coverage helper so supervisor._quota_gate +
+    # quota_admission.evaluate_quota_threshold consume the same logic. Side
+    # effects (warn-once for stale + no_cap, terminal short-circuit) happen
+    # here, not in the helper, which keeps the helper pure.
+    known = quota_caps_loader.KNOWN_VENDORS
+    cause_per_agent: dict[str, str] = {}
     no_cap_evals_per_agent: dict[str, list[WindowEvaluation]] = {}
 
-    # Iterate participating agents deterministically so first-trip window is
-    # stable across test runs.
     for agent in sorted(participating):
-        vblock = vendors.get(agent)
-        if not isinstance(vblock, dict):
-            continue  # agent_outcomes[agent] stays empty → fix#2 escalates
-        tier = vblock.get("tier") or "unknown"
-        windows = vblock.get("windows") or {}
-        if not isinstance(windows, dict):
-            continue
-        for window_name, window in windows.items():
-            if not isinstance(window, dict):
-                continue
-            cap_block = quota_caps_loader.get(caps, agent, tier, window_name)
-            ev = evaluate_window(
-                agent=agent, tier=tier, window_name=window_name,
-                window=window, cap_block=cap_block,
-            )
-            agent_outcomes[agent].add(ev.outcome)
+        report = collect_agent_coverage(agent=agent, vendors=vendors, caps=caps)
 
-            # Stale advisory — applies whether outcome is OK or TRIPPED.
-            # Plan 2026-04-30-001 D012: stale calibration is warning-only;
-            # the ratio is applied because no-action is more dangerous than
-            # slightly-aged-action.
+        # Stale + no_cap diagnostic warn-once — emitted as we observe each
+        # window so the operator sees the same ordering they'd see in the
+        # tracker. We can't return early on terminal until after these emits
+        # because operators rely on the warn-once log even when a different
+        # window trips first; so we walk evaluations in order.
+        for ev in report.evaluations:
             if ev.stale:
                 _warn_once(
                     "budget_ceiling",
                     agent,
-                    f"stale_{window_name}",
-                    f"[budget_ceiling] {agent}.{window_name} calibration "
+                    f"stale_{ev.window}",
+                    f"[budget_ceiling] {agent}.{ev.window} calibration "
                     f"stale; applying ratio anyway. Re-run calibrate-claude "
                     f"when convenient.",
                 )
-
-            if ev.outcome in _TERMINAL_OUTCOME_TO_KIND:
-                return _eval_to_result(ev)
-
             if ev.outcome == WindowOutcome.NO_CAP:
                 no_cap_evals_per_agent.setdefault(agent, []).append(ev)
                 _warn_once(
                     "budget_ceiling",
                     agent,
-                    f"no_cap_for_{window_name}",
+                    f"no_cap_for_{ev.window}",
                     f"[budget_ceiling] {ev.reason}",
                 )
-            # OK: tracked via agent_outcomes; NO_SIGNAL: benign no-op.
 
-    # Post-iteration aggregation. Per-cause classification keeps F006b INBOX
-    # routing distinct: caps_file_missing vs no_cap_for_signal vs
-    # missing_vendor_block all surface as CONFIG_REQUIRED but the details.cause
-    # tells the caller what operator action is needed.
-    known = quota_caps_loader.KNOWN_VENDORS
-    cause_per_agent: dict[str, str] = {}
-    for agent in sorted(participating):
-        if agent not in known:
-            continue  # unknown future agent; not our problem yet
-        outcomes = agent_outcomes[agent]
-        if WindowOutcome.OK in outcomes:
-            continue  # covered
-        if not outcomes:
-            cause_per_agent[agent] = "missing_vendor_block"
-        elif WindowOutcome.NO_CAP in outcomes:
-            cause_per_agent[agent] = "no_cap_for_signal"
-        # else: only NO_SIGNAL — benign
+        if report.terminal is not None:
+            return _eval_to_result(report.terminal)
+
+        if agent in known and report.config_cause is not None:
+            cause_per_agent[agent] = report.config_cause
 
     if cause_per_agent:
         # Synthesize a combined CONFIG_REQUIRED. Where multiple causes appear,

@@ -4,18 +4,25 @@ Reads ~/.jarvis/quota_caps.json. Keyed by vendor.tier.window. Loaded by
 F006 budget_ceiling to compute trip threshold against the v2 vendors{}
 observed state in ~/.jarvis/quota_state.json.
 
-File shape (schema_version 1):
+File shape (schema_version 1; F006a fix#2 starter):
 
     {
       "schema_version": 1,
       "defaults": {"claude_tier": "max_20x"},
       "claude": {"max_20x": {
-          "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-          "rolling_5h": {"cap": 100, "unit": "percent_of_plan"}}},
+          "rolling_7d": {"cap": 100, "unit": "percent_of_plan"}}},
       "codex": {"plus": {"rolling_5h": {"cap": <N>, "unit": "tokens_local_proxy"}}},
       "gemini": {"code_assist_individuals": {"rolling_24h": {"cap": 1000, "unit": "requests"}}},
       "grok": {}
     }
+
+The starter omits claude.max_20x.rolling_5h on purpose: each percent_of_plan
+cap requires its own dashboard sample (weekly bar vs session bar), so seeding
+both would force the operator to run calibrate-claude twice before the first
+dispatch could clear the breaker. Operators opt into rolling_5h coverage
+explicitly via `calibrate-claude --window rolling_5h --dashboard-pct N` plus a
+hand-edit of this file. The rolling_7d entry's `_note` field documents the
+extension procedure inline.
 
 Unit semantics (F006 will compare observed_native vs cap):
 

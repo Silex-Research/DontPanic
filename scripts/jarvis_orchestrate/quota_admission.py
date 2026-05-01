@@ -40,11 +40,15 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from jarvis_orchestrate import interactive_state
+from jarvis_orchestrate import (
+    circuit_breakers,
+    interactive_state,
+    quota_caps_loader,
+)
 
 DEFAULT_QUOTA_DEFER_THRESHOLD = 70.0
 _DEFAULT_QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
@@ -142,10 +146,18 @@ def _read_quota_state(path: Path | None = None) -> dict:
 
 @dataclass(frozen=True)
 class QuotaCheck:
+    """F006b: gained `cause` field (default None) so non-numeric defer
+    reasons (caps_file_missing / calibration_required / unit_mismatch /
+    missing_vendor_block / no_cap_for_signal) can flow through without
+    forcing a synthetic observed_pct. Existing callers reading
+    .over_threshold / .observed_pct still work — observed_pct is None when
+    cause is set, so callers must handle both shapes."""
+
     over_threshold: bool
     offending_agent: str | None
     observed_pct: float | None
     threshold: float
+    cause: str | None = None
 
 
 def evaluate_quota_threshold(
@@ -153,10 +165,34 @@ def evaluate_quota_threshold(
     *,
     quota_state_path: Path | None = None,
 ) -> QuotaCheck:
-    """Returns whether ANY agent in `agents` is over the configured threshold."""
+    """Returns whether ANY agent in `agents` should defer.
+
+    F006b: V2 path uses circuit_breakers.collect_agent_coverage with
+    DEFAULT_WINDOW_PRIORITY (rolling_5h primary). Defers when:
+      - caps file unavailable → cause='caps_file_missing'
+      - any agent has terminal WindowOutcome → cause=outcome.value
+      - any KNOWN_VENDORS agent has config_cause → that cause
+      - any agent's primary window pct_of_cap > threshold/100 → numeric
+
+    Legacy fallback (pre-F002 vendors{} block missing): preserves the
+    F007-original models{}.percent_weekly path with no cause field.
+    """
     threshold = _quota_threshold()
     state = _read_quota_state(quota_state_path)
-    models = (state.get("models") or {}) if isinstance(state, dict) else {}
+    if not isinstance(state, dict):
+        return QuotaCheck(False, None, None, threshold)
+
+    vendors = state.get("vendors")
+    if isinstance(vendors, dict) and vendors:
+        return _evaluate_quota_threshold_v2(agents, vendors, threshold)
+
+    # Legacy fallback
+    circuit_breakers._warn_once(
+        "quota_admission", "_global", "legacy_fallback",
+        "[quota_admission] vendors{} missing in quota_state.json; using legacy "
+        "models{}.percent_weekly path.",
+    )
+    models = state.get("models") or {}
     for agent in agents:
         info = models.get(agent) or {}
         pct = info.get("percent_weekly")
@@ -167,6 +203,62 @@ def evaluate_quota_threshold(
                 observed_pct=float(pct),
                 threshold=threshold,
             )
+    return QuotaCheck(False, None, None, threshold)
+
+
+def _evaluate_quota_threshold_v2(
+    agents: Iterable[str], vendors: dict, threshold: float
+) -> QuotaCheck:
+    """V2 path — shares collect_agent_coverage with the breaker + supervisor
+    so calibration/unit/missing-vendor-block handling is identical across the
+    three consumers."""
+    try:
+        caps = quota_caps_loader.load()
+    except quota_caps_loader.QuotaCapsError:
+        # Caps file missing → defer for the first agent we'd otherwise
+        # check. Don't dispatch unguarded — the breaker would also halt
+        # on the same condition, but admission halts pre-dispatch which
+        # is cheaper.
+        first = next(iter(agents), None)
+        return QuotaCheck(
+            over_threshold=True,
+            offending_agent=first,
+            observed_pct=None,
+            threshold=threshold,
+            cause="caps_file_missing",
+        )
+
+    known = quota_caps_loader.KNOWN_VENDORS
+    for agent in agents:
+        report = circuit_breakers.collect_agent_coverage(
+            agent=agent, vendors=vendors, caps=caps,
+        )
+        if report.terminal is not None:
+            return QuotaCheck(
+                over_threshold=True,
+                offending_agent=agent,
+                observed_pct=None,
+                threshold=threshold,
+                cause=report.terminal.outcome.value,
+            )
+        if report.config_cause is not None and agent in known:
+            return QuotaCheck(
+                over_threshold=True,
+                offending_agent=agent,
+                observed_pct=None,
+                threshold=threshold,
+                cause=report.config_cause,
+            )
+        if report.primary is not None:
+            pct_percent = float(report.primary.pct_of_cap or 0.0) * 100.0
+            if pct_percent > threshold:
+                return QuotaCheck(
+                    over_threshold=True,
+                    offending_agent=agent,
+                    observed_pct=pct_percent,
+                    threshold=threshold,
+                )
+
     return QuotaCheck(False, None, None, threshold)
 
 
