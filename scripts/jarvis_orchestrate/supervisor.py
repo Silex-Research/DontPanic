@@ -30,6 +30,7 @@ from jarvis_orchestrate import (
     plan_loader,
     prompts,
     quota_admission,
+    quota_caps_loader,
     signoff_writer,
     transcript,
 )
@@ -221,27 +222,121 @@ def _read_quota_state() -> dict | None:
 
 
 def _quota_gate(agent: str) -> tuple[float | None, str]:
-    """Returns (percent_weekly, decision_log_line). Raises QuotaExceeded if hard-blocked.
+    """Returns (percent_of_primary_cap, decision_log_line). Raises QuotaExceeded
+    if hard-blocked.
 
-    F020 acceptance: 'supervisor reads ~/.jarvis/quota_state.json before every dispatch'.
+    F006b: V2 path uses circuit_breakers.collect_agent_coverage to share the
+    cap lookup + calibration safety + unit check + missing-vendor-block
+    classification with check_budget_ceiling and quota_admission. Soft-warn
+    at SOFT_THRESHOLD_PERCENT (90%) of the operator-cap on the primary
+    window (rolling_5h preferred per DEFAULT_WINDOW_PRIORITY). Surfaces
+    'unmetered/config_required' when no usable window — NOT 'safe'. Legacy
+    fallback (vendors{} missing) preserves the F020 percent_weekly behavior.
+
+    Returns the percent value (0-100+) for callers that surface it in
+    INBOX events; None when no usable signal exists. The decision log line
+    is the human-readable summary; non-empty even when pct is None.
     """
     state = _read_quota_state()
     if state is None:
         return None, "[quota] no state file — skipping gate (run scripts/quota_check.py)"
 
+    enforce = os.environ.get("JARVIS_QUOTA_ENFORCE", "soft").lower()
+    vendors = state.get("vendors")
+    if isinstance(vendors, dict) and vendors:
+        return _quota_gate_v2(agent, vendors, enforce)
+
+    # Legacy fallback (pre-F002 state shape) — keeps F020 behavior alive
+    # for the cost-model + cost-guard skills until plan 2026-04-29-004
+    # reactivation migrates them. Single deprecation log per process.
+    circuit_breakers._warn_once(
+        "quota_gate", "_global", "legacy_fallback",
+        "[quota_gate] vendors{} missing in quota_state.json; using legacy "
+        "models{}.percent_weekly path. Re-run scripts/quota_check.py.",
+    )
     info = (state.get("models") or {}).get(agent) or {}
     pct = info.get("percent_weekly")
-    enforce = os.environ.get("JARVIS_QUOTA_ENFORCE", "soft").lower()
-
     if pct is None:
         return None, f"[quota] {agent}: unmetered or no cap ({info.get('plan', '?')})"
-
-    line = f"[quota] {agent}: {pct}% of weekly cap ({info.get('plan', '?')})"
+    line = f"[quota] {agent}: {pct}% of weekly cap ({info.get('plan', '?')}) [legacy]"
     if pct >= SOFT_THRESHOLD_PERCENT:
         if enforce == "hard":
             raise QuotaExceeded(
                 f"{agent} weekly quota at {pct}% ≥ {SOFT_THRESHOLD_PERCENT}% — "
                 f"set JARVIS_QUOTA_ENFORCE=soft (default) to log-and-proceed."
+            )
+        line += f"  ⚠ above {SOFT_THRESHOLD_PERCENT}% soft threshold (proceeding)"
+    return pct, line
+
+
+def _quota_gate_v2(
+    agent: str, vendors: dict, enforce: str
+) -> tuple[float | None, str]:
+    """V2 path for _quota_gate — shares collect_agent_coverage with the
+    breaker. Translates the per-agent verdict into the (pct, line) shape
+    the existing supervisor caller + signoff_writer expect."""
+    try:
+        caps = quota_caps_loader.load()
+    except quota_caps_loader.QuotaCapsError as exc:
+        circuit_breakers._warn_once(
+            "quota_gate", agent, "caps_file_missing",
+            f"[quota_gate] caps file unavailable: {exc}",
+        )
+        line = (
+            f"[quota] {agent}: caps file missing → config_required "
+            f"(run `python -m jarvis_orchestrate quota-caps init`)"
+        )
+        if enforce == "hard":
+            raise QuotaExceeded(line)
+        return None, line
+
+    report = circuit_breakers.collect_agent_coverage(
+        agent=agent, vendors=vendors, caps=caps,
+    )
+
+    if report.terminal is not None:
+        # Calibration / unit_mismatch — block dispatch with explicit reason.
+        # Stale advisory still emitted by check_budget_ceiling; not duplicated
+        # here to avoid double-warn from the same dispatch.
+        line = (
+            f"[quota] {agent}: {report.terminal.outcome.value} on "
+            f"{report.terminal.window} — {report.terminal.reason}"
+        )
+        if enforce == "hard":
+            raise QuotaExceeded(line)
+        return None, line
+
+    if report.config_cause is not None:
+        circuit_breakers._warn_once(
+            "quota_gate", agent, report.config_cause,
+            f"[quota_gate] {agent}: {report.config_cause}",
+        )
+        line = (
+            f"[quota] {agent}: config_required ({report.config_cause}) — "
+            f"add caps via `quota-caps init` or fix state"
+        )
+        if enforce == "hard":
+            raise QuotaExceeded(line)
+        return None, line
+
+    if report.primary is None:
+        # All windows NO_SIGNAL — agent dispatched but no logged usage.
+        # Benign; surface as unmetered.
+        return None, f"[quota] {agent}: no signal in any window (unmetered for now)"
+
+    primary = report.primary
+    pct = float(primary.pct_of_cap or 0.0) * 100.0
+    line = (
+        f"[quota] {agent}: {pct:.1f}% of {primary.window} cap "
+        f"(tier={report.tier}, cap={primary.cap} {primary.cap_unit}, "
+        f"confidence={primary.confidence})"
+    )
+    if pct >= SOFT_THRESHOLD_PERCENT:
+        if enforce == "hard":
+            raise QuotaExceeded(
+                f"{agent} {primary.window} at {pct:.1f}% ≥ "
+                f"{SOFT_THRESHOLD_PERCENT}% — set JARVIS_QUOTA_ENFORCE=soft "
+                "(default) to log-and-proceed."
             )
         line += f"  ⚠ above {SOFT_THRESHOLD_PERCENT}% soft threshold (proceeding)"
     return pct, line

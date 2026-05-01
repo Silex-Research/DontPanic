@@ -140,7 +140,7 @@
       "id": "F004",
       "category": "tooling",
       "phase": 2,
-      "description": "Operator-editable caps file at ~/.jarvis/quota_caps.json. Schema: {schema_version: 1, defaults: {claude_tier}, <vendor>: {<tier>: {<window>: {cap, unit, _note?}}}}. NOT in repo (lives in ~/.jarvis/, outside the tree). NOT reusing dashboard/state/costs.json (different audience: app-level GCP $-spend vs per-vendor agent quota — see feedback_operator_config_separation.md). Sibling subcommands on `python -m jarvis_orchestrate`: `quota-caps init [--overwrite]` writes a starter file (samples current Codex rolling_5h via _codex_usage_v2 to derive cap = ceil(observed * 1.25); falls back to high provisional 1B tokens if no sample; refuses to overwrite without flag); `quota-caps show` reads + validates the file and prints effective caps. Starter caps: claude.max_20x rolling_7d/rolling_5h cap=100 unit=percent_of_plan with _note flagging the F006 uncalibrated-skip requirement; codex.plus.rolling_5h unit=tokens_local_proxy (NOT messages_estimate — F006 compares against observed_native which is tokens, so messages_estimate would silently false-trip); gemini.code_assist_individuals.rolling_24h cap=1000 unit=requests; grok={} (empty until F003 detects a real signal). Loader validates schema_version + KNOWN_VENDORS/TIERS/WINDOWS/UNITS at load-time; rejects unknowns with named-key errors. Permits underscore-prefixed keys (_note, _owner) so operators can comment inline. defaults.claude_tier informs _detect_claude_tier (F003) so the cap-key tier and the v2 vendors{} block tier match without a separate config.",
+      "description": "Operator-editable caps file at ~/.jarvis/quota_caps.json. Schema: {schema_version: 1, defaults: {claude_tier}, <vendor>: {<tier>: {<window>: {cap, unit, _note?}}}}. NOT in repo (lives in ~/.jarvis/, outside the tree). NOT reusing dashboard/state/costs.json (different audience: app-level GCP $-spend vs per-vendor agent quota — see feedback_operator_config_separation.md). Sibling subcommands on `python -m jarvis_orchestrate`: `quota-caps init [--overwrite]` writes a starter file (samples current Codex rolling_5h via _codex_usage_v2 to derive cap = ceil(observed * 1.25); falls back to high provisional 1B tokens if no sample; refuses to overwrite without flag); `quota-caps show` reads + validates the file and prints effective caps. Starter caps (post F006a fix#2): claude.max_20x.rolling_7d cap=100 unit=percent_of_plan with _note flagging the F006 uncalibrated-skip requirement AND telling the operator how to extend coverage to rolling_5h (rolling_5h is intentionally NOT seeded — each percent_of_plan cap requires its own dashboard sample, weekly bar vs session bar, so dual-seeding would force two calibrations before first dispatch could clear); codex.plus.rolling_5h unit=tokens_local_proxy (NOT messages_estimate — F006 compares against observed_native which is tokens, so messages_estimate would silently false-trip); gemini.code_assist_individuals.rolling_24h cap=1000 unit=requests; grok={} (empty until F003 detects a real signal). Loader validates schema_version + KNOWN_VENDORS/TIERS/WINDOWS/UNITS at load-time; rejects unknowns with named-key errors. Validator rejects cap <= 0 (F006a fix#2 — was cap < 0; aligned with evaluate_window's defensive cap_value <= 0 check). Permits underscore-prefixed keys (_note, _owner) so operators can comment inline. defaults.claude_tier informs _detect_claude_tier (F003) so the cap-key tier and the v2 vendors{} block tier match without a separate config.",
       "steps": [
         "Define KNOWN_VENDORS/TIERS/WINDOWS/UNITS vocabularies in quota_caps_loader.py",
         "Implement starter_caps() with codex_observed_5h derivation and high provisional fallback",
@@ -277,7 +277,9 @@
         "Note: signoff_writer is OUT OF SCOPE — it reads audit.quota_consumed.percent_weekly (audit-record schema field), not quota_state.json's legacy mirror. Different concern; the F002 rg consumer scan was a false-positive on this file."
       ],
       "acceptance": "(1) check_budget_ceiling returns BudgetCeilingResult with kind ∈ {OK, TRIPPED, CONFIG_REQUIRED, CALIBRATION_REQUIRED, UNIT_MISMATCH}; tripped=True for every non-OK kind so existing callers (`if result.tripped:`) keep working; structured fields (agent/tier/window/cap/observed_native/confidence/fallback_used) populated for the caller to route on. (2) Uncalibrated Claude windows with percent_of_plan caps return CALIBRATION_REQUIRED (NOT a quiet skip, NOT a false-trip against weighted_tokens / 100). (3) Non-Claude unit mismatch returns UNIT_MISMATCH halt. (4) Missing/invalid caps file returns CONFIG_REQUIRED with init guidance. (5) Legacy state shape (no vendors block) falls back to legacy models{}.percent_weekly path with plan.quota_caps as authority and fallback_used=True; v2 path IGNORES plan.quota_caps. (6) _warned_once dedup keyed by (consumer, agent, condition) and reset between tests via reset_warning_cache() called from the autouse fixture in conftest.py. (7) supervisor._quota_gate reads vendors{} for soft-warn (F006b). (8) quota_admission reads vendors{} for defer:quota_threshold (F006b). (9) signoff_writer is OUT OF SCOPE — its `quota_consumed.percent_weekly` is an audit-record field on the audit schema, NOT the quota_state.json legacy mirror; correction surfaced during F006a design. (10) Existing F006 + F007 + F008 + signoff tests pass after fixture updates. (11) New v2-path tests for the 5 BudgetCeilingKind values + warn-once dedup + legacy-fallback + plan-caps-ignored.",
-      "passes": false,
+      "passes": true,
+      "verified_at": "2026-05-01T02:30:00Z",
+      "verified_by": ["claude"],
       "depends_on": ["F002", "F004", "F005"],
       "evidence_refs": [
         {
@@ -377,6 +379,41 @@
           "captured_at": "2026-05-01T01:30:00Z",
           "captured_by": "claude",
           "note": "F006a fix#2: 4 new tests — codex with percent_of_plan cap → UNIT_MISMATCH (no calibrate-claude noise); validator rejects cap=0 (and cap<0); participating known-agent without vblock → CONFIG_REQUIRED missing_vendor_block; starter_caps omits rolling_5h. Existing test_v2_no_cap_for_signal_returns_config_required updated to assert details.cause_per_agent['codex'] == 'no_cap_for_signal'. Full sweep: 286 passed, 6 skipped."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_at": "2026-05-01T02:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b: extracted DEFAULT_WINDOW_PRIORITY tuple + AgentCoverageReport dataclass + collect_agent_coverage() pure aggregator. Primary window selection is deterministic via the priority tuple (was dict iteration order — operator review flagged that as brittle). _check_budget_v2 refactored to drive through the helper instead of inlining the per-agent loop; warn-once for stale + no_cap remains in the aggregator (side effects belong to the caller, not the helper)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_at": "2026-05-01T02:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b: supervisor._quota_gate now branches on state.vendors{} → v2 path via _quota_gate_v2; legacy fallback preserves F020 percent_weekly behavior with single deprecation warn-once. V2 routes through circuit_breakers.collect_agent_coverage so calibration safety + unit check + missing-vendor-block + no-cap-for-signal handling is shared with the breaker. Soft-warn at 90% of operator cap on the .primary window (rolling_5h preferred). Terminal/config_cause cases surface 'unmetered/config_required' (NOT 'safe'); JARVIS_QUOTA_ENFORCE=hard raises QuotaExceeded with explicit reason."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/quota_admission.py",
+          "captured_at": "2026-05-01T02:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b: QuotaCheck gained .cause field (default None) so non-numeric defer reasons (caps_file_missing / calibration_required / unit_mismatch / missing_vendor_block / no_cap_for_signal) flow through without a synthetic observed_pct. evaluate_quota_threshold v2 path uses collect_agent_coverage; legacy fallback preserves F007-original models{}.percent_weekly behavior with no cause. Defers when primary window .pct_of_cap*100 > JARVIS_QUOTA_DEFER_THRESHOLD (default 70.0)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_at": "2026-05-01T02:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b: 6 new tests — collect_agent_coverage covered path; window priority picks rolling_5h regardless of dict insertion order (deterministic); missing vblock → config_cause=missing_vendor_block + empty evaluations; terminal short-circuits into report.terminal; supervisor._quota_gate v2 routes through helper + surfaces percent + soft-warn at 90%; quota_admission v2 defers numeric + surfaces cause for config issues."
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts python3 -m pytest scripts/jarvis_orchestrate/tests/ -q",
+          "captured_at": "2026-05-01T02:30:00Z",
+          "captured_by": "claude",
+          "note": "F006b: 292 passed, 6 skipped (was 286+6 after fix#2; +6 new F006b tests). Full orchestrate sweep regression-clean across all 12 prior test modules."
         }
       ]
     },

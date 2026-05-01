@@ -737,6 +737,203 @@ def test_v2_ignores_plan_level_caps(tmp_path: Path) -> None:
     print("  ✓ v2 path ignores plan-level quota_caps; only operator caps file authoritative")
 
 
+def test_v2_collect_agent_coverage_covered_path() -> None:
+    """F006b shared helper: agent with cap + signal + OK outcome on the
+    primary window. report.terminal None, config_cause None, primary present
+    with .pct_of_cap for soft-warn / defer thresholds."""
+    print("\n[test] v2_collect_agent_coverage_covered_path ...")
+    vendors = {
+        "codex": {
+            "tier": "plus",
+            "windows": {
+                "rolling_5h": {
+                    "kind": "rolling_5h",
+                    "observed_native": 80_000_000,
+                    "observed_unit": "tokens_local_proxy",
+                },
+            },
+        },
+    }
+    caps = {
+        "schema_version": 1,
+        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
+    }
+    report = cb.collect_agent_coverage(agent="codex", vendors=vendors, caps=caps)
+    assert report.terminal is None
+    assert report.config_cause is None
+    assert report.primary is not None
+    assert report.primary.window == "rolling_5h"
+    assert report.primary.outcome == cb.WindowOutcome.OK
+    assert report.primary.pct_of_cap == 0.8
+    print("  ✓ covered agent: terminal None, primary on rolling_5h with .pct_of_cap=0.8")
+
+
+def test_v2_collect_agent_coverage_window_priority_picks_rolling_5h() -> None:
+    """Deterministic window selection per DEFAULT_WINDOW_PRIORITY (was dict
+    iteration order — flagged in the F006a review). With both rolling_5h
+    and rolling_7d having OK outcomes, rolling_5h wins because it's
+    higher priority, regardless of dict insertion order."""
+    print("\n[test] v2_collect_agent_coverage_window_priority_picks_rolling_5h ...")
+    # Insert rolling_7d FIRST in the dict to verify priority overrides order
+    vendors = {
+        "codex": {
+            "tier": "plus",
+            "windows": {
+                "rolling_7d": {
+                    "kind": "rolling_7d",
+                    "observed_native": 700_000_000,
+                    "observed_unit": "tokens_local_proxy",
+                },
+                "rolling_5h": {
+                    "kind": "rolling_5h",
+                    "observed_native": 50_000_000,
+                    "observed_unit": "tokens_local_proxy",
+                },
+            },
+        },
+    }
+    caps = {
+        "schema_version": 1,
+        "codex": {"plus": {
+            "rolling_7d": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
+            "rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"},
+        }},
+    }
+    report = cb.collect_agent_coverage(agent="codex", vendors=vendors, caps=caps)
+    # rolling_5h is higher in DEFAULT_WINDOW_PRIORITY, so it wins as primary
+    assert report.primary is not None
+    assert report.primary.window == "rolling_5h"
+    assert report.primary.pct_of_cap == 0.5
+    print("  ✓ rolling_5h selected as primary regardless of dict insertion order")
+
+
+def test_v2_collect_agent_coverage_missing_vblock() -> None:
+    """Missing vendor block → config_cause='missing_vendor_block', no primary."""
+    print("\n[test] v2_collect_agent_coverage_missing_vblock ...")
+    vendors = {"gemini": {"tier": "code_assist_individuals", "windows": {}}}
+    caps = {"schema_version": 1}
+    report = cb.collect_agent_coverage(agent="claude", vendors=vendors, caps=caps)
+    assert report.config_cause == "missing_vendor_block"
+    assert report.terminal is None
+    assert report.primary is None
+    assert report.evaluations == ()
+    print("  ✓ missing vblock → config_cause=missing_vendor_block")
+
+
+def test_v2_collect_agent_coverage_terminal_short_circuits() -> None:
+    """Terminal outcome (UNIT_MISMATCH here) flows into report.terminal —
+    consumers can branch on it without aggregating other windows."""
+    print("\n[test] v2_collect_agent_coverage_terminal_short_circuits ...")
+    vendors = {
+        "codex": {
+            "tier": "plus",
+            "windows": {
+                "rolling_5h": {
+                    "kind": "rolling_5h",
+                    "observed_native": 1_000,
+                    "observed_unit": "tokens_local_proxy",
+                },
+            },
+        },
+    }
+    caps = {
+        "schema_version": 1,
+        "codex": {"plus": {"rolling_5h": {"cap": 80, "unit": "requests"}}},  # mismatch
+    }
+    report = cb.collect_agent_coverage(agent="codex", vendors=vendors, caps=caps)
+    assert report.terminal is not None
+    assert report.terminal.outcome == cb.WindowOutcome.UNIT_MISMATCH
+    assert report.config_cause is None
+    print("  ✓ terminal flows into report.terminal for caller to route on")
+
+
+def test_v2_supervisor_quota_gate_v2_routes_through_collect_agent_coverage(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """End-to-end: supervisor._quota_gate against v2 state + caps file uses
+    the shared collect_agent_coverage helper. Verifies (pct, line) shape
+    with .pct_of_cap-derived percent and operator-cap reference."""
+    print("\n[test] v2_supervisor_quota_gate_v2_routes_through_collect_agent_coverage ...")
+    from jarvis_orchestrate import supervisor
+
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    qs.write_text(json.dumps({
+        "schema_version": 2,
+        "vendors": {
+            "codex": {
+                "tier": "plus",
+                "windows": {
+                    "rolling_5h": {
+                        "kind": "rolling_5h",
+                        "observed_native": 95_000_000,  # 95% of 100M cap
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                },
+            },
+        },
+    }))
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
+    }))
+
+    pct, line = supervisor._quota_gate("codex")
+    assert pct is not None
+    assert 94.5 <= pct <= 95.5  # 95% within rounding
+    assert "rolling_5h" in line
+    assert "soft threshold" in line  # crossed 90% soft threshold
+    assert "tier=plus" in line
+    print("  ✓ _quota_gate v2 surfaces .pct_of_cap percent + window + soft-warn")
+
+
+def test_v2_quota_admission_threshold_uses_collect_agent_coverage(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """quota_admission.evaluate_quota_threshold v2 path defers when primary
+    window pct > threshold/100 percent. Same shared collector as breaker +
+    supervisor."""
+    print("\n[test] v2_quota_admission_threshold_uses_collect_agent_coverage ...")
+    from jarvis_orchestrate import quota_admission
+
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    # Codex at 80% — above default 70% defer threshold
+    qs.write_text(json.dumps({
+        "schema_version": 2,
+        "vendors": {
+            "codex": {
+                "tier": "plus",
+                "windows": {
+                    "rolling_5h": {
+                        "kind": "rolling_5h",
+                        "observed_native": 80_000_000,
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                },
+            },
+        },
+    }))
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
+    }))
+
+    result = quota_admission.evaluate_quota_threshold(["codex"])
+    assert result.over_threshold
+    assert result.offending_agent == "codex"
+    assert result.observed_pct is not None
+    assert 79.5 <= result.observed_pct <= 80.5
+    assert result.cause is None  # numeric defer, not config issue
+
+    # Caps file unloadable → defer with cause
+    caps.unlink()
+    result2 = quota_admission.evaluate_quota_threshold(["codex"])
+    assert result2.over_threshold
+    assert result2.cause == "caps_file_missing"
+    print("  ✓ quota_admission v2 defers numeric + surfaces cause for config issues")
+
+
 def test_v2_warn_cache_resets_between_tests() -> None:
     """The autouse fixture in conftest.py calls cb.reset_warning_cache() on
     every test. Verify the cache itself has been emptied as we enter this
