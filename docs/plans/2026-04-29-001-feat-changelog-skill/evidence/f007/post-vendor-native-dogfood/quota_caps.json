@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "claude_tier": "max_20x"
+  },
+  "claude": {
+    "max_20x": {
+      "rolling_7d": {
+        "cap": 100,
+        "unit": "percent_of_plan",
+        "_note": "F006 must skip this window when vendors.claude.windows.<w>.calibration.confidence == 'uncalibrated' (see F005 calibrate-claude). Otherwise observed weighted_tokens / 100 false-trips immediately. To extend coverage to rolling_5h: run calibrate-claude --window rolling_5h --dashboard-pct N and add an entry alongside this one with the same shape."
+      }
+    }
+  },
+  "codex": {
+    "plus": {
+      "rolling_5h": {
+        "cap": 1000000000,
+        "unit": "tokens_local_proxy",
+        "_note": "high provisional (1000000000); tune to ~1.25x observed rolling_5h or re-run `quota-caps init` after some Codex usage exists"
+      }
+    }
+  },
+  "gemini": {
+    "code_assist_individuals": {
+      "rolling_24h": {
+        "cap": 1000,
+        "unit": "requests",
+        "_note": "Google Code Assist Individuals daily request cap"
+      }
+    }
+  },
+  "grok": {}
+}

@@ -1,0 +1,20 @@
+ M claude/PORTABILITY.md
+ M claude/RESOLVER.md
+ M claude/scripts/sync-harness.sh
+ M dashboard/state/costs.json
+ M docs/plans/2026-04-29-001-feat-changelog-skill/INBOX.md
+ M docs/plans/2026-04-29-001-feat-changelog-skill/audit/claude-implementer-i0.json
+ M docs/plans/2026-04-29-001-feat-changelog-skill/audit/codex-auditor-i0.json
+ M docs/plans/2026-04-29-001-feat-changelog-skill/audit/gate-state.json
+ M docs/plans/2026-04-29-001-feat-changelog-skill/audit/signoff-2026-04-29-001-feat-changelog-skill.json
+ M docs/plans/2026-04-29-001-feat-changelog-skill/audit/transcript.md
+ M docs/plans/2026-04-29-001-feat-changelog-skill/evidence/iteration-0/changelog-skill/pytest.txt
+ M docs/plans/2026-04-29-001-feat-changelog-skill/evidence/iteration-0/changelog-skill/sanitization_check.txt
+ M docs/plans/2026-04-29-001-feat-changelog-skill/evidence/iteration-0/changelog-skill/validate.txt
+ M docs/plans/2026-04-29-001-feat-changelog-skill/features.json
+?? claude/__init__.py
+?? claude/skills/__init__.py
+?? claude/skills/changelog/
+?? docs/plans/2026-04-29-001-feat-changelog-skill/audit/claude-implementer-i1.json
+?? docs/plans/2026-04-29-001-feat-changelog-skill/audit/codex-auditor-i1.json
+?? docs/plans/2026-04-29-001-feat-changelog-skill/evidence/f007/
