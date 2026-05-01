@@ -294,17 +294,20 @@ def test_v2_unit_mismatch_halts_for_non_claude(tmp_path: Path) -> None:
     print("  ✓ codex cap unit≠observed unit → UNIT_MISMATCH halt")
 
 
-def test_v2_no_cap_for_window_skipped_with_warn_once(tmp_path: Path, capsys) -> None:
-    """When the caps file is present but missing an entry for a particular
-    vendor.tier.window, the window is skipped (warn-once) rather than tripping.
-    The warning must fire at most once per (consumer, agent, condition) per
-    process — verified by calling twice."""
-    print("\n[test] v2_no_cap_for_window_skipped_with_warn_once ...")
+def test_v2_no_cap_for_signal_returns_config_required(tmp_path: Path, capsys) -> None:
+    """F006a fix#1: when a participating agent has signal in some window but
+    NO cap+signal window exists anywhere for that agent, the breaker returns
+    CONFIG_REQUIRED — not OK. Closes the gap where Codex with no cap entry
+    silently returned OK and let dispatch proceed unguarded.
+
+    The warn-once still fires for diagnostic depth, and details.cause
+    distinguishes this from caps-file-missing CONFIG_REQUIRED."""
+    print("\n[test] v2_no_cap_for_signal_returns_config_required ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
     _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
                     claude_calibration=None)
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    # Caps file has Claude but not Codex
+    # Caps file has Claude but no Codex entry — Codex is uncovered.
     caps.write_text(json.dumps({
         "schema_version": 1,
         "defaults": {"claude_tier": "max_20x"},
@@ -316,21 +319,185 @@ def test_v2_no_cap_for_window_skipped_with_warn_once(tmp_path: Path, capsys) -> 
     ad.mkdir()
     _write_audit(ad, "codex")
 
-    # First call: codex skipped, claude has 0 observed → OK
     result1 = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
-    assert not result1.tripped
-    assert result1.kind == cb.BudgetCeilingKind.OK
+    assert result1.tripped
+    assert result1.kind == cb.BudgetCeilingKind.CONFIG_REQUIRED
+    assert result1.details.get("cause") == "no_cap_for_signal"
+    assert "codex" in result1.details.get("uncovered_agents", [])
+    assert "codex.plus.rolling_5h" in result1.reason
+    assert "quota-caps init" in result1.reason
 
     captured1 = capsys.readouterr()
-    assert "no cap for codex.plus.rolling_5h" in captured1.err
+    assert "no cap for codex" in captured1.err.lower() or "rolling_5h" in captured1.err
 
-    # Second call with the same state: warning should NOT repeat
+    # Second call: warn-once dedup means no repeat stderr line, but the
+    # terminal verdict is still CONFIG_REQUIRED (idempotent).
     result2 = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
-    assert not result2.tripped
+    assert result2.tripped
+    assert result2.kind == cb.BudgetCeilingKind.CONFIG_REQUIRED
 
     captured2 = capsys.readouterr()
-    assert "no cap for codex.plus.rolling_5h" not in captured2.err
-    print("  ✓ no_cap_for_window skipped once with warn; no repeat warning per process")
+    assert "rolling_5h" not in captured2.err  # warn-once dedup held
+    print("  ✓ no cap+signal window for participating agent → CONFIG_REQUIRED (no false-OK)")
+
+
+def test_v2_no_cap_for_secondary_window_ok_when_primary_covers(tmp_path: Path) -> None:
+    """If an agent has signal in two windows but cap entry exists for only
+    one, that's OK — the agent is covered by the capped window. Real example:
+    Codex emits both rolling_5h (F006 primary) and rolling_7d (mirror parity)
+    but the F004 starter caps only rolling_5h. Operator-intentional, not a
+    config gap."""
+    print("\n[test] v2_no_cap_for_secondary_window_ok_when_primary_covers ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    state = {
+        "schema_version": 2,
+        "vendors": {
+            "codex": {
+                "tier": "plus",
+                "windows": {
+                    "rolling_5h": {
+                        "kind": "rolling_5h",
+                        "observed_native": 100_000_000,
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                    "rolling_7d": {
+                        "kind": "rolling_7d",
+                        "observed_native": 300_000_000,
+                        "observed_unit": "tokens_local_proxy",
+                    },
+                },
+            },
+        },
+    }
+    qs.write_text(json.dumps(state))
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    # Cap only on rolling_5h (matches F004 starter shape)
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "codex": {"plus": {
+            "rolling_5h": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "codex")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert not result.tripped, (
+        f"expected OK because rolling_5h covers codex; got {result.kind} "
+        f"reason={result.reason}"
+    )
+    assert result.kind == cb.BudgetCeilingKind.OK
+    print("  ✓ secondary uncapped window does NOT escalate when primary covers")
+
+
+def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
+    """The shared evaluate_window helper (used by check_budget_ceiling and
+    F006b consumers) is pure and exposes the per-window outcome + structured
+    fields. Verify each terminal + non-terminal outcome via direct calls."""
+    print("\n[test] v2_evaluate_window_pure_helper ...")
+    # NO_SIGNAL: observed=0
+    ev = cb.evaluate_window(
+        agent="claude", tier="max_20x", window_name="rolling_7d",
+        window={"observed_native": 0, "observed_unit": "weighted_tokens_local_proxy"},
+        cap_block={"cap": 100, "unit": "percent_of_plan"},
+    )
+    assert ev.outcome == cb.WindowOutcome.NO_SIGNAL
+
+    # NO_CAP: signal but no cap_block
+    ev = cb.evaluate_window(
+        agent="codex", tier="plus", window_name="rolling_5h",
+        window={"observed_native": 1_000_000, "observed_unit": "tokens_local_proxy"},
+        cap_block=None,
+    )
+    assert ev.outcome == cb.WindowOutcome.NO_CAP
+    assert ev.observed_native == 1_000_000
+
+    # CALIBRATION_REQUIRED: Claude % cap + uncalibrated
+    ev = cb.evaluate_window(
+        agent="claude", tier="max_20x", window_name="rolling_7d",
+        window={
+            "observed_native": 500_000_000,
+            "observed_unit": "weighted_tokens_local_proxy",
+            "calibration": {"ratio": None, "confidence": "uncalibrated"},
+        },
+        cap_block={"cap": 100, "unit": "percent_of_plan"},
+    )
+    assert ev.outcome == cb.WindowOutcome.CALIBRATION_REQUIRED
+
+    # UNIT_MISMATCH: codex with wrong cap unit
+    ev = cb.evaluate_window(
+        agent="codex", tier="plus", window_name="rolling_5h",
+        window={"observed_native": 1_000, "observed_unit": "tokens_local_proxy"},
+        cap_block={"cap": 100, "unit": "requests"},
+    )
+    assert ev.outcome == cb.WindowOutcome.UNIT_MISMATCH
+
+    # OK: codex with matching unit, under cap; pct_of_cap surfaced for F006b
+    ev = cb.evaluate_window(
+        agent="codex", tier="plus", window_name="rolling_5h",
+        window={"observed_native": 80_000_000, "observed_unit": "tokens_local_proxy"},
+        cap_block={"cap": 100_000_000, "unit": "tokens_local_proxy"},
+    )
+    assert ev.outcome == cb.WindowOutcome.OK
+    assert ev.pct_of_cap == 0.8
+    assert ev.effective == 80_000_000
+
+    # TRIPPED: same shape, over cap
+    ev = cb.evaluate_window(
+        agent="codex", tier="plus", window_name="rolling_5h",
+        window={"observed_native": 150_000_000, "observed_unit": "tokens_local_proxy"},
+        cap_block={"cap": 100_000_000, "unit": "tokens_local_proxy"},
+    )
+    assert ev.outcome == cb.WindowOutcome.TRIPPED
+    assert ev.pct_of_cap == 1.5
+
+    # OK + STALE: Claude % cap, manual calibration, stamped >7d ago, under cap
+    old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat()
+    ev = cb.evaluate_window(
+        agent="claude", tier="max_20x", window_name="rolling_7d",
+        window={
+            "observed_native": 100_000_000,
+            "observed_unit": "weighted_tokens_local_proxy",
+            "calibration": {
+                "ratio": 1.0e-7,  # 100M * 1e-7 = 10 < 100
+                "confidence": "manual",
+                "source": "operator_dashboard_sample",
+                "stamped_at": old,
+            },
+        },
+        cap_block={"cap": 100, "unit": "percent_of_plan"},
+    )
+    assert ev.outcome == cb.WindowOutcome.OK
+    assert ev.stale is True  # advisory; ratio applied anyway
+    assert ev.effective == 10
+    print("  ✓ evaluate_window covers 6 outcomes + stale advisory; pure (no I/O)")
+
+
+def test_v2_caps_init_honors_env_path(tmp_path: Path, monkeypatch) -> None:
+    """F006a fix#1: init_starter_file must honor JARVIS_QUOTA_CAPS_PATH or the
+    CLI guidance ('run quota-caps init') refers to a file the loader doesn't
+    actually read. Test isolates by setting JARVIS_QUOTA_CAPS_PATH and
+    verifying init writes there, not to ~/.jarvis/quota_caps.json."""
+    print("\n[test] v2_caps_init_honors_env_path ...")
+    from jarvis_orchestrate import quota_caps_loader as qcl
+
+    target = tmp_path / "env_override.json"
+    monkeypatch.setenv("JARVIS_QUOTA_CAPS_PATH", str(target))
+
+    # Path arg=None must resolve to env override
+    qcl.init_starter_file(codex_observed_5h=100)
+    assert target.is_file(), "init should have written to env-overridden path"
+    assert qcl.effective_caps_path() == target
+
+    # Loader reads the same place
+    loaded = qcl.load()
+    assert loaded["schema_version"] == 1
+
+    # show() also resolves to the env-overridden path
+    rendered = qcl.show()
+    assert str(target) in rendered
+    print("  ✓ init_starter_file + load + show all honor JARVIS_QUOTA_CAPS_PATH")
 
 
 def test_v2_stale_calibration_warns_but_applies(tmp_path: Path, capsys) -> None:

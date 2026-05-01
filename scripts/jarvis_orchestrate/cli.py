@@ -245,7 +245,9 @@ def _quota_caps_main(argv: list[str]) -> int:
         except quota_caps_loader.QuotaCapsError as exc:
             print(f"[quota-caps] {exc}", file=sys.stderr)
             return 2
-        print(f"[quota-caps] wrote {quota_caps_loader.CAPS_FILE}")
+        # Print the resolved path (honors JARVIS_QUOTA_CAPS_PATH) so the
+        # operator sees exactly what was written, not the default constant.
+        print(f"[quota-caps] wrote {quota_caps_loader.effective_caps_path()}")
         if codex_observed is not None:
             cap = data["codex"]["plus"]["rolling_5h"]["cap"]
             print(
