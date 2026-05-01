@@ -227,8 +227,14 @@ def evaluate_window(
     ratio = calibration.get("ratio")
     stale = calibration_loader.is_stale(calibration, now=now)
 
-    if cap_unit == "percent_of_plan":
+    if cap_unit == "percent_of_plan" and agent == "claude":
         # Claude case: ratio required to bridge weighted_tokens → percent.
+        # F006a fix#2: gate on agent == "claude". Without this, a non-Claude
+        # vendor with cap.unit accidentally set to percent_of_plan (operator
+        # typo) hit this branch and produced calibrate-claude guidance for
+        # codex/gemini — confusing and wrong. Non-Claude vendors with
+        # percent_of_plan caps now fall into the else branch and surface
+        # UNIT_MISMATCH (their observed_unit is never percent_of_plan).
         if confidence != "manual" or not isinstance(ratio, (int, float)):
             return WindowEvaluation(
                 outcome=WindowOutcome.CALIBRATION_REQUIRED,
@@ -426,14 +432,17 @@ def _check_budget_v2(
     overrode the operator caps file. Per-plan overrides remain available only
     on the legacy fallback path (state.vendors{} missing).
 
-    Aggregation rules (F006a fix#1):
+    Aggregation rules (F006a fix#1 + fix#2):
       - First terminal window outcome (TRIPPED / CALIBRATION_REQUIRED /
         UNIT_MISMATCH) returns immediately with the matching BudgetCeilingKind.
-      - If no terminal outcome but a participating agent has signal in any
-        window AND no cap+signal window is found anywhere for that agent,
-        return CONFIG_REQUIRED. This closes the previous gap where Codex with
-        signal but no cap entry returned OK silently.
-      - Otherwise OK.
+      - Otherwise: for each participating agent in KNOWN_VENDORS, if zero
+        OK outcomes were produced AND the agent has either NO_CAP-with-signal
+        OR no vendor block at all, return CONFIG_REQUIRED. Closes two
+        previous false-OK gaps: (a) Codex with signal but no cap entry
+        returned OK; (b) participating agent absent from vendors{} block
+        was silently skipped.
+      - All-NO_SIGNAL agents are benign (the agent dispatched but had no
+        logged usage in any window — nothing to cap, nothing to alarm).
     """
     try:
         caps = quota_caps_loader.load(caps_path)
@@ -445,19 +454,21 @@ def _check_budget_v2(
                 f"caps file unavailable: {exc}. Run "
                 "`python -m jarvis_orchestrate quota-caps init` to seed."
             ),
-            details={"error": str(exc)},
+            details={"cause": "caps_file_missing", "error": str(exc)},
         )
 
-    # Per-agent coverage tracking for the post-iteration CONFIG_REQUIRED check.
-    agent_covered: dict[str, bool] = {a: False for a in participating}
-    no_cap_evals: list[WindowEvaluation] = []
+    # Per-agent tracking. agent_outcomes[agent] is the set of WindowOutcomes
+    # encountered; an empty set means the agent had no vblock or empty
+    # windows{} (fix#2: missing_vendor_block escalation).
+    agent_outcomes: dict[str, set[WindowOutcome]] = {a: set() for a in participating}
+    no_cap_evals_per_agent: dict[str, list[WindowEvaluation]] = {}
 
     # Iterate participating agents deterministically so first-trip window is
     # stable across test runs.
     for agent in sorted(participating):
         vblock = vendors.get(agent)
         if not isinstance(vblock, dict):
-            continue
+            continue  # agent_outcomes[agent] stays empty → fix#2 escalates
         tier = vblock.get("tier") or "unknown"
         windows = vblock.get("windows") or {}
         if not isinstance(windows, dict):
@@ -470,12 +481,12 @@ def _check_budget_v2(
                 agent=agent, tier=tier, window_name=window_name,
                 window=window, cap_block=cap_block,
             )
+            agent_outcomes[agent].add(ev.outcome)
 
             # Stale advisory — applies whether outcome is OK or TRIPPED.
             # Plan 2026-04-30-001 D012: stale calibration is warning-only;
             # the ratio is applied because no-action is more dangerous than
-            # slightly-aged-action. Operator already saw a stderr warning
-            # during quota_check.py; this is a second nudge from the breaker.
+            # slightly-aged-action.
             if ev.stale:
                 _warn_once(
                     "budget_ceiling",
@@ -489,49 +500,82 @@ def _check_budget_v2(
             if ev.outcome in _TERMINAL_OUTCOME_TO_KIND:
                 return _eval_to_result(ev)
 
-            if ev.outcome == WindowOutcome.OK:
-                agent_covered[agent] = True
-            elif ev.outcome == WindowOutcome.NO_CAP:
-                no_cap_evals.append(ev)
+            if ev.outcome == WindowOutcome.NO_CAP:
+                no_cap_evals_per_agent.setdefault(agent, []).append(ev)
                 _warn_once(
                     "budget_ceiling",
                     agent,
                     f"no_cap_for_{window_name}",
                     f"[budget_ceiling] {ev.reason}",
                 )
-            # NO_SIGNAL: nothing to do — agent didn't consume in this window.
+            # OK: tracked via agent_outcomes; NO_SIGNAL: benign no-op.
 
-    # Post-iteration: any agent with NO_CAP-with-signal AND no covering window
-    # elsewhere is uncapped → CONFIG_REQUIRED. Distinct from caps-file-missing
-    # CONFIG_REQUIRED above; details.cause distinguishes the two for the
-    # caller's INBOX wiring (F006b).
-    uncovered = sorted(
-        {
-            ev.agent for ev in no_cap_evals
-            if not agent_covered.get(ev.agent, False)
-        }
-    )
-    if uncovered:
-        details_per_agent: list[str] = []
-        for ev in no_cap_evals:
-            if ev.agent in uncovered:
-                details_per_agent.append(
-                    f"{ev.agent}.{ev.tier}.{ev.window} "
-                    f"({int(ev.observed_native or 0)} {ev.observed_unit})"
-                )
+    # Post-iteration aggregation. Per-cause classification keeps F006b INBOX
+    # routing distinct: caps_file_missing vs no_cap_for_signal vs
+    # missing_vendor_block all surface as CONFIG_REQUIRED but the details.cause
+    # tells the caller what operator action is needed.
+    known = quota_caps_loader.KNOWN_VENDORS
+    cause_per_agent: dict[str, str] = {}
+    for agent in sorted(participating):
+        if agent not in known:
+            continue  # unknown future agent; not our problem yet
+        outcomes = agent_outcomes[agent]
+        if WindowOutcome.OK in outcomes:
+            continue  # covered
+        if not outcomes:
+            cause_per_agent[agent] = "missing_vendor_block"
+        elif WindowOutcome.NO_CAP in outcomes:
+            cause_per_agent[agent] = "no_cap_for_signal"
+        # else: only NO_SIGNAL — benign
+
+    if cause_per_agent:
+        # Synthesize a combined CONFIG_REQUIRED. Where multiple causes appear,
+        # surface the most actionable one first (missing_vendor_block implies
+        # state corruption, more urgent than no_cap_for_signal which is just a
+        # caps-edit). details.causes preserves both for caller routing.
+        causes_set = sorted(set(cause_per_agent.values()))
+        primary_cause = (
+            "missing_vendor_block" if "missing_vendor_block" in causes_set
+            else "no_cap_for_signal"
+        )
+        agents_no_cap = [
+            a for a, c in cause_per_agent.items() if c == "no_cap_for_signal"
+        ]
+        agents_missing_vblock = [
+            a for a, c in cause_per_agent.items() if c == "missing_vendor_block"
+        ]
+        reason_parts: list[str] = []
+        if agents_missing_vblock:
+            reason_parts.append(
+                f"agents with no vendor block in quota_state.json "
+                f"(state may be stale or corrupt — re-run "
+                f"`python3 scripts/quota_check.py`): "
+                + ", ".join(sorted(agents_missing_vblock))
+            )
+        if agents_no_cap:
+            no_cap_windows: list[str] = []
+            for a in sorted(agents_no_cap):
+                for ev in no_cap_evals_per_agent.get(a, []):
+                    no_cap_windows.append(
+                        f"{ev.agent}.{ev.tier}.{ev.window} "
+                        f"({int(ev.observed_native or 0)} {ev.observed_unit})"
+                    )
+            reason_parts.append(
+                "agents with signal but no cap+signal window in "
+                "~/.jarvis/quota_caps.json: "
+                + "; ".join(no_cap_windows)
+                + " — add via `python -m jarvis_orchestrate quota-caps init`"
+                " or hand-edit"
+            )
         return BudgetCeilingResult(
             kind=BudgetCeilingKind.CONFIG_REQUIRED,
             tripped=True,
-            reason=(
-                "participating agents have signal but no cap+signal window "
-                "in ~/.jarvis/quota_caps.json: "
-                + "; ".join(details_per_agent)
-                + ". Add the missing entries via `python -m jarvis_orchestrate"
-                " quota-caps init` (samples current usage) or hand-edit."
-            ),
+            reason="; ".join(reason_parts),
             details={
-                "cause": "no_cap_for_signal",
-                "uncovered_agents": uncovered,
+                "cause": primary_cause,
+                "causes": causes_set,
+                "cause_per_agent": dict(sorted(cause_per_agent.items())),
+                "uncovered_agents": sorted(cause_per_agent.keys()),
                 "uncovered_windows": [
                     {
                         "agent": ev.agent,
@@ -540,8 +584,8 @@ def _check_budget_v2(
                         "observed_native": ev.observed_native,
                         "observed_unit": ev.observed_unit,
                     }
-                    for ev in no_cap_evals
-                    if ev.agent in uncovered
+                    for evs in no_cap_evals_per_agent.values()
+                    for ev in evs
                 ],
             },
         )

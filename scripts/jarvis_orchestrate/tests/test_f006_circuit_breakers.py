@@ -323,6 +323,7 @@ def test_v2_no_cap_for_signal_returns_config_required(tmp_path: Path, capsys) ->
     assert result1.tripped
     assert result1.kind == cb.BudgetCeilingKind.CONFIG_REQUIRED
     assert result1.details.get("cause") == "no_cap_for_signal"
+    assert result1.details.get("cause_per_agent", {}).get("codex") == "no_cap_for_signal"
     assert "codex" in result1.details.get("uncovered_agents", [])
     assert "codex.plus.rolling_5h" in result1.reason
     assert "quota-caps init" in result1.reason
@@ -472,6 +473,138 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
     assert ev.stale is True  # advisory; ratio applied anyway
     assert ev.effective == 10
     print("  ✓ evaluate_window covers 6 outcomes + stale advisory; pure (no I/O)")
+
+
+def test_v2_codex_with_percent_of_plan_cap_returns_unit_mismatch(tmp_path: Path) -> None:
+    """F006a fix#2: only Claude can have percent_of_plan caps (calibration
+    bridges weighted_tokens → percent). A non-Claude vendor with
+    cap.unit=percent_of_plan (operator typo) must return UNIT_MISMATCH, NOT
+    a misleading CALIBRATION_REQUIRED with calibrate-claude guidance for
+    codex."""
+    print("\n[test] v2_codex_with_percent_of_plan_cap_returns_unit_mismatch ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
+                    claude_calibration=None)
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    # Codex cap with percent_of_plan unit — operator typo (should be tokens_local_proxy)
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "codex": {"plus": {
+            "rolling_5h": {"cap": 80, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "codex")
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped
+    assert result.kind == cb.BudgetCeilingKind.UNIT_MISMATCH
+    assert result.agent == "codex"
+    # Codex with percent_of_plan cap → falls through to else branch since
+    # agent != "claude" → UNIT_MISMATCH because observed_unit ≠ percent_of_plan
+    assert result.cap_unit == "percent_of_plan"
+    assert result.observed_unit == "tokens_local_proxy"
+    assert "calibrate-claude" not in result.reason  # no misleading guidance
+    print("  ✓ codex with percent_of_plan cap → UNIT_MISMATCH (no calibrate-claude noise)")
+
+
+def test_v2_validator_rejects_zero_cap(tmp_path: Path) -> None:
+    """F006a fix#2: cap=0 is rejected at validate-time. Aligns the loader
+    with evaluate_window's defensive cap_value <= 0 check (was cap_value < 0
+    in validator vs cap_value <= 0 in evaluator — inconsistent semantics)."""
+    print("\n[test] v2_validator_rejects_zero_cap ...")
+    from jarvis_orchestrate import quota_caps_loader as qcl
+
+    bad = {
+        "schema_version": 1,
+        "codex": {"plus": {
+            "rolling_5h": {"cap": 0, "unit": "tokens_local_proxy"},
+        }},
+    }
+    errors = qcl.validate(bad)
+    assert any("must be positive" in e for e in errors), errors
+
+    # Negative cap also rejected
+    bad["codex"]["plus"]["rolling_5h"]["cap"] = -1
+    errors = qcl.validate(bad)
+    assert any("must be positive" in e for e in errors), errors
+
+    # Tiny positive cap is fine
+    bad["codex"]["plus"]["rolling_5h"]["cap"] = 1
+    errors = qcl.validate(bad)
+    assert errors == []
+    print("  ✓ cap=0 rejected; cap<0 rejected; cap=1 accepted")
+
+
+def test_v2_missing_vendor_block_returns_config_required(tmp_path: Path) -> None:
+    """F006a fix#2: a participating agent with NO vendor block in
+    quota_state.json (state corruption / quota_check.py crash / pre-F002
+    state) used to silently skip and return OK. Now: known-vendor agents
+    without a vblock escalate to CONFIG_REQUIRED with
+    details.cause='missing_vendor_block' so dispatch doesn't proceed
+    unguarded."""
+    print("\n[test] v2_missing_vendor_block_returns_config_required ...")
+    qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    # vendors{} block present BUT only contains gemini — claude/codex omitted
+    state = {
+        "schema_version": 2,
+        "vendors": {
+            "gemini": {
+                "tier": "code_assist_individuals",
+                "windows": {
+                    "rolling_24h": {
+                        "kind": "rolling_24h",
+                        "observed_native": 0,
+                        "observed_unit": "requests",
+                    },
+                },
+            },
+        },
+    }
+    qs.write_text(json.dumps(state))
+    caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
+    caps.write_text(json.dumps({
+        "schema_version": 1,
+        "claude": {"max_20x": {
+            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+        }},
+    }))
+    ad = tmp_path / "audits"
+    ad.mkdir()
+    _write_audit(ad, "claude")  # Claude participated but has no vblock
+
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
+    assert result.tripped, "missing vblock for participating known agent must escalate"
+    assert result.kind == cb.BudgetCeilingKind.CONFIG_REQUIRED
+    assert result.details.get("cause") == "missing_vendor_block"
+    assert "claude" in result.details.get("cause_per_agent", {})
+    assert result.details["cause_per_agent"]["claude"] == "missing_vendor_block"
+    assert "stale or corrupt" in result.reason or "vendor block" in result.reason
+    print("  ✓ participating known-agent without vblock → CONFIG_REQUIRED missing_vendor_block")
+
+
+def test_v2_starter_caps_omits_claude_rolling_5h(tmp_path: Path) -> None:
+    """F006a fix#2: F004 starter no longer seeds Claude rolling_5h with
+    percent_of_plan. Each percent_of_plan cap requires its own dashboard
+    sample (weekly bar vs session bar); seeding both forced a dual-calibrate
+    before the breaker stopped halting on rolling_5h CALIBRATION_REQUIRED.
+    Operator opts in explicitly via hand-edit after running calibrate-claude
+    --window rolling_5h."""
+    print("\n[test] v2_starter_caps_omits_claude_rolling_5h ...")
+    from jarvis_orchestrate import quota_caps_loader as qcl
+
+    data = qcl.starter_caps()
+    claude_windows = data["claude"]["max_20x"]
+    assert "rolling_7d" in claude_windows
+    assert "rolling_5h" not in claude_windows, (
+        "rolling_5h was seeded; would force operator to calibrate twice "
+        "before first dispatch could succeed"
+    )
+    note = claude_windows["rolling_7d"]["_note"]
+    assert "rolling_5h" in note  # operator told how to add it
+    assert "calibrate-claude --window rolling_5h" in note
+    print("  ✓ starter omits rolling_5h; rolling_7d _note tells operator how to extend")
 
 
 def test_v2_caps_init_honors_env_path(tmp_path: Path, monkeypatch) -> None:

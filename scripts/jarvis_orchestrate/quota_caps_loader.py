@@ -134,15 +134,27 @@ def starter_caps(*, codex_observed_5h: int | None = None) -> dict[str, Any]:
         "defaults": {"claude_tier": "max_20x"},
         "claude": {
             "max_20x": {
+                # F006a fix#2: starter only seeds rolling_7d. Each
+                # percent_of_plan cap requires its own calibration sample —
+                # rolling_7d uses the dashboard's weekly bar; rolling_5h uses
+                # the dashboard's session bar. Seeding both would force the
+                # operator to run calibrate-claude twice before the breaker
+                # stops returning CALIBRATION_REQUIRED on rolling_5h. The
+                # operator opts into rolling_5h coverage explicitly by
+                # running `calibrate-claude --window rolling_5h --dashboard-pct N`
+                # then hand-editing this file to add the cap entry, OR by
+                # re-running `quota-caps init --overwrite` once both windows
+                # are calibrated (future enhancement: starter_caps could
+                # auto-include rolling_5h when its calibration exists).
                 "rolling_7d": {
                     "cap": 100,
                     "unit": "percent_of_plan",
-                    "_note": CLAUDE_UNCALIBRATED_NOTE,
-                },
-                "rolling_5h": {
-                    "cap": 100,
-                    "unit": "percent_of_plan",
-                    "_note": CLAUDE_UNCALIBRATED_NOTE,
+                    "_note": (
+                        CLAUDE_UNCALIBRATED_NOTE
+                        + " To extend coverage to rolling_5h: run "
+                        "calibrate-claude --window rolling_5h --dashboard-pct N "
+                        "and add an entry alongside this one with the same shape."
+                    ),
                 },
             },
         },
@@ -219,9 +231,16 @@ def validate(data: Any) -> list[str]:
                     continue
                 cap = wblock.get("cap")
                 unit = wblock.get("unit")
-                if not isinstance(cap, (int, float)) or isinstance(cap, bool) or cap < 0:
+                if not isinstance(cap, (int, float)) or isinstance(cap, bool) or cap <= 0:
+                    # F006a fix#2: cap > 0 (was cap >= 0). cap=0 has no useful
+                    # semantic — "disable a vendor" is better expressed by
+                    # removing the entry (NO_CAP path), and "hard-zero
+                    # allowance" reduces to TRIPPED on any signal which
+                    # operators can express via a tiny positive cap. Aligns
+                    # with evaluate_window's defensive `cap_value <= 0` check
+                    # so post-validate the runtime path never sees zero.
                     errors.append(
-                        f"{vendor}.{tier}.{window}.cap must be non-negative number, "
+                        f"{vendor}.{tier}.{window}.cap must be positive number, "
                         f"got {cap!r}"
                     )
                 if not isinstance(unit, str) or unit not in KNOWN_UNITS:
