@@ -1,0 +1,42 @@
+usage: jarvis-orchestrate dispatch-from-plan [-h] [--feature FEATURE]
+                                             [--implementer IMPLEMENTER]
+                                             [--auditor AUDITOR]
+                                             [--max-iterations MAX_ITERATIONS]
+                                             [--mode {interactive,autonomous}]
+                                             [--confirm]
+                                             plan
+
+Strict-dry-run pre-flight wrapper. Prints 10-field context block and exits 0; pass --confirm to actually dispatch in-process via supervisor.dispatch_volley.
+
+positional arguments:
+  plan                  Plan ID (resolved against ./docs/plans/) or absolute
+                        dir path
+
+options:
+  -h, --help            show this help message and exit
+  --feature FEATURE     Feature ID (default F001)
+  --implementer IMPLEMENTER
+                        Implementer agent (default: agents_required[0])
+  --auditor AUDITOR     Auditor agent (default: agents_required[1])
+  --max-iterations MAX_ITERATIONS
+                        Override loop_caps.max_iterations
+  --mode {interactive,autonomous}
+                        Runtime dispatch class override. interactive=bypass
+                        admission gates; autonomous=enforce. P0 is plan-
+                        derived only and cannot be forced. Default: derived
+                        from plan.tier.
+  --confirm             Commit to in-process dispatch_volley. Without this
+                        flag, dispatch-from-plan is a strict dry-run.
+
+Quota readiness states that block --confirm (exit 3):
+  missing_state         ~/.jarvis/quota_state.json absent or unreadable
+                        → run: python scripts/quota_check.py
+  config_required       caps file or vendor block missing
+                        → run: python -m jarvis_orchestrate quota-caps init
+                          (or edit ~/.jarvis/quota_caps.json if vendor entry missing)
+  calibration_required  Claude window has percent_of_plan cap with non-manual confidence
+                        → run: python -m jarvis_orchestrate calibrate-claude --dashboard-pct N
+  unit_mismatch         non-Claude vendor cap.unit ≠ observed_unit
+                        → edit ~/.jarvis/quota_caps.json so cap.unit matches observed_unit
+Stale calibration is warning-only (not blocking). Dry-run mode prints the
+label without refusal.
