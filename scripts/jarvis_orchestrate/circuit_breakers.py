@@ -117,9 +117,193 @@ def gate_name(kind: BreakerKind) -> str:
 class BudgetCeilingKind(str, Enum):
     OK = "ok"  # all participating windows under cap
     TRIPPED = "tripped"  # observed * ratio > cap somewhere
-    CONFIG_REQUIRED = "config_required"  # caps file absent or invalid
+    CONFIG_REQUIRED = "config_required"  # caps file absent/invalid OR participating agent has signal but no cap+signal window
     CALIBRATION_REQUIRED = "calibration_required"  # Claude percent_of_plan + uncalibrated
     UNIT_MISMATCH = "unit_mismatch"  # cap.unit != observed_unit (non-Claude)
+
+
+class WindowOutcome(str, Enum):
+    """Per-window evaluation result. Distinct from BudgetCeilingKind because
+    a window can have outcomes (NO_SIGNAL, NO_CAP) that aren't terminal at
+    the aggregate level — only the aggregator decides whether a NO_CAP window
+    rises to CONFIG_REQUIRED based on whether the agent has coverage elsewhere.
+    """
+
+    NO_SIGNAL = "no_signal"  # observed_native ≤ 0 — nothing to compare; benign
+    NO_CAP = "no_cap"  # has signal but no cap entry; aggregator may escalate
+    OK = "ok"  # signal + cap, effective ≤ cap
+    TRIPPED = "tripped"  # signal + cap, effective > cap
+    CALIBRATION_REQUIRED = "calibration_required"  # Claude percent_of_plan + uncalibrated
+    UNIT_MISMATCH = "unit_mismatch"  # non-Claude cap.unit ≠ observed_unit
+
+
+@dataclass(frozen=True)
+class WindowEvaluation:
+    """Pure per-window evaluator output. Aggregator (check_budget_ceiling +
+    F006b consumers) decides what to do with sets of these.
+
+    `stale` is an advisory flag: when calibration is older than
+    STALE_WARNING_DAYS the ratio still applies (no-action is more dangerous
+    than slightly-aged-action — see plan 2026-04-30-001 D012). Caller emits
+    a stderr warn-once so operators know to re-sample.
+
+    `pct_of_cap` is provided so F006b consumers (supervisor soft-warn,
+    quota_admission defer-threshold) can compare against their own thresholds
+    (90%, 70%) without recomputing the calibration.
+    """
+
+    outcome: WindowOutcome
+    agent: str
+    tier: str
+    window: str
+    observed_native: float | None = None
+    observed_unit: str | None = None
+    cap: float | None = None
+    cap_unit: str | None = None
+    confidence: str | None = None
+    ratio: float | None = None
+    effective: float | None = None
+    pct_of_cap: float | None = None
+    stale: bool = False
+    reason: str = ""
+
+
+def evaluate_window(
+    *,
+    agent: str,
+    tier: str,
+    window_name: str,
+    window: dict[str, Any],
+    cap_block: dict[str, Any] | None,
+    now: dt.datetime | None = None,
+) -> WindowEvaluation:
+    """Pure per-window evaluator. Applies the F006a calibration-safety + unit-
+    mismatch rules to a single (agent, tier, window). No I/O, no warnings —
+    aggregator handles side effects.
+
+    Used by:
+      - check_budget_ceiling._check_budget_v2 for terminal verdicts
+      - F006b supervisor._quota_gate for soft-warn at 90% via .pct_of_cap
+      - F006b quota_admission for defer-threshold via .pct_of_cap
+    """
+    base = dict(agent=agent, tier=tier, window=window_name)
+    observed_native = window.get("observed_native")
+    observed_unit = window.get("observed_unit")
+
+    if not isinstance(observed_native, (int, float)) or observed_native <= 0:
+        return WindowEvaluation(
+            outcome=WindowOutcome.NO_SIGNAL,
+            **base,
+            observed_unit=observed_unit,
+        )
+
+    if cap_block is None:
+        return WindowEvaluation(
+            outcome=WindowOutcome.NO_CAP,
+            **base,
+            observed_native=float(observed_native),
+            observed_unit=observed_unit,
+            reason=(
+                f"{agent}.{tier}.{window_name} has signal "
+                f"({observed_native} {observed_unit}) but no cap entry in "
+                "~/.jarvis/quota_caps.json"
+            ),
+        )
+
+    cap_value = cap_block.get("cap")
+    cap_unit = cap_block.get("unit")
+    if not isinstance(cap_value, (int, float)) or cap_value <= 0:
+        # Defensive — quota_caps_loader.validate() should reject this at load.
+        return WindowEvaluation(
+            outcome=WindowOutcome.NO_CAP,
+            **base,
+            observed_native=float(observed_native),
+            observed_unit=observed_unit,
+            reason=f"{agent}.{tier}.{window_name} cap value {cap_value!r} invalid",
+        )
+
+    calibration = window.get("calibration") or {}
+    confidence = calibration.get("confidence") or "uncalibrated"
+    ratio = calibration.get("ratio")
+    stale = calibration_loader.is_stale(calibration, now=now)
+
+    if cap_unit == "percent_of_plan":
+        # Claude case: ratio required to bridge weighted_tokens → percent.
+        if confidence != "manual" or not isinstance(ratio, (int, float)):
+            return WindowEvaluation(
+                outcome=WindowOutcome.CALIBRATION_REQUIRED,
+                **base,
+                observed_native=float(observed_native),
+                observed_unit=observed_unit,
+                cap=float(cap_value),
+                cap_unit=cap_unit,
+                confidence=confidence,
+                stale=stale,
+                reason=(
+                    f"{agent}.{tier}.{window_name} cap unit is percent_of_plan "
+                    f"but calibration.confidence={confidence!r}; run "
+                    "`python -m jarvis_orchestrate calibrate-claude --dashboard-pct"
+                    f" N --window {window_name}`"
+                ),
+            )
+        effective = float(observed_native) * float(ratio)
+        ratio_used: float | None = float(ratio)
+    else:
+        # Non-Claude: cap.unit must equal observed_unit.
+        if cap_unit != observed_unit:
+            return WindowEvaluation(
+                outcome=WindowOutcome.UNIT_MISMATCH,
+                **base,
+                observed_native=float(observed_native),
+                observed_unit=observed_unit,
+                cap=float(cap_value),
+                cap_unit=cap_unit,
+                confidence=confidence,
+                stale=stale,
+                reason=(
+                    f"{agent}.{tier}.{window_name} cap.unit={cap_unit!r} "
+                    f"does not match observed_unit={observed_unit!r}. Fix "
+                    "~/.jarvis/quota_caps.json so cap.unit matches what "
+                    "quota_check.py emits."
+                ),
+            )
+        effective = float(observed_native)
+        ratio_used = None
+
+    pct_of_cap = effective / float(cap_value)
+    if effective > float(cap_value):
+        return WindowEvaluation(
+            outcome=WindowOutcome.TRIPPED,
+            **base,
+            observed_native=float(observed_native),
+            observed_unit=observed_unit,
+            cap=float(cap_value),
+            cap_unit=cap_unit,
+            confidence=confidence,
+            ratio=ratio_used,
+            effective=effective,
+            pct_of_cap=pct_of_cap,
+            stale=stale,
+            reason=(
+                f"{agent}.{tier}.{window_name} observed {effective:.4g} "
+                f"{cap_unit} > cap {cap_value} {cap_unit} "
+                f"(confidence={confidence})"
+            ),
+        )
+
+    return WindowEvaluation(
+        outcome=WindowOutcome.OK,
+        **base,
+        observed_native=float(observed_native),
+        observed_unit=observed_unit,
+        cap=float(cap_value),
+        cap_unit=cap_unit,
+        confidence=confidence,
+        ratio=ratio_used,
+        effective=effective,
+        pct_of_cap=pct_of_cap,
+        stale=stale,
+    )
 
 
 @dataclass(frozen=True)
@@ -204,6 +388,30 @@ def _participating_agents(audit_paths: Iterable[Path]) -> set[str]:
     return out
 
 
+_TERMINAL_OUTCOME_TO_KIND: dict[WindowOutcome, BudgetCeilingKind] = {
+    WindowOutcome.TRIPPED: BudgetCeilingKind.TRIPPED,
+    WindowOutcome.CALIBRATION_REQUIRED: BudgetCeilingKind.CALIBRATION_REQUIRED,
+    WindowOutcome.UNIT_MISMATCH: BudgetCeilingKind.UNIT_MISMATCH,
+}
+
+
+def _eval_to_result(ev: WindowEvaluation) -> BudgetCeilingResult:
+    """Project a terminal WindowEvaluation into a BudgetCeilingResult."""
+    return BudgetCeilingResult(
+        kind=_TERMINAL_OUTCOME_TO_KIND[ev.outcome],
+        tripped=True,
+        reason=ev.reason,
+        agent=ev.agent,
+        tier=ev.tier,
+        window=ev.window,
+        observed_native=ev.observed_native,
+        observed_unit=ev.observed_unit,
+        cap=ev.cap,
+        cap_unit=ev.cap_unit,
+        confidence=ev.confidence,
+    )
+
+
 def _check_budget_v2(
     state: dict,
     vendors: dict,
@@ -217,6 +425,15 @@ def _check_budget_v2(
     to the broken percent_weekly model and would reintroduce the bug if they
     overrode the operator caps file. Per-plan overrides remain available only
     on the legacy fallback path (state.vendors{} missing).
+
+    Aggregation rules (F006a fix#1):
+      - First terminal window outcome (TRIPPED / CALIBRATION_REQUIRED /
+        UNIT_MISMATCH) returns immediately with the matching BudgetCeilingKind.
+      - If no terminal outcome but a participating agent has signal in any
+        window AND no cap+signal window is found anywhere for that agent,
+        return CONFIG_REQUIRED. This closes the previous gap where Codex with
+        signal but no cap entry returned OK silently.
+      - Otherwise OK.
     """
     try:
         caps = quota_caps_loader.load(caps_path)
@@ -231,8 +448,12 @@ def _check_budget_v2(
             details={"error": str(exc)},
         )
 
-    # Iterate participating agents in deterministic order so test assertions
-    # against window-of-first-trip don't become order-dependent.
+    # Per-agent coverage tracking for the post-iteration CONFIG_REQUIRED check.
+    agent_covered: dict[str, bool] = {a: False for a in participating}
+    no_cap_evals: list[WindowEvaluation] = []
+
+    # Iterate participating agents deterministically so first-trip window is
+    # stable across test runs.
     for agent in sorted(participating):
         vblock = vendors.get(agent)
         if not isinstance(vblock, dict):
@@ -245,115 +466,85 @@ def _check_budget_v2(
             if not isinstance(window, dict):
                 continue
             cap_block = quota_caps_loader.get(caps, agent, tier, window_name)
-            if cap_block is None:
+            ev = evaluate_window(
+                agent=agent, tier=tier, window_name=window_name,
+                window=window, cap_block=cap_block,
+            )
+
+            # Stale advisory — applies whether outcome is OK or TRIPPED.
+            # Plan 2026-04-30-001 D012: stale calibration is warning-only;
+            # the ratio is applied because no-action is more dangerous than
+            # slightly-aged-action. Operator already saw a stderr warning
+            # during quota_check.py; this is a second nudge from the breaker.
+            if ev.stale:
+                _warn_once(
+                    "budget_ceiling",
+                    agent,
+                    f"stale_{window_name}",
+                    f"[budget_ceiling] {agent}.{window_name} calibration "
+                    f"stale; applying ratio anyway. Re-run calibrate-claude "
+                    f"when convenient.",
+                )
+
+            if ev.outcome in _TERMINAL_OUTCOME_TO_KIND:
+                return _eval_to_result(ev)
+
+            if ev.outcome == WindowOutcome.OK:
+                agent_covered[agent] = True
+            elif ev.outcome == WindowOutcome.NO_CAP:
+                no_cap_evals.append(ev)
                 _warn_once(
                     "budget_ceiling",
                     agent,
                     f"no_cap_for_{window_name}",
-                    f"[budget_ceiling] no cap for {agent}.{tier}.{window_name} "
-                    "in ~/.jarvis/quota_caps.json — skipping window. Operator "
-                    "may want to add it via `quota-caps init` or hand-edit.",
+                    f"[budget_ceiling] {ev.reason}",
                 )
-                continue
-            observed_native = window.get("observed_native")
-            observed_unit = window.get("observed_unit")
-            if (
-                not isinstance(observed_native, (int, float))
-                or observed_native <= 0
-            ):
-                continue  # window has no signal; nothing to compare
-            cap_value = cap_block.get("cap")
-            cap_unit = cap_block.get("unit")
-            if not isinstance(cap_value, (int, float)) or cap_value <= 0:
-                # Defensive — quota_caps_loader.validate() should reject this.
-                continue
-            calibration = window.get("calibration") or {}
-            confidence = calibration.get("confidence") or "uncalibrated"
-            ratio = calibration.get("ratio")
+            # NO_SIGNAL: nothing to do — agent didn't consume in this window.
 
-            if cap_unit == "percent_of_plan":
-                # Claude case. Calibration MUST be manual to convert
-                # weighted_tokens_local_proxy → percent_of_plan. Without it,
-                # observed (millions) / cap (100) false-trips immediately.
-                if confidence != "manual" or not isinstance(
-                    ratio, (int, float)
-                ):
-                    return BudgetCeilingResult(
-                        kind=BudgetCeilingKind.CALIBRATION_REQUIRED,
-                        tripped=True,
-                        reason=(
-                            f"{agent}.{tier}.{window_name} cap unit is "
-                            f"percent_of_plan but calibration.confidence="
-                            f"{confidence!r}; run `python -m "
-                            "jarvis_orchestrate calibrate-claude --dashboard-pct"
-                            f" N --window {window_name}`"
-                        ),
-                        agent=agent,
-                        tier=tier,
-                        window=window_name,
-                        observed_native=float(observed_native),
-                        observed_unit=observed_unit,
-                        cap=float(cap_value),
-                        cap_unit=cap_unit,
-                        confidence=confidence,
-                    )
-                # Calibration is manual + has a real ratio. Stale is a warn
-                # (operator already informed via quota_check.py stderr); we
-                # apply the ratio anyway because no-action is more dangerous.
-                if calibration_loader.is_stale(calibration):
-                    _warn_once(
-                        "budget_ceiling",
-                        agent,
-                        f"stale_{window_name}",
-                        f"[budget_ceiling] {agent}.{window_name} calibration "
-                        f"stale (stamped_at={calibration.get('stamped_at')}); "
-                        "applying ratio anyway. Re-run calibrate-claude when "
-                        "convenient.",
-                    )
-                effective = float(observed_native) * float(ratio)
-            else:
-                # Non-Claude vendors: cap.unit must equal observed_unit.
-                # Mismatch is an operator config error, not silently skipped.
-                if cap_unit != observed_unit:
-                    return BudgetCeilingResult(
-                        kind=BudgetCeilingKind.UNIT_MISMATCH,
-                        tripped=True,
-                        reason=(
-                            f"{agent}.{tier}.{window_name} cap.unit="
-                            f"{cap_unit!r} does not match observed_unit="
-                            f"{observed_unit!r}. Fix "
-                            "~/.jarvis/quota_caps.json so cap.unit "
-                            "matches what quota_check.py emits."
-                        ),
-                        agent=agent,
-                        tier=tier,
-                        window=window_name,
-                        observed_native=float(observed_native),
-                        observed_unit=observed_unit,
-                        cap=float(cap_value),
-                        cap_unit=cap_unit,
-                        confidence=confidence,
-                    )
-                effective = float(observed_native)
-
-            if effective > float(cap_value):
-                return BudgetCeilingResult(
-                    kind=BudgetCeilingKind.TRIPPED,
-                    tripped=True,
-                    reason=(
-                        f"{agent}.{tier}.{window_name} observed "
-                        f"{effective:.4g} {cap_unit} > cap {cap_value} "
-                        f"{cap_unit} (confidence={confidence})"
-                    ),
-                    agent=agent,
-                    tier=tier,
-                    window=window_name,
-                    observed_native=float(observed_native),
-                    observed_unit=observed_unit,
-                    cap=float(cap_value),
-                    cap_unit=cap_unit,
-                    confidence=confidence,
+    # Post-iteration: any agent with NO_CAP-with-signal AND no covering window
+    # elsewhere is uncapped → CONFIG_REQUIRED. Distinct from caps-file-missing
+    # CONFIG_REQUIRED above; details.cause distinguishes the two for the
+    # caller's INBOX wiring (F006b).
+    uncovered = sorted(
+        {
+            ev.agent for ev in no_cap_evals
+            if not agent_covered.get(ev.agent, False)
+        }
+    )
+    if uncovered:
+        details_per_agent: list[str] = []
+        for ev in no_cap_evals:
+            if ev.agent in uncovered:
+                details_per_agent.append(
+                    f"{ev.agent}.{ev.tier}.{ev.window} "
+                    f"({int(ev.observed_native or 0)} {ev.observed_unit})"
                 )
+        return BudgetCeilingResult(
+            kind=BudgetCeilingKind.CONFIG_REQUIRED,
+            tripped=True,
+            reason=(
+                "participating agents have signal but no cap+signal window "
+                "in ~/.jarvis/quota_caps.json: "
+                + "; ".join(details_per_agent)
+                + ". Add the missing entries via `python -m jarvis_orchestrate"
+                " quota-caps init` (samples current usage) or hand-edit."
+            ),
+            details={
+                "cause": "no_cap_for_signal",
+                "uncovered_agents": uncovered,
+                "uncovered_windows": [
+                    {
+                        "agent": ev.agent,
+                        "tier": ev.tier,
+                        "window": ev.window,
+                        "observed_native": ev.observed_native,
+                        "observed_unit": ev.observed_unit,
+                    }
+                    for ev in no_cap_evals
+                    if ev.agent in uncovered
+                ],
+            },
+        )
 
     return BudgetCeilingResult(
         kind=BudgetCeilingKind.OK,

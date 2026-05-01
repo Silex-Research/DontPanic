@@ -50,16 +50,23 @@ CAPS_FILE = Path.home() / ".jarvis" / "quota_caps.json"
 CAPS_SCHEMA_VERSION = 1
 
 
-def _effective_caps_path(path: Path | None) -> Path:
-    """Honor JARVIS_QUOTA_CAPS_PATH for hermetic test isolation, mirroring the
-    JARVIS_QUOTA_STATE_PATH / JARVIS_BREAKER_HISTORY_PATH / etc. pattern. An
-    explicit path arg always wins."""
+def effective_caps_path(path: Path | None = None) -> Path:
+    """Resolve the caps file path, honoring JARVIS_QUOTA_CAPS_PATH for hermetic
+    test isolation (mirrors JARVIS_QUOTA_STATE_PATH / JARVIS_BREAKER_HISTORY_PATH
+    / etc.). An explicit path arg always wins. Public so callers (init,
+    `quota-caps show`, F006/F006b consumers) can surface the same resolved
+    path the loader actually reads, instead of the default constant."""
     if path is not None:
         return path
     env_override = os.environ.get("JARVIS_QUOTA_CAPS_PATH")
     if env_override:
         return Path(env_override)
     return CAPS_FILE
+
+
+# Backward-compat alias retained for any out-of-tree caller that imported the
+# private name. Prefer the public form.
+_effective_caps_path = effective_caps_path
 
 KNOWN_VENDORS = {"claude", "codex", "gemini", "grok"}
 
@@ -271,9 +278,10 @@ def init_starter_file(
 
     Refuses to overwrite an existing file unless overwrite=True. Caller is
     responsible for sampling codex usage (keeps loader decoupled from
-    quota_check).
+    quota_check). Honors JARVIS_QUOTA_CAPS_PATH so test isolation matches
+    load() — without this, env-overridden tests would init the wrong file.
     """
-    p = path or CAPS_FILE
+    p = effective_caps_path(path)
     if p.is_file() and not overwrite:
         raise QuotaCapsError(
             f"caps file already exists at {p}; pass overwrite=True or delete first"
@@ -290,7 +298,7 @@ def show(
     path: Path | None = None,
 ) -> str:
     """Return human-readable summary of effective caps."""
-    p = path or CAPS_FILE
+    p = effective_caps_path(path)
     if data is None:
         data = load(p)
     lines: list[str] = []
