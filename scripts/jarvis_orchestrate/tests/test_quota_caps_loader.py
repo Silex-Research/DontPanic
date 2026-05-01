@@ -76,7 +76,7 @@ def test_validate_accepts_starter_file() -> None:
     [
         ({"schema_version": 99}, "schema_version"),
         ({"unknown_vendor": {}}, "unknown vendor"),
-        ({"claude": {"max_20x": {"rolling_7d": {"cap": -1, "unit": "percent_of_plan"}}}}, "non-negative"),
+        ({"claude": {"max_20x": {"rolling_7d": {"cap": -1, "unit": "percent_of_plan"}}}}, "must be positive"),
         ({"claude": {"max_20x": {"rolling_7d": {"cap": 100, "unit": "bogus_unit"}}}}, "must be one of"),
         ({"claude": {"max_20x": {"rolling_99h": {"cap": 100, "unit": "percent_of_plan"}}}}, "unknown window"),
         ({"claude": {"unobtanium": {"rolling_7d": {"cap": 100, "unit": "percent_of_plan"}}}}, "unknown tier"),

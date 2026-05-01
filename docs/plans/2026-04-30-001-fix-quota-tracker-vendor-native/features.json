@@ -356,6 +356,27 @@
           "captured_at": "2026-05-01T00:30:00Z",
           "captured_by": "claude",
           "note": "F006a fix#1: 282 passed, 6 skipped (was 279+6 after F006a initial; +3 new fix#1 tests). Full sweep clean."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_at": "2026-05-01T01:30:00Z",
+          "captured_by": "claude",
+          "note": "F006a fix#2: gated Claude calibration branch on agent=='claude' (non-Claude with percent_of_plan cap now correctly UNIT_MISMATCH instead of misleading CALIBRATION_REQUIRED with calibrate-claude guidance for the wrong vendor). Aggregator now tracks per-agent outcome sets; participating known-vendor agent with empty outcomes (missing vblock or empty windows{}) escalates to CONFIG_REQUIRED with details.cause='missing_vendor_block' (was silent skip → false OK). details.cause stays single-valued for primary cause; details.causes[] + details.cause_per_agent{} preserve full picture for F006b INBOX routing."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/quota_caps_loader.py",
+          "captured_at": "2026-05-01T01:30:00Z",
+          "captured_by": "claude",
+          "note": "F006a fix#2: validator now rejects cap <= 0 (was cap < 0). Aligns with evaluate_window's defensive cap_value <= 0 check; cap=0 has no useful operational semantic. Starter caps no longer seed Claude rolling_5h — operator opts in explicitly via calibrate-claude --window rolling_5h + hand-edit. The rolling_7d _note tells operators how to extend. Closes the dual-calibrate trap where the dogfood would halt on rolling_5h CALIBRATION_REQUIRED before any work could land."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_at": "2026-05-01T01:30:00Z",
+          "captured_by": "claude",
+          "note": "F006a fix#2: 4 new tests — codex with percent_of_plan cap → UNIT_MISMATCH (no calibrate-claude noise); validator rejects cap=0 (and cap<0); participating known-agent without vblock → CONFIG_REQUIRED missing_vendor_block; starter_caps omits rolling_5h. Existing test_v2_no_cap_for_signal_returns_config_required updated to assert details.cause_per_agent['codex'] == 'no_cap_for_signal'. Full sweep: 286 passed, 6 skipped."
         }
       ]
     },
