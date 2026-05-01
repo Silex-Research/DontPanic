@@ -1,0 +1,8 @@
+ M claude/PORTABILITY.md
+ M claude/RESOLVER.md
+ M claude/scripts/sync-harness.sh
+ M dashboard/state/costs.json
+?? claude/__init__.py
+?? claude/skills/__init__.py
+?? claude/skills/changelog/
+?? docs/plans/2026-04-29-001-feat-changelog-skill/evidence/f007/

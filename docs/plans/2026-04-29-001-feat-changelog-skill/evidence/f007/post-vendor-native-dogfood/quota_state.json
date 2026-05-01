@@ -1,0 +1,217 @@
+{
+  "schema_version": 2,
+  "generated": "2026-05-01T03:40:21.561764+00:00",
+  "week_start": "2026-04-27T00:00:00+00:00",
+  "vendors": {
+    "claude": {
+      "tier": "max_20x",
+      "tier_signal": "operator_config",
+      "tier_source": "$HOME/.jarvis/quota_caps.json",
+      "windows": {
+        "rolling_7d": {
+          "kind": "rolling_7d",
+          "observed_native": 601049462.2,
+          "observed_unit": "weighted_tokens_local_proxy",
+          "models": {
+            "claude-opus-4-7": {
+              "weighted_tokens": 588492108.3999983,
+              "input_tokens": 57305,
+              "output_tokens": 13571655,
+              "cache_creation_input_tokens": 155809652,
+              "cache_read_input_tokens": 4190534964,
+              "messages": 9738
+            },
+            "<synthetic>": {
+              "weighted_tokens": 0.0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "cache_read_input_tokens": 0,
+              "messages": 12
+            },
+            "claude-haiku-4-5-20251001": {
+              "weighted_tokens": 7215573.500000009,
+              "input_tokens": 24957,
+              "output_tokens": 74766,
+              "cache_creation_input_tokens": 4221189,
+              "cache_read_input_tokens": 28946615,
+              "messages": 549
+            },
+            "claude-sonnet-4-6": {
+              "weighted_tokens": 5341780.3000000045,
+              "input_tokens": 515,
+              "output_tokens": 76528,
+              "cache_creation_input_tokens": 3243351,
+              "cache_read_input_tokens": 20213863,
+              "messages": 394
+            }
+          },
+          "diagnostics": {
+            "source": "$HOME/.claude/projects",
+            "messages": 10693,
+            "files_read": 69,
+            "signal": "ok"
+          },
+          "calibration": {
+            "ratio": 2.220128259108215e-08,
+            "confidence": "manual",
+            "source": "operator_dashboard_sample",
+            "stamped_at": "2026-04-30T23:22:17.495376+00:00"
+          }
+        },
+        "rolling_5h": {
+          "kind": "rolling_5h",
+          "observed_native": 34462616.2,
+          "observed_unit": "weighted_tokens_local_proxy",
+          "models": {
+            "claude-opus-4-7": {
+              "weighted_tokens": 34014794.5,
+              "input_tokens": 979,
+              "output_tokens": 1327480,
+              "cache_creation_input_tokens": 4867474,
+              "cache_read_input_tokens": 278188615,
+              "messages": 523
+            },
+            "claude-haiku-4-5-20251001": {
+              "weighted_tokens": 447821.7000000001,
+              "input_tokens": 4722,
+              "output_tokens": 2374,
+              "cache_creation_input_tokens": 323506,
+              "cache_read_input_tokens": 1172197,
+              "messages": 27
+            },
+            "<synthetic>": {
+              "weighted_tokens": 0.0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "cache_read_input_tokens": 0,
+              "messages": 1
+            }
+          },
+          "diagnostics": {
+            "source": "$HOME/.claude/projects",
+            "messages": 551,
+            "files_read": 4,
+            "signal": "ok"
+          },
+          "calibration": {
+            "ratio": null,
+            "confidence": "uncalibrated",
+            "source": null,
+            "stamped_at": null
+          }
+        }
+      }
+    },
+    "codex": {
+      "tier": "plus",
+      "tier_signal": "ok",
+      "tier_source": "$HOME/.codex/auth.json",
+      "windows": {
+        "rolling_5h": {
+          "kind": "rolling_5h",
+          "observed_native": 260725567,
+          "observed_unit": "tokens_local_proxy",
+          "models": {
+            "gpt-5.5": {
+              "tokens_local_proxy": 260725567,
+              "threads": 2
+            }
+          },
+          "diagnostics": {
+            "source": "$HOME/.codex/state_5.sqlite",
+            "threads": 2,
+            "signal": "ok"
+          }
+        },
+        "rolling_7d": {
+          "kind": "rolling_7d",
+          "observed_native": 576079801,
+          "observed_unit": "tokens_local_proxy",
+          "models": {
+            "gpt-5.4": {
+              "tokens_local_proxy": 80770008,
+              "threads": 3
+            },
+            "gpt-5.5": {
+              "tokens_local_proxy": 495309793,
+              "threads": 28
+            }
+          },
+          "diagnostics": {
+            "source": "$HOME/.codex/state_5.sqlite",
+            "threads": 31,
+            "signal": "ok"
+          }
+        }
+      }
+    },
+    "gemini": {
+      "tier": "code_assist_individuals",
+      "tier_signal": "oauth",
+      "tier_source": "$HOME/.gemini/oauth_creds.json",
+      "windows": {
+        "rolling_24h": {
+          "kind": "rolling_24h",
+          "observed_native": 0,
+          "observed_unit": "requests",
+          "models": {},
+          "diagnostics": {
+            "source": "$HOME/.gemini/tmp",
+            "sessions": 0,
+            "messages": 0,
+            "tokens_total": null,
+            "tokens_total_present": false,
+            "signal": "ok"
+          }
+        }
+      }
+    },
+    "grok": {
+      "tier": "absent",
+      "tier_signal": "absent",
+      "tier_source": "$HOME/.grok",
+      "windows": {},
+      "signal": "absent"
+    }
+  },
+  "models": {
+    "claude": {
+      "used": 601049462,
+      "limit": 1000000000,
+      "unit": "weighted_tokens_local_proxy",
+      "percent_weekly": 60.1,
+      "plan": "Max ~1B/wk estimate"
+    },
+    "codex": {
+      "used": 576079801,
+      "limit": null,
+      "unit": "tokens_local_proxy",
+      "percent_weekly": null,
+      "plan": "local SQLite token proxy; v2 caps pending"
+    },
+    "gemini": {
+      "used": 0,
+      "limit": 1000,
+      "unit": "requests",
+      "percent_weekly": 0.0,
+      "plan": "Code Assist Individuals daily request cap"
+    },
+    "grok": {
+      "used": null,
+      "limit": null,
+      "unit": null,
+      "percent_weekly": null,
+      "plan": "signal: absent"
+    },
+    "ollama": {
+      "loaded_models": [],
+      "limit": null,
+      "unit": null,
+      "percent_weekly": null,
+      "plan": "unmetered (local)"
+    }
+  },
+  "_legacy_mirror_note": "deprecated: legacy models{} block preserved for cost-model + cost-guard skills. Will be removed when plan 2026-04-29-004 reactivates and migrates those skills to read vendors{} (see plan 004 D011)."
+}

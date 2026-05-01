@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "claude": {
+    "rolling_7d": {
+      "ratio": 2.220128259108215e-08,
+      "confidence": "manual",
+      "source": "operator_dashboard_sample",
+      "dashboard_pct": 13.0,
+      "observed_native": 585551755.7,
+      "stamped_at": "2026-04-30T23:22:17.495376+00:00"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[budget_ceiling] claude.max_20x.rolling_5h has signal (34462616.2 weighted_tokens_local_proxy) but no cap entry in ~/.jarvis/quota_caps.json
+[budget_ceiling] codex.plus.rolling_7d has signal (576079801 tokens_local_proxy) but no cap entry in ~/.jarvis/quota_caps.json
+[supervisor] plan_dir=$HOME/Documents/GitHub/Jarvis/docs/plans/2026-04-29-001-feat-changelog-skill
+[supervisor] mode=volley feature=F001 impl=claude aud=codex runtime_class=(derived)
+[env-registry] Jarvis ($HOME/Documents/GitHub/Jarvis): dev → <firebase-project-id> validated + .firebaserc reaches <firebase-project-id>
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-04-29-001-feat-changelog-skill-4kur6jjs target_env=dev target_project=<firebase-project-id> source=plan cwd=$HOME/Documents/GitHub/Jarvis
+[quota] claude: 13.3% of rolling_7d cap (tier=max_20x, cap=100.0 percent_of_plan, confidence=manual)
+[quota] codex: 26.1% of rolling_5h cap (tier=plus, cap=1000000000.0 tokens_local_proxy, confidence=uncalibrated)
+[volley] iter=0 auditor verdict: needs_changes
+[quota] claude: 13.3% of rolling_7d cap (tier=max_20x, cap=100.0 percent_of_plan, confidence=manual)
+[quota] codex: 26.1% of rolling_5h cap (tier=plus, cap=1000000000.0 tokens_local_proxy, confidence=uncalibrated)
+[volley] iter=1 auditor verdict: needs_changes
+
+[supervisor] volley terminal: stopped_diminishing_returns after 2 round(s)
+[supervisor] reason: diminishing returns: auditor finding counts [1, 1] non-decreasing across 2 consecutive needs_changes rounds
+[supervisor] 4 audit JSONs written
