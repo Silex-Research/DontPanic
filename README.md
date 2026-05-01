@@ -126,21 +126,97 @@ These four commands are the exact local equivalents of the
 [GitHub Actions CI workflow](.github/workflows/ci.yml). See
 [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor flow.
 
-### 6. Preview your first volley
+### 6. Run your first volley
 
-Before authorizing a real dispatch, the `dispatch-from-plan` subcommand prints a
-10-field pre-flight context block (resolved plan path, target_env, declared
-gates, quota readiness, etc.) and exits without dispatching:
+End-to-end flow from a fresh checkout to a signed-off dispatch:
+
+**1. Refresh the local quota signal** (writes `~/.jarvis/quota_state.json`):
+
+```bash
+python3 scripts/quota_check.py
+```
+
+**2. Seed your operator caps file** (`~/.jarvis/quota_caps.json`):
+
+```bash
+PYTHONPATH=scripts python -m jarvis_orchestrate quota-caps init
+PYTHONPATH=scripts python -m jarvis_orchestrate quota-caps show
+```
+
+**3. Calibrate Claude** against your real plan-usage dashboard at
+[claude.ai/settings/usage](https://claude.ai/settings/usage). Read the percent
+shown in the weekly bar and pass it as `--dashboard-pct`:
+
+```bash
+PYTHONPATH=scripts python -m jarvis_orchestrate calibrate-claude --dashboard-pct 13
+```
+
+This writes a sticky calibration to `~/.jarvis/quota_calibration.json`. Re-run
+weekly; `quota_check.py` warns at >7 days. Calibration is Claude-only — Codex
+and Gemini meter against direct local signals.
+
+**4. Author or pick a plan.** New plans go under
+`docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `plan.md`, `features.json`, and
+`decisions.jsonl`. Validate before dispatching:
+
+```bash
+python3 claude/shared/schemas/v1.0/validate.py docs/plans/<plan-id>/
+```
+
+**5. Preview the dispatch.** `dispatch-from-plan` is **strict dry-run by default**
+— it prints a 10-field pre-flight context block (resolved plan path, feature,
+tier, target_env, target_project, implementer, auditor, gates, max_iterations,
+quota readiness) and exits 0 without dispatching, regardless of TTY state:
 
 ```bash
 PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan <plan-id>
 ```
 
-Add `--confirm` to actually dispatch via `supervisor.dispatch_volley` (in-process,
-no subprocess shell-out). Forwarded flags: `--feature`, `--implementer`,
-`--auditor`, `--max-iterations`, `--mode`. A full operator walkthrough — quota
-calibration, INBOX, gate approvals — lands with the onboarding-UX plan
-([`2026-05-01-001-feat-onboarding-ux`](./docs/plans/2026-05-01-001-feat-onboarding-ux/plan.md), F001).
+If quota readiness is one of `missing_state` / `config_required` /
+`calibration_required` / `unit_mismatch`, the preview prints the label and the
+matching remediation pointer; `--confirm` will refuse with exit 3 until you fix
+it. `dispatch-from-plan --help` lists the four states with one-line fixes.
+
+**6. Authorize the dispatch.** Add `--confirm` to call
+`supervisor.dispatch_volley` in-process (no subprocess shell-out, same Python
+interpreter). Forwarded flags: `--feature F001`, `--implementer claude`,
+`--auditor codex`, `--max-iterations N`, `--mode interactive|autonomous`. P0
+class is plan-derived only and cannot be forced via `--mode`.
+
+```bash
+PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan <plan-id> --confirm
+```
+
+`target_env: prod` blocks dispatch unless `plan.tier=p0`. Use `dev` until ready.
+
+**7. Watch the run.** Five operator-facing artifacts land under the plan dir as
+the volley runs:
+
+| Path | What it is |
+|---|---|
+| `audit/<agent>-<role>-i<N>.json` | Per-iteration audit JSON (machine-checkable verdict) |
+| `audit/transcript.md` | One row per dispatch — agent, role, tokens in/out, verdict, audit link |
+| `audit/signoff-<plan-id>.json` | Volley-terminal verdict (signoff: true/false, reason, next_action) |
+| `audit/gate-state.json` | Gate-clearance state (cleared_gates, history, active_breakers) |
+| `INBOX.md` | Append-only operator log: gate_paused, breaker_tripped, signoff |
+
+**8. Engage when paused.** The supervisor pauses on declared `human_gates`
+(`pre_impl`, `pre_merge`, …) and on tripped breakers (`breaker:budget_ceiling`,
+`breaker:diminishing_returns`, …). INBOX names the gate; clear it with:
+
+```bash
+PYTHONPATH=scripts python -m jarvis_orchestrate ps                            # active supervisors
+PYTHONPATH=scripts python -m jarvis_orchestrate approve <plan-id> <gate>      # clear one gate
+PYTHONPATH=scripts python -m jarvis_orchestrate resume  <plan-id>             # clear every declared gate
+```
+
+**Gotchas:** `--max-iterations 1` still permits two rounds (iter 0 + iter 1)
+before the diminishing-returns breaker can fire. The Codex auditor runs
+`--sandbox read-only` and **cannot independently rerun pytest** — it inspects
+the implementer's recorded evidence rather than re-running tests. The cross-
+vendor adversarial invariant (no Claude grading Claude) only holds in
+`--volley` mode; single-agent `--role auditor` resolves the agent from
+`agents_required[0]` today.
 
 ---
 
@@ -229,17 +305,32 @@ Run `python3 scripts/quota_check.py` for LLM tokens (every ~30 min during active
 
 This list grows as we build. If a feature requires new setup, it lands here.
 
+Bootstrap (`scripts/bootstrap.sh`):
+
 - [x] gcloud + firebase CLI authenticated
 - [x] Firebase project linked to billing
 - [x] APIs enabled: Firestore, Firebase Storage, IAM, IAM Credentials
 - [x] GCS evidence bucket created
 - [x] `orchestrator` service account + 4 roles + JSON key in `.secrets/`
 - [x] firebase-admin Python SDK installed
-- [x] Storage smoke test passes (F002 acceptance)
-- [ ] BigQuery billing export configured (manual, Console only)
-- [ ] (when supervisor lands) Codex / Gemini / Grok CLIs authed
-- [ ] (when supervisor lands) `terminal-notifier` for INBOX async channel
-- [ ] (when supervisor lands) `~/.jarvis/quota_state.json` caps calibrated to your real usage
+- [x] Storage smoke test passes
+
+Supervisor + executor panel (shipped):
+
+- [x] Single-agent + volley dispatch (Claude / Codex / Gemini / Grok / Ollama executors)
+- [x] 7 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, global_circuit_breaker)
+- [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
+- [x] Operator caps + Claude calibration (`~/.jarvis/quota_caps.json`, `~/.jarvis/quota_calibration.json`)
+- [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)
+- [x] CLI surface: `dispatch-from-plan`, `quota-caps`, `calibrate-claude`, `approve`, `resume`, `ps`, `claude-touch`
+
+Operator-local prerequisites (per machine):
+
+- [ ] Codex / Gemini / Grok CLIs authed (only the agents your plans use)
+- [ ] `terminal-notifier` installed (`brew install terminal-notifier`) for desktop pings — optional; INBOX.md is the durable channel
+- [ ] `~/.jarvis/quota_caps.json` initialized (`quota-caps init`) and Claude calibrated (`calibrate-claude --dashboard-pct N`)
+- [ ] Re-calibrate Claude weekly (`quota_check.py` warns at >7 days)
+- [ ] BigQuery billing export configured (manual, Console only) — optional, only needed for app-level $ tracking
 
 ---
 

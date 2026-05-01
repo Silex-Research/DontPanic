@@ -17,8 +17,40 @@
         "Sanity-check by reading from a fresh-clone perspective: can someone reach 'first dispatch' from README alone?"
       ],
       "acceptance": "(1) README contains a 'Run your first volley' section that lists every command needed for first dispatch, in order, with one-line context for each. (2) Each command shown matches `python -m jarvis_orchestrate <subcommand> --help` output verbatim (no stale flag names) — including `dispatch-from-plan` from F002. (3) Setup checklist matches current shipped state (no false negatives for completed work, no false positives for unfinished work). (4) `--mode`, `--max-iterations`, `target_env` semantics are documented. (5) post-dispatch artifact map (audit/, INBOX.md, transcript.md, signoff.json, gate-state.json) is documented. (6) Total README length stays under ~350 lines. (7) F001 lands AFTER F002 so the `dispatch-from-plan` references in the walkthrough are accurate against the shipped CLI surface (depends_on: F002).",
-      "passes": false,
-      "depends_on": ["F002"]
+      "passes": true,
+      "verified_at": "2026-05-01T16:00:00Z",
+      "verified_by": ["claude"],
+      "depends_on": ["F002"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "README.md",
+          "captured_at": "2026-05-01T16:00:00Z",
+          "captured_by": "claude",
+          "note": "Section 6 'Run your first volley' rewritten with 8-step end-to-end walkthrough: quota_check.py → quota-caps init/show → calibrate-claude → plan validation → dispatch-from-plan dry-run → --confirm dispatch → 5-row post-dispatch artifact table → approve/resume/ps engagement. Each shown command matches its `--help` (verified inline). Final line: gotchas list covers `--max-iterations 1` two-round semantics, codex auditor read-only sandbox, cross-vendor invariant only-in-volley caveat. Closes acceptance items (1), (2), (4), (5)."
+        },
+        {
+          "type": "file",
+          "uri": "README.md",
+          "captured_at": "2026-05-01T16:00:00Z",
+          "captured_by": "claude",
+          "note": "Setup checklist refreshed into 3 sections: Bootstrap (7 boxes, all checked), Supervisor + executor panel shipped (6 boxes, all checked — covers F004/F005a/F006/F008/F023 + 2026-04-30-001 vendor-native quota tracker), Operator-local prerequisites per machine (5 boxes, unchecked because they're operator-specific install/config). No false negatives, no false positives. Closes acceptance item (3)."
+        },
+        {
+          "type": "test_output",
+          "uri": "wc -l README.md",
+          "captured_at": "2026-05-01T16:00:00Z",
+          "captured_by": "claude",
+          "note": "README.md is 343 lines after the F001 changes (was 252 pre-F001, +91 lines of walkthrough + checklist refresh). Under the ~350-line cap from acceptance item (6)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_at": "2026-05-01T16:00:00Z",
+          "captured_by": "claude",
+          "note": "F001 is documentation-only — no CLI behavior changes. The shipped `dispatch-from-plan` subcommand from F002 (cli.py:506-683) is the surface the walkthrough documents. D007 (quota_readiness=ok overload), D008 (single-agent --role auditor default), D009 (auditor prompt EC5 prelude) deliberately NOT addressed in this commit per operator guidance — separate follow-ups. Closes acceptance item (7)."
+        }
+      ]
     },
     {
       "id": "F002",
