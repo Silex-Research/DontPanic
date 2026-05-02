@@ -67,14 +67,20 @@ need() {
     "missing CLI: $1" \
     "$2"
 }
-need gcloud   "install gcloud SDK: https://cloud.google.com/sdk/docs/install"
-need firebase "install firebase CLI: npm i -g firebase-tools"
+# jq and python3 are required even under --dry-run because the script itself
+# parses JSON / computes derived values regardless of execution mode.
 need jq       "install jq: brew install jq"
 need python3  "install Python 3.10+: brew install python@3.11"
 
-# Auth checks — skipped under --dry-run (the whole point of dry-run is to
-# preview commands without touching the cloud, including authenticating).
+# Cloud CLI presence + auth checks — skipped under --dry-run. The whole
+# point of dry-run is to preview commands without touching the cloud,
+# including authenticating; under dry-run the gcloud/firebase invocations
+# are echoed rather than executed (see `run` / `run_quiet` helpers below),
+# so requiring the binaries to be installed would defeat dry-run's purpose
+# (test_f022_bootstrap_parser.py::test_dry_run_executes_zero_side_effects).
 if ! $DRY_RUN; then
+  need gcloud   "install gcloud SDK: https://cloud.google.com/sdk/docs/install"
+  need firebase "install firebase CLI: npm i -g firebase-tools"
   gcloud auth print-access-token >/dev/null 2>&1 || abort \
     "gcloud is not authenticated" \
     "run: gcloud auth login && gcloud auth application-default login"
