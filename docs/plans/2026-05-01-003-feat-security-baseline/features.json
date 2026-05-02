@@ -48,7 +48,32 @@
       ],
       "acceptance": "(1) `pyproject.toml` `[tool.ruff.lint].select` includes `\"S\"`. (2) Stop-rule observed: `evidence/f002/first-wave-raw.txt` archives the raw inventory; if findings >25 OR distinct files >8, F002 lands as `passes: false` with `signoff_reason: scope_split_required` and a follow-up plan is queued — and the steps below (3-7) are explicitly NOT performed in this feature. Below threshold, all of (3-7) hold. (3) `ruff check scripts/` exits 0 (clean) after first-wave remediation. (4) Every `# noqa: SXXX` in scripts/ names the specific rule and carries a one-line justification comment; verified by `grep -nR 'noqa: S' scripts/` showing each match has a comment after the rule code. (5) Per-file ignores in `[tool.ruff.lint.per-file-ignores]` (if any) carry a rationale comment in pyproject.toml. (6) SECURITY.md (from F001) gains a 'Security tooling' section that explicitly states Ruff S is baseline security lint, not SAST; words 'NOT a SAST substitute' or equivalent appear verbatim. (7) `evidence/f002/ruff-s-first-wave.md` documents every finding handled (whether fix / noqa / per-file ignore). (8) All existing orchestrate test modules stay green.",
       "passes": false,
-      "depends_on": ["F001"]
+      "verified_at": "2026-05-01T16:30:00Z",
+      "verified_by": ["claude"],
+      "depends_on": ["F001"],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f002/first-wave-raw.txt",
+          "captured_at": "2026-05-01T16:25:00Z",
+          "captured_by": "claude",
+          "note": "Raw `ruff check --select S scripts/` output: 853 findings across 30 distinct files. Stop-rule (D007) thresholds (>25 findings OR >8 files) BOTH triggered — both >34x and >3.75x respectively. Rule breakdown: S101=810 (95%, assert in non-test code; almost all in scripts/jarvis_orchestrate/tests/), S108=15, S603=14, S607=13, S310=1. Pyproject.toml NOT modified per stop-rule: F002 ships at inventory only."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f002/ruff-s-first-wave-inventory.md",
+          "captured_at": "2026-05-01T16:30:00Z",
+          "captured_by": "claude",
+          "note": "Stop-rule outcome memo. F002 lands `passes: false` with `signoff_reason: scope_split_required` (recorded here in evidence note since features.schema doesn't have a feature-level signoff_reason field — the proper home would be the signoff.json when this plan closes). Follow-up plan proposed: `feat-ruff-s-remediation` with two slices: F001 per-file-ignore baseline for tests/** (drops S101 from 810→0), F002 per-finding remediation of residual ~43 non-test findings under the original fix/noqa/per-file-ignore policy. SECURITY.md 'Security tooling' section + pyproject.toml `[tool.ruff.lint].select` += `S` deferred to that follow-up plan to keep framing honest (current baseline is NOT yet S-enabled)."
+        },
+        {
+          "type": "log",
+          "uri": "follow-up: feat-ruff-s-remediation (proposed plan)",
+          "captured_at": "2026-05-01T16:30:00Z",
+          "captured_by": "claude",
+          "note": "Queued follow-up plan that owns the bulk remediation as its own auditable scope. Two-slice structure documented in the inventory memo. Not opened yet; opens after the security baseline plan's F003 (SHA-pin + Dependabot) closes, per the corrected sequence v3 ordering."
+        }
+      ]
     },
     {
       "id": "F003",
