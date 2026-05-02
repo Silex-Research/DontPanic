@@ -1,0 +1,55 @@
+# Dependabot configuration — Jarvis platform
+#
+# F003 narrowed-promise framing (per plan 2026-05-01-003 D003):
+#
+#   github-actions ecosystem  = SECURITY-OWNED. Dependabot is the canonical
+#                               source of pin rotations for `uses:` lines in
+#                               .github/workflows/*.yml. Pins are SHA-pinned
+#                               with tag comments; the bot updates both atomically.
+#
+#   pip ecosystem             = CONFIGURED BUT CURRENTLY NO-OP. Dependabot's pip
+#                               ecosystem requires a supported Python dependency
+#                               manifest (requirements*.txt, pyproject.toml with
+#                               PEP 621 [project], Pipfile, etc.). Jarvis's
+#                               pyproject.toml today contains only Ruff config —
+#                               no [project] table, no [project.dependencies] —
+#                               so the bot has nothing to maintain on the pip
+#                               side. The entry is left configured so it
+#                               activates the day a Python manifest is added (no
+#                               re-config step needed). Hash-pinning, lockfile
+#                               enforcement, and pip-audit all remain DEFERRED
+#                               to a future dep-security plan that owns the
+#                               packaging change. Until that plan lands: pip
+#                               here is bookkeeping intent, NOT active visibility.
+#
+# See:
+#   docs/plans/2026-05-01-003-feat-security-baseline/decisions.jsonl D003
+#   docs/plans/2026-05-01-003-feat-security-baseline/decisions.jsonl D004 (deferral list)
+#   CONTRIBUTING.md / docs/maintenance.md "Dependency maintenance" section
+
+version: 2
+updates:
+  # github-actions: security-owned ecosystem.
+  # Bot manages SHA pin rotation for actions/checkout, actions/setup-python, etc.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security-owned"
+
+  # pip: configured but currently NO-OP.
+  # No PEP 621 [project] table or requirements*.txt exists in this repo today,
+  # so Dependabot's pip ecosystem has no manifest to maintain. The entry is
+  # left here so the bot activates automatically once a manifest is added.
+  # Until then, this is bookkeeping intent, not active visibility.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+      - "no-op-no-manifest"
