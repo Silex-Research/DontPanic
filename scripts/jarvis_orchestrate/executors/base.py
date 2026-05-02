@@ -15,16 +15,18 @@ import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 # F005b — non-interactive permission policy.
 # Forbidden flags shortcut the permission system entirely and would defeat
 # the role allowlist. Both Claude bypass flags + the Codex bypass.
-FORBIDDEN_FLAGS: frozenset[str] = frozenset({
-    "--dangerously-skip-permissions",
-    "--allow-dangerously-skip-permissions",
-    "--dangerously-bypass-approvals-and-sandbox",
-})
+FORBIDDEN_FLAGS: frozenset[str] = frozenset(
+    {
+        "--dangerously-skip-permissions",
+        "--allow-dangerously-skip-permissions",
+        "--dangerously-bypass-approvals-and-sandbox",
+    }
+)
 
 
 def check_forbidden_flags(argv: list[str]) -> None:
@@ -46,7 +48,7 @@ def check_forbidden_flags(argv: list[str]) -> None:
 # exactly as before this change.
 def _derive_permission_policy(
     agent_role: str | None,
-) -> Optional[Literal["implementer", "auditor"]]:
+) -> Literal["implementer", "auditor"] | None:
     if agent_role == "implementer":
         return "implementer"
     if agent_role == "auditor":
@@ -73,7 +75,7 @@ class DispatchTask:
     # F005b: non-interactive permission policy derived from agent_role.
     # None = legacy / explicit no-policy (executors emit no permission flags,
     # preserving pre-F005b behavior for synthetic-disagreement mocks etc.).
-    permission_policy: Optional[Literal["implementer", "auditor"]] = None
+    permission_policy: Literal["implementer", "auditor"] | None = None
 
 
 @dataclass

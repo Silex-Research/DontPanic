@@ -18,7 +18,6 @@ sys.path.insert(0, str(HERE.parents[2]))
 
 import quota_check as qc  # noqa: E402
 
-
 NOW = dt.datetime(2026, 4, 30, 12, 0, tzinfo=dt.timezone.utc)
 
 
@@ -67,7 +66,9 @@ def test_claude_usage_v2_weights_cache_reads_and_groups_by_model(tmp_path: Path)
     )
     os.utime(session, (NOW.timestamp(), NOW.timestamp()))
 
-    usage = qc._claude_usage_v2("rolling_5h", sessions_dir=tmp_path / ".claude" / "projects", now=NOW)
+    usage = qc._claude_usage_v2(
+        "rolling_5h", sessions_dir=tmp_path / ".claude" / "projects", now=NOW
+    )
 
     assert usage["observed_unit"] == "weighted_tokens_local_proxy"
     assert usage["observed_native"] == 235.0
@@ -161,9 +162,7 @@ def test_codex_tier_detection_decodes_nested_id_token(tmp_path: Path) -> None:
         json.dumps(
             {
                 "tokens": {
-                    "id_token": _jwt(
-                        {"https://api.openai.com/auth": {"chatgpt_plan_type": "plus"}}
-                    )
+                    "id_token": _jwt({"https://api.openai.com/auth": {"chatgpt_plan_type": "plus"}})
                 }
             }
         )
@@ -185,9 +184,10 @@ def test_tier_detection_is_fail_soft(tmp_path: Path, monkeypatch) -> None:
     oauth = tmp_path / "oauth_creds.json"
     oauth.write_text("{}")
     assert qc._detect_gemini_tier(oauth_path=oauth, env={})["tier"] == "code_assist_individuals"
-    assert qc._detect_gemini_tier(oauth_path=tmp_path / "missing", env={"GEMINI_API_KEY": "x"})[
-        "tier"
-    ] == "ai_studio_api"
+    assert (
+        qc._detect_gemini_tier(oauth_path=tmp_path / "missing", env={"GEMINI_API_KEY": "x"})["tier"]
+        == "ai_studio_api"
+    )
     assert qc._detect_gemini_tier(oauth_path=tmp_path / "missing", env={})["tier"] == "unknown"
 
     caps = tmp_path / "quota_caps.json"
@@ -202,9 +202,11 @@ def test_tier_detection_is_fail_soft(tmp_path: Path, monkeypatch) -> None:
 # These tests monkeypatch the helpers to keep _build_state() hermetic; the
 # helper-level coverage above already exercises the real signal extraction.
 
+
 def _stub_helpers(monkeypatch) -> None:
     monkeypatch.setattr(
-        qc, "_claude_usage_v2",
+        qc,
+        "_claude_usage_v2",
         lambda window, **_: {
             "kind": window,
             "observed_native": 100.0 if window == "rolling_7d" else 25.0,
@@ -214,7 +216,8 @@ def _stub_helpers(monkeypatch) -> None:
         },
     )
     monkeypatch.setattr(
-        qc, "_codex_usage_v2",
+        qc,
+        "_codex_usage_v2",
         lambda window, **_: {
             "kind": window,
             # 5h returns 50, 7d returns 200 — distinct so tests can verify which
@@ -226,17 +229,24 @@ def _stub_helpers(monkeypatch) -> None:
         },
     )
     monkeypatch.setattr(
-        qc, "_gemini_usage_v2",
+        qc,
+        "_gemini_usage_v2",
         lambda **_: {
             "kind": "rolling_24h",
             "observed_native": 3,
             "observed_unit": "requests",
             "models": {"gemini-2.5-pro": {"requests": 3}},
-            "diagnostics": {"source": "/fake", "signal": "ok", "tokens_total": 90, "tokens_total_present": True},
+            "diagnostics": {
+                "source": "/fake",
+                "signal": "ok",
+                "tokens_total": 90,
+                "tokens_total_present": True,
+            },
         },
     )
     monkeypatch.setattr(
-        qc, "_grok_usage_v2",
+        qc,
+        "_grok_usage_v2",
         lambda **_: {
             "kind": "rolling_2h",
             "observed_native": None,
@@ -246,15 +256,32 @@ def _stub_helpers(monkeypatch) -> None:
         },
     )
     monkeypatch.setattr(qc, "_ollama_models_loaded", lambda: [])
-    monkeypatch.setattr(qc, "_detect_claude_tier", lambda *a, **k: {"tier": "max_20x", "source": "/fake", "signal": "default"})
-    monkeypatch.setattr(qc, "_detect_codex_tier", lambda *a, **k: {"tier": "plus", "source": "/fake", "signal": "ok"})
-    monkeypatch.setattr(qc, "_detect_gemini_tier", lambda *a, **k: {"tier": "code_assist_individuals", "source": "/fake", "signal": "oauth"})
-    monkeypatch.setattr(qc, "_detect_grok_tier", lambda *a, **k: {"tier": "absent", "source": "/fake", "signal": "absent"})
+    monkeypatch.setattr(
+        qc,
+        "_detect_claude_tier",
+        lambda *a, **k: {"tier": "max_20x", "source": "/fake", "signal": "default"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_codex_tier",
+        lambda *a, **k: {"tier": "plus", "source": "/fake", "signal": "ok"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_gemini_tier",
+        lambda *a, **k: {"tier": "code_assist_individuals", "source": "/fake", "signal": "oauth"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_grok_tier",
+        lambda *a, **k: {"tier": "absent", "source": "/fake", "signal": "absent"},
+    )
     # Hermetic isolation from operator-set ~/.jarvis/quota_calibration.json (F005):
     # _build_state lazy-imports calibration_loader and calls .load() with no args
     # → reads the real file. Patch .load to return {} so the v2 state-shape tests
     # always see uncalibrated default blocks regardless of operator state.
     from jarvis_orchestrate import calibration_loader as _cal
+
     monkeypatch.setattr(_cal, "load", lambda *a, **k: {})
 
 

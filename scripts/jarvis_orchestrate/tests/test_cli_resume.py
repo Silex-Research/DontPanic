@@ -158,9 +158,7 @@ def _shape_c_gate_unknown(plan_dir: Path) -> None:
 def _shape_d_gate_global_breaker(plan_dir: Path) -> None:
     """(d) `resume --gate breaker:global_circuit_breaker` → exit 2; refusal message."""
     before = _state_bytes(plan_dir)
-    rc, out, err = _run_cli(
-        ["resume", str(plan_dir), "--gate", "breaker:global_circuit_breaker"]
-    )
+    rc, out, err = _run_cli(["resume", str(plan_dir), "--gate", "breaker:global_circuit_breaker"])
     assert rc == 2, (rc, out, err)
     assert "global breaker has no operator clearance path" in err, err
     assert _state_bytes(plan_dir) == before, _state_bytes(plan_dir)

@@ -42,9 +42,7 @@ PATTERNS = [_PROJECT, _BILLING, _MAINTAINER_USER]
 # `AKIAAAAAAAAAAAAAAAAA`) by requiring at least one letter AND one digit —
 # real AWS keys always mix both, while doc-style placeholders typically don't.
 # source: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (rule: aws-access-token)
-_AWS_ACCESS_KEY_RE = re.compile(
-    r"AKIA(?=[0-9A-Z]*[A-Z])(?=[0-9A-Z]*[0-9])[0-9A-Z]{16}"
-)
+_AWS_ACCESS_KEY_RE = re.compile(r"AKIA(?=[0-9A-Z]*[A-Z])(?=[0-9A-Z]*[0-9])[0-9A-Z]{16}")
 
 # GitHub personal access token (classic). `ghp_` prefix + 36 base62 chars.
 # source: https://github.blog/changelog/2021-03-31-authentication-token-format-updates-are-generally-available/

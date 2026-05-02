@@ -9,8 +9,8 @@ Caps below are configurable estimates — refine as we get real Max plan reset s
 
 from __future__ import annotations
 
-import datetime as dt
 import base64
+import datetime as dt
 import json
 import os
 import shutil
@@ -74,9 +74,7 @@ def _parse_iso_timestamp(raw: Any) -> dt.datetime | None:
     if not isinstance(raw, str) or not raw:
         return None
     try:
-        return dt.datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone(
-            dt.timezone.utc
-        )
+        return dt.datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
     except ValueError:
         return None
 
@@ -142,10 +140,7 @@ def _claude_usage_v2(
                 cache_creation = _safe_int(usage.get("cache_creation_input_tokens"))
                 cache_read = _safe_int(usage.get("cache_read_input_tokens"))
                 weighted = (
-                    input_tokens
-                    + output_tokens
-                    + cache_creation
-                    + (cache_read * CACHE_READ_WEIGHT)
+                    input_tokens + output_tokens + cache_creation + (cache_read * CACHE_READ_WEIGHT)
                 )
                 bucket = models.setdefault(
                     model,
@@ -169,9 +164,7 @@ def _claude_usage_v2(
             continue
 
     result["models"] = models
-    result["observed_native"] = round(
-        sum(float(v["weighted_tokens"]) for v in models.values()), 2
-    )
+    result["observed_native"] = round(sum(float(v["weighted_tokens"]) for v in models.values()), 2)
     return result
 
 
@@ -272,9 +265,7 @@ def _gemini_usage_v2(
             if message.get("type") == "info":
                 continue
             model = message.get("model") or "unknown"
-            bucket = models.setdefault(
-                model, {"requests": 0, "messages": 0, "tokens_total": 0}
-            )
+            bucket = models.setdefault(model, {"requests": 0, "messages": 0, "tokens_total": 0})
             bucket["messages"] += 1
             result["diagnostics"]["messages"] += 1
             if message.get("type") in {"assistant", "model"} or message.get("tokens"):
@@ -504,6 +495,7 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
     calibration_data: dict[str, Any] = {}
     try:
         import sys as _sys
+
         _sys.path.insert(0, str(Path(__file__).resolve().parent))
         from jarvis_orchestrate import calibration_loader  # noqa: E402
 
@@ -514,9 +506,7 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
     def _with_calibration(window: dict[str, Any], window_name: str) -> dict[str, Any]:
         merged = dict(window)
         try:
-            sticky = calibration_loader.get_for_window(
-                calibration_data, "claude", window_name
-            )
+            sticky = calibration_loader.get_for_window(calibration_data, "claude", window_name)
         except (NameError, AttributeError):
             sticky = None
         merged["calibration"] = sticky if sticky else dict(UNCALIBRATED_BLOCK)
@@ -630,9 +620,7 @@ def main() -> int:
         _sys.path.insert(0, str(Path(__file__).resolve().parent))
         from jarvis_orchestrate import calibration_loader  # noqa: E402
 
-        for wname, w in (
-            state.get("vendors", {}).get("claude", {}).get("windows", {}).items()
-        ):
+        for wname, w in state.get("vendors", {}).get("claude", {}).get("windows", {}).items():
             cal = w.get("calibration") or {}
             if cal.get("confidence") == "manual" and calibration_loader.is_stale(cal):
                 print(
@@ -660,14 +648,9 @@ def main() -> int:
             unit = w.get("observed_unit") or "—"
             cal = w.get("calibration") or {}
             cal_label = (
-                f" calibration={cal.get('confidence')}"
-                if cal and "confidence" in cal
-                else ""
+                f" calibration={cal.get('confidence')}" if cal and "confidence" in cal else ""
             )
-            print(
-                f"    {vendor:<8} tier={tier:<24} {wname:<11} "
-                f"{obs!s:>14} {unit}{cal_label}"
-            )
+            print(f"    {vendor:<8} tier={tier:<24} {wname:<11} {obs!s:>14} {unit}{cal_label}")
     print(f"  models{{}} mirror: {LEGACY_MIRROR_NOTE}")
     return 0
 

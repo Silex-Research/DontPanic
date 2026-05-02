@@ -80,9 +80,7 @@ def load(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
-def get_for_window(
-    data: dict[str, Any], vendor: str, window: str
-) -> dict[str, Any] | None:
+def get_for_window(data: dict[str, Any], vendor: str, window: str) -> dict[str, Any] | None:
     """Return the merged calibration block for vendor.window, or None.
 
     Output is the shape that goes into vendors.<v>.windows.<w>.calibration:
@@ -128,17 +126,13 @@ def write_calibration(
     this safe to run while quota_check.py may be reading the same file.
     """
     if not (0 < dashboard_pct <= 100):
-        raise CalibrationError(
-            f"dashboard_pct must be in (0, 100]; got {dashboard_pct!r}"
-        )
+        raise CalibrationError(f"dashboard_pct must be in (0, 100]; got {dashboard_pct!r}")
     if not isinstance(observed_native, (int, float)) or observed_native <= 0:
         raise CalibrationError(
             f"observed_native must be a positive number; got {observed_native!r}"
         )
     if window not in SUPPORTED_WINDOWS:
-        raise CalibrationError(
-            f"window must be one of {sorted(SUPPORTED_WINDOWS)}; got {window!r}"
-        )
+        raise CalibrationError(f"window must be one of {sorted(SUPPORTED_WINDOWS)}; got {window!r}")
     if confidence not in CONFIDENCE_LEVELS:
         raise CalibrationError(
             f"confidence must be one of {sorted(CONFIDENCE_LEVELS)}; got {confidence!r}"
@@ -151,7 +145,10 @@ def write_calibration(
     if p.is_file():
         try:
             parsed = json.loads(p.read_text())
-            if isinstance(parsed, dict) and parsed.get("schema_version") == CALIBRATION_SCHEMA_VERSION:
+            if (
+                isinstance(parsed, dict)
+                and parsed.get("schema_version") == CALIBRATION_SCHEMA_VERSION
+            ):
                 existing = parsed
         except (OSError, json.JSONDecodeError):
             existing = {}
@@ -209,7 +206,5 @@ def is_stale(
         return False
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=dt.timezone.utc)
-    cutoff = (now or dt.datetime.now(dt.timezone.utc)) - dt.timedelta(
-        days=threshold_days
-    )
+    cutoff = (now or dt.datetime.now(dt.timezone.utc)) - dt.timedelta(days=threshold_days)
     return ts < cutoff

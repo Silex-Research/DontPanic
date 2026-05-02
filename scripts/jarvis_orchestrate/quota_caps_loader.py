@@ -80,15 +80,32 @@ KNOWN_VENDORS = {"claude", "codex", "gemini", "grok"}
 KNOWN_TIERS: dict[str, set[str]] = {
     "claude": {"max_20x", "max_5x", "pro", "free", "unknown"},
     "codex": {
-        "plus", "pro", "pro_5x", "pro_20x", "business", "enterprise", "unknown",
+        "plus",
+        "pro",
+        "pro_5x",
+        "pro_20x",
+        "business",
+        "enterprise",
+        "unknown",
     },
     "gemini": {
-        "code_assist_individuals", "code_assist_standard", "code_assist_enterprise",
-        "ai_studio_api", "ai_pro", "ai_ultra", "unknown",
+        "code_assist_individuals",
+        "code_assist_standard",
+        "code_assist_enterprise",
+        "ai_studio_api",
+        "ai_pro",
+        "ai_ultra",
+        "unknown",
     },
     "grok": {
-        "absent", "premium", "premium_plus", "supergrok", "supergrok_heavy",
-        "api", "cli_installed", "unknown",
+        "absent",
+        "premium",
+        "premium_plus",
+        "supergrok",
+        "supergrok_heavy",
+        "api",
+        "cli_installed",
+        "unknown",
     },
 }
 
@@ -157,8 +174,7 @@ def starter_caps(*, codex_observed_5h: int | None = None) -> dict[str, Any]:
                     "cap": 100,
                     "unit": "percent_of_plan",
                     "_note": (
-                        CLAUDE_UNCALIBRATED_NOTE
-                        + " To extend coverage to rolling_5h: run "
+                        CLAUDE_UNCALIBRATED_NOTE + " To extend coverage to rolling_5h: run "
                         "calibrate-claude --window rolling_5h --dashboard-pct N "
                         "and add an entry alongside this one with the same shape."
                     ),
@@ -199,8 +215,7 @@ def validate(data: Any) -> list[str]:
         return ["caps file must be a JSON object"]
     if data.get("schema_version") != CAPS_SCHEMA_VERSION:
         errors.append(
-            f"schema_version must be {CAPS_SCHEMA_VERSION}, "
-            f"got {data.get('schema_version')!r}"
+            f"schema_version must be {CAPS_SCHEMA_VERSION}, got {data.get('schema_version')!r}"
         )
 
     defaults = data.get("defaults")
@@ -229,9 +244,7 @@ def validate(data: Any) -> list[str]:
                 if window.startswith("_"):
                     continue
                 if window not in KNOWN_WINDOWS:
-                    errors.append(
-                        f"unknown window {window!r} under {vendor}.{tier}"
-                    )
+                    errors.append(f"unknown window {window!r} under {vendor}.{tier}")
                     continue
                 if not isinstance(wblock, dict):
                     errors.append(f"{vendor}.{tier}.{window} must be an object")
@@ -247,8 +260,7 @@ def validate(data: Any) -> list[str]:
                     # with evaluate_window's defensive `cap_value <= 0` check
                     # so post-validate the runtime path never sees zero.
                     errors.append(
-                        f"{vendor}.{tier}.{window}.cap must be positive number, "
-                        f"got {cap!r}"
+                        f"{vendor}.{tier}.{window}.cap must be positive number, got {cap!r}"
                     )
                 if not isinstance(unit, str) or unit not in KNOWN_UNITS:
                     errors.append(
@@ -263,8 +275,7 @@ def load(path: Path | None = None) -> dict[str, Any]:
     p = _effective_caps_path(path)
     if not p.is_file():
         raise QuotaCapsError(
-            f"caps file not found at {p}; "
-            "run `python -m jarvis_orchestrate quota-caps init`"
+            f"caps file not found at {p}; run `python -m jarvis_orchestrate quota-caps init`"
         )
     try:
         data = json.loads(p.read_text())
@@ -272,15 +283,11 @@ def load(path: Path | None = None) -> dict[str, Any]:
         raise QuotaCapsError(f"failed to read caps file at {p}: {exc}") from exc
     errors = validate(data)
     if errors:
-        raise QuotaCapsError(
-            f"caps file at {p} invalid:\n  " + "\n  ".join(errors)
-        )
+        raise QuotaCapsError(f"caps file at {p} invalid:\n  " + "\n  ".join(errors))
     return data
 
 
-def get(
-    data: dict[str, Any], vendor: str, tier: str, window: str
-) -> dict[str, Any] | None:
+def get(data: dict[str, Any], vendor: str, tier: str, window: str) -> dict[str, Any] | None:
     """Return the {cap, unit, ...} block for vendor.tier.window, or None."""
     vblock = data.get(vendor)
     if not isinstance(vblock, dict):
@@ -347,10 +354,7 @@ def show(
                 cap = wblock.get("cap")
                 unit = wblock.get("unit")
                 note = wblock.get("_note")
-                line = (
-                    f"  {vendor:<8} {tier:<24} {window:<11} "
-                    f"cap={cap} unit={unit}"
-                )
+                line = f"  {vendor:<8} {tier:<24} {window:<11} cap={cap} unit={unit}"
                 if note:
                     line += f"\n            # {note}"
                 lines.append(line)

@@ -40,7 +40,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
@@ -188,7 +188,9 @@ def evaluate_quota_threshold(
 
     # Legacy fallback
     circuit_breakers._warn_once(
-        "quota_admission", "_global", "legacy_fallback",
+        "quota_admission",
+        "_global",
+        "legacy_fallback",
         "[quota_admission] vendors{} missing in quota_state.json; using legacy "
         "models{}.percent_weekly path.",
     )
@@ -231,7 +233,9 @@ def _evaluate_quota_threshold_v2(
     known = quota_caps_loader.KNOWN_VENDORS
     for agent in agents:
         report = circuit_breakers.collect_agent_coverage(
-            agent=agent, vendors=vendors, caps=caps,
+            agent=agent,
+            vendors=vendors,
+            caps=caps,
         )
         if report.terminal is not None:
             # F006b fix#1: TRIPPED is numeric — surface its .pct_of_cap so the

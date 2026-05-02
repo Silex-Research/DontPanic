@@ -60,11 +60,13 @@ def test_forbidden_flags_set_contents():
     """The frozenset contains exactly the three documented bypass flags.
     If a future change adds more bypass flags upstream, this test fails
     loudly so we update FORBIDDEN_FLAGS deliberately rather than by accident."""
-    assert FORBIDDEN_FLAGS == frozenset({
-        "--dangerously-skip-permissions",
-        "--allow-dangerously-skip-permissions",
-        "--dangerously-bypass-approvals-and-sandbox",
-    })
+    assert FORBIDDEN_FLAGS == frozenset(
+        {
+            "--dangerously-skip-permissions",
+            "--allow-dangerously-skip-permissions",
+            "--dangerously-bypass-approvals-and-sandbox",
+        }
+    )
 
 
 @pytest.mark.parametrize(
@@ -336,8 +338,8 @@ def test_fake_cli_smoke_codex_auditor_no_sentinel(tmp_path):
 # regressed — a permission prompt is blocking. If a deny case writes the
 # sentinel anyway, the permission system has been bypassed.
 
-import os
-import shutil
+import os  # noqa: E402  # gated runtime imports — kept after the gating-comment block above
+import shutil  # noqa: E402
 
 _RUN_REAL = os.environ.get("JARVIS_RUN_REAL_CLI_TESTS") == "1"
 _HAVE_CLAUDE = shutil.which("claude") is not None
@@ -406,9 +408,9 @@ def test_real_claude_auditor_read_success(tmp_path):
     task = _make_task(tmp_path, role="auditor")
     task.extra_context = {
         "prompt_override": (
-            f"Use the Read tool to read the file fixture.txt in the current "
-            f"working directory. Then reply with one short sentence that "
-            f"includes the literal token after 'Contents: ' from the file."
+            "Use the Read tool to read the file fixture.txt in the current "
+            "working directory. Then reply with one short sentence that "
+            "includes the literal token after 'Contents: ' from the file."
         )
     }
     result = ex.dispatch(task)
@@ -416,8 +418,7 @@ def test_real_claude_auditor_read_success(tmp_path):
         f"real Claude auditor read dispatch hit TimeoutExpired: {result.error}"
     )
     assert fixture_content in (result.summary or ""), (
-        f"real Claude auditor failed to read and report fixture content; "
-        f"summary={result.summary!r}"
+        f"real Claude auditor failed to read and report fixture content; summary={result.summary!r}"
     )
     # Read-only allowlist must NOT have written anything.
     new_files = [p.name for p in tmp_path.iterdir() if p.name != "fixture.txt"]
@@ -462,10 +463,18 @@ def _git_init_tmp(tmp_path: Path) -> Path:
     subprocess.run(
         [
             "git",
-            "-c", "user.email=test@x",
-            "-c", "user.name=t",
-            "-c", "commit.gpgsign=false",
-            "commit", "--allow-empty", "--no-gpg-sign", "-m", "init", "-q",
+            "-c",
+            "user.email=test@x",
+            "-c",
+            "user.name=t",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--allow-empty",
+            "--no-gpg-sign",
+            "-m",
+            "init",
+            "-q",
         ],
         cwd=tmp_path,
         check=True,
@@ -503,9 +512,9 @@ def test_real_codex_auditor_read_success(tmp_path):
     task = _make_task(tmp_path, role="auditor")
     task.extra_context = {
         "prompt_override": (
-            f"Read the file fixture.txt in the current working directory and "
-            f"reply with one short sentence that includes the literal token "
-            f"after 'Contents: ' from the file."
+            "Read the file fixture.txt in the current working directory and "
+            "reply with one short sentence that includes the literal token "
+            "after 'Contents: ' from the file."
         )
     }
     result = ex.dispatch(task)
@@ -513,13 +522,10 @@ def test_real_codex_auditor_read_success(tmp_path):
         f"real Codex auditor read dispatch hit TimeoutExpired: {result.error}"
     )
     assert fixture_content in (result.summary or ""), (
-        f"real Codex auditor failed to read and report fixture content; "
-        f"summary={result.summary!r}"
+        f"real Codex auditor failed to read and report fixture content; summary={result.summary!r}"
     )
     # Read-only sandbox must NOT have written anything beyond fixture + git.
-    written = sorted(
-        p.name for p in tmp_path.iterdir() if p.name not in {"fixture.txt", ".git"}
-    )
+    written = sorted(p.name for p in tmp_path.iterdir() if p.name not in {"fixture.txt", ".git"})
     assert not written, f"auditor wrote unexpected files: {written}"
 
 
