@@ -33,6 +33,15 @@ python -c "from jarvis_orchestrate import circuit_breakers, gate_pause, quota_ad
 
 If any of these fail, fix them — there is no allowed-failure lint job.
 
+## Dependency maintenance
+
+Dependabot (`.github/dependabot.yml`) manages weekly updates with two distinct framings — do not treat them as equivalent:
+
+- **`github-actions` ecosystem — security-owned.** Every `uses:` in `.github/workflows/*.yml` is SHA-pinned with a tag comment (e.g. `actions/checkout@34e114876b...  # v4.3.1`). Dependabot is the canonical source of pin rotations: when a new release ships, the bot opens a PR that updates both the SHA and the tag comment atomically. **Do not hand-update workflow pins** without checking the bot first; manual edits race with bot PRs and risk pinning to the wrong SHA. If the bot is offline, regenerate pin resolutions via `gh api repos/<action>/git/ref/tags/<tag>` (see `docs/plans/2026-05-01-003-feat-security-baseline/evidence/f003/pin-resolutions.md` for the methodology).
+- **`pip` ecosystem — configured but currently NO-OP, NOT dependency-security completion.** Dependabot's pip ecosystem requires a supported Python dependency manifest (requirements*.txt, pyproject.toml with a PEP 621 `[project]` table, Pipfile, etc.). Jarvis's `pyproject.toml` today carries only Ruff config — no `[project]` table — so the bot has nothing to maintain on the pip side. The entry stays configured so it activates the day a manifest lands; until then it is bookkeeping intent. Adding a `[project]` table changes Jarvis's packaging model (from "invoke as module" to "pip-installable") and is **deferred** to a future dep-security plan that also owns hash-pinning, lockfile enforcement, and `pip-audit`. **A green Dependabot pip PR is NOT supply-chain coverage even when one starts firing** — that gate belongs to the deferred plan (see plan `2026-05-01-003-feat-security-baseline` D004 deferral list).
+
+Both ecosystems are operator-managed via PR review. The bot opens, you review and merge.
+
 ## Plan-Driven Changes
 
 Significant changes are gated by a *plan* under `docs/plans/<id>/`:
