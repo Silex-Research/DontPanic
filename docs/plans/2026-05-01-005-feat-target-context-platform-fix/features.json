@@ -232,10 +232,59 @@
         "Integration test \u2014 fresh volley regression: dispatch a synthetic volley iteration with the changelog-skill regression envelope (the recent EC5 i1 example sourced into F001 fixtures); assert post-F002+F003 the volley produces zero EC5 i1 findings (case-a-equivalent behavior). Same dispatch with case-d-shaped envelope produces exactly one EC5 i1 finding."
       ],
       "acceptance": "(1) `scripts/jarvis_orchestrate/ec5_classifier.py` exists with `classify_ec5_severity(envelope)` exported; pure function, no I/O. (2) Classifier returns the documented severity for each of the **seven** F001 fixtures: case-a-pre-injection \u2192 'i0' (missing prelude); case-a-post-injection / case-b-post-injection / case-c \u2192 'none' (golden); case-d / case-e / case-f \u2192 'i1' (struct invalid); **case-g \u2192 'i1'** (struct valid BUT parsed prelude value mismatches struct \u2014 narrow rule). Verified by parametrized test. (3) **Narrow downgrade scope (D005 + acceptance-locked here)**: the classifier returns 'i0' ONLY when (a) struct validates AND (b) the summary either has no detectable prelude OR has a structurally-malformed prelude (wrong field order, mistyped labels, missing line). The classifier returns 'i1' in EVERY other case where an auditor would file EC5: missing struct, invalid struct (empty env/project with commands), commands-without-target, AND prelude-value-mismatch. Verified by a parametrized test with at least 6 negative-control cases (one per i1 trigger including value-mismatch). (4) Auditor finding-aggregation step calls the classifier on every EC5-coded finding and drops/downgrades per the classifier's verdict. (5) **Description preservation (D008)**: when the classifier downgrades severity, the original finding's `description` text is preserved verbatim in the persisted envelope; only `severity` is mutated. Verified by a test that asserts deep-equality on description before/after downgrade. (6) Auditor prompt template at `prompts.py` (or equivalent) contains the documented EC5 rule paragraph including the value-mismatch carve-out (`prelude says env=X, struct says env=Y` stays i1); verified by string-match test on a representative phrase. (7) Non-EC5 findings pass through the aggregation step unchanged \u2014 verified by mixed-finding test (one EC5 i1 + one S101 i1; only the EC5 is touched). (8) Integration test: a fresh synthetic volley iteration against a case-a-shaped envelope (post-F002 normalization) produces ZERO EC5 i1 findings; against case-d-shaped produces exactly one EC5 i1; against **case-g produces exactly one EC5 i1** (negative control \u2014 narrow rule respected). (9) No agent retraining \u2014 the only changes are (a) the classifier helper, (b) the prompt template paragraph addition, (c) finding-aggregation wiring. No model-tuning, no fine-tuning, no per-agent customization. (10) Backwards-compat: legacy auditor outputs that file EC5-shaped findings without a `code` field but with text matching the `target.context.prelude` heuristic are also handled by the aggregation downgrade \u2014 verified by a test using a synthetic legacy-shaped finding. (11) All existing orchestrate test modules stay green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_at": "2026-05-02T17:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/ec5_classifier.py",
+          "captured_by": "claude",
+          "note": "Pure helpers: classify_ec5_severity (verdict 'none'|'i0'|'i1'), is_ec5_finding (explicit code OR text heuristic for backwards-compat), apply_ec5_classifier_to_findings (drop/downgrade per verdict, preserves description per D008). 'i0' verdict maps to severity='advisory' (within audit.schema.json enum, no schema bump per D006)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/audit_writer.py",
+          "captured_by": "claude",
+          "note": "build_audit calls apply_ec5_classifier_to_findings AFTER findings extraction and BEFORE _derive_status, so downgrades affect audit_status determination. Non-EC5 findings pass through identically (same dict reference)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/prompts.py",
+          "captured_by": "claude",
+          "note": "EC5_AUDITOR_RULE constant embedded in auditor_prompt; documents narrow-downgrade with explicit value-mismatch carve-out. No agent retraining \u2014 prompt-as-context change only."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_ec5_classifier.py",
+          "captured_by": "claude",
+          "note": "19 tests: classifier verdicts on all 7 F001 fixtures + malformed-prelude synthetic, is_ec5_finding heuristics, aggregation drop/downgrade/passthrough/legacy, no-mutation, classifier-purity (monkey-patch I/O sentinels), prompt template smoke."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-01-005-feat-target-context-platform-fix/evidence/f003-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F003 close-out memo \u2014 documents direct-path choice (no volley) rationale: F002's volley already saturated the EC5 surface adversarially; another volley would test loop instability rather than implementation."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-01-005-feat-target-context-platform-fix/decisions.jsonl",
+          "captured_by": "operator",
+          "note": "D014 records F003 close-out + direct-path decision."
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-05-01-005-feat-target-context-platform-fix/evidence/f003-closeout-memo.md#test-state",
+          "captured_by": "operator",
+          "note": "Final state: 19/19 F003 targeted tests pass, 447 passed + 6 skipped full orchestrate suite, ruff clean, sanitization clean (544 files)."
+        }
       ]
     }
   ]

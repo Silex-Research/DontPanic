@@ -26,6 +26,9 @@ for _candidate in _SCHEMA_CANDIDATES:
 from models.audit_model import Audit  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
+from jarvis_orchestrate.ec5_classifier import (  # noqa: E402
+    apply_ec5_classifier_to_findings,
+)
 from jarvis_orchestrate.executors.base import DispatchResult  # noqa: E402
 from jarvis_orchestrate.plan_loader import LoadedPlan  # noqa: E402
 from jarvis_orchestrate.target_context_prelude import (  # noqa: E402
@@ -72,8 +75,8 @@ def build_audit(
         "iteration": result.iteration,
         "started_at": result.started_at,
         "completed_at": result.completed_at,
-        "audit_status": _derive_status(result, findings, status_hint=status_hint),
-        "findings": findings,
+        # `audit_status` is derived AFTER F003 EC5 classification (below) so
+        # downgrades to advisory propagate into the status decision.
         "validation_performed": validation_performed,
         "quota_consumed": {
             k: v
@@ -95,6 +98,19 @@ def build_audit(
             "project": target_context.get("project"),
             "commands_run": commands_run,
         }
+
+    # F003 / D005 / D008: defensively re-apply the EC5 narrow-downgrade rule
+    # at finding-aggregation. `apply_ec5_classifier_to_findings` drops EC5
+    # findings whose envelope is golden ('none'), downgrades 'i0' findings to
+    # advisory while preserving description, and leaves 'i1' findings as
+    # authored. Non-EC5 findings pass through untouched. The classifier needs
+    # the envelope's `target_context` + `summary`, both already populated
+    # above — that's why the call sits here, after both are set, and BEFORE
+    # `_derive_status` so downgrades affect the audit_status decision.
+    findings = apply_ec5_classifier_to_findings(findings, audit)
+    audit["findings"] = findings
+    audit["audit_status"] = _derive_status(result, findings, status_hint=status_hint)
+
     return {k: v for k, v in audit.items() if v is not None}
 
 
