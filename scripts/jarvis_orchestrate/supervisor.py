@@ -592,7 +592,7 @@ def dispatch_single_agent(
             plan_target_project=effective_project,
         )
 
-        return audit_writer.write(audit, loaded.plan_dir)
+        return audit_writer.write(audit, loaded.plan_dir, feature_id=feature_id)
 
 
 # ─────────────────────────────  F005a: volley  ─────────────────────────────
@@ -1339,7 +1339,7 @@ def _run_round(
             plan_target_env=target_env,
             plan_target_project=target_project,
         )
-    audit_path = audit_writer.write(audit, loaded.plan_dir)
+    audit_path = audit_writer.write(audit, loaded.plan_dir, feature_id=feature["id"])
 
     transcript.append_round(
         plan_dir=loaded.plan_dir,

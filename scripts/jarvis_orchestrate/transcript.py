@@ -12,7 +12,7 @@ from pathlib import Path
 
 HEADER = """# Volley transcript
 
-One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-i<N>.json`.
+One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<feature_id>-i<N>.json`.
 
 | timestamp | feature | iter | agent / role | status | tokens in/out | audit |
 |---|---|---|---|---|---|---|
