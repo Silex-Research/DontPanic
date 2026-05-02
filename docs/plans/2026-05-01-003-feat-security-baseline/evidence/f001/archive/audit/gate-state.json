@@ -1,0 +1,21 @@
+{
+  "plan_id": "2026-05-01-003-feat-security-baseline",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-01T23:24:33Z",
+      "actor": "operator"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-01T23:24:33Z",
+      "actor": "operator"
+    }
+  ]
+}

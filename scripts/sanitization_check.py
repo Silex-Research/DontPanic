@@ -26,6 +26,73 @@ _BILLING = "01EA42-" + "C7164E-" + "236F6E"
 _MAINTAINER_USER = "bil" + "otto"  # appears in @gmail, @silexr, GitHub noreply
 PATTERNS = [_PROJECT, _BILLING, _MAINTAINER_USER]
 
+# ── Secret-shape regexes (F001 / D005) ─────────────────────────────────────
+# Distinct from PATTERNS: those guard repo-specific identifiers (literal
+# strings); these flag canonical secret shapes from major vendors. Each
+# regex carries a `# source:` citation per D005 — gitleaks default rules,
+# vendor docs, or a tracked issue — so future review can verify the shape
+# is current and the false-positive surface is understood.
+#
+# Anchors are deliberately loose (no \b boundaries) so embedded matches
+# inside larger strings still flag — secrets in URLs / JSON / env exports
+# don't always sit on word boundaries.
+
+# AWS access key ID. Long-form prefix `AKIA` + 16 base32-uppercase chars.
+# Lookaheads reject low-entropy placeholder bodies (e.g. `AKIA0000000000000000`,
+# `AKIAAAAAAAAAAAAAAAAA`) by requiring at least one letter AND one digit —
+# real AWS keys always mix both, while doc-style placeholders typically don't.
+# source: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (rule: aws-access-token)
+_AWS_ACCESS_KEY_RE = re.compile(
+    r"AKIA(?=[0-9A-Z]*[A-Z])(?=[0-9A-Z]*[0-9])[0-9A-Z]{16}"
+)
+
+# GitHub personal access token (classic). `ghp_` prefix + 36 base62 chars.
+# source: https://github.blog/changelog/2021-03-31-authentication-token-format-updates-are-generally-available/
+_GH_PAT_RE = re.compile(r"ghp_[A-Za-z0-9]{36}")
+
+# GitHub fine-grained tokens — OAuth (`gho_`), server-to-server (`ghs_`),
+# user-to-server (`ghu_`), refresh (`ghr_`). Same 36-char body shape.
+# source: https://github.blog/changelog/2021-03-31-authentication-token-format-updates-are-generally-available/
+_GH_FINE_GRAINED_RE = re.compile(r"gh[osur]_[A-Za-z0-9]{36}")
+
+# Anthropic API key. `sk-ant-api03-` prefix + 93 url-safe-base64 chars + `AA`.
+# source: https://docs.anthropic.com/en/api/getting-started (key format)
+_ANTHROPIC_API_KEY_RE = re.compile(r"sk-ant-api03-[A-Za-z0-9_\-]{93}AA")
+
+# OpenAI API key (legacy/standard). Body contains `T3BlbkFJ` infix
+# (base64 of "OpenAI"). The 20+/20+ bracket is intentional: OpenAI has
+# rotated the surrounding length over time, so we anchor on the infix.
+# source: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (rule: openai-api-key)
+_OPENAI_API_KEY_RE = re.compile(r"sk-[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}")
+
+# Slack tokens. `xox` + role-suffix + body. Covers bot/user/app/refresh/legacy.
+# source: https://api.slack.com/authentication/token-types
+_SLACK_TOKEN_RE = re.compile(r"xox[baprs]-[0-9a-zA-Z\-]{10,}")
+
+# PEM private-key block opener. Catches RSA / EC / OPENSSH / generic.
+# Assembled from parts so this file does not match its own check.
+# source: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (rule: private-key)
+_PEM_PRIVATE_KEY_RE = re.compile(
+    "-----" + "BEGIN" + r" (?:RSA |EC |OPENSSH )?" + "PRIVATE KEY" + "-----"
+)
+
+# Generic JWT — three base64url segments separated by dots, leading
+# `eyJ` (base64 of `{"`) anchors on the JOSE header to keep the false-
+# positive surface narrow vs. any 3-segment dotted string.
+# source: https://datatracker.ietf.org/doc/html/rfc7519 (JWT spec)
+_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}")
+
+SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
+    _AWS_ACCESS_KEY_RE,
+    _GH_PAT_RE,
+    _GH_FINE_GRAINED_RE,
+    _ANTHROPIC_API_KEY_RE,
+    _OPENAI_API_KEY_RE,
+    _SLACK_TOKEN_RE,
+    _PEM_PRIVATE_KEY_RE,
+    _JWT_RE,
+)
+
 # Path-prefix allowlist (relative to repo root). Plan dirs retain
 # historical IDs by design (audit/evidence integrity); test fixtures
 # may use them as realistic data; vendored upstream code is out of scope.
@@ -90,9 +157,23 @@ def tracked_files() -> list[str]:
     return [line for line in proc.stdout.splitlines() if line]
 
 
+def scan_line(line: str) -> str | None:
+    """Return the name of the first matching rule, or None.
+
+    Two rule families: campaign-ID literals (PATTERNS) and secret-shape
+    regexes (SECRET_REGEXES). Both run against every non-allowlisted line.
+    """
+    for literal in PATTERNS:
+        if literal in line:
+            return f"campaign-id:{literal[:8]}…"
+    for rx in SECRET_REGEXES:
+        if rx.search(line):
+            return f"secret-shape:{rx.pattern[:32]}…"
+    return None
+
+
 def main() -> int:
-    pattern_re = re.compile("|".join(re.escape(p) for p in PATTERNS))
-    leaks: list[tuple[str, int, str]] = []
+    leaks: list[tuple[str, int, str, str]] = []
     for rel in tracked_files():
         if is_allowed(rel):
             continue
@@ -104,20 +185,26 @@ def main() -> int:
         except OSError:
             continue
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if pattern_re.search(line):
-                leaks.append((rel, lineno, line.strip()[:160]))
+            rule = scan_line(line)
+            if rule is not None:
+                leaks.append((rel, lineno, rule, line.strip()[:160]))
     if leaks:
-        print("::error::Campaign IDs leaked into sanitized files:", file=sys.stderr)
-        for rel, lineno, line in leaks:
-            print(f"  {rel}:{lineno}: {line}", file=sys.stderr)
+        print("::error::Sanitization check failed:", file=sys.stderr)
+        for rel, lineno, rule, line in leaks:
+            print(f"  [{rule}] {rel}:{lineno}: {line}", file=sys.stderr)
         print(
-            "\nFix: either move the reference to an allowed location "
+            "\nFix: for campaign IDs, move the reference to an allowed location "
             "(docs/plans, tests, dashboard state) or replace with a placeholder "
-            "(your-project-id). See scripts/sanitization_check.py for the allowlist.",
+            "(your-project-id). For secret shapes (AWS / GitHub / Anthropic / "
+            "OpenAI / Slack / PEM / JWT), rotate the credential and remove from "
+            "history. See scripts/sanitization_check.py for the allowlist.",
             file=sys.stderr,
         )
         return 1
-    print(f"✓ no campaign IDs in sanitized surface ({len(tracked_files())} files scanned)")
+    print(
+        f"✓ no campaign IDs or secret shapes in sanitized surface "
+        f"({len(tracked_files())} files scanned)"
+    )
     return 0
 
 

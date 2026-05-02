@@ -5,6 +5,14 @@ on:
   push:
     branches: [main]
 
+# Default GITHUB_TOKEN is read/write across most scopes. Pin to least-
+# privilege at the workflow root; jobs that need writes (release, pages,
+# packages) opt in by overriding `permissions:` at the job level. Closes
+# pwn-request-style risk where a malicious PR uses workflow scopes the
+# job didn't actually need.
+permissions:
+  contents: read
+
 jobs:
   python:
     name: Python — lint + format + tests + schema

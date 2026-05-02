@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-05-01-003-feat-security-baseline",
+  "signoff_id": "2026-05-01-003-feat-security-baseline#signoff#1",
+  "iteration": 1,
+  "tier": "local",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-i0.json",
+    "audit/codex-auditor-i0.json",
+    "audit/claude-implementer-i1.json",
+    "audit/codex-auditor-i1.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 2,
+    "needs_changes_count": 2,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "auditor signed off",
+  "next_action": "merge",
+  "decided_at": "2026-05-01T23:43:58Z"
+}
