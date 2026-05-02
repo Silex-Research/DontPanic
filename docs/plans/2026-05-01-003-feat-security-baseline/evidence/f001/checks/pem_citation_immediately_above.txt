@@ -1,0 +1,2 @@
+# source: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (rule: private-key)
+_PEM_PRIVATE_KEY_RE = re.compile(

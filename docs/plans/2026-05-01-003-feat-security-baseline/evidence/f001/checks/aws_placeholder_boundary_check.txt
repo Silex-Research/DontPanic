@@ -1,0 +1,6 @@
+OK  expect_match=True  got_match=True  input=AKIAIOSFODNN7EXAMPLE
+OK  expect_match=False  got_match=False  input=AKIA0000000000000000
+OK  expect_match=False  got_match=False  input=AKIAAAAAAAAAAAAAAAAA
+OK  expect_match=False  got_match=False  input=AKIA-EXAMPLE-PLACEHOLDER
+OK  expect_match=False  got_match=False  input=sk-ant-PLACEHOLDER
+OK  expect_match=False  got_match=False  input=https://example.invalid/webhook

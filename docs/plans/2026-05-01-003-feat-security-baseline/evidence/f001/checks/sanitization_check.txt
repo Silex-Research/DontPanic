@@ -1,0 +1,1 @@
+✓ no campaign IDs or secret shapes in sanitized surface (482 files scanned)

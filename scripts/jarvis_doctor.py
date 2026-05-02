@@ -44,6 +44,10 @@ SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
 MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
 
+# F001: SA-key age check looks under ~/.jarvis/.secrets/ by default; the
+# JARVIS_SECRETS_DIR env var lets tests / alternate installs point elsewhere.
+SA_KEY_AGE_THRESHOLD_DAYS = 90
+
 GREEN = "\033[32m✓\033[0m"
 RED = "\033[31m✗\033[0m"
 YELLOW = "\033[33m⚠\033[0m"
@@ -55,6 +59,7 @@ class CheckResult:
     ok: bool
     message: str
     remediation: str = ""
+    warn: bool = False
 
 
 def _ok(name: str, msg: str) -> CheckResult:
@@ -63,6 +68,13 @@ def _ok(name: str, msg: str) -> CheckResult:
 
 def _bad(name: str, msg: str, remediation: str) -> CheckResult:
     return CheckResult(name=name, ok=False, message=msg, remediation=remediation)
+
+
+def _warn(name: str, msg: str, remediation: str) -> CheckResult:
+    """Soft signal — does NOT fail the doctor. Used when an operator may
+    legitimately have out-of-band reasons for the surfaced state (e.g. a
+    rotation cadence Jarvis doesn't know about)."""
+    return CheckResult(name=name, ok=True, message=msg, remediation=remediation, warn=True)
 
 
 # ── individual checks ──────────────────────────────────────────────────────
@@ -303,6 +315,55 @@ def check_parent_plan_validates() -> CheckResult:
     return _ok("parent-plan", "parent orchestration plan validates")
 
 
+def _sa_key_dir() -> Path:
+    override = os.environ.get("JARVIS_SECRETS_DIR")
+    if override:
+        return Path(override)
+    return Path.home() / ".jarvis" / ".secrets"
+
+
+def check_sa_key_age() -> CheckResult:
+    """Soft warning when any *.json key under the SA key dir is older than
+    SA_KEY_AGE_THRESHOLD_DAYS. Operators may have a rotation cadence we
+    can't see, so this never fails the doctor — it just nudges. Honors
+    JARVIS_SECRETS_DIR for synthetic fixtures."""
+    import time
+
+    sa_dir = _sa_key_dir()
+    if not sa_dir.is_dir():
+        # Nothing to check — fresh clone or no SA keys provisioned yet.
+        return _ok("sa-key-age", f"{sa_dir} not present (no SA keys to age-check)")
+    threshold_seconds = SA_KEY_AGE_THRESHOLD_DAYS * 86_400
+    now = time.time()
+    stale: list[tuple[Path, int]] = []
+    fresh_count = 0
+    for key in sa_dir.glob("*.json"):
+        if not key.is_file():
+            continue
+        age_days = int((now - key.stat().st_mtime) // 86_400)
+        if (now - key.stat().st_mtime) > threshold_seconds:
+            stale.append((key, age_days))
+        else:
+            fresh_count += 1
+    if not stale:
+        total = fresh_count
+        if total == 0:
+            return _ok("sa-key-age", f"{sa_dir} has no *.json keys (nothing to age-check)")
+        return _ok(
+            "sa-key-age",
+            f"all {total} SA key(s) under {sa_dir} are <{SA_KEY_AGE_THRESHOLD_DAYS}d old",
+        )
+    # Acceptance format: `⚠ <path> is N days old (rotate via bootstrap.sh --create-key)`.
+    # Full path (not basename) so an operator can act on the message without
+    # going hunting; rotation instruction inline so the warning is self-contained.
+    paths = "; ".join(f"{p} is {age} days old" for p, age in stale)
+    return _warn(
+        "sa-key-age",
+        f"{paths} (rotate via bootstrap.sh --create-key)",
+        "",
+    )
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -322,6 +383,7 @@ def run_all_checks(skip_auth: bool = False) -> list[CheckResult]:
     target_result, project = check_target_project()
     results.append(target_result)
     results.append(check_secrets_dir(project))
+    results.append(check_sa_key_age())
     results.extend(check_python_deps())
     results.append(check_schemas())
     results.append(check_pydantic_models())
@@ -332,14 +394,21 @@ def run_all_checks(skip_auth: bool = False) -> list[CheckResult]:
 def render_text(results: list[CheckResult]) -> str:
     lines = []
     for r in results:
-        marker = GREEN if r.ok else RED
+        if not r.ok:
+            marker = RED
+        elif r.warn:
+            marker = YELLOW
+        else:
+            marker = GREEN
         lines.append(f"{marker} {r.name:<22} {r.message}")
-        if not r.ok and r.remediation:
+        if (not r.ok or r.warn) and r.remediation:
             lines.append(f"  ↳ {r.remediation}")
     failed = sum(1 for r in results if not r.ok)
+    warned = sum(1 for r in results if r.ok and r.warn)
     total = len(results)
     if failed == 0:
-        lines.append(f"\n{GREEN} {total}/{total} checks passed — Jarvis is ready")
+        suffix = f" ({warned} warning{'s' if warned != 1 else ''})" if warned else ""
+        lines.append(f"\n{GREEN} {total}/{total} checks passed — Jarvis is ready{suffix}")
     else:
         lines.append(f"\n{RED} {failed}/{total} checks failed — see remediation above")
     return "\n".join(lines)
@@ -349,11 +418,18 @@ def render_json(results: list[CheckResult]) -> str:
     return json.dumps(
         {
             "checks": [
-                {"name": r.name, "ok": r.ok, "message": r.message, "remediation": r.remediation}
+                {
+                    "name": r.name,
+                    "ok": r.ok,
+                    "message": r.message,
+                    "remediation": r.remediation,
+                    "warn": r.warn,
+                }
                 for r in results
             ],
             "passed": sum(1 for r in results if r.ok),
             "failed": sum(1 for r in results if not r.ok),
+            "warnings": sum(1 for r in results if r.ok and r.warn),
         },
         indent=2,
     )
