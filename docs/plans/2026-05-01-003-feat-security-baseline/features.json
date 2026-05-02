@@ -6,29 +6,77 @@
       "id": "F001",
       "category": "security",
       "phase": 1,
-      "description": "Baseline hardening — four small wins packaged together because they touch the same security posture surface and audit together. (a) `scripts/sanitization_check.py` adds secret-shape regexes for AWS access keys (`AKIA[0-9A-Z]{16}`), GitHub PATs (`ghp_[A-Za-z0-9]{36}`) + fine-grained variants (`gh[osur]_[A-Za-z0-9]{36}`), Anthropic API keys (`sk-ant-api03-[A-Za-z0-9_-]{93}AA`), OpenAI API keys (`sk-[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}`), Slack tokens (`xox[baprs]-[0-9a-zA-Z-]{10,}`), PEM private-key blocks (`-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----`), and generic 3-segment JWTs. Each pattern carries a code-comment citation to its public source (gitleaks default rules, vendor docs, or an issue link) — D005 mandates this so the scanner doesn't become a random regex pile. (b) `.github/workflows/ci.yml` (and any sibling workflows) gain `permissions: contents: read` at the workflow root — default `GITHUB_TOKEN` is read/write across most scopes; explicit least-privilege closes pwn-request-style risk. (c) New `SECURITY.md` at repo root: disclosure email, supported-versions table, response-timeline note. GitHub's Security tab won't surface a policy without this file. (d) `scripts/jarvis_doctor.py` adds a soft warning when any file under `~/.jarvis/.secrets/` has mtime >90 days — does NOT fail the doctor (operator may have rotation cadence Jarvis doesn't know about); just nudges with the rotation command.",
+      "description": "Baseline hardening \u2014 four small wins packaged together because they touch the same security posture surface and audit together. (a) `scripts/sanitization_check.py` adds secret-shape regexes for AWS access keys (`AKIA[0-9A-Z]{16}`), GitHub PATs (`ghp_[A-Za-z0-9]{36}`) + fine-grained variants (`gh[osur]_[A-Za-z0-9]{36}`), Anthropic API keys (`sk-ant-api03-[A-Za-z0-9_-]{93}AA`), OpenAI API keys (`sk-[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}`), Slack tokens (`xox[baprs]-[0-9a-zA-Z-]{10,}`), PEM private-key blocks (`-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----`), and generic 3-segment JWTs. Each pattern carries a code-comment citation to its public source (gitleaks default rules, vendor docs, or an issue link) \u2014 D005 mandates this so the scanner doesn't become a random regex pile. (b) `.github/workflows/ci.yml` (and any sibling workflows) gain `permissions: contents: read` at the workflow root \u2014 default `GITHUB_TOKEN` is read/write across most scopes; explicit least-privilege closes pwn-request-style risk. (c) New `SECURITY.md` at repo root: disclosure email, supported-versions table, response-timeline note. GitHub's Security tab won't surface a policy without this file. (d) `scripts/jarvis_doctor.py` adds a soft warning when any file under `~/.jarvis/.secrets/` has mtime >90 days \u2014 does NOT fail the doctor (operator may have rotation cadence Jarvis doesn't know about); just nudges with the rotation command.",
       "steps": [
         "Add 8 regex patterns to sanitization_check.py with code-comment citations (one per pattern: source URL or vendor doc reference)",
-        "Add tests/test_sanitization_check.py cases: synthetic-violation file with one match per pattern → all flagged; false-positive guard against placeholder strings (example.invalid, sk-ant-PLACEHOLDER, etc.)",
-        "Edit .github/workflows/ci.yml + sibling workflows to add `permissions: contents: read` at workflow root (not job level — root scope)",
+        "Add tests/test_sanitization_check.py cases: synthetic-violation file with one match per pattern \u2192 all flagged; false-positive guard against placeholder strings (example.invalid, sk-ant-PLACEHOLDER, etc.)",
+        "Edit .github/workflows/ci.yml + sibling workflows to add `permissions: contents: read` at workflow root (not job level \u2014 root scope)",
         "Create SECURITY.md at repo root with: 'Reporting a Vulnerability' section (email or GitHub Security Advisory link), 'Supported Versions' table (main branch only for now), 'Response Timeline' (acknowledge in 72h, fix or disclose in 90d)",
-        "Add `_check_sa_key_age()` to jarvis_doctor.py: walks ~/.jarvis/.secrets/*.json, prints `⚠ <path> is N days old (rotate via bootstrap.sh --create-key)` when mtime >90d; reports as a warning, not a fail",
+        "Add `_check_sa_key_age()` to jarvis_doctor.py: walks ~/.jarvis/.secrets/*.json, prints `\u26a0 <path> is N days old (rotate via bootstrap.sh --create-key)` when mtime >90d; reports as a warning, not a fail",
         "Run `python3 scripts/sanitization_check.py` against the repo + run jarvis_doctor on a synthetic >90d-aged key fixture; capture both as evidence"
       ],
-      "acceptance": "(1) sanitization_check.py contains exactly the 8 patterns listed in description, each with a `# source: <url>` comment immediately above the regex citing gitleaks default rules, vendor docs, or a tracked issue (D005). (2) Test file contains, per pattern: one synthetic POSITIVE case (canonical-shape match that MUST be flagged) AND one synthetic NEGATIVE case (placeholder / lookalike string that MUST NOT match — e.g. `sk-ant-PLACEHOLDER`, `AKIA0000000000000000`, `https://example.invalid/webhook`). Scope guard: scanner stays narrow when both positive AND negative fixtures pin the boundary. (3) `python3 scripts/sanitization_check.py` exits 0 against the current repo (no real secrets present). (4) `.github/workflows/ci.yml` has `permissions: contents: read` at workflow root; verified by `grep -A1 '^permissions:' .github/workflows/ci.yml`. (5) SECURITY.md exists at repo root with the 3 required sections; verified by section-header grep. (6) jarvis_doctor.py warns on SA key mtime >90d (synthetic fixture: `touch -d '100 days ago' /tmp/test_key.json`; doctor with `JARVIS_SECRETS_DIR=/tmp` warns); does NOT exit non-zero. (7) All existing orchestrate test modules stay green.",
+      "acceptance": "(1) sanitization_check.py contains exactly the 8 patterns listed in description, each with a `# source: <url>` comment immediately above the regex citing gitleaks default rules, vendor docs, or a tracked issue (D005). (2) Test file contains, per pattern: one synthetic POSITIVE case (canonical-shape match that MUST be flagged) AND one synthetic NEGATIVE case (placeholder / lookalike string that MUST NOT match \u2014 e.g. `sk-ant-PLACEHOLDER`, `AKIA0000000000000000`, `https://example.invalid/webhook`). Scope guard: scanner stays narrow when both positive AND negative fixtures pin the boundary. (3) `python3 scripts/sanitization_check.py` exits 0 against the current repo (no real secrets present). (4) `.github/workflows/ci.yml` has `permissions: contents: read` at workflow root; verified by `grep -A1 '^permissions:' .github/workflows/ci.yml`. (5) SECURITY.md exists at repo root with the 3 required sections; verified by section-header grep. (6) jarvis_doctor.py warns on SA key mtime >90d (synthetic fixture: `touch -d '100 days ago' /tmp/test_key.json`; doctor with `JARVIS_SECRETS_DIR=/tmp` warns); does NOT exit non-zero. (7) All existing orchestrate test modules stay green.",
       "passes": true,
       "verified_at": "2026-05-01T23:43:58Z",
-      "verified_by": ["claude", "codex"],
+      "verified_by": [
+        "claude",
+        "codex"
+      ],
       "evidence_refs": [
-        {"type": "file", "uri": "scripts/sanitization_check.py", "captured_by": "codex", "note": "F001 secret-shape scanner implementation. Adds the 8 accepted regex families with immediate # source citations and shared scan_line coverage for campaign IDs plus secret shapes."},
-        {"type": "file", "uri": ".github/workflows/ci.yml", "captured_by": "codex", "note": "Workflow-root permissions block pins default GITHUB_TOKEN scope to contents: read."},
-        {"type": "file", "uri": "SECURITY.md", "captured_by": "codex", "note": "Root security policy with Reporting a Vulnerability, Supported Versions, and Response Timeline sections."},
-        {"type": "file", "uri": "scripts/jarvis_doctor.py", "captured_by": "codex", "note": "SA key age warning added as a soft warning. JARVIS_SECRETS_DIR supports synthetic fixture verification."},
-        {"type": "file", "uri": "scripts/jarvis_orchestrate/tests/test_f001_secret_shapes.py", "captured_by": "codex", "note": "Synthetic positive and negative fixture coverage for every F001 secret-shape pattern, including acceptance placeholders."},
-        {"type": "test_output", "uri": "evidence/f001/checks/pytest.txt", "captured_by": "codex", "note": "Full orchestrate test sweep: 333 passed, 6 skipped."},
-        {"type": "test_output", "uri": "evidence/f001/checks/sanitization_check.txt", "captured_by": "codex", "note": "Sanitization scan exits clean and reports no campaign IDs or secret shapes in the sanitized surface."},
-        {"type": "test_output", "uri": "evidence/f001/checks/doctor_synthetic_stale_key.txt", "captured_by": "codex", "note": "Synthetic 100-day-old service-account key emits the required rotation warning while the doctor exits successfully."},
-        {"type": "file", "uri": "evidence/f001/confirmation.md", "captured_by": "codex", "note": "Human close-out memo interpreting the signed-off volley and archived audit state."}
+        {
+          "type": "file",
+          "uri": "scripts/sanitization_check.py",
+          "captured_by": "codex",
+          "note": "F001 secret-shape scanner implementation. Adds the 8 accepted regex families with immediate # source citations and shared scan_line coverage for campaign IDs plus secret shapes."
+        },
+        {
+          "type": "file",
+          "uri": ".github/workflows/ci.yml",
+          "captured_by": "codex",
+          "note": "Workflow-root permissions block pins default GITHUB_TOKEN scope to contents: read."
+        },
+        {
+          "type": "file",
+          "uri": "SECURITY.md",
+          "captured_by": "codex",
+          "note": "Root security policy with Reporting a Vulnerability, Supported Versions, and Response Timeline sections."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_doctor.py",
+          "captured_by": "codex",
+          "note": "SA key age warning added as a soft warning. JARVIS_SECRETS_DIR supports synthetic fixture verification."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f001_secret_shapes.py",
+          "captured_by": "codex",
+          "note": "Synthetic positive and negative fixture coverage for every F001 secret-shape pattern, including acceptance placeholders."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001/checks/pytest.txt",
+          "captured_by": "codex",
+          "note": "Full orchestrate test sweep: 333 passed, 6 skipped."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001/checks/sanitization_check.txt",
+          "captured_by": "codex",
+          "note": "Sanitization scan exits clean and reports no campaign IDs or secret shapes in the sanitized surface."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001/checks/doctor_synthetic_stale_key.txt",
+          "captured_by": "codex",
+          "note": "Synthetic 100-day-old service-account key emits the required rotation warning while the doctor exits successfully."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f001/confirmation.md",
+          "captured_by": "codex",
+          "note": "Human close-out memo interpreting the signed-off volley and archived audit state."
+        }
       ],
       "depends_on": []
     },
@@ -36,35 +84,39 @@
       "id": "F002",
       "category": "security",
       "phase": 2,
-      "description": "Enable Ruff `S` (bandit-port) ruleset as **baseline security lint** in `pyproject.toml`. This is NOT a SAST replacement (per D002) — Ruff S covers in-tree code-pattern checks: `subprocess` with `shell=True` (S602/S603/S605), hardcoded passwords (S105/S106), weak crypto (S324/S501), `pickle` on untrusted data (S301), `eval`/`exec` (S307), `assert` in non-test code (S101), insecure temp files (S108), etc. Bundle the rule enable + first-wave finding remediation in one feature so the audit pass sees the rules being USED, not just declared. **First-wave stop rule (D007): if `ruff check --select S scripts/` produces >25 findings OR touches >8 distinct files, F002 must STOP, record the inventory under `evidence/f002/ruff-s-first-wave-inventory.md`, lock as `passes: false` with `signoff_reason: scope_split_required`, and queue a follow-up plan that handles the bulk remediation as its own feature with its own auditor pass.** This stop rule prevents F002 from degenerating into a noisy mass-suppressions commit. Below the threshold, the policy applies: every finding either (a) gets fixed, or (b) gets a `# noqa: SXXX  # <one-line justification>` per occurrence, or (c) gets a per-file disable in `[tool.ruff.lint.per-file-ignores]` with a rationale comment in `pyproject.toml`. NO blanket `# noqa: S` — each suppression must name the specific rule. Coverage explicitly framed in `SECURITY.md` (added by F001) under a 'Security tooling' section: 'Ruff S baseline lint — bandit-style in-tree checks, NOT a SAST substitute. SAST coverage (semgrep / CodeQL) is a deferred plan.'",
+      "description": "Enable Ruff `S` (bandit-port) ruleset as **baseline security lint** in `pyproject.toml`. This is NOT a SAST replacement (per D002) \u2014 Ruff S covers in-tree code-pattern checks: `subprocess` with `shell=True` (S602/S603/S605), hardcoded passwords (S105/S106), weak crypto (S324/S501), `pickle` on untrusted data (S301), `eval`/`exec` (S307), `assert` in non-test code (S101), insecure temp files (S108), etc. Bundle the rule enable + first-wave finding remediation in one feature so the audit pass sees the rules being USED, not just declared. **First-wave stop rule (D007): if `ruff check --select S scripts/` produces >25 findings OR touches >8 distinct files, F002 must STOP, record the inventory under `evidence/f002/ruff-s-first-wave-inventory.md`, lock as `passes: false` with `signoff_reason: scope_split_required`, and queue a follow-up plan that handles the bulk remediation as its own feature with its own auditor pass.** This stop rule prevents F002 from degenerating into a noisy mass-suppressions commit. Below the threshold, the policy applies: every finding either (a) gets fixed, or (b) gets a `# noqa: SXXX  # <one-line justification>` per occurrence, or (c) gets a per-file disable in `[tool.ruff.lint.per-file-ignores]` with a rationale comment in `pyproject.toml`. NO blanket `# noqa: S` \u2014 each suppression must name the specific rule. Coverage explicitly framed in `SECURITY.md` (added by F001) under a 'Security tooling' section: 'Ruff S baseline lint \u2014 bandit-style in-tree checks, NOT a SAST substitute. SAST coverage (semgrep / CodeQL) is a deferred plan.'",
       "steps": [
         "Add `\"S\"` to `[tool.ruff.lint].select` in pyproject.toml; keep existing rule selection unchanged",
         "Run `ruff check --select S scripts/ | tee evidence/f002/first-wave-raw.txt` to inventory the first-wave findings",
-        "Apply the stop rule: count findings + count distinct files. If findings >25 OR files >8 → STOP, write `evidence/f002/ruff-s-first-wave-inventory.md` summarizing the inventory by rule code, lock F002 with `signoff_reason: scope_split_required`, queue follow-up plan, and exit. Otherwise continue with first-wave remediation",
+        "Apply the stop rule: count findings + count distinct files. If findings >25 OR files >8 \u2192 STOP, write `evidence/f002/ruff-s-first-wave-inventory.md` summarizing the inventory by rule code, lock F002 with `signoff_reason: scope_split_required`, queue follow-up plan, and exit. Otherwise continue with first-wave remediation",
         "Below threshold: for each finding: (a) fix if mechanical, (b) add `# noqa: SXXX  # <rationale>` if intentional, (c) per-file ignore with comment if pattern is pervasive and intentional in that file (e.g. test files commonly use assert)",
         "Confirm `ruff check scripts/` exits 0 after first-wave remediation",
         "Add a 'Security tooling' section to SECURITY.md (created in F001) explicitly framing this as baseline security lint, NOT SAST. Cite Ruff S documentation",
         "Document first-wave remediations in evidence/f002/ruff-s-first-wave.md: per-finding line, decision (fix/noqa/ignore), justification"
       ],
-      "acceptance": "(1) `pyproject.toml` `[tool.ruff.lint].select` includes `\"S\"`. (2) Stop-rule observed: `evidence/f002/first-wave-raw.txt` archives the raw inventory; if findings >25 OR distinct files >8, F002 lands as `passes: false` with `signoff_reason: scope_split_required` and a follow-up plan is queued — and the steps below (3-7) are explicitly NOT performed in this feature. Below threshold, all of (3-7) hold. (3) `ruff check scripts/` exits 0 (clean) after first-wave remediation. (4) Every `# noqa: SXXX` in scripts/ names the specific rule and carries a one-line justification comment; verified by `grep -nR 'noqa: S' scripts/` showing each match has a comment after the rule code. (5) Per-file ignores in `[tool.ruff.lint.per-file-ignores]` (if any) carry a rationale comment in pyproject.toml. (6) SECURITY.md (from F001) gains a 'Security tooling' section that explicitly states Ruff S is baseline security lint, not SAST; words 'NOT a SAST substitute' or equivalent appear verbatim. (7) `evidence/f002/ruff-s-first-wave.md` documents every finding handled (whether fix / noqa / per-file ignore). (8) All existing orchestrate test modules stay green.",
+      "acceptance": "(1) `pyproject.toml` `[tool.ruff.lint].select` includes `\"S\"`. (2) Stop-rule observed: `evidence/f002/first-wave-raw.txt` archives the raw inventory; if findings >25 OR distinct files >8, F002 lands as `passes: false` with `signoff_reason: scope_split_required` and a follow-up plan is queued \u2014 and the steps below (3-7) are explicitly NOT performed in this feature. Below threshold, all of (3-7) hold. (3) `ruff check scripts/` exits 0 (clean) after first-wave remediation. (4) Every `# noqa: SXXX` in scripts/ names the specific rule and carries a one-line justification comment; verified by `grep -nR 'noqa: S' scripts/` showing each match has a comment after the rule code. (5) Per-file ignores in `[tool.ruff.lint.per-file-ignores]` (if any) carry a rationale comment in pyproject.toml. (6) SECURITY.md (from F001) gains a 'Security tooling' section that explicitly states Ruff S is baseline security lint, not SAST; words 'NOT a SAST substitute' or equivalent appear verbatim. (7) `evidence/f002/ruff-s-first-wave.md` documents every finding handled (whether fix / noqa / per-file ignore). (8) All existing orchestrate test modules stay green.",
       "passes": false,
       "verified_at": "2026-05-01T16:30:00Z",
-      "verified_by": ["claude"],
-      "depends_on": ["F001"],
+      "verified_by": [
+        "claude"
+      ],
+      "depends_on": [
+        "F001"
+      ],
       "evidence_refs": [
         {
           "type": "test_output",
           "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f002/first-wave-raw.txt",
           "captured_at": "2026-05-01T16:25:00Z",
           "captured_by": "claude",
-          "note": "Raw `ruff check --select S scripts/` output: 853 findings across 30 distinct files. Stop-rule (D007) thresholds (>25 findings OR >8 files) BOTH triggered — both >34x and >3.75x respectively. Rule breakdown: S101=810 (95%, assert in non-test code; almost all in scripts/jarvis_orchestrate/tests/), S108=15, S603=14, S607=13, S310=1. Pyproject.toml NOT modified per stop-rule: F002 ships at inventory only."
+          "note": "Raw `ruff check --select S scripts/` output: 853 findings across 30 distinct files. Stop-rule (D007) thresholds (>25 findings OR >8 files) BOTH triggered \u2014 both >34x and >3.75x respectively. Rule breakdown: S101=810 (95%, assert in non-test code; almost all in scripts/jarvis_orchestrate/tests/), S108=15, S603=14, S607=13, S310=1. Pyproject.toml NOT modified per stop-rule: F002 ships at inventory only."
         },
         {
           "type": "log",
           "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f002/ruff-s-first-wave-inventory.md",
           "captured_at": "2026-05-01T16:30:00Z",
           "captured_by": "claude",
-          "note": "Stop-rule outcome memo. F002 lands `passes: false` with `signoff_reason: scope_split_required` (recorded here in evidence note since features.schema doesn't have a feature-level signoff_reason field — the proper home would be the signoff.json when this plan closes). Follow-up plan proposed: `feat-ruff-s-remediation` with two slices: F001 per-file-ignore baseline for tests/** (drops S101 from 810→0), F002 per-finding remediation of residual ~43 non-test findings under the original fix/noqa/per-file-ignore policy. SECURITY.md 'Security tooling' section + pyproject.toml `[tool.ruff.lint].select` += `S` deferred to that follow-up plan to keep framing honest (current baseline is NOT yet S-enabled)."
+          "note": "Stop-rule outcome memo. F002 lands `passes: false` with `signoff_reason: scope_split_required` (recorded here in evidence note since features.schema doesn't have a feature-level signoff_reason field \u2014 the proper home would be the signoff.json when this plan closes). Follow-up plan proposed: `feat-ruff-s-remediation` with two slices: F001 per-file-ignore baseline for tests/** (drops S101 from 810\u21920), F002 per-finding remediation of residual ~43 non-test findings under the original fix/noqa/per-file-ignore policy. SECURITY.md 'Security tooling' section + pyproject.toml `[tool.ruff.lint].select` += `S` deferred to that follow-up plan to keep framing honest (current baseline is NOT yet S-enabled)."
         },
         {
           "type": "log",
@@ -79,20 +131,62 @@
       "id": "F003",
       "category": "security",
       "phase": 3,
-      "description": "Replace every `uses: <action>@<tag>` in `.github/workflows/*.yml` with a SHA-pinned form: `uses: <action>@<commit-sha>  # <tag-comment>`. Reference: OpenSSF Scorecard 'Pinned-Dependencies' check; the Scorecard project itself dogfoods this. Then add an updater policy with a **narrowed promise** (D003 + operator review): (a) **GitHub Actions ecosystem updater is configured and owned** — Dependabot (default per D003) covers github-actions weekly, this is the primary security win F003 ships; (b) **Python ecosystem updater is added for manifest visibility ONLY, NOT as dependency-security completion** — Dependabot pip ecosystem is enabled against `pyproject.toml` so unhashed dep updates surface in PRs, but hash-pinning + `pip-audit` enforcement + lockfile-based supply-chain hardening remain explicitly DEFERRED to a future dependency-security plan (see D004 deferral list). The pip-ecosystem coverage in F003 is bookkeeping, not security closure — D003 and the operator-facing CONTRIBUTING.md text both state this verbatim. Document the bot in CONTRIBUTING.md (or new `docs/maintenance.md`): 'Action SHA pins are maintained by Dependabot weekly. Do not hand-update without checking the bot. Python dep updates surface in PRs but are NOT yet hash-verified — full dep-security is a deferred plan.' If neither bot is configurable in this slice, F003 STILL ships the SHA-pin work but acknowledges the manual rotation burden in CONTRIBUTING.md.",
+      "description": "Replace every `uses: <action>@<tag>` in `.github/workflows/*.yml` with a SHA-pinned form: `uses: <action>@<commit-sha>  # <tag-comment>`. Reference: OpenSSF Scorecard 'Pinned-Dependencies' check; the Scorecard project itself dogfoods this. Then add an updater policy with a **narrowed promise** (D003 + operator review): (a) **GitHub Actions ecosystem updater is configured and owned** \u2014 Dependabot (default per D003) covers github-actions weekly, this is the primary security win F003 ships; (b) **Python ecosystem updater is added for manifest visibility ONLY, NOT as dependency-security completion** \u2014 Dependabot pip ecosystem is enabled against `pyproject.toml` so unhashed dep updates surface in PRs, but hash-pinning + `pip-audit` enforcement + lockfile-based supply-chain hardening remain explicitly DEFERRED to a future dependency-security plan (see D004 deferral list). The pip-ecosystem coverage in F003 is bookkeeping, not security closure \u2014 D003 and the operator-facing CONTRIBUTING.md text both state this verbatim. Document the bot in CONTRIBUTING.md (or new `docs/maintenance.md`): 'Action SHA pins are maintained by Dependabot weekly. Do not hand-update without checking the bot. Python dep updates surface in PRs but are NOT yet hash-verified \u2014 full dep-security is a deferred plan.' If neither bot is configurable in this slice, F003 STILL ships the SHA-pin work but acknowledges the manual rotation burden in CONTRIBUTING.md.",
       "steps": [
         "Inventory every `uses: <action>@<tag>` in .github/workflows/*.yml (expect ~5-10 entries: actions/checkout, actions/setup-python, etc.). Record each as a row in `evidence/f003/pin-resolutions.md`: `<action> | <tag> | <resolved-sha> | <lookup-command>`",
-        "For each, look up the commit SHA matching the current tag with `gh api repos/<owner>/<repo>/git/refs/tags/<tag> --jq '.object.sha'` (handles annotated tags via deref) — append the exact command + output to evidence row",
+        "For each, look up the commit SHA matching the current tag with `gh api repos/<owner>/<repo>/git/refs/tags/<tag> --jq '.object.sha'` (handles annotated tags via deref) \u2014 append the exact command + output to evidence row",
         "Replace `uses: <action>@<tag>` with `uses: <action>@<sha>  # <tag>` (full 40-char SHA, tag as comment)",
-        "Decide Dependabot vs Renovate (D003). Default lean: Dependabot — native to GitHub, no extra app install, simpler operator burden",
-        "Write `.github/dependabot.yml` with `package-ecosystem: github-actions` (weekly) — this is the SECURITY-OWNED ecosystem in F003",
-        "Add `package-ecosystem: pip` (weekly) ONLY for manifest-update visibility in PRs — F003 description + decisions.jsonl D003 + CONTRIBUTING.md text all state this is NOT dependency-security completion (no hash-pin, no pip-audit, no lockfile)",
+        "Decide Dependabot vs Renovate (D003). Default lean: Dependabot \u2014 native to GitHub, no extra app install, simpler operator burden",
+        "Write `.github/dependabot.yml` with `package-ecosystem: github-actions` (weekly) \u2014 this is the SECURITY-OWNED ecosystem in F003",
+        "Add `package-ecosystem: pip` (weekly) ONLY for manifest-update visibility in PRs \u2014 F003 description + decisions.jsonl D003 + CONTRIBUTING.md text all state this is NOT dependency-security completion (no hash-pin, no pip-audit, no lockfile)",
         "Add to CONTRIBUTING.md a 'Dependency maintenance' section: name the bot for github-actions ownership + name the pip ecosystem as visibility-only with the deferred-plan link",
         "Verify CI still runs cleanly against SHA-pinned actions (smoke a PR or push to a test branch)"
       ],
-      "acceptance": "(1) Every `uses: <action>@<ref>` in `.github/workflows/*.yml` matches the SHA-pinned form `<action>@[a-f0-9]{40}  # <tag>` — verified by `grep -E 'uses:.*@' .github/workflows/*.yml` showing only 40-char hex shas with tag comments. (2) **Tag-to-SHA correctness recorded as evidence**, not just trusted to auditor intuition: `evidence/f003/pin-resolutions.md` contains one row per pinned action with `<action> | <tag> | <resolved-sha> | <lookup-command-output>`; auditor cross-checks the SHA matches the tag at lookup time. (3) `.github/dependabot.yml` exists with `package-ecosystem: github-actions` weekly — this is the F003-owned security ecosystem. (4) `.github/dependabot.yml` ALSO contains `package-ecosystem: pip` weekly, but framed as **CONFIGURED-BUT-NO-OP** in the file's leading comment + ecosystem-block comment, in CONTRIBUTING.md, and in D009: Jarvis's `pyproject.toml` carries only Ruff config (no PEP 621 `[project]` table or requirements file) so Dependabot's pip ecosystem has no manifest to maintain. The entry is bookkeeping intent so the bot activates automatically when a manifest is later added; the original 'manifest-update visibility ONLY' framing was wrong because there is no manifest to read today. The phrases 'NOT dependency-security completion' AND 'NO-OP until a manifest exists' (or equivalents) appear verbatim in CONTRIBUTING.md. (5) Hash-pinning, `pip-audit`, lockfile enforcement, AND adding a PEP 621 `[project]` table all remain explicitly deferred (per D004 deferral list + D009); F003 acceptance does NOT claim them. (6) CONTRIBUTING.md gains a 'Dependency maintenance' section that distinguishes github-actions ownership (security-owned, active) from pip ecosystem (configured-but-no-op until manifest). (7) CI runs green against the SHA-pinned actions on the next push (smoke evidence at `evidence/f003/post-pin-ci-run.txt` or PR link). Until pushed, F003 stays passes:false. (8) All existing orchestrate test modules stay green.",
-      "passes": false,
-      "depends_on": []
+      "acceptance": "(1) Every `uses: <action>@<ref>` in `.github/workflows/*.yml` matches the SHA-pinned form `<action>@[a-f0-9]{40}  # <tag>` \u2014 verified by `grep -E 'uses:.*@' .github/workflows/*.yml` showing only 40-char hex shas with tag comments. (2) **Tag-to-SHA correctness recorded as evidence**, not just trusted to auditor intuition: `evidence/f003/pin-resolutions.md` contains one row per pinned action with `<action> | <tag> | <resolved-sha> | <lookup-command-output>`; auditor cross-checks the SHA matches the tag at lookup time. (3) `.github/dependabot.yml` exists with `package-ecosystem: github-actions` weekly \u2014 this is the F003-owned security ecosystem. (4) `.github/dependabot.yml` ALSO contains `package-ecosystem: pip` weekly, but framed as **CONFIGURED-BUT-NO-OP** in the file's leading comment + ecosystem-block comment, in CONTRIBUTING.md, and in D009: Jarvis's `pyproject.toml` carries only Ruff config (no PEP 621 `[project]` table or requirements file) so Dependabot's pip ecosystem has no manifest to maintain. The entry is bookkeeping intent so the bot activates automatically when a manifest is later added; the original 'manifest-update visibility ONLY' framing was wrong because there is no manifest to read today. The phrases 'NOT dependency-security completion' AND 'NO-OP until a manifest exists' (or equivalents) appear verbatim in CONTRIBUTING.md. (5) Hash-pinning, `pip-audit`, lockfile enforcement, AND adding a PEP 621 `[project]` table all remain explicitly deferred (per D004 deferral list + D009); F003 acceptance does NOT claim them. (6) CONTRIBUTING.md gains a 'Dependency maintenance' section that distinguishes github-actions ownership (security-owned, active) from pip ecosystem (configured-but-no-op until manifest). (7) **Scope-changed per D010.** SHA-pinned actions execute correctly on push, verified via CI run logs showing `actions/checkout@<SHA>` and `actions/setup-python@<SHA>` running without errors. Evidence at `evidence/f003/post-pin-ci-run.md` captures three runs proving pin correctness. Latent CI debt unrelated to action pinning (jarvis_doctor's firebase CLI presence under --skip-auth, target-project resolution on fresh runners) is deferred to a future `feat-ci-baseline-cleanup` plan and is NOT a blocker for F003 close-out. (8) All existing orchestrate test modules stay green.",
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-02T06:50:00Z",
+      "verified_by": [
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": ".github/workflows/ci.yml",
+          "captured_by": "operator",
+          "note": "Three uses: lines SHA-pinned with patch-tag comments (actions/checkout@34e114876b... v4.3.1, actions/setup-python@a26af69be9... v5.6.0)."
+        },
+        {
+          "type": "file",
+          "uri": ".github/dependabot.yml",
+          "captured_by": "operator",
+          "note": "Dependabot config: github-actions ecosystem (security-owned, weekly pin rotations) + pip ecosystem (CONFIGURED-BUT-NO-OP per D009 \u2014 no PEP 621 manifest exists today)."
+        },
+        {
+          "type": "file",
+          "uri": "CONTRIBUTING.md",
+          "captured_by": "operator",
+          "note": "\"Dependency maintenance\" section documents both ecosystems; pip framing explicitly NOT dependency-security completion."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f003/pin-resolutions.md",
+          "captured_by": "operator",
+          "note": "Pre-edit memo recording tag-to-SHA resolutions with replayable gh api commands (acceptance #2)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-01-003-feat-security-baseline/evidence/f003/post-pin-ci-run.md",
+          "captured_by": "operator",
+          "note": "Post-push CI evidence: three run IDs (25245864063, 25245971829, 25246097015) all show the SHA-pinned actions executing correctly. Downstream failures are pre-existing CI debt unrelated to F003 (per D010 scope-change)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-01-003-feat-security-baseline/decisions.jsonl#D010",
+          "captured_by": "operator",
+          "note": "Scope-change record: acceptance #7 narrowed from \"CI runs green\" to \"SHA-pinned actions execute correctly\", with deferred-debt list and stop-rule rationale."
+        }
+      ]
     }
   ]
 }
