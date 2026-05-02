@@ -26,6 +26,7 @@ from jarvis_orchestrate import (
     command_guard,
     gate_pause,
     inbox,
+    nested_orchestration,
     notify,
     plan_loader,
     prompts,
@@ -442,6 +443,20 @@ def _quota_gate_v2(agent: str, vendors: dict, enforce: str) -> tuple[float | Non
     return pct, line
 
 
+def _run_nested_orch_guards(plan_dir: Path, *, allow_depth: int | None) -> str | None:
+    """Plan 2026-05-02-003 F001: run depth + cycle + repeated-finding guards
+    when the plan has an `orchestration` block. Top-level plans are no-ops.
+    Returns the audit-trail validation_performed marker string when
+    `allow_depth` was used; None otherwise. Raises NestedOrchestrationError
+    on any guard failure (caller surfaces as non-zero exit)."""
+    nested_orchestration.check_depth(plan_dir, override_max=allow_depth)
+    nested_orchestration.check_cycle(plan_dir)
+    nested_orchestration.check_repeated_finding(plan_dir)
+    if allow_depth is not None:
+        return f"depth_override applied ({allow_depth})"
+    return None
+
+
 def dispatch_single_agent(
     plan_dir: Path,
     feature_id: str,
@@ -450,6 +465,7 @@ def dispatch_single_agent(
     target_env: str | None = None,
     target_project: str | None = None,
     mode: str | None = None,
+    allow_depth: int | None = None,
 ) -> Path:
     """F004 path: dispatch one agent (Claude), produce + validate audit JSON.
 
@@ -466,6 +482,9 @@ def dispatch_single_agent(
     """
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
+
+    # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
+    nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
 
     quota_pct, quota_line = _quota_gate("claude")
     print(quota_line)
@@ -568,6 +587,7 @@ def dispatch_single_agent(
             result=result,
             feature_id=feature_id,
             validation_performed=[
+                *([nested_marker] if nested_marker else []),
                 f"read ~/.jarvis/quota_state.json (claude pct={quota_pct})",
                 f"claude -p --output-format json (binary={executor.binary})",
                 f"captured stdout {len(result.raw_response)} bytes",
@@ -665,6 +685,7 @@ def dispatch_volley(
     target_env: str | None = None,
     target_project: str | None = None,
     mode: str | None = None,
+    allow_depth: int | None = None,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
 
@@ -683,6 +704,9 @@ def dispatch_volley(
     """
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
+
+    # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
+    nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
 
     # Resolve role pairing — F005a uses agents_required[0/1] convention
     agents_req = list(loaded.plan.agents_required or [])
@@ -992,6 +1016,7 @@ def dispatch_volley(
                     target_project=effective_project,
                 ),
                 extra_validation=[
+                    *([nested_marker] if nested_marker else []),
                     f"quota gate impl={impl_pct}",
                     f"prior_auditor_path={prior_aud_path or '(none)'}",
                     round_env_log,
@@ -1041,6 +1066,7 @@ def dispatch_volley(
                     target_project=effective_project,
                 ),
                 extra_validation=[
+                    *([nested_marker] if nested_marker else []),
                     f"quota gate aud={aud_pct}",
                     f"reviewing implementer audit at {impl_audit_path.name}",
                     round_env_log,
