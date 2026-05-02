@@ -1,0 +1,44 @@
+{
+  "_fixture_notes": {
+    "case": "a",
+    "name": "implementer summary missing canonical prelude with valid struct",
+    "originating_envelope": "docs/plans/2026-04-29-001-feat-changelog-skill/audit/claude-implementer-i0.json",
+    "shape": "target_context validates (env=dev, project=jarvis-a6ee1, commands_run non-empty); summary lacks the canonical '## Target context' prelude block — it begins directly with feature prose '[F001] F001 complete...'",
+    "expected_f002_outcome": "prelude-injected",
+    "expected_f003_verdict": "i0",
+    "sanitization": "model_version -> fixture-model-v1, agent -> fixture-agent, findings stripped (envelope-shape only; F003 recomputes severity)"
+  },
+  "task_id": "2026-04-29-001-feat-changelog-skill",
+  "audit_id": "2026-04-29-001-feat-changelog-skill#fixture-agent#0",
+  "agent": "fixture-agent",
+  "agent_role": "implementer",
+  "model_version": "fixture-model-v1",
+  "iteration": 0,
+  "started_at": "2026-05-01T04:56:17Z",
+  "completed_at": "2026-05-01T04:57:56Z",
+  "audit_status": "needs_changes",
+  "findings": [],
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "captured stdout 2547 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1058962,
+    "tokens_out": 6702,
+    "api_calls": 1
+  },
+  "summary": "[F001] F001 complete. The skill was already implemented (`SKILL.md`, `changelog.py`, 5 fixtures with golden outputs, full test suite, `claude/__init__.py` + `claude/skills/__init__.py` package files, RESOLVER.md row registered with the four required trigger keywords). I ran all required verifications and captured fresh evidence into `evidence/iteration-0/changelog-skill/`: pytest (19/19 passed), `validate.py` (0 errors / 63 baseline-only warnings, exit 0), `sanitization_check.py` (415 files clean, exit 0), `jarvis_doctor.py --skip-auth` (13/13 checks, exit 0), and a sample nominal-fixture run. Marked F001 `passes: true` in `features.json`. No protected paths were touched, no LLM/network calls made — pure deterministic git parsing.\n\nCommands invoked:\n$ pytest claude/skills/changelog/tests/ -q\n$ python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/\n$ python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/empty/\n$ python claude/shared/resolver/validate.py --resolver claude/RESOLVER.md --skills-dir claude/skills claude/commands --conventions-dir claude/shared/conventions --project-root .\n$ python scripts/sanitization_check.py\n$ python scripts/jarvis_doctor.py --skip-auth\n$ pytest claude/skills/changelog/tests/ -v > evidence/iteration-0/changelog-skill/pytest.txt",
+  "target_context": {
+    "env": "dev",
+    "project": "jarvis-a6ee1",
+    "commands_run": [
+      "pytest claude/skills/changelog/tests/ -q",
+      "python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/",
+      "python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/empty/",
+      "python claude/shared/resolver/validate.py --resolver claude/RESOLVER.md --skills-dir claude/skills claude/commands --conventions-dir claude/shared/conventions --project-root .",
+      "python scripts/sanitization_check.py",
+      "python scripts/jarvis_doctor.py --skip-auth",
+      "pytest claude/skills/changelog/tests/ -v > evidence/iteration-0/changelog-skill/pytest.txt"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "_fixture_notes": {
+    "case": "d",
+    "name": "envelope has no target_context key at all",
+    "originating_envelope": "docs/plans/2026-04-25-002-infra-trivial-orchestration-test/audit/claude-implementer.json",
+    "shape": "legacy envelope from before F023 EC5 — no `target_context` key in the dict at all. F002 must call validate_target_context which raises TargetContextError; envelope is NOT persisted. F003 returns 'i1' (struct invalid is a real blocker).",
+    "expected_f002_outcome": "error-raised",
+    "expected_f003_verdict": "i1",
+    "sanitization": "model_version -> fixture-model-v1, agent -> fixture-agent (auditor envelope-shape preserved verbatim — no findings to strip)"
+  },
+  "task_id": "2026-04-25-002-infra-trivial-orchestration-test",
+  "audit_id": "2026-04-25-002-infra-trivial-orchestration-test#fixture-agent#0",
+  "agent": "fixture-agent",
+  "agent_role": "implementer",
+  "model_version": "fixture-model-v1",
+  "iteration": 0,
+  "started_at": "2026-04-25T19:13:08Z",
+  "completed_at": "2026-04-25T19:13:16Z",
+  "audit_status": "signed_off",
+  "findings": [],
+  "validation_performed": [
+    "claude -p --output-format json",
+    "captured stdout 1899 bytes",
+    "subprocess exit 0"
+  ],
+  "quota_consumed": {
+    "tokens_in": 32320,
+    "tokens_out": 271,
+    "api_calls": 1
+  },
+  "summary": "[F001] I'm the implementer for plan 2026-04-25-002-infra-trivial-orchestration-test, iteration 0, dispatched to execute feature F001. I acknowledge receipt of the plan dispatch and confirm my agent_role is `implementer` operating at iteration 0. This feature explicitly requires no code changes — it's a trivial orchestration smoke test, so I performed no edits, ran no verification commands (none were specified), and made no tool calls. The acceptance criterion is satisfied by this non-empty paragraph referencing plan ID 2026-04-25-002-infra-trivial-orchestration-test, which the supervisor will wrap into audit/claude-implementer.json for Audit.model_validate. Outcome: feature F001 complete, ready for the supervisor to record the audit artifact."
+}
