@@ -33,6 +33,9 @@ SCHEMAS_DIR = _find_schemas_dir()
 from models.features_model import Features  # noqa: E402
 from models.plan_model import Plan  # noqa: E402
 
+from jarvis_orchestrate.nested_orchestration import (  # noqa: E402
+    Orchestration,
+)
 from jarvis_orchestrate.plan_target import (  # noqa: E402
     normalize_target_project,
     parse_target_section,
@@ -76,6 +79,10 @@ class LoadedPlan:
     schemas_dir: Path
     target_env: str = "dev"
     target_project: str | None = None
+    # Plan 2026-05-02-003 F001: optional `orchestration` block (parent/child
+    # metadata). None for top-level plans; populated for child plans that
+    # declare an `orchestration:` frontmatter section.
+    orchestration: Orchestration | None = None
 
     def feature(self, feature_id: str) -> dict[str, Any]:
         for f in self.features.features:
@@ -107,7 +114,15 @@ def load(plan_dir: Path) -> LoadedPlan:
         raise FileNotFoundError(features_json)
 
     plan_md_text = plan_md.read_text()
-    plan = Plan.model_validate(_frontmatter(plan_md))
+    fm = _frontmatter(plan_md)
+    # Plan 2026-05-02-003 F001: pop the optional `orchestration` block before
+    # Plan.model_validate (which has extra='forbid' and would reject it). The
+    # block lives on LoadedPlan.orchestration as a separate parser-level concern;
+    # canonical Plan model in agent-conventions/schemas is unchanged (D006-style
+    # schema discipline — no schema bump required for nested orchestration v1).
+    orch_block = fm.pop("orchestration", None)
+    plan = Plan.model_validate(fm)
+    orchestration = Orchestration.model_validate(orch_block) if orch_block is not None else None
     features = Features.model_validate(json.loads(features_json.read_text()))
 
     if features.task_id != plan.id:
@@ -129,4 +144,5 @@ def load(plan_dir: Path) -> LoadedPlan:
         schemas_dir=SCHEMAS_DIR,
         target_env=target["target_env"],
         target_project=normalize_target_project(target["target_project"]),
+        orchestration=orchestration,
     )

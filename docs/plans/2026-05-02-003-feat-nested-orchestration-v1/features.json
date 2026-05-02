@@ -16,8 +16,57 @@
         "Tests: `scripts/jarvis_orchestrate/tests/test_nested_orchestration.py` covers (a) Orchestration model parses valid frontmatter, rejects malformed (Pydantic ValidationError) — including spawn_reason/spawn_finding cross-field invariants; (b) compute_finding_signature is deterministic across whitespace + case variations of the same issue text; (c) walk_parent_chain returns [child, parent, grandparent, ...] for a 3-deep tree, [child] for a 2-deep, [] for a top-level; (d) check_depth raises at depth=4 with default limit=3, passes at depth=3, passes at depth=4 when --allow-depth=5 override; (e) frontmatter `depth_limit: 5` is CLAMPED to 3 (D002 — frontmatter cannot raise); (f) check_cycle raises when plan_id appears twice in the chain (synthetic broken plan dir); (g) check_repeated_finding raises when current plan's finding_signature matches a parent's signature even if `audit_id#finding-N` strings differ; (h) check_repeated_finding does NOT raise for two distinct findings that share `(code, class)` but differ in normalized_issue (signature differs); (i) supervisor.dispatch_volley refuses dispatch on each violation with non-zero exit; (j) `--allow-depth N` override path passes validation that would otherwise fail."
       ],
       "acceptance": "(1) `scripts/jarvis_orchestrate/nested_orchestration.py` exists with `SpawnFinding` + `Orchestration` Pydantic models + helpers (`compute_finding_signature`, `walk_parent_chain`, `compute_depth`, `check_depth`, `check_cycle`, `check_repeated_finding`) + `NestedOrchestrationError` exception. (2) **Structured spawn identity (D001)**: SpawnFinding requires all five fields (parent_audit_id, finding_id, finding_code, finding_class, finding_signature). `compute_finding_signature` is deterministic across whitespace + case variations of issue text — verified by parametrized test with the same `(code, class, issue)` differing only in spaces/case yielding identical signatures. (3) `plan_loader.LoadedPlan` gains an optional `orchestration` field; top-level plans load identically to today (zero behavior change for plans without an `orchestration` frontmatter block). (4) `supervisor.dispatch_volley` and `dispatch_single_agent` both invoke the three guards (depth, cycle, repeated-finding) when orchestration is set; raise NestedOrchestrationError with audit_id + plan_id + finding_signature context (mirrors plan 005 F002 acceptance #5) BEFORE any agent dispatch or quota consumption. (5) **CLI-only depth override (D002)**: `--allow-depth N` on the `<plan-id> --volley` and `<plan-id>` (single-agent) paths is the ONLY mechanism for raising the cap; frontmatter `depth_limit` is clamped to a hard ceiling of 3 (parsed values > 3 are rejected at Pydantic-validation time, OR clamped silently — either way, frontmatter cannot raise the cap). The CLI override is recorded in `validation_performed` as `depth_override applied (N)` for audit-trail visibility. Verified by parametrized test that frontmatter `depth_limit: 5` raises ValidationError; `--allow-depth 5` succeeds. (6) **Spawn authority enforced**: `Orchestration.spawn_reason` is one of `auditor_finding | operator_manual` (Pydantic enum); when `spawn_reason=auditor_finding`, `spawn_finding` (the SpawnFinding model) is required; when `spawn_reason=operator_manual`, `spawn_finding=None` is required; mismatches raise ValidationError. (7) **Cycle detection**: parametrized test with synthetic plan dirs constructs a 3-plan cycle (A→B→C→A) and asserts `check_cycle` raises with both plan_ids in the message. (8) **Signature-based repeated-finding hard stop (D001)**: test with two parent plans whose findings share `(EC5, correctness)` but differ in normalized_issue → distinct signatures → child claiming a third EC5/correctness finding with a third distinct signature DOES NOT trigger the guard (signatures differ); a fourth child whose finding_signature matches one of the parents' DOES trigger NestedOrchestrationError citing the matching parent_plan_id + finding_signature. The signature-based rule prevents the broad `(code, class)`-only false-positive case. (9) **Default depth limit = 3**: verified by parametrized depth test (1, 2, 3 pass; 4 fails without override). (10) **Override path verified**: `--allow-depth 5` enables depth=4 dispatch; the audit envelope records the override. (11) plan.md without an `orchestration` block (i.e., every existing plan) loads and dispatches identically to today (zero regression). Verified by running `dispatch_volley` against a top-level plan in the synthetic test harness. (12) `audit.schema.json` and `features.schema.json` are unmodified — the change is in plan.md frontmatter parsing only. (13) NestedOrchestrationError messages contain enough context (parent plan_id, child plan_id, finding_signature, current depth, limit) for an operator to understand why dispatch was refused without reading source.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-02T19:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/nested_orchestration.py",
+          "captured_by": "claude",
+          "note": "SpawnFinding + Orchestration Pydantic models with cross-field invariants (auditor_finding requires spawn_finding, operator_manual rejects it; depth_limit clamped at platform DEFAULT_DEPTH_LIMIT=3 per D002). compute_finding_signature is deterministic SHA-256 hex prefix of `{code}|{class}|{normalized_issue}` (D001). walk_parent_chain + compute_depth + check_depth/cycle/repeated_finding helpers. NestedOrchestrationError raised with full context."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/plan_loader.py",
+          "captured_by": "claude",
+          "note": "LoadedPlan gains `orchestration: Orchestration | None`. plan_loader.load pops `orchestration` from frontmatter dict BEFORE Plan.model_validate (which has extra=forbid) — D006-style schema discipline keeps agent-conventions/schemas unchanged."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "_run_nested_orch_guards helper invoked from both dispatch_single_agent (line ~480) and dispatch_volley (line ~700) immediately after plan_loader.load. Top-level plans (orchestration=None) pass trivially. Both paths accept allow_depth: int|None and propagate the override to the audit envelope's validation_performed list as `depth_override applied (N)`."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "`--allow-depth N` CLI flag added on the volley + single-agent paths; threaded to supervisor.dispatch_*. CLI is the ONLY way to lift the depth cap (D002 — frontmatter cannot raise)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_nested_orchestration.py",
+          "captured_by": "claude",
+          "note": "21 tests: signature determinism (whitespace+case invariance), signature distinctness across (code/class/issue), Pydantic cross-field invariants, depth_limit clamp, walk_parent_chain at depths 1/2/3, check_depth pass/fail/override paths, check_cycle on 3-plan loop, check_repeated_finding distinct signatures pass + collision raises, plan_loader top-level orchestration=None + child orchestration parses correctly."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-003-feat-nested-orchestration-v1/evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo — direct path rationale: schema/validation/guard slice with locked decisions (D001-D006) and deterministic tests; volley deferred until F003 parent-pause/fan-in exists to dogfood real child flow."
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-05-02-003-feat-nested-orchestration-v1/evidence/f001-closeout-memo.md#test-state",
+          "captured_by": "operator",
+          "note": "Final state: 21/21 F001 targeted tests pass, 490 + 6 skipped full orchestrate suite (was 469 → +21), ruff clean, sanitization clean (557 files)."
+        }
+      ]
     },
     {
       "id": "F002",

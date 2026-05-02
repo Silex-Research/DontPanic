@@ -835,6 +835,15 @@ def main(argv: list[str] | None = None) -> int:
         "forced via this flag — that would silently expand emergency-lane scope. "
         "Default: derived from plan.tier (p0 → p0; else autonomous).",
     )
+    p.add_argument(
+        "--allow-depth",
+        type=int,
+        default=None,
+        help="Plan 2026-05-02-003 F001 (D002): operator-only override for nested-"
+        "orchestration depth_limit. Frontmatter cannot raise the platform cap "
+        "(default 3); this flag does, and the override is recorded in the "
+        "audit envelope's validation_performed for audit-trail visibility.",
+    )
     args = p.parse_args(raw)
 
     plan_dir = _resolve_plan_dir(args.plan)
@@ -855,6 +864,7 @@ def main(argv: list[str] | None = None) -> int:
                 auditor_agent=args.auditor,
                 max_iterations=args.max_iterations,
                 mode=args.mode,
+                allow_depth=args.allow_depth,
             )
         except QuotaExceeded as exc:
             print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
@@ -883,6 +893,7 @@ def main(argv: list[str] | None = None) -> int:
             agent_role=args.role,
             iteration=args.iteration,
             mode=args.mode,
+            allow_depth=args.allow_depth,
         )
     except QuotaExceeded as exc:
         print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
