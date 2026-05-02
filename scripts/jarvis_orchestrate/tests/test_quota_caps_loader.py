@@ -76,10 +76,22 @@ def test_validate_accepts_starter_file() -> None:
     [
         ({"schema_version": 99}, "schema_version"),
         ({"unknown_vendor": {}}, "unknown vendor"),
-        ({"claude": {"max_20x": {"rolling_7d": {"cap": -1, "unit": "percent_of_plan"}}}}, "must be positive"),
-        ({"claude": {"max_20x": {"rolling_7d": {"cap": 100, "unit": "bogus_unit"}}}}, "must be one of"),
-        ({"claude": {"max_20x": {"rolling_99h": {"cap": 100, "unit": "percent_of_plan"}}}}, "unknown window"),
-        ({"claude": {"unobtanium": {"rolling_7d": {"cap": 100, "unit": "percent_of_plan"}}}}, "unknown tier"),
+        (
+            {"claude": {"max_20x": {"rolling_7d": {"cap": -1, "unit": "percent_of_plan"}}}},
+            "must be positive",
+        ),
+        (
+            {"claude": {"max_20x": {"rolling_7d": {"cap": 100, "unit": "bogus_unit"}}}},
+            "must be one of",
+        ),
+        (
+            {"claude": {"max_20x": {"rolling_99h": {"cap": 100, "unit": "percent_of_plan"}}}},
+            "unknown window",
+        ),
+        (
+            {"claude": {"unobtanium": {"rolling_7d": {"cap": 100, "unit": "percent_of_plan"}}}},
+            "unknown tier",
+        ),
     ],
 )
 def test_validate_rejects_malformed_inputs(mutation, expect_substring) -> None:
@@ -148,7 +160,16 @@ def test_load_raises_on_invalid_json(tmp_path: Path) -> None:
 def test_load_raises_on_validation_errors(tmp_path: Path) -> None:
     print("\n[test] load_raises_on_validation_errors ...")
     p = tmp_path / "invalid.json"
-    p.write_text(json.dumps({"schema_version": 99, "claude": {"max_20x": {"rolling_7d": {"cap": "not a number", "unit": "percent_of_plan"}}}}))
+    p.write_text(
+        json.dumps(
+            {
+                "schema_version": 99,
+                "claude": {
+                    "max_20x": {"rolling_7d": {"cap": "not a number", "unit": "percent_of_plan"}}
+                },
+            }
+        )
+    )
     with pytest.raises(qcl.QuotaCapsError, match="invalid"):
         qcl.load(p)
     print("  ✓ load() composes validate() errors into single QuotaCapsError")

@@ -412,7 +412,10 @@ _TERMINAL_OUTCOME_TO_KIND: dict[WindowOutcome, BudgetCeilingKind] = {
 # order-dependent — operator review specifically called out the latter as
 # brittle.
 DEFAULT_WINDOW_PRIORITY: tuple[str, ...] = (
-    "rolling_5h", "rolling_2h", "rolling_24h", "rolling_7d",
+    "rolling_5h",
+    "rolling_2h",
+    "rolling_24h",
+    "rolling_7d",
 )
 
 
@@ -478,16 +481,22 @@ def collect_agent_coverage(
     vblock = vendors.get(agent)
     if not isinstance(vblock, dict):
         return AgentCoverageReport(
-            agent=agent, tier="unknown",
-            evaluations=(), terminal=None, primary=None,
+            agent=agent,
+            tier="unknown",
+            evaluations=(),
+            terminal=None,
+            primary=None,
             config_cause="missing_vendor_block",
         )
     tier = vblock.get("tier") or "unknown"
     windows = vblock.get("windows") or {}
     if not isinstance(windows, dict) or not windows:
         return AgentCoverageReport(
-            agent=agent, tier=tier,
-            evaluations=(), terminal=None, primary=None,
+            agent=agent,
+            tier=tier,
+            evaluations=(),
+            terminal=None,
+            primary=None,
             config_cause="missing_vendor_block",
         )
 
@@ -501,8 +510,11 @@ def collect_agent_coverage(
             continue
         cap_block = quota_caps_loader.get(caps, agent, tier, window_name)
         ev = evaluate_window(
-            agent=agent, tier=tier, window_name=window_name,
-            window=window, cap_block=cap_block,
+            agent=agent,
+            tier=tier,
+            window_name=window_name,
+            window=window,
+            cap_block=cap_block,
         )
         evaluations.append(ev)
         if ev.outcome in _TERMINAL_OUTCOME_TO_KIND and terminal is None:
@@ -519,7 +531,8 @@ def collect_agent_coverage(
     for wname in priority:
         ev = by_window.get(wname)
         if ev is not None and ev.outcome in (
-            WindowOutcome.OK, WindowOutcome.TRIPPED,
+            WindowOutcome.OK,
+            WindowOutcome.TRIPPED,
         ):
             primary = ev
             break
@@ -533,9 +546,11 @@ def collect_agent_coverage(
         # else: only NO_SIGNAL — benign, no escalation
 
     return AgentCoverageReport(
-        agent=agent, tier=tier,
+        agent=agent,
+        tier=tier,
         evaluations=tuple(evaluations),
-        terminal=terminal, primary=primary,
+        terminal=terminal,
+        primary=primary,
         config_cause=config_cause,
     )
 
@@ -645,22 +660,18 @@ def _check_budget_v2(
         # caps-edit). details.causes preserves both for caller routing.
         causes_set = sorted(set(cause_per_agent.values()))
         primary_cause = (
-            "missing_vendor_block" if "missing_vendor_block" in causes_set
-            else "no_cap_for_signal"
+            "missing_vendor_block" if "missing_vendor_block" in causes_set else "no_cap_for_signal"
         )
-        agents_no_cap = [
-            a for a, c in cause_per_agent.items() if c == "no_cap_for_signal"
-        ]
+        agents_no_cap = [a for a, c in cause_per_agent.items() if c == "no_cap_for_signal"]
         agents_missing_vblock = [
             a for a, c in cause_per_agent.items() if c == "missing_vendor_block"
         ]
         reason_parts: list[str] = []
         if agents_missing_vblock:
             reason_parts.append(
-                f"agents with no vendor block in quota_state.json "
-                f"(state may be stale or corrupt — re-run "
-                f"`python3 scripts/quota_check.py`): "
-                + ", ".join(sorted(agents_missing_vblock))
+                "agents with no vendor block in quota_state.json "
+                "(state may be stale or corrupt — re-run "
+                "`python3 scripts/quota_check.py`): " + ", ".join(sorted(agents_missing_vblock))
             )
         if agents_no_cap:
             no_cap_windows: list[str] = []

@@ -78,9 +78,7 @@ def test_check_budget_ceiling_reads_quota_state_file() -> None:
         qs = Path(td) / "quota_state.json"
         qs.write_text(json.dumps({"models": {"claude": {"percent_weekly": 80.0, "plan": "x"}}}))
         # No caps → no trip
-        result = cb.check_budget_ceiling(
-            sorted(ad.glob("*.json")), None, quota_state_path=qs
-        )
+        result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None, quota_state_path=qs)
         assert not result.tripped
         assert result.fallback_used  # legacy state shape (no vendors{})
         # Cap=50 → trip (state says 80%)
@@ -109,7 +107,9 @@ def test_check_budget_ceiling_reads_quota_state_file() -> None:
             quota_state_path=qs,
         )
         assert not result.tripped
-    print("  ✓ legacy fallback: budget_ceiling reads models{}.percent_weekly + scoped to participating agents")
+    print(
+        "  ✓ legacy fallback: budget_ceiling reads models{}.percent_weekly + scoped to participating agents"
+    )
 
 
 # ──────────────────────  F006a budget_ceiling v2-path tests  ──────────────────────
@@ -118,8 +118,10 @@ def test_check_budget_ceiling_reads_quota_state_file() -> None:
 # in the env-isolated path and a matching/missing/wrong caps file. Exercises
 # the five non-OK BudgetCeilingKind values + the legacy-fallback boundary.
 
-def _write_v2_state(qs: Path, *, claude_7d_observed: float, codex_5h_observed: int,
-                    claude_calibration: dict | None) -> None:
+
+def _write_v2_state(
+    qs: Path, *, claude_7d_observed: float, codex_5h_observed: int, claude_calibration: dict | None
+) -> None:
     """Build a minimal v2 vendors{} state file the breaker can read."""
     state = {
         "schema_version": 2,
@@ -132,7 +134,8 @@ def _write_v2_state(qs: Path, *, claude_7d_observed: float, codex_5h_observed: i
                         "kind": "rolling_7d",
                         "observed_native": claude_7d_observed,
                         "observed_unit": "weighted_tokens_local_proxy",
-                        "calibration": claude_calibration or {
+                        "calibration": claude_calibration
+                        or {
                             "ratio": None,
                             "confidence": "uncalibrated",
                             "source": None,
@@ -162,17 +165,21 @@ def _write_v2_state(qs: Path, *, claude_7d_observed: float, codex_5h_observed: i
 
 def _write_audit(ad: Path, agent: str = "claude") -> Path:
     p = ad / f"{agent}-implementer-i0.json"
-    p.write_text(json.dumps({
-        "task_id": "t",
-        "audit_id": f"t#{agent}#0",
-        "agent": agent,
-        "agent_role": "implementer",
-        "iteration": 0,
-        "started_at": _iso_now(),
-        "completed_at": _iso_now(),
-        "audit_status": "needs_changes",
-        "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
-    }))
+    p.write_text(
+        json.dumps(
+            {
+                "task_id": "t",
+                "audit_id": f"t#{agent}#0",
+                "agent": agent,
+                "agent_role": "implementer",
+                "iteration": 0,
+                "started_at": _iso_now(),
+                "completed_at": _iso_now(),
+                "audit_status": "needs_changes",
+                "quota_consumed": {"tokens_in": 100, "tokens_out": 50, "api_calls": 1},
+            }
+        )
+    )
     return p
 
 
@@ -181,8 +188,9 @@ def test_v2_config_required_when_caps_file_missing(tmp_path: Path) -> None:
     config_required pause, not a silent quiet-skip."""
     print("\n[test] v2_config_required_when_caps_file_missing ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=500_000_000, codex_5h_observed=200_000_000,
-                    claude_calibration=None)
+    _write_v2_state(
+        qs, claude_7d_observed=500_000_000, codex_5h_observed=200_000_000, claude_calibration=None
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
@@ -202,16 +210,23 @@ def test_v2_calibration_required_for_uncalibrated_claude(tmp_path: Path) -> None
     against weighted_tokens / 100."""
     print("\n[test] v2_calibration_required_for_uncalibrated_claude ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=500_000_000, codex_5h_observed=0,
-                    claude_calibration=None)
+    _write_v2_state(
+        qs, claude_7d_observed=500_000_000, codex_5h_observed=0, claude_calibration=None
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
@@ -233,21 +248,31 @@ def test_v2_calibrated_claude_trips_on_excess(tmp_path: Path) -> None:
     print("\n[test] v2_calibrated_claude_trips_on_excess ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
     # ratio chosen so observed * ratio = 110 > cap 100
-    _write_v2_state(qs, claude_7d_observed=550_000_000, codex_5h_observed=0,
-                    claude_calibration={
-                        "ratio": 2.0e-7,  # 550M * 2e-7 = 110
-                        "confidence": "manual",
-                        "source": "operator_dashboard_sample",
-                        "stamped_at": _iso_now(),
-                    })
+    _write_v2_state(
+        qs,
+        claude_7d_observed=550_000_000,
+        codex_5h_observed=0,
+        claude_calibration={
+            "ratio": 2.0e-7,  # 550M * 2e-7 = 110
+            "confidence": "manual",
+            "source": "operator_dashboard_sample",
+            "stamped_at": _iso_now(),
+        },
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
@@ -270,16 +295,23 @@ def test_v2_unit_mismatch_halts_for_non_claude(tmp_path: Path) -> None:
     quota_caps.json."""
     print("\n[test] v2_unit_mismatch_halts_for_non_claude ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
-                    claude_calibration=None)
+    _write_v2_state(
+        qs, claude_7d_observed=0, codex_5h_observed=200_000_000, claude_calibration=None
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "codex": {"plus": {
-            "rolling_5h": {"cap": 100, "unit": "requests"},  # WRONG: observed is tokens
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "codex": {
+                    "plus": {
+                        "rolling_5h": {"cap": 100, "unit": "requests"},  # WRONG: observed is tokens
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "codex")
@@ -304,17 +336,24 @@ def test_v2_no_cap_for_signal_returns_config_required(tmp_path: Path, capsys) ->
     distinguishes this from caps-file-missing CONFIG_REQUIRED."""
     print("\n[test] v2_no_cap_for_signal_returns_config_required ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
-                    claude_calibration=None)
+    _write_v2_state(
+        qs, claude_7d_observed=0, codex_5h_observed=200_000_000, claude_calibration=None
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
     # Caps file has Claude but no Codex entry — Codex is uncovered.
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "codex")
@@ -373,20 +412,25 @@ def test_v2_no_cap_for_secondary_window_ok_when_primary_covers(tmp_path: Path) -
     qs.write_text(json.dumps(state))
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
     # Cap only on rolling_5h (matches F004 starter shape)
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "codex": {"plus": {
-            "rolling_5h": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "codex": {
+                    "plus": {
+                        "rolling_5h": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "codex")
 
     result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), None)
     assert not result.tripped, (
-        f"expected OK because rolling_5h covers codex; got {result.kind} "
-        f"reason={result.reason}"
+        f"expected OK because rolling_5h covers codex; got {result.kind} reason={result.reason}"
     )
     assert result.kind == cb.BudgetCeilingKind.OK
     print("  ✓ secondary uncapped window does NOT escalate when primary covers")
@@ -399,7 +443,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
     print("\n[test] v2_evaluate_window_pure_helper ...")
     # NO_SIGNAL: observed=0
     ev = cb.evaluate_window(
-        agent="claude", tier="max_20x", window_name="rolling_7d",
+        agent="claude",
+        tier="max_20x",
+        window_name="rolling_7d",
         window={"observed_native": 0, "observed_unit": "weighted_tokens_local_proxy"},
         cap_block={"cap": 100, "unit": "percent_of_plan"},
     )
@@ -407,7 +453,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
 
     # NO_CAP: signal but no cap_block
     ev = cb.evaluate_window(
-        agent="codex", tier="plus", window_name="rolling_5h",
+        agent="codex",
+        tier="plus",
+        window_name="rolling_5h",
         window={"observed_native": 1_000_000, "observed_unit": "tokens_local_proxy"},
         cap_block=None,
     )
@@ -416,7 +464,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
 
     # CALIBRATION_REQUIRED: Claude % cap + uncalibrated
     ev = cb.evaluate_window(
-        agent="claude", tier="max_20x", window_name="rolling_7d",
+        agent="claude",
+        tier="max_20x",
+        window_name="rolling_7d",
         window={
             "observed_native": 500_000_000,
             "observed_unit": "weighted_tokens_local_proxy",
@@ -428,7 +478,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
 
     # UNIT_MISMATCH: codex with wrong cap unit
     ev = cb.evaluate_window(
-        agent="codex", tier="plus", window_name="rolling_5h",
+        agent="codex",
+        tier="plus",
+        window_name="rolling_5h",
         window={"observed_native": 1_000, "observed_unit": "tokens_local_proxy"},
         cap_block={"cap": 100, "unit": "requests"},
     )
@@ -436,7 +488,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
 
     # OK: codex with matching unit, under cap; pct_of_cap surfaced for F006b
     ev = cb.evaluate_window(
-        agent="codex", tier="plus", window_name="rolling_5h",
+        agent="codex",
+        tier="plus",
+        window_name="rolling_5h",
         window={"observed_native": 80_000_000, "observed_unit": "tokens_local_proxy"},
         cap_block={"cap": 100_000_000, "unit": "tokens_local_proxy"},
     )
@@ -446,7 +500,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
 
     # TRIPPED: same shape, over cap
     ev = cb.evaluate_window(
-        agent="codex", tier="plus", window_name="rolling_5h",
+        agent="codex",
+        tier="plus",
+        window_name="rolling_5h",
         window={"observed_native": 150_000_000, "observed_unit": "tokens_local_proxy"},
         cap_block={"cap": 100_000_000, "unit": "tokens_local_proxy"},
     )
@@ -456,7 +512,9 @@ def test_v2_evaluate_window_pure_helper(tmp_path: Path) -> None:
     # OK + STALE: Claude % cap, manual calibration, stamped >7d ago, under cap
     old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat()
     ev = cb.evaluate_window(
-        agent="claude", tier="max_20x", window_name="rolling_7d",
+        agent="claude",
+        tier="max_20x",
+        window_name="rolling_7d",
         window={
             "observed_native": 100_000_000,
             "observed_unit": "weighted_tokens_local_proxy",
@@ -483,16 +541,23 @@ def test_v2_codex_with_percent_of_plan_cap_returns_unit_mismatch(tmp_path: Path)
     codex."""
     print("\n[test] v2_codex_with_percent_of_plan_cap_returns_unit_mismatch ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=0, codex_5h_observed=200_000_000,
-                    claude_calibration=None)
+    _write_v2_state(
+        qs, claude_7d_observed=0, codex_5h_observed=200_000_000, claude_calibration=None
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
     # Codex cap with percent_of_plan unit — operator typo (should be tokens_local_proxy)
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "codex": {"plus": {
-            "rolling_5h": {"cap": 80, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "codex": {
+                    "plus": {
+                        "rolling_5h": {"cap": 80, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "codex")
@@ -518,9 +583,11 @@ def test_v2_validator_rejects_zero_cap(tmp_path: Path) -> None:
 
     bad = {
         "schema_version": 1,
-        "codex": {"plus": {
-            "rolling_5h": {"cap": 0, "unit": "tokens_local_proxy"},
-        }},
+        "codex": {
+            "plus": {
+                "rolling_5h": {"cap": 0, "unit": "tokens_local_proxy"},
+            }
+        },
     }
     errors = qcl.validate(bad)
     assert any("must be positive" in e for e in errors), errors
@@ -564,12 +631,18 @@ def test_v2_missing_vendor_block_returns_config_required(tmp_path: Path) -> None
     }
     qs.write_text(json.dumps(state))
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")  # Claude participated but has no vblock
@@ -640,21 +713,31 @@ def test_v2_stale_calibration_warns_but_applies(tmp_path: Path, capsys) -> None:
     print("\n[test] v2_stale_calibration_warns_but_applies ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
     old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat()
-    _write_v2_state(qs, claude_7d_observed=100_000_000, codex_5h_observed=0,
-                    claude_calibration={
-                        "ratio": 1.0e-7,  # 100M * 1e-7 = 10 (well under cap 100)
-                        "confidence": "manual",
-                        "source": "operator_dashboard_sample",
-                        "stamped_at": old,
-                    })
+    _write_v2_state(
+        qs,
+        claude_7d_observed=100_000_000,
+        codex_5h_observed=0,
+        claude_calibration={
+            "ratio": 1.0e-7,  # 100M * 1e-7 = 10 (well under cap 100)
+            "confidence": "manual",
+            "source": "operator_dashboard_sample",
+            "stamped_at": old,
+        },
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
@@ -676,10 +759,14 @@ def test_v2_legacy_fallback_when_vendors_block_missing(tmp_path: Path, capsys) -
     as the authority. fallback_used=True surfaces the path taken."""
     print("\n[test] v2_legacy_fallback_when_vendors_block_missing ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    qs.write_text(json.dumps({
-        # NO vendors{} block — legacy F020 v1 shape only
-        "models": {"claude": {"percent_weekly": 80.0, "plan": "x"}},
-    }))
+    qs.write_text(
+        json.dumps(
+            {
+                # NO vendors{} block — legacy F020 v1 shape only
+                "models": {"claude": {"percent_weekly": 80.0, "plan": "x"}},
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
@@ -703,30 +790,38 @@ def test_v2_ignores_plan_level_caps(tmp_path: Path) -> None:
     that's covered by the existing fallback test.)"""
     print("\n[test] v2_ignores_plan_level_caps ...")
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    _write_v2_state(qs, claude_7d_observed=550_000_000, codex_5h_observed=0,
-                    claude_calibration={
-                        "ratio": 2.0e-7,  # 550M * 2e-7 = 110 > cap 100
-                        "confidence": "manual",
-                        "source": "operator_dashboard_sample",
-                        "stamped_at": _iso_now(),
-                    })
+    _write_v2_state(
+        qs,
+        claude_7d_observed=550_000_000,
+        codex_5h_observed=0,
+        claude_calibration={
+            "ratio": 2.0e-7,  # 550M * 2e-7 = 110 > cap 100
+            "confidence": "manual",
+            "source": "operator_dashboard_sample",
+            "stamped_at": _iso_now(),
+        },
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "defaults": {"claude_tier": "max_20x"},
-        "claude": {"max_20x": {
-            "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
-        }},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "defaults": {"claude_tier": "max_20x"},
+                "claude": {
+                    "max_20x": {
+                        "rolling_7d": {"cap": 100, "unit": "percent_of_plan"},
+                    }
+                },
+            }
+        )
+    )
     ad = tmp_path / "audits"
     ad.mkdir()
     _write_audit(ad, "claude")
 
     # Pass an absurdly-large per_agent_caps to prove it's ignored on v2 path
     # (if v2 honored plan caps, claude:99999 would prevent the trip).
-    result = cb.check_budget_ceiling(
-        sorted(ad.glob("*.json")), {"claude": 99999.0}
-    )
+    result = cb.check_budget_ceiling(sorted(ad.glob("*.json")), {"claude": 99999.0})
     assert result.tripped, (
         "v2 path must trip on operator caps file regardless of plan.quota_caps; "
         "ignoring this would reintroduce the broken-percent_weekly bug for "
@@ -794,10 +889,12 @@ def test_v2_collect_agent_coverage_window_priority_picks_rolling_5h() -> None:
     }
     caps = {
         "schema_version": 1,
-        "codex": {"plus": {
-            "rolling_7d": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
-            "rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"},
-        }},
+        "codex": {
+            "plus": {
+                "rolling_7d": {"cap": 1_000_000_000, "unit": "tokens_local_proxy"},
+                "rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"},
+            }
+        },
     }
     report = cb.collect_agent_coverage(agent="codex", vendors=vendors, caps=caps)
     # rolling_5h is higher in DEFAULT_WINDOW_PRIORITY, so it wins as primary
@@ -857,26 +954,36 @@ def test_v2_supervisor_quota_gate_v2_routes_through_collect_agent_coverage(
     from jarvis_orchestrate import supervisor
 
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
-    qs.write_text(json.dumps({
-        "schema_version": 2,
-        "vendors": {
-            "codex": {
-                "tier": "plus",
-                "windows": {
-                    "rolling_5h": {
-                        "kind": "rolling_5h",
-                        "observed_native": 95_000_000,  # 95% of 100M cap
-                        "observed_unit": "tokens_local_proxy",
+    qs.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "vendors": {
+                    "codex": {
+                        "tier": "plus",
+                        "windows": {
+                            "rolling_5h": {
+                                "kind": "rolling_5h",
+                                "observed_native": 95_000_000,  # 95% of 100M cap
+                                "observed_unit": "tokens_local_proxy",
+                            },
+                        },
                     },
                 },
-            },
-        },
-    }))
+            }
+        )
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "codex": {
+                    "plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}
+                },
+            }
+        )
+    )
 
     pct, line = supervisor._quota_gate("codex")
     assert pct is not None
@@ -898,26 +1005,36 @@ def test_v2_quota_admission_threshold_uses_collect_agent_coverage(
 
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
     # Codex at 80% — above default 70% defer threshold
-    qs.write_text(json.dumps({
-        "schema_version": 2,
-        "vendors": {
-            "codex": {
-                "tier": "plus",
-                "windows": {
-                    "rolling_5h": {
-                        "kind": "rolling_5h",
-                        "observed_native": 80_000_000,
-                        "observed_unit": "tokens_local_proxy",
+    qs.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "vendors": {
+                    "codex": {
+                        "tier": "plus",
+                        "windows": {
+                            "rolling_5h": {
+                                "kind": "rolling_5h",
+                                "observed_native": 80_000_000,
+                                "observed_unit": "tokens_local_proxy",
+                            },
+                        },
                     },
                 },
-            },
-        },
-    }))
+            }
+        )
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "codex": {
+                    "plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}
+                },
+            }
+        )
+    )
 
     result = quota_admission.evaluate_quota_threshold(["codex"])
     assert result.over_threshold
@@ -945,8 +1062,10 @@ def test_v2_supervisor_admission_reason_handles_cause_path() -> None:
 
     # Numeric path — preserves the historical 'percent_weekly N% > threshold M%' shape
     numeric = quota_admission.QuotaCheck(
-        over_threshold=True, offending_agent="codex",
-        observed_pct=85.0, threshold=70.0,
+        over_threshold=True,
+        offending_agent="codex",
+        observed_pct=85.0,
+        threshold=70.0,
     )
     line = supervisor._format_admission_quota_reason(numeric)
     assert "codex" in line
@@ -955,8 +1074,11 @@ def test_v2_supervisor_admission_reason_handles_cause_path() -> None:
 
     # Cause path — observed_pct is None, no crash, surfaces structured cause
     cause = quota_admission.QuotaCheck(
-        over_threshold=True, offending_agent="codex",
-        observed_pct=None, threshold=70.0, cause="caps_file_missing",
+        over_threshold=True,
+        offending_agent="codex",
+        observed_pct=None,
+        threshold=70.0,
+        cause="caps_file_missing",
     )
     line = supervisor._format_admission_quota_reason(cause)
     assert "codex" in line
@@ -975,26 +1097,36 @@ def test_v2_quota_admission_tripped_returns_numeric() -> None:
 
     qs = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
     # Codex at 150% of cap — TRIPPED outcome
-    qs.write_text(json.dumps({
-        "schema_version": 2,
-        "vendors": {
-            "codex": {
-                "tier": "plus",
-                "windows": {
-                    "rolling_5h": {
-                        "kind": "rolling_5h",
-                        "observed_native": 150_000_000,
-                        "observed_unit": "tokens_local_proxy",
+    qs.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "vendors": {
+                    "codex": {
+                        "tier": "plus",
+                        "windows": {
+                            "rolling_5h": {
+                                "kind": "rolling_5h",
+                                "observed_native": 150_000_000,
+                                "observed_unit": "tokens_local_proxy",
+                            },
+                        },
                     },
                 },
-            },
-        },
-    }))
+            }
+        )
+    )
     caps = Path(os.environ["JARVIS_QUOTA_CAPS_PATH"])
-    caps.write_text(json.dumps({
-        "schema_version": 1,
-        "codex": {"plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}},
-    }))
+    caps.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "codex": {
+                    "plus": {"rolling_5h": {"cap": 100_000_000, "unit": "tokens_local_proxy"}}
+                },
+            }
+        )
+    )
 
     result = quota_admission.evaluate_quota_threshold(["codex"])
     assert result.over_threshold
@@ -1028,7 +1160,10 @@ def test_v2_emit_budget_kind_specific_event_calibration_required(tmp_path: Path)
         confidence="uncalibrated",
     )
     supervisor._emit_budget_kind_specific_event(
-        plan_dir, "test-plan", bd_result, feature_id="F001",
+        plan_dir,
+        "test-plan",
+        bd_result,
+        feature_id="F001",
     )
     inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
     assert "calibration_required" in inbox_text
@@ -1049,11 +1184,17 @@ def test_v2_emit_budget_kind_specific_event_unit_mismatch(tmp_path: Path) -> Non
         kind=cb.BudgetCeilingKind.UNIT_MISMATCH,
         tripped=True,
         reason="codex cap.unit='requests' != observed_unit='tokens_local_proxy'",
-        agent="codex", tier="plus", window="rolling_5h",
-        cap_unit="requests", observed_unit="tokens_local_proxy",
+        agent="codex",
+        tier="plus",
+        window="rolling_5h",
+        cap_unit="requests",
+        observed_unit="tokens_local_proxy",
     )
     supervisor._emit_budget_kind_specific_event(
-        plan_dir, "test-plan", bd_result, feature_id="F001",
+        plan_dir,
+        "test-plan",
+        bd_result,
+        feature_id="F001",
     )
     inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
     assert "unit_mismatch" in inbox_text
@@ -1077,7 +1218,10 @@ def test_v2_emit_budget_kind_specific_event_config_required(tmp_path: Path) -> N
         details={"cause": "caps_file_missing"},
     )
     supervisor._emit_budget_kind_specific_event(
-        plan_dir, "test-plan", bd_result, feature_id="F001",
+        plan_dir,
+        "test-plan",
+        bd_result,
+        feature_id="F001",
     )
     inbox_text = (plan_dir / inbox.INBOX_FILENAME).read_text()
     assert "config_required" in inbox_text
@@ -1098,12 +1242,18 @@ def test_v2_emit_budget_kind_specific_event_tripped_no_extra_event(tmp_path: Pat
     (plan_dir / "audit").mkdir()
 
     bd_result = cb.BudgetCeilingResult(
-        kind=cb.BudgetCeilingKind.TRIPPED, tripped=True,
-        reason="claude rolling_7d 110% > 100%", agent="claude",
-        tier="max_20x", window="rolling_7d",
+        kind=cb.BudgetCeilingKind.TRIPPED,
+        tripped=True,
+        reason="claude rolling_7d 110% > 100%",
+        agent="claude",
+        tier="max_20x",
+        window="rolling_7d",
     )
     supervisor._emit_budget_kind_specific_event(
-        plan_dir, "test-plan", bd_result, feature_id="F001",
+        plan_dir,
+        "test-plan",
+        bd_result,
+        feature_id="F001",
     )
     inbox_path = plan_dir / inbox.INBOX_FILENAME
     # No event written — _trip_breaker handles the breaker_tripped emit

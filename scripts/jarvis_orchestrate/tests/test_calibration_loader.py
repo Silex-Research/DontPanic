@@ -13,7 +13,6 @@ import pytest
 
 from jarvis_orchestrate import calibration_loader as cal
 
-
 NOW = dt.datetime(2026, 4, 30, 12, 0, tzinfo=dt.timezone.utc)
 
 
@@ -46,8 +45,12 @@ def test_write_calibration_is_atomic(tmp_path: Path) -> None:
     print("\n[test] write_calibration_is_atomic ...")
     p = tmp_path / "quota_calibration.json"
     cal.write_calibration(
-        vendor="claude", window="rolling_7d",
-        dashboard_pct=13.0, observed_native=585_000_000, now=NOW, path=p,
+        vendor="claude",
+        window="rolling_7d",
+        dashboard_pct=13.0,
+        observed_native=585_000_000,
+        now=NOW,
+        path=p,
     )
     assert p.is_file()
     # .tmp sibling cleaned up by os.replace
@@ -83,12 +86,20 @@ def test_write_calibration_preserves_other_window(tmp_path: Path) -> None:
     print("\n[test] write_calibration_preserves_other_window ...")
     p = tmp_path / "quota_calibration.json"
     cal.write_calibration(
-        vendor="claude", window="rolling_7d",
-        dashboard_pct=13.0, observed_native=585_000_000, now=NOW, path=p,
+        vendor="claude",
+        window="rolling_7d",
+        dashboard_pct=13.0,
+        observed_native=585_000_000,
+        now=NOW,
+        path=p,
     )
     cal.write_calibration(
-        vendor="claude", window="rolling_5h",
-        dashboard_pct=9.0, observed_native=18_000_000, now=NOW, path=p,
+        vendor="claude",
+        window="rolling_5h",
+        dashboard_pct=9.0,
+        observed_native=18_000_000,
+        now=NOW,
+        path=p,
     )
     loaded = cal.load(p)
     assert loaded["claude"]["rolling_7d"]["dashboard_pct"] == 13.0
@@ -134,8 +145,12 @@ def test_get_for_window_returns_breaker_shape(tmp_path: Path) -> None:
     print("\n[test] get_for_window_returns_breaker_shape ...")
     p = tmp_path / "out.json"
     cal.write_calibration(
-        vendor="claude", window="rolling_7d",
-        dashboard_pct=13.0, observed_native=585_000_000, now=NOW, path=p,
+        vendor="claude",
+        window="rolling_7d",
+        dashboard_pct=13.0,
+        observed_native=585_000_000,
+        now=NOW,
+        path=p,
     )
     data = cal.load(p)
     block = cal.get_for_window(data, "claude", "rolling_7d")
@@ -150,8 +165,12 @@ def test_get_for_window_returns_none_on_miss(tmp_path: Path) -> None:
     print("\n[test] get_for_window_returns_none_on_miss ...")
     p = tmp_path / "out.json"
     cal.write_calibration(
-        vendor="claude", window="rolling_7d",
-        dashboard_pct=13.0, observed_native=585_000_000, now=NOW, path=p,
+        vendor="claude",
+        window="rolling_7d",
+        dashboard_pct=13.0,
+        observed_native=585_000_000,
+        now=NOW,
+        path=p,
     )
     data = cal.load(p)
     assert cal.get_for_window(data, "claude", "rolling_5h") is None
@@ -172,7 +191,9 @@ def test_is_stale_threshold_boundary(tmp_path: Path) -> None:
     assert not cal.is_stale({}, now=NOW)  # no stamp → not stale
     assert not cal.is_stale(None, now=NOW)
     assert not cal.is_stale({"stamped_at": "garbage"}, now=NOW)
-    print(f"  ✓ stale at >{cal.STALE_WARNING_DAYS}d; missing/malformed timestamps treated as not-stale")
+    print(
+        f"  ✓ stale at >{cal.STALE_WARNING_DAYS}d; missing/malformed timestamps treated as not-stale"
+    )
 
 
 def test_quota_check_integrates_calibration_into_vendors_block(tmp_path: Path, monkeypatch) -> None:
@@ -183,35 +204,87 @@ def test_quota_check_integrates_calibration_into_vendors_block(tmp_path: Path, m
     uncalibrated."""
     print("\n[test] quota_check_integrates_calibration_into_vendors_block ...")
     import sys as _sys
+
     _sys.path.insert(0, "scripts")
     import quota_check as qc
 
     cal_path = tmp_path / "quota_calibration.json"
     cal.write_calibration(
-        vendor="claude", window="rolling_7d",
-        dashboard_pct=13.0, observed_native=585_072_343.7,
-        now=NOW, path=cal_path,
+        vendor="claude",
+        window="rolling_7d",
+        dashboard_pct=13.0,
+        observed_native=585_072_343.7,
+        now=NOW,
+        path=cal_path,
     )
     monkeypatch.setattr(cal, "CALIBRATION_FILE", cal_path)
 
     # Stub the vendor helpers to avoid touching the real machine state.
-    monkeypatch.setattr(qc, "_claude_usage_v2",
-        lambda window, **_: {"kind": window, "observed_native": 100, "observed_unit": "weighted_tokens_local_proxy",
-                             "models": {}, "diagnostics": {"signal": "ok"}})
-    monkeypatch.setattr(qc, "_codex_usage_v2",
-        lambda window, **_: {"kind": window, "observed_native": 0, "observed_unit": "tokens_local_proxy",
-                             "models": {}, "diagnostics": {"signal": "ok"}})
-    monkeypatch.setattr(qc, "_gemini_usage_v2",
-        lambda **_: {"kind": "rolling_24h", "observed_native": 0, "observed_unit": "requests",
-                     "models": {}, "diagnostics": {"signal": "ok"}})
-    monkeypatch.setattr(qc, "_grok_usage_v2",
-        lambda **_: {"kind": "rolling_2h", "observed_native": None, "observed_unit": None,
-                     "models": {}, "diagnostics": {"signal": "absent"}})
+    monkeypatch.setattr(
+        qc,
+        "_claude_usage_v2",
+        lambda window, **_: {
+            "kind": window,
+            "observed_native": 100,
+            "observed_unit": "weighted_tokens_local_proxy",
+            "models": {},
+            "diagnostics": {"signal": "ok"},
+        },
+    )
+    monkeypatch.setattr(
+        qc,
+        "_codex_usage_v2",
+        lambda window, **_: {
+            "kind": window,
+            "observed_native": 0,
+            "observed_unit": "tokens_local_proxy",
+            "models": {},
+            "diagnostics": {"signal": "ok"},
+        },
+    )
+    monkeypatch.setattr(
+        qc,
+        "_gemini_usage_v2",
+        lambda **_: {
+            "kind": "rolling_24h",
+            "observed_native": 0,
+            "observed_unit": "requests",
+            "models": {},
+            "diagnostics": {"signal": "ok"},
+        },
+    )
+    monkeypatch.setattr(
+        qc,
+        "_grok_usage_v2",
+        lambda **_: {
+            "kind": "rolling_2h",
+            "observed_native": None,
+            "observed_unit": None,
+            "models": {},
+            "diagnostics": {"signal": "absent"},
+        },
+    )
     monkeypatch.setattr(qc, "_ollama_models_loaded", lambda: [])
-    monkeypatch.setattr(qc, "_detect_claude_tier", lambda *a, **k: {"tier": "max_20x", "source": "/fake", "signal": "default"})
-    monkeypatch.setattr(qc, "_detect_codex_tier", lambda *a, **k: {"tier": "plus", "source": "/fake", "signal": "ok"})
-    monkeypatch.setattr(qc, "_detect_gemini_tier", lambda *a, **k: {"tier": "code_assist_individuals", "source": "/fake", "signal": "oauth"})
-    monkeypatch.setattr(qc, "_detect_grok_tier", lambda *a, **k: {"tier": "absent", "source": "/fake", "signal": "absent"})
+    monkeypatch.setattr(
+        qc,
+        "_detect_claude_tier",
+        lambda *a, **k: {"tier": "max_20x", "source": "/fake", "signal": "default"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_codex_tier",
+        lambda *a, **k: {"tier": "plus", "source": "/fake", "signal": "ok"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_gemini_tier",
+        lambda *a, **k: {"tier": "code_assist_individuals", "source": "/fake", "signal": "oauth"},
+    )
+    monkeypatch.setattr(
+        qc,
+        "_detect_grok_tier",
+        lambda *a, **k: {"tier": "absent", "source": "/fake", "signal": "absent"},
+    )
 
     state = qc._build_state(now=NOW)
 
