@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import sys
 from pathlib import Path
@@ -27,6 +28,17 @@ from pydantic import ValidationError  # noqa: E402
 
 from jarvis_orchestrate.executors.base import DispatchResult  # noqa: E402
 from jarvis_orchestrate.plan_loader import LoadedPlan  # noqa: E402
+from jarvis_orchestrate.target_context_prelude import (  # noqa: E402
+    TargetContextError,
+    parse_prelude_block,
+    render_prelude,
+    resolve_repo,
+    validate_target_context,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+_PRELUDE_HEADER = "## Target context\n"
 
 
 def build_audit(
@@ -162,8 +174,81 @@ def _summary(result: DispatchResult, feature_id: str) -> str:
     return f"[{feature_id}] DISPATCH FAILED: {result.error or 'unknown error'}"
 
 
+def _normalize_summary(audit: dict[str, Any]) -> dict[str, Any]:
+    """F002 write-side gate — validate target_context, then inject the
+    canonical D001 prelude into `summary` if it isn't already present.
+
+    Returns a NEW audit dict (shallow-copied; the input is not mutated)
+    with `summary` updated when injection fires; returns the input
+    audit untouched when validation passes and the canonical prelude
+    header is already present (no-op idempotence).
+
+    Raises ``TargetContextError`` (wrapped with audit_id + plan_id
+    context) when ``validate_target_context`` rejects the struct shape
+    OR when a header is present but the prelude body is structurally
+    malformed (wrong field order, mistyped labels, missing line, missing
+    trailing blank). Caller MUST NOT persist on raise — F002 acceptance
+    #5 is no-partial.
+
+    Presence detection uses ``parse_prelude_block`` so that only a FULL
+    canonical block (header + 4 well-formed field lines + trailing blank)
+    qualifies as "present." A header-only or otherwise malformed block
+    no longer false-positive no-ops (codex i1 MEDIUM finding from the
+    F002 confirmation volley). Case-g (header + 4 well-formed lines whose
+    VALUES disagree with struct) still no-ops because parse_prelude_block
+    returns the parsed dict — F002 only checks structural presence, not
+    value correctness; F003's classifier files the value-mismatch i1.
+    """
+    audit_id = audit.get("audit_id") or "<unknown>"
+    plan_id = audit.get("task_id") or "<unknown>"
+    tc = audit.get("target_context")
+
+    try:
+        validate_target_context(tc)
+    except TargetContextError as exc:
+        wrapped = TargetContextError(f"envelope {audit_id} for plan {plan_id}: {exc}")
+        _LOGGER.warning("audit_writer: %s", wrapped)
+        raise wrapped from exc
+
+    # validate_target_context guarantees tc is a dict here; satisfy type
+    # checkers and guard against a future change to the validator.
+    if not isinstance(tc, dict):
+        raise TargetContextError(
+            f"envelope {audit_id} for plan {plan_id}: target_context not a dict after validate"
+        )
+
+    summary = audit.get("summary") or ""
+    try:
+        parsed = parse_prelude_block(summary)
+    except TargetContextError as exc:
+        wrapped = TargetContextError(
+            f"envelope {audit_id} for plan {plan_id}: malformed prelude block: {exc}"
+        )
+        _LOGGER.warning("audit_writer: %s", wrapped)
+        raise wrapped from exc
+
+    if parsed is not None:
+        return audit  # no-op (case-c golden, case-g value-mismatch, idempotent re-persist)
+
+    repo = resolve_repo(tc)
+    rendered = render_prelude({**tc, "repo": repo})
+
+    new_audit = dict(audit)
+    new_audit["summary"] = rendered + summary
+    _LOGGER.info("audit_writer: injected target-context prelude for %s", audit_id)
+    return new_audit
+
+
 def write(audit: dict[str, Any], plan_dir: Path) -> Path:
-    """Validate against audit.schema.json (via Pydantic) and persist."""
+    """Validate against audit.schema.json (via Pydantic) and persist.
+
+    F002: ``_normalize_summary`` runs first — it validates the structured
+    ``target_context`` (raises ``TargetContextError`` on shape failure
+    BEFORE any disk I/O so the envelope file does not land) and
+    prepends the canonical prelude when the summary lacks it.
+    """
+    audit = _normalize_summary(audit)
+
     try:
         Audit.model_validate(audit)
     except ValidationError as exc:
