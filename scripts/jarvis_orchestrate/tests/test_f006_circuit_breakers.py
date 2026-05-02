@@ -1626,8 +1626,10 @@ target_project: none
         gate_pause.add_breaker(plan_dir, "breaker:wall_clock", plan_id=plan_id)
         assert "breaker:wall_clock" in gate_pause.active_breakers(plan_dir)
         buf = io.StringIO()
+        # Plan 2026-05-02-001 F001: bare `resume <plan>` now exits 2; the
+        # bulk-clear semantic this test exercises is now `resume --all`.
         with redirect_stdout(buf):
-            rc = cli.main(["resume", str(plan_dir)])
+            rc = cli.main(["resume", str(plan_dir), "--all"])
         assert rc == 0
         # After resume, active breakers must be cleared
         assert "breaker:wall_clock" not in gate_pause.active_breakers(plan_dir), (

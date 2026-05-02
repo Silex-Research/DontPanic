@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-05-02-001-feat-resume-gate-discipline",
+  "audit_id": "2026-05-02-001-feat-resume-gate-discipline#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-02T06:14:35Z",
+  "completed_at": "2026-05-02T06:18:09Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "command accountability was not captured. Evidence: the implementer summary lists side-effect commands, but `target_context.commands_run` is `[]`, likely because commands were written as bullet/backticked text instead of one `$ ...` line each. Recommendation: re-emit the implementer summary with each side-effect command on its own `$ `-prefixed line so the supervisor records them.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "the plan asked for the seven CLI shapes to be covered by a parametrized test, but `test_cli_resume.py` uses separate tests and contains no `parametrize`. Recommendation: consolidate the seven shape cases under `pytest.mark.parametrize` or explicitly amend the plan if separate tests are acceptable. Checks run: $ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_cli_resume.py -v $ PYTHONDONTWRITEBYTECODE=1 ruff check scripts/jarvis_orchestrate/cli",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-02-001-feat-resume-gate-discipline-w5s69xl4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 281081 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1331592,
+    "tokens_out": 17472,
+    "api_calls": 1
+  },
+  "summary": "[F001] Repo: Jarvis\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. The implementer’s summary correctly declares `Repo: Jarvis`, `Env: dev`, `Project: (none)`, and the structured `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): command accountability was not captured. Evidence: the implementer summary lists side-effect commands, but `target_context.commands_run` is `[]`, likely because commands were written as bullet/backticked text instead of one `$ ...` line each. Recommendation: re-emit the implementer summary with each side-effect command on its own `$ `-prefixed line so the supervisor records them.\n\nFINDING (low, test_coverage): the plan asked for the seven CLI shapes to be covered by a parametrized test, but `test_cli_resume.py` uses separate tests and contains no `parametrize`. Recommendation: consolidate the seven shape cases under `pytest.mark.parametrize` or explicitly amend the plan if separate tests are acceptable.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_cli_resume.py -v\n$ PYTHONDONTWRITEBYTECODE=1 ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py\n$ git diff HEAD~1 --check\n\n`ruff` passe",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_cli_resume.py -v",
+      "PYTHONDONTWRITEBYTECODE=1 ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py",
+      "git diff HEAD~1 --check"
+    ]
+  }
+}

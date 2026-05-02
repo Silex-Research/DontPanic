@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-02-001-feat-resume-gate-discipline",
+  "audit_id": "2026-05-02-001-feat-resume-gate-discipline#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-02T06:09:52Z",
+  "completed_at": "2026-05-02T06:12:57Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "implementer did not declare `{Repo, Env: dev, Project: (none)}` in their summary; evidence: `claude-implementer-i0.json` summary line lacks all three declaration lines, and the JSON already carries a high finding for missing `Env: dev`; recommendation: rerun/fix the implementer summary with the required declaration block.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "the required new resume CLI test module is untracked and therefore not part of the delivered tracked diff; evidence: `git status --short` reports `?? scripts/jarvis_orchestrate/tests/test_cli_resume.py`, while only the evidence files are staged; recommendation: add the test file to the patch/commit so CI and reviewers receive the required coverage. No forbidden command shapes were present in implementer `target_context.commands_run` because it was empty. Checks run: $ PYTHONDONTWRITEBYTECODE=1 r",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-02-001-feat-resume-gate-discipline-w5s69xl4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 211689 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1496968,
+    "tokens_out": 12959,
+    "api_calls": 1
+  },
+  "summary": "[F001] Repo: Jarvis  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. FINDING (high, correctness): implementer did not declare `{Repo, Env: dev, Project: (none)}` in their summary; evidence: `claude-implementer-i0.json` summary line lacks all three declaration lines, and the JSON already carries a high finding for missing `Env: dev`; recommendation: rerun/fix the implementer summary with the required declaration block. FINDING (high, test_coverage): the required new resume CLI test module is untracked and therefore not part of the delivered tracked diff; evidence: `git status --short` reports `?? scripts/jarvis_orchestrate/tests/test_cli_resume.py`, while only the evidence files are staged; recommendation: add the test file to the patch/commit so CI and reviewers receive the required coverage. No forbidden command shapes were present in implementer `target_context.commands_run` because it was empty.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py\n$ PYTHONDONTWRITEBYTECODE=1 RUFF_CACHE_DIR=/tmp/jarvis-ruff-cache ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py",
+      "PYTHONDONTWRITEBYTECODE=1 RUFF_CACHE_DIR=/tmp/jarvis-ruff-cache ruff check scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py",
+      "PYTHONDONTWRITEBYTECODE=1 ruff check --no-cache scripts/jarvis_orchestrate/cli.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/gate_pause.py scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_cli_resume.py scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py::test_cli_resume_clears_active_breaker scripts/jarvis_orchestrate/tests/test_f008_engagement_surface.py::test_e2e_pause_then_approve_then_resume -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -s -p no:cacheprovider --collect-only scripts/jarvis_orchestrate/tests/test_cli_resume.py -q"
+    ]
+  }
+}

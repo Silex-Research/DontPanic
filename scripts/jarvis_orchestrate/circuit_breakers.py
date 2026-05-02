@@ -4,8 +4,9 @@ Six of seven triggers integrate with F008's gate-pause framework: a breaker
 trip writes a synthetic `breaker:<kind>` entry into <plan_dir>/audit/gate-state.json's
 `active_breakers` list. The supervisor's pre-dispatch gate-pause check unions
 plan.human_gates with active_breakers; either source blocks dispatch until the
-operator clears via `jarvis approve <plan-id> breaker:<kind>` or `jarvis resume
-<plan-id>`.
+operator clears via `jarvis approve <plan-id> breaker:<kind>` (or
+`jarvis resume <plan-id> --gate breaker:<kind>` for parity, or
+`jarvis resume <plan-id> --all` to clear every gate at once).
 
 The seventh trigger — the global circuit breaker — is hard stop, not pause.
 After 3 iteration_cap hits in any 24h window across all plans (per F006 spec),

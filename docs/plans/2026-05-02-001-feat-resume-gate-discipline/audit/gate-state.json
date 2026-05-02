@@ -1,0 +1,61 @@
+{
+  "plan_id": "2026-05-02-001-feat-resume-gate-discipline",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-02T05:38:22Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl",
+        "pre_merge"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-02T05:38:32Z",
+      "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-02T05:39:06Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-02T05:42:12Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T05:57:48Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T06:05:40Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:diminishing_returns",
+      "at": "2026-05-02T06:18:09Z",
+      "actor": "supervisor",
+      "reason": "diminishing returns: auditor finding counts [2, 2] non-decreasing across 2 consecutive needs_changes rounds"
+    }
+  ],
+  "active_breakers": [
+    "breaker:diminishing_returns"
+  ]
+}

@@ -92,7 +92,7 @@ def _trip_breaker(
             + (
                 "Operator clearance required: "
                 f"`jarvis approve {plan_id} breaker:{kind.value}` "
-                f"or `jarvis resume {plan_id}`."
+                f"or `jarvis resume {plan_id} --all`."
                 if kind in circuit_breakers.APPROVAL_BREAKERS
                 else "Hard stop: global circuit breaker. No operator clearance "
                 "available — wait out the 24h window."
@@ -344,7 +344,9 @@ def _quota_gate(agent: str) -> tuple[float | None, str]:
     # for the cost-model + cost-guard skills until plan 2026-04-29-004
     # reactivation migrates them. Single deprecation log per process.
     circuit_breakers._warn_once(
-        "quota_gate", "_global", "legacy_fallback",
+        "quota_gate",
+        "_global",
+        "legacy_fallback",
         "[quota_gate] vendors{} missing in quota_state.json; using legacy "
         "models{}.percent_weekly path. Re-run scripts/quota_check.py.",
     )
@@ -363,9 +365,7 @@ def _quota_gate(agent: str) -> tuple[float | None, str]:
     return pct, line
 
 
-def _quota_gate_v2(
-    agent: str, vendors: dict, enforce: str
-) -> tuple[float | None, str]:
+def _quota_gate_v2(agent: str, vendors: dict, enforce: str) -> tuple[float | None, str]:
     """V2 path for _quota_gate — shares collect_agent_coverage with the
     breaker. Translates the per-agent verdict into the (pct, line) shape
     the existing supervisor caller + signoff_writer expect."""
@@ -373,7 +373,9 @@ def _quota_gate_v2(
         caps = quota_caps_loader.load()
     except quota_caps_loader.QuotaCapsError as exc:
         circuit_breakers._warn_once(
-            "quota_gate", agent, "caps_file_missing",
+            "quota_gate",
+            agent,
+            "caps_file_missing",
             f"[quota_gate] caps file unavailable: {exc}",
         )
         line = (
@@ -381,11 +383,13 @@ def _quota_gate_v2(
             f"(run `python -m jarvis_orchestrate quota-caps init`)"
         )
         if enforce == "hard":
-            raise QuotaExceeded(line)
+            raise QuotaExceeded(line) from exc
         return None, line
 
     report = circuit_breakers.collect_agent_coverage(
-        agent=agent, vendors=vendors, caps=caps,
+        agent=agent,
+        vendors=vendors,
+        caps=caps,
     )
 
     if report.terminal is not None:
@@ -402,7 +406,9 @@ def _quota_gate_v2(
 
     if report.config_cause is not None:
         circuit_breakers._warn_once(
-            "quota_gate", agent, report.config_cause,
+            "quota_gate",
+            agent,
+            report.config_cause,
             f"[quota_gate] {agent}: {report.config_cause}",
         )
         line = (
@@ -513,8 +519,8 @@ def dispatch_single_agent(
             body=(
                 f"Single-agent dispatch paused before run.\n\n"
                 f"Awaiting: {gate_check.unmet}\n\n"
-                f"Clear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
-                f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} <gate>"
+                f"Clear one (preferred): python -m jarvis_orchestrate approve {loaded.plan_id} <gate>\n"
+                f"Clear all (explicit):  python -m jarvis_orchestrate resume {loaded.plan_id} --all"
             ),
             unmet_gates=",".join(gate_check.unmet),
             feature_id=feature_id,
@@ -527,7 +533,7 @@ def dispatch_single_agent(
         raise PausedOnGate(
             f"single-agent paused on gates {gate_check.unmet}; "
             f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
-            f"`jarvis resume {loaded.plan_id}`"
+            f"`jarvis resume {loaded.plan_id} --all`"
         )
 
     with (
@@ -780,8 +786,8 @@ def dispatch_volley(
         body = f"Admission defer activated: {gate}\n\n"
         body += f"Reason: {reason_for.get(gate, '(see gate-state.json)')}\n"
         body += (
-            f"\nClear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
-            f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} {gate}"
+            f"\nClear one (preferred): python -m jarvis_orchestrate approve {loaded.plan_id} {gate}\n"
+            f"Clear all (explicit):  python -m jarvis_orchestrate resume {loaded.plan_id} --all"
         )
         inbox.append_event(
             loaded.plan_dir,
@@ -829,8 +835,8 @@ def dispatch_volley(
                 f"Declared gates: {gate_check.declared}\n"
                 f"Cleared gates : {gate_check.cleared}\n"
                 f"Awaiting      : {gate_check.unmet}\n\n"
-                f"Clear all:    python -m jarvis_orchestrate resume {loaded.plan_id}\n"
-                f"Approve one:  python -m jarvis_orchestrate approve {loaded.plan_id} <gate>"
+                f"Clear one (preferred): python -m jarvis_orchestrate approve {loaded.plan_id} <gate>\n"
+                f"Clear all (explicit):  python -m jarvis_orchestrate resume {loaded.plan_id} --all"
             ),
             unmet_gates=",".join(gate_check.unmet),
             target_env=effective_env,
@@ -848,7 +854,7 @@ def dispatch_volley(
             0,
             f"unmet gates: {gate_check.unmet}; "
             f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
-            f"`jarvis resume {loaded.plan_id}`",
+            f"`jarvis resume {loaded.plan_id} --all`",
             audit_paths,
         )
 
@@ -928,9 +934,7 @@ def dispatch_volley(
                 return _trip_and_return(
                     circuit_breakers.BreakerKind.WALL_CLOCK, wc_reason, iteration
                 )
-            bd_result = circuit_breakers.check_budget_ceiling(
-                audit_paths, per_agent_caps
-            )
+            bd_result = circuit_breakers.check_budget_ceiling(audit_paths, per_agent_caps)
             if bd_result.tripped:
                 # F006b fix#1: emit kind-specific INBOX event BEFORE the
                 # generic breaker_tripped event so operators see a clear
