@@ -1,0 +1,31 @@
+{
+  "plan_id": "2026-05-01-005-feat-target-context-platform-fix",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-02T06:57:45Z",
+      "actor": "operator"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-02T06:57:45Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T07:18:40Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    }
+  ],
+  "active_breakers": [
+    "breaker:no_progress"
+  ]
+}
