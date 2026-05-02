@@ -4,15 +4,29 @@
   "agent": "codex",
   "agent_role": "auditor",
   "iteration": 1,
-  "started_at": "2026-05-02T07:16:16Z",
-  "completed_at": "2026-05-02T07:18:40Z",
+  "started_at": "2026-05-02T16:31:10Z",
+  "completed_at": "2026-05-02T16:33:54Z",
   "audit_status": "needs_changes",
   "findings": [
     {
       "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "case-c byte-equality proof still is not verbatim against the required F001 case-c fixture. Evidence: `test_audit_writer_normalize.py:63-79` sanitizes the F001 fixture, `:170-203` compares against that sanitized serialization, and `:209-230` uses a new F002-owned golden instead. Recommendation: make the F001 case-c fixture writer-valid as-is, then assert persisted bytes equal that source fixture’s raw bytes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
       "category": "correctness",
-      "feature_id": "F001",
-      "issue": "implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: `claude-implementer-i1.json.summary` starts with `[F001] All three regressions resolved...` and contains no leading `Repo: Jarvis`, `Env: dev`, `Project: (none)` block, even though `target_context.env` is `dev` and `target_context.project` is `null`; recommendation: prepend the required declaration block to the implementer summary. No forbidden command shapes found in `target_context.commands_r",
+      "feature_id": "F002",
+      "issue": "`_normalize_summary` uses only `summary.lstrip().startswith(\"## Target context\\n\")`, so a malformed header-only prelude would no-op instead of proving a canonical block is present. Evidence: `audit_writer.py:214-216`. Recommendation: detect canonical prelude shape while preserving case-g value-mismatch no-op behavior.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "forward-only proof still does not run a real synthetic supervisor read-only cycle over the copied historical envelope. Evidence: `test_audit_writer_normalize.py:431-432` calls circuit-breaker helpers directly. Recommendation: exercise the supervisor read-only inspection path itself, without calling `audit_writer.write`. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orc",
       "evidence": "Extracted from auditor summary."
     }
   ],
@@ -20,24 +34,21 @@
     "codex auditor round (iteration 1)",
     "quota gate aud=12.638534100000001",
     "reviewing implementer audit at claude-implementer-i1.json",
-    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-waar3qb9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
-    "captured stdout 247527 bytes"
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-lmg0e6fx target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 213775 bytes"
   ],
   "quota_consumed": {
-    "tokens_in": 886944,
-    "tokens_out": 10095,
+    "tokens_in": 785206,
+    "tokens_out": 11530,
     "api_calls": 1
   },
-  "summary": "[F001] Repo: Jarvis\nEnv: dev\nProject: (none)\nCommand: audit complete; no further commands\n\nOverall verdict: needs_changes. FINDING (high, correctness): implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: `claude-implementer-i1.json.summary` starts with `[F001] All three regressions resolved...` and contains no leading `Repo: Jarvis`, `Env: dev`, `Project: (none)` block, even though `target_context.env` is `dev` and `target_context.project` is `null`; recommendation: prepend the required declaration block to the implementer summary. No forbidden command shapes found in `target_context.commands_run`. Code/fixtures otherwise matched the F001 scope I inspected: HEAD only adds the helper module, tests, and seven fixtures; no supervisor/audit_writer/auditor-prompt changes.\n\nChecks run:\n$ git status --short\n$ git diff HEAD~1\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"manual F001 fixture/helper checks\"\n$ ruff check scripts/jarvis_orchestrate/target_context_prelude.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py\n\nPytest could not start because this read-only sandbox has no usable writable temp directory; the manual no-temp helper/fixture probe passed, and `ruff` passed.",
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F002] Repo: Jarvis\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is present/correct, and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, test_coverage): case-c byte-equality proof still is not verbatim against the required F001 case-c fixture. Evidence: `test_audit_writer_normalize.py:63-79` sanitizes the F001 fixture, `:170-203` compares against that sanitized serialization, and `:209-230` uses a new F002-owned golden instead. Recommendation: make the F001 case-c fixture writer-valid as-is, then assert persisted bytes equal that source fixture’s raw bytes.\n\nFINDING (medium, correctness): `_normalize_summary` uses only `summary.lstrip().startswith(\"## Target context\\n\")`, so a malformed header-only prelude would no-op instead of proving a canonical block is present. Evidence: `audit_writer.py:214-216`. Recommendation: detect canonical prelude shape while preserving case-g value-mismatch no-op behavior.\n\nFINDING (low, test_coverage): forward-only proof still does not run a real synthetic supervisor read-only cycle over the copied historical envelope. Evidence: `test_audit_writer_normalize.py:431-432` calls circuit-breaker helpers directly. Recommendation: exercise the supervisor read-only inspection path itself, without calling `audit_writer.write`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scrip",
   "target_context": {
     "env": "dev",
     "project": null,
     "commands_run": [
-      "git status --short",
-      "git diff HEAD~1",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q -p no:cacheprovider",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"manual F001 fixture/helper checks\"",
-      "ruff check scripts/jarvis_orchestrate/target_context_prelude.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py"
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q",
+      "ruff check --no-cache scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py scripts/jarvis_orchestrate/audit_writer.py scripts/jarvis_orchestrate/target_context_prelude.py"
     ]
   }
 }

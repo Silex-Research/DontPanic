@@ -23,9 +23,43 @@
       "at": "2026-05-02T07:18:40Z",
       "actor": "supervisor",
       "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-02T13:14:39Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:no_progress"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T13:15:05Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T15:44:20Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-02T16:20:27Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:diminishing_returns",
+      "at": "2026-05-02T16:33:54Z",
+      "actor": "supervisor",
+      "reason": "diminishing returns: auditor finding counts [2, 3] non-decreasing across 2 consecutive needs_changes rounds"
     }
   ],
   "active_breakers": [
-    "breaker:no_progress"
+    "breaker:diminishing_returns"
   ]
 }

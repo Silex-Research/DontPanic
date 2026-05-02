@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-05-01-005-feat-target-context-platform-fix",
+  "audit_id": "2026-05-01-005-feat-target-context-platform-fix#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-02T15:41:49Z",
+  "completed_at": "2026-05-02T15:44:20Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the explicit case-c byte-equality proof does not use the required F001 case-c fixture verbatim; evidence: [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py:186) compares against a new `evidence/f002/golden/case-c-writer-valid.json`, while the F001 case-c fixture path is only sanitized and checked for summary preservation at [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the claimed CLI nonzero proof does not exercise the CLI or assert an exit code; evidence: [test_audit_writer_f002_supervisor_integration.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py:276) only asserts `supervisor.dispatch_volley(...)` raises `TargetContextError`; recommendation: call the real CLI entrypoint or `cli.main(...)` and assert `SystemExit.code != 0`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the forward-only proof is weaker than requested because it does not run a synthetic supervisor read-only cycle over the copied historical envelope; evidence: [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py:397) writes an unrelated sample instead; recommendation: replace that with a read-only supervisor inspection path while keeping the static no-glob check. `audit.schema.json` was not modified. I attempted t",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-_l4ntaex target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 170363 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 823827,
+    "tokens_out": 11417,
+    "api_calls": 1
+  },
+  "summary": "[F002] Repo: Jarvis\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is present and correct, and I found no forbidden command shapes in `target_context.commands_run`. FINDING (high, test_coverage): the explicit case-c byte-equality proof does not use the required F001 case-c fixture verbatim; evidence: [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py:186) compares against a new `evidence/f002/golden/case-c-writer-valid.json`, while the F001 case-c fixture path is only sanitized and checked for summary preservation at [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py:211); recommendation: make the required case-c fixture writer-valid or add a verbatim byte-equality assertion against the actual F001 case-c source fixture. FINDING (medium, test_coverage): the claimed CLI nonzero proof does not exercise the CLI or assert an exit code; evidence: [test_audit_writer_f002_supervisor_integration.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py:276) only asserts `supervisor.dispatch_volley(...)` raises `TargetContextError`; recommendation: call the real CLI entrypoint or `cli.main(...)` and assert `SystemExit.code != 0`. FINDING (low, test_coverage): the forward-only proof is weaker than requested because it does ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py -q"
+    ]
+  }
+}

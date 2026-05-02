@@ -14,13 +14,13 @@
     "audit/codex-auditor-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 0,
-    "needs_changes_count": 4,
+    "signed_off_count": 1,
+    "needs_changes_count": 3,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
   "signoff": false,
-  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds",
+  "signoff_reason": "diminishing returns: auditor finding counts [2, 3] non-decreasing across 2 consecutive needs_changes rounds",
   "next_action": "remediate",
-  "decided_at": "2026-05-02T07:18:40Z"
+  "decided_at": "2026-05-02T16:33:54Z"
 }

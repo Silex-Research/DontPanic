@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+rootdir: /Users/bayesian/Documents/GitHub/Jarvis
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 21 items
+
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_a_summary_lacks_prelude_writer_injects PASSED [  4%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_a_idempotence_double_persist PASSED [  9%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_b_auditor_summary_lacks_prelude_writer_injects PASSED [ 14%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_b_idempotence_double_persist PASSED [ 19%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_c_golden_no_op_byte_identical_verbatim PASSED [ 23%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_c_fixture_no_op_summary_preserved PASSED [ 28%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_c_idempotence_double_persist PASSED [ 33%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_case_g_value_mismatch_no_op PASSED [ 38%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_invalid_struct_raises_no_partial_artifact[case-d-struct-absent.json-d] PASSED [ 42%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_invalid_struct_raises_no_partial_artifact[case-e-struct-invalid-empty-env.json-e] PASSED [ 47%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_invalid_struct_raises_no_partial_artifact[case-f-commands-without-target.json-f] PASSED [ 52%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_error_message_carries_audit_id_and_plan_id PASSED [ 57%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_log_info_on_injection PASSED [ 61%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_log_warning_on_validation_failure PASSED [ 66%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_no_log_on_no_op PASSED [ 71%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_forward_only_no_walk_of_historical_files PASSED [ 76%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_audit_writer_source_has_no_directory_walks PASSED [ 80%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py::test_prelude_header_constant_matches_template_first_line PASSED [ 85%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py::test_case_a_supervisor_roundtrip_injects_prelude PASSED [ 90%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py::test_case_d_supervisor_missing_target_context_raises_no_file_landed PASSED [ 95%]
+scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py::test_case_d_supervisor_exit_code_propagates_via_cli_nonzero PASSED [100%]
+
+============================== 21 passed in 0.20s ==============================

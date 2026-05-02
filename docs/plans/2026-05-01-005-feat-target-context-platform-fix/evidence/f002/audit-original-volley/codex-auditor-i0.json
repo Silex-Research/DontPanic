@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-05-01-005-feat-target-context-platform-fix",
+  "audit_id": "2026-05-01-005-feat-target-context-platform-fix#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-02T15:30:12Z",
+  "completed_at": "2026-05-02T15:35:06Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "the implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: [claude-implementer-i0.json](/Users/bayesian/Documents/GitHub/Jarvis/docs/plans/2026-05-01-005-feat-target-context-platform-fix/audit/claude-implementer-i0.json:29) contains only a timeout summary, and the audit itself records the missing Env finding; recommendation: rerun with the declaration block.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "the implementer did not complete F002; evidence: audit status is `blocked`, `api_calls` is `0`, and summary says Claude timed out after 600s at [claude-implementer-i0.json](/Users/bayesian/Documents/GitHub/Jarvis/docs/plans/2026-05-01-005-feat-target-context-platform-fix/audit/claude-implementer-i0.json:9); recommendation: rerun implementation to completion.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "required synthetic supervisor integration tests are missing; evidence: the new tests only call `audit_writer.write`, and no supervisor volley path appears in the F002 test search; recommendation: add case-a and case-d real supervisor-cycle tests.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the case-c byte-equality proof is weaker than acceptance; evidence: the test strips `_fixture_notes` and rewrites `agent` before comparing serialized bytes at [test_audit_writer_normalize.py](/Users/bayesian/Documents/GitHub/Jarvis/scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py:168), so it is not byte-equal to the source fixture verbatim; recommendation: make the golden fixture writer-valid or compare against an explicit verbatim golden file. `audit.schema.json` was not modified",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-_l4ntaex target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 227286 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 957617,
+    "tokens_out": 13271,
+    "api_calls": 1
+  },
+  "summary": "[F002] Repo: Jarvis\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. `target_context.commands_run` in the implementer audit is empty, so I found no forbidden command shapes. FINDING (high, correctness): the implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: [claude-implementer-i0.json](/Users/bayesian/Documents/GitHub/Jarvis/docs/plans/2026-05-01-005-feat-target-context-platform-fix/audit/claude-implementer-i0.json:29) contains only a timeout summary, and the audit itself records the missing Env finding; recommendation: rerun with the declaration block. FINDING (high, correctness): the implementer did not complete F002; evidence: audit status is `blocked`, `api_calls` is `0`, and summary says Claude timed out after 600s at [claude-implementer-i0.json](/Users/bayesian/Documents/GitHub/Jarvis/docs/plans/2026-05-01-005-feat-target-context-platform-fix/audit/claude-implementer-i0.json:9); recommendation: rerun implementation to completion. FINDING (high, test_coverage): required synthetic supervisor integration tests are missing; evidence: the new tests only call `audit_writer.write`, and no supervisor volley path appears in the F002 test search; recommendation: add case-a and case-d real supervisor-cycle tests. FINDING (medium, test_coverage): the case-c byte-equality proof is weaker than acceptance; evidence: the test strips `_fixture_notes` and rewrites `agent` before comparing serialized bytes at [test_audit_writer_normalize.py](/",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --",
+      "rg -n \"case-a|case-d|synthetic supervisor|supervisor volley|TargetContextError|prelude injected|f002\" scripts/jarvis_orchestrate/tests docs/plans/2026-05-01-005-feat-target-context-platform-fix -g '*.py' -g '*.md' -g '*.json'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from jarvis_orchestrate import audit_writer; from jarvis_orchestrate.target_context_prelude import TargetContextError; print('import ok')\""
+    ]
+  }
+}

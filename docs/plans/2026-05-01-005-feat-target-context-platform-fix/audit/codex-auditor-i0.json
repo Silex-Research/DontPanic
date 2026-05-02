@@ -4,36 +4,22 @@
   "agent": "codex",
   "agent_role": "auditor",
   "iteration": 0,
-  "started_at": "2026-05-02T07:07:31Z",
-  "completed_at": "2026-05-02T07:10:39Z",
+  "started_at": "2026-05-02T16:22:09Z",
+  "completed_at": "2026-05-02T16:25:21Z",
   "audit_status": "needs_changes",
   "findings": [
     {
       "severity": "high",
-      "category": "correctness",
-      "feature_id": "F001",
-      "issue": "Implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: `claude-implementer-i0.json.summary` starts with `[F001] F001 implemented...` and has no `Repo:` / `Env:` / `Project:` block; recommendation: prepend the canonical target declaration to the audit summary.",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "case-c idempotence proof is still not verbatim against the F001 fixture. Evidence: `test_case_c_f001_fixture_byte_equality` loads case-c but strips `_fixture_notes`, rewrites `agent`, and rewrites `audit_id` before comparing bytes, so it proves byte-equality against a sanitized reconstruction, not the source fixture bytes verbatim. Recommendation: make the case-c F001 fixture writer-valid as-is, or add a true raw-fixture byte equality path that satisfies the locked acceptance.",
       "evidence": "Extracted from auditor summary."
     },
     {
-      "severity": "high",
-      "category": "correctness",
-      "feature_id": "F001",
-      "issue": "`parse_prelude_block` accepts a look-alike prelude missing the required trailing blank line; evidence: the parser returns a dict after only validating the first four field lines at `target_context_prelude.py:226-254`; recommendation: require the blank separator after `Command` and add a regression test.",
-      "evidence": "Extracted from auditor summary."
-    },
-    {
-      "severity": "medium",
-      "category": "correctness",
-      "feature_id": "F001",
-      "issue": "`render_prelude` is not pure under the current implementation despite the acceptance requiring no I/O; evidence: `_resolve_repo` calls `subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], cwd=os.getcwd(), ...)` at `target_context_prelude.py:87-94`, and the docstring acknowledges I/O; recommendation: either move cwd repo resolution outside the renderer or clarify the contract so the D002 shim is explicit.",
-      "evidence": "Extracted from auditor summary."
-    },
-    {
-      "severity": "medium",
-      "category": "correctness",
-      "feature_id": "F001",
-      "issue": "the F001 deliverables are untracked and therefore not in the `HEAD~1` diff; evidence: `git status` showed `?? scripts/jarvis_orchestrate/target_context_prelude.py`, `?? scripts/jarvis_orchestrate/tests/test_target_context_prelude.py`, and the seven fixture files; recommendation: stage/commit/include these files so they actually land with the feature. Implementer `target_context.commands_run` contains no forbidden command shapes. Checks I ran: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python",
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "forward-only proof does not run a synthetic supervisor read-only cycle over the copied historical envelope. Evidence: `test_forward_only_no_walk_of_historical_files` copies the historical audit, then only calls `audit_writer.render_prelude` on an unrelated synthetic struct; it does not exercise a supervisor read-only inspection cycle. Recommendation: replace or extend it with a supervisor-level read-only path over the copied historical envelope, with no `audit_writer.write` call. Checks run: $ P",
       "evidence": "Extracted from auditor summary."
     }
   ],
@@ -41,24 +27,22 @@
     "codex auditor round (iteration 0)",
     "quota gate aud=12.638534100000001",
     "reviewing implementer audit at claude-implementer-i0.json",
-    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-waar3qb9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
-    "captured stdout 123944 bytes"
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-005-feat-target-context-platform-fix-lmg0e6fx target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 276402 bytes"
   ],
   "quota_consumed": {
-    "tokens_in": 770983,
-    "tokens_out": 14451,
+    "tokens_in": 1074265,
+    "tokens_out": 14330,
     "api_calls": 1
   },
-  "summary": "[F001] Repo: Jarvis\nEnv: dev\nProject: (none)\nCommand: (audit complete; no further commands)\n\nOverall verdict: needs_changes. FINDING (high, correctness): Implementer summary is missing the required `{Repo, Env: dev, Project: (none)}` declaration; evidence: `claude-implementer-i0.json.summary` starts with `[F001] F001 implemented...` and has no `Repo:` / `Env:` / `Project:` block; recommendation: prepend the canonical target declaration to the audit summary. FINDING (high, correctness): `parse_prelude_block` accepts a look-alike prelude missing the required trailing blank line; evidence: the parser returns a dict after only validating the first four field lines at `target_context_prelude.py:226-254`; recommendation: require the blank separator after `Command` and add a regression test. FINDING (medium, correctness): `render_prelude` is not pure under the current implementation despite the acceptance requiring no I/O; evidence: `_resolve_repo` calls `subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], cwd=os.getcwd(), ...)` at `target_context_prelude.py:87-94`, and the docstring acknowledges I/O; recommendation: either move cwd repo resolution outside the renderer or clarify the contract so the D002 shim is explicit. FINDING (medium, correctness): the F001 deliverables are untracked and therefore not in the `HEAD~1` diff; evidence: `git status` showed `?? scripts/jarvis_orchestrate/target_context_prelude.py`, `?? scripts/jarvis_orchestrate/tests/test_target_context_prelude.py`, an",
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Repo: Jarvis  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer summary correctly declares `Repo: Jarvis`, `Env: dev`, `Project: (none)`, and I found no forbidden command shapes in `target_context.commands_run`.\n\nFINDING (high, test_coverage): case-c idempotence proof is still not verbatim against the F001 fixture. Evidence: `test_case_c_f001_fixture_byte_equality` loads case-c but strips `_fixture_notes`, rewrites `agent`, and rewrites `audit_id` before comparing bytes, so it proves byte-equality against a sanitized reconstruction, not the source fixture bytes verbatim. Recommendation: make the case-c F001 fixture writer-valid as-is, or add a true raw-fixture byte equality path that satisfies the locked acceptance.\n\nFINDING (low, test_coverage): forward-only proof does not run a synthetic supervisor read-only cycle over the copied historical envelope. Evidence: `test_forward_only_no_walk_of_historical_files` copies the historical audit, then only calls `audit_writer.render_prelude` on an unrelated synthetic struct; it does not exercise a supervisor read-only inspection cycle. Recommendation: replace or extend it with a supervisor-level read-only path over the copied historical envelope, with no `audit_writer.write` call.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration",
   "target_context": {
     "env": "dev",
     "project": null,
     "commands_run": [
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q -p no:cacheprovider",
-      "ruff check scripts/jarvis_orchestrate/target_context_prelude.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from jarvis_orchestrate.target_context_prelude import PRELUDE_TEMPLATE, render_prelude, validate_target_context, parse_prelude_block, TargetContextError; tc={'repo':'Jarvis','env':'dev','project':None,'commands_run':['pytest -q']}; assert render_prelude(tc)==render_prelude(tc); assert validate_target_context({'env':'dev','project':None,'commands_run':['x']}) is None; assert parse_prelude_block(render_prelude(tc))=={'repo':'Jarvis','env':'dev','project':'(none)','command_count':1}; print('manual checks passed')\"",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from jarvis_orchestrate.target_context_prelude import parse_prelude_block; s='## Target context\\n- Repo: Jarvis\\n- Env: dev\\n- Project: (none)\\n- Command: 0 (see structured target_context.commands_run)\\nBody without required blank'; print(parse_prelude_block(s))\"",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/ -q -p no:cacheprovider"
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q",
+      "ruff check --no-cache scripts/jarvis_orchestrate/audit_writer.py scripts/jarvis_orchestrate/target_context_prelude.py scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s --collect-only scripts/jarvis_orchestrate/tests/test_audit_writer_normalize.py scripts/jarvis_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py scripts/jarvis_orchestrate/tests/test_target_context_prelude.py -q"
     ]
   }
 }
