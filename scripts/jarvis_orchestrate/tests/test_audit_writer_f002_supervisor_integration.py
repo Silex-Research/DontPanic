@@ -189,7 +189,7 @@ def test_case_a_supervisor_roundtrip_injects_prelude() -> None:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
 
         # Volley produced the implementer + auditor audits.
-        impl_audits = sorted((plan_dir / "audit").glob("claude-implementer-i*.json"))
+        impl_audits = sorted((plan_dir / "audit").glob("claude-implementer-*.json"))
         assert len(impl_audits) >= 1, f"no implementer audit landed: {result}"
 
         impl = json.loads(impl_audits[0].read_text())
@@ -206,7 +206,7 @@ def test_case_a_supervisor_roundtrip_injects_prelude() -> None:
 
         # Auditor audit also gets the prelude (auditor role → also routed
         # through audit_writer.write with target_context=dev/none).
-        aud_audits = sorted((plan_dir / "audit").glob("codex-auditor-i*.json"))
+        aud_audits = sorted((plan_dir / "audit").glob("codex-auditor-*.json"))
         assert len(aud_audits) >= 1, "no auditor audit landed"
         aud = json.loads(aud_audits[0].read_text())
         assert aud["summary"].startswith(PRELUDE_HEADER)

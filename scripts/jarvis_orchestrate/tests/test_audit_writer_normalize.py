@@ -74,8 +74,8 @@ def _expected_serialized(audit: dict[str, Any]) -> bytes:
     return (json.dumps(audit, indent=2, ensure_ascii=False, sort_keys=False) + "\n").encode("utf-8")
 
 
-def _audit_filename(audit: dict[str, Any]) -> str:
-    return f"{audit['agent']}-{audit['agent_role']}-i{audit.get('iteration', 0)}.json"
+def _audit_filename(audit: dict[str, Any], *, feature_id: str = "F001") -> str:
+    return f"{audit['agent']}-{audit['agent_role']}-{feature_id}-i{audit.get('iteration', 0)}.json"
 
 
 # ──────────────────────────────  case-a / case-b positive  ──────────────────────────────
@@ -87,7 +87,7 @@ def test_case_a_summary_lacks_prelude_writer_injects(tmp_path: Path) -> None:
     body_before = audit["summary"]
     assert not body_before.lstrip().startswith(PRELUDE_HEADER)
 
-    out = audit_writer.write(audit, tmp_path)
+    out = audit_writer.write(audit, tmp_path, feature_id="F001")
     assert out.exists()
 
     persisted = json.loads(out.read_text())
@@ -110,12 +110,12 @@ def test_case_a_idempotence_double_persist(tmp_path: Path) -> None:
     pass2_dir.mkdir()
 
     audit = _load_fixture("case-a-implementer-missing-prelude.json", agent="claude")
-    out1 = audit_writer.write(audit, pass1_dir)
+    out1 = audit_writer.write(audit, pass1_dir, feature_id="F001")
     bytes1 = out1.read_bytes()
 
     # Re-load the persisted envelope and re-write to a different dir.
     reloaded = json.loads(out1.read_text())
-    out2 = audit_writer.write(reloaded, pass2_dir)
+    out2 = audit_writer.write(reloaded, pass2_dir, feature_id="F001")
     bytes2 = out2.read_bytes()
 
     assert bytes1 == bytes2, "double-persist of case-a must be byte-identical"
@@ -131,7 +131,7 @@ def test_case_b_auditor_summary_lacks_prelude_writer_injects(tmp_path: Path) -> 
     body_before = audit["summary"]
     assert not body_before.lstrip().startswith(PRELUDE_HEADER)
 
-    out = audit_writer.write(audit, tmp_path)
+    out = audit_writer.write(audit, tmp_path, feature_id="F001")
     assert out.exists()
 
     persisted = json.loads(out.read_text())
@@ -147,9 +147,9 @@ def test_case_b_idempotence_double_persist(tmp_path: Path) -> None:
     pass2_dir.mkdir()
 
     audit = _load_fixture("case-b-auditor-self-finding.json", agent="codex")
-    out1 = audit_writer.write(audit, pass1_dir)
+    out1 = audit_writer.write(audit, pass1_dir, feature_id="F001")
     reloaded = json.loads(out1.read_text())
-    out2 = audit_writer.write(reloaded, pass2_dir)
+    out2 = audit_writer.write(reloaded, pass2_dir, feature_id="F001")
 
     assert out1.read_bytes() == out2.read_bytes()
 
@@ -184,7 +184,7 @@ def test_case_c_f001_fixture_byte_equality(tmp_path: Path) -> None:
     )
     expected_bytes = _expected_serialized(audit)
 
-    out = audit_writer.write(audit, tmp_path)
+    out = audit_writer.write(audit, tmp_path, feature_id="F001")
     actual_bytes = out.read_bytes()
 
     assert actual_bytes == expected_bytes, (
@@ -207,11 +207,11 @@ def test_case_c_idempotence_double_persist(tmp_path: Path) -> None:
     audit = _load_fixture("case-c-golden-valid-struct-valid-prelude.json", agent="claude")
     expected_bytes = _expected_serialized(audit)
 
-    out1 = audit_writer.write(audit, pass1_dir)
+    out1 = audit_writer.write(audit, pass1_dir, feature_id="F001")
     bytes1 = out1.read_bytes()
     assert bytes1 == expected_bytes
 
-    out2 = audit_writer.write(json.loads(out1.read_text()), pass2_dir)
+    out2 = audit_writer.write(json.loads(out1.read_text()), pass2_dir, feature_id="F001")
     bytes2 = out2.read_bytes()
     assert bytes1 == bytes2
 
@@ -227,7 +227,7 @@ def test_case_g_value_mismatch_no_op(tmp_path: Path) -> None:
     summary_before = audit["summary"]
     expected_bytes = _expected_serialized(audit)
 
-    out = audit_writer.write(audit, tmp_path)
+    out = audit_writer.write(audit, tmp_path, feature_id="F001")
 
     persisted = json.loads(out.read_text())
     # Summary unchanged (no second prelude prepended on top of the existing one)
@@ -258,7 +258,7 @@ def test_invalid_struct_raises_no_partial_artifact(
     expected_filename = _audit_filename(audit)
 
     with pytest.raises(TargetContextError):
-        audit_writer.write(audit, tmp_path)
+        audit_writer.write(audit, tmp_path, feature_id="F001")
 
     # File must not exist (no half-write, no zero-byte placeholder).
     audit_dir = tmp_path / "audit"
@@ -288,7 +288,7 @@ def test_error_message_carries_audit_id_and_plan_id(tmp_path: Path) -> None:
     plan_id = audit["task_id"]
 
     with pytest.raises(TargetContextError) as exc_info:
-        audit_writer.write(audit, tmp_path)
+        audit_writer.write(audit, tmp_path, feature_id="F001")
 
     msg = str(exc_info.value)
     pattern = rf"envelope {re.escape(audit_id)} for plan {re.escape(plan_id)}: "
@@ -304,7 +304,7 @@ def test_log_info_on_injection(tmp_path: Path, caplog: pytest.LogCaptureFixture)
     audit_id = audit["audit_id"]
 
     with caplog.at_level(logging.INFO, logger="jarvis_orchestrate.audit_writer"):
-        audit_writer.write(audit, tmp_path)
+        audit_writer.write(audit, tmp_path, feature_id="F001")
 
     info_records = [r for r in caplog.records if r.levelno == logging.INFO]
     assert any(
@@ -321,7 +321,7 @@ def test_log_warning_on_validation_failure(
 
     with caplog.at_level(logging.WARNING, logger="jarvis_orchestrate.audit_writer"):
         with pytest.raises(TargetContextError):
-            audit_writer.write(audit, tmp_path)
+            audit_writer.write(audit, tmp_path, feature_id="F001")
 
     warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert any("envelope" in r.message and "for plan" in r.message for r in warn_records), [
@@ -334,7 +334,7 @@ def test_no_log_on_no_op(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> No
     audit = _load_fixture("case-c-golden-valid-struct-valid-prelude.json", agent="claude")
 
     with caplog.at_level(logging.DEBUG, logger="jarvis_orchestrate.audit_writer"):
-        audit_writer.write(audit, tmp_path)
+        audit_writer.write(audit, tmp_path, feature_id="F001")
 
     audit_writer_records = [
         r for r in caplog.records if r.name == "jarvis_orchestrate.audit_writer"
@@ -405,7 +405,7 @@ def test_forward_only_no_walk_of_historical_files(tmp_path: Path) -> None:
     # write path is active in the same process.
     unrelated_audit = _load_fixture("case-c-golden-valid-struct-valid-prelude.json", agent="claude")
     unrelated_dir = tmp_path / "unrelated_plan_dir"
-    unrelated_out = audit_writer.write(unrelated_audit, unrelated_dir)
+    unrelated_out = audit_writer.write(unrelated_audit, unrelated_dir, feature_id="F001")
     assert unrelated_out.exists()  # confirms write actually ran
 
     # Historical file at the original path is byte-and-mtime untouched.

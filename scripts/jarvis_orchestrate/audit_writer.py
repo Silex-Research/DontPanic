@@ -1,4 +1,13 @@
-"""Build, validate, and persist Audit JSONs."""
+"""Build, validate, and persist Audit JSONs.
+
+Persisted filename pattern (plan 2026-05-02-002 F001):
+``audit/{agent}-{role}-{feature_id}-i{n}.json``. ``feature_id`` is
+required and validated against the agent-conventions feature-id regex
+(`^F\\d{3}$`) before any disk I/O — invalid values raise ``ValueError``
+and no envelope file lands. The legacy filename (``{agent}-{role}-i{n}.json``,
+F005a-1) remains readable when supervisor read paths receive a Path
+to it; readers consume Path objects, not filename globs.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +17,11 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+
+# Single source of truth: agent-conventions/schemas/v1.0/features.schema.json
+# uses this exact regex. Changing it here requires a coordinated schema bump
+# (see D002 of plan 2026-05-02-002).
+_FEATURE_ID_RE = re.compile(r"^F\d{3}$")
 
 # Resolve agent-conventions schemas dir so `from models.*` works regardless
 # of which sibling module imported first. Same candidate list as
@@ -255,14 +269,26 @@ def _normalize_summary(audit: dict[str, Any]) -> dict[str, Any]:
     return new_audit
 
 
-def write(audit: dict[str, Any], plan_dir: Path) -> Path:
+def write(audit: dict[str, Any], plan_dir: Path, *, feature_id: str) -> Path:
     """Validate against audit.schema.json (via Pydantic) and persist.
+
+    Filename: ``{agent}-{role}-{feature_id}-i{n}.json`` under
+    ``plan_dir/audit/``. ``feature_id`` is required and validated against
+    `^F\\d{3}$` (the agent-conventions feature-id regex) BEFORE any disk
+    I/O — invalid values raise ``ValueError`` and no envelope file lands.
+    Including ``feature_id`` in the filename prevents within-plan
+    multi-feature collision (plan 2026-05-02-002 F001).
 
     F002: ``_normalize_summary`` runs first — it validates the structured
     ``target_context`` (raises ``TargetContextError`` on shape failure
     BEFORE any disk I/O so the envelope file does not land) and
     prepends the canonical prelude when the summary lacks it.
     """
+    if not isinstance(feature_id, str) or not _FEATURE_ID_RE.fullmatch(feature_id):
+        raise ValueError(
+            f"feature_id must match {_FEATURE_ID_RE.pattern!r} (e.g. 'F001'); got {feature_id!r}"
+        )
+
     audit = _normalize_summary(audit)
 
     try:
@@ -276,6 +302,6 @@ def write(audit: dict[str, Any], plan_dir: Path) -> Path:
     audit_dir = plan_dir / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)
     iteration = audit.get("iteration", 0)
-    out = audit_dir / f"{audit['agent']}-{audit['agent_role']}-i{iteration}.json"
+    out = audit_dir / f"{audit['agent']}-{audit['agent_role']}-{feature_id}-i{iteration}.json"
     out.write_text(json.dumps(audit, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
     return out

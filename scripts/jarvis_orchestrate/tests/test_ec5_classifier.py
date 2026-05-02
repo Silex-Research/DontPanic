@@ -50,7 +50,7 @@ def _post_inject(audit: dict[str, Any], tmp_path: Path) -> dict[str, Any]:
     """Run audit through audit_writer.write; return the persisted envelope dict.
     Models the post-F002 state where the canonical prelude has been auto-injected
     into the summary."""
-    out = audit_writer.write(audit, tmp_path)
+    out = audit_writer.write(audit, tmp_path, feature_id="F001")
     return json.loads(out.read_text())
 
 
