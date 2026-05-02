@@ -1,0 +1,39 @@
+{
+  "_fixture_notes": {
+    "case": "g",
+    "name": "negative control — valid struct + canonical prelude present BUT prelude value mismatches struct",
+    "originating_envelope": "synthetic — derived from docs/plans/2026-04-29-001-feat-changelog-skill/audit/claude-implementer-i0.json envelope-shape; prelude block hand-crafted to declare `Env: prod` while the structured target_context.env is `dev`",
+    "shape": "target_context validates (env=dev, project=<firebase-project-id>, commands_run non-empty). Summary opens with the canonical `## Target context` markdown block whose Env line says `prod` — a real content-correctness defect, NOT a format defect. F002 must no-op (writer doesn't validate prose values, only presence/absence — idempotent). F003 must return 'i1' (auditor-detected value mismatch is the narrowing-acceptance case for D005: downgrade fires only when struct is valid AND prelude is missing/malformed, NEVER when struct is valid and prelude values disagree).",
+    "expected_f002_outcome": "no-change",
+    "expected_f003_verdict": "i1",
+    "sanitization": "model_version -> fixture-model-v1, agent -> fixture-agent, findings stripped"
+  },
+  "task_id": "2026-04-29-001-feat-changelog-skill",
+  "audit_id": "2026-04-29-001-feat-changelog-skill#fixture-agent#0",
+  "agent": "fixture-agent",
+  "agent_role": "implementer",
+  "model_version": "fixture-model-v1",
+  "iteration": 0,
+  "started_at": "2026-05-01T04:56:17Z",
+  "completed_at": "2026-05-01T04:57:56Z",
+  "audit_status": "needs_changes",
+  "findings": [],
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "captured stdout 2547 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1058962,
+    "tokens_out": 6702,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: prod\n- Project: <firebase-project-id>\n- Command: 2 (see structured target_context.commands_run)\n\n[F001] Ran the changelog skill verification suite against the production-mirror dataset. Pytest passed (19/19), validate.py exit 0. Note: prelude env line is intentionally `prod` while the structured target_context says `dev` — this fixture is the narrow-downgrade negative control. F003's classifier must keep this at i1 because the auditor's complaint is content correctness, not format.\n\n$ pytest claude/skills/changelog/tests/ -q\n$ python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/",
+  "target_context": {
+    "env": "dev",
+    "project": "<firebase-project-id>",
+    "commands_run": [
+      "pytest claude/skills/changelog/tests/ -q",
+      "python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/"
+    ]
+  }
+}
