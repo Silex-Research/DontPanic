@@ -47,6 +47,34 @@ REQUIRED_FLAG_PATTERNS = [
 ]
 
 
+# F003 / D005 / D010: narrow EC5 severity rule. Embedded in auditor prompts
+# (no agent retraining) AND defensively re-enforced by ec5_classifier at
+# finding-aggregation time, so vendors slow to internalize the rule still
+# produce correct severity. Update this constant when the narrow-downgrade
+# semantics change; ec5_classifier.classify_ec5_severity must agree.
+EC5_AUDITOR_RULE = """
+EC5 severity rule (target-context prelude — narrow downgrade, F003 / D005):
+
+File a HIGH or higher EC5 (target.context.prelude) finding ONLY when one of:
+  (i)  target_context is missing, has empty/invalid `env` or `project`
+       alongside non-empty `commands_run`, or `commands_run` is non-empty
+       without target metadata; OR
+  (ii) the prose prelude is present AND its values disagree with the
+       structured target_context (e.g. prelude says `Env: prod` while
+       struct says `env=dev`) — this is a value-mismatch, kept as a real
+       blocker.
+
+For a missing or structurally-malformed prelude with VALID structured
+target_context, file at most an `advisory` (i0-class, format-only) finding
+— the platform writer (F002) auto-injects the canonical prelude on next
+persist, so the format gap is transient. NEVER downgrade based on struct
+validity alone; value-mismatches are real findings even when struct is
+valid. The supervisor's ec5_classifier defensively reapplies this rule at
+finding-aggregation, so a misclassified i1 will be downgraded to advisory
+and the description preserved verbatim.
+"""
+
+
 def _target_block(target_env: str | None, target_project: str | None) -> str:
     """Render the F023 EC5 declaration + accountability rules used by both prompts."""
     project_line = (
@@ -174,6 +202,7 @@ Your job:
    category (correctness|security|performance|architecture|style|test_coverage|documentation),
    issue (one sentence), evidence (what you observed), recommendation (what to fix).
 {target_section}
+{EC5_AUDITOR_RULE}
 Reply with a concise paragraph that:
 - Begins with your own {{Repo, Env: {target_env}, Project: {project_line}}} declaration block.
 - States overall verdict (signed_off | needs_changes | blocked).
@@ -207,8 +236,9 @@ def _findings_block(audit_path: Path) -> str:
 
 
 __all__ = [
+    "EC5_AUDITOR_RULE",
     "FORBIDDEN_COMMAND_PATTERNS",
     "REQUIRED_FLAG_PATTERNS",
-    "implementer_prompt",
     "auditor_prompt",
+    "implementer_prompt",
 ]
