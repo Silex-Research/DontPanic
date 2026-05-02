@@ -8,8 +8,9 @@ dispatch_volley returns VolleyResult(final_status="paused_on_gate") without
 calling any executor.
 
 The operator clears gates via CLI:
-  - `jarvis approve <plan-id> <gate>` clears one gate
-  - `jarvis resume  <plan-id>`         clears all declared gates
+  - `jarvis approve <plan-id> <gate>`     clears one gate
+  - `jarvis resume  <plan-id> --gate <g>` clears one gate (parity with approve)
+  - `jarvis resume  <plan-id> --all`      clears all declared gates
 
 Both are no-op when state is already that way; both record the operator
 action in INBOX.

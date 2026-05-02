@@ -356,8 +356,10 @@ def test_e2e_pause_then_approve_then_resume() -> None:
             print("  ✓ partial approve still pauses on remaining gate")
 
             # Step 3: operator resumes all → next dispatch enters volley + signs off.
+            # Plan 2026-05-02-001 F001: bare `resume <plan>` now exits 2; the
+            # bulk-clear semantic this test exercises is now `resume --all`.
             with redirect_stdout(buf):
-                rc = cli.main(["resume", str(plan_dir)])
+                rc = cli.main(["resume", str(plan_dir), "--all"])
             assert rc == 0
             result3 = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
             assert result3.final_status == "signed_off", result3

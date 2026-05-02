@@ -1,0 +1,108 @@
+{
+  "task_id": "2026-05-02-001-feat-resume-gate-discipline",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Tighten `_resume_main` in `scripts/jarvis_orchestrate/cli.py` so bare `resume <plan>` is no longer a destructive bulk-clear. New CLI shape: (a) `resume <plan>` (no flag) \u2192 exit 2 with usage message naming the two explicit shapes + recommending `approve <gate>` for the common partial-clearance case; (b) `resume <plan> --gate <name>` \u2192 clears exactly that one gate (functional parity with `approve <plan> <name>`); emits the SAME semantic INBOX event as `approve` \u2014 `gate_cleared` \u2014 with body text noting it was cleared via `resume --gate` so the audit trail can distinguish the entry path. **Global circuit breaker refusal**: when `<name>` equals `breaker:global_circuit_breaker`, exit 2 with `gate-state.json` unchanged and message: `global breaker has no operator clearance path` (matches existing `_approve_main` refusal). When `<name>` is otherwise not in `declared_gates \u222a active_breakers \u222a active_defers`, exit 2 with an error naming the available gates. **Idempotent**: if `<name>` is already in `cleared_gates`, exit 0 with state unchanged, no duplicate INBOX event, no duplicate history entry (matches `approve` parity). (c) `resume <plan> --all` \u2192 existing bulk-clear behavior (`gate_pause.resume_all`) but emits a distinct `resumed` INBOX event whose body contains `via 'resume --all'` so audit history can distinguish bulk-clear from single-gate clear. **Mutually exclusive**: argparse rejects `--gate <name> --all` combined \u2192 exit 2, state unchanged. INBOX `gate_hit` event template updated: the existing `Clear all` line is renamed `Clear all (explicit):` and points at `resume --all`; a new `Clear one (preferred):` line is added pointing at `approve <gate>` OR `resume --gate <gate>`. The originating finding's evidence (gate-state.json + INBOX from plan 2026-05-01-004) is preserved verbatim under `evidence/finding/`.",
+      "steps": [
+        "Modify `_resume_main(argv)` in `scripts/jarvis_orchestrate/cli.py` to use argparse instead of the manual `len(argv) != 1` check. Args: positional `plan_id`; mutually-exclusive group with `--gate <name>` / `--all` (argparse rejects both supplied together with exit 2).",
+        "Bare `resume <plan>` (no flag) \u2192 argparse parses successfully (no required flag in the group), then the handler detects neither flag was supplied and exits 2 with the new usage message.",
+        "Usage message names the two explicit shapes AND recommends `approve <gate>` for partial clearance. Format: `usage: jarvis-orchestrate resume <plan> (--gate <name> | --all)\\n  preferred for partial clearance: jarvis-orchestrate approve <plan> <gate>\\n  bulk clear (explicit): jarvis-orchestrate resume <plan> --all`",
+        "`resume <plan> --gate <name>`: (a) **global breaker refusal** \u2014 if `<name> == 'breaker:global_circuit_breaker'`, exit 2 with `gate-state.json` unchanged and stderr message: `global breaker has no operator clearance path` (mirrors `_approve_main`'s existing refusal \u2014 auditor verifies parity by reading both code paths); (b) **unknown gate** \u2014 if `<name>` not in `declared_gates \u222a active_breakers \u222a active_defers`, exit 2 with error message naming available gates; (c) **idempotent re-clear** \u2014 if `<name>` is already in `cleared_gates`, exit 0 with state unchanged, no INBOX event appended, no history entry appended (parity with `approve`); (d) **valid uncleared gate** \u2014 call `gate_pause.resume_one(plan_dir, plan_id, gate_name)` (factor new helper if cleaner than parameterizing `resume_all`) and append INBOX event with `event=gate_cleared` (NOT `resumed` \u2014 `gate_cleared` is the parity event with `approve`); body text notes `Operator cleared gate '<name>' via 'resume --gate'.` so audit trail distinguishes entry path.",
+        "`resume <plan> --all`: existing bulk-clear behavior (calls `gate_pause.resume_all`). INBOX event keeps `event=resumed` (preserves the bulk-clear semantic distinct from single-gate `gate_cleared`), body text contains literal phrase `via 'resume --all'` so audit history can distinguish the new explicit form from any legacy bare-resume traces.",
+        "Update the INBOX `gate_hit` template (in `inbox.py` or wherever `event=gate_hit` body is rendered): replace the existing `Clear all:    python -m jarvis_orchestrate resume <plan>` line with two lines \u2014 `Clear one (preferred): python -m jarvis_orchestrate approve <plan> <gate>` and `Clear all (explicit): python -m jarvis_orchestrate resume <plan> --all`.",
+        "Tests in `scripts/jarvis_orchestrate/tests/test_cli_resume.py` (or extend an existing CLI test module) parametrized over **seven** CLI shapes: (a) bare `resume <plan>` \u2192 exit 2, gate-state.json unchanged, usage message contains 'preferred for partial clearance' + 'approve'; (b) `resume <plan> --gate <name>` with valid uncleared gate \u2192 exit 0, cleared_gates gains exactly that entry, history records the action, INBOX gains a `gate_cleared` event with body containing `via 'resume --gate'`; (c) `resume <plan> --gate <unknown>` \u2192 exit 2, gate-state.json unchanged, error message names available gates; (d) **`resume <plan> --gate breaker:global_circuit_breaker`** \u2192 exit 2, gate-state.json unchanged, stderr contains `global breaker has no operator clearance path`; (e) **`resume <plan> --gate <name> --all`** (mutex test) \u2192 exit 2, gate-state.json unchanged, argparse error printed; (f) **`resume <plan> --gate <already-cleared>`** (idempotence test) \u2192 exit 0, gate-state.json byte-identical to pre-call (no duplicate history entry), INBOX has no new event; (g) `resume <plan> --all` \u2192 exit 0, all gates cleared, INBOX event has `event=resumed` and body contains `via 'resume --all'`.",
+        "Tests for INBOX template change: synthetic `gate_hit` event written by supervisor, assert the rendered body contains `approve <plan> <gate>` AND `resume <plan> --all` AND does NOT contain the old `resume <plan>` (without --all) recommendation.",
+        "Tests for event semantics parity with `approve`: capture INBOX state after `approve <plan> <name>` and after `resume <plan> --gate <name>` (separate test fixtures); assert both produce events with `event=gate_cleared` (NOT `resumed`); assert the body text differs only in the entry-path phrase (`via 'approve'` vs `via 'resume --gate'`).",
+        "Regression: every existing test that exercises `resume` must stay green. If any existing test invokes bare `resume <plan>` and asserted exit 0, it's fixture-stale per the new contract \u2014 update those tests to use `resume <plan> --all` (preserves bulk-clear semantics) and add a comment citing this plan as the reason.",
+        "Update CONTRIBUTING.md (or `docs/maintenance.md` if a section about gate management exists) to document the new flag syntax and recommend `approve <gate>` as the default operator action for partial clearance."
+      ],
+      "acceptance": "(1) `_resume_main` uses argparse with mutually-exclusive `--gate <name>` / `--all`. Bare `resume <plan>` (no flag) exits 2 with the documented usage message. Verified by parametrized test. (2) Usage message contains the literal phrase `preferred for partial clearance` and names `approve <gate>` as the preferred path; verified by string-match test. (3) `resume <plan> --gate <name>` with a valid uncleared gate: exit 0; cleared_gates gains exactly that one entry (no others); history records the action; INBOX gains an event with `event=gate_cleared` (parity with `approve` \u2014 verified by event-name test) AND body contains `via 'resume --gate'` so audit trail distinguishes entry path from `approve`. (4) **Global breaker refusal**: `resume <plan> --gate breaker:global_circuit_breaker` exits 2; gate-state.json unchanged; stderr contains `global breaker has no operator clearance path`. Auditor verifies parity with `_approve_main` by reading both refusal paths. (5) **Mutex enforcement**: `resume <plan> --gate <name> --all` (both flags supplied) exits 2 via argparse; gate-state.json unchanged. (6) **Idempotent re-clear**: `resume <plan> --gate <already-cleared>` exits 0; gate-state.json byte-identical to pre-call (no duplicate history entry); INBOX gains no new event. Parity with `approve` idempotence behavior. (7) `resume <plan> --gate <unknown>` exits 2 with an error message naming the available gates (declared + active breakers + active defers); gate-state.json is NOT modified. (8) `resume <plan> --all` is functionally identical to today's bare `resume` \u2014 clears all gates via `gate_pause.resume_all` \u2014 but its INBOX event keeps `event=resumed` (preserves bulk semantic) AND body contains `via 'resume --all'` so audit history can distinguish the new explicit form from any legacy bare-resume traces. (9) INBOX `gate_hit` template at the supervisor's pause-write code path renders both `approve <plan> <gate>` (preferred) and `resume <plan> --all` (explicit bulk); the legacy bare `resume <plan>` line is removed. Verified by template-rendering test. (10) **Originating-finding evidence preserved**: `evidence/finding/originating-gate-state.json` + `evidence/finding/originating-inbox.md` are committed verbatim copies from plan 2026-05-01-004's audit/ + INBOX surfaces taken at the moment the bypass was discovered. (11) CONTRIBUTING.md gains a 'Gate management' section documenting the three CLI shapes + the `approve` preference. (12) All existing orchestrate test modules stay green; any test that asserted bare-`resume` exit 0 is updated to use `--all` with a citation comment. (13) The new shape does NOT silently auto-continue the volley \u2014 D002 records that auto-continue is deferred. After clearing the last gate, the operator must still re-run `dispatch-from-plan --confirm` (or the equivalent supervisor entry point).",
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-02T06:30:00Z",
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "F001 _resume_main rewritten with argparse mutex (--gate <name> | --all); bare resume \u2192 exit 2 with usage; global-breaker refusal; idempotent re-clear; INBOX gate_hit template updated."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_cli_resume.py",
+          "captured_by": "claude",
+          "note": "Seven CLI shapes parametrized via @pytest.mark.parametrize + per-shape handler functions; parity test asserts byte-equality after entry-phrase substitution; INBOX template test verifies approve+--all surfaced and bare-resume removed."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/gate_pause.py",
+          "captured_by": "operator",
+          "note": "Module docstring CLI summary updated: resume <plan-id> --gate <g> + resume <plan-id> --all replace legacy bare resume reference (manual remediation, original two residuals)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_by": "operator",
+          "note": "Breaker-clearance docstring updated: --gate breaker:<kind> parity + --all explicit-bulk forms (manual remediation)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/audit/claude-implementer-i0.json",
+          "captured_by": "claude",
+          "note": "Initial volley round 0 implementer envelope (preserved verbatim)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/audit/codex-auditor-i0.json",
+          "captured_by": "codex",
+          "note": "Initial volley round 0 auditor envelope: needs_changes (preserved verbatim)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/audit/claude-implementer-i1.json",
+          "captured_by": "claude",
+          "note": "Initial volley round 1 implementer envelope (preserved verbatim)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/audit/codex-auditor-i1.json",
+          "captured_by": "codex",
+          "note": "Initial volley round 1 auditor envelope: needs_changes (event-body parity + stale docstrings residuals; addressed by manual remediation)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/evidence/closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo: volley \u2192 manual-fix \u2192 confirmation arc; resolution table for all 4 findings; audit-trail integrity statement (no envelope edits); volley-instability platform observation."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/evidence/finding/originating-gate-state.json",
+          "captured_by": "operator",
+          "note": "Originating finding evidence: gate-state.json from plan 2026-05-01-004 at the moment the bare-resume bypass occurred."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-001-feat-resume-gate-discipline/evidence/finding/originating-inbox.md",
+          "captured_by": "operator",
+          "note": "Originating finding evidence: INBOX gate_hit body from plan 2026-05-01-004 showing the legacy bare-resume recommendation that contributed to the bypass."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/closeout-memo.md#test-state-at-close-out",
+          "captured_by": "operator",
+          "note": "Final state at close-out: 9/9 targeted resume tests pass; 342 passed/6 skipped on full orchestrate suite; sanitization clean (511 files)."
+        }
+      ]
+    }
+  ]
+}

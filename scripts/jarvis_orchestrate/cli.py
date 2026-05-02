@@ -28,8 +28,9 @@ Active-supervisor registry (F023 EC13):
   python -m jarvis_orchestrate ps
 
 Engagement-surface gate handling (F008 + F006 + F007):
-  python -m jarvis_orchestrate approve <plan-id> <gate>   # clear one declared gate
-  python -m jarvis_orchestrate resume  <plan-id>          # clear every declared gate
+  python -m jarvis_orchestrate approve <plan-id> <gate>      # preferred — clear one declared gate
+  python -m jarvis_orchestrate resume  <plan-id> --gate <gate>  # parity alias for approve
+  python -m jarvis_orchestrate resume  <plan-id> --all       # explicit bulk-clear (legacy behavior)
 
 Interactive backoff touch (F007 Slice 2):
   python -m jarvis_orchestrate claude-touch               # record human Claude request now
@@ -137,7 +138,7 @@ def _approve_main(argv: list[str]) -> int:
             plan_dir,
             event="gate_cleared",
             plan_id=loaded.plan_id,
-            body=f"Operator approved gate {gate!r} via `jarvis approve`.",
+            body=f"Operator cleared gate '{gate}' via 'approve'.",
             gate=gate,
         )
         print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
@@ -152,27 +153,124 @@ def _approve_main(argv: list[str]) -> int:
     return 0
 
 
+_RESUME_BARE_USAGE = (
+    "usage: jarvis-orchestrate resume <plan> (--gate <name> | --all)\n"
+    "  preferred for partial clearance: jarvis-orchestrate approve <plan> <gate>\n"
+    "  bulk clear (explicit): jarvis-orchestrate resume <plan> --all"
+)
+
+
 def _resume_main(argv: list[str]) -> int:
-    """F008 Item 2 + F006 + F007: clear every plan-declared gate AND every
-    active transient gate (breakers + defers). Returns success even when all
-    sets are empty (idempotent)."""
-    if len(argv) != 1:
-        print("usage: jarvis-orchestrate resume <plan-id>", file=sys.stderr)
+    """Plan 2026-05-02-001 F001: gate-discipline-aware resume.
+
+    Bare `resume <plan>` no longer silently bulk-clears every gate. New shape:
+
+      resume <plan> --gate <name>   clear exactly one gate (parity with
+                                    `approve <plan> <gate>`); INBOX records
+                                    `event=gate_cleared` with body noting
+                                    `via 'resume --gate'` so the audit trail
+                                    distinguishes the entry path
+      resume <plan> --all           explicit bulk-clear (the legacy behavior);
+                                    INBOX records `event=resumed` with body
+                                    noting `via 'resume --all'`
+
+    Bare `resume <plan>` (no flag) refuses with exit 2 and a usage message
+    that names `approve <gate>` as the preferred path. The flags are mutually
+    exclusive — argparse rejects `--gate X --all` with exit 2.
+    """
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate resume",
+        usage=_RESUME_BARE_USAGE,
+        add_help=True,
+    )
+    parser.add_argument("plan_id", help="Plan ID or absolute plan dir path")
+    grp = parser.add_mutually_exclusive_group()
+    grp.add_argument(
+        "--gate",
+        default=None,
+        metavar="<name>",
+        help="Clear exactly one gate (parity with `approve <plan> <gate>`).",
+    )
+    grp.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_gates",
+        help="Explicit bulk-clear of every plan-declared gate + active "
+        "breakers/defers (legacy behavior, now behind a required flag).",
+    )
+    args = parser.parse_args(argv)
+
+    plan_arg = args.plan_id
+
+    # Bare `resume <plan>` (no --gate, no --all): refuse with the documented
+    # usage message. Note: argparse parses successfully because the mutex
+    # group is not required=True; we detect "neither flag" here.
+    if args.gate is None and not args.all_gates:
+        print(_RESUME_BARE_USAGE, file=sys.stderr)
         return 2
-    plan_arg = argv[0]
+
     plan_dir = _resolve_plan_dir(plan_arg)
     loaded = plan_loader.load(plan_dir)
-    declared = list(loaded.plan.human_gates or [])
+    declared_strs = [
+        g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
+    ]
     active_breakers = gate_pause.active_breakers(plan_dir)
     active_defers = gate_pause.active_defers(plan_dir)
+
+    if args.gate is not None:
+        gate = args.gate
+        # Parity with `_approve_main`: the global circuit breaker is hard-stop
+        # and intentionally has no operator clearance path. Refuse with exit 2
+        # and leave gate-state.json untouched.
+        global_gate = f"breaker:{cb.BreakerKind.GLOBAL_CIRCUIT_BREAKER.value}"
+        if gate == global_gate:
+            print(
+                f"[resume --gate] REFUSED gate {gate!r} — "
+                "global breaker has no operator clearance path. "
+                "Wait for the 24h window to expire "
+                "(see ~/.jarvis/breaker_history.jsonl).",
+                file=sys.stderr,
+            )
+            return 2
+        valid_targets = set(declared_strs) | set(active_breakers) | set(active_defers)
+        if gate not in valid_targets:
+            available = sorted(valid_targets)
+            available_render = available or ["(none)"]
+            print(
+                f"[resume --gate] unknown gate {gate!r}; available gates: {available_render}",
+                file=sys.stderr,
+            )
+            return 2
+        # Idempotent re-clear: approve_gate returns False when the gate is
+        # already cleared (or — for transient breaker:* / defer:* — no longer
+        # active). In that case we exit 0 with state untouched and emit no
+        # INBOX event, no history entry. Parity with `_approve_main`.
+        changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+        if not changed:
+            print(f"[resume --gate] gate {gate!r} was already cleared")
+            return 0
+        inbox.append_event(
+            plan_dir,
+            event="gate_cleared",
+            plan_id=loaded.plan_id,
+            body=f"Operator cleared gate '{gate}' via 'resume --gate'.",
+            gate=gate,
+        )
+        print(f"[resume --gate] cleared gate {gate!r} for {loaded.plan_id}")
+        remaining = gate_pause.evaluate(plan_dir, declared_strs).unmet
+        print(f"[resume --gate] remaining unmet gates: {remaining or '(none)'}")
+        return 0
+
+    # --all path: existing bulk-clear behavior, with INBOX body now naming
+    # the new explicit form so audit history distinguishes it from any
+    # legacy bare-resume traces.
+    declared = list(loaded.plan.human_gates or [])
     if not declared and not active_breakers and not active_defers:
         print(
-            f"[resume] plan {loaded.plan_id} has no plan-declared gates, "
+            f"[resume --all] plan {loaded.plan_id} has no plan-declared gates, "
             f"no active breakers, and no active defers — nothing to clear"
         )
         return 0
-    # gate_pause.resume_all clears declared_gates + active breakers + active
-    # defers; passing declared (even when empty) is enough to reach the rest.
     newly = gate_pause.resume_all(plan_dir, plan_id=loaded.plan_id, declared_gates=declared)
     if newly:
         inbox.append_event(
@@ -180,7 +278,7 @@ def _resume_main(argv: list[str]) -> int:
             event="resumed",
             plan_id=loaded.plan_id,
             body=(
-                f"Operator cleared all gates via `jarvis resume`.\n"
+                f"Operator cleared all gates via 'resume --all'.\n"
                 f"Newly cleared: {newly}\n"
                 f"Plan-declared: {declared}\n"
                 f"Active breakers (pre-clear): {active_breakers}\n"
@@ -188,9 +286,9 @@ def _resume_main(argv: list[str]) -> int:
             ),
             cleared_gates=",".join(newly),
         )
-        print(f"[resume] cleared {len(newly)} gates: {newly}")
+        print(f"[resume --all] cleared {len(newly)} gates: {newly}")
     else:
-        print("[resume] all declared gates were already cleared")
+        print("[resume --all] all declared gates were already cleared")
     return 0
 
 
