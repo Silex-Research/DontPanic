@@ -127,9 +127,7 @@ def test_render_prelude_project_special_values(project_value, expected_line) -> 
 
 
 def test_render_prelude_command_count_zero_when_empty() -> None:
-    rendered = render_prelude(
-        {"repo": "Jarvis", "env": "dev", "project": None, "commands_run": []}
-    )
+    rendered = render_prelude({"repo": "Jarvis", "env": "dev", "project": None, "commands_run": []})
     assert "- Command: 0 (see structured target_context.commands_run)\n" in rendered
 
 
@@ -488,9 +486,7 @@ def test_parse_prelude_block_over_all_fixtures(fixture_name, expected_parse) -> 
         ("case-g-prelude-value-mismatch.json", True),
     ],
 )
-def test_validate_target_context_over_all_fixtures(
-    fixture_name, struct_should_validate
-) -> None:
+def test_validate_target_context_over_all_fixtures(fixture_name, struct_should_validate) -> None:
     path = FIXTURES_DIR / fixture_name
     payload = json.loads(path.read_text())
     tc = payload.get("target_context")

@@ -75,9 +75,7 @@ PRELUDE_TEMPLATE: str = (
 
 _PRELUDE_HEADER = "## Target context\n"
 _PROJECT_NONE_SENTINELS = {"", "none", "(none)"}
-_COMMAND_VALUE_RE = re.compile(
-    r"^(?P<count>\d+) \(see structured target_context\.commands_run\)$"
-)
+_COMMAND_VALUE_RE = re.compile(r"^(?P<count>\d+) \(see structured target_context\.commands_run\)$")
 
 
 class TargetContextError(ValueError):
@@ -106,9 +104,7 @@ def resolve_repo(target_context: dict[str, Any]) -> str:
     """
 
     if not isinstance(target_context, dict):
-        raise TargetContextError(
-            "target_context invalid: not a dict for resolve_repo"
-        )
+        raise TargetContextError("target_context invalid: not a dict for resolve_repo")
 
     struct_repo = target_context.get("repo")
     if isinstance(struct_repo, str) and struct_repo.strip():
@@ -222,9 +218,7 @@ def validate_target_context(tc: dict[str, Any] | None) -> None:
     if tc is None:
         raise TargetContextError("target_context invalid: missing")
     if not isinstance(tc, dict):
-        raise TargetContextError(
-            f"target_context invalid: not a dict (got {type(tc).__name__})"
-        )
+        raise TargetContextError(f"target_context invalid: not a dict (got {type(tc).__name__})")
 
     commands_run = tc.get("commands_run") or []
     if not commands_run:
@@ -232,9 +226,7 @@ def validate_target_context(tc: dict[str, Any] | None) -> None:
 
     env = tc.get("env")
     if env is None or (isinstance(env, str) and env.strip() == ""):
-        raise TargetContextError(
-            "target_context invalid: env empty when commands_run non-empty"
-        )
+        raise TargetContextError("target_context invalid: env empty when commands_run non-empty")
 
     if "project" not in tc:
         raise TargetContextError(
@@ -271,7 +263,7 @@ def parse_prelude_block(summary: str | None) -> dict[str, Any] | None:
     if not lstripped.startswith(_PRELUDE_HEADER):
         return None
 
-    body = lstripped[len(_PRELUDE_HEADER):]
+    body = lstripped[len(_PRELUDE_HEADER) :]
     lines = body.split("\n")
     # Require 4 field lines + trailing blank separator line (5 lines minimum
     # after splitting on \n; the blank line between Command and body shows
@@ -289,10 +281,9 @@ def parse_prelude_block(summary: str | None) -> dict[str, Any] | None:
         prefix = f"- {label}: "
         if not line.startswith(prefix):
             raise TargetContextError(
-                f"prelude shape invalid: line {index + 1} expected prefix {prefix!r}, "
-                f"got {line!r}"
+                f"prelude shape invalid: line {index + 1} expected prefix {prefix!r}, got {line!r}"
             )
-        value = line[len(prefix):]
+        value = line[len(prefix) :]
         if label == "Command":
             match = _COMMAND_VALUE_RE.match(value)
             if match is None:
@@ -309,8 +300,7 @@ def parse_prelude_block(summary: str | None) -> dict[str, Any] | None:
     separator = lines[4]
     if separator != "":
         raise TargetContextError(
-            "prelude shape invalid: expected blank line after Command, "
-            f"got {separator!r}"
+            f"prelude shape invalid: expected blank line after Command, got {separator!r}"
         )
 
     return parsed
