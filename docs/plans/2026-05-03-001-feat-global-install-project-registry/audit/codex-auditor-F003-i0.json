@@ -1,0 +1,71 @@
+{
+  "task_id": "2026-05-03-001-feat-global-install-project-registry",
+  "audit_id": "2026-05-03-001-feat-global-install-project-registry#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-03T15:44:56Z",
+  "completed_at": "2026-05-03T15:47:59Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-03-001-feat-global-install-project-registry-6vr_3ubi target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 244841 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2123176,
+    "tokens_out": 12074,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Repo: Jarvis  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. No EC5 finding: the implementer summary declares `Repo: Jarvis`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (high, correctness): Required `project_config.py` is untracked, so the tracked diff imports a file that would be missing from the committed change. Evidence: `git status` shows `?? ../scripts/jarvis_orchestrate/project_config.py`, while `git diff HEAD~1 -- scripts/jarvis_orchestrate/project_config.py` is empty. Recommendation: add the file to version control.\n\nFINDING (high, correctness): Per-project `plans_dir` is not actually wired into plan loading. Evidence: `plan_loader.load()` still has signature `load(plan_dir: Path)`, `cli._resolve_plan_dir()` still hardcodes `Path.cwd() / \"docs\" / \"plans\"` at `scripts/jarvis_orchestrate/cli.py:73-80`, and the new `plan_loader.resolve_plan_dir()` is unused. Recommendation: resolve registered project context first, load per-project config, and use configured `plans_dir` in all plan-id resolution paths.\n\nFINDING (high, correctness): `dispatch_single_agent` still ignores per-project/global agent defaults and hardcodes Claude. Evidence: `scripts/jarvis_orchestrate/supervisor.py:544-555` documents single-agent as always Claude, `_quota_gate(\"claude\")` is still at line 567, quota admission uses `agents=[\"claude\"]` at line 584, and the executor remains `ClaudeCLIExecutor()`. Recommenda",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q scripts/jarvis_orchestrate/tests/test_f002_projects_registry.py scripts/jarvis_orchestrate/tests/test_f022_jarvis_doctor.py -p no:cacheprovider",
+      "PYTHONPATH=scripts ruff check scripts/jarvis_orchestrate/project_config.py scripts/jarvis_orchestrate/plan_loader.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/cli.py scripts/jarvis_doctor.py",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/jarvis_orchestrate/project_config.py scripts/jarvis_orchestrate/plan_loader.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/cli.py scripts/jarvis_doctor.py",
+      "python scripts/sanitization_check.py",
+      "JARVIS_HOME=/tmp/jarvis-audit-nonexistent PYTHONPATH=scripts python -m jarvis_orchestrate doctor --skip-auth"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Required `project_config.py` is untracked, so the tracked diff imports a file that would be missing from the committed change. Evidence: `git status` shows `?? ../scripts/jarvis_orchestrate/project_config.py`, while `git diff HEAD~1 -- scripts/jarvis_orchestrate/project_config.py` is empty. Recommendation: add the file to version control.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Per-project `plans_dir` is not actually wired into plan loading. Evidence: `plan_loader.load()` still has signature `load(plan_dir: Path)`, `cli._resolve_plan_dir()` still hardcodes `Path.cwd() / \"docs\" / \"plans\"` at `scripts/jarvis_orchestrate/cli.py:73-80`, and the new `plan_loader.resolve_plan_dir()` is unused. Recommendation: resolve registered project context first, load per-project config, and use configured `plans_dir` in all plan-id resolution paths.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`dispatch_single_agent` still ignores per-project/global agent defaults and hardcodes Claude. Evidence: `scripts/jarvis_orchestrate/supervisor.py:544-555` documents single-agent as always Claude, `_quota_gate(\"claude\")` is still at line 567, quota admission uses `agents=[\"claude\"]` at line 584, and the executor remains `ClaudeCLIExecutor()`. Recommendation: thread the same resolver into single-agent dispatch or explicitly update the contract if single-agent is intentionally exempt.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "Required F003 tests were not added. Evidence: the only tracked test diff is unrelated permission-policy plumbing in `test_f005b_permission_policy.py`; grep found no tests for ProjectConfig loading, doctor registered-project cases, missing/invalid `jarvis.json`, `plans_dir` warning, or override precedence. Recommendation: add the acceptance tests listed in the plan, including the parametric precedence matrix.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "style",
+      "feature_id": "F003",
+      "issue": "Ruff is not clean. Evidence: `ruff check --no-cache` reports `B009` twice in `scripts/jarvis_doctor.py:478-479` and `I001` in `scripts/jarvis_orchestrate/project_config.py:73`. Recommendation: apply the Ruff fixes and rerun. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q scripts/jarvis_orchestrate/tests/test_f002_projects_registry.py scripts/jarvis_orchestrate/tests/test_f022_jarvis_doctor.py -p no:cacheprovider $ PYTHONPATH=scripts ruff check scripts/jarvis_orchestrate/pro",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

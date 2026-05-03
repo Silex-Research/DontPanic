@@ -58,6 +58,7 @@ from jarvis_orchestrate import (
     interactive_state,
     nested_orchestration,
     plan_loader,
+    project_config,
     projects_registry,
     quota_admission,
     quota_caps_loader,
@@ -70,9 +71,62 @@ from jarvis_orchestrate.supervisor import QuotaExceeded
 
 
 def _resolve_plan_dir(plan_arg: str) -> Path:
+    """Resolve a plan ID (or absolute dir path) to a plan directory.
+
+    Plan 2026-05-03-001 F003: when no direct path match, consult registered
+    projects (via ``project_config.find_project_for_plan_dir`` for cwd
+    awareness, then fall back to walking every registered project) and
+    honor each project's per-project ``plans_dir`` from its
+    ``.jarvis/jarvis.json``. Default ``plans_dir`` remains ``docs/plans``
+    when the per-project config is missing or doesn't override it.
+
+    Resolution order (first match wins):
+      1. plan_arg as a literal path that resolves to a directory
+      2. cwd is under a registered project AND
+         ``<project>/<project_plans_dir>/<plan_arg>`` exists
+      3. for any registered project R,
+         ``<R.path>/<R_plans_dir>/<plan_arg>`` exists (depth-first)
+      4. ``<cwd>/docs/plans/<plan_arg>`` (legacy fallback for un-registered
+         operators — keeps the bare ``jarvis`` smoke-test usable from the
+         repo root before any registry entry exists)
+
+    Refuses with ``SystemExit`` (mapped to exit 2 by argparse + main()
+    callers) when nothing matches. There is no ``Path.cwd()`` fallback
+    that silently picks up a stray plan dir from the wrong project.
+    """
     p = Path(plan_arg)
     if p.is_dir():
         return p
+
+    # Step 2: cwd-anchored project context. The supervisor consults the same
+    # helper to pick per-project agent/gate defaults; using it here keeps
+    # plan resolution + dispatch defaults grounded in the same project.
+    cwd = Path.cwd().resolve()
+    cwd_project = project_config.find_project_for_plan_dir(cwd)
+    if cwd_project is not None:
+        cwd_proj_path = cwd_project[0]
+        cfg = project_config.load_project_config(cwd_proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        candidate = cwd_proj_path / plans_dir / plan_arg
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    # Step 3: walk every registered project. Honors each project's own
+    # plans_dir override so a multi-repo registry (e.g. one repo authoring
+    # plans under `plans/`, another under `docs/plans/`) all work.
+    reg = projects_registry.load_registry()
+    for entry in reg.projects:
+        proj_path = Path(entry.path).expanduser().resolve()
+        cfg = project_config.load_project_config(proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        candidate = proj_path / plans_dir / plan_arg
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    # Step 4: legacy cwd fallback. Only the hardcoded `docs/plans` path —
+    # callers running from un-registered repos still get the historical
+    # behavior. NOT a `Path.cwd()` bare fallback — the per-project plans_dir
+    # only applies when a registered project resolves.
     cwd_match = Path.cwd() / "docs" / "plans" / plan_arg
     if cwd_match.is_dir():
         return cwd_match
@@ -246,8 +300,7 @@ def _approve_pre_resume_after_child_main(argv: list[str]) -> int:
     child_plan_dir = plans_root / child_plan_id
     if not child_plan_dir.is_dir():
         print(
-            f"[approve pre_resume_after_child] child plan dir not found: "
-            f"{child_plan_dir}",
+            f"[approve pre_resume_after_child] child plan dir not found: {child_plan_dir}",
             file=sys.stderr,
         )
         return 2
@@ -619,8 +672,7 @@ def _projects_add(argv: list[str]) -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing entry with the same name. Requires --yes "
-        "for non-interactive use.",
+        help="Overwrite existing entry with the same name. Requires --yes for non-interactive use.",
     )
     parser.add_argument(
         "--yes",
@@ -631,6 +683,17 @@ def _projects_add(argv: list[str]) -> int:
     parser.add_argument("--implementer", default=None)
     parser.add_argument("--auditor", default=None)
     parser.add_argument("--notes", default=None)
+    parser.add_argument(
+        "--init-config",
+        action="store_true",
+        dest="init_config",
+        help=(
+            "Plan 2026-05-03-001 F003: scaffold an empty per-project config "
+            "at <project>/.jarvis/jarvis.json after registration. Default "
+            "behavior (without this flag) is no scaffold — operators who "
+            "want a per-project config opt in explicitly to avoid surprise."
+        ),
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
 
@@ -656,11 +719,38 @@ def _projects_add(argv: list[str]) -> int:
         print(f"[projects add] {exc}", file=sys.stderr)
         return 2
 
-    payload = {"action": "added", "project": projects_registry.to_public_dict(entry)}
+    scaffold_path: Path | None = None
+    scaffold_skipped = False
+    if args.init_config:
+        try:
+            scaffold_path = project_config.scaffold_empty_config(Path(entry.path))
+        except FileExistsError:
+            # Pre-existing per-project config — leave it alone, surface the
+            # fact in the human/JSON output. Don't fail the add.
+            scaffold_skipped = True
+
+    payload: dict[str, object] = {
+        "action": "added",
+        "project": projects_registry.to_public_dict(entry),
+    }
+    if args.init_config:
+        if scaffold_skipped:
+            payload["scaffold"] = "skipped (config already exists)"
+        elif scaffold_path is not None:
+            payload["scaffold"] = str(scaffold_path)
+
     if args.as_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(f"[projects add] registered {entry.name!r} → {entry.path}")
+        if args.init_config:
+            if scaffold_skipped:
+                print(
+                    "[projects add] per-project config already exists at "
+                    f"{project_config.project_config_path(Path(entry.path))} — left untouched"
+                )
+            elif scaffold_path is not None:
+                print(f"[projects add] scaffolded empty per-project config at {scaffold_path}")
     return 0
 
 
@@ -858,6 +948,54 @@ def _calibrate_claude_main(argv: list[str]) -> int:
         "Re-run `python3 scripts/quota_check.py` to see the calibrated state."
     )
     return 0
+
+
+# ──────────────────────────  jarvis doctor (F003)  ──────────────────────────
+
+
+def _doctor_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-001 F003: ``jarvis doctor`` wraps
+    ``scripts/jarvis_doctor.py`` so users have a single console-script
+    entry point. Includes per-project preflight by default and uses the
+    strict 0/1/2 exit-code matrix.
+
+    The bare script (``python3 scripts/jarvis_doctor.py``) keeps its
+    legacy 0/1 contract and skips per-project checks unless the operator
+    explicitly opts in via ``--include-projects --strict-codes``. This
+    wrapper is the new canonical surface; the legacy script remains for
+    backward compatibility per AC#5.
+    """
+    parser = argparse.ArgumentParser(
+        prog="jarvis doctor",
+        description=(
+            "Run the full doctor battery (structural + auth + per-project "
+            "preflight). Output structured PASS / WARN / FAIL per check; "
+            "exit 0 if all PASS, 1 if any WARN, 2 if any FAIL."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Machine-readable output (mirrors the legacy script's shape).",
+    )
+    parser.add_argument(
+        "--skip-auth",
+        action="store_true",
+        help="Omit gcloud-auth + firebase-auth probes (CI / fresh-clone mode).",
+    )
+    args = parser.parse_args(argv)
+
+    # Lazy import: scripts/ may not be on sys.path when the console script
+    # is installed via pipx. Add it before importing jarvis_doctor.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    try:
+        import jarvis_doctor as jd  # type: ignore[import-not-found]
+    finally:
+        sys.path.pop(0)
+
+    results = jd.run_all_checks(skip_auth=args.skip_auth, include_projects=True)
+    print(jd.render_json(results) if args.json else jd.render_text(results))
+    return jd.compute_strict_exit(results)
 
 
 # ──────────────────────────  dispatch-from-plan (F002)  ──────────────────────────
@@ -1062,20 +1200,17 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
     # Plan resolution. Distinct exit code (2) from the dispatch path so
     # operator wrappers (Discord, cron) can disambiguate "plan invalid" from
-    # "quota blocked".
+    # "quota blocked". F003: route through the shared resolver so registered
+    # projects' per-project ``plans_dir`` is honored, not just hardcoded
+    # ``./docs/plans/``.
     plan_arg = args.plan
-    plan_dir_candidate: Path | None = None
-    direct = Path(plan_arg)
-    if direct.is_dir():
-        plan_dir_candidate = direct
-    else:
-        cwd_match = Path.cwd() / "docs" / "plans" / plan_arg
-        if cwd_match.is_dir():
-            plan_dir_candidate = cwd_match
-    if plan_dir_candidate is None:
+    try:
+        plan_dir_candidate = _resolve_plan_dir(plan_arg)
+    except SystemExit:
         print(
             f"[dispatch-from-plan] plan not found: {plan_arg!r} "
-            f"(looked under ./docs/plans/{plan_arg}/ and as a literal path)",
+            "(checked literal path, registered projects' plans_dir, and "
+            "./docs/plans/)",
             file=sys.stderr,
         )
         return 2
@@ -1094,11 +1229,16 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
     # Resolve impl/auditor with the same fallback dispatch_volley uses, so
     # the printed defaults match what dispatch will actually run with.
+    # F003: chain is CLI arg > plan.agents_required > per-project config >
+    # global config > hardcoded.
     agents_req = list(plan.agents_required or [])
-    impl_default = str(agents_req[0]).split(".")[-1] if agents_req else "claude"
-    aud_default = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else "codex"
-    impl = args.implementer or impl_default
-    aud = args.auditor or aud_default
+    project_match = project_config.find_project_for_plan_dir(plan_dir)
+    project_path_for_resolve = project_match[0] if project_match else None
+    resolved_defaults = project_config.resolve_dispatch_defaults(project_path_for_resolve)
+    plan_impl = str(agents_req[0]).split(".")[-1] if agents_req else None
+    plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
+    impl = args.implementer or plan_impl or resolved_defaults["implementer"]
+    aud = args.auditor or plan_aud or resolved_defaults["auditor"]
 
     human_gates = [g.value if hasattr(g, "value") else str(g) for g in (plan.human_gates or [])]
     loop_caps = plan.loop_caps
@@ -1196,6 +1336,8 @@ def main(argv: list[str] | None = None) -> int:
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":
         return _dispatch_from_plan_main(raw[1:])
+    if raw and raw[0] == "doctor":
+        return _doctor_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

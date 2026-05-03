@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-03-001-feat-global-install-project-registry",
+  "audit_id": "2026-05-03-001-feat-global-install-project-registry#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-03T15:57:59Z",
+  "completed_at": "2026-05-03T16:01:04Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-03-001-feat-global-install-project-registry-6vr_3ubi target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 447743 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1801462,
+    "tokens_out": 12124,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Repo: Jarvis  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes.\n\nFINDING (high, correctness): Implementer audit is not a valid completion artifact. Evidence: `audit_status` is `blocked`, summary says `DISPATCH FAILED: TimeoutExpired`, and no commands were recorded. Recommendation: rerun implementation/audit after fixes and persist a successful completion summary.\n\nFINDING (high, style): Ruff is not clean. Evidence: `test_f003_project_config.py` has `F841` unused `ghost` plus two `I001` import-order failures. Recommendation: remove the unused variable and sort imports.\n\nFINDING (medium, correctness): `plan_loader.load()` was not updated to accept or apply a per-project `plans_dir` override. Evidence: signature remains `def load(plan_dir: Path) -> LoadedPlan`; only CLI `_resolve_plan_dir()` handles registered project overrides, and the AC6 test covers CLI resolution rather than `plan_loader.load()`. Recommendation: implement the required loader-level override path or update the contract/tests if resolution is intentionally owned by CLI.\n\nFINDING (medium, correctness): `jarvis doctor` exits non-zero on WARN-only results. Evidence: `compute_strict_exit()` returns `1` when any check has `warn=True`; a registered project with missing `plans_dir` is specified as WARN, so doctor can fail automation without any FAIL. Recommendation: align exit behavior with acceptance: non-zero only when any FAIL, unless the plan explicitly wants WARN-only exit 1.\n\nImplementer target declaration: p",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS='-p no:cacheprovider' PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f003_project_config.py scripts/jarvis_orchestrate/tests/test_f022_jarvis_doctor.py",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/jarvis_orchestrate/project_config.py scripts/jarvis_orchestrate/plan_loader.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/cli.py scripts/jarvis_doctor.py scripts/jarvis_orchestrate/tests/test_f003_project_config.py scripts/jarvis_orchestrate/tests/test_f022_jarvis_doctor.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "git -C /Users/bayesian/Documents/GitHub/Jarvis diff --check",
+      "git -C /Users/bayesian/Documents/GitHub/Jarvis diff --check -- scripts/jarvis_orchestrate/project_config.py scripts/jarvis_orchestrate/plan_loader.py scripts/jarvis_orchestrate/supervisor.py scripts/jarvis_orchestrate/cli.py scripts/jarvis_doctor.py scripts/jarvis_orchestrate/tests/test_f003_project_config.py scripts/jarvis_orchestrate/tests/test_f022_jarvis_doctor.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Implementer audit is not a valid completion artifact. Evidence: `audit_status` is `blocked`, summary says `DISPATCH FAILED: TimeoutExpired`, and no commands were recorded. Recommendation: rerun implementation/audit after fixes and persist a successful completion summary.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "style",
+      "feature_id": "F003",
+      "issue": "Ruff is not clean. Evidence: `test_f003_project_config.py` has `F841` unused `ghost` plus two `I001` import-order failures. Recommendation: remove the unused variable and sort imports.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`plan_loader.load()` was not updated to accept or apply a per-project `plans_dir` override. Evidence: signature remains `def load(plan_dir: Path) -> LoadedPlan`; only CLI `_resolve_plan_dir()` handles registered project overrides, and the AC6 test covers CLI resolution rather than `plan_loader.load()`. Recommendation: implement the required loader-level override path or update the contract/tests if resolution is intentionally owned by CLI.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`jarvis doctor` exits non-zero on WARN-only results. Evidence: `compute_strict_exit()` returns `1` when any check has `warn=True`; a registered project with missing `plans_dir` is specified as WARN, so doctor can fail automation without any FAIL. Recommendation: align exit behavior with acceptance: non-zero only when any FAIL, unless the plan explicitly wants WARN-only exit 1. Implementer target declaration: present and matching (`Repo: Jarvis`, `Env: dev`, `Project: (none)`). `target_context.co",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

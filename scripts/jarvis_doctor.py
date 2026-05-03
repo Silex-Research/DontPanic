@@ -13,14 +13,29 @@ Checks:
   6. agent-conventions schemas present + Pydantic models import-clean
   7. plan-artifact validator runs against parent orchestration plan
 
+Plan 2026-05-03-001 F003 adds optional per-project preflight (off by
+default for backward compat). When ``--include-projects`` is passed, the
+doctor also surfaces:
+  - global ``~/.jarvis/config.json`` parses (PASS / FAIL when invalid)
+  - projects registry status (PASS, lists count)
+  - per registered project: path exists, ``.jarvis/jarvis.json`` parses,
+    declared ``plans_dir`` exists or is creatable, declared agents are
+    recognized by AGENT_REGISTRY, declared ``human_gates`` are valid
+
 Usage:
   python3 scripts/jarvis_doctor.py              # full check (needs gcloud + firebase auth)
   python3 scripts/jarvis_doctor.py --skip-auth  # structural checks only (CI / fresh clone)
   python3 scripts/jarvis_doctor.py --json       # machine-readable output
+  python3 scripts/jarvis_doctor.py --include-projects --strict-codes  # F003 wrapper mode
 
-Exit codes:
+Exit codes (default — backward compat):
   0 — all checks green
   1 — at least one check failed (see output for remediation)
+
+Exit codes (--strict-codes — F003 mode used by `jarvis doctor`):
+  0 — all PASS
+  1 — at least one WARN, no FAIL
+  2 — at least one FAIL
 """
 
 from __future__ import annotations
@@ -364,15 +379,277 @@ def check_sa_key_age() -> CheckResult:
     )
 
 
+# ── F003: global + per-project config preflight ────────────────────────────
+
+
+def check_global_config() -> CheckResult:
+    """Plan 2026-05-03-001 F003: ``~/.jarvis/config.json`` parses if present.
+
+    A missing file is the valid first-run zero state — PASS with a hint.
+    A present-but-invalid file is FAIL: the global-config loader degrades
+    to empty + WARN at runtime, but the doctor surfaces it explicitly so
+    operators don't silently lose their declared defaults.
+    """
+    # Lazy import: keep the doctor importable from arbitrary cwds without
+    # forcing scripts/ onto sys.path until the F003 checks actually run.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from jarvis_orchestrate import global_config as gc
+    finally:
+        sys.path.pop(0)
+
+    path = gc.config_path()
+    if not path.is_file():
+        return _ok(
+            "global-config",
+            f"{path} not present (first-run zero state — defaults will fall through to hardcoded)",
+        )
+    try:
+        raw = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return _bad(
+            "global-config",
+            f"{path} is not valid JSON: line {exc.lineno} col {exc.colno}: {exc.msg}",
+            f"edit {path} to fix the JSON syntax error",
+        )
+    except OSError as exc:
+        return _bad(
+            "global-config",
+            f"{path} is unreadable: {exc}",
+            f"check file permissions on {path}",
+        )
+    try:
+        gc.GlobalConfig.model_validate(raw)
+    except Exception as exc:
+        return _bad(
+            "global-config",
+            f"{path} fails schema validation: {exc}",
+            f"edit {path} to remove unknown fields and match the expected schema",
+        )
+    return _ok("global-config", f"{path} parses + validates")
+
+
+def check_projects_registry_status() -> CheckResult:
+    """Plan 2026-05-03-001 F003: surface the registry's zero/non-zero state.
+
+    Empty registry is a valid first-run state (PASS with a hint that
+    nothing is registered yet — operators reading the doctor output then
+    know to run `jarvis projects add` if they expected projects to be
+    registered). Non-empty: PASS with the count.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from jarvis_orchestrate import projects_registry as pr
+    finally:
+        sys.path.pop(0)
+
+    reg = pr.load_registry()
+    n = len(reg.projects)
+    if n == 0:
+        return _ok(
+            "projects-registry",
+            "no projects registered (run `jarvis projects add <name> <path>` to register)",
+        )
+    return _ok("projects-registry", f"{n} project(s) registered")
+
+
+def check_registered_project(entry: object) -> list[CheckResult]:
+    """Plan 2026-05-03-001 F003: per-project preflight for one registry entry.
+
+    Runs five sub-checks, each surfaced as its own ``CheckResult`` so
+    operators see exactly which check tripped. The check name suffix
+    pins the entry's project name so JSON consumers can group by project.
+
+    1. ``project:<name>:path``        — registered ``path`` exists on disk
+    2. ``project:<name>:config``      — ``.jarvis/jarvis.json`` parses (if present)
+    3. ``project:<name>:plans-dir``   — declared ``plans_dir`` exists or is creatable
+    4. ``project:<name>:agents``      — declared implementer / auditor are in AGENT_REGISTRY
+    5. ``project:<name>:gates``       — declared ``human_gates`` intersect canonical names
+
+    ``entry`` is a ``ProjectEntry`` (typed as ``object`` in the signature
+    to avoid a hard import dep — the F003 checks are lazy-loaded).
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from jarvis_orchestrate import project_config as pc
+    finally:
+        sys.path.pop(0)
+
+    name = entry.name
+    path_str = entry.path
+    project_path = Path(path_str).expanduser()
+
+    results: list[CheckResult] = []
+
+    # 1. path exists
+    if not project_path.is_dir():
+        results.append(
+            _bad(
+                f"project:{name}:path",
+                f"registered path does not exist: {project_path}",
+                (
+                    f"run `jarvis projects remove {name} --yes` to drop, "
+                    "or `jarvis projects add ... --force --yes` to relink"
+                ),
+            )
+        )
+        # If the path doesn't exist, the rest of the checks are moot —
+        # bail out early so we don't dump confusing follow-on failures.
+        return results
+    results.append(_ok(f"project:{name}:path", f"path exists: {project_path}"))
+
+    # 2. per-project config (jarvis.json) parses if present.
+    config_path = pc.project_config_path(project_path)
+    project_cfg: pc.ProjectConfig | None = None
+    if config_path.is_file():
+        try:
+            raw = json.loads(config_path.read_text())
+        except json.JSONDecodeError as exc:
+            results.append(
+                _bad(
+                    f"project:{name}:config",
+                    (
+                        f"{config_path} is not valid JSON: "
+                        f"line {exc.lineno} col {exc.colno}: {exc.msg}"
+                    ),
+                    f"edit {config_path} to fix the JSON syntax error",
+                )
+            )
+            return results
+        except OSError as exc:
+            results.append(
+                _bad(
+                    f"project:{name}:config",
+                    f"{config_path} is unreadable: {exc}",
+                    f"check file permissions on {config_path}",
+                )
+            )
+            return results
+        try:
+            project_cfg = pc.ProjectConfig.model_validate(raw)
+        except Exception as exc:
+            results.append(
+                _bad(
+                    f"project:{name}:config",
+                    f"{config_path} fails schema validation: {exc}",
+                    f"edit {config_path} — see the schema in project_config.py",
+                )
+            )
+            return results
+        results.append(_ok(f"project:{name}:config", f"{config_path} parses + validates"))
+    else:
+        results.append(
+            _ok(
+                f"project:{name}:config",
+                f"{config_path} not present (per-project config is optional)",
+            )
+        )
+
+    # 3. plans_dir exists OR is creatable. Declared plans_dir from the
+    # config (or the default 'docs/plans' fallback) is checked as a
+    # project-relative path. WARN (not FAIL) when missing — a fresh
+    # project may not have authored any plans yet.
+    plans_dir_rel = project_cfg.plans_dir if project_cfg is not None else pc.DEFAULT_PLANS_DIR
+    plans_dir_abs = (project_path / plans_dir_rel).resolve()
+    if plans_dir_abs.is_dir():
+        results.append(_ok(f"project:{name}:plans-dir", f"plans dir exists: {plans_dir_abs}"))
+    else:
+        # Soft signal: the parent must exist and be writable for it to be
+        # creatable. If the parent doesn't exist either, that's a sharper
+        # signal still — surface but don't FAIL.
+        creatable = plans_dir_abs.parent.is_dir()
+        suffix = "" if creatable else " (parent dir also missing)"
+        results.append(
+            _warn(
+                f"project:{name}:plans-dir",
+                f"declared plans dir not present: {plans_dir_abs}{suffix}",
+                f"create the directory or update plans_dir in {config_path}",
+            )
+        )
+
+    # 4. declared agents are in AGENT_REGISTRY.
+    declared_agents: list[tuple[str, str]] = []
+    if project_cfg is not None:
+        if project_cfg.implementer:
+            declared_agents.append(("implementer", project_cfg.implementer))
+        if project_cfg.auditor:
+            declared_agents.append(("auditor", project_cfg.auditor))
+    if declared_agents:
+        unknown = [(role, agent) for role, agent in declared_agents if not pc.is_known_agent(agent)]
+        if unknown:
+            details = ", ".join(f"{role}={agent!r}" for role, agent in unknown)
+            results.append(
+                _bad(
+                    f"project:{name}:agents",
+                    f"declared agent(s) not in AGENT_REGISTRY: {details}",
+                    (
+                        f"edit {config_path} so implementer/auditor names "
+                        "match registered executors (claude, codex)"
+                    ),
+                )
+            )
+        else:
+            joined = ", ".join(f"{role}={agent}" for role, agent in declared_agents)
+            results.append(_ok(f"project:{name}:agents", f"declared agents recognized: {joined}"))
+    else:
+        results.append(
+            _ok(
+                f"project:{name}:agents",
+                "no per-project agent overrides (falls through to global / hardcoded)",
+            )
+        )
+
+    # 5. declared human_gates are valid. Cross-validation already runs at
+    # ProjectConfig.model_validate time; reaching here means the names
+    # are known. Surface the count for visibility. If human_gates is None,
+    # still PASS (no override declared).
+    if project_cfg is not None and project_cfg.human_gates:
+        results.append(
+            _ok(
+                f"project:{name}:gates",
+                f"declared human_gates: {project_cfg.human_gates}",
+            )
+        )
+    else:
+        results.append(_ok(f"project:{name}:gates", "no per-project human_gates override"))
+
+    return results
+
+
+def check_registered_projects() -> list[CheckResult]:
+    """Iterate the registry and run :func:`check_registered_project` for
+    each entry. Returns the flattened list. When the registry is empty,
+    returns ``[]`` — :func:`check_projects_registry_status` is the explicit
+    zero-state surface."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from jarvis_orchestrate import projects_registry as pr
+    finally:
+        sys.path.pop(0)
+
+    reg = pr.load_registry()
+    out: list[CheckResult] = []
+    for entry in reg.projects:
+        out.extend(check_registered_project(entry))
+    return out
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
-def run_all_checks(skip_auth: bool = False) -> list[CheckResult]:
+def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> list[CheckResult]:
     """Execute the full check battery.
 
     skip_auth=True omits the gcloud-auth + firebase-auth probes. That mode
     is for environments where authenticated CLIs are not expected (CI,
     fresh clones being smoke-tested) — every other check still runs.
+
+    Plan 2026-05-03-001 F003: ``include_projects=True`` also runs the
+    global-config check, the registry-status check, and the per-project
+    preflight for each registered project. Off by default for backward
+    compat (existing `python3 scripts/jarvis_doctor.py` invocation
+    behavior is unchanged); the new ``jarvis doctor`` subcommand passes
+    ``include_projects=True``.
     """
     results: list[CheckResult] = []
     results.append(check_python_version())
@@ -388,7 +665,28 @@ def run_all_checks(skip_auth: bool = False) -> list[CheckResult]:
     results.append(check_schemas())
     results.append(check_pydantic_models())
     results.append(check_parent_plan_validates())
+    if include_projects:
+        results.append(check_global_config())
+        results.append(check_projects_registry_status())
+        results.extend(check_registered_projects())
     return results
+
+
+def compute_strict_exit(results: list[CheckResult]) -> int:
+    """Plan 2026-05-03-001 F003 exit-code matrix.
+
+    0 — every result is PASS (ok=True, warn=False)
+    1 — at least one WARN, no FAIL
+    2 — at least one FAIL (ok=False)
+
+    Default ``main()`` uses the legacy 0/1 contract; the new
+    ``jarvis doctor`` subcommand (and ``--strict-codes``) use this matrix.
+    """
+    if any(not r.ok for r in results):
+        return 2
+    if any(r.warn for r in results):
+        return 1
+    return 0
 
 
 def render_text(results: list[CheckResult]) -> str:
@@ -443,10 +741,30 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="omit gcloud-auth and firebase-auth probes (CI / fresh-clone mode)",
     )
+    parser.add_argument(
+        "--include-projects",
+        action="store_true",
+        help=(
+            "Plan 2026-05-03-001 F003: also run global-config + per-project "
+            "preflight (off by default for backward compat). The `jarvis doctor` "
+            "subcommand passes this implicitly."
+        ),
+    )
+    parser.add_argument(
+        "--strict-codes",
+        action="store_true",
+        help=(
+            "Plan 2026-05-03-001 F003: use the 0/1/2 exit code matrix "
+            "(0=PASS, 1=WARN, 2=FAIL) instead of the legacy 0/1 (0=all-ok, "
+            "1=any-fail). The `jarvis doctor` subcommand passes this implicitly."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    results = run_all_checks(skip_auth=args.skip_auth)
+    results = run_all_checks(skip_auth=args.skip_auth, include_projects=args.include_projects)
     print(render_json(results) if args.json else render_text(results))
+    if args.strict_codes:
+        return compute_strict_exit(results)
     return 0 if all(r.ok for r in results) else 1
 
 

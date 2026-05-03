@@ -148,10 +148,84 @@
         "Tests: (a) per-project config loads + overrides global. (b) `jarvis doctor` with a registered project, no jarvis.json present → reports OK (config is optional). (c) `jarvis doctor` with invalid jarvis.json → FAIL with line/field detail. (d) `jarvis doctor` with declared plans_dir that doesn't exist → WARN. (e) override precedence: per-project > global > fallback verified by parametric test."
       ],
       "acceptance": "(1) Per-project `.jarvis/jarvis.json` validates + loads; missing is OK (config is optional); invalid is WARN, not FAIL. (2) Override precedence at dispatch time: per-project > global (~/.jarvis/config.json) > hardcoded ('claude' / 'codex'). (3) `jarvis doctor` runs global preflight + per-registered-project preflight; outputs structured PASS / WARN / FAIL; non-zero exit on any FAIL. (4) `jarvis projects add --init-config` scaffolds an empty per-project config; default behavior is no scaffold. (5) Existing `scripts/jarvis_doctor.py` invocation unchanged (backward compat). (6) plan_loader respects per-project `plans_dir` when set. (7) All new tests pass. Ruff + sanitization clean. Full orchestrate suite still green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_at": "2026-05-03T16:00:00Z",
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/project_config.py",
+          "captured_by": "claude",
+          "note": "Pydantic v2 ProjectConfig (extra='forbid'); load_project_config (missing→None, invalid-JSON→WARN+None, schema-violation→WARN+None); resolve_dispatch_defaults walks per-project > global > fallback chain (D004) with chained `or` semantics where None-or-absent at one layer falls through to the next; resolve_project_path is structural (registry-first by name regex, then path-shape detection requiring `/`/`~`/`.`); find_project_for_plan_dir does deepest-match registry lookup; scaffold_empty_config supports `jarvis projects add --init-config`. None-vs-missing semantic explicitly pinned in resolve_dispatch_defaults docstring."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "_resolve_plan_dir is project-aware (literal-path → cwd-anchored project plans_dir → walk registry honoring each project's plans_dir → gated `<cwd>/docs/plans/<arg>` smoke-test fallback for un-registered repos). Step 4 fallback is bounded — only fires when registry-based resolution fails AND the literal dir exists. dispatch-from-plan consults resolve_dispatch_defaults. `projects add --init-config` scaffolds empty per-project config. approve/resume deliberately NOT wired through resolver — they clear gates, don't pick agents (rationale documented in test docstring)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Both agent-picker dispatch paths consult resolve_dispatch_defaults: dispatch_volley (line 581) and dispatch_single_agent (line 852). When no explicit override is passed via CLI args, defaults flow through the per-project > global > fallback chain. Per-project config also flows in for human_gates / protected_paths."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_doctor.py",
+          "captured_by": "claude",
+          "note": "--include-projects flag adds per-registered-project preflight (path exists, jarvis.json parses with line/field detail on failure, plans_dir exists or is creatable, declared agents are recognized by AGENT_REGISTRY, declared human_gates are valid HumanGate names). --strict-codes selects the 0/1/2 exit-code matrix per F003 acceptance. Bare `scripts/jarvis_doctor.py` invocation keeps the legacy 0/1 contract for backward compat (AC5)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/plan_loader.py",
+          "captured_by": "claude",
+          "note": "load() accepts optional plans_dir override path used by the resolver. The function signature gain is additive — existing callers that pass only plan_dir continue to work."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f003_project_config.py",
+          "captured_by": "claude",
+          "note": "43 tests across 7 classes covering all 6 acceptance items + the 8 audit-focus addendum priorities: TestProjectConfigLoad (missing/empty/full/invalid-JSON/extra-field/unknown-gate/explicit-null), TestPrecedenceMatrix (parametric matrix over per-project × global × fallback cells + partial fall-through + invalid layer + no-project-path), TestResolveProjectPath (registered-name-wins + absolute-path + unknown-bare-name-refuses + name-wins-over-coincident-dir), TestPlansDirWiring (per-project plans_dir honored + refuses-unknown + cwd-fallback), TestDoctorPerProject (legacy + include-projects + zero-state + missing-jarvis-json + invalid-json + missing-path + missing-plans-dir-warns + unknown-agent + global-config-invalid), TestDoctorExitCodeMatrix (parametric 0/1/2 cells + jarvis-doctor-subcommand + legacy-script-keeps-0/1), TestSingleAgentResolverParity (dispatch_single_agent uses per-project implementer)."
+        },
+        {
+          "type": "audit_json",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/audit/codex-auditor-F003-i0.json",
+          "captured_by": "codex",
+          "note": "Codex auditor iter-0 envelope (5 findings — 3 resolved before flip: project_config.py untracked → now staged, missing tests → now present, ruff issues → now clean; 2 dismissed: dispatch_single_agent precedence is wired and tested as TestSingleAgentResolverParity, plan_loader signature interpretation differs but achieves the spec via _resolve_plan_dir wrapping)."
+        },
+        {
+          "type": "audit_json",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/audit/codex-auditor-F003-i1.json",
+          "captured_by": "codex",
+          "note": "Codex auditor iter-1 envelope (4 findings — 1 platform: implementer envelope blocked by 600s timeout per D009 caveat 2; 1 resolved: ruff after auto-fix + manual F841 fix; 2 spec-clarification dismissed: plan_loader signature pattern, doctor WARN→exit 1 contradicts locked acceptance #3)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/evidence/f003-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F003 close-out memo — direct-volley rationale, what landed, volley terminal explanation (stopped_no_progress with both implementer iterations hitting 600s timeout but completing on-disk work), pre-flip diff review for all 6 high-risk audit-focus areas, four caveats (gate semantics upfront-evaluated, 600s subprocess timeout, Step-4 cwd fallback, approve/resume-not-wired), and pointers for follow-up plans (lifecycle-staged gates, timeout-and-checkpoint, OpenClaw strategic doc edits, Phase B agent-manifest)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/decisions.jsonl",
+          "captured_by": "operator",
+          "note": "D009 records the F003 close-out — accepting work despite stopped_no_progress terminal because (a) all gates green, (b) acceptance independently verifiable from on-disk state, (c) operator-side review covered the 6 high-risk audit-focus areas, (d) re-dispatch would burn quota without changing the implementation. Three caveats recorded for future plans: gate-semantics quirk, 600s subprocess timeout, Step-4 cwd carveout. Spec-clarification finding (doctor WARN exit) explicitly dismissed in favor of locked acceptance text."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/tests/",
+          "captured_by": "claude",
+          "note": "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/ — 702 passed, 6 skipped (baseline 659+6 → +43 F003 tests = 702). Targeted F003 run: 43/43 green in 1.57s. Ruff: clean across all F003-touched files (after auto-fix for I001/B009 + manual F841 unused-var fix). Sanitization: 0 findings, 591 files scanned."
+        }
       ]
     }
   ]

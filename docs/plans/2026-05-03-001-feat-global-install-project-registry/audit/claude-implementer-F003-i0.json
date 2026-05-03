@@ -1,0 +1,35 @@
+{
+  "task_id": "2026-05-03-001-feat-global-install-project-registry",
+  "audit_id": "2026-05-03-001-feat-global-install-project-registry#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "iteration": 0,
+  "started_at": "2026-05-03T15:34:56Z",
+  "completed_at": "2026-05-03T15:44:56Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-03-001-feat-global-install-project-registry-6vr_3ubi target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 0 bytes"
+  ],
+  "quota_consumed": {
+    "api_calls": 0
+  },
+  "summary": "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F003] DISPATCH FAILED: TimeoutExpired: Command '['/Users/bayesian/.local/bin/claude', '-p', '--output-format', 'json', '--permission-mode', 'acceptEdits', '--allowedTools', 'Read Edit Write Bash']' timed out after 600 seconds",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "issue": "Missing or mismatched `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "blocked"
+}
