@@ -1,26 +1,41 @@
-"""Plan 2026-05-02-003 F001 — parent/child metadata + depth/cycle/repeated-finding guards.
+"""Plan 2026-05-02-003 F001 + F002 — nested-orchestration primitives.
 
-Loads optional `orchestration` blocks from plan.md frontmatter into
-structured Pydantic models, computes parent-chain depth, and refuses
-dispatch when (a) depth exceeds the platform cap (default 3, CLI-only
-override per D002), (b) the chain forms a cycle by `plan_id`, or (c)
-the current plan's spawn-finding signature collides with any parent's
-recorded signature (D001).
+F001: parent/child metadata + depth/cycle/repeated-finding guards.
+F002: child_charter + commit_policy parsing/validation + close-out
+compliance (allowed-paths + return-condition + requires).
+
+Loads optional `orchestration`, `child_charter`, and `commit_policy`
+blocks from plan.md frontmatter into structured Pydantic models, computes
+parent-chain depth, and refuses dispatch when (a) depth exceeds the
+platform cap (default 3, CLI-only override per D002), (b) the chain
+forms a cycle by `plan_id`, or (c) the current plan's spawn-finding
+signature collides with any parent's recorded signature (D001).
+
+At signoff time (F002), enforces the child charter: parses the structured
+`## Return Condition` section of evidence/closeout-memo.md (D004), checks
+modified-file paths against `allowed_paths` when commit_policy.mode is
+`child_commit`, and verifies each `commit_policy.requires` item is
+satisfied by the signoff envelope.
 
 Anti-recursion thesis: a child plan is bounded work tied to a named
 parent finding/objective. depth + cycle + signature guards together
-make unbounded chains "fixing the same thing" impossible.
+make unbounded chains "fixing the same thing" impossible. The charter
+adds intentional close-out boundaries (allowed_paths, return-condition
+status enum) so the child cannot quietly drift outside its declared scope.
 """
 
 from __future__ import annotations
 
+import datetime as dt
+import fnmatch
 import hashlib
 import re
+import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 DEFAULT_DEPTH_LIMIT: int = 3
 """The platform cap on parent-chain depth (D002). Frontmatter may declare a
@@ -312,16 +327,423 @@ def check_repeated_finding(plan_dir: Path, *, plans_root: Path | None = None) ->
         cur_orch = parent_orch
 
 
+# ──────────────────────────────  F002 — child charter + commit policy  ──────────────────────────────
+#
+# The charter declares the bounded work (allowed_paths, return-condition,
+# kind), and the commit_policy declares whether the child is allowed to
+# commit code (child_commit) or only produce evidence (evidence_only).
+# Cross-field invariant (D003): mode and may_edit_product_code must agree.
+# Enforcement is at signoff time, NOT at dispatch — the agent can technically
+# write anywhere, but signoff refuses to land if it drifted outside scope.
+
+
+ChildCharterKind = Literal["implementation"]
+"""Only 'implementation' children are supported in v1. 'governance_design'
+and any future kinds are deferred to v2."""
+
+CommitPolicyMode = Literal["child_commit", "evidence_only"]
+"""'child_commit' = child squashes its own commits to the working tree;
+'evidence_only' = child produces evidence/* only (no product-code edits).
+'parent_squash' is deferred to v2."""
+
+ReturnConditionStatus = Literal["satisfied", "blocked", "superseded"]
+"""D004: the three legal close-out statuses. 'satisfied' = parent's return
+condition met; 'blocked' = child terminated without resolving; 'superseded' =
+work moved to a different plan or scope changed."""
+
+RequiresItem = Literal["patch_completeness", "tests_pass", "evidence_packaged"]
+"""commit_policy.requires items (subset). Each must be satisfied by the
+signoff envelope at close-out time, else ChildCharterViolation."""
+
+
+class ReturnConditionError(ValueError):
+    """Raised by parse_return_condition_section when the close-out memo's
+    `## Return Condition` section is missing or malformed (D004)."""
+
+
+class ChildCharterViolation(ValueError):
+    """Raised at signoff time when the child charter check fails:
+    return-condition section missing/invalid, files modified outside
+    allowed_paths under child_commit mode, or a commit_policy.requires
+    item is unsatisfied. signoff envelope MUST NOT be written on raise
+    (no-partial-artifact, mirrors plan 005 F002 acceptance #5)."""
+
+
+class CommitPolicy(BaseModel):
+    """`commit_policy` block from a child plan's frontmatter.
+
+    Default `mode='evidence_only'` per D003 — code-writing authority must
+    be explicit, not inherited from defaults. Cross-field invariant with
+    `child_charter.may_edit_product_code` is enforced separately by
+    `validate_charter_policy_consistency` (the two blocks parse independently
+    so the cross-check happens after both have validated).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: CommitPolicyMode = Field(
+        default="evidence_only",
+        description=(
+            "'child_commit' or 'evidence_only'. Defaults to 'evidence_only' "
+            "(D003 — code-writing authority must be explicit). 'parent_squash' "
+            "is deferred to v2 and rejected at parse time."
+        ),
+    )
+    requires: list[RequiresItem] = Field(
+        default_factory=list,
+        description=(
+            "Subset of {'patch_completeness', 'tests_pass', 'evidence_packaged'}. "
+            "Each item is checked by check_child_charter_compliance against the "
+            "signoff envelope at close-out time."
+        ),
+    )
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _check_mode(cls, v: Any) -> Any:
+        if v == "parent_squash":
+            raise ValueError(
+                "commit_policy.mode='parent_squash' is deferred to v2 "
+                "(plan 003 v1 supports modes 'child_commit' and 'evidence_only')"
+            )
+        return v
+
+
+class ChildCharter(BaseModel):
+    """`child_charter` block from a child plan's frontmatter.
+
+    Declares the bounded work, parent objective, allowed paths, and
+    return-condition shape. `may_edit_product_code` has NO default per D003 —
+    operator must declare intent explicitly when authoring the plan.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ChildCharterKind = Field(
+        ...,
+        description=(
+            "Only 'implementation' is supported in v1. 'governance_design' is "
+            "deferred to v2 and rejected at parse time with a deferral message."
+        ),
+    )
+    parent_objective: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="What the parent needed when it spawned this child (≤500 chars).",
+    )
+    parent_acceptance_item: str = Field(
+        ...,
+        min_length=1,
+        description="The parent acceptance clause this child unblocks.",
+    )
+    allowed_paths: list[str] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "fnmatch-style glob patterns. When commit_policy.mode='child_commit', "
+            "every modified file must match at least one glob; otherwise "
+            "ChildCharterViolation. Mode='evidence_only' skips this check."
+        ),
+    )
+    forbidden_decisions: list[str] = Field(
+        default_factory=list,
+        description="Free-form decisions the child must not take (informational).",
+    )
+    return_condition_summary: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "One short text describing the observable signal — used to render "
+            "the `## Return Condition` section template in the close-out memo. "
+            "The structured `status:` line is what enforcement reads (D004)."
+        ),
+    )
+    may_edit_product_code: bool = Field(
+        ...,
+        description=(
+            "Whether the child is allowed to modify product code. NO default "
+            "per D003 — operator must declare intent explicitly. Cross-field "
+            "invariant with commit_policy.mode."
+        ),
+    )
+    may_spawn_children: bool = Field(
+        default=False,
+        description=(
+            "Whether this child may itself appear as a parent_plan_id on a "
+            "grandchild plan. Defaults False; v1 enforces no grandchild-spawn "
+            "in nested_orchestration guards (deferred wiring lives in F003)."
+        ),
+    )
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def _check_kind(cls, v: Any) -> Any:
+        if v == "governance_design":
+            raise ValueError(
+                "child_charter.kind='governance_design' is deferred to v2 "
+                "(plan 003 v1 supports kind='implementation' only)"
+            )
+        return v
+
+
+def validate_charter_policy_consistency(
+    charter: ChildCharter, policy: CommitPolicy
+) -> None:
+    """D003 cross-field invariant: commit_policy.mode and
+    child_charter.may_edit_product_code must agree on intent.
+
+    - mode='child_commit' requires may_edit_product_code=True
+    - mode='evidence_only' requires may_edit_product_code=False
+
+    Raises ValueError on mismatch. Plan_loader calls this after both blocks
+    have parsed (Pydantic validators on either side cannot see the other
+    block, so the cross-check is a separate function call).
+    """
+    if policy.mode == "child_commit" and not charter.may_edit_product_code:
+        raise ValueError(
+            "commit_policy.mode='child_commit' requires "
+            "child_charter.may_edit_product_code=true (D003 cross-field invariant)"
+        )
+    if policy.mode == "evidence_only" and charter.may_edit_product_code:
+        raise ValueError(
+            "commit_policy.mode='evidence_only' requires "
+            "child_charter.may_edit_product_code=false "
+            "(D003 cross-field invariant — code-writing authority is "
+            "child_commit-only)"
+        )
+
+
+# ──────────────────────────────  Return Condition parser (D004)  ──────────────────────────────
+
+
+# The heading must be exactly `## Return Condition` (case-sensitive on the
+# words; leading whitespace permitted). The status line is case-insensitive
+# on both keyword and value (per D004).
+_RETURN_CONDITION_HEADING_RE = re.compile(
+    r"^\s*##\s+Return Condition\s*$", re.MULTILINE
+)
+_NEXT_H2_HEADING_RE = re.compile(r"^\s*##\s+", re.MULTILINE)
+_STATUS_LINE_RE = re.compile(
+    r"^\s*status\s*:\s*(\S+)\s*$", re.IGNORECASE | re.MULTILINE
+)
+_LEGAL_STATUSES = {"satisfied", "blocked", "superseded"}
+
+
+def parse_return_condition_section(memo_path: Path) -> ReturnConditionStatus:
+    """D004: parse the structured `## Return Condition` section of the
+    close-out memo and return one of {'satisfied', 'blocked', 'superseded'}.
+
+    Heading must be exactly `## Return Condition` (h2; leading whitespace
+    permitted). Within the section, finds the FIRST line matching
+    `^\\s*status:\\s*<value>\\s*$` (keyword + value case-insensitive).
+    Returns the lowercased status.
+
+    Raises ReturnConditionError on:
+      - missing memo file
+      - missing `## Return Condition` section
+      - missing `status:` line within the section
+      - illegal status value (not in {satisfied, blocked, superseded})
+      - multiple `status:` lines (ambiguous)
+    """
+    if not memo_path.is_file():
+        raise ReturnConditionError(f"close-out memo not found: {memo_path}")
+    text = memo_path.read_text()
+
+    heading_match = _RETURN_CONDITION_HEADING_RE.search(text)
+    if heading_match is None:
+        raise ReturnConditionError(
+            f"`## Return Condition` section missing in {memo_path} "
+            "(D004 — must be a literal h2 heading)"
+        )
+
+    section_start = heading_match.end()
+    next_heading = _NEXT_H2_HEADING_RE.search(text, pos=section_start)
+    section_text = (
+        text[section_start : next_heading.start()] if next_heading else text[section_start:]
+    )
+
+    status_matches = list(_STATUS_LINE_RE.finditer(section_text))
+    if not status_matches:
+        raise ReturnConditionError(
+            f"`## Return Condition` section in {memo_path} has no "
+            "`status:` line (D004 — must be `status: satisfied|blocked|superseded`)"
+        )
+    if len(status_matches) > 1:
+        raise ReturnConditionError(
+            f"`## Return Condition` section in {memo_path} has multiple "
+            f"`status:` lines (found {len(status_matches)}); only one is permitted"
+        )
+
+    raw_value = status_matches[0].group(1).strip().lower()
+    if raw_value not in _LEGAL_STATUSES:
+        raise ReturnConditionError(
+            f"`## Return Condition` status={raw_value!r} not in "
+            f"{sorted(_LEGAL_STATUSES)!r} in {memo_path}"
+        )
+    return raw_value  # type: ignore[return-value]
+
+
+# ──────────────────────────────  signoff-time charter compliance  ──────────────────────────────
+
+
+def _matches_any_glob(path: str, globs: list[str]) -> bool:
+    """fnmatch a path against a list of glob patterns. Returns True on any
+    match. Empty `globs` returns False (vacuous-true would defeat the check)."""
+    return any(fnmatch.fnmatch(path, g) for g in globs)
+
+
+def _git_modified_files(plan_dir: Path) -> list[str]:
+    """Best-effort `git diff --name-only HEAD` from the repo root inferred
+    from plan_dir. Returns the list of modified-but-not-committed paths
+    (relative to repo root). Returns [] if git is unavailable, the plan_dir
+    is not in a git repo, or the command fails — callers should be tolerant
+    of empty results (the allowed_paths check is meaningful only when there
+    are modified files to check)."""
+    repo_root: Path | None = None
+    cur = plan_dir.resolve()
+    for ancestor in (cur, *cur.parents):
+        if (ancestor / ".git").exists():
+            repo_root = ancestor
+            break
+    if repo_root is None:
+        return []
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return []
+    if result.returncode != 0:
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def check_child_charter_compliance(
+    *,
+    plan_dir: Path,
+    child_charter: ChildCharter,
+    commit_policy: CommitPolicy,
+    signoff_data: dict[str, Any],
+    modified_files: list[str] | None = None,
+) -> dict[str, Any]:
+    """Plan 2026-05-02-003 F002: signoff-time charter compliance check.
+
+    Three checks (D003 + D004):
+
+    (1) ``parse_return_condition_section`` against
+        ``<plan_dir>/evidence/closeout-memo.md``. Missing section / illegal
+        value / ambiguity → ChildCharterViolation. The parsed status is
+        returned in the compliance dict; recording does NOT raise on
+        ``blocked``/``superseded`` — F003 is what refuses parent re-entry on
+        non-satisfied (per AC#6).
+
+    (2) When ``commit_policy.mode='child_commit'``: every modified file
+        (passed in or queried via ``git diff --name-only HEAD``) must match
+        at least one glob in ``child_charter.allowed_paths``; otherwise
+        ChildCharterViolation. Mode='evidence_only' skips this check
+        entirely (no git invocation).
+
+    (3) For each item in ``commit_policy.requires``:
+        - 'tests_pass' → ``signoff_data['signoff']`` is True (the volley
+          signed off; absent or False → violation).
+        - 'patch_completeness' → ``signoff_data['audits']`` is non-empty
+          (at least one audit envelope underpins the signoff).
+        - 'evidence_packaged' → ``<plan_dir>/evidence/`` exists and is
+          non-empty.
+
+    Returns a side-car compliance dict (intended for persistence at
+    ``audit/charter-compliance-{plan_id}.json``). Does NOT mutate
+    ``signoff_data``; the canonical Signoff schema (agent-conventions
+    v1.0) stays unchanged — schema-discipline pattern matching F001's
+    pop-orchestration-block-before-validate.
+
+    Raises ``ChildCharterViolation`` (or ``ReturnConditionError``, which is
+    NOT a subclass) on any failure; the supervisor's signoff_writer call
+    catches both and refuses to persist a partial signoff envelope.
+    """
+    memo_path = plan_dir / "evidence" / "closeout-memo.md"
+    try:
+        status = parse_return_condition_section(memo_path)
+    except ReturnConditionError as exc:
+        raise ChildCharterViolation(str(exc)) from exc
+
+    if commit_policy.mode == "child_commit":
+        files = modified_files if modified_files is not None else _git_modified_files(plan_dir)
+        violations = [f for f in files if not _matches_any_glob(f, child_charter.allowed_paths)]
+        if violations:
+            raise ChildCharterViolation(
+                f"files modified outside allowed_paths: {violations} "
+                f"(allowed_paths={list(child_charter.allowed_paths)})"
+            )
+
+    satisfied: list[str] = []
+    for item in commit_policy.requires:
+        if item == "tests_pass":
+            if not signoff_data.get("signoff"):
+                raise ChildCharterViolation(
+                    "requires=tests_pass not satisfied: "
+                    f"signoff_data['signoff']={signoff_data.get('signoff')!r} "
+                    "(volley did not sign off)"
+                )
+            satisfied.append("tests_pass")
+        elif item == "patch_completeness":
+            if not signoff_data.get("audits"):
+                raise ChildCharterViolation(
+                    "requires=patch_completeness not satisfied: "
+                    "signoff_data['audits'] is empty (no audit envelopes)"
+                )
+            satisfied.append("patch_completeness")
+        elif item == "evidence_packaged":
+            evidence_dir = plan_dir / "evidence"
+            if not evidence_dir.is_dir() or not any(evidence_dir.iterdir()):
+                raise ChildCharterViolation(
+                    f"requires=evidence_packaged not satisfied: "
+                    f"{evidence_dir} is missing or empty"
+                )
+            satisfied.append("evidence_packaged")
+        # Pydantic Literal validation prevents unknown items from reaching here.
+
+    return {
+        "task_id": signoff_data.get("task_id"),
+        "return_condition_status": status,
+        "compliance_checks_satisfied": satisfied,
+        "commit_policy_mode": commit_policy.mode,
+        "decided_at": _now_iso(),
+    }
+
+
 __all__ = [
     "DEFAULT_DEPTH_LIMIT",
+    "ChildCharter",
+    "ChildCharterKind",
+    "ChildCharterViolation",
+    "CommitPolicy",
+    "CommitPolicyMode",
     "NestedOrchestrationError",
     "Orchestration",
+    "RequiresItem",
+    "ReturnConditionError",
+    "ReturnConditionStatus",
     "SpawnFinding",
     "SpawnReason",
+    "check_child_charter_compliance",
     "check_cycle",
     "check_depth",
     "check_repeated_finding",
     "compute_depth",
     "compute_finding_signature",
+    "parse_return_condition_section",
+    "validate_charter_policy_consistency",
     "walk_parent_chain",
 ]

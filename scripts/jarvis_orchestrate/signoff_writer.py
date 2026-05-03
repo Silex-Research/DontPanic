@@ -174,6 +174,12 @@ def signoff_path(plan_dir: Path, plan_id: str) -> Path:
     return plan_dir / "audit" / f"signoff-{plan_id}.json"
 
 
+def charter_compliance_path(plan_dir: Path, plan_id: str) -> Path:
+    """Plan 2026-05-02-003 F002: side-car compliance file path. Lives next
+    to the signoff envelope so operators see both artifacts together."""
+    return plan_dir / "audit" / f"charter-compliance-{plan_id}.json"
+
+
 def write_signoff(
     *,
     plan_id: str,
@@ -184,8 +190,24 @@ def write_signoff(
     plan_dir: Path,
     volley_status: str,
     signoff_reason: str | None = None,
+    child_charter: Any = None,
+    commit_policy: Any = None,
+    modified_files: list[str] | None = None,
 ) -> Path:
-    """Build, validate, and write the signoff.json closeout. Returns the path."""
+    """Build, validate, and write the signoff.json closeout. Returns the path.
+
+    Plan 2026-05-02-003 F002: when both ``child_charter`` and ``commit_policy``
+    are passed, runs ``check_child_charter_compliance`` BEFORE persisting any
+    artifact. On ``ChildCharterViolation`` neither the signoff envelope nor
+    the side-car compliance file is written (no-partial-artifact, mirrors
+    plan 005 F002 acceptance #5). On compliance pass, writes the side-car
+    file at ``audit/charter-compliance-{plan_id}.json`` recording the parsed
+    return-condition status + satisfied requires items.
+
+    The Signoff schema (agent-conventions v1.0) is unchanged — compliance
+    output lives in the side-car, matching F001's pop-orchestration-block
+    schema-discipline pattern (D006-style).
+    """
     payload = build_signoff_dict(
         plan_id=plan_id,
         tier=tier,
@@ -196,9 +218,31 @@ def write_signoff(
         volley_status=volley_status,
         signoff_reason=signoff_reason,
     )
+
+    compliance: dict[str, Any] | None = None
+    if child_charter is not None and commit_policy is not None:
+        # Late import to avoid a load-time cycle (nested_orchestration imports
+        # nothing from signoff_writer, but plan_loader imports both).
+        from jarvis_orchestrate.nested_orchestration import (
+            check_child_charter_compliance,
+        )
+
+        compliance = check_child_charter_compliance(
+            plan_dir=plan_dir,
+            child_charter=child_charter,
+            commit_policy=commit_policy,
+            signoff_data=payload,
+            modified_files=modified_files,
+        )
+
     out = signoff_path(plan_dir, plan_id)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+
+    if compliance is not None:
+        side_car = charter_compliance_path(plan_dir, plan_id)
+        side_car.write_text(json.dumps(compliance, indent=2, ensure_ascii=False) + "\n")
+
     return out
 
 
@@ -206,6 +250,7 @@ __all__ = [
     "SignoffWriteError",
     "VALID_TIERS",
     "build_signoff_dict",
+    "charter_compliance_path",
     "signoff_path",
     "write_signoff",
 ]

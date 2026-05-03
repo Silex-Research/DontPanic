@@ -670,8 +670,14 @@ def _emit_volley_terminal(
                 plan_dir=plan_dir,
                 volley_status=result.final_status,
                 signoff_reason=result.reason,
+                # Plan 2026-05-02-003 F002: pass charter/policy if present so
+                # signoff-time compliance (allowed_paths + return-condition +
+                # requires) runs before the envelope persists. Top-level
+                # plans (None/None) skip the check entirely.
+                child_charter=loaded.child_charter,
+                commit_policy=loaded.commit_policy,
             )
-        except signoff_writer.SignoffWriteError as exc:
+        except (signoff_writer.SignoffWriteError, nested_orchestration.ChildCharterViolation) as exc:
             print(f"[volley] signoff_writer skipped: {exc}")
     return result
 
