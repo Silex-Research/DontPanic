@@ -963,6 +963,14 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
+    # Plan 2026-05-03-001 F001: --version / -V prints the package version
+    # and exits 0. Resolves to `jarvis_orchestrate.__version__` (single
+    # source of truth read by pyproject.toml's [tool.setuptools.dynamic]).
+    if raw and raw[0] in ("--version", "-V"):
+        from jarvis_orchestrate import __version__
+
+        print(f"jarvis {__version__}")
+        return 0
     if raw and raw[0] == "ps":
         return _ps_main(raw[1:])
     if raw and raw[0] == "approve":
