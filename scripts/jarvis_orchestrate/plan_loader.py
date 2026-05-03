@@ -111,6 +111,43 @@ def _frontmatter(path: Path) -> dict[str, Any]:
     return yaml.safe_load(parts[1])
 
 
+def resolve_plan_dir(
+    plan_arg: str,
+    *,
+    project_path: Path | None = None,
+    plans_dir: str = "docs/plans",
+) -> Path | None:
+    """Resolve a plan ID (or absolute path) to a plan directory.
+
+    Resolution order:
+      1. If ``plan_arg`` is itself an existing directory, use it directly.
+      2. If ``project_path`` is set, look under
+         ``<project_path>/<plans_dir>/<plan_arg>/``.
+      3. Else look under ``<cwd>/<plans_dir>/<plan_arg>/`` (the
+         backward-compatible behavior every existing caller depends on).
+
+    The ``plans_dir`` argument is the project-relative override threaded
+    in by F003: when a per-project ``.jarvis/jarvis.json`` sets
+    ``plans_dir``, callers pass that string here. Default matches the
+    convention every shipped plan uses.
+
+    Returns the resolved Path on success; ``None`` when no candidate
+    exists. Callers (CLI) translate ``None`` into a hard exit-2 refusal —
+    there is intentionally no silent ``Path.cwd()`` fallback baked in here.
+    """
+    direct = Path(plan_arg)
+    if direct.is_dir():
+        return direct.resolve()
+    if project_path is not None:
+        candidate = (project_path / plans_dir / plan_arg).resolve()
+        if candidate.is_dir():
+            return candidate
+    cwd_match = (Path.cwd() / plans_dir / plan_arg).resolve()
+    if cwd_match.is_dir():
+        return cwd_match
+    return None
+
+
 def load(plan_dir: Path) -> LoadedPlan:
     plan_dir = plan_dir.resolve()
     if not plan_dir.is_dir():
@@ -139,9 +176,7 @@ def load(plan_dir: Path) -> LoadedPlan:
     child_charter = (
         ChildCharter.model_validate(charter_block) if charter_block is not None else None
     )
-    commit_policy = (
-        CommitPolicy.model_validate(policy_block) if policy_block is not None else None
-    )
+    commit_policy = CommitPolicy.model_validate(policy_block) if policy_block is not None else None
 
     # Plan 2026-05-02-003 F002 cross-validation:
     # (a) child_charter is only valid on a child plan (orchestration set).

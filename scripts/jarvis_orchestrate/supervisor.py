@@ -29,6 +29,8 @@ from jarvis_orchestrate import (
     nested_orchestration,
     notify,
     plan_loader,
+    project_config,
+    projects_registry,
     prompts,
     quota_admission,
     quota_caps_loader,
@@ -42,7 +44,7 @@ from jarvis_orchestrate.environments_loader import (
     validate_target,
 )
 from jarvis_orchestrate.execution_environment import ExecutionEnvironment
-from jarvis_orchestrate.executors import ClaudeCLIExecutor, get_executor
+from jarvis_orchestrate.executors import get_executor
 from jarvis_orchestrate.executors.base import (
     BaseExecutor,
     DispatchTask,
@@ -539,7 +541,7 @@ def dispatch_single_agent(
     mode: str | None = None,
     allow_depth: int | None = None,
 ) -> Path:
-    """F004 path: dispatch one agent (Claude), produce + validate audit JSON.
+    """F004 path: dispatch one agent, produce + validate audit JSON.
 
     F023 Step 1 (EC9 + EC10): wraps the dispatch in an ExecutionEnvironment so
     the subprocess inherits an isolated CLI-state namespace, not ambient shell
@@ -547,10 +549,16 @@ def dispatch_single_agent(
     level Target contract; when unset, isolation still applies but no project
     label is injected into the subprocess env.
 
-    F007 Slice 2: pre-dispatch admission applies here too. Single-agent dispatch
-    is always Claude (F004 hardcodes ClaudeCLIExecutor); the admission check
-    therefore evaluates against ["claude"] only, but the runtime class /
-    bypass / transient-gate semantics match dispatch_volley.
+    F007 Slice 2: pre-dispatch admission applies here too.
+
+    Plan 2026-05-03-001 F003: agent resolution mirrors :func:`dispatch_volley`.
+    The agent_role ('implementer' / 'auditor') maps onto the per-plan
+    ``agents_required`` indices first, then through the
+    :func:`project_config.resolve_dispatch_defaults` chain (per-project
+    ``.jarvis/jarvis.json`` > global ``~/.jarvis/config.json`` > hardcoded
+    fallbacks 'claude' / 'codex'). The executor is then resolved through
+    :data:`AGENT_REGISTRY` rather than hardcoded to Claude — this is the
+    single-agent parity contract for F003.
     """
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
@@ -562,7 +570,31 @@ def dispatch_single_agent(
     # once on first arm, and record best-effort volley.spawn_child trace.
     _arm_parent_pre_resume_gate_for_child(loaded)
 
-    quota_pct, quota_line = _quota_gate("claude")
+    # Plan 2026-05-03-001 F003: resolve the effective agent for this role.
+    # Order: plan.agents_required[index] > per-project > global > hardcoded.
+    # Index 0 = implementer, index 1 = auditor; non-canonical roles fall
+    # straight through to the implementer slot for back-compat with callers
+    # that pass an arbitrary string.
+    agents_req = list(loaded.plan.agents_required or [])
+    project_match = project_config.find_project_for_plan_dir(loaded.plan_dir)
+    project_path_for_resolve = project_match[0] if project_match else None
+    resolved_defaults = project_config.resolve_dispatch_defaults(project_path_for_resolve)
+    if agent_role == "auditor":
+        plan_pick = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
+        agent_name = plan_pick or resolved_defaults["auditor"]
+    else:
+        plan_pick = str(agents_req[0]).split(".")[-1] if agents_req else None
+        agent_name = plan_pick or resolved_defaults["implementer"]
+    if project_match is not None:
+        # Stamp last_used_at on the resolved registered project so
+        # `jarvis projects list` reflects real recency. Best-effort —
+        # missing-name (registry edited mid-flight) must not block dispatch.
+        try:
+            projects_registry.update_last_used(project_match[1])
+        except projects_registry.ProjectsRegistryError:
+            pass
+
+    quota_pct, quota_line = _quota_gate(agent_name)
     print(quota_line)
 
     effective_env = target_env if target_env is not None else loaded.target_env
@@ -573,13 +605,16 @@ def dispatch_single_agent(
     )
     print(registry_log)
 
-    # F007 Slice 2 — pre-dispatch admission for single-agent path.
+    # F007 Slice 2 — pre-dispatch admission for single-agent path. F003:
+    # admission evaluates against the resolved agent_name (not hardcoded
+    # 'claude') so per-project / global overrides flow through to quota +
+    # interactive-backoff signals correctly.
     plan_tier_str = (
         loaded.plan.tier.value
         if hasattr(loaded.plan.tier, "value")
         else str(loaded.plan.tier or "")
     )
-    admission = quota_admission.evaluate(plan_tier_str, agents=["claude"], mode_override=mode)
+    admission = quota_admission.evaluate(plan_tier_str, agents=[agent_name], mode_override=mode)
     print(
         f"[admission] class={admission.dispatch_class.value} "
         f"quota_over={admission.quota.over_threshold} "
@@ -592,7 +627,7 @@ def dispatch_single_agent(
         )
     if admission.interactive.within_backoff:
         reason_for[quota_admission.gate_name(quota_admission.DeferKind.INTERACTIVE_BACKOFF)] = (
-            f"interactive backoff active for claude — "
+            f"interactive backoff active for {agent_name} — "
             f"{admission.interactive.minutes_remaining:.1f} min remaining"
         )
     gate_pause.reconcile_defers(
@@ -655,7 +690,12 @@ def dispatch_single_agent(
             permission_policy=_derive_permission_policy(agent_role),
         )
 
-        executor = ClaudeCLIExecutor()
+        # F003: resolve executor through AGENT_REGISTRY rather than
+        # hardcoding ClaudeCLIExecutor; respects per-project / global
+        # overrides flowing through ``agent_name``. KeyError on unknown
+        # name surfaces as a clear runtime error rather than silent
+        # claude-fallback.
+        executor = _resolve_executor(agent_name)
         result = executor.dispatch(task)
 
         audit = audit_writer.build_audit(
@@ -664,8 +704,8 @@ def dispatch_single_agent(
             feature_id=feature_id,
             validation_performed=[
                 *([nested_marker] if nested_marker else []),
-                f"read ~/.jarvis/quota_state.json (claude pct={quota_pct})",
-                f"claude -p --output-format json (binary={executor.binary})",
+                f"read ~/.jarvis/quota_state.json ({agent_name} pct={quota_pct})",
+                f"{agent_name} dispatch (binary={getattr(executor, 'binary', None) or '?'})",
                 f"captured stdout {len(result.raw_response)} bytes",
                 f"subprocess exit {0 if result.success else 'nonzero'}",
                 f"execution_env_root={exec_env.root}",
@@ -757,7 +797,10 @@ def _emit_volley_terminal(
                 # events.jsonl. None for top-level plans.
                 orchestration=loaded.orchestration,
             )
-        except (signoff_writer.SignoffWriteError, nested_orchestration.ChildCharterViolation) as exc:
+        except (
+            signoff_writer.SignoffWriteError,
+            nested_orchestration.ChildCharterViolation,
+        ) as exc:
             print(f"[volley] signoff_writer skipped: {exc}")
     return result
 
@@ -798,12 +841,27 @@ def dispatch_volley(
     # once on first arm, and record best-effort volley.spawn_child trace.
     _arm_parent_pre_resume_gate_for_child(loaded)
 
-    # Resolve role pairing — F005a uses agents_required[0/1] convention
+    # Resolve role pairing — F005a uses agents_required[0/1] convention.
+    # F003 fallback chain (when neither CLI arg nor agents_required declares):
+    # per-project `<project>/.jarvis/jarvis.json` > global `~/.jarvis/config.json`
+    # > hardcoded ('claude' / 'codex'). Plan's agents_required[] still wins
+    # over per-project / global because it's an explicit per-plan declaration.
     agents_req = list(loaded.plan.agents_required or [])
-    impl_name = implementer_agent or (str(agents_req[0]).split(".")[-1] if agents_req else "claude")
-    aud_name = auditor_agent or (
-        str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else "codex"
-    )
+    project_match = project_config.find_project_for_plan_dir(loaded.plan_dir)
+    project_path = project_match[0] if project_match else None
+    resolved = project_config.resolve_dispatch_defaults(project_path)
+    plan_impl = str(agents_req[0]).split(".")[-1] if agents_req else None
+    plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
+    impl_name = implementer_agent or plan_impl or resolved["implementer"]
+    aud_name = auditor_agent or plan_aud or resolved["auditor"]
+    if project_match is not None:
+        # Stamp last_used_at on the resolved registered project so
+        # `jarvis projects list` reflects real recency. Best-effort —
+        # missing-name (registry edited mid-flight) must not block dispatch.
+        try:
+            projects_registry.update_last_used(project_match[1])
+        except projects_registry.ProjectsRegistryError:
+            pass
 
     # Iteration cap from plan or argument
     cap = max_iterations
