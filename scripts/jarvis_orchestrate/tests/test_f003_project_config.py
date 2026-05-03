@@ -1,14 +1,15 @@
 """Plan 2026-05-03-001 F003 — per-project config + override precedence + doctor.
 
 Covers the deterministic acceptance contract:
-  AC1 — per-project ``.jarvis/jarvis.json`` validates + loads; missing OK,
+  AC1 — per-project ``.dontpanic/dontpanic.json`` validates + loads; missing OK,
+        legacy ``.jarvis/jarvis.json`` remains readable,
         invalid degrades to None + WARN.
   AC2 — override precedence: per-project > global > hardcoded; tested as a
         parametric matrix over all four (per-project set/unset × global set/
         unset) cells, plus an 'all-None' cell that hits the hardcoded fallback.
-  AC3 — ``jarvis doctor --include-projects --strict-codes`` runs global +
+  AC3 — ``dontpanic doctor --include-projects --strict-codes`` runs global +
         per-registered-project preflight; non-zero exit on any FAIL.
-  AC4 — ``jarvis projects add --init-config`` scaffolds the per-project
+  AC4 — ``dontpanic projects add --init-config`` scaffolds the per-project
         config; default behavior leaves the project free of scaffolding.
   AC5 — bare ``scripts/jarvis_doctor.py`` invocation backwards-compatible
         (no per-project rows, legacy 0/1 exit code matrix).
@@ -28,8 +29,8 @@ Audit-focus addendum coverage (Operator memo):
       no-coverage-needed decision auditable.
   (8) doctor exit-code matrix: parametric.
 
-All tests redirect ``$JARVIS_HOME`` to ``tmp_path`` so the user's real
-``~/.jarvis/`` is never touched.
+All tests redirect ``$DONTPANIC_HOME`` to ``tmp_path`` so the user's real
+``~/.dontpanic/`` / legacy ``~/.jarvis/`` is never touched.
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f003_project_config.py
 """
@@ -57,11 +58,12 @@ DOCTOR_PATH = REPO_ROOT / "scripts" / "jarvis_doctor.py"
 
 
 @pytest.fixture(autouse=True)
-def _isolate_jarvis_home(tmp_path, monkeypatch):
-    """Reroute ``$JARVIS_HOME`` to a tmp dir so the user's real
-    ``~/.jarvis/{config,projects}.json`` is never touched. Autouse to
+def _isolate_dontpanic_home(tmp_path, monkeypatch):
+    """Reroute ``$DONTPANIC_HOME`` to a tmp dir so the user's real
+    ``~/.dontpanic/{config,projects}.json`` is never touched. Autouse to
     protect every test in this module."""
-    monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+    monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
+    monkeypatch.setenv(gc.DONTPANIC_HOME_ENV, str(tmp_path / ".dontpanic"))
 
 
 @pytest.fixture
@@ -89,7 +91,7 @@ def doctor():
 
 class TestProjectConfigLoad:
     def test_missing_file_returns_none(self, project_dir):
-        # The valid zero state: no jarvis.json at all → None, no warn.
+        # The valid zero state: no dontpanic.json / legacy jarvis.json at all → None, no warn.
         assert pc.load_project_config(project_dir) is None
 
     def test_empty_object_loads_with_defaults(self, project_dir):
@@ -127,6 +129,27 @@ class TestProjectConfigLoad:
         assert cfg.default_target_env == "staging"
         assert cfg.human_gates == ["pre_impl", "pre_merge"]
         assert cfg.protected_paths == ["secrets/", "config/"]
+
+    def test_legacy_jarvis_json_loads_when_preferred_absent(self, project_dir):
+        cfg_path = pc.legacy_project_config_path(project_dir)
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(json.dumps({"implementer": "codex"}))
+        cfg = pc.load_project_config(project_dir)
+        assert cfg is not None
+        assert cfg.implementer == "codex"
+        assert pc.project_config_read_path(project_dir) == cfg_path
+
+    def test_preferred_config_wins_when_both_preferred_and_legacy_exist(self, project_dir):
+        preferred = pc.project_config_path(project_dir)
+        legacy = pc.legacy_project_config_path(project_dir)
+        preferred.parent.mkdir(parents=True, exist_ok=True)
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        preferred.write_text(json.dumps({"implementer": "claude"}))
+        legacy.write_text(json.dumps({"implementer": "codex"}))
+        cfg = pc.load_project_config(project_dir)
+        assert cfg is not None
+        assert cfg.implementer == "claude"
+        assert pc.project_config_read_path(project_dir) == preferred
 
     def test_invalid_json_warns_returns_none(self, project_dir, caplog):
         # AC1: invalid JSON degrades to None + WARN. The supervisor never
@@ -200,6 +223,15 @@ class TestScaffold:
         # Pre-existing content is preserved.
         assert json.loads(cfg_path.read_text())["implementer"] == "codex"
 
+    def test_scaffold_refuses_when_legacy_config_exists(self, project_dir):
+        cfg_path = pc.legacy_project_config_path(project_dir)
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(json.dumps({"implementer": "codex"}))
+        with pytest.raises(FileExistsError) as exc:
+            pc.scaffold_empty_config(project_dir)
+        assert str(cfg_path) in str(exc.value)
+        assert not pc.project_config_path(project_dir).exists()
+
     def test_projects_add_init_config_scaffolds(self, project_dir, capsys):
         # AC4 via the CLI surface: --init-config flag creates the file.
         rc = cli.main(["projects", "add", "alpha", str(project_dir), "--init-config"])
@@ -230,8 +262,8 @@ class TestScaffold:
 
 
 def _write_global_config(implementer=None, auditor=None):
-    """Helper: stamp ``$JARVIS_HOME/config.json`` for a precedence test."""
-    home = gc.ensure_jarvis_home()
+    """Helper: stamp ``$DONTPANIC_HOME/config.json`` for a precedence test."""
+    home = gc.ensure_dontpanic_home()
     payload: dict[str, str] = {}
     if implementer is not None:
         payload["default_implementer"] = implementer
@@ -241,7 +273,7 @@ def _write_global_config(implementer=None, auditor=None):
 
 
 def _write_project_config(project_dir, implementer=None, auditor=None):
-    """Helper: stamp ``<project>/.jarvis/jarvis.json`` for a precedence test."""
+    """Helper: stamp ``<project>/.dontpanic/dontpanic.json`` for a precedence test."""
     cfg_path = pc.project_config_path(project_dir)
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     payload: dict[str, str] = {}
@@ -428,7 +460,7 @@ class TestDoctorPerProject:
         assert registry_check.ok and not registry_check.warn
         assert "no projects registered" in registry_check.message
 
-    def test_registered_project_no_jarvis_json_passes(self, doctor, project_dir):
+    def test_registered_project_no_project_config_passes(self, doctor, project_dir):
         # AC3: registered project with no per-project config → no FAILs.
         # The plans-dir check WARNs (docs/plans not authored yet) — that's
         # the documented soft signal, NOT a failure. We assert here that no
@@ -461,6 +493,22 @@ class TestDoctorPerProject:
         # The "line N col M" detail must be in the message so the
         # operator can find it without re-running.
         assert "line" in config_check.message.lower()
+
+    def test_registered_project_legacy_config_is_readable(self, doctor, project_dir):
+        pr.add_project(name="alpha", path=str(project_dir))
+        (project_dir / "docs" / "plans").mkdir(parents=True)
+        cfg_path = pc.legacy_project_config_path(project_dir)
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(json.dumps({"implementer": "codex"}))
+        results = doctor.run_all_checks(skip_auth=True, include_projects=True)
+        config_check = next((r for r in results if r.name == "project:alpha:config"), None)
+        assert config_check is not None
+        assert config_check.ok
+        assert str(cfg_path) in config_check.message
+        agents_check = next((r for r in results if r.name == "project:alpha:agents"), None)
+        assert agents_check is not None
+        assert agents_check.ok
+        assert "codex" in agents_check.message
 
     def test_registered_project_missing_path_fails(self, doctor, tmp_path):
         # The registry entry points at a path that no longer exists. Doctor
@@ -501,10 +549,10 @@ class TestDoctorPerProject:
         assert "made-up-agent" in agents_check.message
 
     def test_global_config_invalid_fails(self, doctor):
-        # global-config check FAILs (not warns) when ~/.jarvis/config.json
+        # global-config check FAILs (not warns) when ~/.dontpanic/config.json
         # is broken. Operator must see it explicitly so they don't silently
         # lose their declared defaults.
-        gc.ensure_jarvis_home()
+        gc.ensure_dontpanic_home()
         gc.config_path().write_text("{ broken")
         results = doctor.run_all_checks(skip_auth=True, include_projects=True)
         gc_check = next((r for r in results if r.name == "global-config"), None)
@@ -536,7 +584,7 @@ class TestDoctorExitCodeMatrix:
         assert doctor.compute_strict_exit(check_results) == expected_code
 
     def test_jarvis_doctor_subcommand_uses_strict_codes(self, project_dir, capsys, monkeypatch):
-        # AC3: `jarvis doctor` (the new console-script subcommand) must use
+        # AC3: `dontpanic doctor` (the preferred console-script subcommand) must use
         # the 0/1/2 matrix. We patch the plan/auth-dependent checks to a
         # known-WARN state so the test is deterministic.
         # Force include_projects path and assert exit 1 when ONLY warnings.

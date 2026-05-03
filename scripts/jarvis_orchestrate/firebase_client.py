@@ -1,12 +1,14 @@
-"""Firebase Admin SDK wrapper for Jarvis orchestrator.
+"""Firebase Admin SDK wrapper for DontPanic.
 
 Project, bucket, and SA key path are resolved from environment variables
 (no hardcoded campaign defaults). Required:
 
-    JARVIS_FIREBASE_PROJECT      — required
-    JARVIS_FIREBASE_BUCKET       — optional, defaults to {project}-evidence
-    JARVIS_SERVICE_ACCOUNT_KEY   — optional, defaults to
-                                   <repo>/.secrets/{project}-orchestrator.json
+    DONTPANIC_FIREBASE_PROJECT      — required
+    DONTPANIC_FIREBASE_BUCKET       — optional, defaults to {project}-evidence
+    DONTPANIC_SERVICE_ACCOUNT_KEY   — optional, defaults to
+                                       <repo>/.secrets/{project}-orchestrator.json
+
+Legacy JARVIS_* names remain read-compatible during the staged rename.
 
 Used by:
 - smoke_test_storage.py (F002 acceptance)
@@ -29,11 +31,13 @@ _app: firebase_admin.App | None = None
 
 
 def _required_project() -> str:
-    project = os.environ.get("JARVIS_FIREBASE_PROJECT")
+    project = os.environ.get("DONTPANIC_FIREBASE_PROJECT") or os.environ.get(
+        "JARVIS_FIREBASE_PROJECT"
+    )
     if not project:
         raise RuntimeError(
-            "JARVIS_FIREBASE_PROJECT is not set. Set it explicitly, e.g.:\n"
-            "    export JARVIS_FIREBASE_PROJECT=your-project-id\n"
+            "DONTPANIC_FIREBASE_PROJECT is not set. Set it explicitly, e.g.:\n"
+            "    export DONTPANIC_FIREBASE_PROJECT=your-project-id\n"
             "Or run: scripts/bootstrap.sh --project your-project-id "
             "--billing-account XXXXXX-XXXXXX-XXXXXX"
         )
@@ -41,11 +45,17 @@ def _required_project() -> str:
 
 
 def _default_bucket(project: str) -> str:
-    return os.environ.get("JARVIS_FIREBASE_BUCKET") or f"{project}-evidence"
+    return (
+        os.environ.get("DONTPANIC_FIREBASE_BUCKET")
+        or os.environ.get("JARVIS_FIREBASE_BUCKET")
+        or f"{project}-evidence"
+    )
 
 
 def _default_key_path(project: str) -> Path:
-    explicit = os.environ.get("JARVIS_SERVICE_ACCOUNT_KEY")
+    explicit = os.environ.get("DONTPANIC_SERVICE_ACCOUNT_KEY") or os.environ.get(
+        "JARVIS_SERVICE_ACCOUNT_KEY"
+    )
     if explicit:
         return Path(explicit)
     return Path(__file__).resolve().parents[2] / ".secrets" / f"{project}-orchestrator.json"
@@ -54,8 +64,8 @@ def _default_key_path(project: str) -> Path:
 def init_app(key_path: Path | None = None, bucket: str | None = None) -> firebase_admin.App:
     """Initialize the firebase_admin app once. Idempotent.
 
-    Resolves project/bucket/key from JARVIS_* env vars; raises with
-    remediation if JARVIS_FIREBASE_PROJECT is unset.
+    Resolves project/bucket/key from DONTPANIC_* env vars, with legacy
+    JARVIS_* fallback; raises with remediation if no project is set.
     """
     global _app
     if _app is not None:

@@ -49,15 +49,25 @@ def test_clis_returns_one_result_per_cli(doctor) -> None:
 
 
 def test_target_project_uses_env_var(doctor, monkeypatch) -> None:
-    monkeypatch.setenv("JARVIS_FIREBASE_PROJECT", "from-env-id")
+    monkeypatch.setenv("DONTPANIC_FIREBASE_PROJECT", "from-env-id")
+    monkeypatch.setenv("JARVIS_FIREBASE_PROJECT", "legacy-id")
     result, project = doctor.check_target_project()
     assert result.ok and project == "from-env-id"
     assert "from-env-id" in result.message
 
 
+def test_target_project_uses_legacy_env_var(doctor, monkeypatch) -> None:
+    monkeypatch.delenv("DONTPANIC_FIREBASE_PROJECT", raising=False)
+    monkeypatch.setenv("JARVIS_FIREBASE_PROJECT", "from-legacy-id")
+    result, project = doctor.check_target_project()
+    assert result.ok and project == "from-legacy-id"
+    assert "from-legacy-id" in result.message
+
+
 def test_target_project_falls_back_to_environments_json(
     doctor, monkeypatch, tmp_path: Path
 ) -> None:
+    monkeypatch.delenv("DONTPANIC_FIREBASE_PROJECT", raising=False)
     monkeypatch.delenv("JARVIS_FIREBASE_PROJECT", raising=False)
     env = tmp_path / "environments.json"
     env.write_text(json.dumps({"repo": "X", "dev": {"firebase_project": "from-file-id"}}))
@@ -68,6 +78,7 @@ def test_target_project_falls_back_to_environments_json(
 
 def test_target_project_rejects_placeholder(doctor, monkeypatch, tmp_path: Path) -> None:
     """If environments.json still has the example placeholder, fail clearly."""
+    monkeypatch.delenv("DONTPANIC_FIREBASE_PROJECT", raising=False)
     monkeypatch.delenv("JARVIS_FIREBASE_PROJECT", raising=False)
     env = tmp_path / "environments.json"
     env.write_text(
@@ -81,11 +92,12 @@ def test_target_project_rejects_placeholder(doctor, monkeypatch, tmp_path: Path)
 
 
 def test_target_project_aborts_when_neither_set(doctor, monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("DONTPANIC_FIREBASE_PROJECT", raising=False)
     monkeypatch.delenv("JARVIS_FIREBASE_PROJECT", raising=False)
     monkeypatch.setattr(doctor, "ENV_FILE", tmp_path / "does-not-exist.json")
     result, project = doctor.check_target_project()
     assert not result.ok and project is None
-    assert "JARVIS_FIREBASE_PROJECT" in result.message
+    assert "DONTPANIC_FIREBASE_PROJECT" in result.message
     assert "scripts/bootstrap.sh" in result.remediation
 
 
@@ -194,7 +206,7 @@ def test_render_json_is_valid(doctor) -> None:
 def test_main_exits_nonzero_when_checks_fail(doctor, monkeypatch) -> None:
     """Force a check to fail and verify main() returns 1."""
 
-    def fake_run_all(skip_auth: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
         return [doctor.CheckResult(name="forced", ok=False, message="x", remediation="y")]
 
     monkeypatch.setattr(doctor, "run_all_checks", fake_run_all)
@@ -203,7 +215,7 @@ def test_main_exits_nonzero_when_checks_fail(doctor, monkeypatch) -> None:
 
 
 def test_main_returns_zero_when_all_green(doctor, monkeypatch) -> None:
-    def fake_run_all(skip_auth: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
         return [doctor.CheckResult(name="forced", ok=True, message="x")]
 
     monkeypatch.setattr(doctor, "run_all_checks", fake_run_all)
@@ -241,7 +253,7 @@ def test_skip_auth_propagates_through_main(doctor, monkeypatch) -> None:
     skip_auth=True. Captured via monkeypatch."""
     captured: dict[str, bool] = {}
 
-    def fake_run_all(skip_auth: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
         captured["skip_auth"] = skip_auth
         return [doctor.CheckResult("forced-ok", True, "x")]
 

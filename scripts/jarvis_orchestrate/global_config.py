@@ -1,10 +1,10 @@
-"""Plan 2026-05-03-001 F001 — global config at ``~/.jarvis/config.json``.
+"""Global config at ``~/.dontpanic/config.json``.
 
 Loaded lazily by the CLI; missing file is OK (returns empty defaults).
 Invalid JSON logs a WARNING and returns empty defaults so the CLI still
-starts. The path can be overridden by the ``JARVIS_HOME`` environment
-variable so tests can route to a tmp dir without polluting the user's
-real home directory.
+starts. The path can be overridden by the ``DONTPANIC_HOME`` environment
+variable. The legacy ``JARVIS_HOME`` environment variable and ``~/.jarvis``
+directory remain read/write-compatible during the staged rename.
 
 Schema is intentionally minimal in F001: just the per-user defaults that
 the supervisor consults at dispatch time when no per-project override
@@ -25,14 +25,17 @@ from pydantic import BaseModel, ConfigDict
 
 _LOG = logging.getLogger(__name__)
 
-JARVIS_HOME_ENV = "JARVIS_HOME"
-"""Test / power-user override. When set, ``jarvis_home()`` returns
-``Path(os.environ[JARVIS_HOME_ENV])`` instead of ``~/.jarvis``."""
+DONTPANIC_HOME_ENV = "DONTPANIC_HOME"
+"""Preferred test / power-user override for the per-user state directory."""
 
-DEFAULT_DIRNAME = ".jarvis"
-"""Directory under ``$HOME`` (or ``$JARVIS_HOME``'s parent) that holds
-all per-user state. Today: ``config.json``; future: ``projects.json``
-(F002), ``audit.jsonl`` (Phase C), etc."""
+JARVIS_HOME_ENV = "JARVIS_HOME"
+"""Legacy override. Still honored as a fallback for existing installs."""
+
+DEFAULT_DIRNAME = ".dontpanic"
+"""Preferred directory under ``$HOME`` that holds per-user state."""
+
+LEGACY_DIRNAME = ".jarvis"
+"""Legacy per-user state directory, read-compatible during migration."""
 
 CONFIG_FILENAME = "config.json"
 
@@ -61,38 +64,63 @@ class GlobalConfig(BaseModel):
 
     calibration_path: str | None = None
     """Optional pointer to a calibration file (e.g., a non-default
-    ``~/.jarvis/quota_calibration.json``). When None, the supervisor
+    ``~/.dontpanic/quota_calibration.json``). When None, the supervisor
     uses the default location."""
 
 
-def jarvis_home() -> Path:
+def dontpanic_home() -> Path:
     """Resolve the per-user state directory.
 
     Precedence:
-      1. ``$JARVIS_HOME`` if set (used by tests + power users with
-         non-standard layouts).
-      2. ``~/.jarvis`` otherwise.
+      1. ``$DONTPANIC_HOME`` if set.
+      2. ``$JARVIS_HOME`` if set (legacy compatibility).
+      3. ``~/.dontpanic`` if it already exists.
+      4. ``~/.jarvis`` if it already exists (legacy compatibility).
+      5. ``~/.dontpanic`` for new installs.
 
     Returns the path; does NOT create it. Callers that need to write
-    pass through ``ensure_jarvis_home()``.
+    pass through ``ensure_dontpanic_home()``.
     """
+    override = os.environ.get(DONTPANIC_HOME_ENV)
+    if override:
+        return Path(override).expanduser()
     override = os.environ.get(JARVIS_HOME_ENV)
     if override:
         return Path(override).expanduser()
-    return Path.home() / DEFAULT_DIRNAME
+    preferred = Path.home() / DEFAULT_DIRNAME
+    if preferred.exists():
+        return preferred
+    legacy = Path.home() / LEGACY_DIRNAME
+    if legacy.exists():
+        return legacy
+    return preferred
 
 
-def ensure_jarvis_home() -> Path:
+def jarvis_home() -> Path:
+    """Legacy alias for :func:`dontpanic_home`.
+
+    Kept so existing callers and tests continue to work while public
+    documentation moves to DontPanic naming.
+    """
+    return dontpanic_home()
+
+
+def ensure_dontpanic_home() -> Path:
     """Resolve the per-user state directory and create it if missing.
     Used by writers (F002 registry, future surfaces)."""
-    home = jarvis_home()
+    home = dontpanic_home()
     home.mkdir(parents=True, exist_ok=True)
     return home
 
 
+def ensure_jarvis_home() -> Path:
+    """Legacy alias for :func:`ensure_dontpanic_home`."""
+    return ensure_dontpanic_home()
+
+
 def config_path() -> Path:
-    """Path to ``config.json`` under ``jarvis_home()``."""
-    return jarvis_home() / CONFIG_FILENAME
+    """Path to ``config.json`` under ``dontpanic_home()``."""
+    return dontpanic_home() / CONFIG_FILENAME
 
 
 def load_config() -> GlobalConfig:
@@ -139,7 +167,7 @@ def save_config(config: GlobalConfig) -> Path:
     directory if needed. Returns the written path. Used by future
     surfaces; F001's ``jarvis`` CLI does not write the config (operators
     edit it directly with their preferred tooling)."""
-    home = ensure_jarvis_home()
+    home = ensure_dontpanic_home()
     path = home / CONFIG_FILENAME
     path.write_text(
         json.dumps(
@@ -174,9 +202,13 @@ def merge_with_defaults(
 __all__ = [
     "CONFIG_FILENAME",
     "DEFAULT_DIRNAME",
+    "DONTPANIC_HOME_ENV",
     "GlobalConfig",
     "JARVIS_HOME_ENV",
+    "LEGACY_DIRNAME",
     "config_path",
+    "dontpanic_home",
+    "ensure_dontpanic_home",
     "ensure_jarvis_home",
     "jarvis_home",
     "load_config",

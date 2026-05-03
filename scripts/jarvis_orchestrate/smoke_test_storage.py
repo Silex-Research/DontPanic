@@ -4,7 +4,8 @@ Acceptance per parent plan 2026-04-19-001 features.json F002:
   'Python script uploads fixture to {project}://evidence/test.json
    and retrieves via 1-hour signed URL'
 
-Reads target project from JARVIS_FIREBASE_PROJECT (see firebase_client.py).
+Reads target project from DONTPANIC_FIREBASE_PROJECT, with legacy
+JARVIS_FIREBASE_PROJECT fallback (see firebase_client.py).
 Historical project ID notes are tracked in the bootstrap sub-plan's
 decisions.jsonl, not in this file.
 """

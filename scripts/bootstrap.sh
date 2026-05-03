@@ -1,13 +1,15 @@
 #!/bin/bash
-# bootstrap.sh — One-shot bootstrap for a fresh Jarvis-on-Firebase setup.
+# bootstrap.sh — One-shot bootstrap for a fresh DontPanic-on-Firebase setup.
 #
 # Codifies the gcloud + firebase steps that were originally executed by hand
 # under sub-plan 2026-04-25-001-infra-jarvis-firebase-bootstrap. Required
 # inputs are passed explicitly (no campaign defaults).
 #
 # Required:
-#   --project / JARVIS_FIREBASE_PROJECT      Target GCP/Firebase project ID
-#   --billing-account / JARVIS_BILLING_ACCOUNT
+#   --project / DONTPANIC_FIREBASE_PROJECT  Target GCP/Firebase project ID
+#             / JARVIS_FIREBASE_PROJECT     Legacy alias
+#   --billing-account / DONTPANIC_BILLING_ACCOUNT
+#                     / JARVIS_BILLING_ACCOUNT
 #                                            Billing account (XXXXXX-XXXXXX-XXXXXX)
 #
 # Optional:
@@ -21,8 +23,8 @@
 set -euo pipefail
 
 # ── arg parsing ─────────────────────────────────────────────────────────────
-PROJECT="${JARVIS_FIREBASE_PROJECT:-}"
-BILLING="${JARVIS_BILLING_ACCOUNT:-}"
+PROJECT="${DONTPANIC_FIREBASE_PROJECT:-${JARVIS_FIREBASE_PROJECT:-}}"
+BILLING="${DONTPANIC_BILLING_ACCOUNT:-${JARVIS_BILLING_ACCOUNT:-}}"
 CREATE_KEY=false
 SKIP_APIS=false
 SKIP_RULES=false
@@ -50,10 +52,10 @@ done
 abort() { echo "Error: $1" >&2; echo "Remediation: $2" >&2; exit 2; }
 
 [[ -n "$PROJECT" ]] || abort \
-  "missing --project / JARVIS_FIREBASE_PROJECT" \
+  "missing --project / DONTPANIC_FIREBASE_PROJECT" \
   "pass --project your-project-id (no campaign default — see CONTRIBUTING.md)"
 [[ -n "$BILLING" ]] || abort \
-  "missing --billing-account / JARVIS_BILLING_ACCOUNT" \
+  "missing --billing-account / DONTPANIC_BILLING_ACCOUNT" \
   "pass --billing-account XXXXXX-XXXXXX-XXXXXX (gcloud billing accounts list)"
 
 # Validate billing account shape (very permissive: 6-6-6 hex)
@@ -257,7 +259,7 @@ write_from_example "$FIREBASERC_FILE" "$FIREBASERC_EXAMPLE" \
 echo ""
 echo "=== Bootstrap complete ==="
 echo "Next:"
-echo "  export JARVIS_FIREBASE_PROJECT=$PROJECT"
+echo "  export DONTPANIC_FIREBASE_PROJECT=$PROJECT"
 echo "  python3 scripts/jarvis_doctor.py     # verify"
 if ! $CREATE_KEY; then
   echo "  # If you need a SA key for local agent auth, re-run with --create-key"

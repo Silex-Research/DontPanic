@@ -76,17 +76,20 @@ phase builds on top of this substrate.
   DontPanic's own deps from project venvs). The legacy `jarvis` alias
   remains available during the staged migration.
 - `dontpanic projects add | list | show | remove` backed by
-  `~/.jarvis/projects.json` (D003 name regex, non-clobber semantics,
-  `--json` output across all subcommands).
-- Per-project `<repo>/.jarvis/jarvis.json` config (committable per
-  project; overrides global agent defaults).
-- Global config at `~/.jarvis/config.json` (default agent pair,
-  default tier, calibration pointers).
+  `~/.dontpanic/projects.json` (legacy `~/.jarvis/projects.json`
+  fallback; D003 name regex, non-clobber semantics, `--json` output
+  across all subcommands).
+- Per-project `<repo>/.dontpanic/dontpanic.json` config (committable
+  per project; legacy `<repo>/.jarvis/jarvis.json` remains readable;
+  overrides global agent defaults).
+- Global config at `~/.dontpanic/config.json` (legacy `~/.jarvis`
+  fallback; default agent pair, default tier, calibration pointers).
 - Override precedence at dispatch time: per-project > global >
   hardcoded fallbacks (D004), wired into both `dispatch_volley` and
   `dispatch_single_agent`.
-- `dontpanic doctor` per-project preflight (path / jarvis.json / plans_dir
-  / agents / gates) with the 0/1/2 strict exit-code matrix.
+- `dontpanic doctor` per-project preflight (path / dontpanic.json /
+  legacy jarvis.json / plans_dir / agents / gates) with the 0/1/2
+  strict exit-code matrix.
 - `_resolve_plan_dir` is registry-aware: cwd-anchored project →
   walk-the-registry → gated cwd-fallback for un-registered repos.
 
@@ -107,14 +110,16 @@ those agents can call without a full-runtime integration. See
 
 **Likely deliverables:**
 
-- **`~/.jarvis/agent-manifest.json`** — global discovery file answering
+- **`~/.dontpanic/agent-manifest.json`** — global discovery file answering
   "how does an agent find and invoke DontPanic on this machine?" Contains:
   DontPanic version, install source, CLI path, common commands, MCP server
   command, safety rules, project registry pointer, supported intake
   types, default agent roles. Machine-level — not committed to
-  project repos. (Locked decision: this is the global manifest;
-  project behavior stays in `<repo>/.jarvis/jarvis.json` from Phase A.
-  No per-project `agent.json` in v1.)
+  project repos. Legacy `~/.jarvis/agent-manifest.json` may be read for
+  compatibility but new writes use `~/.dontpanic`. (Locked decision:
+  this is the global manifest; project behavior stays in
+  `<repo>/.dontpanic/dontpanic.json` from Phase A with legacy read
+  compatibility. No per-project `agent.json` in v1.)
 - **`dontpanic mcp serve` (localhost MCP server)** — thin typed tool
   surface for agents:
   - `dontpanic.intake` — submit a brief, get plan / questions / discovery
@@ -208,7 +213,7 @@ daemon. This phase is mostly documentation + small enabling helpers.
   real usage proves these existing surfaces cannot carry the load —
   and the threat model is already pre-written if it ever becomes
   necessary (allowed-plans-directory enforcement, API + session token
-  distinction, `~/.jarvis/audit.jsonl` global audit, OpenAPI 3.1 spec
+  distinction, `~/.dontpanic/audit.jsonl` global audit, OpenAPI 3.1 spec
   for ChatGPT Custom Actions, Tailscale Funnel preferred over ngrok).
 
 **Acceptance:** an operator running OpenClaw can install a small

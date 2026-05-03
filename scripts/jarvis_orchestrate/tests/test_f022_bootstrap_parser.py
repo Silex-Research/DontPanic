@@ -18,6 +18,8 @@ BOOTSTRAP = REPO_ROOT / "scripts" / "bootstrap.sh"
 def _run(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     # Strip any inherited values so missing-flag tests can detect "missing"
+    env.pop("DONTPANIC_FIREBASE_PROJECT", None)
+    env.pop("DONTPANIC_BILLING_ACCOUNT", None)
     env.pop("JARVIS_FIREBASE_PROJECT", None)
     env.pop("JARVIS_BILLING_ACCOUNT", None)
     return subprocess.run(
@@ -85,8 +87,27 @@ def test_dry_run_executes_zero_side_effects() -> None:
 
 
 def test_env_vars_substitute_for_flags() -> None:
-    """JARVIS_FIREBASE_PROJECT + JARVIS_BILLING_ACCOUNT can replace flags."""
+    """DONTPANIC_FIREBASE_PROJECT + DONTPANIC_BILLING_ACCOUNT can replace flags."""
     env = os.environ.copy()
+    env["DONTPANIC_FIREBASE_PROJECT"] = "test-id"
+    env["DONTPANIC_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
+    proc = subprocess.run(
+        ["bash", str(BOOTSTRAP), "--dry-run"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env=env,
+    )
+    # Should not abort with "missing --project" — env var supplied it.
+    assert "missing --project" not in proc.stderr
+    assert "missing --billing-account" not in proc.stderr
+
+
+def test_legacy_env_vars_still_substitute_for_flags() -> None:
+    """JARVIS_FIREBASE_PROJECT + JARVIS_BILLING_ACCOUNT remain compatible."""
+    env = os.environ.copy()
+    env.pop("DONTPANIC_FIREBASE_PROJECT", None)
+    env.pop("DONTPANIC_BILLING_ACCOUNT", None)
     env["JARVIS_FIREBASE_PROJECT"] = "test-id"
     env["JARVIS_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
     proc = subprocess.run(

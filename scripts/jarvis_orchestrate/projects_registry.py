@@ -1,15 +1,15 @@
-"""Plan 2026-05-03-001 F002 — project registry at ``~/.jarvis/projects.json``.
+"""Project registry at ``~/.dontpanic/projects.json``.
 
-The registry is the single source of truth for "which projects can Jarvis
-operate against". F002 is intentionally CRUD-only: no supervisor wiring,
-no per-project config consumption (F003 lands those). Operators (or
-agents shelling out via ``--json``) call ``jarvis projects add | list |
-show | remove`` and the registry's on-disk shape is what F003's lookup
-chain will consult at dispatch time.
+The registry is the single source of truth for "which projects can
+DontPanic operate against". Operators (or agents shelling out via
+``--json``) call ``dontpanic projects add | list | show | remove`` and
+the registry's on-disk shape is what the lookup chain consults at
+dispatch time.
 
-Storage path obeys ``$JARVIS_HOME`` (test isolation + power-user use)
-via :mod:`jarvis_orchestrate.global_config`. Schema is Pydantic v2 with
-``extra='forbid'`` so a stale config from an older Jarvis cannot
+Storage path obeys ``$DONTPANIC_HOME`` first, then legacy
+``$JARVIS_HOME`` / ``~/.jarvis`` fallback via
+:mod:`jarvis_orchestrate.global_config`. Schema is Pydantic v2 with
+``extra='forbid'`` so a stale config from an older DontPanic cannot
 silently break a newer one — invalid files degrade to empty + WARN.
 
 Project name regex per D003: ``^[a-z0-9][a-z0-9-]{0,63}$`` — DNS-label
@@ -83,8 +83,8 @@ class Registry(BaseModel):
 
 
 def registry_path() -> Path:
-    """Path to ``projects.json`` under :func:`gc.jarvis_home`."""
-    return gc.jarvis_home() / REGISTRY_FILENAME
+    """Path to ``projects.json`` under :func:`gc.dontpanic_home`."""
+    return gc.dontpanic_home() / REGISTRY_FILENAME
 
 
 def _utcnow_iso() -> str:
@@ -122,9 +122,9 @@ def load_registry() -> Registry:
 
 
 def save_registry(reg: Registry) -> Path:
-    """Persist the registry to ``projects.json``. Creates ``$JARVIS_HOME``
-    if missing. Returns the written path."""
-    home = gc.ensure_jarvis_home()
+    """Persist the registry to ``projects.json``. Creates the resolved
+    DontPanic home if missing. Returns the written path."""
+    home = gc.ensure_dontpanic_home()
     path = home / REGISTRY_FILENAME
     path.write_text(
         json.dumps(

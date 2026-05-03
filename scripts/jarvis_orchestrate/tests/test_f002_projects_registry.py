@@ -5,8 +5,8 @@ Tests cover the deterministic acceptance items: registry schema (Pydantic
 non-clobber semantics with ``--force --yes`` override, dry-run remove
 default, ``--json`` round-trip, and ``update_last_used`` idempotency.
 
-All tests redirect ``$JARVIS_HOME`` to ``tmp_path`` so the user's real
-``~/.jarvis/projects.json`` is never read or written.
+All tests redirect ``$DONTPANIC_HOME`` to ``tmp_path`` so the user's real
+``~/.dontpanic/projects.json`` / legacy ``~/.jarvis/projects.json`` is never read or written.
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f002_projects_registry.py
 """
@@ -29,11 +29,12 @@ from jarvis_orchestrate import projects_registry as pr  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _isolate_jarvis_home(tmp_path, monkeypatch):
-    """Reroute ``$JARVIS_HOME`` to a tmp dir so the user's real
-    ``~/.jarvis/projects.json`` is never touched. Autouse to protect
+def _isolate_dontpanic_home(tmp_path, monkeypatch):
+    """Reroute ``$DONTPANIC_HOME`` to a tmp dir so the user's real
+    ``~/.dontpanic/projects.json`` is never touched. Autouse to protect
     every test in this module."""
-    monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+    monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
+    monkeypatch.setenv(gc.DONTPANIC_HOME_ENV, str(tmp_path / ".dontpanic"))
 
 
 @pytest.fixture
@@ -152,12 +153,21 @@ class TestLoadSave:
         assert reg.projects == []
         assert any("schema validation" in m for m in caplog.messages)
 
-    def test_save_creates_jarvis_home_if_missing(self, tmp_path, project_dir):
-        target = tmp_path / ".jarvis"
+    def test_save_creates_dontpanic_home_if_missing(self, tmp_path, project_dir):
+        target = tmp_path / ".dontpanic"
         assert not target.exists()
         pr.save_registry(pr.Registry())
         assert target.is_dir()
         assert (target / "projects.json").is_file()
+
+    def test_legacy_jarvis_home_env_fallback_still_writes_registry(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
+        monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+        path = pr.save_registry(pr.Registry())
+        assert path == tmp_path / ".jarvis" / "projects.json"
+        assert path.is_file()
 
     def test_save_excludes_none_fields(self, project_dir):
         entry = pr.ProjectEntry(
