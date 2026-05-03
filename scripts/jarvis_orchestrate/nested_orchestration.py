@@ -151,6 +151,41 @@ def compute_finding_signature(finding_code: str, finding_class: str, issue: str)
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
+def compute_audit_finding_signature(finding: dict[str, Any]) -> str | None:
+    """Plan 2026-05-02-004: derive a stable signature for a single auditor
+    Finding dict (entries inside an audit envelope's ``findings`` list).
+
+    Composition: ``{file}:{line}`` locality (when ``file`` is set) +
+    ``category`` + normalized ``issue`` text, hashed via the existing
+    ``compute_finding_signature`` primitive. Severity is intentionally
+    excluded (D002) — a high→medium downgrade is the same finding with a
+    re-evaluated severity, not a different finding.
+
+    Returns ``None`` when ``issue`` text is missing or whitespace-only.
+    Callers should treat ``None`` as a fallback signal; the diminishing-
+    returns breaker degrades to count-based behavior (D004) when ANY round
+    in its convergence window has an unsigned finding.
+
+    Used by ``circuit_breakers.check_diminishing_returns`` to detect 'same
+    unresolved findings persist' as opposed to 'auditor flagged a similar
+    count of different findings.' Shared with the F001 repeated-finding
+    guard via the same primitive so the two surfaces have one notion of
+    finding identity.
+    """
+    issue = finding.get("issue")
+    if not isinstance(issue, str) or not issue.strip():
+        return None
+    file_loc = finding.get("file") or ""
+    line_loc = finding.get("line")
+    locality = f"{file_loc}:{line_loc}" if file_loc else ""
+    category = str(finding.get("category") or "")
+    return compute_finding_signature(
+        finding_code=locality,
+        finding_class=category,
+        issue=issue,
+    )
+
+
 # ──────────────────────────────  parent-chain helpers  ──────────────────────────────
 
 
@@ -1022,6 +1057,7 @@ __all__ = [
     "check_depth",
     "check_repeated_finding",
     "child_compliance_side_car_path",
+    "compute_audit_finding_signature",
     "compute_depth",
     "compute_finding_signature",
     "events_log_path",

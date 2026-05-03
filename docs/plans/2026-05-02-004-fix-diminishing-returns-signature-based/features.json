@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-05-02-004-fix-diminishing-returns-signature-based",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Replace count-only diminishing-returns heuristic in `circuit_breakers.check_diminishing_returns` with a signature-based check that compares finding identity sets across rounds. Add `compute_audit_finding_signature(finding) -> str | None` helper to `nested_orchestration.py` (sibling of F001's existing `compute_finding_signature` from plan 003). Signature derived from `category` + `file:line` locality + normalized `issue` text via the existing SHA-256 16-hex primitive — severity intentionally excluded so a high→medium downgrade keeps the same signature (D002). When ANY round in the window has at least one finding without usable issue text, fall back to the legacy non-decreasing-count behavior with the fallback fact named in the breaker reason for operator visibility (D004). Round-count threshold (DIMINISHING_RETURNS_MIN_ROUNDS=2) stays a constant — no operator config knob in v1 (D003). Convergence rule: trip when the intersection of signature sets across the last N consecutive needs_changes rounds is non-empty AND every round in the window has at least one signed finding. The reason string distinguishes signature-based trips from count-fallback trips so operators can read the breaker history correctly. Existing `test_check_diminishing_returns` updated minimally to reflect the new contract; new `test_check_diminishing_returns_signature_semantics` covers the four user-specified cases.",
+      "steps": [
+        "Add `compute_audit_finding_signature(finding: Mapping[str, Any]) -> str | None` to `scripts/jarvis_orchestrate/nested_orchestration.py`. Returns None when `issue` is missing or empty/whitespace-only. Otherwise reuses the F001 `compute_finding_signature(finding_code, finding_class, issue)` primitive with: `finding_code = '{file}:{line}'` locality (or empty when `file` is None), `finding_class = category`, `issue = issue` text. Severity is intentionally excluded.",
+        "Add `_audit_findings(audit_data) -> list[dict]` helper in `scripts/jarvis_orchestrate/circuit_breakers.py`: returns `audit_data.get('findings')` when present, else falls back to `blocking_findings + non_blocking_findings`. Tolerates both schema shapes since older envelopes used the latter.",
+        "Replace the body of `check_diminishing_returns` in `scripts/jarvis_orchestrate/circuit_breakers.py:857`. Loop over the last `DIMINISHING_RETURNS_MIN_ROUNDS` auditor rounds with `audit_status == 'needs_changes'`; per round, derive a set of signatures via `compute_audit_finding_signature`. If ANY round has a finding whose signature can't be computed, set `fallback=True` and break. Signature path trips when (a) every round has at least one signed finding AND (b) `set.intersection(*rounds_signatures)` is non-empty. Fallback path replicates the existing non-decreasing-count check. The breaker reason string starts with `'diminishing returns (signature-based):'` for the signature path and `'diminishing returns (count fallback — finding signatures unavailable):'` for the fallback path so operators can grep history.",
+        "Update `scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py::test_check_diminishing_returns` to reflect the new contract: same-issue-text rounds trip with `'signature-based'` in the reason; replacing round 1 with disjoint findings (different issue text) does NOT trip, even at the same count. Add an `issue_offset` kwarg to `_write_auditor_audit` so tests can produce disjoint signature sets.",
+        "Add `test_check_diminishing_returns_signature_semantics` to the same file covering the four operator-specified cases: (1) same signatures over 2 rounds → trips with signature-based reason; (2) different signatures with same count → no trip; (3) increasing count with different signatures → no trip; (4) missing issue text → count-based fallback trip with `'count fallback'` and `'signatures unavailable'` in the reason.",
+        "Verify: targeted `pytest test_f006_circuit_breakers.py::test_check_diminishing_returns test_f006_circuit_breakers.py::test_check_diminishing_returns_signature_semantics`; full suite `pytest scripts/jarvis_orchestrate/tests/`; ruff on changed files; `python scripts/sanitization_check.py`."
+      ],
+      "acceptance": "(1) `nested_orchestration.compute_audit_finding_signature` exists with documented behavior: returns deterministic 16-hex SHA-256 prefix when `issue` text is present (composed via existing `compute_finding_signature` with locality + category + normalized issue); returns None when issue is missing or whitespace-only. Severity is NOT part of the signature. (2) `circuit_breakers.check_diminishing_returns` no longer trips on `[3, 3]` non-decreasing count when the two rounds have disjoint signature sets — verified by `test_check_diminishing_returns_signature_semantics` case 2. (3) The breaker DOES trip when the same finding signatures persist across the window — verified by case 1; reason string contains `'signature-based'` and `'persisted'`. (4) Increasing finding count with disjoint signatures does NOT trip — verified by case 3. (5) When issue text is missing on at least one finding, falls back to count behavior; reason string contains `'count fallback'` and `'signatures unavailable'` — verified by case 4. (6) Existing single-audit calls (test_audit_writer_normalize.py, test_audit_filename_feature_id.py) unaffected: with `len(auditor_audits) < 2` the function still returns `(False, '')`. (7) Round-count threshold `DIMINISHING_RETURNS_MIN_ROUNDS = 2` remains a module-level constant (no operator config knob added). (8) Full orchestrate suite passes (~579 tests + 6 skipped baseline; this work adds N tests; expected ~579+N + 6 skipped). Ruff clean on changed files; sanitization clean.",
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-02T23:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/nested_orchestration.py",
+          "captured_by": "claude",
+          "note": "Added compute_audit_finding_signature(finding) → str | None. Composition: locality (file:line) + category + normalized issue, hashed via existing compute_finding_signature SHA-256/16-hex primitive. Severity excluded (D002). Returns None on missing/whitespace-only issue text — callers degrade to fallback."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/circuit_breakers.py",
+          "captured_by": "claude",
+          "note": "Replaced check_diminishing_returns body. Signature-based convergence: trips when set.intersection of finding signatures across last N=2 needs_changes rounds is non-empty AND every round has ≥1 signed finding. Falls back to non-decreasing-count when ANY round has unsigned findings; fallback fact named in reason string (D004). Added _audit_findings helper that tolerates both schema shapes (flat findings vs blocking_findings + non_blocking_findings). Threshold remains module-level constant (D003)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f006_circuit_breakers.py",
+          "captured_by": "claude",
+          "note": "Updated existing test_check_diminishing_returns to reflect new contract: same issue text → signature-based trip; disjoint issue text at same count → no trip. Added _write_auditor_audit_no_issue helper. Added test_check_diminishing_returns_signature_semantics covering the four operator-specified cases (same sigs trip; disjoint sigs same count → no trip; increasing count + disjoint sigs → no trip; missing issue → count fallback with named reason)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-004-fix-diminishing-returns-signature-based/evidence/closeout-memo.md",
+          "captured_by": "operator",
+          "note": "Direct path; locked decisions D001-D004; signature-based convergence detection replaces count-only false-positive heuristic."
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-05-02-004-fix-diminishing-returns-signature-based/evidence/closeout-memo.md#test--lint--sanitization-state",
+          "captured_by": "operator",
+          "note": "2/2 targeted tests pass, 580 + 6 skipped full orchestrate suite (was 579 → +1 net), ruff clean, sanitization clean (565 files)."
+        }
+      ]
+    }
+  ]
+}
