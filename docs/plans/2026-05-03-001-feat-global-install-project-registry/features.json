@@ -16,8 +16,63 @@
         "Tests: (a) packaging — `pyproject.toml` parses as valid PEP 621, `python -m build` produces a wheel, the wheel installs cleanly into a fresh venv. (b) console script — `jarvis --help` exits 0 from any cwd post-install. (c) global config — missing file returns empty defaults, invalid JSON warns and returns empty, valid file populates `default_implementer` / `default_auditor` correctly. (d) backward compat — `python -m jarvis_orchestrate <plan>` still works."
       ],
       "acceptance": "(1) Repo has a top-level `pyproject.toml` valid per PEP 621 declaring the `jarvis` console script. (2) `pipx install .` from the source tree puts a `jarvis` binary on PATH that runs from any cwd. (3) `pip install -e .` (developer mode) works and supports test discovery. (4) `~/.jarvis/config.json` loader handles missing file (returns empty), invalid JSON (warns + empty), and valid config (returns populated). (5) Global config defaults flow into supervisor when no per-project override exists. (6) `python -m jarvis_orchestrate <plan>` still works (backward compat — no flag-day break per D001). (7) README quickstart uses pipx; `PYTHONPATH=scripts` removed from primary instructions. (8) All existing orchestrate-suite tests pass (~580 + 6 skipped baseline). (9) Ruff clean, sanitization clean.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-02T20:00:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "pyproject.toml",
+          "captured_by": "claude",
+          "note": "PEP 621 [project] block declares name='jarvis-orchestrate', requires-python='>=3.10', dynamic=['version'], dependencies=[pydantic>=2.0, pyyaml>=6.0]. [project.scripts] jarvis = 'jarvis_orchestrate.cli:main'. [tool.setuptools.dynamic] reads version from attr='jarvis_orchestrate.__version__' (single source of truth). [tool.setuptools.packages.find] where=['scripts'], include=['jarvis_orchestrate*'], exclude=['jarvis_orchestrate.tests*']."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/__init__.py",
+          "captured_by": "claude",
+          "note": "__version__='0.1.0' — single source of truth consumed by pyproject.toml's dynamic version resolution and the `jarvis --version` flag."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/global_config.py",
+          "captured_by": "claude",
+          "note": "GlobalConfig Pydantic v2 model (extra='forbid') with default_implementer/default_auditor/default_tier/calibration_path. jarvis_home() respects $JARVIS_HOME env override (test isolation), falls back to ~/.jarvis. load_config() handles missing→empty, invalid-JSON→WARN+empty, schema-violation→WARN+empty, OSError→WARN+empty (never raises). save_config() writes JSON with exclude_none. merge_with_defaults() resolves to hardcoded fallbacks (implementer='claude', auditor='codex') when fields unset."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "main() handles --version/-V at top of dispatch chain — prints 'jarvis {__version__}' and returns 0 before any subcommand resolution. Backward-compat path `python -m jarvis_orchestrate` continues to route through cli.main via the existing __main__.py."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f001_packaging_and_global_config.py",
+          "captured_by": "claude",
+          "note": "27 tests across 7 classes: TestPyproject (PEP 621 shape, console script, deps, dynamic version, packages.find, build-system); TestVersion (attribute resolves, --version + -V exit 0 with correct format, `python -m jarvis_orchestrate --version` subprocess test for backward compat); TestJarvisHome (env override, default ~/.jarvis, ensure idempotent); TestLoadConfig (missing/valid/invalid-JSON/extra-field/unreadable cases); TestSaveConfig (roundtrip, exclude_none, creates dir); TestMergeWithDefaults (empty/populated/partial precedence); TestNoRepoSpecificAssumptions (loader + --version work from arbitrary cwd, JARVIS_HOME points anywhere). All use autouse fixture redirecting $JARVIS_HOME to tmp_path so user's real ~/.jarvis is never touched."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo — direct path rationale (deterministic acceptance, mechanical packaging slice), scope-cut record (registry/per-project config deferred to F002/F003), and operator-side verification list (pipx install, README quickstart edits) deferred to F002 + scope-cut decision D007."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/decisions.jsonl",
+          "captured_by": "operator",
+          "note": "D007 records the F001 scope cut: original features.json acceptance items (2)/(3)/(5)/(7) — pipx install/pip install -e/supervisor wiring/README rewrite — explicitly deferred from F001 to F002 (registry surface) and F003 (per-project override wiring). F001 ships package metadata + global config helpers + --version flag + backward-compat test harness only."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/tests/",
+          "captured_by": "claude",
+          "note": "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/ — 607 passed, 6 skipped (baseline 580+6 → +27 F001 tests = 607). Targeted run: 27/27 green. Ruff: clean across the 5 modified/new files. Sanitization: 0 findings, 573 files scanned."
+        }
+      ]
     },
     {
       "id": "F002",

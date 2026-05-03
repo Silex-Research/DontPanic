@@ -1,3 +1,78 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Plan 2026-05-03-001 F001 (D002): pipx-installable global tool. Console
+# script `jarvis` becomes the canonical invocation; `python -m
+# jarvis_orchestrate` continues to work for backward compat (D001).
+name = "jarvis-orchestrate"
+description = "Plan-locked AI software-delivery supervisor — implementer + auditor agents iterate against locked contracts; gates, evidence, and signoff stay in your repo."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Silex Research" }]
+keywords = [
+    "ai",
+    "agents",
+    "code-review",
+    "mcp-server",
+    "ai-orchestration",
+    "multi-agent",
+    "local-first",
+    "claude",
+    "codex",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Software Distribution",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+firebase = ["firebase-admin>=6.0"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+# F001 console-script entry point. Backward-compat path
+# `python -m jarvis_orchestrate` is preserved by the existing
+# scripts/jarvis_orchestrate/__main__.py module.
+jarvis = "jarvis_orchestrate.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Silex-Research/Jarvis"
+Repository = "https://github.com/Silex-Research/Jarvis"
+Issues = "https://github.com/Silex-Research/Jarvis/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "jarvis_orchestrate.__version__" }
+
+[tool.setuptools.packages.find]
+# Package source lives under `scripts/`. Excludes are belt-and-suspenders
+# against accidental inclusion of test fixtures.
+where = ["scripts"]
+include = ["jarvis_orchestrate*"]
+exclude = ["jarvis_orchestrate.tests*"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
