@@ -34,7 +34,10 @@ from models.features_model import Features  # noqa: E402
 from models.plan_model import Plan  # noqa: E402
 
 from jarvis_orchestrate.nested_orchestration import (  # noqa: E402
+    ChildCharter,
+    CommitPolicy,
     Orchestration,
+    validate_charter_policy_consistency,
 )
 from jarvis_orchestrate.plan_target import (  # noqa: E402
     normalize_target_project,
@@ -83,6 +86,13 @@ class LoadedPlan:
     # metadata). None for top-level plans; populated for child plans that
     # declare an `orchestration:` frontmatter section.
     orchestration: Orchestration | None = None
+    # Plan 2026-05-02-003 F002: optional `child_charter` + `commit_policy`
+    # blocks. Only valid when `orchestration.parent_plan_id` is set; loader
+    # rejects charter on a top-level plan. When charter is present and
+    # commit_policy is absent, loader synthesizes the default
+    # `CommitPolicy(mode='evidence_only', requires=[])` per D003.
+    child_charter: ChildCharter | None = None
+    commit_policy: CommitPolicy | None = None
 
     def feature(self, feature_id: str) -> dict[str, Any]:
         for f in self.features.features:
@@ -115,14 +125,38 @@ def load(plan_dir: Path) -> LoadedPlan:
 
     plan_md_text = plan_md.read_text()
     fm = _frontmatter(plan_md)
-    # Plan 2026-05-02-003 F001: pop the optional `orchestration` block before
-    # Plan.model_validate (which has extra='forbid' and would reject it). The
-    # block lives on LoadedPlan.orchestration as a separate parser-level concern;
-    # canonical Plan model in agent-conventions/schemas is unchanged (D006-style
-    # schema discipline — no schema bump required for nested orchestration v1).
+    # Plan 2026-05-02-003 F001 + F002: pop the optional nested-orchestration
+    # blocks before Plan.model_validate (which has extra='forbid' and would
+    # reject them). The blocks live on LoadedPlan as separate parser-level
+    # concerns; canonical Plan model in agent-conventions/schemas is unchanged
+    # (D006-style schema discipline — no schema bump required for nested
+    # orchestration v1).
     orch_block = fm.pop("orchestration", None)
+    charter_block = fm.pop("child_charter", None)
+    policy_block = fm.pop("commit_policy", None)
     plan = Plan.model_validate(fm)
     orchestration = Orchestration.model_validate(orch_block) if orch_block is not None else None
+    child_charter = (
+        ChildCharter.model_validate(charter_block) if charter_block is not None else None
+    )
+    commit_policy = (
+        CommitPolicy.model_validate(policy_block) if policy_block is not None else None
+    )
+
+    # Plan 2026-05-02-003 F002 cross-validation:
+    # (a) child_charter is only valid on a child plan (orchestration set).
+    # (b) charter present + commit_policy absent → synthesize default per D003.
+    # (c) charter + policy must agree on may_edit_product_code vs mode (D003).
+    if child_charter is not None:
+        if orchestration is None or not orchestration.parent_plan_id:
+            raise ValueError(
+                f"{plan_md}: child_charter requires orchestration.parent_plan_id; "
+                "child_charter is only valid on child plans"
+            )
+        if commit_policy is None:
+            commit_policy = CommitPolicy()  # default: mode='evidence_only', requires=[]
+        validate_charter_policy_consistency(child_charter, commit_policy)
+
     features = Features.model_validate(json.loads(features_json.read_text()))
 
     if features.task_id != plan.id:
@@ -145,4 +179,6 @@ def load(plan_dir: Path) -> LoadedPlan:
         target_env=target["target_env"],
         target_project=normalize_target_project(target["target_project"]),
         orchestration=orchestration,
+        child_charter=child_charter,
+        commit_policy=commit_policy,
     )
