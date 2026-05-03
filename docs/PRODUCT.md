@@ -28,16 +28,31 @@ The point is simple:
 > AI agents can write code. Jarvis makes the work trustworthy enough to
 > ship.
 
+The ten-word positioning:
+
+> **OpenClaw helps agents do things across your digital life. Jarvis
+> helps agents ship software safely.**
+
 ---
 
 ## What Jarvis Is
 
-Jarvis is a local AI software-delivery system.
+Jarvis is **the verified software-delivery layer** — the tool that
+turns software requests into reviewed, tested, commit-ready patches by
+running plan-locked, cross-vendor adversarial agent volleys with human
+gates and evidence trails.
 
-It is not just a chat interface. It is not a SaaS. It is not "one more
-agent."
+Jarvis is **not** a personal-agent runtime. It does not own messaging
+channels, mobile presence, chat surfaces, plugin marketplaces, or a
+hosted control plane. Mature systems already solve those problems —
+[OpenClaw](https://github.com/openclaw/openclaw),
+[Claude Code](https://claude.com/claude-code),
+[Codex CLI](https://github.com/openai/codex),
+Cursor, Claude-managed agents — and Jarvis is designed to be **called
+by** those systems, not to replace them. See
+[`ECOSYSTEM.md`](./ECOSYSTEM.md) for the caller-pattern recipes.
 
-Jarvis is the layer that coordinates agents, plans, memory, skills,
+Jarvis is the layer that coordinates plans, agents, memory, skills,
 gates, evidence, and commits across many projects.
 
 It can manage:
@@ -66,12 +81,16 @@ dispatches, audits, and packages evidence.
 2. **A founder or product-builder** — has product ideas, PRDs, bugs, and
    half-built systems; needs them turned into real implementation plans
    and verified patches.
-3. **An AI coding agent** — Claude Code, Codex CLI, Cursor, Clawdbot-style
-   agents, or custom Claude-managed agents need a clear way to discover
-   Jarvis, install it, configure it, and call it.
-4. **A remote operator** — may want to trigger Jarvis from Claude,
-   ChatGPT, Clawdbot, or another managed-agent surface without building
-   a custom remote infrastructure.
+3. **An AI coding agent** — Claude Code, Codex CLI, Cursor,
+   OpenClaw-hosted skills, Clawdbot-style agents, or custom
+   Claude-managed agents need a clear way to discover Jarvis, install
+   it, configure it, and call it. Jarvis exposes a CLI plus (Phase B)
+   a thin MCP surface; the agent's runtime owns chat / scheduling /
+   reach.
+4. **A remote operator** — triggers Jarvis from Claude, ChatGPT,
+   OpenClaw, Clawdbot, or another managed-agent surface through that
+   system's existing remote infrastructure. Jarvis ships no custom
+   daemon — the caller's runtime carries the remote burden.
 5. **Future non-technical users** — a UI may make this accessible to
    non-technical users later. That is not the first product.
 
@@ -278,6 +297,10 @@ It makes AI coding agents safe enough to use on serious software.
 
 ## See Also
 
+- [`ECOSYSTEM.md`](./ECOSYSTEM.md) — Jarvis's place in the agent
+  ecosystem: who calls Jarvis (OpenClaw, Claude Code, Codex CLI,
+  Cursor, Claude-managed agents, MCP clients), what Jarvis is *not*
+  trying to be, and a concrete OpenClaw-as-caller integration recipe.
 - [`PLATFORM.md`](./PLATFORM.md) — the architectural thesis (5 layers,
   stakeholders, design consequences).
 - [`ROADMAP.md`](./ROADMAP.md) — the phased build plan that turns the
