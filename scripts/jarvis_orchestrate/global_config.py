@@ -105,7 +105,7 @@ def load_config() -> GlobalConfig:
       still starts).
     - File present with extra fields → Pydantic raises
       ``ValidationError`` (``extra='forbid'``); we catch + warn + return
-      empty so an outdated config doesn't break a newer Jarvis.
+      empty so an outdated config doesn't break a newer DontPanic.
 
     Returns the populated config. Never raises.
     """

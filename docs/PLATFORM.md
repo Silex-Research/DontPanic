@@ -1,6 +1,6 @@
-# Jarvis Platform Thesis
+# DontPanic Platform Thesis
 
-Jarvis is portable trust infrastructure for bounded agent work.
+DontPanic is portable trust infrastructure for bounded agent work.
 
 Its job is to turn ambiguous human or agent intent into a machine-checkable
 contract, execute that contract with bounded agents, and preserve enough proof
@@ -9,7 +9,7 @@ whether the outcome should be trusted.
 
 ## Simple Goal
 
-Jarvis lets agents and humans do real work on behalf of an operator without
+DontPanic lets agents and humans do real work on behalf of an operator without
 losing the operator's judgment, the architecture context, or the evidence trail.
 
 The unit of trust is not a chat transcript or a single model's confidence. The
@@ -56,7 +56,7 @@ work with any vendor mix, and produce comparable evidence.
 
 ## Stakeholders
 
-Jarvis has two first-class stakeholder shapes.
+DontPanic has two first-class stakeholder shapes.
 
 Humans need narrative summaries, visual architecture, mobile-friendly
 notifications, concise gate prompts, and enough context to exercise judgment
@@ -69,7 +69,7 @@ idempotent commands, stable artifact locations, redaction guarantees, and clear
 These are different renderings of the same state. The platform should not invent
 separate truths for humans and agents.
 
-## What Jarvis Protects Against
+## What DontPanic Protects Against
 
 - Single-model blind spots, especially one vendor approving its own work.
 - Cost, quota, wall-clock, or iteration runaway.
@@ -90,4 +90,3 @@ adversarial audit, structured proof, and tier-appropriate human judgment.
 - Autonomy must be bounded by plan contracts, loop caps, gates, and evidence.
 - Architecture docs should explain the five layers and stay linked to the
   executable artifacts that prove the system's current behavior.
-
