@@ -4,11 +4,12 @@ Tests cover the deterministic acceptance items: pyproject parses as PEP
 621, `[project.scripts] dontpanic` exists, the legacy `jarvis` alias
 still exists, `__version__` is resolvable,
 `--version` / `-V` exit 0 with the right format, `python -m
-jarvis_orchestrate` backward-compat works, and the global-config loader
+jarvis_orchestrate` backward-compat works, `python -m dontpanic_orchestrate`
+works as the preferred module alias, and the global-config loader
 handles missing / invalid / valid files without raising.
 
-All tests use the ``JARVIS_HOME`` env var to redirect to ``tmp_path``
-so the user's real ``~/.jarvis`` is never read or written.
+All tests use the ``DONTPANIC_HOME`` env var to redirect to ``tmp_path``
+so the user's real ``~/.dontpanic`` / ``~/.jarvis`` is never read or written.
 
 Run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/test_f001_packaging_and_global_config.py
 """
@@ -88,6 +89,7 @@ class TestPyproject:
         find_config = d["tool"]["setuptools"]["packages"]["find"]
         assert find_config["where"] == ["scripts"]
         assert "jarvis_orchestrate*" in find_config["include"]
+        assert "dontpanic_orchestrate*" in find_config["include"]
         # Don't ship tests in the wheel.
         assert "jarvis_orchestrate.tests*" in find_config["exclude"]
 
@@ -143,37 +145,83 @@ class TestVersion:
         assert result.returncode == 0, f"stderr: {result.stderr}"
         assert result.stdout.strip() == f"dontpanic {__version__}"
 
+    def test_version_via_preferred_module_alias(self):
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO_ROOT / "scripts") + os.pathsep + env.get(
+            "PYTHONPATH", ""
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "dontpanic_orchestrate", "--version"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        assert result.returncode == 0, f"stderr: {result.stderr}"
+        assert result.stdout.strip() == f"dontpanic {__version__}"
+
 
 # ──────────────────────────────  global config loader  ──────────────────────────────
 
 
 @pytest.fixture(autouse=True)
 def _isolate_jarvis_home(tmp_path, monkeypatch):
-    """Reroute ``$JARVIS_HOME`` to a tmp dir so the user's real
-    ``~/.jarvis`` is never touched. Autouse to protect every test
-    in this module."""
-    monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+    """Reroute ``$DONTPANIC_HOME`` to a tmp dir so the user's real
+    ``~/.dontpanic`` / ``~/.jarvis`` is never touched. Autouse to protect
+    every test in this module."""
+    monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
+    monkeypatch.setenv(gc.DONTPANIC_HOME_ENV, str(tmp_path / ".dontpanic"))
 
 
-class TestJarvisHome:
-    def test_jarvis_home_respects_env_override(self, tmp_path):
-        # Fixture set $JARVIS_HOME to tmp_path/.jarvis already.
-        home = gc.jarvis_home()
-        assert home == tmp_path / ".jarvis"
+class TestDontPanicHome:
+    def test_dontpanic_home_respects_preferred_env_override(self, tmp_path):
+        # Fixture set $DONTPANIC_HOME to tmp_path/.dontpanic already.
+        home = gc.dontpanic_home()
+        assert home == tmp_path / ".dontpanic"
 
-    def test_jarvis_home_default_when_env_unset(self, monkeypatch):
+    def test_legacy_jarvis_home_env_is_fallback(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
+        monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+        assert gc.dontpanic_home() == tmp_path / ".jarvis"
+
+    def test_preferred_env_beats_legacy_env(self, tmp_path, monkeypatch):
+        monkeypatch.setenv(gc.DONTPANIC_HOME_ENV, str(tmp_path / ".dontpanic"))
+        monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
+        assert gc.dontpanic_home() == tmp_path / ".dontpanic"
+
+    def test_dontpanic_home_default_when_env_unset(self, monkeypatch):
+        monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
         monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
-        home = gc.jarvis_home()
+        home = gc.dontpanic_home()
         # Should resolve under user's real home dir (not asserting equality
         # because we don't want to assume what the runner's $HOME is).
-        assert home.name == ".jarvis"
+        assert home.name in {".dontpanic", ".jarvis"}
         assert home.parent == Path.home()
 
-    def test_ensure_jarvis_home_creates_dir(self):
-        home = gc.ensure_jarvis_home()
+    def test_default_prefers_existing_legacy_dir_when_preferred_absent(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
+        monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
+        monkeypatch.setenv("HOME", str(tmp_path))
+        legacy = tmp_path / ".jarvis"
+        legacy.mkdir()
+        assert gc.dontpanic_home() == legacy
+
+    def test_default_prefers_existing_dontpanic_dir_over_legacy(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
+        monkeypatch.delenv(gc.JARVIS_HOME_ENV, raising=False)
+        monkeypatch.setenv("HOME", str(tmp_path))
+        preferred = tmp_path / ".dontpanic"
+        legacy = tmp_path / ".jarvis"
+        preferred.mkdir()
+        legacy.mkdir()
+        assert gc.dontpanic_home() == preferred
+
+    def test_ensure_dontpanic_home_creates_dir(self):
+        home = gc.ensure_dontpanic_home()
         assert home.is_dir()
         # Idempotent.
-        home2 = gc.ensure_jarvis_home()
+        home2 = gc.ensure_dontpanic_home()
         assert home2 == home
 
 
@@ -263,8 +311,8 @@ class TestSaveConfig:
         assert raw == {"default_implementer": "claude"}
 
     def test_save_creates_jarvis_home_if_missing(self, tmp_path):
-        # Fixture set $JARVIS_HOME but didn't create it.
-        target = tmp_path / ".jarvis"
+        # Fixture set $DONTPANIC_HOME but didn't create it.
+        target = tmp_path / ".dontpanic"
         assert not target.exists()
         gc.save_config(gc.GlobalConfig(default_implementer="claude"))
         assert target.is_dir()
@@ -317,6 +365,6 @@ class TestNoRepoSpecificAssumptions:
         assert out == f"dontpanic {__version__}"
 
     def test_jarvis_home_does_not_assume_repo_root(self, tmp_path):
-        # $JARVIS_HOME points anywhere, including outside any repo.
-        home = gc.jarvis_home()
+        # $DONTPANIC_HOME points anywhere, including outside any repo.
+        home = gc.dontpanic_home()
         assert str(tmp_path) in str(home)

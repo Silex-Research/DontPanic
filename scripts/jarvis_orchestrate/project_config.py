@@ -1,12 +1,13 @@
-"""Plan 2026-05-03-001 F003 — per-project config at ``<project>/.jarvis/jarvis.json``.
+"""Per-project config at ``<project>/.dontpanic/dontpanic.json``.
 
 The per-project config lives *inside the registered project*, not under
-``~/.jarvis/``. It is committable so a team can share defaults via git;
-absence is the valid zero state. Per D004 the lookup chain at dispatch
-time is:
+``~/.dontpanic/``. It is committable so a team can share defaults via
+git; absence is the valid zero state. The legacy
+``<project>/.jarvis/jarvis.json`` path remains read-compatible during
+the staged rename. The lookup chain at dispatch time is:
 
-    per-project ``.jarvis/jarvis.json``
-      > global ``~/.jarvis/config.json``
+    per-project ``.dontpanic/dontpanic.json`` (or legacy ``.jarvis/jarvis.json``)
+      > global ``~/.dontpanic/config.json`` (or legacy ``~/.jarvis/config.json``)
       > hardcoded fallbacks (``implementer='claude'``, ``auditor='codex'``)
 
 All three layers can independently leave a field unset (``None`` /
@@ -18,7 +19,7 @@ override at this layer, fall through to the next" (see
 interpretation; tests pin it.
 
 Schema is Pydantic v2 with ``extra='forbid'`` so a stale config from an
-older Jarvis cannot silently break a newer one — invalid files degrade
+older DontPanic cannot silently break a newer one — invalid files degrade
 to ``None`` and emit a WARN.
 
 Cross-validation at load time:
@@ -44,11 +45,17 @@ from jarvis_orchestrate.executors import AGENT_REGISTRY
 
 _LOG = logging.getLogger(__name__)
 
-PROJECT_CONFIG_DIRNAME = ".jarvis"
-"""Directory under a project root that holds the per-project config."""
+PROJECT_CONFIG_DIRNAME = ".dontpanic"
+"""Preferred directory under a project root that holds the per-project config."""
 
-PROJECT_CONFIG_FILENAME = "jarvis.json"
-"""Filename of the per-project config inside ``<project>/.jarvis/``."""
+PROJECT_CONFIG_FILENAME = "dontpanic.json"
+"""Preferred filename of the per-project config."""
+
+LEGACY_PROJECT_CONFIG_DIRNAME = ".jarvis"
+"""Legacy project config directory, read-compatible during migration."""
+
+LEGACY_PROJECT_CONFIG_FILENAME = "jarvis.json"
+"""Legacy project config filename, read-compatible during migration."""
 
 DEFAULT_PLANS_DIR = "docs/plans"
 """Hardcoded default for ``plans_dir`` when neither per-project nor global
@@ -129,16 +136,38 @@ class ProjectConfig(BaseModel):
 
 
 def project_config_path(project_path: Path) -> Path:
-    """Path to ``jarvis.json`` under ``<project>/.jarvis/``.
+    """Preferred path to ``dontpanic.json`` under ``<project>/.dontpanic/``.
 
     ``project_path`` must be a project ROOT (the path stored in the
-    registry), not the per-project ``.jarvis`` dir. The function does NOT
+    registry), not the per-project ``.dontpanic`` dir. The function does NOT
     create the dir — :func:`scaffold_empty_config` is the writer."""
     return project_path / PROJECT_CONFIG_DIRNAME / PROJECT_CONFIG_FILENAME
 
 
+def legacy_project_config_path(project_path: Path) -> Path:
+    """Legacy path to ``jarvis.json`` under ``<project>/.jarvis/``."""
+    return project_path / LEGACY_PROJECT_CONFIG_DIRNAME / LEGACY_PROJECT_CONFIG_FILENAME
+
+
+def project_config_read_path(project_path: Path) -> Path:
+    """Return the config path to read.
+
+    Preferred ``.dontpanic/dontpanic.json`` wins when present. Legacy
+    ``.jarvis/jarvis.json`` is read when the preferred file is absent.
+    Missing config returns the preferred path so diagnostics and writers
+    point new projects at the new shape.
+    """
+    preferred = project_config_path(project_path)
+    if preferred.is_file():
+        return preferred
+    legacy = legacy_project_config_path(project_path)
+    if legacy.is_file():
+        return legacy
+    return preferred
+
+
 def load_project_config(project_path: Path) -> ProjectConfig | None:
-    """Load the per-project config from ``<project>/.jarvis/jarvis.json``.
+    """Load the per-project config.
 
     Returns:
         - ``None`` if the file is absent (the valid zero state — projects
@@ -153,7 +182,7 @@ def load_project_config(project_path: Path) -> ProjectConfig | None:
     Never raises — config-load errors are operator-fixable in a separate
     pass and must not block dispatch.
     """
-    path = project_config_path(project_path)
+    path = project_config_read_path(project_path)
     if not path.is_file():
         return None
     try:
@@ -180,13 +209,17 @@ def load_project_config(project_path: Path) -> ProjectConfig | None:
 
 def scaffold_empty_config(project_path: Path) -> Path:
     """Write an empty ``{}`` per-project config at
-    ``<project>/.jarvis/jarvis.json``. Used by ``jarvis projects add
+    ``<project>/.dontpanic/dontpanic.json``. Used by ``dontpanic projects add
     --init-config`` when the operator opts in. Refuses to overwrite an
     existing file — operators editing their config shouldn't have it
     silently flattened by a re-add."""
     path = project_config_path(project_path)
-    if path.exists():
-        raise FileExistsError(f"per-project config already exists at {path}; refusing to overwrite")
+    legacy = legacy_project_config_path(project_path)
+    if path.exists() or legacy.exists():
+        existing = path if path.exists() else legacy
+        raise FileExistsError(
+            f"per-project config already exists at {existing}; refusing to overwrite"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{}\n")
     return path
@@ -196,8 +229,8 @@ def resolve_project_path(name_or_path: str) -> tuple[Path, str | None] | None:
     """Resolve a CLI-supplied project identifier to an absolute project
     path + (optional) registered name.
 
-    The CLI accepts both shapes: ``jarvis dispatch myproject`` (registered
-    name) and ``jarvis dispatch /abs/path/to/proj`` (filesystem path).
+    The CLI accepts both shapes: ``dontpanic dispatch myproject`` (registered
+    name) and ``dontpanic dispatch /abs/path/to/proj`` (filesystem path).
     Distinguishing them is structural, not heuristic:
 
       1. If the input matches the project-name regex (D003) AND the
@@ -256,7 +289,7 @@ def find_project_for_plan_dir(plan_dir: Path) -> tuple[Path, str] | None:
     This is the boundary that turns "where does the plan live on disk"
     into "which per-project config should the supervisor consult". It is
     intentionally registry-driven — we never fall back to walking up
-    looking for a stray ``.jarvis/`` directory, because an unregistered
+    looking for a stray ``.dontpanic/`` or ``.jarvis/`` directory, because an unregistered
     project should not silently influence dispatch.
     """
     plan_dir_resolved = plan_dir.resolve()
@@ -285,8 +318,8 @@ def resolve_dispatch_defaults(
     """Resolve effective implementer / auditor / plans_dir / target_env at
     dispatch time by walking the precedence chain (D004):
 
-        1. per-project ``<project>/.jarvis/jarvis.json``  (when project_path is set)
-        2. global ``~/.jarvis/config.json``
+        1. per-project ``<project>/.dontpanic/dontpanic.json``  (when project_path is set)
+        2. global ``~/.dontpanic/config.json``
         3. hardcoded fallbacks (``'claude'`` / ``'codex'`` / ``'docs/plans'`` / ``'dev'``)
 
     A field set to ``None`` (or absent) at one layer falls through to the
@@ -344,11 +377,15 @@ __all__ = [
     "DEFAULT_TARGET_ENV",
     "FALLBACK_AUDITOR",
     "FALLBACK_IMPLEMENTER",
+    "LEGACY_PROJECT_CONFIG_DIRNAME",
+    "LEGACY_PROJECT_CONFIG_FILENAME",
     "PROJECT_CONFIG_DIRNAME",
     "PROJECT_CONFIG_FILENAME",
     "ProjectConfig",
     "is_known_agent",
+    "legacy_project_config_path",
     "load_project_config",
+    "project_config_read_path",
     "project_config_path",
     "resolve_dispatch_defaults",
     "resolve_project_path",

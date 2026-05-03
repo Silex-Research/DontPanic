@@ -20,7 +20,7 @@ solved problems in mature systems like
 | Caller | How it reaches DontPanic | Why |
 |---|---|---|
 | OpenClaw | A small DontPanic skill / plugin in the OpenClaw workspace shells out to `dontpanic intake | dispatch | status | approve` | OpenClaw owns the chat / channel / session surface; DontPanic owns plan-locked delivery |
-| Claude Code | Claude reads `~/.jarvis/agent-manifest.json` (Phase B) and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
+| Claude Code | Claude reads `~/.dontpanic/agent-manifest.json` (Phase B; legacy `~/.jarvis` fallback) and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
 | Codex CLI | Same pattern as Claude Code: read manifest, call CLI or MCP tools | Cross-vendor verification — Codex implements while Claude audits, or vice versa |
 | Cursor / IDE plugins | MCP client → `dontpanic mcp serve` localhost | IDE owns editing UX; DontPanic adds plan/audit/evidence rigor |
 | Claude-managed agents | Skill descriptor points at the global manifest; long-running tasks dispatched via `dontpanic dispatch-from-plan` | Managed agent owns scheduling + presence; DontPanic owns the delivery contract |
@@ -33,14 +33,15 @@ solved problems in mature systems like
   personal-assistant personality, no mobile nodes, no full Gateway
   clone, no plugin marketplace as a near-term priority.
 - **Build the callable surface, not the daemon.** Phase B
-  ships `~/.jarvis/agent-manifest.json` (global discovery: "how do I
+  ships `~/.dontpanic/agent-manifest.json` (global discovery: "how do I
   invoke DontPanic on this machine?") and a thin MCP server exposing
   `intake | dispatch | status | approve` — that's enough for any of
   the above callers.
-- **Project behavior stays in `<repo>/.jarvis/jarvis.json`.** The
+- **Project behavior stays in `<repo>/.dontpanic/dontpanic.json`.** The
   per-project config that Phase A's F003 landed answers "how should
   DontPanic operate in this project?" — committable, lives with the repo,
-  read by the supervisor at dispatch time.
+  read by the supervisor at dispatch time. Legacy
+  `<repo>/.jarvis/jarvis.json` remains readable during migration.
 - **No custom daemon until proven necessary.** Existing remote-agent
   infrastructure (Clawdbot-style runners, Claude dispatch, OpenClaw
   Gateway) already solves remote execution. DontPanic exposes a clean CLI
@@ -72,7 +73,7 @@ manifest + MCP surface.
 # In the OpenClaw workspace, a skill named e.g. "dontpanic-delivery":
 #
 # When user says: "DontPanic, build the creator hub from this PRD"
-# 1. Skill reads ~/.jarvis/agent-manifest.json to find the dontpanic CLI
+# 1. Skill reads ~/.dontpanic/agent-manifest.json to find the dontpanic CLI
 # 2. Skill calls: dontpanic intake prd <path> --project creator-hub --json
 # 3. Skill returns DontPanic's plan / questions / discovery output to user
 # 4. On approval: dontpanic dispatch-from-plan <plan-id> --confirm

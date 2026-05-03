@@ -7,7 +7,7 @@ red exits 1 with a remediation pointer.
 Checks:
   1. Python version >= 3.10
   2. gcloud + firebase CLIs present + authenticated
-  3. JARVIS_FIREBASE_PROJECT is set OR environments.json is present
+  3. DONTPANIC_FIREBASE_PROJECT / JARVIS_FIREBASE_PROJECT is set OR environments.json is present
   4. .secrets/ exists, is gitignored, and the SA key matches the project
   5. Pydantic + pyyaml + firebase_admin importable
   6. agent-conventions schemas present + Pydantic models import-clean
@@ -16,9 +16,10 @@ Checks:
 Plan 2026-05-03-001 F003 adds optional per-project preflight (off by
 default for backward compat). When ``--include-projects`` is passed, the
 doctor also surfaces:
-  - global ``~/.jarvis/config.json`` parses (PASS / FAIL when invalid)
+  - global ``~/.dontpanic/config.json`` parses (legacy ``~/.jarvis`` fallback)
   - projects registry status (PASS, lists count)
-  - per registered project: path exists, ``.jarvis/jarvis.json`` parses,
+  - per registered project: path exists, ``.dontpanic/dontpanic.json`` parses
+    (legacy ``.jarvis/jarvis.json`` fallback),
     declared ``plans_dir`` exists or is creatable, declared agents are
     recognized by AGENT_REGISTRY, declared ``human_gates`` are valid
 
@@ -59,8 +60,9 @@ SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
 MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
 
-# F001: SA-key age check looks under ~/.jarvis/.secrets/ by default; the
-# JARVIS_SECRETS_DIR env var lets tests / alternate installs point elsewhere.
+# F001: SA-key age check looks under the resolved DontPanic home by default.
+# DONTPANIC_SECRETS_DIR is preferred; JARVIS_SECRETS_DIR remains a legacy
+# test / alternate-install override.
 SA_KEY_AGE_THRESHOLD_DAYS = 90
 
 GREEN = "\033[32m✓\033[0m"
@@ -152,9 +154,11 @@ def check_firebase_auth() -> CheckResult:
 
 def check_target_project() -> tuple[CheckResult, str | None]:
     """Returns (result, resolved_project) — project may be None if check failed."""
-    env_var = os.environ.get("JARVIS_FIREBASE_PROJECT")
+    env_var = os.environ.get("DONTPANIC_FIREBASE_PROJECT") or os.environ.get(
+        "JARVIS_FIREBASE_PROJECT"
+    )
     if env_var:
-        return _ok("target-project", f"JARVIS_FIREBASE_PROJECT={env_var}"), env_var
+        return _ok("target-project", f"target project env={env_var}"), env_var
     if ENV_FILE.is_file():
         try:
             data = json.loads(ENV_FILE.read_text())
@@ -166,11 +170,11 @@ def check_target_project() -> tuple[CheckResult, str | None]:
         return _bad(
             "target-project",
             "environments.json present but has placeholder/missing dev.firebase_project",
-            "edit environments.json with your real project ID, or set JARVIS_FIREBASE_PROJECT",
+            "edit environments.json with your real project ID, or set DONTPANIC_FIREBASE_PROJECT",
         ), None
     return _bad(
         "target-project",
-        "no JARVIS_FIREBASE_PROJECT and no environments.json",
+        "no DONTPANIC_FIREBASE_PROJECT/JARVIS_FIREBASE_PROJECT and no environments.json",
         f"run: scripts/bootstrap.sh --project YOUR_ID --billing-account XXXXXX-XXXXXX-XXXXXX, "
         f"or copy {ENV_EXAMPLE.name} to environments.json and edit",
     ), None
@@ -331,17 +335,22 @@ def check_parent_plan_validates() -> CheckResult:
 
 
 def _sa_key_dir() -> Path:
-    override = os.environ.get("JARVIS_SECRETS_DIR")
+    override = os.environ.get("DONTPANIC_SECRETS_DIR") or os.environ.get("JARVIS_SECRETS_DIR")
     if override:
         return Path(override)
-    return Path.home() / ".jarvis" / ".secrets"
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from jarvis_orchestrate import global_config as gc
+    finally:
+        sys.path.pop(0)
+    return gc.dontpanic_home() / ".secrets"
 
 
 def check_sa_key_age() -> CheckResult:
     """Soft warning when any *.json key under the SA key dir is older than
     SA_KEY_AGE_THRESHOLD_DAYS. Operators may have a rotation cadence we
     can't see, so this never fails the doctor — it just nudges. Honors
-    JARVIS_SECRETS_DIR for synthetic fixtures."""
+    DONTPANIC_SECRETS_DIR preferred, JARVIS_SECRETS_DIR legacy for synthetic fixtures."""
     import time
 
     sa_dir = _sa_key_dir()
@@ -383,7 +392,7 @@ def check_sa_key_age() -> CheckResult:
 
 
 def check_global_config() -> CheckResult:
-    """Plan 2026-05-03-001 F003: ``~/.jarvis/config.json`` parses if present.
+    """Plan 2026-05-03-001 F003: global ``config.json`` parses if present.
 
     A missing file is the valid first-run zero state — PASS with a hint.
     A present-but-invalid file is FAIL: the global-config loader degrades
@@ -461,7 +470,7 @@ def check_registered_project(entry: object) -> list[CheckResult]:
     pins the entry's project name so JSON consumers can group by project.
 
     1. ``project:<name>:path``        — registered ``path`` exists on disk
-    2. ``project:<name>:config``      — ``.jarvis/jarvis.json`` parses (if present)
+    2. ``project:<name>:config``      — project config parses (if present)
     3. ``project:<name>:plans-dir``   — declared ``plans_dir`` exists or is creatable
     4. ``project:<name>:agents``      — declared implementer / auditor are in AGENT_REGISTRY
     5. ``project:<name>:gates``       — declared ``human_gates`` intersect canonical names
@@ -498,8 +507,9 @@ def check_registered_project(entry: object) -> list[CheckResult]:
         return results
     results.append(_ok(f"project:{name}:path", f"path exists: {project_path}"))
 
-    # 2. per-project config (jarvis.json) parses if present.
-    config_path = pc.project_config_path(project_path)
+    # 2. per-project config parses if present. Preferred path wins; legacy
+    # .jarvis/jarvis.json remains readable when the preferred file is absent.
+    config_path = pc.project_config_read_path(project_path)
     project_cfg: pc.ProjectConfig | None = None
     if config_path.is_file():
         try:

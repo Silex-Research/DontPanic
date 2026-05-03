@@ -77,7 +77,8 @@ def _resolve_plan_dir(plan_arg: str) -> Path:
     projects (via ``project_config.find_project_for_plan_dir`` for cwd
     awareness, then fall back to walking every registered project) and
     honor each project's per-project ``plans_dir`` from its
-    ``.jarvis/jarvis.json``. Default ``plans_dir`` remains ``docs/plans``
+    ``.dontpanic/dontpanic.json`` (legacy ``.jarvis/jarvis.json`` fallback).
+    Default ``plans_dir`` remains ``docs/plans``
     when the per-project config is missing or doesn't override it.
 
     Resolution order (first match wins):
@@ -689,7 +690,7 @@ def _projects_add(argv: list[str]) -> int:
         dest="init_config",
         help=(
             "Plan 2026-05-03-001 F003: scaffold an empty per-project config "
-            "at <project>/.jarvis/jarvis.json after registration. Default "
+            "at <project>/.dontpanic/dontpanic.json after registration. Default "
             "behavior (without this flag) is no scaffold — operators who "
             "want a per-project config opt in explicitly to avoid surprise."
         ),

@@ -7,9 +7,11 @@ tested, evidence-backed software delivery. It locks the work into a plan,
 runs implementer and auditor agents against that plan, pauses for human
 approval at declared gates, and leaves behind durable proof before you merge.
 
-Formerly **Jarvis**. The repo and public product are now DontPanic. The
-`jarvis` command, `jarvis_orchestrate` Python module, and `.jarvis` config
-paths remain as compatibility aliases while the migration happens in stages.
+Formerly **Jarvis**. The repo and public product are now DontPanic.
+New installs use `dontpanic`, `dontpanic_orchestrate`, `~/.dontpanic`,
+and `<repo>/.dontpanic/dontpanic.json`. Legacy `jarvis`,
+`jarvis_orchestrate`, `~/.jarvis`, and `<repo>/.jarvis/jarvis.json`
+remain compatibility aliases while the migration happens in stages.
 
 **Status:** alpha — bootstrap phase. See [`docs/PRODUCT.md`](./docs/PRODUCT.md)
 for the plain-English product overview, [`docs/ROADMAP.md`](./docs/ROADMAP.md)
@@ -102,7 +104,7 @@ Pass `--dry-run` to preview every command without executing.
 ### 3. Verify
 
 ```bash
-export JARVIS_FIREBASE_PROJECT=your-project-id
+export DONTPANIC_FIREBASE_PROJECT=your-project-id
 
 # Full check — needs `gcloud auth login` + `firebase login` first
 python3 scripts/jarvis_doctor.py

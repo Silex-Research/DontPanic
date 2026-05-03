@@ -11,7 +11,7 @@ description: |
   (OpenClaw skills, Claude Code, Codex CLI, Cursor, Claude-managed
   agents, MCP clients) without operator hand-holding. Four features:
 
-  - F001 — Global agent manifest at `~/.jarvis/agent-manifest.json`:
+  - F001 — Global agent manifest at `~/.dontpanic/agent-manifest.json`:
     versioned schema; install/source metadata; CLI path; project
     registry pointer; supported commands; safety rules. Pure
     discovery, no MCP yet.
@@ -74,7 +74,7 @@ target_project: none
 Phase B is the access surface that turns DontPanic into a tool ecosystem
 agents call. Four feature surfaces, intentionally narrow:
 
-1. Global agent manifest at `~/.jarvis/agent-manifest.json` (F001).
+1. Global agent manifest at `~/.dontpanic/agent-manifest.json` (F001).
 2. Local MCP server `dontpanic mcp serve` (F002).
 3. Agent discoverability docs in README + repo (F003).
 4. LLM-authored-plan schema documentation (F004).
@@ -100,7 +100,7 @@ not at draft time.
   docs (F003) are evidence-of-readiness, not commitments to publish
   during this slice. The actual external submissions can ride a later
   release.
-- **No `~/.jarvis/projects.json` schema changes.** F002's MCP tools
+- **No `~/.dontpanic/projects.json` schema changes.** F002's MCP tools
   read the existing registry shape that Phase A's F002 shipped.
 - **No supervisor / dispatch behavior changes.** F002's `dispatch`
   MCP tool wraps the existing `supervisor.dispatch_volley` /

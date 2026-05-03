@@ -127,7 +127,7 @@ def resolve_plan_dir(
          backward-compatible behavior every existing caller depends on).
 
     The ``plans_dir`` argument is the project-relative override threaded
-    in by F003: when a per-project ``.jarvis/jarvis.json`` sets
+    in by F003: when a per-project ``.dontpanic/dontpanic.json`` sets
     ``plans_dir``, callers pass that string here. Default matches the
     convention every shipped plan uses.
 
