@@ -86,9 +86,52 @@
         "Tests: (a) `add` with valid name + existing path persists to `~/.jarvis/projects.json` (use a per-test override env var `JARVIS_REGISTRY_PATH`). (b) `add` with name collision exits 2; `--force --yes` overwrites. (c) `add` with invalid name (uppercase / underscore / >64 chars) exits 2 with regex hint. (d) `add` with non-existent path exits 2. (e) `remove` without `--yes` is dry-run; with `--yes` deletes. (f) `list` and `show --json` round-trip without dropping fields. (g) `update_last_used` mutates the field; idempotent within the same second."
       ],
       "acceptance": "(1) `jarvis projects add foo /path/to/foo` writes `~/.jarvis/projects.json` with a well-formed entry (name, absolute path, created_at, optional defaults). (2) `jarvis projects add foo …` a second time exits 2 with a clear collision message; `--force --yes` overwrites. (3) `jarvis projects list` prints a table; `jarvis projects list --json` is parseable. (4) `jarvis projects show foo` and `--json` round-trip all fields. (5) `jarvis projects remove foo` is dry-run by default; `--yes` deletes. (6) Project name regex `^[a-z0-9][a-z0-9-]{0,63}$` enforced; non-existent paths refused. (7) `~/.jarvis/projects.json` shape: `{\"projects\": [{...}, ...]}`; missing file = empty registry (not error). (8) All new tests pass. Ruff + sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_at": "2026-05-02T20:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/projects_registry.py",
+          "captured_by": "claude",
+          "note": "Pydantic v2 models (extra='forbid') — ProjectEntry with name field-validator enforcing D003 regex `^[a-z0-9][a-z0-9-]{0,63}$`, Registry wrapping `projects: list[ProjectEntry]`. CRUD: add_project (collision-safe + force overwrite + path validation + name validation), remove_project, find_project, update_last_used (idempotent within same second). load_registry total: missing→empty, invalid-JSON/OSError→WARN+empty, schema-violation→WARN+empty (parity with F001 global_config)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "_projects_main dispatches `add | list | show | remove`. `add` flags: --force (requires --yes for non-interactive), --implementer/--auditor/--notes optional, --json. `list`: tabular default, --json structured. `show`: refuses missing name with exit 2, --json round-trip. `remove`: dry-run preview default, --yes actually deletes, exit 2 if missing. All four subcommands accept --json. Wired into main() after `quota-caps` branch."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f002_projects_registry.py",
+          "captured_by": "claude",
+          "note": "52 tests across 9 classes: TestSchema (D003 regex + extra='forbid' on entry/registry + parametrized bad-name cases), TestLoadSave (missing/valid/invalid-JSON/extra-field/dir-creation/exclude_none), TestAddProject (persists, ~ expansion, collision refuses, force overwrites, invalid-name raises, nonexistent-path refuses, optional fields), TestFindAndUpdate (existing/missing/last_used set + idempotent + unknown-name raises), TestRemoveProject (existing/missing returns None), TestProjectsCLI{Add,List,Show,Remove} covering exit codes + --json round-trip + dry-run semantics, TestProjectsCLIDispatch (no-subcommand usage + unknown-subcommand exit 2 + arbitrary-cwd works). All use autouse fixture redirecting $JARVIS_HOME to tmp_path."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/evidence/f002-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F002 close-out memo — direct-path rationale (CRUD-only slice, deterministic acceptance), pointers for F003 close-out (registry consumed by per-project override resolution + supervisor wiring + jarvis doctor preflight)."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-03-001-feat-global-install-project-registry/decisions.jsonl",
+          "captured_by": "operator",
+          "note": "D008 records the F002 surface decisions: --force requires --yes for non-interactive use (no TTY-prompting dependency); --json output across all four subcommands (agents shell out and parse); whole-second timestamps for diff-friendliness; registry-path env override is via $JARVIS_HOME (no separate $JARVIS_REGISTRY_PATH — single env var spec)."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/tests/",
+          "captured_by": "claude",
+          "note": "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/ — 659 passed, 6 skipped (baseline 607+6 → +52 F002 tests = 659). Targeted run: 52/52 green. Ruff: clean across the 3 modified/new files. Sanitization: 0 findings, 576 files scanned."
+        }
       ]
     },
     {

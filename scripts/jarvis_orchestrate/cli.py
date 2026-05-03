@@ -46,6 +46,7 @@ Claude calibration (plan 2026-04-30-001 F005):
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -57,6 +58,7 @@ from jarvis_orchestrate import (
     interactive_state,
     nested_orchestration,
     plan_loader,
+    projects_registry,
     quota_admission,
     quota_caps_loader,
     supervisor,
@@ -562,6 +564,213 @@ def _quota_caps_main(argv: list[str]) -> int:
     return 0
 
 
+_PROJECTS_USAGE = (
+    "usage: jarvis-orchestrate projects {add|list|show|remove} [args] [--json]\n"
+    "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
+    "  list\n"
+    "  show <name>\n"
+    "  remove <name> [--yes]    (default is dry-run preview)"
+)
+
+
+def _projects_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-001 F002: project registry CRUD.
+
+    Subcommands:
+      add     register a project (name + path); refuses collision unless
+              `--force --yes`; refuses non-existent path; refuses bad-shape
+              name (D003 regex).
+      list    print registered projects (table by default, JSON with
+              `--json`).
+      show    print one entry (JSON with `--json`).
+      remove  unregister; default is dry-run preview, `--yes` actually
+              deletes.
+
+    All subcommands accept `--json` for machine-readable output so agents
+    shelling out can parse without screen-scraping. F002 ships CRUD only;
+    supervisor wiring (per-project override precedence) lands in F003 per
+    D004 / D007.
+    """
+    if not argv:
+        print(_PROJECTS_USAGE, file=sys.stderr)
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    if sub == "add":
+        return _projects_add(rest)
+    if sub == "list":
+        return _projects_list(rest)
+    if sub == "show":
+        return _projects_show(rest)
+    if sub == "remove":
+        return _projects_remove(rest)
+    print(f"[projects] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_PROJECTS_USAGE, file=sys.stderr)
+    return 2
+
+
+def _projects_add(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate projects add",
+        add_help=True,
+    )
+    parser.add_argument("name", help="Project name (D003 regex)")
+    parser.add_argument("path", help="Project directory (must exist)")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing entry with the same name. Requires --yes "
+        "for non-interactive use.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Skip confirmation prompt. Required with --force.",
+    )
+    parser.add_argument("--implementer", default=None)
+    parser.add_argument("--auditor", default=None)
+    parser.add_argument("--notes", default=None)
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    if args.force and not args.yes:
+        # Non-interactive: refuse without --yes. Keeps the surface scriptable
+        # without taking on a TTY-prompting dependency.
+        print(
+            "[projects add] --force requires --yes for non-interactive use",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        entry = projects_registry.add_project(
+            name=args.name,
+            path=args.path,
+            force=args.force,
+            default_implementer=args.implementer,
+            default_auditor=args.auditor,
+            notes=args.notes,
+        )
+    except projects_registry.ProjectsRegistryError as exc:
+        print(f"[projects add] {exc}", file=sys.stderr)
+        return 2
+
+    payload = {"action": "added", "project": projects_registry.to_public_dict(entry)}
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[projects add] registered {entry.name!r} → {entry.path}")
+    return 0
+
+
+def _projects_list(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate projects list",
+        add_help=True,
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+    reg = projects_registry.load_registry()
+
+    if args.as_json:
+        print(
+            json.dumps(
+                {"projects": [projects_registry.to_public_dict(p) for p in reg.projects]},
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
+    if not reg.projects:
+        print("[projects list] no projects registered")
+        return 0
+
+    name_w = max(len("NAME"), *(len(p.name) for p in reg.projects))
+    path_w = max(len("PATH"), *(len(p.path) for p in reg.projects))
+    header = f"{'NAME':<{name_w}}  {'PATH':<{path_w}}  LAST_USED"
+    print(header)
+    for p in reg.projects:
+        print(f"{p.name:<{name_w}}  {p.path:<{path_w}}  {p.last_used_at or '(never)'}")
+    return 0
+
+
+def _projects_show(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate projects show",
+        add_help=True,
+    )
+    parser.add_argument("name")
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    entry = projects_registry.find_project(args.name)
+    if entry is None:
+        print(f"[projects show] project not found: {args.name!r}", file=sys.stderr)
+        return 2
+
+    payload = projects_registry.to_public_dict(entry)
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        # Human-readable: same JSON shape, just pretty-printed (operators
+        # asked for "readable JSON" in the F002 spec).
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _projects_remove(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate projects remove",
+        add_help=True,
+    )
+    parser.add_argument("name")
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Actually delete. Default is dry-run preview.",
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    entry = projects_registry.find_project(args.name)
+    if entry is None:
+        print(f"[projects remove] project not found: {args.name!r}", file=sys.stderr)
+        return 2
+
+    if not args.yes:
+        # Dry-run: report what would happen, leave registry untouched.
+        if args.as_json:
+            print(
+                json.dumps(
+                    {
+                        "action": "dry_run",
+                        "project": projects_registry.to_public_dict(entry),
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+        else:
+            print(
+                f"[projects remove] dry-run: would remove {entry.name!r} → "
+                f"{entry.path}. Pass --yes to actually delete."
+            )
+        return 0
+
+    removed = projects_registry.remove_project(args.name)
+    # `removed` is the same entry we just looked up; safe to assert non-None.
+    assert removed is not None
+    payload = {"action": "removed", "project": projects_registry.to_public_dict(removed)}
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[projects remove] removed {removed.name!r}")
+    return 0
+
+
 def _calibrate_claude_main(argv: list[str]) -> int:
     """Plan 2026-04-30-001 F005: write Claude calibration ratio to the sticky
     file at ~/.jarvis/quota_calibration.json so F006 can convert the local
@@ -981,6 +1190,8 @@ def main(argv: list[str] | None = None) -> int:
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
+    if raw and raw[0] == "projects":
+        return _projects_main(raw[1:])
     if raw and raw[0] == "calibrate-claude":
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":
