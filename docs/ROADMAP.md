@@ -1,22 +1,25 @@
-# Jarvis Roadmap — Substrate → Agent Access → Intake → Ecosystem
+# DontPanic Roadmap — Substrate → Agent Access → Intake → Ecosystem
 
-This document is the canonical phased build plan that takes Jarvis from
+This document is the canonical phased build plan that takes DontPanic from
 "a private orchestration repo for one operator" to "the verified
 software-delivery layer that OpenClaw, Claude Code, Codex CLI,
 Cursor, Claude-managed agents, and MCP clients can call across many
 projects."
 
 It is the long-form companion to [`PRODUCT.md`](./PRODUCT.md) (what
-Jarvis is in plain English), [`ECOSYSTEM.md`](./ECOSYSTEM.md) (who
-calls Jarvis and what it is *not* trying to be), and
+DontPanic is in plain English), [`ECOSYSTEM.md`](./ECOSYSTEM.md) (who
+calls DontPanic and what it is *not* trying to be), and
 [`PLATFORM.md`](./PLATFORM.md) (the five-layer architecture thesis).
 
 ## Strategic frame
 
-Jarvis is the verified software-delivery layer. It is not a
+> DontPanic: the safety layer between “the agent says it’s done” and
+> “you merge it.”
+
+DontPanic is the verified software-delivery layer. It is not a
 personal-agent runtime. Mature systems already own the runtime
 surface — chat, channels, mobile, scheduling, plugin marketplaces — and
-Jarvis is designed to be **called by** those systems. Every phase
+DontPanic is designed to be **called by** those systems. Every phase
 below names the build that makes that calling pattern progressively
 more accessible. See [`ECOSYSTEM.md`](./ECOSYSTEM.md) for the explicit
 caller-pattern recipes and the deliberate non-goals.
@@ -32,7 +35,7 @@ The platform substrate that Phase A built on top of:
 | `2026-05-02-002-fix-audit-envelope-filename` | Per-feature audit envelope isolation |
 | `2026-05-02-003-feat-nested-orchestration-v1` | Parent/child plans + depth/cycle/repeated-finding guards + child charter + parent pause/fan-in |
 | `2026-05-02-004-fix-diminishing-returns-signature-based` | Signature-based convergence detection (no false-positive count trips) |
-| `2026-05-03-001-feat-global-install-project-registry` | **Phase A.** Global install, project registry, per-project config, override precedence, `jarvis doctor` |
+| `2026-05-03-001-feat-global-install-project-registry` | **Phase A.** Global install, project registry, per-project config, override precedence, `dontpanic doctor` / `jarvis doctor` compatibility |
 
 What works today:
 
@@ -46,11 +49,11 @@ What works today:
 - memory layer (durable lessons across sessions)
 - security baseline (sanitization scan, CI hardening, SECURITY.md)
 - **global install + multi-project registry + per-project config +
-  override precedence + `jarvis doctor`** (Phase A, just shipped)
+  override precedence + `dontpanic doctor`** (Phase A, just shipped)
 
 What is missing: **the agent-callable access surface** (Phase B —
 manifest + thin MCP) and **the intake pipeline** that turns
-ambiguous requests into valid plans (Phase C). After those, Jarvis
+ambiguous requests into valid plans (Phase C). After those, DontPanic
 delivers on the ecosystem-position framing in
 [`ECOSYSTEM.md`](./ECOSYSTEM.md).
 
@@ -62,16 +65,17 @@ delivers on the ecosystem-position framing in
 
 **Audience:** technical solo dev / friend / OSS user.
 
-**Why first:** Jarvis should not be trapped inside one repo. It is
+**Why first:** DontPanic should not be trapped inside one repo. It is
 now a global tool that can work across many projects. Every later
 phase builds on top of this substrate.
 
 **What shipped:**
 
-- `pipx install` and a global `jarvis` console script via PEP 621
+- `pipx install` and a global `dontpanic` console script via PEP 621
   packaging (kills `PYTHONPATH=…` friction permanently and isolates
-  Jarvis's own deps from project venvs).
-- `jarvis projects add | list | show | remove` backed by
+  DontPanic's own deps from project venvs). The legacy `jarvis` alias
+  remains available during the staged migration.
+- `dontpanic projects add | list | show | remove` backed by
   `~/.jarvis/projects.json` (D003 name regex, non-clobber semantics,
   `--json` output across all subcommands).
 - Per-project `<repo>/.jarvis/jarvis.json` config (committable per
@@ -81,7 +85,7 @@ phase builds on top of this substrate.
 - Override precedence at dispatch time: per-project > global >
   hardcoded fallbacks (D004), wired into both `dispatch_volley` and
   `dispatch_single_agent`.
-- `jarvis doctor` per-project preflight (path / jarvis.json / plans_dir
+- `dontpanic doctor` per-project preflight (path / jarvis.json / plans_dir
   / agents / gates) with the 0/1/2 strict exit-code matrix.
 - `_resolve_plan_dir` is registry-aware: cwd-anchored project →
   walk-the-registry → gated cwd-fallback for un-registered repos.
@@ -94,9 +98,9 @@ phase builds on top of this substrate.
 Cursor, Claude-managed agents, custom MCP clients) and the runtimes
 that host them.
 
-**Strategic frame:** this is the phase that makes Jarvis
-**callable** by the ecosystem. The shape of "Jarvis is the verified
-software-delivery layer" requires (a) any agent can find Jarvis on a
+**Strategic frame:** this is the phase that makes DontPanic
+**callable** by the ecosystem. The shape of "DontPanic is the verified
+software-delivery layer" requires (a) any agent can find DontPanic on a
 machine without operator hand-holding, and (b) a thin tool surface
 those agents can call without a full-runtime integration. See
 [`ECOSYSTEM.md`](./ECOSYSTEM.md) for the caller-pattern recipes.
@@ -104,42 +108,42 @@ those agents can call without a full-runtime integration. See
 **Likely deliverables:**
 
 - **`~/.jarvis/agent-manifest.json`** — global discovery file answering
-  "how does an agent find and invoke Jarvis on this machine?" Contains:
-  Jarvis version, install source, CLI path, common commands, MCP server
+  "how does an agent find and invoke DontPanic on this machine?" Contains:
+  DontPanic version, install source, CLI path, common commands, MCP server
   command, safety rules, project registry pointer, supported intake
   types, default agent roles. Machine-level — not committed to
   project repos. (Locked decision: this is the global manifest;
   project behavior stays in `<repo>/.jarvis/jarvis.json` from Phase A.
   No per-project `agent.json` in v1.)
-- **`jarvis mcp serve` (localhost MCP server)** — thin typed tool
+- **`dontpanic mcp serve` (localhost MCP server)** — thin typed tool
   surface for agents:
-  - `jarvis.intake` — submit a brief, get plan / questions / discovery
-  - `jarvis.dispatch` — start a volley against a plan
-  - `jarvis.status` — check active supervisors + gate state
-  - `jarvis.approve` — clear a declared gate
+  - `dontpanic.intake` — submit a brief, get plan / questions / discovery
+  - `dontpanic.dispatch` — start a volley against a plan
+  - `dontpanic.status` — check active supervisors + gate state
+  - `dontpanic.approve` — clear a declared gate
 - **Discoverability commitments** — PyPI metadata, GitHub topic tags
   (`mcp-server`, `ai-orchestration`, `multi-agent`, `local-first`,
   `code-review`), MCP-directory listing, copy-paste `mcp.json` snippet
   in the README.
 - **Stable LLM-authored-plan schema** documented in the README so any
   LLM (ChatGPT, Grok, Claude.ai, local model) can produce a plan dir
-  that `jarvis plan validate` accepts.
+  that `dontpanic plan validate` accepts.
 
 **Acceptance:** an agent in OpenClaw / Claude Code / Codex CLI /
 Cursor can read the global manifest and call the MCP tools (or shell
 out to the CLI) without operator hand-holding. Phrased as the
-non-goal: **Jarvis ships no chat surface, no scheduling, no
+non-goal: **DontPanic ships no chat surface, no scheduling, no
 custom remote daemon, no plugin marketplace.** The caller's runtime
 owns those concerns.
 
 ## Phase C — Intake Pipeline (turn messy input into a valid plan)
 
 **Status:** outlined; not locked. Pulled forward from previous Phase
-C since intake is Jarvis's core differentiation: this is what
+C since intake is DontPanic's core differentiation: this is what
 "verified software-delivery layer" actually means in practice.
 
 **Audience:** developers, founders, product builders, and the AI
-agents calling Jarvis through Phase B's manifest + MCP surface.
+agents calling DontPanic through Phase B's manifest + MCP surface.
 
 **Goal:** bridge from "I have an idea / problem" to "agents can safely
 work on this." A bounded bootstrap — start with PRD / issue / feature
@@ -148,27 +152,27 @@ until real usage informs it.
 
 **Likely deliverables:**
 
-- `jarvis intake prd <file>` — read PRD, run sufficiency check, draft
+- `dontpanic intake prd <file>` — read PRD, run sufficiency check, draft
   plan or return clarification questions.
-- `jarvis intake issue <file>` — production issue → root-cause plan.
-- `jarvis intake feature <file>` — feature brief → scoped plan.
-- `jarvis intake parity <source> <target>` — parity work → parity plan.
+- `dontpanic intake issue <file>` — production issue → root-cause plan.
+- `dontpanic intake feature <file>` — feature brief → scoped plan.
+- `dontpanic intake parity <source> <target>` — parity work → parity plan.
 - **Sufficiency checker** — LLM-driven, runs against documented
   criteria per work-type. Has its own cost-model implications and
   circuit breakers (don't infinite-loop "ask one more question").
-- **Research / discovery mode** — when a request is vague, Jarvis
+- **Research / discovery mode** — when a request is vague, DontPanic
   inspects repo + docs + ADRs + prior plans + logs (if permitted)
   before drafting. Subsumes the old "Project Init + Discovery"
   phase — discovery is a feature of intake, not a separate slice.
 - **Discovery-plan fallback** — if implementation is premature, propose
   a research plan with its own acceptance criteria.
 - Human approval before any implementation dispatch.
-- The MCP `jarvis.intake` tool from Phase B becomes the canonical
+- The MCP `dontpanic.intake` tool from Phase B becomes the canonical
   caller surface for OpenClaw / Claude Code / Codex CLI agents.
 
 **Sufficiency criteria (what counts as "ready to plan"):**
 
-For any work-type, Jarvis must be able to define: project, desired
+For any work-type, DontPanic must be able to define: project, desired
 outcome, target surface, constraints, acceptance criteria, risk level,
 evidence needed, scope boundary. Per-type criteria are documented in
 [`PRODUCT.md`](./PRODUCT.md).
@@ -180,23 +184,23 @@ least one Phase C intake type ships, so we have something for the
 ecosystem to call.
 
 **Audience:** the operators of OpenClaw / Claude / Codex / Clawdbot-style
-runtimes integrating Jarvis as a callable skill.
+runtimes integrating DontPanic as a callable skill.
 
-**Goal:** make Jarvis easy to integrate, **without** building a custom
+**Goal:** make DontPanic easy to integrate, **without** building a custom
 daemon. This phase is mostly documentation + small enabling helpers.
 
 **Likely deliverables:**
 
 - **OpenClaw caller recipe** — a published skill template / plugin
   example showing how an OpenClaw skill calls
-  `jarvis intake | dispatch | status | approve` (sketched in
+  `dontpanic intake | dispatch | status | approve` (sketched in
   [`ECOSYSTEM.md`](./ECOSYSTEM.md), formalized here).
 - **Claude-managed-agent recipe** — same shape, expressed against
   Claude's managed-agent surface.
 - **MCP client examples** — Cursor, Continue, IDE plugins.
 - **Status webhook (optional)** — if existing runtimes need push
   notifications (gate paused, signoff complete) instead of polling
-  `jarvis status`, ship a thin webhook hook. Defer until real demand.
+  `dontpanic status`, ship a thin webhook hook. Defer until real demand.
 - **No custom remote daemon.** Existing surfaces (Clawdbot-style
   runners, Claude dispatch, OpenClaw Gateway, Codex / Claude CLI on
   the user's machine, GitHub-based workflows, remote MCP clients)
@@ -208,8 +212,8 @@ daemon. This phase is mostly documentation + small enabling helpers.
   for ChatGPT Custom Actions, Tailscale Funnel preferred over ngrok).
 
 **Acceptance:** an operator running OpenClaw can install a small
-Jarvis skill, paste their Jarvis CLI path, and have OpenClaw dispatch
-real software work to Jarvis with full plan + audit + signoff
+DontPanic skill, paste their DontPanic CLI path, and have OpenClaw dispatch
+real software work to DontPanic with full plan + audit + signoff
 discipline. No SDK, no embedded library, no Gateway-side state.
 
 ## Phase E — Governance V2
@@ -239,14 +243,14 @@ trigger fires, that's the starting point.
 
 Two earlier phases are explicitly off the build plan:
 
-- **Custom remote daemon (`jarvis serve` HTTP service)** — replaced by
+- **Custom remote daemon (`dontpanic serve` HTTP service)** — replaced by
   Phase D's ecosystem-callers approach. Existing remote-agent
   infrastructure already solves remote execution; we don't need to
   build, secure, and maintain another server. The threat model
   remains pre-written if real usage ever proves the need.
 - **Standalone "Project Init + Discovery" phase** — discovery is now a
   feature of Phase C intake's research mode, not a separate slice.
-  `jarvis init` may still ship as a thin convenience helper inside
+  `dontpanic init` may still ship as a thin convenience helper inside
   Phase C, but it is not a phase boundary.
 
 ## Sequencing Summary
@@ -269,14 +273,14 @@ slice, ship it, learn from it, lock the next.
 
 | Stakeholder | After Phase A [now] | After Phase B | After Phase C | After Phase D |
 |---|---|---|---|---|
-| Solo dev / friend | global install, multi-project registry, doctor preflight | their AI tools find Jarvis automatically | submit a brief / PRD / issue, get a plan | richer ecosystem callers |
+| Solo dev / friend | global install, multi-project registry, doctor preflight | their AI tools find DontPanic automatically | submit a brief / PRD / issue, get a plan | richer ecosystem callers |
 | Founder / product builder | (not yet) | (not yet) | submit a PRD, get verified delivery | (richer; managed-agent surfaces) |
-| AI coding agent (Claude Code, Codex CLI, Cursor) | install via pipx | discovers Jarvis via global manifest, calls MCP tools | submits work via `jarvis.intake` | OpenClaw skill template, MCP client examples |
-| OpenClaw user | (not yet) | (not yet) | (not yet) | OpenClaw skill calls `jarvis intake / dispatch / status / approve` |
-| Remote operator | (not yet) | (not yet) | (not yet) | dispatches via existing surfaces (Claude, ChatGPT, Clawdbot, OpenClaw) — Jarvis ships no custom remote daemon |
+| AI coding agent (Claude Code, Codex CLI, Cursor) | install via pipx | discovers DontPanic via global manifest, calls MCP tools | submits work via `dontpanic.intake` | OpenClaw skill template, MCP client examples |
+| OpenClaw user | (not yet) | (not yet) | (not yet) | OpenClaw skill calls `dontpanic intake / dispatch / status / approve` |
+| Remote operator | (not yet) | (not yet) | (not yet) | dispatches via existing surfaces (Claude, ChatGPT, Clawdbot, OpenClaw) — DontPanic ships no custom remote daemon |
 
 By Phase D, the positioning in [`PRODUCT.md`](./PRODUCT.md) and
 [`ECOSYSTEM.md`](./ECOSYSTEM.md) — "OpenClaw helps agents do things
-across your digital life; Jarvis helps agents ship software safely" —
+across your digital life; DontPanic helps agents ship software safely" —
 becomes deliverable end-to-end without building custom remote
 infrastructure.

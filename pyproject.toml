@@ -3,16 +3,17 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# Plan 2026-05-03-001 F001 (D002): pipx-installable global tool. Console
-# script `jarvis` becomes the canonical invocation; `python -m
-# jarvis_orchestrate` continues to work for backward compat (D001).
-name = "jarvis-orchestrate"
-description = "Plan-locked AI software-delivery supervisor — implementer + auditor agents iterate against locked contracts; gates, evidence, and signoff stay in your repo."
+# Rename phase 1: DontPanic is the public package and preferred console
+# command. The legacy `jarvis` command and `python -m jarvis_orchestrate`
+# continue to work for backward compatibility while internals migrate later.
+name = "dontpanic-orchestrate"
+description = "The safety layer between the agent says it's done and you merge it."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [{ name = "Silex Research" }]
 keywords = [
+    "dontpanic",
     "ai",
     "agents",
     "code-review",
@@ -53,15 +54,15 @@ dev = [
 ]
 
 [project.scripts]
-# F001 console-script entry point. Backward-compat path
-# `python -m jarvis_orchestrate` is preserved by the existing
-# scripts/jarvis_orchestrate/__main__.py module.
+# Preferred public command plus legacy alias. Backward-compat path
+# `python -m jarvis_orchestrate` is preserved by the existing module.
+dontpanic = "jarvis_orchestrate.cli:main"
 jarvis = "jarvis_orchestrate.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Silex-Research/Jarvis"
-Repository = "https://github.com/Silex-Research/Jarvis"
-Issues = "https://github.com/Silex-Research/Jarvis/issues"
+Homepage = "https://github.com/Silex-Research/DontPanic"
+Repository = "https://github.com/Silex-Research/DontPanic"
+Issues = "https://github.com/Silex-Research/DontPanic/issues"
 
 [tool.setuptools.dynamic]
 version = { attr = "jarvis_orchestrate.__version__" }

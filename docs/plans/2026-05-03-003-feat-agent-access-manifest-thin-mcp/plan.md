@@ -7,7 +7,7 @@ status: draft
 date: "2026-05-03"
 description: |
   Phase B of the OpenClaw-repositioned roadmap (see docs/ROADMAP.md and
-  docs/ECOSYSTEM.md). Make Jarvis **callable** by ecosystem agents
+  docs/ECOSYSTEM.md). Make DontPanic **callable** by ecosystem agents
   (OpenClaw skills, Claude Code, Codex CLI, Cursor, Claude-managed
   agents, MCP clients) without operator hand-holding. Four features:
 
@@ -15,7 +15,7 @@ description: |
     versioned schema; install/source metadata; CLI path; project
     registry pointer; supported commands; safety rules. Pure
     discovery, no MCP yet.
-  - F002 — Thin local MCP server (`jarvis mcp serve`): localhost /
+  - F002 — Thin local MCP server (`dontpanic mcp serve`): localhost /
     stdio transport; thin tools `list_projects | validate_plan |
     dispatch | status | approve_gate | read_evidence`. **No intake
     tool** — Phase C owns intake, exposing it before then would lock
@@ -34,13 +34,13 @@ description: |
   plugin marketplace. The caller's runtime owns those concerns; see
   ECOSYSTEM.md for the explicit non-goals.
 motivation: |
-  Phase A made Jarvis globally installable and registry-aware. What's
+  Phase A made DontPanic globally installable and registry-aware. What's
   missing is the surface an agent can find on a machine and call
   without per-vendor integration code. The OpenClaw discovery (2026-05-03)
-  sharpened the framing: Jarvis is the verified software-delivery
+  sharpened the framing: DontPanic is the verified software-delivery
   layer ecosystem runtimes call, not a runtime competitor. Phase B is
   the smallest slice that delivers that calling pattern: a global
-  manifest (find Jarvis), a thin MCP surface (call Jarvis), and the
+  manifest (find DontPanic), a thin MCP surface (call DontPanic), and the
   docs an agent or LLM needs to do both correctly.
 agents_required:
   - claude
@@ -71,11 +71,11 @@ target_project: none
 
 ## Scope
 
-Phase B is the access surface that turns Jarvis into a tool ecosystem
+Phase B is the access surface that turns DontPanic into a tool ecosystem
 agents call. Four feature surfaces, intentionally narrow:
 
 1. Global agent manifest at `~/.jarvis/agent-manifest.json` (F001).
-2. Local MCP server `jarvis mcp serve` (F002).
+2. Local MCP server `dontpanic mcp serve` (F002).
 3. Agent discoverability docs in README + repo (F003).
 4. LLM-authored-plan schema documentation (F004).
 
@@ -85,13 +85,13 @@ not at draft time.
 
 ## Out of scope (deliberate)
 
-- **No `jarvis intake` MCP tool.** Phase C owns intake. Exposing an
+- **No `dontpanic intake` MCP tool.** Phase C owns intake. Exposing an
   intake tool through MCP before Phase C exists would lock in a
   contract we have not designed yet.
 - **No remote MCP transport.** Phase B is local-only (stdio +
   localhost). Remote callers go through their own runtime's remote
   surface (Clawdbot, OpenClaw Gateway, Claude dispatch, etc.) — not
-  a Jarvis-hosted daemon.
+  a DontPanic-hosted daemon.
 - **No custom remote daemon.** Existing remote-agent infrastructure
   carries the remote-execution burden. If a daemon ever becomes
   necessary, the threat model is pre-written in
@@ -136,7 +136,7 @@ must verify per item:
    not a credential surface. Sanitization check must pass on the
    manifest writer.
 5. **Manifest is regenerable and idempotent.** Operators (or a future
-   `jarvis bootstrap` helper) can rewrite the manifest from scratch.
+   `dontpanic bootstrap` helper) can rewrite the manifest from scratch.
    Re-running the writer with the same inputs produces a
    byte-identical file. No accidental drift between regenerations.
 6. **Agent-facing docs must say: do not dispatch without user
@@ -200,8 +200,8 @@ should be satisfied that:
 
 ## See also
 
-- [`docs/PRODUCT.md`](../../PRODUCT.md) — what Jarvis is in plain
-  English; the tagline and "what Jarvis is NOT" framing.
+- [`docs/PRODUCT.md`](../../PRODUCT.md) — what DontPanic is in plain
+  English; the tagline and "what DontPanic is NOT" framing.
 - [`docs/ECOSYSTEM.md`](../../ECOSYSTEM.md) — caller-pattern recipes
   (OpenClaw, Claude Code, Codex CLI, Cursor, managed agents, MCP);
   the deliberate non-goals.

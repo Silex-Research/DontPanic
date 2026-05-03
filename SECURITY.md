@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you believe you have found a security issue in Jarvis, **do not open a public
+If you believe you have found a security issue in DontPanic, **do not open a public
 issue or pull request**. Instead, report it privately so we can investigate and
 ship a fix before details become public.
 
@@ -26,7 +26,7 @@ policy.
 
 ## Supported Versions
 
-Jarvis is currently a single-operator tool with no published release tags. Only
+DontPanic is currently a single-operator tool with no published release tags. Only
 the `main` branch receives security fixes; older clones must rebase onto `main`
 to pick them up.
 
@@ -36,7 +36,7 @@ to pick them up.
 | Any tagged release | ❌ — no LTS branch yet |
 | Forks   | ❌ — fork maintainers are responsible for their own backports |
 
-This table will be revisited once Jarvis ships its first tagged release; until
+This table will be revisited once DontPanic ships its first tagged release; until
 then, "rebase onto `main`" is the only supported upgrade path.
 
 ## Response Timeline
