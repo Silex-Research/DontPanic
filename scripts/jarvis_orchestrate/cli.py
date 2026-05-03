@@ -171,7 +171,7 @@ def _approve_main(argv: list[str]) -> int:
         return 2
 
     if len(argv) != 2:
-        print("usage: jarvis-orchestrate approve <plan-id> <gate>", file=sys.stderr)
+        print("usage: dontpanic approve <plan-id> <gate>", file=sys.stderr)
         return 2
     plan_arg, gate = argv
     # F006: the global circuit breaker is hard-stop and intentionally has no
@@ -258,7 +258,7 @@ def _approve_pre_resume_after_child_main(argv: list[str]) -> int:
     volley.return_to_parent_approved event on the parent's events.jsonl.
     """
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate approve <parent> pre_resume_after_child",
+        prog="dontpanic approve <parent> pre_resume_after_child",
         add_help=True,
     )
     parser.add_argument(
@@ -372,9 +372,9 @@ def _approve_pre_resume_after_child_main(argv: list[str]) -> int:
 
 
 _RESUME_BARE_USAGE = (
-    "usage: jarvis-orchestrate resume <plan> (--gate <name> | --all)\n"
-    "  preferred for partial clearance: jarvis-orchestrate approve <plan> <gate>\n"
-    "  bulk clear (explicit): jarvis-orchestrate resume <plan> --all"
+    "usage: dontpanic resume <plan> (--gate <name> | --all)\n"
+    "  preferred for partial clearance: dontpanic approve <plan> <gate>\n"
+    "  bulk clear (explicit): dontpanic resume <plan> --all"
 )
 
 
@@ -397,7 +397,7 @@ def _resume_main(argv: list[str]) -> int:
     exclusive — argparse rejects `--gate X --all` with exit 2.
     """
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate resume",
+        prog="dontpanic resume",
         usage=_RESUME_BARE_USAGE,
         add_help=True,
     )
@@ -538,7 +538,7 @@ def _claude_touch_main(argv: list[str]) -> int:
     hermetic tests; conftest autouse fixture sets it per-test.
     """
     if argv:
-        print("usage: jarvis-orchestrate claude-touch", file=sys.stderr)
+        print("usage: dontpanic claude-touch", file=sys.stderr)
         return 2
     ts = interactive_state.touch("claude")
     minutes = interactive_state.backoff_minutes()
@@ -561,7 +561,7 @@ def _quota_caps_main(argv: list[str]) -> int:
     """
     if not argv or argv[0] not in {"init", "show"}:
         print(
-            "usage: jarvis-orchestrate quota-caps {init|show} [--overwrite]",
+            "usage: dontpanic quota-caps {init|show} [--overwrite]",
             file=sys.stderr,
         )
         return 2
@@ -618,7 +618,7 @@ def _quota_caps_main(argv: list[str]) -> int:
 
 
 _PROJECTS_USAGE = (
-    "usage: jarvis-orchestrate projects {add|list|show|remove} [args] [--json]\n"
+    "usage: dontpanic projects {add|list|show|remove} [args] [--json]\n"
     "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
     "  list\n"
     "  show <name>\n"
@@ -664,7 +664,7 @@ def _projects_main(argv: list[str]) -> int:
 
 def _projects_add(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate projects add",
+        prog="dontpanic projects add",
         add_help=True,
     )
     parser.add_argument("name", help="Project name (D003 regex)")
@@ -756,7 +756,7 @@ def _projects_add(argv: list[str]) -> int:
 
 def _projects_list(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate projects list",
+        prog="dontpanic projects list",
         add_help=True,
     )
     parser.add_argument("--json", action="store_true", dest="as_json")
@@ -788,7 +788,7 @@ def _projects_list(argv: list[str]) -> int:
 
 def _projects_show(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate projects show",
+        prog="dontpanic projects show",
         add_help=True,
     )
     parser.add_argument("name")
@@ -812,7 +812,7 @@ def _projects_show(argv: list[str]) -> int:
 
 def _projects_remove(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate projects remove",
+        prog="dontpanic projects remove",
         add_help=True,
     )
     parser.add_argument("name")
@@ -871,7 +871,7 @@ def _calibrate_claude_main(argv: list[str]) -> int:
     percent (claude.ai/settings/usage). Ratio = dashboard_pct / observed_native.
     """
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate calibrate-claude",
+        prog="dontpanic calibrate-claude",
         description=__doc__,
     )
     parser.add_argument(
@@ -950,11 +950,11 @@ def _calibrate_claude_main(argv: list[str]) -> int:
     return 0
 
 
-# ──────────────────────────  jarvis doctor (F003)  ──────────────────────────
+# ────────────────────────  dontpanic doctor (F003)  ──────────────────────────
 
 
 def _doctor_main(argv: list[str]) -> int:
-    """Plan 2026-05-03-001 F003: ``jarvis doctor`` wraps
+    """Plan 2026-05-03-001 F003: ``dontpanic doctor`` wraps
     ``scripts/jarvis_doctor.py`` so users have a single console-script
     entry point. Includes per-project preflight by default and uses the
     strict 0/1/2 exit-code matrix.
@@ -966,7 +966,7 @@ def _doctor_main(argv: list[str]) -> int:
     backward compatibility per AC#5.
     """
     parser = argparse.ArgumentParser(
-        prog="jarvis doctor",
+        prog="dontpanic doctor",
         description=(
             "Run the full doctor battery (structural + auth + per-project "
             "preflight). Output structured PASS / WARN / FAIL per check; "
@@ -1140,7 +1140,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     audit/INBOX/transcript artifacts.
     """
     parser = argparse.ArgumentParser(
-        prog="jarvis-orchestrate dispatch-from-plan",
+        prog="dontpanic dispatch-from-plan",
         description=(
             "Strict-dry-run pre-flight wrapper. Prints 10-field context block "
             "and exits 0; pass --confirm to actually dispatch in-process via "
@@ -1312,13 +1312,12 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
-    # Plan 2026-05-03-001 F001: --version / -V prints the package version
-    # and exits 0. Resolves to `jarvis_orchestrate.__version__` (single
-    # source of truth read by pyproject.toml's [tool.setuptools.dynamic]).
+    # --version / -V prints the public package name and version, resolving
+    # to `jarvis_orchestrate.__version__` as the single source of truth.
     if raw and raw[0] in ("--version", "-V"):
         from jarvis_orchestrate import __version__
 
-        print(f"jarvis {__version__}")
+        print(f"dontpanic {__version__}")
         return 0
     if raw and raw[0] == "ps":
         return _ps_main(raw[1:])
@@ -1339,7 +1338,7 @@ def main(argv: list[str] | None = None) -> int:
     if raw and raw[0] == "doctor":
         return _doctor_main(raw[1:])
 
-    p = argparse.ArgumentParser(prog="jarvis-orchestrate", description=__doc__)
+    p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
     p.add_argument("--feature", default="F001", help="Feature ID to dispatch (default F001)")
     p.add_argument(

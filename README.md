@@ -1,14 +1,26 @@
-# Jarvis
+# DontPanic
 
-> Cross-agent orchestration framework for Claude Code, Codex, Gemini, Grok, and local Ollama models. Plans are executable contracts; agents implement and audit each other; humans decide at tier-appropriate gates.
+> The safety layer between “the agent says it’s done” and “you merge it.”
 
-**Status:** alpha — bootstrap phase. Self-hosting orchestration system being built. See [`docs/plans/`](./docs/plans/) for active work and [parent plan](./docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md) for the design.
+DontPanic turns AI coding from "one agent says it finished" into reviewed,
+tested, evidence-backed software delivery. It locks the work into a plan,
+runs implementer and auditor agents against that plan, pauses for human
+approval at declared gates, and leaves behind durable proof before you merge.
+
+Formerly **Jarvis**. The repo and public product are now DontPanic. The
+`jarvis` command, `jarvis_orchestrate` Python module, and `.jarvis` config
+paths remain as compatibility aliases while the migration happens in stages.
+
+**Status:** alpha — bootstrap phase. See [`docs/PRODUCT.md`](./docs/PRODUCT.md)
+for the plain-English product overview, [`docs/ROADMAP.md`](./docs/ROADMAP.md)
+for the current build plan, and [`docs/plans/`](./docs/plans/) for active work.
 
 ---
 
-## What is Jarvis
+## What is DontPanic
 
-A 4-layer hierarchy that lets multiple AI agents collaborate on real work without going off the rails:
+DontPanic is a 4-layer hierarchy that lets multiple AI agents collaborate on
+real work without going off the rails:
 
 ```
 Identity & governance        ← SOUL.md, AGENTS.md, USER.md
@@ -20,7 +32,7 @@ Multi-agent panel + bounds   ← Claude / Codex / Gemini / Grok / OSS  +  CAWP t
 Each layer's output becomes the next layer's contract. Plans live in `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `features.json` as inviolable machine-checkable ground truth. Different model families audit each other so no single vendor self-approves.
 
 The platform thesis is captured in [`docs/PLATFORM.md`](./docs/PLATFORM.md):
-Jarvis is portable trust infrastructure for bounded agent work. It routes intent
+DontPanic is portable trust infrastructure for bounded agent work. It routes intent
 through reusable skills and learned memory, turns non-trivial work into
 machine-checkable plans, executes those plans across model/vendor boundaries, and
 preserves proof through audits, evidence, signoff, and protected-path checks.
@@ -53,11 +65,14 @@ Python deps: `pip3 install firebase-admin pydantic jsonschema pyyaml datamodel-c
 
 ## Quickstart
 
+The preferred command is `dontpanic`. The legacy `jarvis` alias still works.
+
 ### 1. Clone
 
 ```bash
-git clone https://github.com/Silex-Research/Jarvis.git
-cd Jarvis
+git clone https://github.com/Silex-Research/DontPanic.git
+cd DontPanic
+python3 -m pip install -e .
 ```
 
 ### 2. Bootstrap your own GCP/Firebase project
@@ -96,7 +111,7 @@ python3 scripts/jarvis_doctor.py
 python3 scripts/jarvis_doctor.py --skip-auth
 ```
 
-Both modes should print `✓ N/N checks passed — Jarvis is ready`. Each
+Both modes should print `✓ N/N checks passed — DontPanic is ready`. Each
 red check includes a remediation line. Then run the storage smoke test:
 
 ```bash
@@ -139,8 +154,8 @@ python3 scripts/quota_check.py
 **2. Seed your operator caps file** (`~/.jarvis/quota_caps.json`):
 
 ```bash
-PYTHONPATH=scripts python -m jarvis_orchestrate quota-caps init
-PYTHONPATH=scripts python -m jarvis_orchestrate quota-caps show
+dontpanic quota-caps init
+dontpanic quota-caps show
 ```
 
 **3. Calibrate Claude** against your real plan-usage dashboard at
@@ -148,7 +163,7 @@ PYTHONPATH=scripts python -m jarvis_orchestrate quota-caps show
 shown in the weekly bar and pass it as `--dashboard-pct`:
 
 ```bash
-PYTHONPATH=scripts python -m jarvis_orchestrate calibrate-claude --dashboard-pct 13
+dontpanic calibrate-claude --dashboard-pct 13
 ```
 
 This writes a sticky calibration to `~/.jarvis/quota_calibration.json`. Re-run
@@ -169,7 +184,7 @@ tier, target_env, target_project, implementer, auditor, gates, max_iterations,
 quota readiness) and exits 0 without dispatching, regardless of TTY state:
 
 ```bash
-PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan <plan-id>
+dontpanic dispatch-from-plan <plan-id>
 ```
 
 If quota readiness is one of `missing_state` / `config_required` /
@@ -184,7 +199,7 @@ interpreter). Forwarded flags: `--feature F001`, `--implementer claude`,
 class is plan-derived only and cannot be forced via `--mode`.
 
 ```bash
-PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan <plan-id> --confirm
+dontpanic dispatch-from-plan <plan-id> --confirm
 ```
 
 `target_env: prod` blocks dispatch unless `plan.tier=p0`. Use `dev` until ready.
@@ -205,9 +220,9 @@ the volley runs:
 `breaker:diminishing_returns`, …). INBOX names the gate; clear it with:
 
 ```bash
-PYTHONPATH=scripts python -m jarvis_orchestrate ps                            # active supervisors
-PYTHONPATH=scripts python -m jarvis_orchestrate approve <plan-id> <gate>      # clear one gate
-PYTHONPATH=scripts python -m jarvis_orchestrate resume  <plan-id>             # clear every declared gate
+dontpanic ps                                  # active supervisors
+dontpanic approve <plan-id> <gate>            # clear one gate
+dontpanic resume <plan-id> --all              # explicit bulk clear
 ```
 
 **Gotchas:** `--max-iterations 1` still permits two rounds (iter 0 + iter 1)
@@ -223,7 +238,7 @@ vendor adversarial invariant (no Claude grading Claude) only holds in
 ## Project layout
 
 ```
-Jarvis/
+DontPanic/
 ├── SOUL.md                          # values + safety guard
 ├── AGENTS.md                        # operating manual + role catalog
 ├── USER.md                          # who you're helping
@@ -290,7 +305,7 @@ Full design in [`docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.
 
 ## Two-axis billing
 
-Jarvis tracks cost on two independent axes:
+DontPanic tracks cost on two independent axes:
 
 | Axis | Source | Output | Use |
 |---|---|---|---|

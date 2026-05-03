@@ -1,9 +1,11 @@
-# Jarvis — In Plain English
+# DontPanic — In Plain English
 
-Jarvis turns messy software requests into reviewed, tested, commit-ready
+> The safety layer between “the agent says it’s done” and “you merge it.”
+
+DontPanic turns messy software requests into reviewed, tested, commit-ready
 patches.
 
-You give Jarvis a goal:
+You give DontPanic a goal:
 
 - "Build this feature."
 - "Catch Android up to the iOS app."
@@ -11,54 +13,54 @@ You give Jarvis a goal:
 - "Turn this PRD into implementation work."
 - "Audit this platform and fix the gaps."
 
-Jarvis does not immediately let an agent start coding.
+DontPanic does not immediately let an agent start coding.
 
 First, it figures out whether the request is clear enough. If it is not,
-Jarvis uses its own research and discovery skills to inspect the repo,
+DontPanic uses its own research and discovery skills to inspect the repo,
 docs, environment, tests, architecture, prior plans, logs, and product
 context. Then it comes back with a proposed plan or follow-up questions.
 
-Only after the human approves the plan does Jarvis dispatch agents.
+Only after the human approves the plan does DontPanic dispatch agents.
 
-One agent implements. Another (different vendor) audits. Jarvis tracks
+One agent implements. Another (different vendor) audits. DontPanic tracks
 findings, evidence, tests, gates, decisions, and signoff.
 
 The point is simple:
 
-> AI agents can write code. Jarvis makes the work trustworthy enough to
+> AI agents can write code. DontPanic makes the work trustworthy enough to
 > ship.
 
 The ten-word positioning:
 
-> **OpenClaw helps agents do things across your digital life. Jarvis
+> **OpenClaw helps agents do things across your digital life. DontPanic
 > helps agents ship software safely.**
 
 ---
 
-## What Jarvis Is
+## What DontPanic Is
 
-Jarvis is **the verified software-delivery layer** — the tool that
+DontPanic is **the verified software-delivery layer** — the tool that
 turns software requests into reviewed, tested, commit-ready patches by
 running plan-locked, cross-vendor adversarial agent volleys with human
 gates and evidence trails.
 
-Jarvis is **not** a personal-agent runtime. It does not own messaging
+DontPanic is **not** a personal-agent runtime. It does not own messaging
 channels, mobile presence, chat surfaces, plugin marketplaces, or a
 hosted control plane. Mature systems already solve those problems —
 [OpenClaw](https://github.com/openclaw/openclaw),
 [Claude Code](https://claude.com/claude-code),
 [Codex CLI](https://github.com/openai/codex),
-Cursor, Claude-managed agents — and Jarvis is designed to be **called
+Cursor, Claude-managed agents — and DontPanic is designed to be **called
 by** those systems, not to replace them. See
 [`ECOSYSTEM.md`](./ECOSYSTEM.md) for the caller-pattern recipes.
 
-Jarvis is the layer that coordinates plans, agents, memory, skills,
+DontPanic is the layer that coordinates plans, agents, memory, skills,
 gates, evidence, and commits across many projects.
 
 It can manage:
 
 - one repo or many repos
-- new projects created by Jarvis
+- new projects created by DontPanic
 - existing messy projects
 - mobile apps
 - web apps
@@ -69,12 +71,12 @@ It can manage:
 - feature development
 - root-cause investigations
 
-Install Jarvis once. Register projects. Give it work. It plans, verifies,
+Install DontPanic once. Register projects. Give it work. It plans, verifies,
 dispatches, audits, and packages evidence.
 
 ---
 
-## Who Uses Jarvis
+## Who Uses DontPanic
 
 1. **A developer** — wants AI help, but does not want to blindly trust
    whatever Claude, Codex, Cursor, or another agent says is done.
@@ -83,13 +85,13 @@ dispatches, audits, and packages evidence.
    and verified patches.
 3. **An AI coding agent** — Claude Code, Codex CLI, Cursor,
    OpenClaw-hosted skills, Clawdbot-style agents, or custom
-   Claude-managed agents need a clear way to discover Jarvis, install
-   it, configure it, and call it. Jarvis exposes a CLI plus (Phase B)
+   Claude-managed agents need a clear way to discover DontPanic, install
+   it, configure it, and call it. DontPanic exposes a CLI plus (Phase B)
    a thin MCP surface; the agent's runtime owns chat / scheduling /
    reach.
-4. **A remote operator** — triggers Jarvis from Claude, ChatGPT,
+4. **A remote operator** — triggers DontPanic from Claude, ChatGPT,
    OpenClaw, Clawdbot, or another managed-agent surface through that
-   system's existing remote infrastructure. Jarvis ships no custom
+   system's existing remote infrastructure. DontPanic ships no custom
    daemon — the caller's runtime carries the remote burden.
 5. **Future non-technical users** — a UI may make this accessible to
    non-technical users later. That is not the first product.
@@ -101,26 +103,26 @@ dispatches, audits, and packages evidence.
 **1. Register a project**
 
 ```
-jarvis projects add spindine ~/GitHub/SpinDineSwift
+dontpanic projects add spindine ~/GitHub/SpinDineSwift
 ```
 
-**2. Give Jarvis a brief**
+**2. Give DontPanic a brief**
 
 ```
-jarvis intake prd docs/product/creator-hub.md --project creator-hub
+dontpanic intake prd docs/product/creator-hub.md --project creator-hub
 ```
 
 or:
 
 ```
-jarvis intake issue prod-incident.md --project real-estate-analytics
+dontpanic intake issue prod-incident.md --project real-estate-analytics
 ```
 
-**3. Jarvis checks sufficiency**
+**3. DontPanic checks sufficiency**
 
-If the brief is good enough, Jarvis drafts a plan.
+If the brief is good enough, DontPanic drafts a plan.
 
-If it is not, Jarvis researches:
+If it is not, DontPanic researches:
 
 - repo structure
 - test commands
@@ -149,7 +151,7 @@ No implementation starts until the human approves the plan.
 
 - primary agent implements
 - auditor agent (different vendor) reviews
-- Jarvis records evidence
+- DontPanic records evidence
 - gates pause when human approval is needed
 - signoff happens only when acceptance is met
 
@@ -161,30 +163,30 @@ No implementation starts until the human approves the plan.
 
 > Ask agent → agent edits → agent says done → you hope it is right.
 
-**Jarvis flow:**
+**DontPanic flow:**
 
 > Request → research if needed → plan → human approval → implementer →
 > auditor → tests → evidence → signoff → commit-ready patch.
 
 That is the difference.
 
-Jarvis does not assume agents are reliable. It assumes agents are useful
+DontPanic does not assume agents are reliable. It assumes agents are useful
 but need structure.
 
 ---
 
-## What Makes Jarvis Different
+## What Makes DontPanic Different
 
 **Plan-first.** Agents do not start with vibes. Work is locked into a
 plan with acceptance criteria.
 
-**Research-aware.** If the request is vague, Jarvis can inspect the
+**Research-aware.** If the request is vague, DontPanic can inspect the
 project and propose what needs to be known before coding.
 
 **Multi-agent verification.** One model does not grade itself. An
 implementer and auditor work against the same contract.
 
-**Local-first.** Jarvis runs where your repos live. It uses the tools
+**Local-first.** DontPanic runs where your repos live. It uses the tools
 you already have.
 
 **Project-aware.** Each repo can have its own tests, protected paths,
@@ -193,7 +195,7 @@ agents, gates, standards, and deployment rules.
 **Evidence-backed.** Every decision, finding, audit, test result, and
 signoff is saved.
 
-**Governed recursion.** If work needs a child plan, Jarvis bounds it
+**Governed recursion.** If work needs a child plan, DontPanic bounds it
 with depth limits, cycle checks, child charters, return conditions, and
 human re-entry.
 
@@ -201,13 +203,13 @@ human re-entry.
 
 ## Important Product Principle
 
-**Jarvis should not fake certainty.**
+**DontPanic should not fake certainty.**
 
 If a user gives it:
 
 > "Build the creator hub."
 
-Jarvis should not immediately code.
+DontPanic should not immediately code.
 
 It should ask:
 
@@ -220,7 +222,7 @@ It should ask:
 - Is this new functionality or parity with another app?
 - Is there production data involved?
 
-If enough context exists in the repo, Jarvis can research and draft the
+If enough context exists in the repo, DontPanic can research and draft the
 plan. If not, it asks the human.
 
 That is the product discipline.
@@ -229,7 +231,7 @@ That is the product discipline.
 
 ## What "Sufficient Enough" Means
 
-Jarvis can start planning when it has enough to define:
+DontPanic can start planning when it has enough to define:
 
 - project
 - desired outcome
@@ -271,7 +273,7 @@ If it lacks these, it researches or asks.
 - priority flows
 - QA evidence
 
-If not sufficient, Jarvis should not code. It should produce:
+If not sufficient, DontPanic should not code. It should produce:
 
 - clarification questions, or
 - a research plan, or
@@ -281,7 +283,7 @@ If not sufficient, Jarvis should not code. It should produce:
 
 ## Revised Product Summary
 
-Jarvis is a global local tool for turning software requests into
+DontPanic is a global local tool for turning software requests into
 verified work.
 
 It can manage many projects. It can research unclear problems. It can
@@ -297,9 +299,9 @@ It makes AI coding agents safe enough to use on serious software.
 
 ## See Also
 
-- [`ECOSYSTEM.md`](./ECOSYSTEM.md) — Jarvis's place in the agent
-  ecosystem: who calls Jarvis (OpenClaw, Claude Code, Codex CLI,
-  Cursor, Claude-managed agents, MCP clients), what Jarvis is *not*
+- [`ECOSYSTEM.md`](./ECOSYSTEM.md) — DontPanic's place in the agent
+  ecosystem: who calls DontPanic (OpenClaw, Claude Code, Codex CLI,
+  Cursor, Claude-managed agents, MCP clients), what DontPanic is *not*
   trying to be, and a concrete OpenClaw-as-caller integration recipe.
 - [`PLATFORM.md`](./PLATFORM.md) — the architectural thesis (5 layers,
   stakeholders, design consequences).

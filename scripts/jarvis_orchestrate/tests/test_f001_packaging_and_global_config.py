@@ -1,7 +1,8 @@
 """Plan 2026-05-03-001 F001 — packaging + console-script + global config.
 
 Tests cover the deterministic acceptance items: pyproject parses as PEP
-621, `[project.scripts] jarvis` exists, `__version__` is resolvable,
+621, `[project.scripts] dontpanic` exists, the legacy `jarvis` alias
+still exists, `__version__` is resolvable,
 `--version` / `-V` exit 0 with the right format, `python -m
 jarvis_orchestrate` backward-compat works, and the global-config loader
 handles missing / invalid / valid files without raising.
@@ -48,15 +49,26 @@ class TestPyproject:
     def test_parses_as_pep621(self):
         d = _load_pyproject()
         project = d["project"]
-        assert project["name"] == "jarvis-orchestrate"
-        assert "description" in project
+        assert project["name"] == "dontpanic-orchestrate"
+        assert (
+            project["description"]
+            == "The safety layer between the agent says it's done and you merge it."
+        )
         assert "requires-python" in project
         assert project["requires-python"].startswith(">=3.10")
 
-    def test_console_script_declared(self):
+    def test_console_scripts_declared(self):
         d = _load_pyproject()
         scripts = d["project"]["scripts"]
+        assert scripts["dontpanic"] == "jarvis_orchestrate.cli:main"
         assert scripts["jarvis"] == "jarvis_orchestrate.cli:main"
+
+    def test_project_urls_point_at_renamed_repo(self):
+        d = _load_pyproject()
+        urls = d["project"]["urls"]
+        assert urls["Homepage"] == "https://github.com/Silex-Research/DontPanic"
+        assert urls["Repository"] == "https://github.com/Silex-Research/DontPanic"
+        assert urls["Issues"] == "https://github.com/Silex-Research/DontPanic/issues"
 
     def test_runtime_deps_present(self):
         d = _load_pyproject()
@@ -104,13 +116,13 @@ class TestVersion:
         rc = cli.main(["--version"])
         assert rc == 0
         captured = capsys.readouterr()
-        assert captured.out.strip() == f"jarvis {__version__}"
+        assert captured.out.strip() == f"dontpanic {__version__}"
 
     def test_version_flag_short(self, capsys):
         rc = cli.main(["-V"])
         assert rc == 0
         captured = capsys.readouterr()
-        assert captured.out.strip() == f"jarvis {__version__}"
+        assert captured.out.strip() == f"dontpanic {__version__}"
 
     def test_version_via_module_invoke(self):
         # Backward-compat path: `python -m jarvis_orchestrate --version`
@@ -129,7 +141,7 @@ class TestVersion:
             timeout=15,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        assert result.stdout.strip() == f"jarvis {__version__}"
+        assert result.stdout.strip() == f"dontpanic {__version__}"
 
 
 # ──────────────────────────────  global config loader  ──────────────────────────────
@@ -283,7 +295,7 @@ class TestMergeWithDefaults:
 
 
 class TestNoRepoSpecificAssumptions:
-    """Acceptance: F001 must not require running from inside the Jarvis
+    """Acceptance: F001 must not require running from inside the DontPanic
     source tree. The console script + global config + version flag must
     work from any cwd."""
 
@@ -302,7 +314,7 @@ class TestNoRepoSpecificAssumptions:
         rc = cli.main(["--version"])
         assert rc == 0
         out = capsys.readouterr().out.strip()
-        assert out == f"jarvis {__version__}"
+        assert out == f"dontpanic {__version__}"
 
     def test_jarvis_home_does_not_assume_repo_root(self, tmp_path):
         # $JARVIS_HOME points anywhere, including outside any repo.
