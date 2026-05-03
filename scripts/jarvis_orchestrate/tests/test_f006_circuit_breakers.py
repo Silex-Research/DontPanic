@@ -1287,7 +1287,17 @@ def test_check_no_progress() -> None:
     print("  ✓ no_progress fires on identical non-terminal verdicts only")
 
 
-def _write_auditor_audit(ad: Path, iteration: int, *, status: str, findings: int) -> Path:
+def _write_auditor_audit(
+    ad: Path,
+    iteration: int,
+    *,
+    status: str,
+    findings: int,
+    issue_offset: int = 0,
+) -> Path:
+    """Plan 2026-05-02-004: ``issue_offset`` lets tests produce disjoint
+    signature sets across rounds (different ``issue`` text per offset).
+    Default 0 reproduces legacy fixture behavior."""
     p = ad / f"codex-auditor-i{iteration}.json"
     p.write_text(
         json.dumps(
@@ -1301,7 +1311,11 @@ def _write_auditor_audit(ad: Path, iteration: int, *, status: str, findings: int
                 "completed_at": _iso_now(),
                 "audit_status": status,
                 "findings": [
-                    {"severity": "low", "category": "style", "issue": f"finding {i}-aaaaaaa"}
+                    {
+                        "severity": "low",
+                        "category": "style",
+                        "issue": f"finding {i + issue_offset}-aaaaaaa",
+                    }
                     for i in range(findings)
                 ],
             }
@@ -1310,21 +1324,94 @@ def _write_auditor_audit(ad: Path, iteration: int, *, status: str, findings: int
     return p
 
 
+def _write_auditor_audit_no_issue(ad: Path, iteration: int, *, findings: int) -> Path:
+    """Plan 2026-05-02-004: emit findings with empty ``issue`` text so
+    ``compute_audit_finding_signature`` returns None and the breaker
+    degrades to count-based fallback."""
+    p = ad / f"codex-auditor-i{iteration}.json"
+    p.write_text(
+        json.dumps(
+            {
+                "task_id": "t",
+                "audit_id": f"t#codex#{iteration}",
+                "agent": "codex",
+                "agent_role": "auditor",
+                "iteration": iteration,
+                "started_at": _iso_now(),
+                "completed_at": _iso_now(),
+                "audit_status": "needs_changes",
+                "findings": [
+                    {"severity": "low", "category": "style", "issue": ""}
+                    for _ in range(findings)
+                ],
+            }
+        )
+    )
+    return p
+
+
 def test_check_diminishing_returns() -> None:
+    """Plan 2026-05-02-004: existing test updated to reflect signature-based
+    contract. Same ISSUE TEXT across rounds trips (signature collision);
+    different issue text at the same count does NOT trip (signatures
+    disjoint)."""
     print("\n[test] check_diminishing_returns ...")
     with tempfile.TemporaryDirectory() as td:
         ad = Path(td)
-        # First single audit — not enough rounds
+        # First single audit — not enough rounds.
         _write_auditor_audit(ad, 0, status="needs_changes", findings=3)
         assert not cb.check_diminishing_returns(sorted(ad.glob("*.json")))[0]
-        # Second audit — same finding count, same status → diminishing
+        # Second audit — SAME issue text → signature-based trip.
         _write_auditor_audit(ad, 1, status="needs_changes", findings=3)
         tripped, reason = cb.check_diminishing_returns(sorted(ad.glob("*.json")))
-        assert tripped and "non-decreasing" in reason
-        # Replace last with fewer findings → no trip
-        _write_auditor_audit(ad, 1, status="needs_changes", findings=1)
+        assert tripped and "signature-based" in reason and "persisted" in reason
+        # Replace round 1 with disjoint issue text → no trip even at same count.
+        _write_auditor_audit(ad, 1, status="needs_changes", findings=3, issue_offset=100)
         assert not cb.check_diminishing_returns(sorted(ad.glob("*.json")))[0]
-    print("  ✓ diminishing_returns fires on non-decreasing findings across needs_changes rounds")
+    print("  ✓ diminishing_returns fires on persisted signatures, not raw count")
+
+
+def test_check_diminishing_returns_signature_semantics() -> None:
+    """Plan 2026-05-02-004: the four operator-specified cases (D001 + D004)."""
+    print("\n[test] check_diminishing_returns signature semantics ...")
+
+    # Case 1: same signatures across 2 rounds → trip (signature-based reason).
+    with tempfile.TemporaryDirectory() as td:
+        ad = Path(td)
+        _write_auditor_audit(ad, 0, status="needs_changes", findings=2)
+        _write_auditor_audit(ad, 1, status="needs_changes", findings=2)
+        tripped, reason = cb.check_diminishing_returns(sorted(ad.glob("*.json")))
+        assert tripped, "expected trip when signatures persist"
+        assert "signature-based" in reason and "persisted" in reason
+    print("  ✓ same signatures across rounds → signature-based trip")
+
+    # Case 2: different signatures with same count → no trip.
+    with tempfile.TemporaryDirectory() as td:
+        ad = Path(td)
+        _write_auditor_audit(ad, 0, status="needs_changes", findings=3, issue_offset=0)
+        _write_auditor_audit(ad, 1, status="needs_changes", findings=3, issue_offset=100)
+        tripped, _reason = cb.check_diminishing_returns(sorted(ad.glob("*.json")))
+        assert not tripped, "expected no trip when signatures are disjoint at same count"
+    print("  ✓ different signatures + same count → no trip")
+
+    # Case 3: increasing count with disjoint signatures → no trip.
+    with tempfile.TemporaryDirectory() as td:
+        ad = Path(td)
+        _write_auditor_audit(ad, 0, status="needs_changes", findings=2, issue_offset=0)
+        _write_auditor_audit(ad, 1, status="needs_changes", findings=4, issue_offset=100)
+        tripped, _reason = cb.check_diminishing_returns(sorted(ad.glob("*.json")))
+        assert not tripped, "expected no trip when count grew with disjoint signatures"
+    print("  ✓ increasing count + different signatures → no trip")
+
+    # Case 4: missing issue text → count-based fallback with named reason.
+    with tempfile.TemporaryDirectory() as td:
+        ad = Path(td)
+        _write_auditor_audit_no_issue(ad, 0, findings=2)
+        _write_auditor_audit_no_issue(ad, 1, findings=2)
+        tripped, reason = cb.check_diminishing_returns(sorted(ad.glob("*.json")))
+        assert tripped, "expected count-fallback trip when signatures unavailable"
+        assert "count fallback" in reason and "signatures unavailable" in reason
+    print("  ✓ missing signatures → count fallback + reason names fallback")
 
 
 def test_check_convergence_collapse() -> None:

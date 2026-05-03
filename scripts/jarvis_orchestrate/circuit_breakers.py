@@ -854,11 +854,39 @@ def check_no_progress(
     return False, ""
 
 
+def _audit_findings(audit_data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Plan 2026-05-02-004: return the unified findings list for an audit
+    envelope. Today's schema uses flat ``findings``; older callers may have
+    used ``blocking_findings`` + ``non_blocking_findings``. Tolerate both."""
+    flat = audit_data.get("findings")
+    if isinstance(flat, list):
+        return list(flat)
+    return list(audit_data.get("blocking_findings") or []) + list(
+        audit_data.get("non_blocking_findings") or []
+    )
+
+
 def check_diminishing_returns(audit_paths: list[Path]) -> tuple[bool, str]:
-    """Heuristic: across the last DIMINISHING_RETURNS_MIN_ROUNDS auditor rounds,
-    finding count is non-decreasing AND status is needs_changes. Implies the
-    auditor isn't converging on actionable feedback."""
-    auditor_audits = []
+    """Plan 2026-05-02-004: trip when the SAME finding signatures persist
+    across the last DIMINISHING_RETURNS_MIN_ROUNDS auditor rounds (all of
+    which are ``needs_changes``). Compares finding IDENTITY, not cardinality
+    — `[3, 3]` flat counts no longer trip when the underlying findings are
+    different problems each round (D001).
+
+    Falls back to the legacy non-decreasing-count heuristic when ANY round
+    in the window has at least one finding without usable issue text (so
+    ``compute_audit_finding_signature`` returns None). Fallback fact is
+    named in the breaker reason so operators can tell the two paths apart
+    in breaker history (D004).
+
+    Round-count threshold ``DIMINISHING_RETURNS_MIN_ROUNDS`` remains a
+    constant — no operator config knob in v1 (D003).
+    """
+    # Late import to avoid load-time cycle (nested_orchestration imports
+    # nothing from circuit_breakers).
+    from jarvis_orchestrate.nested_orchestration import compute_audit_finding_signature
+
+    auditor_audits: list[dict[str, Any]] = []
     for ap in audit_paths:
         try:
             data = json.loads(ap.read_text())
@@ -869,14 +897,52 @@ def check_diminishing_returns(audit_paths: list[Path]) -> tuple[bool, str]:
     if len(auditor_audits) < DIMINISHING_RETURNS_MIN_ROUNDS:
         return False, ""
     recent = auditor_audits[-DIMINISHING_RETURNS_MIN_ROUNDS:]
-    counts = [len(d.get("findings") or []) for d in recent]
     statuses = [d.get("audit_status") for d in recent]
-    if all(s == "needs_changes" for s in statuses) and all(
-        counts[i] <= counts[i + 1] for i in range(len(counts) - 1)
-    ):
+    if not all(s == "needs_changes" for s in statuses):
+        return False, ""
+
+    # Try signature-based path first.
+    rounds_signatures: list[set[str]] = []
+    fallback = False
+    for d in recent:
+        findings = _audit_findings(d)
+        sigs: set[str] = set()
+        any_unsigned = False
+        for f in findings:
+            sig = compute_audit_finding_signature(f)
+            if sig is None:
+                # An unsigned finding in any round → can't trust the
+                # signature set for that round; degrade to count-based.
+                any_unsigned = True
+                break
+            sigs.add(sig)
+        if any_unsigned:
+            fallback = True
+            break
+        rounds_signatures.append(sigs)
+
+    if not fallback and rounds_signatures and all(rounds_signatures):
+        # Every round contributed at least one signed finding.
+        # Trip when the intersection of signature sets is non-empty —
+        # at least one finding signature persisted across every round.
+        persistent = set.intersection(*rounds_signatures)
+        if persistent:
+            return True, (
+                f"diminishing returns (signature-based): {len(persistent)} "
+                f"finding{'s' if len(persistent) != 1 else ''} persisted across "
+                f"{DIMINISHING_RETURNS_MIN_ROUNDS} consecutive needs_changes "
+                f"rounds (signatures={sorted(persistent)})"
+            )
+        return False, ""
+
+    # Fallback path: legacy non-decreasing-count behavior. Reason string
+    # names the fallback so operators see WHY count fired instead of identity.
+    counts = [len(_audit_findings(d)) for d in recent]
+    if all(counts[i] <= counts[i + 1] for i in range(len(counts) - 1)):
         return True, (
-            f"diminishing returns: auditor finding counts {counts} non-decreasing "
-            f"across {DIMINISHING_RETURNS_MIN_ROUNDS} consecutive needs_changes rounds"
+            f"diminishing returns (count fallback — finding signatures unavailable): "
+            f"auditor finding counts {counts} non-decreasing across "
+            f"{DIMINISHING_RETURNS_MIN_ROUNDS} consecutive needs_changes rounds"
         )
     return False, ""
 
