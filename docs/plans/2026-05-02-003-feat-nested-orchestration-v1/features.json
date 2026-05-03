@@ -150,10 +150,65 @@
         "Tests: `test_parent_pause_protocol.py` covers (a) gate auto-arms when child dispatch is detected via active_supervisors; (b) INBOX entry rendered correctly with idempotence (multiple parent re-dispatches don't append duplicate entries); (c) events.jsonl spawn_child + return_to_parent entries appear in correct files (parent receives spawn, child receives return); (d) **best-effort events**: when events.jsonl path is read-only, `record_event` returns silently and orchestration state lands correctly; (e) fan-in memo absence blocks approve (CLI exits non-zero with expected-path message); (f) fan-in memo present + child signoff with `return_condition_status=satisfied` + correct child_plan_id → approve clears the gate; (g) **status-satisfied gate**: child with status=blocked → approve refuses; child with status=superseded → approve refuses; `--accept-non-satisfied` flag with status=blocked → approve clears (operator override path); (h) bare `resume <plan>` does NOT clear pre_resume_after_child gate (asserts gate-state.json unchanged); (i) **canonical state primacy**: events.jsonl deleted on both parent and child mid-flow → approve still works because gate-state + signoff carry the load-bearing info; (j) hermetic synthetic e2e: full sequence (spawn parent → spawn child → child signoff satisfied → parent gate → memo → approve → resume) under tmp_path with scripted executors."
       ],
       "acceptance": "(1) New gate type `pre_resume_after_child` added to `gate_pause.py`; auto-arms on parent volley dispatch when active_supervisors shows a referencing child. Gate name format: `pre_resume_after_child:{child_plan_id}` to permit multiple children in v2 (v1 will only ever have one entry). (2) INBOX `nested_child_pending` entry shape renders parent_plan_id + child_plan_id + child status + the exact approve command; idempotent (re-dispatch doesn't duplicate). (3) **`events.jsonl` is best-effort trace, not canonical state (D006)**: ships with `record_event(plan_dir, kind, payload)` that opens the file in append mode, writes one JSON object per line, and on OSError or json.JSONEncodeError logs a WARNING and returns silently — never propagates. Two new event kinds (`volley.spawn_child`, `volley.return_to_parent`). The parent's events.jsonl gets the spawn_child entry; the child's gets the return_to_parent entry. Test verifies (a) successful append produces well-formed JSONL; (b) when the events.jsonl path is read-only or the dir is unwritable, `record_event` does NOT raise and orchestration state (gate-state, audit envelopes, signoff) lands correctly anyway. (4) **No implicit re-entry**: parent volley does NOT auto-resume on child signoff. Test asserts that after child signoff lands, running `dispatch_volley` on the parent re-enters the `pre_resume_after_child` gate (still armed) until explicit approve clears it. (5) Fan-in memo enforcement: `jarvis approve pre_resume_after_child --child <id>` refuses to clear the gate when `evidence/fan-in-from-{child_plan_id}.md` is missing on the parent plan; the error message names the expected path. (6) **Status-satisfied gate (D004)**: the approve refuses to clear the gate unless the child's signoff records `return_condition_status: satisfied`. When the child's signoff has `return_condition_status` ∈ {`blocked`, `superseded`}, approve refuses and the error message surfaces the recorded status + the close-out memo path. The operator can override via `--accept-non-satisfied` flag, which is recorded as a free-form D-entry requirement on the parent (CLI prompts the operator to record the rationale, but does NOT enforce a D-file write — that remains operator hygiene). (7) **Bare-resume discipline (parity with plan 2026-05-02-001 D004)**: bare `jarvis resume <parent_plan_id>` does NOT clear `pre_resume_after_child:*` gates; only the explicit `--child <id>` flag clears them. Verified by parametrized test asserting gate-state.json's cleared_gates does NOT include the pre_resume_after_child entry after a bare resume. (8) Fan-in memo template stub: when operator runs approve and memo is missing, the CLI's error message includes a 6-line stub template (sections: 'What changed in the child', 'How the parent return_condition_summary was observed', 'Open follow-ups') that operator can paste in. (9) **Symmetric events**: parent and child both have events.jsonl files with the relationship recorded — operator can read either side and reconstruct the chain. The reconstructed chain MUST be derivable from the canonical state alone (plan files + gate-state + audit + signoff) — events are merely an index — so a test verifies that with events.jsonl artificially deleted from both sides, the canonical state still permits identifying the parent/child relationship. (10) **Hermetic synthetic e2e test (D005)**: the canonical acceptance proof. Synthetic test exercises the full sequence under a tmp_path: spawn parent → spawn child referencing parent → child runs to signoff with status=satisfied → parent dispatch enters gate → operator authors fan-in memo → operator approves → parent resumes. Same test parametrized for status=blocked → approve refuses; status=superseded → approve refuses. Real-dogfood trial is OPTIONAL evidence (recorded if a clean recursive-finding case surfaces during impl), NOT a hard acceptance criterion (D005). (11) Existing plans (no nested orchestration) are unaffected — gate auto-arming is conditional on `LoadedPlan.orchestration is not None` for the child + active_supervisors registry showing it as in-flight. (12) **Canonical state primacy (D006)**: a parametrized test deletes `events.jsonl` mid-flow on both parent and child, then verifies that the parent can still complete approve correctly because canonical state (gate-state, signoff with return_condition_status) carries the load-bearing information.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_at": "2026-05-02T21:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/nested_orchestration.py",
+          "captured_by": "claude",
+          "note": "F003 surface: pre_resume_gate_name, fan_in_memo_path, FAN_IN_MEMO_TEMPLATE, events_log_path, record_event (best-effort, never raises per D006), child_compliance_side_car_path, read_child_compliance, parse_fan_in_memo_status, ChildPauseApproveError, approve_pre_resume_after_child (validates: gate armed, fan-in memo exists with status=satisfied, child compliance side-car status=satisfied unless --accept-non-satisfied; memo's own status is NEVER overridden by the flag)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/gate_pause.py",
+          "captured_by": "claude",
+          "note": "Adds pre_resume_after_child as a third transient gate kind (alongside breakers + defers). add_pre_resume_after_child + clear_pre_resume_after_child + active_pre_resume_after_children. evaluate() reports them in unmet. _maybe_clear_pause_marker recognizes the prefix. resume_all() does NOT touch them — bare-resume discipline."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/signoff_writer.py",
+          "captured_by": "claude",
+          "note": "write_signoff gains optional orchestration kwarg. When set with parent_plan_id, records best-effort volley.return_to_parent event on child's events.jsonl after signoff persists. Top-level plans (orchestration=None) skip the trace entirely. Failure to write the trace NEVER blocks signoff (D006)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "_arm_parent_pre_resume_gate_for_child helper invoked from both dispatch_single_agent and dispatch_volley after _run_nested_orch_guards. Top-level plans no-op. On first arm: writes INBOX nested_child_pending entry (idempotent — re-dispatch doesn't append duplicates) + best-effort volley.spawn_child trace on parent's events.jsonl. On re-dispatch: gate already armed (idempotent), INBOX skipped, best-effort spawn event still recorded (append-only history). dispatch_volley's signoff_writer.write_signoff call now threads loaded.orchestration through for child-side return_to_parent trace."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "_approve_main routes `pre_resume_after_child` (without suffix) + --child to validating handler. Bare suffix form `pre_resume_after_child:CHILD` refused with directive to use --child flag. _approve_pre_resume_after_child_main: argparse with --child (required) + --accept-non-satisfied; on missing memo prints FAN_IN_MEMO_TEMPLATE; on success writes INBOX gate_cleared (with override flag in body) + best-effort volley.return_to_parent_approved trace. _resume_main refuses --gate pre_resume_after_child:* with directive to use approve form."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_parent_pause_protocol.py",
+          "captured_by": "claude",
+          "note": "38 tests: events.jsonl best-effort (5 — append, multiple, invalid payload, unwritable dir, OSError raised), gate lifecycle (8 — add/clear idempotent, active list, evaluate inclusion, resume_all preservation KEY, pause-marker clearing), approve helper validation (10 — gate not armed, memo missing/malformed/blocked, memo override does NOT bypass memo, child blocked/superseded refused, side-car missing refused, override clears, clean path), read_child_compliance (3), CLI bare-resume discipline (2 KEY — resume --gate refused, resume --all preserves), CLI approve flow (5 — bare suffix refused, missing memo prints template, clean clears, blocked refused, override clears with INBOX OVERRIDE entry), hermetic synthetic e2e (1 — full lifecycle: arm → INBOX idempotent → events recorded → child compliance → memo → CLI approve → gate cleared + return_to_parent_approved trace), canonical-state-primacy (2 KEY — events deletion / unwritable does NOT block approve), signoff_writer F003 trace (2 — child signoff records return_to_parent, top-level skips)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-02-003-feat-nested-orchestration-v1/evidence/f003-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F003 close-out memo — direct path rationale (locked decisions D004 + D006, deterministic tests, parent-pause/fan-in slice scoped to gate creation + approval + INBOX + events + memo enforcement). Stricter verification per operator directive: hermetic e2e + canonical-state-primacy + bare-resume + override + missing-memo all covered."
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-05-02-003-feat-nested-orchestration-v1/evidence/f003-closeout-memo.md#test-state",
+          "captured_by": "operator",
+          "note": "Final state: 38/38 F003 targeted tests pass, 579 + 6 skipped full orchestrate suite (was 541 → +38), ruff clean, sanitization clean (561 files)."
+        }
       ]
     }
   ]

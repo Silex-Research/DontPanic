@@ -1,8 +1,10 @@
-"""Plan 2026-05-02-003 F001 + F002 — nested-orchestration primitives.
+"""Plan 2026-05-02-003 F001 + F002 + F003 — nested-orchestration primitives.
 
 F001: parent/child metadata + depth/cycle/repeated-finding guards.
 F002: child_charter + commit_policy parsing/validation + close-out
 compliance (allowed-paths + return-condition + requires).
+F003: parent pause/fan-in protocol — pre_resume_after_child gate +
+fan-in memo enforcement + best-effort events.jsonl trace.
 
 Loads optional `orchestration`, `child_charter`, and `commit_policy`
 blocks from plan.md frontmatter into structured Pydantic models, computes
@@ -29,6 +31,8 @@ from __future__ import annotations
 import datetime as dt
 import fnmatch
 import hashlib
+import json
+import logging
 import re
 import subprocess
 from pathlib import Path
@@ -36,6 +40,8 @@ from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+_LOG = logging.getLogger(__name__)
 
 DEFAULT_DEPTH_LIMIT: int = 3
 """The platform cap on parent-chain depth (D002). Frontmatter may declare a
@@ -723,11 +729,284 @@ def check_child_charter_compliance(
     }
 
 
+# ──────────────────────────────  F003 — parent pause / fan-in protocol  ──────────────────────────────
+#
+# When a child plan dispatches, the supervisor arms a
+# `pre_resume_after_child:{child_plan_id}` gate on the parent. The parent's
+# next dispatch sees the unmet gate and pauses. To resume, the operator runs
+# `jarvis approve <parent> pre_resume_after_child --child <child>`, which
+# refuses unless (a) the fan-in memo at parent's
+# `evidence/fan-in-from-{child_plan_id}.md` exists and declares
+# `## Return Condition / status: satisfied`, AND (b) the child's
+# `audit/charter-compliance-{child_plan_id}.json` records
+# `return_condition_status: satisfied` (or `--accept-non-satisfied` is set).
+#
+# Anti-recursion thesis: the explicit-approval-with-status-satisfied
+# requirement is the operator's last-mile check that the child actually
+# resolved the parent finding before parent work resumes.
+
+
+PRE_RESUME_GATE_PREFIX = "pre_resume_after_child:"
+
+
+def pre_resume_gate_name(child_plan_id: str) -> str:
+    """Canonical gate name for a parent waiting on a specific child plan."""
+    return f"{PRE_RESUME_GATE_PREFIX}{child_plan_id}"
+
+
+def fan_in_memo_path(parent_plan_dir: Path, child_plan_id: str) -> Path:
+    """Path the operator must author at parent re-entry: `<parent>/evidence/
+    fan-in-from-{child_plan_id}.md`. Existence + structured `## Return
+    Condition / status: satisfied` are the operator's explicit declaration
+    that they have reviewed the child's outcome and are resuming the parent."""
+    return parent_plan_dir / "evidence" / f"fan-in-from-{child_plan_id}.md"
+
+
+FAN_IN_MEMO_TEMPLATE = """\
+# Fan-in from {child_plan_id}
+
+## What changed in the child
+<one or two sentences summarizing the child's contribution>
+
+## How the parent return_condition_summary was observed
+<which artifact / commit / test demonstrates the parent finding is resolved>
+
+## Open follow-ups
+<anything the parent's next iteration should pick up; '(none)' is fine>
+
+## Return Condition
+
+status: satisfied
+"""
+"""Stub the CLI prints when the operator runs `approve pre_resume_after_child`
+with the memo missing. The structured `## Return Condition / status: …`
+section is mandatory — the rest is operator-editable narrative."""
+
+
+# ----- best-effort events.jsonl trace (D006) -----
+
+
+def events_log_path(plan_dir: Path) -> Path:
+    return plan_dir / "events.jsonl"
+
+
+def record_event(
+    plan_dir: Path,
+    kind: str,
+    payload: dict[str, Any],
+    *,
+    plan_id: str | None = None,
+) -> bool:
+    """Best-effort append-one-JSON-line trace. NEVER raises (D006).
+
+    Returns True on successful append, False on failure. Failures log a
+    WARNING with kind + plan_id + reason and return silently — events.jsonl
+    is a trace/index for human visibility, NOT canonical state. Canonical
+    state lives in plan files, audit/<envelope>.json, audit/gate-state.json,
+    and audit/signoff-*.json (D006).
+
+    Caller's responsibility to pass a JSON-serializable payload; this
+    function adds `kind`, `plan_id`, and `ts` automatically.
+    """
+    record = {
+        "kind": kind,
+        "plan_id": plan_id,
+        "ts": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        **payload,
+    }
+    try:
+        line = json.dumps(record, ensure_ascii=False)
+    except (TypeError, ValueError) as exc:
+        _LOG.warning(
+            "record_event: failed to serialize kind=%s plan_id=%s reason=%s",
+            kind,
+            plan_id,
+            exc,
+        )
+        return False
+
+    path = events_log_path(plan_dir)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as f:
+            f.write(line + "\n")
+    except OSError as exc:
+        _LOG.warning(
+            "record_event: failed to append to %s kind=%s reason=%s",
+            path,
+            kind,
+            exc,
+        )
+        return False
+    return True
+
+
+# ----- child compliance side-car reader (F002 D008 → F003 consumer) -----
+
+
+def child_compliance_side_car_path(child_plan_dir: Path, child_plan_id: str) -> Path:
+    """The F002 D008 side-car. F003 reads this to gate parent re-entry."""
+    return child_plan_dir / "audit" / f"charter-compliance-{child_plan_id}.json"
+
+
+def read_child_compliance(child_plan_dir: Path, child_plan_id: str) -> dict[str, Any] | None:
+    """Read the child's charter-compliance side-car. Returns the parsed dict
+    or None if the file is missing or malformed. The caller decides how to
+    treat None (typically: refuse parent re-entry without
+    `--accept-non-satisfied`, with a message naming the missing artifact)."""
+    path = child_compliance_side_car_path(child_plan_dir, child_plan_id)
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+# ----- fan-in memo parser (reuses F002's `## Return Condition` parser) -----
+
+
+def parse_fan_in_memo_status(memo_path: Path) -> ReturnConditionStatus:
+    """F003: parse the operator's fan-in memo for the structured `##
+    Return Condition / status:` line. Reuses F002's parser since the contract
+    is identical — only the file location differs.
+
+    Raises ReturnConditionError on missing file / section / value (same as
+    F002). The CLI handler converts the raise into ChildPauseApproveError
+    so the user sees consistent F003 framing.
+    """
+    return parse_return_condition_section(memo_path)
+
+
+# ----- approve / refuse pre_resume_after_child gate -----
+
+
+class ChildPauseApproveError(NestedOrchestrationError):
+    """F003: approve_pre_resume_after_child refused. Specific reasons:
+    gate not active for this child, fan-in memo missing or non-satisfied,
+    child compliance side-car missing or non-satisfied without override."""
+
+
+def approve_pre_resume_after_child(
+    parent_plan_dir: Path,
+    *,
+    parent_plan_id: str,
+    child_plan_id: str,
+    child_plan_dir: Path,
+    accept_non_satisfied: bool = False,
+) -> dict[str, Any]:
+    """F003: validate + clear the `pre_resume_after_child:{child_plan_id}`
+    gate on the parent. Returns a dict with the validation outcome (memo
+    status, child status, override flag) suitable for INBOX bodies.
+
+    Validation order (raises ChildPauseApproveError on first failure):
+
+    1. Gate must be currently armed for this child.
+    2. Fan-in memo at parent's
+       ``evidence/fan-in-from-{child_plan_id}.md`` must exist.
+    3. The memo must contain a structured ``## Return Condition / status:
+       satisfied`` line. Even with ``--accept-non-satisfied``, the memo's
+       OWN status must be ``satisfied`` — the memo is the operator's
+       explicit re-entry declaration; ``--accept-non-satisfied`` only
+       overrides the *child-side* status.
+    4. Read the child's ``audit/charter-compliance-{child_plan_id}.json``
+       side-car. If missing OR ``return_condition_status != 'satisfied'``,
+       refuse unless ``accept_non_satisfied=True`` (records the override).
+
+    On success, calls ``gate_pause.clear_pre_resume_after_child`` and
+    returns the outcome dict. Caller (CLI) wraps with INBOX +
+    ``record_event`` (best-effort).
+
+    Note: this function does NOT itself write the INBOX entry or events
+    line — that surface concern lives in the CLI handler. Same separation
+    of concerns as F002's compliance check vs. side-car write.
+    """
+    # Late import to avoid load-time cycle (gate_pause imports nothing from
+    # here, but the CLI surface routes through both modules).
+    from jarvis_orchestrate import gate_pause
+
+    gate_str = pre_resume_gate_name(child_plan_id)
+    active = gate_pause.active_pre_resume_after_children(parent_plan_dir)
+    if gate_str not in active:
+        raise ChildPauseApproveError(
+            f"gate {gate_str!r} is not currently armed on parent "
+            f"{parent_plan_id!r}; nothing to approve. Active gates: "
+            f"{active or '(none)'}"
+        )
+
+    memo_path = fan_in_memo_path(parent_plan_dir, child_plan_id)
+    if not memo_path.is_file():
+        raise ChildPauseApproveError(
+            f"fan-in memo missing at {memo_path}. Author it (template "
+            f"available via CLI) and re-run approve."
+        )
+
+    try:
+        memo_status = parse_fan_in_memo_status(memo_path)
+    except ReturnConditionError as exc:
+        raise ChildPauseApproveError(
+            f"fan-in memo at {memo_path} malformed: {exc}"
+        ) from exc
+
+    if memo_status != "satisfied":
+        raise ChildPauseApproveError(
+            f"fan-in memo at {memo_path} declares status={memo_status!r}; "
+            "must be 'satisfied' for parent re-entry. The memo is the "
+            "operator's explicit re-entry declaration; --accept-non-satisfied "
+            "overrides ONLY the child-side compliance status, not this memo."
+        )
+
+    child_compliance = read_child_compliance(child_plan_dir, child_plan_id)
+    child_status = (
+        child_compliance.get("return_condition_status") if child_compliance else None
+    )
+
+    override_applied = False
+    if child_status != "satisfied":
+        if not accept_non_satisfied:
+            artifact_hint = (
+                child_compliance_side_car_path(child_plan_dir, child_plan_id)
+                if child_compliance is not None
+                else f"{child_compliance_side_car_path(child_plan_dir, child_plan_id)} (file missing)"
+            )
+            raise ChildPauseApproveError(
+                f"child {child_plan_id!r} compliance status={child_status!r} "
+                f"(read from {artifact_hint}); refuse to clear "
+                f"{gate_str!r} without --accept-non-satisfied. To override, "
+                "re-run with --accept-non-satisfied and record the rationale "
+                "in the parent's decisions.jsonl."
+            )
+        override_applied = True
+
+    cleared = gate_pause.clear_pre_resume_after_child(
+        parent_plan_dir,
+        child_plan_id,
+        plan_id=parent_plan_id,
+        actor="operator",
+        reason=(
+            "approve_pre_resume_after_child: memo+child both satisfied"
+            if not override_applied
+            else f"approve_pre_resume_after_child: --accept-non-satisfied (child status={child_status!r})"
+        ),
+    )
+    return {
+        "gate": gate_str,
+        "cleared": cleared,
+        "memo_path": str(memo_path),
+        "memo_status": memo_status,
+        "child_status": child_status,
+        "override_applied": override_applied,
+    }
+
+
 __all__ = [
     "DEFAULT_DEPTH_LIMIT",
+    "FAN_IN_MEMO_TEMPLATE",
+    "PRE_RESUME_GATE_PREFIX",
     "ChildCharter",
     "ChildCharterKind",
     "ChildCharterViolation",
+    "ChildPauseApproveError",
     "CommitPolicy",
     "CommitPolicyMode",
     "NestedOrchestrationError",
@@ -737,13 +1016,21 @@ __all__ = [
     "ReturnConditionStatus",
     "SpawnFinding",
     "SpawnReason",
+    "approve_pre_resume_after_child",
     "check_child_charter_compliance",
     "check_cycle",
     "check_depth",
     "check_repeated_finding",
+    "child_compliance_side_car_path",
     "compute_depth",
     "compute_finding_signature",
+    "events_log_path",
+    "fan_in_memo_path",
+    "parse_fan_in_memo_status",
     "parse_return_condition_section",
+    "pre_resume_gate_name",
+    "read_child_compliance",
+    "record_event",
     "validate_charter_policy_consistency",
     "walk_parent_chain",
 ]

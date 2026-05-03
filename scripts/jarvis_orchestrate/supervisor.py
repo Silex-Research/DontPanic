@@ -457,6 +457,78 @@ def _run_nested_orch_guards(plan_dir: Path, *, allow_depth: int | None) -> str |
     return None
 
 
+def _arm_parent_pre_resume_gate_for_child(loaded: plan_loader.LoadedPlan) -> None:
+    """Plan 2026-05-02-003 F003: when a child plan dispatches, arm the parent's
+    `pre_resume_after_child:{child_plan_id}` gate. Idempotent on the gate
+    (re-dispatch doesn't double-arm). The INBOX nested_child_pending entry is
+    only written on first arm. The events.jsonl `volley.spawn_child` trace is
+    best-effort and may write on every dispatch (it's append-only history).
+
+    Top-level plans (no orchestration) are no-ops. Missing parent dirs are
+    logged as warnings but don't block child dispatch — F001's
+    check_repeated_finding has stronger handling for genuine missing-parent
+    scenarios.
+    """
+    orch = loaded.orchestration
+    if orch is None:
+        return
+    plans_root = loaded.plan_dir.parent
+    parent_plan_dir = plans_root / orch.parent_plan_id
+    if not parent_plan_dir.is_dir():
+        # F001's depth/cycle guards run before this and would raise on missing
+        # parents that participate in the chain. Reaching here with a missing
+        # dir means the parent_plan_id is something exotic (probably a test
+        # fixture) — best-effort skip to avoid blocking dispatch.
+        return
+
+    newly_armed = gate_pause.add_pre_resume_after_child(
+        parent_plan_dir,
+        loaded.plan_id,
+        plan_id=orch.parent_plan_id,
+        reason=f"child {loaded.plan_id!r} dispatched",
+    )
+    if newly_armed:
+        body = (
+            f"Child plan {loaded.plan_id} is in flight (parent: "
+            f"{orch.parent_plan_id}, spawn_reason: {orch.spawn_reason}). "
+            "Parent re-entry is paused until operator runs:\n"
+            f"  jarvis-orchestrate approve {orch.parent_plan_id} "
+            f"pre_resume_after_child --child {loaded.plan_id}\n"
+            f"After authoring evidence/fan-in-from-{loaded.plan_id}.md "
+            "with `## Return Condition / status: satisfied`."
+        )
+        try:
+            inbox.append_event(
+                parent_plan_dir,
+                event="nested_child_pending",
+                plan_id=orch.parent_plan_id,
+                body=body,
+                child_plan_id=loaded.plan_id,
+                spawn_reason=orch.spawn_reason,
+            )
+        except OSError:
+            # INBOX is operator surface; failures should NOT block child
+            # dispatch. Canonical state (gate-state.json) is already written.
+            pass
+
+    # Best-effort spawn event on parent's events.jsonl (D006 — never raises).
+    finding_signature = (
+        orch.spawn_finding.finding_signature if orch.spawn_finding is not None else None
+    )
+    nested_orchestration.record_event(
+        parent_plan_dir,
+        kind="volley.spawn_child",
+        payload={
+            "parent_plan_id": orch.parent_plan_id,
+            "child_plan_id": loaded.plan_id,
+            "spawn_reason": orch.spawn_reason,
+            "finding_signature": finding_signature,
+            "newly_armed": newly_armed,
+        },
+        plan_id=orch.parent_plan_id,
+    )
+
+
 def dispatch_single_agent(
     plan_dir: Path,
     feature_id: str,
@@ -485,6 +557,10 @@ def dispatch_single_agent(
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
+    # Plan 2026-05-02-003 F003: when a child plan dispatches, arm the parent's
+    # pre_resume_after_child gate (idempotent), write INBOX nested_child_pending
+    # once on first arm, and record best-effort volley.spawn_child trace.
+    _arm_parent_pre_resume_gate_for_child(loaded)
 
     quota_pct, quota_line = _quota_gate("claude")
     print(quota_line)
@@ -676,6 +752,10 @@ def _emit_volley_terminal(
                 # plans (None/None) skip the check entirely.
                 child_charter=loaded.child_charter,
                 commit_policy=loaded.commit_policy,
+                # Plan 2026-05-02-003 F003: orchestration drives the
+                # best-effort volley.return_to_parent trace on the child's
+                # events.jsonl. None for top-level plans.
+                orchestration=loaded.orchestration,
             )
         except (signoff_writer.SignoffWriteError, nested_orchestration.ChildCharterViolation) as exc:
             print(f"[volley] signoff_writer skipped: {exc}")
@@ -713,6 +793,10 @@ def dispatch_volley(
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
+    # Plan 2026-05-02-003 F003: when a child plan dispatches, arm the parent's
+    # pre_resume_after_child gate (idempotent), write INBOX nested_child_pending
+    # once on first arm, and record best-effort volley.spawn_child trace.
+    _arm_parent_pre_resume_gate_for_child(loaded)
 
     # Resolve role pairing — F005a uses agents_required[0/1] convention
     agents_req = list(loaded.plan.agents_required or [])
