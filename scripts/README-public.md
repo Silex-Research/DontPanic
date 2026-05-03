@@ -1,4 +1,4 @@
-# JARVIS — Personal AI Control Dashboard
+# DontPanic — Personal AI Control Dashboard
 
 A modular, local-first control dashboard for managing multiple AI coding harnesses (Claude Code, Codex, Gemini, Grok, Kimi, Qwen) across multiple projects.
 
@@ -17,8 +17,8 @@ A modular, local-first control dashboard for managing multiple AI coding harness
 
 ```bash
 # 1. Clone
-git clone https://github.com/Silex-Research/Jarvis-OSS.git
-cd Jarvis-OSS
+git clone https://github.com/Silex-Research/DontPanic.git
+cd DontPanic
 
 # 2. Install test dependencies (optional — dashboard runs without npm)
 cd dashboard && npm install && cd ..
@@ -54,10 +54,10 @@ Update `dashboard/state/tasks.json` manually or via a script. Each task has:
 
 ```bash
 # 1. Create a Firebase project
-firebase projects:create my-jarvis-dashboard
+firebase projects:create my-dontpanic-dashboard
 
 # 2. Configure
-echo '{ "projects": { "default": "my-jarvis-dashboard" } }' > .firebaserc
+echo '{ "projects": { "default": "my-dontpanic-dashboard" } }' > .firebaserc
 
 # 3. Deploy
 firebase deploy --only hosting
@@ -96,7 +96,7 @@ dashboard/
 ### Adding a New Page
 
 1. Create `dashboard/pages/my-page/my-page.js` and `.css`
-2. Register via `Jarvis.registerPage({ id: 'my-page', label: 'My Page', init(state) {...} })`
+2. Register via the legacy dashboard namespace: `Jarvis.registerPage({ id: 'my-page', label: 'My Page', init(state) {...} })`
 3. Add CSS link to `index.html`
 
 Pages are fully isolated — zero merge conflicts with other pages.

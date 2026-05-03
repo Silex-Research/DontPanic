@@ -1,4 +1,4 @@
-"""jarvis_doctor.py — preflight health checks for a Jarvis install.
+"""jarvis_doctor.py — preflight health checks for a DontPanic install.
 
 Run after `scripts/bootstrap.sh` (or after a fresh clone) to verify the
 local setup is consistent. Each check returns (status, message); a single
@@ -32,7 +32,7 @@ Exit codes (default — backward compat):
   0 — all checks green
   1 — at least one check failed (see output for remediation)
 
-Exit codes (--strict-codes — F003 mode used by `jarvis doctor`):
+Exit codes (--strict-codes — F003 mode used by `dontpanic doctor`):
   0 — all PASS
   1 — at least one WARN, no FAIL
   2 — at least one FAIL
@@ -88,7 +88,7 @@ def _bad(name: str, msg: str, remediation: str) -> CheckResult:
 def _warn(name: str, msg: str, remediation: str) -> CheckResult:
     """Soft signal — does NOT fail the doctor. Used when an operator may
     legitimately have out-of-band reasons for the surfaced state (e.g. a
-    rotation cadence Jarvis doesn't know about)."""
+    rotation cadence DontPanic doesn't know about)."""
     return CheckResult(name=name, ok=True, message=msg, remediation=remediation, warn=True)
 
 
@@ -434,7 +434,7 @@ def check_projects_registry_status() -> CheckResult:
 
     Empty registry is a valid first-run state (PASS with a hint that
     nothing is registered yet — operators reading the doctor output then
-    know to run `jarvis projects add` if they expected projects to be
+    know to run `dontpanic projects add` if they expected projects to be
     registered). Non-empty: PASS with the count.
     """
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -448,7 +448,7 @@ def check_projects_registry_status() -> CheckResult:
     if n == 0:
         return _ok(
             "projects-registry",
-            "no projects registered (run `jarvis projects add <name> <path>` to register)",
+            "no projects registered (run `dontpanic projects add <name> <path>` to register)",
         )
     return _ok("projects-registry", f"{n} project(s) registered")
 
@@ -488,8 +488,8 @@ def check_registered_project(entry: object) -> list[CheckResult]:
                 f"project:{name}:path",
                 f"registered path does not exist: {project_path}",
                 (
-                    f"run `jarvis projects remove {name} --yes` to drop, "
-                    "or `jarvis projects add ... --force --yes` to relink"
+                    f"run `dontpanic projects remove {name} --yes` to drop, "
+                    "or `dontpanic projects add ... --force --yes` to relink"
                 ),
             )
         )
@@ -648,7 +648,7 @@ def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> l
     global-config check, the registry-status check, and the per-project
     preflight for each registered project. Off by default for backward
     compat (existing `python3 scripts/jarvis_doctor.py` invocation
-    behavior is unchanged); the new ``jarvis doctor`` subcommand passes
+    behavior is unchanged); the new ``dontpanic doctor`` subcommand passes
     ``include_projects=True``.
     """
     results: list[CheckResult] = []
@@ -680,7 +680,7 @@ def compute_strict_exit(results: list[CheckResult]) -> int:
     2 — at least one FAIL (ok=False)
 
     Default ``main()`` uses the legacy 0/1 contract; the new
-    ``jarvis doctor`` subcommand (and ``--strict-codes``) use this matrix.
+    ``dontpanic doctor`` subcommand (and ``--strict-codes``) use this matrix.
     """
     if any(not r.ok for r in results):
         return 2
@@ -706,7 +706,7 @@ def render_text(results: list[CheckResult]) -> str:
     total = len(results)
     if failed == 0:
         suffix = f" ({warned} warning{'s' if warned != 1 else ''})" if warned else ""
-        lines.append(f"\n{GREEN} {total}/{total} checks passed — Jarvis is ready{suffix}")
+        lines.append(f"\n{GREEN} {total}/{total} checks passed — DontPanic is ready{suffix}")
     else:
         lines.append(f"\n{RED} {failed}/{total} checks failed — see remediation above")
     return "\n".join(lines)
@@ -746,7 +746,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "Plan 2026-05-03-001 F003: also run global-config + per-project "
-            "preflight (off by default for backward compat). The `jarvis doctor` "
+            "preflight (off by default for backward compat). The `dontpanic doctor` "
             "subcommand passes this implicitly."
         ),
     )
@@ -756,7 +756,7 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Plan 2026-05-03-001 F003: use the 0/1/2 exit code matrix "
             "(0=PASS, 1=WARN, 2=FAIL) instead of the legacy 0/1 (0=all-ok, "
-            "1=any-fail). The `jarvis doctor` subcommand passes this implicitly."
+            "1=any-fail). The `dontpanic doctor` subcommand passes this implicitly."
         ),
     )
     args = parser.parse_args(argv)
