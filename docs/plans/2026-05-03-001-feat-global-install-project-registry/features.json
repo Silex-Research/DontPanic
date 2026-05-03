@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-05-03-001-feat-global-install-project-registry",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Make Jarvis pipx-installable with a global `jarvis` console script. Turn `scripts/jarvis_orchestrate/` into a properly packaged Python distribution: add a top-level `pyproject.toml` (or extend the existing one) declaring `[project]` with name `jarvis-orchestrate`, runtime deps (pydantic, pyyaml, jsonschema, firebase-admin), and `[project.scripts] jarvis = \"jarvis_orchestrate.cli:main\"`. After `pipx install jarvis-orchestrate` (or `pipx install .` from the source tree), invoking `jarvis --help` from any cwd lists subcommands without requiring `PYTHONPATH=scripts`. Add `~/.jarvis/config.json` as global config with `default_implementer`, `default_auditor`, `default_tier`, optional `calibration_path`. The CLI loads it lazily and merges with any per-project override (F003). Existing `python -m jarvis_orchestrate <plan>` invocation keeps working — no flag-day break for the maintainer's own dogfood (D001). pipx (not pip) is the install path because Jarvis is a global tool, not a project dependency; pipx isolates Jarvis's own venv from any project venv (D002).",
+      "steps": [
+        "Create or extend `pyproject.toml` at repo root: `[project]` with name=jarvis-orchestrate, version pulled from a single source of truth, python>=3.10, dependencies=[pydantic>=2, pyyaml, jsonschema, firebase-admin], `[project.scripts] jarvis = \"jarvis_orchestrate.cli:main\"`, `[tool.setuptools.packages.find] where = [\"scripts\"]`. Verify `pip install -e .` then `jarvis --help` works without `PYTHONPATH=`.",
+        "Verify pipx install path: `pipx install .` from a fresh shell, confirm `which jarvis` resolves to the pipx-managed binary, `jarvis ps` runs cleanly. Document this in README's quickstart.",
+        "Add `~/.jarvis/config.json` global-config loader at `scripts/jarvis_orchestrate/global_config.py`: schema = `{default_implementer: str, default_auditor: str, default_tier: str | None, calibration_path: str | None}`, missing-file = empty dict (not error), invalid-JSON = WARNING + empty dict (don't block CLI startup). Pydantic-validated with `extra='forbid'`.",
+        "Wire global config into `cli._approve_main`, `cli._resume_main`, `dispatch-from-plan`, and `dispatch_volley` lookups so when no per-project override exists, defaults come from global config (instead of hardcoded 'claude' / 'codex'). Hardcoded fallbacks remain for empty-config case.",
+        "Update README quickstart to use `pipx install jarvis-orchestrate` as the canonical path; keep `pip install -e .` as the developer-mode alternative. Drop the `PYTHONPATH=scripts` prefixes throughout.",
+        "Tests: (a) packaging — `pyproject.toml` parses as valid PEP 621, `python -m build` produces a wheel, the wheel installs cleanly into a fresh venv. (b) console script — `jarvis --help` exits 0 from any cwd post-install. (c) global config — missing file returns empty defaults, invalid JSON warns and returns empty, valid file populates `default_implementer` / `default_auditor` correctly. (d) backward compat — `python -m jarvis_orchestrate <plan>` still works."
+      ],
+      "acceptance": "(1) Repo has a top-level `pyproject.toml` valid per PEP 621 declaring the `jarvis` console script. (2) `pipx install .` from the source tree puts a `jarvis` binary on PATH that runs from any cwd. (3) `pip install -e .` (developer mode) works and supports test discovery. (4) `~/.jarvis/config.json` loader handles missing file (returns empty), invalid JSON (warns + empty), and valid config (returns populated). (5) Global config defaults flow into supervisor when no per-project override exists. (6) `python -m jarvis_orchestrate <plan>` still works (backward compat — no flag-day break per D001). (7) README quickstart uses pipx; `PYTHONPATH=scripts` removed from primary instructions. (8) All existing orchestrate-suite tests pass (~580 + 6 skipped baseline). (9) Ruff clean, sanitization clean.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Add project registry CRUD: `jarvis projects add | list | show | remove`. Registry lives at `~/.jarvis/projects.json` (global, single source of truth). Each entry: `name` (string, primary key), `path` (absolute), `created_at` (ISO timestamp), `last_used_at` (ISO timestamp, updated on dispatch), optional `default_implementer`, `default_auditor`, optional `notes`. Non-clobbering: `add` refuses if name exists with exit 2 + clear error; `add --force` requires interactive confirmation OR `--yes` flag for scripted use. `remove` requires `--yes` to actually delete (default is dry-run preview). `show <name>` prints the entry as readable JSON. `list` prints a tabular summary (name, path, last-used). All commands support `--json` for machine-readable output (agents reading via shell-out can parse). Project name pattern: `^[a-z0-9][a-z0-9-]{0,63}$` (lowercase, hyphen-separated, no underscores, max 64 chars) to avoid filename / URL ambiguity. Path is `Path.expanduser().resolve()`-normalized at add time (operator can add with `~/...`; registry stores absolute).",
+      "steps": [
+        "Add `scripts/jarvis_orchestrate/projects_registry.py` with Pydantic model `ProjectEntry`: `name: str` (regex-validated), `path: str` (validated as existing dir at add time), `created_at: str`, `last_used_at: str | None`, `default_implementer: str | None`, `default_auditor: str | None`, `notes: str | None`. `Registry` model wraps `projects: list[ProjectEntry]`. Functions: `load_registry() -> Registry` (missing file → empty), `save_registry(reg)`, `add_project(name, path, **kwargs)` (refuses on dup), `remove_project(name)`, `find_project(name) -> ProjectEntry | None`, `update_last_used(name)`.",
+        "Add CLI subcommands in `scripts/jarvis_orchestrate/cli.py`: `_projects_main(argv)` dispatches `add | list | show | remove` to handlers. Each handler supports `--json` flag. `add` flags: `--force`, `--yes`, optional `--implementer`, `--auditor`, `--notes`. `remove` requires `--yes` (default is dry-run preview).",
+        "Wire `--json` output across all four subcommands so agents shelling out can parse. `list --json` returns `{\"projects\": [...]}`; `show --json` returns the single entry; `add` / `remove` return `{\"action\": \"...\", \"project\": {...}}`.",
+        "Tests: (a) `add` with valid name + existing path persists to `~/.jarvis/projects.json` (use a per-test override env var `JARVIS_REGISTRY_PATH`). (b) `add` with name collision exits 2; `--force --yes` overwrites. (c) `add` with invalid name (uppercase / underscore / >64 chars) exits 2 with regex hint. (d) `add` with non-existent path exits 2. (e) `remove` without `--yes` is dry-run; with `--yes` deletes. (f) `list` and `show --json` round-trip without dropping fields. (g) `update_last_used` mutates the field; idempotent within the same second."
+      ],
+      "acceptance": "(1) `jarvis projects add foo /path/to/foo` writes `~/.jarvis/projects.json` with a well-formed entry (name, absolute path, created_at, optional defaults). (2) `jarvis projects add foo …` a second time exits 2 with a clear collision message; `--force --yes` overwrites. (3) `jarvis projects list` prints a table; `jarvis projects list --json` is parseable. (4) `jarvis projects show foo` and `--json` round-trip all fields. (5) `jarvis projects remove foo` is dry-run by default; `--yes` deletes. (6) Project name regex `^[a-z0-9][a-z0-9-]{0,63}$` enforced; non-existent paths refused. (7) `~/.jarvis/projects.json` shape: `{\"projects\": [{...}, ...]}`; missing file = empty registry (not error). (8) All new tests pass. Ruff + sanitization clean.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Per-project config at `<project>/.jarvis/jarvis.json` (committable; lives inside the registered project, not in `~/.jarvis/`). Schema: `{implementer: str | null, auditor: str | null, plans_dir: str (default 'docs/plans'), default_target_env: str (default 'dev'), human_gates: list[str] | null, protected_paths: list[str] | null}`. Per-project values override global config (F001) override hardcoded fallbacks. Also: extend the existing `scripts/jarvis_doctor.py` to check global + per-project config when a project is registered: (a) `~/.jarvis/config.json` parses if present; (b) for each registered project: path exists, `.jarvis/jarvis.json` parses if present, declared `plans_dir` exists or is creatable, declared agents are recognized by AGENT_REGISTRY, declared `human_gates` are valid gate names. Doctor exit code: 0 if all PASS, 1 if any WARN, 2 if any FAIL. `jarvis doctor` (the new console-script subcommand) wraps the existing `scripts/jarvis_doctor.py` so users get one entry point. The supervisor lookup chain becomes: per-project `.jarvis/jarvis.json` > global `~/.jarvis/config.json` > hardcoded defaults.",
+      "steps": [
+        "Add `scripts/jarvis_orchestrate/project_config.py` with Pydantic `ProjectConfig` model + `load_project_config(project_path: Path) -> ProjectConfig | None` (missing = None, invalid = warn + None). Cross-validation: `human_gates` must intersect known gate names from `gate_pause` module; `protected_paths` must be a list of strings.",
+        "Update `plan_loader.load()` to accept an optional override path for plans_dir (today it's hardcoded relative-to-cwd `docs/plans`). When a project is registered AND its config sets `plans_dir`, use that.",
+        "Update agent-resolution in `supervisor.dispatch_volley` and `dispatch_single_agent` to consult: (1) per-project `.jarvis/jarvis.json`, (2) `~/.jarvis/config.json`, (3) hardcoded fallbacks. Test that override precedence is correct.",
+        "Wrap `scripts/jarvis_doctor.py` as a `jarvis doctor` subcommand. Add per-project checks: for each entry in `~/.jarvis/projects.json`, run path-exists + jarvis.json-parses + plans-dir-exists + agents-recognized + gates-valid. Output structured PASS/WARN/FAIL per check; non-zero exit when any FAIL.",
+        "Update `jarvis projects add` (F002) to optionally scaffold an empty `<project>/.jarvis/jarvis.json` (only when `--init-config` is passed; default is no scaffold to avoid surprise).",
+        "Tests: (a) per-project config loads + overrides global. (b) `jarvis doctor` with a registered project, no jarvis.json present → reports OK (config is optional). (c) `jarvis doctor` with invalid jarvis.json → FAIL with line/field detail. (d) `jarvis doctor` with declared plans_dir that doesn't exist → WARN. (e) override precedence: per-project > global > fallback verified by parametric test."
+      ],
+      "acceptance": "(1) Per-project `.jarvis/jarvis.json` validates + loads; missing is OK (config is optional); invalid is WARN, not FAIL. (2) Override precedence at dispatch time: per-project > global (~/.jarvis/config.json) > hardcoded ('claude' / 'codex'). (3) `jarvis doctor` runs global preflight + per-registered-project preflight; outputs structured PASS / WARN / FAIL; non-zero exit on any FAIL. (4) `jarvis projects add --init-config` scaffolds an empty per-project config; default behavior is no scaffold. (5) Existing `scripts/jarvis_doctor.py` invocation unchanged (backward compat). (6) plan_loader respects per-project `plans_dir` when set. (7) All new tests pass. Ruff + sanitization clean. Full orchestrate suite still green.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}
