@@ -55,6 +55,7 @@ from jarvis_orchestrate import (
     gate_pause,
     inbox,
     interactive_state,
+    nested_orchestration,
     plan_loader,
     quota_admission,
     quota_caps_loader,
@@ -86,7 +87,33 @@ def _ps_main(argv: list[str]) -> int:
 
 
 def _approve_main(argv: list[str]) -> int:
-    """F008 Item 2: clear a single declared gate for a plan."""
+    """F008 Item 2 + F003: clear a single declared gate for a plan.
+
+    Plan 2026-05-02-003 F003: when ``gate == 'pre_resume_after_child'``, the
+    handler accepts ``--child <child_plan_id>`` and ``--accept-non-satisfied``
+    flags and routes to nested_orchestration.approve_pre_resume_after_child
+    (fan-in memo + child-compliance validation). The bare-suffix form
+    ``pre_resume_after_child:CHILD`` is refused with a directive to use the
+    ``--child`` flag (bare-resume discipline — direct clearance bypasses
+    validation).
+    """
+    # Plan 2026-05-02-003 F003 — special-case BEFORE the strict 2-arg check
+    # because the F003 form takes 3+ args.
+    if len(argv) >= 2 and argv[1] == "pre_resume_after_child":
+        return _approve_pre_resume_after_child_main(argv)
+    if len(argv) >= 2 and argv[1].startswith(nested_orchestration.PRE_RESUME_GATE_PREFIX):
+        # Bare suffix form like `approve <plan> pre_resume_after_child:CHILD`
+        # — refuse so operator goes through the validating path.
+        suffix_only = argv[1][len(nested_orchestration.PRE_RESUME_GATE_PREFIX) :]
+        print(
+            f"[approve] REFUSED gate {argv[1]!r} — use the validated form: "
+            f"`approve <plan> pre_resume_after_child --child {suffix_only or '<child_plan_id>'} "
+            "[--accept-non-satisfied]`. Direct clearance via the `:suffix` "
+            "form bypasses fan-in memo + child-compliance validation.",
+            file=sys.stderr,
+        )
+        return 2
+
     if len(argv) != 2:
         print("usage: jarvis-orchestrate approve <plan-id> <gate>", file=sys.stderr)
         return 2
@@ -150,6 +177,142 @@ def _approve_main(argv: list[str]) -> int:
     # transient breaker:* / defer:* was still blocking dispatch.
     remaining = gate_pause.evaluate(plan_dir, declared_strs).unmet
     print(f"[approve] remaining unmet gates: {remaining or '(none)'}")
+    return 0
+
+
+def _approve_pre_resume_after_child_main(argv: list[str]) -> int:
+    """Plan 2026-05-02-003 F003: validate-and-clear a pre_resume_after_child gate.
+
+    Shape:
+      approve <parent> pre_resume_after_child --child <child_plan_id>
+                                              [--accept-non-satisfied]
+
+    Validation chain (refuses with exit 2 on first failure):
+      1. Gate must currently be armed for this child on the parent.
+      2. Fan-in memo at parent's evidence/fan-in-from-{child}.md must exist.
+         When absent, prints a stub template the operator can paste in.
+      3. The memo must declare `## Return Condition / status: satisfied`.
+         (This is the operator's explicit re-entry declaration; the
+         --accept-non-satisfied flag does NOT override the memo's own status.)
+      4. Child's audit/charter-compliance-{child}.json must record
+         return_condition_status='satisfied' UNLESS --accept-non-satisfied.
+
+    On success: clears the gate, writes INBOX gate_cleared event recording
+    whether --accept-non-satisfied was applied, records best-effort
+    volley.return_to_parent_approved event on the parent's events.jsonl.
+    """
+    parser = argparse.ArgumentParser(
+        prog="jarvis-orchestrate approve <parent> pre_resume_after_child",
+        add_help=True,
+    )
+    parser.add_argument(
+        "plan_id",
+        help="Parent plan ID or absolute parent dir path.",
+    )
+    parser.add_argument(
+        "_gate_token",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--child",
+        required=True,
+        metavar="<child_plan_id>",
+        help="The child plan_id whose pre_resume_after_child gate to clear.",
+    )
+    parser.add_argument(
+        "--accept-non-satisfied",
+        action="store_true",
+        dest="accept_non_satisfied",
+        help=(
+            "Override: clear the gate even when the child's "
+            "audit/charter-compliance-*.json records "
+            "return_condition_status != 'satisfied'. Does NOT override the "
+            "fan-in memo's own status — the memo must always be 'satisfied'."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    plan_arg = args.plan_id
+    child_plan_id = args.child
+    parent_plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(parent_plan_dir)
+
+    # plans_root inferred from parent_plan_dir.parent. Production callers run
+    # against `<repo>/docs/plans/<parent>/`; tests pass tmp_path layouts the
+    # same shape.
+    plans_root = parent_plan_dir.parent
+    child_plan_dir = plans_root / child_plan_id
+    if not child_plan_dir.is_dir():
+        print(
+            f"[approve pre_resume_after_child] child plan dir not found: "
+            f"{child_plan_dir}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Surface the fan-in memo template when the memo is missing — easier than
+    # re-running approve to discover the format.
+    memo_path = nested_orchestration.fan_in_memo_path(parent_plan_dir, child_plan_id)
+    if not memo_path.is_file():
+        print(
+            f"[approve pre_resume_after_child] fan-in memo missing at {memo_path}.",
+            file=sys.stderr,
+        )
+        print("Paste this template into the file and re-run:", file=sys.stderr)
+        print("---", file=sys.stderr)
+        print(
+            nested_orchestration.FAN_IN_MEMO_TEMPLATE.format(child_plan_id=child_plan_id),
+            file=sys.stderr,
+        )
+        print("---", file=sys.stderr)
+        return 2
+
+    try:
+        outcome = nested_orchestration.approve_pre_resume_after_child(
+            parent_plan_dir,
+            parent_plan_id=loaded.plan_id,
+            child_plan_id=child_plan_id,
+            child_plan_dir=child_plan_dir,
+            accept_non_satisfied=args.accept_non_satisfied,
+        )
+    except nested_orchestration.ChildPauseApproveError as exc:
+        print(f"[approve pre_resume_after_child] REFUSED: {exc}", file=sys.stderr)
+        return 2
+
+    body_lines = [
+        f"Operator cleared pre_resume_after_child gate for child {child_plan_id!r}.",
+        f"Fan-in memo: {outcome['memo_path']} (status={outcome['memo_status']})",
+        f"Child compliance: status={outcome['child_status']!r}",
+    ]
+    if outcome["override_applied"]:
+        body_lines.append(
+            "OVERRIDE applied (--accept-non-satisfied). Operator must record "
+            "rationale in the parent's decisions.jsonl."
+        )
+    inbox.append_event(
+        parent_plan_dir,
+        event="gate_cleared",
+        plan_id=loaded.plan_id,
+        body="\n".join(body_lines),
+        gate=outcome["gate"],
+        child_plan_id=child_plan_id,
+        accept_non_satisfied=str(outcome["override_applied"]).lower(),
+    )
+    nested_orchestration.record_event(
+        parent_plan_dir,
+        kind="volley.return_to_parent_approved",
+        payload={
+            "child_plan_id": child_plan_id,
+            "child_status": outcome["child_status"],
+            "memo_status": outcome["memo_status"],
+            "override_applied": outcome["override_applied"],
+        },
+        plan_id=loaded.plan_id,
+    )
+    print(
+        f"[approve pre_resume_after_child] cleared {outcome['gate']!r} for "
+        f"{loaded.plan_id} (override={outcome['override_applied']})"
+    )
     return 0
 
 
@@ -219,6 +382,23 @@ def _resume_main(argv: list[str]) -> int:
 
     if args.gate is not None:
         gate = args.gate
+        # Plan 2026-05-02-003 F003 — bare-resume discipline: pre_resume_after_child
+        # gates can ONLY be cleared via the validating approve form (which
+        # reads the fan-in memo + child-compliance side-car). `resume --gate`
+        # would bypass that validation, so refuse with exit 2 and direct the
+        # operator to the canonical command.
+        if gate.startswith(nested_orchestration.PRE_RESUME_GATE_PREFIX):
+            child_id = gate[len(nested_orchestration.PRE_RESUME_GATE_PREFIX) :]
+            print(
+                f"[resume --gate] REFUSED gate {gate!r} — child-return gates "
+                "must be cleared via the validating approve form: "
+                f"`approve <plan> pre_resume_after_child --child "
+                f"{child_id or '<child_plan_id>'} [--accept-non-satisfied]`. "
+                "Direct clearance bypasses fan-in memo + child-compliance "
+                "validation.",
+                file=sys.stderr,
+            )
+            return 2
         # Parity with `_approve_main`: the global circuit breaker is hard-stop
         # and intentionally has no operator clearance path. Refuse with exit 2
         # and leave gate-state.json untouched.

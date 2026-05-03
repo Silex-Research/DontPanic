@@ -193,6 +193,7 @@ def write_signoff(
     child_charter: Any = None,
     commit_policy: Any = None,
     modified_files: list[str] | None = None,
+    orchestration: Any = None,
 ) -> Path:
     """Build, validate, and write the signoff.json closeout. Returns the path.
 
@@ -242,6 +243,27 @@ def write_signoff(
     if compliance is not None:
         side_car = charter_compliance_path(plan_dir, plan_id)
         side_car.write_text(json.dumps(compliance, indent=2, ensure_ascii=False) + "\n")
+
+    # Plan 2026-05-02-003 F003: when this signoff is for a child plan,
+    # record a best-effort volley.return_to_parent trace on the child's
+    # events.jsonl. Parent reads its own trace + the child's compliance
+    # side-car when operator invokes `approve pre_resume_after_child`.
+    # NEVER raises (D006 — events.jsonl is best-effort).
+    if orchestration is not None and getattr(orchestration, "parent_plan_id", None):
+        from jarvis_orchestrate.nested_orchestration import record_event
+
+        return_status = compliance.get("return_condition_status") if compliance else None
+        record_event(
+            plan_dir,
+            kind="volley.return_to_parent",
+            payload={
+                "child_plan_id": plan_id,
+                "parent_plan_id": orchestration.parent_plan_id,
+                "child_final_status": volley_status,
+                "return_condition_status": return_status,
+            },
+            plan_id=plan_id,
+        )
 
     return out
 

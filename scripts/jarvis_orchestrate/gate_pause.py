@@ -121,12 +121,17 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
     cleared = set(state.get("cleared_gates") or [])
     active_breakers_set = set(state.get("active_breakers") or [])
     active_defers_set = set(state.get("active_defers") or [])
+    active_pre_resume_set = set(state.get("active_pre_resume_after_children") or [])
 
     def _is_resolved(gate: str) -> bool:
         if gate.startswith("breaker:"):
             return gate not in active_breakers_set
         if gate.startswith("defer:"):
             return gate not in active_defers_set
+        if gate.startswith("pre_resume_after_child:"):
+            # Plan 2026-05-02-003 F003 — same transient lifecycle as
+            # breakers/defers; tracked via active_pre_resume_after_children.
+            return gate not in active_pre_resume_set
         return gate in cleared
 
     if all(_is_resolved(g) for g in pending):
@@ -304,9 +309,16 @@ def evaluate(plan_dir: Path, declared_gates: list[Any]) -> GateCheck:
     cleared = list(state.get("cleared_gates") or [])
     active_breakers_list = list(state.get("active_breakers") or [])
     active_defers_list = list(state.get("active_defers") or [])
+    # Plan 2026-05-02-003 F003 — pre_resume_after_child:* gates participate in
+    # the unmet check the same way breakers/defers do. resume --all does NOT
+    # clear them (the operator must use `approve <plan> pre_resume_after_child
+    # --child <child_id>` with fan-in memo + child-compliance validation).
+    active_pre_resume_list = list(state.get("active_pre_resume_after_children") or [])
     plan_unmet = [g for g in declared_strs if g not in cleared]
-    combined_declared = declared_strs + active_breakers_list + active_defers_list
-    unmet = plan_unmet + active_breakers_list + active_defers_list
+    combined_declared = (
+        declared_strs + active_breakers_list + active_defers_list + active_pre_resume_list
+    )
+    unmet = plan_unmet + active_breakers_list + active_defers_list + active_pre_resume_list
     return GateCheck(paused=bool(unmet), declared=combined_declared, cleared=cleared, unmet=unmet)
 
 
@@ -368,6 +380,96 @@ def add_defer(plan_dir: Path, defer_gate: str, *, plan_id: str, reason: str = ""
 
 def active_defers(plan_dir: Path) -> list[str]:
     return list(_read_state(plan_dir).get("active_defers") or [])
+
+
+# ──────────────────────────────  Plan 2026-05-02-003 F003 — pre_resume_after_child  ──────────────────────────────
+
+
+def add_pre_resume_after_child(
+    plan_dir: Path,
+    child_plan_id: str,
+    *,
+    plan_id: str,
+    reason: str = "",
+) -> bool:
+    """F003 — arm a `pre_resume_after_child:{child_plan_id}` gate on the
+    parent. Tracked separately from active_breakers / active_defers because
+    its clearance lifecycle is different: only `approve <parent>
+    pre_resume_after_child --child <child_id>` (with fan-in memo +
+    child-compliance validation) can clear it. `resume --all` and
+    `resume --gate pre_resume_after_child:*` do NOT clear it.
+
+    Idempotent: returns True on first arm, False on re-arm. Records a
+    `pre_resume_after_child_arm` history entry on first arm.
+    """
+    gate_str = f"pre_resume_after_child:{child_plan_id}"
+    state = _read_state(plan_dir)
+    state["plan_id"] = plan_id
+    pending = list(state.get("active_pre_resume_after_children") or [])
+    if gate_str in pending:
+        return False
+    pending.append(gate_str)
+    state["active_pre_resume_after_children"] = pending
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "pre_resume_after_child_arm",
+            "gate": gate_str,
+            "at": _now_iso(),
+            "actor": "supervisor",
+            "reason": reason,
+        }
+    )
+    state["history"] = history
+    _write_state(plan_dir, state)
+    return True
+
+
+def clear_pre_resume_after_child(
+    plan_dir: Path,
+    child_plan_id: str,
+    *,
+    plan_id: str,
+    actor: str = "operator",
+    reason: str = "",
+) -> bool:
+    """F003 — clear a previously-armed pre_resume_after_child gate.
+    Idempotent: returns True if state changed, False if the gate was
+    already cleared (or never armed). `nested_orchestration.
+    approve_pre_resume_after_child` is the canonical caller; direct
+    calls bypass the fan-in memo + child-compliance validation."""
+    gate_str = f"pre_resume_after_child:{child_plan_id}"
+    state = _read_state(plan_dir)
+    pending = list(state.get("active_pre_resume_after_children") or [])
+    if gate_str not in pending:
+        return False
+    pending = [g for g in pending if g != gate_str]
+    if pending:
+        state["active_pre_resume_after_children"] = pending
+    else:
+        state.pop("active_pre_resume_after_children", None)
+    state["plan_id"] = plan_id
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "pre_resume_after_child_clear",
+            "gate": gate_str,
+            "at": _now_iso(),
+            "actor": actor,
+            "reason": reason,
+        }
+    )
+    state["history"] = history
+    _maybe_clear_pause_marker(state)
+    _write_state(plan_dir, state)
+    return True
+
+
+def active_pre_resume_after_children(plan_dir: Path) -> list[str]:
+    """F003 — currently-armed `pre_resume_after_child:*` gates. Each entry
+    is the full gate name (`pre_resume_after_child:{child_plan_id}`).
+    `resume --all` does NOT touch this list."""
+    return list(_read_state(plan_dir).get("active_pre_resume_after_children") or [])
 
 
 def reconcile_defers(
@@ -445,9 +547,12 @@ __all__ = [
     "GateCheck",
     "active_breakers",
     "active_defers",
+    "active_pre_resume_after_children",
     "add_breaker",
     "add_defer",
+    "add_pre_resume_after_child",
     "approve_gate",
+    "clear_pre_resume_after_child",
     "cleared_gates",
     "evaluate",
     "gate_state_path",
