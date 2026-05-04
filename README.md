@@ -237,6 +237,145 @@ vendor adversarial invariant (no Claude grading Claude) only holds in
 
 ---
 
+## How agents call DontPanic
+
+Agents should discover DontPanic the same way a human does: read the
+machine-level manifest, show the user the plan, then call the local tool
+surface. The invariant is simple:
+
+**Always surface the plan to the user before calling dispatch(confirm=true). Do NOT auto-confirm.**
+
+That rule appears in `~/.dontpanic/agent-manifest.json` and in every caller
+example below. The manifest is the first thing an agent should read:
+
+```bash
+dontpanic manifest show --json
+```
+
+It returns the canonical command surface, including the local MCP server:
+
+```json
+{
+  "mcp_server": {
+    "command": "dontpanic",
+    "args": ["mcp", "serve"]
+  },
+  "supported_commands": ["dispatch-from-plan", "projects", "manifest", "mcp"],
+  "safety_rules": [
+    "Always surface the plan to the user before calling dispatch(confirm=true). Do NOT auto-confirm."
+  ]
+}
+```
+
+See [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) for the non-goals and caller
+patterns, [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md) for the
+publish-readiness checklist, and [`docs/AUTHORING_PLANS.md`](./docs/AUTHORING_PLANS.md)
+for the plan-directory contract once F004 lands.
+
+### Claude Code
+
+Add DontPanic as a local MCP server, then ask Claude to validate or dispatch a
+registered plan. Claude must show the plan and ask before passing
+`confirm=true`.
+
+```json
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "dontpanic",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+Example tool flow:
+
+```text
+1. call dontpanic.list_projects
+2. call dontpanic.validate_plan with {"plan": "2026-05-03-003-feat-agent-access-manifest-thin-mcp"}
+3. show the validation result and dispatch preview to the user
+4. only after approval, call dontpanic.dispatch with {"plan": "...", "confirm": true}
+```
+
+### Cursor
+
+Use the same local MCP process in Cursor's MCP settings. Cursor owns the IDE
+experience; DontPanic owns plan validation, gates, evidence, and signoff.
+
+```json
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "dontpanic",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+Example tool flow:
+
+```text
+1. call dontpanic.validate_plan for the selected plan
+2. call dontpanic.status to see active gates and signoff state
+3. never call dontpanic.dispatch with confirm=true until the user approves
+```
+
+### OpenClaw
+
+OpenClaw should treat DontPanic as a callable software-delivery skill, not as a
+runtime competitor. The OpenClaw skill reads `~/.dontpanic/agent-manifest.json`,
+starts the local MCP server, and forwards plan/gate updates back to the user.
+
+```json
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "dontpanic",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+Example tool flow:
+
+```text
+1. read ~/.dontpanic/agent-manifest.json or call dontpanic manifest show --json
+2. call dontpanic.validate_plan for the plan OpenClaw is about to run
+3. surface the plan and gates in the OpenClaw conversation
+4. call dontpanic.dispatch only after explicit user approval
+```
+
+### Codex CLI
+
+Codex can shell out to the CLI today and use the same MCP shape when running in
+an MCP-aware host. The cross-vendor pattern is common: one model implements,
+another audits, and DontPanic records the evidence.
+
+```json
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "dontpanic",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+Example tool flow:
+
+```text
+1. run dontpanic manifest show --json to discover the local command
+2. call dontpanic.validate_plan or run dontpanic dispatch-from-plan <plan-id>
+3. show the dry-run/preflight output to the user
+4. dispatch only when the user authorizes confirm=true
+```
+
+---
+
 ## Project layout
 
 ```

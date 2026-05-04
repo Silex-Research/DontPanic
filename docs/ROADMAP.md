@@ -95,7 +95,11 @@ phase builds on top of this substrate.
 
 ## Phase B — Agent Access Manifest + Thin MCP Surface
 
-**Status:** outlined; not locked. Lock next.
+**Status:** active. F001 (global manifest) and F002 (thin local MCP server)
+have shipped in plan
+`docs/plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/`. F003
+(discoverability docs) and F004 (LLM-authored-plan schema docs) are the
+remaining direct documentation slices.
 
 **Audience:** AI agents (OpenClaw skills, Claude Code, Codex CLI,
 Cursor, Claude-managed agents, custom MCP clients) and the runtimes
@@ -120,19 +124,24 @@ those agents can call without a full-runtime integration. See
   this is the global manifest; project behavior stays in
   `<repo>/.dontpanic/dontpanic.json` from Phase A with legacy read
   compatibility. No per-project `agent.json` in v1.)
-- **`dontpanic mcp serve` (localhost MCP server)** — thin typed tool
-  surface for agents:
-  - `dontpanic.intake` — submit a brief, get plan / questions / discovery
-  - `dontpanic.dispatch` — start a volley against a plan
-  - `dontpanic.status` — check active supervisors + gate state
-  - `dontpanic.approve` — clear a declared gate
-- **Discoverability commitments** — PyPI metadata, GitHub topic tags
+- **`dontpanic mcp serve` (local stdio MCP server)** — thin typed tool
+  surface for agents. Shipped tools:
+  - `list_projects` — read registered projects
+  - `validate_plan` — validate a plan before asking the user to run it
+  - `dispatch` — dry-run by default; `confirm: true` required to mutate
+  - `status` — check active supervisors + gate state
+  - `approve_gate` — dry-run by default; `confirm: true` required to mutate
+  - `read_evidence` — read evidence under a registered plan
+  There is deliberately no `intake` tool in Phase B. Phase C owns intake.
+- **Discoverability commitments** — README caller examples, PyPI metadata,
+  GitHub topic tags
   (`mcp-server`, `ai-orchestration`, `multi-agent`, `local-first`,
   `code-review`), MCP-directory listing, copy-paste `mcp.json` snippet
-  in the README.
-- **Stable LLM-authored-plan schema** documented in the README so any
-  LLM (ChatGPT, Grok, Claude.ai, local model) can produce a plan dir
-  that `dontpanic plan validate` accepts.
+  in the README. See [`DISCOVERABILITY.md`](./DISCOVERABILITY.md).
+- **Stable LLM-authored-plan schema** documented in
+  [`AUTHORING_PLANS.md`](./AUTHORING_PLANS.md) so any LLM (ChatGPT, Grok,
+  Claude.ai, local model) can produce a plan dir that `dontpanic plan
+  validate` accepts.
 
 **Acceptance:** an agent in OpenClaw / Claude Code / Codex CLI /
 Cursor can read the global manifest and call the MCP tools (or shell

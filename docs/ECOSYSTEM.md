@@ -27,6 +27,17 @@ solved problems in mature systems like
 | ChatGPT / Grok / other LLMs | Output an LLM-authored plan dir (schema documented in README); `dontpanic plan validate` accepts it | Bridge from any LLM to verified delivery without per-vendor integration |
 | Direct human operator | `dontpanic` CLI from a registered project | The original use case; everything else is a generalization |
 
+## Safety rules for agent callers
+
+Every agent runtime should treat DontPanic as a human-gated delivery system,
+not a background deploy button.
+
+- Always surface the plan to the user before calling dispatch(confirm=true). Do NOT auto-confirm.
+- Use `validate_plan`, `status`, and dry-run `dispatch` output as the preview
+  surface before asking for approval.
+- Keep approval explicit. `dispatch(confirm=true)` and `approve_gate` are the
+  point where the caller must have user intent.
+
 ## What this means for the build plan
 
 - **Don't replicate runtime concerns.** No messaging channels, no
@@ -35,7 +46,9 @@ solved problems in mature systems like
 - **Build the callable surface, not the daemon.** Phase B
   ships `~/.dontpanic/agent-manifest.json` (global discovery: "how do I
   invoke DontPanic on this machine?") and a thin MCP server exposing
-  `intake | dispatch | status | approve` — that's enough for any of
+  `list_projects | validate_plan | dispatch | status | approve_gate | read_evidence`.
+  There is deliberately no `intake` tool in Phase B — Phase C owns intake.
+  This is enough for any of
   the above callers.
 - **Project behavior stays in `<repo>/.dontpanic/dontpanic.json`.** The
   per-project config that Phase A's F003 landed answers "how should
@@ -74,11 +87,11 @@ manifest + MCP surface.
 #
 # When user says: "DontPanic, build the creator hub from this PRD"
 # 1. Skill reads ~/.dontpanic/agent-manifest.json to find the dontpanic CLI
-# 2. Skill calls: dontpanic intake prd <path> --project creator-hub --json
-# 3. Skill returns DontPanic's plan / questions / discovery output to user
-# 4. On approval: dontpanic dispatch-from-plan <plan-id> --confirm
-# 5. Skill polls: dontpanic status <plan-id> --json
-# 6. On gate pause: skill surfaces the gate to user, calls dontpanic approve
+# 2. Skill calls: dontpanic manifest show --json
+# 3. Skill calls the MCP validate_plan tool for an existing plan
+# 4. Skill returns DontPanic's plan / validation / dry-run output to user
+# 5. On approval: skill calls dispatch with confirm=true
+# 6. Skill polls status and surfaces gate pauses to the user
 ```
 
 That recipe is the **whole** OpenClaw integration. No SDK, no
@@ -90,4 +103,6 @@ for any caller.
 - [`PRODUCT.md`](./PRODUCT.md) — what DontPanic is in plain English
 - [`ROADMAP.md`](./ROADMAP.md) — phased build plan with the ecosystem
   position explicit
+- [`DISCOVERABILITY.md`](./DISCOVERABILITY.md) — publish-readiness and MCP
+  client checklist
 - [`PLATFORM.md`](./PLATFORM.md) — architectural thesis
