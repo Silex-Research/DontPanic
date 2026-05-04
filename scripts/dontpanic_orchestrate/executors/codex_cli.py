@@ -15,7 +15,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import shutil
-import subprocess
 
 from dontpanic_orchestrate.executors.base import (
     BaseExecutor,
@@ -23,6 +22,7 @@ from dontpanic_orchestrate.executors.base import (
     DispatchTask,
     check_forbidden_flags,
 )
+from dontpanic_orchestrate.subprocess_runner import run_subprocess
 
 DEFAULT_BIN = "codex"
 
@@ -71,34 +71,16 @@ class CodexCLIExecutor(BaseExecutor):
         # F005b — final pre-dispatch assertion that no bypass flag slipped in.
         check_forbidden_flags(argv)
 
-        try:
-            proc = subprocess.run(
-                argv,
-                input="",
-                capture_output=True,
-                env=task.subprocess_env or None,
-                cwd=str(task.cwd) if task.cwd else None,
-                text=True,
-                timeout=600,
-                check=False,
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-            completed = dt.datetime.now(dt.timezone.utc)
-            return DispatchResult(
-                agent=self.agent_name,
-                agent_role=task.agent_role,
-                iteration=task.iteration,
-                started_at=_iso(started),
-                completed_at=_iso(completed),
-                success=False,
-                summary="",
-                error=f"{type(exc).__name__}: {exc}",
-            )
-
+        proc = run_subprocess(
+            argv,
+            input_data=b"",
+            env=task.subprocess_env or None,
+            cwd=task.cwd,
+        )
         completed = dt.datetime.now(dt.timezone.utc)
-        raw = proc.stdout
+        raw = proc.stdout.decode(errors="replace")
 
-        if proc.returncode != 0 or not raw.strip():
+        if proc.timed_out:
             return DispatchResult(
                 agent=self.agent_name,
                 agent_role=task.agent_role,
@@ -108,7 +90,22 @@ class CodexCLIExecutor(BaseExecutor):
                 success=False,
                 summary="",
                 raw_response=raw,
-                error=f"exit={proc.returncode}; stderr={proc.stderr[:300]}",
+                error=f"timeout after {proc.timeout_seconds}s",
+                subprocess_result=proc,
+            )
+
+        if proc.exit_code != 0 or not raw.strip():
+            return DispatchResult(
+                agent=self.agent_name,
+                agent_role=task.agent_role,
+                iteration=task.iteration,
+                started_at=_iso(started),
+                completed_at=_iso(completed),
+                success=False,
+                summary="",
+                raw_response=raw,
+                error=f"exit={proc.exit_code}; stderr={proc.stderr[:300].decode(errors='replace')}",
+                subprocess_result=proc,
             )
 
         summary, usage = self._parse_event_stream(raw)
@@ -129,6 +126,7 @@ class CodexCLIExecutor(BaseExecutor):
                 "tokens_out": int(usage.get("output_tokens") or 0)
                 + int(usage.get("reasoning_output_tokens") or 0),
             },
+            subprocess_result=proc,
         )
 
     def _parse_event_stream(self, stdout: str) -> tuple[str, dict]:

@@ -33,6 +33,7 @@ from dontpanic_orchestrate.executors.base import (
 )
 from dontpanic_orchestrate.executors.claude_cli import ClaudeCLIExecutor
 from dontpanic_orchestrate.executors.codex_cli import CodexCLIExecutor
+from dontpanic_orchestrate.subprocess_runner import SubprocessResult
 
 FAKE_CLI_DIR = Path(__file__).parent / "fake_cli"
 FAKE_CLAUDE = FAKE_CLI_DIR / "fake-claude"
@@ -120,22 +121,28 @@ def test_check_forbidden_flags_clean_argv_returns_silently():
 )
 def test_claude_executor_argv(monkeypatch, tmp_path, policy, expected_tail):
     """ClaudeCLIExecutor produces the exact argv we documented in plan.md.
-    Captured via subprocess.run monkey-patch; no real CLI invocation."""
+    Captured via shared-runner monkey-patch; no real CLI invocation."""
+    from dontpanic_orchestrate.executors import claude_cli
+
     captured: dict = {}
 
-    def _fake_run(argv, **kwargs):
+    def _fake_runner(argv, **kwargs):
         captured["argv"] = list(argv)
-        # Return a successful CompletedProcess with valid JSON so dispatch
-        # parses cleanly.
-        return subprocess.CompletedProcess(
-            args=argv,
-            returncode=0,
-            stdout='{"result":"ok","is_error":false,"usage":{},"modelUsage":{"v1":{}}}',
-            stderr="",
+        return SubprocessResult(
+            exit_code=0,
+            stdout=b'{"result":"ok","is_error":false,"usage":{},"modelUsage":{"v1":{}}}',
+            stderr=b"",
+            timed_out=False,
+            timeout_seconds=600,
+            grace_period_used=False,
+            captured_stdout_bytes=64,
+            captured_stderr_bytes=0,
+            worktree_changed=False,
+            pgid=123,
         )
 
-    monkeypatch.setattr(subprocess, "run", _fake_run)
-    ex = ClaudeCLIExecutor(binary="/bin/echo")  # binary doesn't matter; subprocess.run is mocked
+    monkeypatch.setattr(claude_cli, "run_subprocess", _fake_runner)
+    ex = ClaudeCLIExecutor(binary="/bin/echo")  # binary doesn't matter; runner is mocked
     ex.dispatch(_make_task(tmp_path, role=policy))
     argv = captured["argv"]
     # First three args are the legacy -p --output-format json shape.
@@ -163,21 +170,30 @@ def test_claude_executor_argv(monkeypatch, tmp_path, policy, expected_tail):
 def test_codex_executor_argv(monkeypatch, tmp_path, policy, expected_global):
     """CodexCLIExecutor inserts global flags BEFORE the `exec` subcommand —
     verified by checking position of `exec` in the produced argv."""
+    from dontpanic_orchestrate.executors import codex_cli
+
     captured: dict = {}
 
-    def _fake_run(argv, **kwargs):
+    def _fake_runner(argv, **kwargs):
         captured["argv"] = list(argv)
-        return subprocess.CompletedProcess(
-            args=argv,
-            returncode=0,
-            stdout=(
-                '{"type":"item.completed","item":{"type":"agent_message","text":"ok"}}\n'
-                '{"type":"turn.completed","usage":{}}\n'
-            ),
-            stderr="",
+        stdout = (
+            b'{"type":"item.completed","item":{"type":"agent_message","text":"ok"}}\n'
+            b'{"type":"turn.completed","usage":{}}\n'
+        )
+        return SubprocessResult(
+            exit_code=0,
+            stdout=stdout,
+            stderr=b"",
+            timed_out=False,
+            timeout_seconds=600,
+            grace_period_used=False,
+            captured_stdout_bytes=len(stdout),
+            captured_stderr_bytes=0,
+            worktree_changed=False,
+            pgid=123,
         )
 
-    monkeypatch.setattr(subprocess, "run", _fake_run)
+    monkeypatch.setattr(codex_cli, "run_subprocess", _fake_runner)
     ex = CodexCLIExecutor(binary="/bin/echo")
     ex.dispatch(_make_task(tmp_path, role=policy))
     argv = captured["argv"]
@@ -220,13 +236,26 @@ def test_produced_argv_never_contains_forbidden_flag(
     contains any of the forbidden bypass flags."""
     captured: dict = {}
 
-    def _fake_run(argv, **kwargs):
+    def _fake_runner(argv, **kwargs):
         captured["argv"] = list(argv)
-        return subprocess.CompletedProcess(
-            args=argv, returncode=0, stdout=fake_run_stdout, stderr=""
+        stdout = fake_run_stdout.encode()
+        return SubprocessResult(
+            exit_code=0,
+            stdout=stdout,
+            stderr=b"",
+            timed_out=False,
+            timeout_seconds=600,
+            grace_period_used=False,
+            captured_stdout_bytes=len(stdout),
+            captured_stderr_bytes=0,
+            worktree_changed=False,
+            pgid=123,
         )
 
-    monkeypatch.setattr(subprocess, "run", _fake_run)
+    from dontpanic_orchestrate.executors import claude_cli, codex_cli
+
+    monkeypatch.setattr(claude_cli, "run_subprocess", _fake_runner)
+    monkeypatch.setattr(codex_cli, "run_subprocess", _fake_runner)
     ex = executor_factory()
     ex.dispatch(_make_task(tmp_path, role=policy))
     for flag in FORBIDDEN_FLAGS:
@@ -238,28 +267,40 @@ def test_produced_argv_never_contains_forbidden_flag(
 
 def test_executors_call_check_forbidden_flags_before_subprocess(monkeypatch, tmp_path):
     """If a future change introduces an argv-override surface, check_forbidden_flags
-    must run before subprocess.run so the guard catches the injection. Verified by
-    monkey-patching check_forbidden_flags to raise; subprocess.run must NOT have been
+    must run before the shared runner so the guard catches the injection. Verified by
+    monkey-patching check_forbidden_flags to raise; runner must NOT have been
     called, proving the guard runs first."""
     from dontpanic_orchestrate.executors import claude_cli, codex_cli
 
-    subprocess_called = {"count": 0}
+    runner_called = {"count": 0}
 
-    def _record_subprocess(*a, **kw):
-        subprocess_called["count"] += 1
-        return subprocess.CompletedProcess(args=[], returncode=0, stdout="{}", stderr="")
+    def _record_runner(*a, **kw):
+        runner_called["count"] += 1
+        return SubprocessResult(
+            exit_code=0,
+            stdout=b"{}",
+            stderr=b"",
+            timed_out=False,
+            timeout_seconds=600,
+            grace_period_used=False,
+            captured_stdout_bytes=2,
+            captured_stderr_bytes=0,
+            worktree_changed=False,
+            pgid=123,
+        )
 
     def _raise_guard(_argv):
-        raise ValueError("guard fired before subprocess.run")
+        raise ValueError("guard fired before runner")
 
     monkeypatch.setattr(claude_cli, "check_forbidden_flags", _raise_guard)
     monkeypatch.setattr(codex_cli, "check_forbidden_flags", _raise_guard)
-    monkeypatch.setattr(subprocess, "run", _record_subprocess)
+    monkeypatch.setattr(claude_cli, "run_subprocess", _record_runner)
+    monkeypatch.setattr(codex_cli, "run_subprocess", _record_runner)
 
     for ex in (ClaudeCLIExecutor(binary="/bin/echo"), CodexCLIExecutor(binary="/bin/echo")):
         with pytest.raises(ValueError, match="guard fired"):
             ex.dispatch(_make_task(tmp_path, role="implementer"))
-    assert subprocess_called["count"] == 0, "subprocess.run must not run after guard raises"
+    assert runner_called["count"] == 0, "runner must not run after guard raises"
 
 
 # ── F004: fake-CLI shim — sentinel write/no-write ─────────────────────────

@@ -91,6 +91,9 @@ class DispatchResult:
     raw_response: str = ""  # full stdout from CLI
     error: str | None = None
     quota_consumed: dict[str, Any] = field(default_factory=dict)
+    # Plan 2026-05-04-003 F001: internal runner metadata consumed by later
+    # envelope-durability features. Not serialized directly into audit JSON.
+    subprocess_result: Any | None = None
 
 
 class BaseExecutor(ABC):
