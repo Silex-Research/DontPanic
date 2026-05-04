@@ -95,11 +95,11 @@ phase builds on top of this substrate.
 
 ## Phase B — Agent Access Manifest + Thin MCP Surface
 
-**Status:** active. F001 (global manifest) and F002 (thin local MCP server)
-have shipped in plan
-`docs/plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/`. F003
-(discoverability docs) and F004 (LLM-authored-plan schema docs) are the
-remaining direct documentation slices.
+**Status:** shipped in plan
+`docs/plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/`.
+F001 shipped the global manifest, F002 shipped the thin local MCP server,
+F003 shipped agent discoverability docs, and F004 shipped the LLM-authored-plan
+schema documentation.
 
 **Audience:** AI agents (OpenClaw skills, Claude Code, Codex CLI,
 Cursor, Claude-managed agents, custom MCP clients) and the runtimes
