@@ -100,15 +100,11 @@ class TestSchema:
     )
     def test_install_source_enum_rejects_unknown(self, bad_install_source):
         with pytest.raises(ValueError):
-            am.AgentManifest(
-                **_valid_manifest_kwargs(install_source=bad_install_source)
-            )
+            am.AgentManifest(**_valid_manifest_kwargs(install_source=bad_install_source))
 
     @pytest.mark.parametrize("good_install_source", ["pipx", "pip-editable", "source"])
     def test_install_source_enum_accepts_known(self, good_install_source):
-        m = am.AgentManifest(
-            **_valid_manifest_kwargs(install_source=good_install_source)
-        )
+        m = am.AgentManifest(**_valid_manifest_kwargs(install_source=good_install_source))
         assert m.install_source == good_install_source
 
     @pytest.mark.parametrize(
@@ -154,9 +150,7 @@ class TestSchema:
         # write_manifest must produce manifests that contain it. Tested
         # via TestBootstrap.test_bootstrap_safety_rule below; here we just
         # confirm a manifest CAN carry the canonical string.
-        m = am.AgentManifest(
-            **_valid_manifest_kwargs(safety_rules=[SAFETY_RULE_NO_AUTO_DISPATCH])
-        )
+        m = am.AgentManifest(**_valid_manifest_kwargs(safety_rules=[SAFETY_RULE_NO_AUTO_DISPATCH]))
         assert SAFETY_RULE_NO_AUTO_DISPATCH in m.safety_rules
 
     def test_required_fields_missing_rejected(self):
@@ -182,9 +176,7 @@ class TestPaths:
         path = am.manifest_path()
         assert path == tmp_path / ".dontpanic" / "agent-manifest.json"
 
-    def test_manifest_path_under_jarvis_home_legacy_fallback(
-        self, tmp_path, monkeypatch
-    ):
+    def test_manifest_path_under_jarvis_home_legacy_fallback(self, tmp_path, monkeypatch):
         # If $DONTPANIC_HOME is unset and $JARVIS_HOME is set, the manifest
         # path resolves under the legacy directory. Existing installs do
         # not break.
@@ -230,9 +222,7 @@ class TestLoadSave:
         assert target.is_dir()
         assert (target / "agent-manifest.json").is_file()
 
-    def test_save_legacy_jarvis_home_still_writes_manifest(
-        self, tmp_path, monkeypatch
-    ):
+    def test_save_legacy_jarvis_home_still_writes_manifest(self, tmp_path, monkeypatch):
         # $JARVIS_HOME-only env still writes (legacy compat).
         monkeypatch.delenv(gc.DONTPANIC_HOME_ENV, raising=False)
         monkeypatch.setenv(gc.JARVIS_HOME_ENV, str(tmp_path / ".jarvis"))
@@ -268,6 +258,7 @@ class TestRegenerable:
         # Match ISO-8601 like 2026-05-03T15:00:00Z. None of the input fields
         # carry timestamps, so any match means a non-input timestamp leaked.
         import re
+
         assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", body), (
             "manifest body contains an ISO timestamp; this breaks the "
             "regenerable invariant (D006). If a timestamp is genuinely "
@@ -318,6 +309,7 @@ class TestBootstrap:
 
     def test_bootstrap_pins_dontpanic_version_from_init(self):
         from jarvis_orchestrate import __version__
+
         m = am.bootstrap_manifest(install_source="source", cli_path="/x")
         assert m.dontpanic_version == __version__
 
@@ -342,9 +334,7 @@ class TestBootstrap:
     def test_bootstrap_project_registry_path_under_dontpanic_home(self, tmp_path):
         m = am.bootstrap_manifest(install_source="source", cli_path="/x")
         # Fixture put $DONTPANIC_HOME at tmp_path/.dontpanic.
-        assert m.project_registry_path == str(
-            tmp_path / ".dontpanic" / "projects.json"
-        )
+        assert m.project_registry_path == str(tmp_path / ".dontpanic" / "projects.json")
 
     def test_bootstrap_supported_commands_includes_core_set(self):
         m = am.bootstrap_manifest(install_source="source", cli_path="/x")
@@ -352,11 +342,34 @@ class TestBootstrap:
         for required in ("projects", "doctor", "manifest"):
             assert required in m.supported_commands
 
-    def test_bootstrap_does_not_populate_mcp_server_in_phase_b_f001(self):
-        # F001 ships without populating mcp_server. F002 lands the server
-        # and re-runs bootstrap to fill it in.
+    def test_bootstrap_populates_mcp_server_when_f002_importable(self):
+        """Plan 2026-05-03-003 F002 amendment: once F002's mcp_server module
+        ships, bootstrap_manifest() detects it via :func:`_detect_mcp_server`
+        and populates the manifest's ``mcp_server`` field with the canonical
+        ``dontpanic mcp serve`` invocation. Before F002 shipped this field
+        stayed ``None``; the regression test pins the post-F002 invariant
+        so a future change that drops the wiring is caught."""
+        from jarvis_orchestrate import mcp_server
+
         m = am.bootstrap_manifest(install_source="source", cli_path="/x")
-        assert m.mcp_server is None
+        assert m.mcp_server is not None, (
+            "F002's mcp_server module is importable, so bootstrap_manifest() "
+            "must populate the manifest's mcp_server block. See plan "
+            "2026-05-03-003 audit-focus #6."
+        )
+        assert m.mcp_server.command == mcp_server.MCP_SERVER_COMMAND
+        assert m.mcp_server.args == list(mcp_server.MCP_SERVER_ARGS)
+        # Operator-canonical surface (D011): use `dontpanic mcp serve`, not
+        # `python -m dontpanic_orchestrate mcp serve`.
+        assert m.mcp_server.command == "dontpanic"
+        assert m.mcp_server.args == ["mcp", "serve"]
+
+    def test_bootstrap_supported_commands_includes_mcp_when_f002_present(self):
+        """F002 amendment: the ``mcp`` subcommand is appended to
+        supported_commands once F002 ships, so agents reading the manifest
+        learn about the new surface without operator action."""
+        m = am.bootstrap_manifest(install_source="source", cli_path="/x")
+        assert "mcp" in m.supported_commands
 
 
 # ──────────────────────────────  CLI: dontpanic manifest init|show  ──────────────────────────────
