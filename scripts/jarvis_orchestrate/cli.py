@@ -57,6 +57,7 @@ from jarvis_orchestrate import (
     gate_pause,
     inbox,
     interactive_state,
+    mcp_server,
     nested_orchestration,
     plan_loader,
     project_config,
@@ -991,6 +992,17 @@ def _manifest_show(argv: list[str]) -> int:
     return 0
 
 
+def _mcp_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-003 F002: ``dontpanic mcp serve`` thin local MCP server.
+
+    Phase B is local-only (D003). ``serve`` is the only subcommand; it runs
+    the stdio JSON-RPC loop. The future ``tools`` introspection subcommand
+    is reserved but intentionally not implemented in F002 so the surface
+    stays minimal.
+    """
+    return mcp_server.main(argv)
+
+
 def _calibrate_claude_main(argv: list[str]) -> int:
     """Plan 2026-04-30-001 F005: write Claude calibration ratio to the sticky
     file at ~/.jarvis/quota_calibration.json so F006 can convert the local
@@ -1463,6 +1475,8 @@ def main(argv: list[str] | None = None) -> int:
         return _projects_main(raw[1:])
     if raw and raw[0] == "manifest":
         return _manifest_main(raw[1:])
+    if raw and raw[0] == "mcp":
+        return _mcp_main(raw[1:])
     if raw and raw[0] == "calibrate-claude":
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":

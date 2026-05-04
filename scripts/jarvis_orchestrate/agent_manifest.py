@@ -174,8 +174,7 @@ def load_manifest() -> AgentManifest | None:
         raw = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         _LOG.warning(
-            "agent manifest at %s is unreadable or invalid JSON (%s); "
-            "returning None",
+            "agent manifest at %s is unreadable or invalid JSON (%s); returning None",
             path,
             exc,
         )
@@ -184,8 +183,7 @@ def load_manifest() -> AgentManifest | None:
         return AgentManifest.model_validate(raw)
     except Exception as exc:  # pydantic.ValidationError or similar
         _LOG.warning(
-            "agent manifest at %s failed schema validation (%s); "
-            "returning None",
+            "agent manifest at %s failed schema validation (%s); returning None",
             path,
             exc,
         )
@@ -220,10 +218,11 @@ def write_manifest(manifest: AgentManifest) -> Path:
 
 def _default_supported_commands() -> list[str]:
     """The Phase A surface that ships in every DontPanic install. Phase B
-    F001 adds ``manifest`` to this list. Future phases append to it as
-    new subcommands ship; the order is stable so the regenerable invariant
+    F001 adds ``manifest`` to this list; F002 adds ``mcp`` once
+    ``dontpanic mcp serve`` is importable. Future phases append as new
+    subcommands ship; the order is stable so the regenerable invariant
     holds."""
-    return [
+    base = [
         "projects",
         "doctor",
         "manifest",
@@ -232,6 +231,9 @@ def _default_supported_commands() -> list[str]:
         "ps",
         "dispatch-from-plan",
     ]
+    if _detect_mcp_server() is not None:
+        base.append("mcp")
+    return base
 
 
 def _default_safety_rules() -> list[str]:
@@ -240,6 +242,31 @@ def _default_safety_rules() -> list[str]:
     append to this list — the canonical rule stays at index 0 for
     discoverability."""
     return [SAFETY_RULE_NO_AUTO_DISPATCH]
+
+
+def _detect_mcp_server() -> McpServerSpec | None:
+    """Detect whether F002's MCP server is available on this install. Returns
+    the canonical operator-CLI invocation (``dontpanic mcp serve``) when the
+    :mod:`jarvis_orchestrate.mcp_server` module is importable, else ``None``.
+
+    The detection is strictly importability-based — it does not call
+    ``serve_main`` or open the stdio loop. Re-running
+    :func:`bootstrap_manifest` after F002 lands therefore populates the
+    manifest's ``mcp_server`` block automatically; before F002 ships the
+    import fails and the field stays unset.
+
+    Per D011 of plan 2026-05-03-003, operator-facing strings use the
+    canonical ``dontpanic`` form, not ``python -m dontpanic_orchestrate``
+    (the latter is reserved for module-invocation / packaging
+    verification)."""
+    try:
+        from jarvis_orchestrate import mcp_server  # noqa: F401
+    except ImportError:
+        return None
+    return McpServerSpec(
+        command=mcp_server.MCP_SERVER_COMMAND,
+        args=list(mcp_server.MCP_SERVER_ARGS),
+    )
 
 
 def bootstrap_manifest(
@@ -255,6 +282,12 @@ def bootstrap_manifest(
     from :func:`gc.dontpanic_home` so the resolved DontPanic home (with
     legacy ``$JARVIS_HOME`` fallback) flows through.
 
+    Plan 2026-05-03-003 F002: when ``jarvis_orchestrate.mcp_server`` is
+    importable, the manifest's ``mcp_server`` block is populated with
+    the canonical ``dontpanic mcp serve`` invocation. Before F002 ships
+    (or in environments where the module is missing) the field stays
+    ``None`` and is excluded from the on-disk JSON via ``exclude_none``.
+
     Idempotent: same inputs → same output. Combined with
     :func:`write_manifest`'s regenerable invariant, ``bootstrap_manifest()
     → write_manifest()`` produces a byte-identical file on every run
@@ -267,7 +300,7 @@ def bootstrap_manifest(
         project_registry_path=str(gc.dontpanic_home() / "projects.json"),
         supported_commands=_default_supported_commands(),
         safety_rules=_default_safety_rules(),
-        mcp_server=None,  # F001 ships without; F002 re-runs to populate.
+        mcp_server=_detect_mcp_server(),
     )
 
 
@@ -290,3 +323,9 @@ __all__ = [
     "to_public_dict",
     "write_manifest",
 ]
+
+
+# Internal helper exported for F002's regression test. Not part of the
+# stable public API — tests assert it returns the canonical spec when the
+# F002 module is importable.
+__all__.append("_detect_mcp_server")

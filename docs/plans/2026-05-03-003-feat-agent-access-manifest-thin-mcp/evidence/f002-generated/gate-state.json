@@ -1,0 +1,31 @@
+{
+  "plan_id": "2026-05-03-003-feat-agent-access-manifest-thin-mcp",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-04T04:38:50Z",
+      "actor": "operator"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-04T04:38:50Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-04T05:05:55Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    }
+  ],
+  "active_breakers": [
+    "breaker:no_progress"
+  ]
+}
