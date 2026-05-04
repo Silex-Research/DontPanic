@@ -10,7 +10,7 @@ approval at declared gates, and leaves behind durable proof before you merge.
 Formerly **Jarvis**. The repo and public product are now DontPanic.
 New installs use `dontpanic`, `dontpanic_orchestrate`, `~/.dontpanic`,
 and `<repo>/.dontpanic/dontpanic.json`. Legacy `jarvis`,
-`jarvis_orchestrate`, `~/.jarvis`, and `<repo>/.jarvis/jarvis.json`
+`dontpanic_orchestrate`, `~/.jarvis`, and `<repo>/.jarvis/jarvis.json`
 remain compatibility aliases while the migration happens in stages.
 
 **Status:** alpha — bootstrap phase. See [`docs/PRODUCT.md`](./docs/PRODUCT.md)
@@ -117,7 +117,7 @@ Both modes should print `✓ N/N checks passed — DontPanic is ready`. Each
 red check includes a remediation line. Then run the storage smoke test:
 
 ```bash
-PYTHONPATH=scripts python3 -m jarvis_orchestrate.smoke_test_storage
+PYTHONPATH=scripts python3 -m dontpanic_orchestrate.smoke_test_storage
 ```
 
 If it prints `✓ F002 acceptance PASS`, evidence storage is wired.
@@ -134,7 +134,7 @@ Should print all green checkmarks.
 ### 5. Run the test suite
 
 ```bash
-PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/ -q
+PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q
 ruff check scripts/
 ruff format --check scripts/
 ```
@@ -408,7 +408,7 @@ DontPanic/
 │       └── evidence/                # small artifacts (large → Firebase Storage)
 │
 ├── scripts/
-│   ├── jarvis_orchestrate/          # supervisor runtime
+│   ├── dontpanic_orchestrate/          # supervisor runtime
 │   ├── bootstrap.sh                 # one-shot GCP/Firebase setup
 │   ├── jarvis_doctor.py             # preflight health checks
 │   ├── sanitization_check.py        # sanitization regression guard

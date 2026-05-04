@@ -30,7 +30,7 @@ If no mode is supplied: refuses to run live (avoids surprising network calls). U
 
 ## Prerequisites
 
-- For live mode: `firebase-admin` available + the orchestrator service-account key present under `.secrets/` (or ADC) so `scripts/jarvis_orchestrate/firebase_client.py` can be imported. Project ID is read from `environments.json` at runtime, not hardcoded here.
+- For live mode: `firebase-admin` available + the orchestrator service-account key present under `.secrets/` (or ADC) so `scripts/dontpanic_orchestrate/firebase_client.py` can be imported. Project ID is read from `environments.json` at runtime, not hardcoded here.
 - For stub mode: nothing.
 
 ## Steps

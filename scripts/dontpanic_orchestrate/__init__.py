@@ -1,10 +1,8 @@
-"""Forward-compatible public import alias for DontPanic.
+"""DontPanic cross-agent orchestration runtime.
 
-The implementation still lives in :mod:`jarvis_orchestrate` during the
-staged rename. Importing :mod:`dontpanic_orchestrate` gives new callers the
-canonical product name without breaking existing integrations.
+Exposes ``__version__`` as the single source of truth consumed by
+``pyproject.toml`` (via ``[tool.setuptools.dynamic]``) and surfaced by
+the ``dontpanic --version`` console script.
 """
 
-from jarvis_orchestrate import __version__
-
-__all__ = ["__version__"]
+__version__ = "0.1.0"

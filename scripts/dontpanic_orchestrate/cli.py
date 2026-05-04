@@ -1,0 +1,1599 @@
+"""argparse entry for `python -m dontpanic_orchestrate`.
+
+Single-agent dispatch (F004):
+  python -m dontpanic_orchestrate <plan-id> [--feature F001] [--role implementer]
+
+Volley dispatch (F005a — implementer/auditor pair, iterate until signoff or cap):
+  python -m dontpanic_orchestrate <plan-id> --volley [--feature F001]
+                                                  [--implementer claude] [--auditor codex]
+                                                  [--max-iterations 3]
+                                                  [--mode interactive|p0|autonomous]
+
+Pre-flight + dispatch (plan 2026-05-01-001 F002):
+  python -m dontpanic_orchestrate dispatch-from-plan <plan-id>
+      [--feature F001] [--implementer claude] [--auditor codex]
+      [--max-iterations N] [--mode interactive|autonomous] [--confirm]
+
+  Strict dry-run by default: prints a 10-field pre-flight context block and
+  exits 0 without dispatching, regardless of TTY state. With `--confirm`,
+  validates quota readiness == ok and calls supervisor.dispatch_volley
+  in-process. Blocking readiness states each exit 3 with a kind-specific
+  remediation pointer:
+    config_required        → `python -m dontpanic_orchestrate quota-caps init`
+    calibration_required   → `python -m dontpanic_orchestrate calibrate-claude`
+    unit_mismatch          → edit ~/.jarvis/quota_caps.json
+    missing_state          → `python scripts/quota_check.py`
+
+Active-supervisor registry (F023 EC13):
+  python -m dontpanic_orchestrate ps
+
+Engagement-surface gate handling (F008 + F006 + F007):
+  python -m dontpanic_orchestrate approve <plan-id> <gate>      # preferred — clear one declared gate
+  python -m dontpanic_orchestrate resume  <plan-id> --gate <gate>  # parity alias for approve
+  python -m dontpanic_orchestrate resume  <plan-id> --all       # explicit bulk-clear (legacy behavior)
+
+Interactive backoff touch (F007 Slice 2):
+  python -m dontpanic_orchestrate claude-touch               # record human Claude request now
+
+Operator quota caps (plan 2026-04-30-001 F004):
+  python -m dontpanic_orchestrate quota-caps init [--overwrite]
+  python -m dontpanic_orchestrate quota-caps show
+
+Claude calibration (plan 2026-04-30-001 F005):
+  python -m dontpanic_orchestrate calibrate-claude --dashboard-pct N [--window rolling_7d|rolling_5h]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from dontpanic_orchestrate import (
+    active_supervisors,
+    agent_manifest,
+    calibration_loader,
+    gate_pause,
+    inbox,
+    interactive_state,
+    mcp_server,
+    nested_orchestration,
+    plan_loader,
+    project_config,
+    projects_registry,
+    quota_admission,
+    quota_caps_loader,
+    supervisor,
+)
+from dontpanic_orchestrate import (
+    circuit_breakers as cb,
+)
+from dontpanic_orchestrate.supervisor import QuotaExceeded
+
+
+def _resolve_plan_dir(plan_arg: str) -> Path:
+    """Resolve a plan ID (or absolute dir path) to a plan directory.
+
+    Plan 2026-05-03-001 F003: when no direct path match, consult registered
+    projects (via ``project_config.find_project_for_plan_dir`` for cwd
+    awareness, then fall back to walking every registered project) and
+    honor each project's per-project ``plans_dir`` from its
+    ``.dontpanic/dontpanic.json`` (legacy ``.jarvis/jarvis.json`` fallback).
+    Default ``plans_dir`` remains ``docs/plans``
+    when the per-project config is missing or doesn't override it.
+
+    Resolution order (first match wins):
+      1. plan_arg as a literal path that resolves to a directory
+      2. cwd is under a registered project AND
+         ``<project>/<project_plans_dir>/<plan_arg>`` exists
+      3. for any registered project R,
+         ``<R.path>/<R_plans_dir>/<plan_arg>`` exists (depth-first)
+      4. ``<cwd>/docs/plans/<plan_arg>`` (legacy fallback for un-registered
+         operators — keeps the bare ``jarvis`` smoke-test usable from the
+         repo root before any registry entry exists)
+
+    Refuses with ``SystemExit`` (mapped to exit 2 by argparse + main()
+    callers) when nothing matches. There is no ``Path.cwd()`` fallback
+    that silently picks up a stray plan dir from the wrong project.
+    """
+    p = Path(plan_arg)
+    if p.is_dir():
+        return p
+
+    # Step 2: cwd-anchored project context. The supervisor consults the same
+    # helper to pick per-project agent/gate defaults; using it here keeps
+    # plan resolution + dispatch defaults grounded in the same project.
+    cwd = Path.cwd().resolve()
+    cwd_project = project_config.find_project_for_plan_dir(cwd)
+    if cwd_project is not None:
+        cwd_proj_path = cwd_project[0]
+        cfg = project_config.load_project_config(cwd_proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        candidate = cwd_proj_path / plans_dir / plan_arg
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    # Step 3: walk every registered project. Honors each project's own
+    # plans_dir override so a multi-repo registry (e.g. one repo authoring
+    # plans under `plans/`, another under `docs/plans/`) all work.
+    reg = projects_registry.load_registry()
+    for entry in reg.projects:
+        proj_path = Path(entry.path).expanduser().resolve()
+        cfg = project_config.load_project_config(proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        candidate = proj_path / plans_dir / plan_arg
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    # Step 4: legacy cwd fallback. Only the hardcoded `docs/plans` path —
+    # callers running from un-registered repos still get the historical
+    # behavior. NOT a `Path.cwd()` bare fallback — the per-project plans_dir
+    # only applies when a registered project resolves.
+    cwd_match = Path.cwd() / "docs" / "plans" / plan_arg
+    if cwd_match.is_dir():
+        return cwd_match
+    raise SystemExit(f"plan not found: {plan_arg}")
+
+
+def _ps_main(argv: list[str]) -> int:
+    """F023 EC13: list live supervisors registered in
+    ~/.jarvis/active_supervisors.jsonl. Filters dead PIDs and prunes the file
+    as a side effect."""
+    entries = active_supervisors.list_active()
+    print(active_supervisors.format_entries(entries))
+    return 0
+
+
+def _approve_main(argv: list[str]) -> int:
+    """F008 Item 2 + F003: clear a single declared gate for a plan.
+
+    Plan 2026-05-02-003 F003: when ``gate == 'pre_resume_after_child'``, the
+    handler accepts ``--child <child_plan_id>`` and ``--accept-non-satisfied``
+    flags and routes to nested_orchestration.approve_pre_resume_after_child
+    (fan-in memo + child-compliance validation). The bare-suffix form
+    ``pre_resume_after_child:CHILD`` is refused with a directive to use the
+    ``--child`` flag (bare-resume discipline — direct clearance bypasses
+    validation).
+    """
+    # Plan 2026-05-02-003 F003 — special-case BEFORE the strict 2-arg check
+    # because the F003 form takes 3+ args.
+    if len(argv) >= 2 and argv[1] == "pre_resume_after_child":
+        return _approve_pre_resume_after_child_main(argv)
+    if len(argv) >= 2 and argv[1].startswith(nested_orchestration.PRE_RESUME_GATE_PREFIX):
+        # Bare suffix form like `approve <plan> pre_resume_after_child:CHILD`
+        # — refuse so operator goes through the validating path.
+        suffix_only = argv[1][len(nested_orchestration.PRE_RESUME_GATE_PREFIX) :]
+        print(
+            f"[approve] REFUSED gate {argv[1]!r} — use the validated form: "
+            f"`approve <plan> pre_resume_after_child --child {suffix_only or '<child_plan_id>'} "
+            "[--accept-non-satisfied]`. Direct clearance via the `:suffix` "
+            "form bypasses fan-in memo + child-compliance validation.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if len(argv) != 2:
+        print("usage: dontpanic approve <plan-id> <gate>", file=sys.stderr)
+        return 2
+    plan_arg, gate = argv
+    # F006: the global circuit breaker is hard-stop and intentionally has no
+    # operator clearance path. Refuse the approve so the CLI surface matches
+    # the spec ("APPROVAL_BREAKERS frozenset names the 6 pause-for-approval
+    # kinds; the 7th (global) is hard-stop"). Operators wait out the 24h
+    # window; there is no jarvis clear-global-breaker.
+    global_gate = f"breaker:{cb.BreakerKind.GLOBAL_CIRCUIT_BREAKER.value}"
+    if gate == global_gate:
+        print(
+            f"[approve] REFUSED gate {gate!r} — the global circuit breaker is "
+            "hard-stop and has no operator clearance path. Wait for the 24h "
+            "window to expire (see ~/.jarvis/breaker_history.jsonl).",
+            file=sys.stderr,
+        )
+        return 2
+    plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(plan_dir)
+    # plan.human_gates is a list of HumanGate enum members; compare on .value
+    # so the user-supplied string CLI arg matches the declared set.
+    declared_strs = [
+        g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
+    ]
+    # F006: synthetic breaker:<kind> gates are valid declared names too — the
+    # supervisor adds them to active_breakers on trip. Don't false-warn when
+    # operator approves a known breaker name (either currently active or any
+    # known approval-required BreakerKind, in case the operator is pre-clearing).
+    # The global kind is excluded above; the rest of APPROVAL_BREAKERS is fair game.
+    # F007: same treatment for synthetic defer:<kind> gates added by the
+    # admission reconcile.
+    active_breakers = gate_pause.active_breakers(plan_dir)
+    active_defers = gate_pause.active_defers(plan_dir)
+    breaker_names = {f"breaker:{k.value}" for k in cb.APPROVAL_BREAKERS}
+    defer_names = {quota_admission.gate_name(k) for k in quota_admission.DeferKind}
+    valid_targets = (
+        set(declared_strs) | set(active_breakers) | set(active_defers) | breaker_names | defer_names
+    )
+    if gate not in valid_targets:
+        print(
+            f"[approve] WARNING gate {gate!r} not in plan.human_gates {declared_strs} "
+            f"and not a known breaker:* name; recording anyway",
+            file=sys.stderr,
+        )
+    changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+    if changed:
+        inbox.append_event(
+            plan_dir,
+            event="gate_cleared",
+            plan_id=loaded.plan_id,
+            body=f"Operator cleared gate '{gate}' via 'approve'.",
+            gate=gate,
+        )
+        print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
+    else:
+        print(f"[approve] gate {gate!r} was already cleared")
+    # Remaining unmet = unmet plan-declared + every still-active breaker +
+    # every still-active defer. unmet_gates() considers only plan-declared
+    # gates, which used to give operators a misleading "(none)" while a
+    # transient breaker:* / defer:* was still blocking dispatch.
+    remaining = gate_pause.evaluate(plan_dir, declared_strs).unmet
+    print(f"[approve] remaining unmet gates: {remaining or '(none)'}")
+    return 0
+
+
+def _approve_pre_resume_after_child_main(argv: list[str]) -> int:
+    """Plan 2026-05-02-003 F003: validate-and-clear a pre_resume_after_child gate.
+
+    Shape:
+      approve <parent> pre_resume_after_child --child <child_plan_id>
+                                              [--accept-non-satisfied]
+
+    Validation chain (refuses with exit 2 on first failure):
+      1. Gate must currently be armed for this child on the parent.
+      2. Fan-in memo at parent's evidence/fan-in-from-{child}.md must exist.
+         When absent, prints a stub template the operator can paste in.
+      3. The memo must declare `## Return Condition / status: satisfied`.
+         (This is the operator's explicit re-entry declaration; the
+         --accept-non-satisfied flag does NOT override the memo's own status.)
+      4. Child's audit/charter-compliance-{child}.json must record
+         return_condition_status='satisfied' UNLESS --accept-non-satisfied.
+
+    On success: clears the gate, writes INBOX gate_cleared event recording
+    whether --accept-non-satisfied was applied, records best-effort
+    volley.return_to_parent_approved event on the parent's events.jsonl.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic approve <parent> pre_resume_after_child",
+        add_help=True,
+    )
+    parser.add_argument(
+        "plan_id",
+        help="Parent plan ID or absolute parent dir path.",
+    )
+    parser.add_argument(
+        "_gate_token",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--child",
+        required=True,
+        metavar="<child_plan_id>",
+        help="The child plan_id whose pre_resume_after_child gate to clear.",
+    )
+    parser.add_argument(
+        "--accept-non-satisfied",
+        action="store_true",
+        dest="accept_non_satisfied",
+        help=(
+            "Override: clear the gate even when the child's "
+            "audit/charter-compliance-*.json records "
+            "return_condition_status != 'satisfied'. Does NOT override the "
+            "fan-in memo's own status — the memo must always be 'satisfied'."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    plan_arg = args.plan_id
+    child_plan_id = args.child
+    parent_plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(parent_plan_dir)
+
+    # plans_root inferred from parent_plan_dir.parent. Production callers run
+    # against `<repo>/docs/plans/<parent>/`; tests pass tmp_path layouts the
+    # same shape.
+    plans_root = parent_plan_dir.parent
+    child_plan_dir = plans_root / child_plan_id
+    if not child_plan_dir.is_dir():
+        print(
+            f"[approve pre_resume_after_child] child plan dir not found: {child_plan_dir}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Surface the fan-in memo template when the memo is missing — easier than
+    # re-running approve to discover the format.
+    memo_path = nested_orchestration.fan_in_memo_path(parent_plan_dir, child_plan_id)
+    if not memo_path.is_file():
+        print(
+            f"[approve pre_resume_after_child] fan-in memo missing at {memo_path}.",
+            file=sys.stderr,
+        )
+        print("Paste this template into the file and re-run:", file=sys.stderr)
+        print("---", file=sys.stderr)
+        print(
+            nested_orchestration.FAN_IN_MEMO_TEMPLATE.format(child_plan_id=child_plan_id),
+            file=sys.stderr,
+        )
+        print("---", file=sys.stderr)
+        return 2
+
+    try:
+        outcome = nested_orchestration.approve_pre_resume_after_child(
+            parent_plan_dir,
+            parent_plan_id=loaded.plan_id,
+            child_plan_id=child_plan_id,
+            child_plan_dir=child_plan_dir,
+            accept_non_satisfied=args.accept_non_satisfied,
+        )
+    except nested_orchestration.ChildPauseApproveError as exc:
+        print(f"[approve pre_resume_after_child] REFUSED: {exc}", file=sys.stderr)
+        return 2
+
+    body_lines = [
+        f"Operator cleared pre_resume_after_child gate for child {child_plan_id!r}.",
+        f"Fan-in memo: {outcome['memo_path']} (status={outcome['memo_status']})",
+        f"Child compliance: status={outcome['child_status']!r}",
+    ]
+    if outcome["override_applied"]:
+        body_lines.append(
+            "OVERRIDE applied (--accept-non-satisfied). Operator must record "
+            "rationale in the parent's decisions.jsonl."
+        )
+    inbox.append_event(
+        parent_plan_dir,
+        event="gate_cleared",
+        plan_id=loaded.plan_id,
+        body="\n".join(body_lines),
+        gate=outcome["gate"],
+        child_plan_id=child_plan_id,
+        accept_non_satisfied=str(outcome["override_applied"]).lower(),
+    )
+    nested_orchestration.record_event(
+        parent_plan_dir,
+        kind="volley.return_to_parent_approved",
+        payload={
+            "child_plan_id": child_plan_id,
+            "child_status": outcome["child_status"],
+            "memo_status": outcome["memo_status"],
+            "override_applied": outcome["override_applied"],
+        },
+        plan_id=loaded.plan_id,
+    )
+    print(
+        f"[approve pre_resume_after_child] cleared {outcome['gate']!r} for "
+        f"{loaded.plan_id} (override={outcome['override_applied']})"
+    )
+    return 0
+
+
+_RESUME_BARE_USAGE = (
+    "usage: dontpanic resume <plan> (--gate <name> | --all)\n"
+    "  preferred for partial clearance: dontpanic approve <plan> <gate>\n"
+    "  bulk clear (explicit): dontpanic resume <plan> --all"
+)
+
+
+def _resume_main(argv: list[str]) -> int:
+    """Plan 2026-05-02-001 F001: gate-discipline-aware resume.
+
+    Bare `resume <plan>` no longer silently bulk-clears every gate. New shape:
+
+      resume <plan> --gate <name>   clear exactly one gate (parity with
+                                    `approve <plan> <gate>`); INBOX records
+                                    `event=gate_cleared` with body noting
+                                    `via 'resume --gate'` so the audit trail
+                                    distinguishes the entry path
+      resume <plan> --all           explicit bulk-clear (the legacy behavior);
+                                    INBOX records `event=resumed` with body
+                                    noting `via 'resume --all'`
+
+    Bare `resume <plan>` (no flag) refuses with exit 2 and a usage message
+    that names `approve <gate>` as the preferred path. The flags are mutually
+    exclusive — argparse rejects `--gate X --all` with exit 2.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic resume",
+        usage=_RESUME_BARE_USAGE,
+        add_help=True,
+    )
+    parser.add_argument("plan_id", help="Plan ID or absolute plan dir path")
+    grp = parser.add_mutually_exclusive_group()
+    grp.add_argument(
+        "--gate",
+        default=None,
+        metavar="<name>",
+        help="Clear exactly one gate (parity with `approve <plan> <gate>`).",
+    )
+    grp.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_gates",
+        help="Explicit bulk-clear of every plan-declared gate + active "
+        "breakers/defers (legacy behavior, now behind a required flag).",
+    )
+    args = parser.parse_args(argv)
+
+    plan_arg = args.plan_id
+
+    # Bare `resume <plan>` (no --gate, no --all): refuse with the documented
+    # usage message. Note: argparse parses successfully because the mutex
+    # group is not required=True; we detect "neither flag" here.
+    if args.gate is None and not args.all_gates:
+        print(_RESUME_BARE_USAGE, file=sys.stderr)
+        return 2
+
+    plan_dir = _resolve_plan_dir(plan_arg)
+    loaded = plan_loader.load(plan_dir)
+    declared_strs = [
+        g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
+    ]
+    active_breakers = gate_pause.active_breakers(plan_dir)
+    active_defers = gate_pause.active_defers(plan_dir)
+
+    if args.gate is not None:
+        gate = args.gate
+        # Plan 2026-05-02-003 F003 — bare-resume discipline: pre_resume_after_child
+        # gates can ONLY be cleared via the validating approve form (which
+        # reads the fan-in memo + child-compliance side-car). `resume --gate`
+        # would bypass that validation, so refuse with exit 2 and direct the
+        # operator to the canonical command.
+        if gate.startswith(nested_orchestration.PRE_RESUME_GATE_PREFIX):
+            child_id = gate[len(nested_orchestration.PRE_RESUME_GATE_PREFIX) :]
+            print(
+                f"[resume --gate] REFUSED gate {gate!r} — child-return gates "
+                "must be cleared via the validating approve form: "
+                f"`approve <plan> pre_resume_after_child --child "
+                f"{child_id or '<child_plan_id>'} [--accept-non-satisfied]`. "
+                "Direct clearance bypasses fan-in memo + child-compliance "
+                "validation.",
+                file=sys.stderr,
+            )
+            return 2
+        # Parity with `_approve_main`: the global circuit breaker is hard-stop
+        # and intentionally has no operator clearance path. Refuse with exit 2
+        # and leave gate-state.json untouched.
+        global_gate = f"breaker:{cb.BreakerKind.GLOBAL_CIRCUIT_BREAKER.value}"
+        if gate == global_gate:
+            print(
+                f"[resume --gate] REFUSED gate {gate!r} — "
+                "global breaker has no operator clearance path. "
+                "Wait for the 24h window to expire "
+                "(see ~/.jarvis/breaker_history.jsonl).",
+                file=sys.stderr,
+            )
+            return 2
+        valid_targets = set(declared_strs) | set(active_breakers) | set(active_defers)
+        if gate not in valid_targets:
+            available = sorted(valid_targets)
+            available_render = available or ["(none)"]
+            print(
+                f"[resume --gate] unknown gate {gate!r}; available gates: {available_render}",
+                file=sys.stderr,
+            )
+            return 2
+        # Idempotent re-clear: approve_gate returns False when the gate is
+        # already cleared (or — for transient breaker:* / defer:* — no longer
+        # active). In that case we exit 0 with state untouched and emit no
+        # INBOX event, no history entry. Parity with `_approve_main`.
+        changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+        if not changed:
+            print(f"[resume --gate] gate {gate!r} was already cleared")
+            return 0
+        inbox.append_event(
+            plan_dir,
+            event="gate_cleared",
+            plan_id=loaded.plan_id,
+            body=f"Operator cleared gate '{gate}' via 'resume --gate'.",
+            gate=gate,
+        )
+        print(f"[resume --gate] cleared gate {gate!r} for {loaded.plan_id}")
+        remaining = gate_pause.evaluate(plan_dir, declared_strs).unmet
+        print(f"[resume --gate] remaining unmet gates: {remaining or '(none)'}")
+        return 0
+
+    # --all path: existing bulk-clear behavior, with INBOX body now naming
+    # the new explicit form so audit history distinguishes it from any
+    # legacy bare-resume traces.
+    declared = list(loaded.plan.human_gates or [])
+    if not declared and not active_breakers and not active_defers:
+        print(
+            f"[resume --all] plan {loaded.plan_id} has no plan-declared gates, "
+            f"no active breakers, and no active defers — nothing to clear"
+        )
+        return 0
+    newly = gate_pause.resume_all(plan_dir, plan_id=loaded.plan_id, declared_gates=declared)
+    if newly:
+        inbox.append_event(
+            plan_dir,
+            event="resumed",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Operator cleared all gates via 'resume --all'.\n"
+                f"Newly cleared: {newly}\n"
+                f"Plan-declared: {declared}\n"
+                f"Active breakers (pre-clear): {active_breakers}\n"
+                f"Active defers (pre-clear): {active_defers}"
+            ),
+            cleared_gates=",".join(newly),
+        )
+        print(f"[resume --all] cleared {len(newly)} gates: {newly}")
+    else:
+        print("[resume --all] all declared gates were already cleared")
+    return 0
+
+
+def _claude_touch_main(argv: list[str]) -> int:
+    """F007 Slice 2: record that a human just made a Claude request. The
+    supervisor's autonomous-class admission check reads this state and pauses
+    via defer:interactive_backoff for JARVIS_INTERACTIVE_BACKOFF_MINUTES (30
+    min default) after the touch.
+
+    No args. Touches `claude` only — future agent variants can ride a later
+    slice. State path overridable via JARVIS_INTERACTIVE_STATE_PATH for
+    hermetic tests; conftest autouse fixture sets it per-test.
+    """
+    if argv:
+        print("usage: dontpanic claude-touch", file=sys.stderr)
+        return 2
+    ts = interactive_state.touch("claude")
+    minutes = interactive_state.backoff_minutes()
+    print(
+        f"[claude-touch] recorded human Claude request at {ts} "
+        f"(backoff window {minutes:g} min). Autonomous Claude-heavy "
+        "dispatches will defer until the window elapses."
+    )
+    return 0
+
+
+def _quota_caps_main(argv: list[str]) -> int:
+    """Plan 2026-04-30-001 F004: operator-editable per-vendor quota caps.
+
+    Subcommands:
+      init    Write starter ~/.jarvis/quota_caps.json. Samples current Codex
+              rolling_5h usage to derive a generous starter cap (* 1.25).
+              Refuses to overwrite without --overwrite.
+      show    Read + validate the file, print effective caps.
+    """
+    if not argv or argv[0] not in {"init", "show"}:
+        print(
+            "usage: dontpanic quota-caps {init|show} [--overwrite]",
+            file=sys.stderr,
+        )
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "init":
+        overwrite = "--overwrite" in rest
+        # Sample codex rolling_5h via quota_check (sibling of dontpanic_orchestrate
+        # under scripts/). Lazy-import to keep the loader decoupled.
+        codex_observed: int | None = None
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+            import quota_check as qc
+
+            sample = qc._codex_usage_v2("rolling_5h")
+            codex_observed = int(sample.get("observed_native") or 0) or None
+        except (ImportError, OSError, RuntimeError) as exc:
+            print(
+                f"[quota-caps] codex sample failed ({exc}); using high provisional cap",
+                file=sys.stderr,
+            )
+            codex_observed = None
+        try:
+            data = quota_caps_loader.init_starter_file(
+                codex_observed_5h=codex_observed,
+                overwrite=overwrite,
+            )
+        except quota_caps_loader.QuotaCapsError as exc:
+            print(f"[quota-caps] {exc}", file=sys.stderr)
+            return 2
+        # Print the resolved path (honors JARVIS_QUOTA_CAPS_PATH) so the
+        # operator sees exactly what was written, not the default constant.
+        print(f"[quota-caps] wrote {quota_caps_loader.effective_caps_path()}")
+        if codex_observed is not None:
+            cap = data["codex"]["plus"]["rolling_5h"]["cap"]
+            print(
+                f"[quota-caps] codex.plus.rolling_5h cap={cap} (observed {codex_observed} * 1.25)"
+            )
+        else:
+            print(
+                "[quota-caps] codex cap = high provisional; re-run after some "
+                "usage exists to derive a tighter cap"
+            )
+        return 0
+
+    # show
+    try:
+        print(quota_caps_loader.show())
+    except quota_caps_loader.QuotaCapsError as exc:
+        print(f"[quota-caps] {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
+_PROJECTS_USAGE = (
+    "usage: dontpanic projects {add|list|show|remove} [args] [--json]\n"
+    "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
+    "  list\n"
+    "  show <name>\n"
+    "  remove <name> [--yes]    (default is dry-run preview)"
+)
+
+
+def _projects_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-001 F002: project registry CRUD.
+
+    Subcommands:
+      add     register a project (name + path); refuses collision unless
+              `--force --yes`; refuses non-existent path; refuses bad-shape
+              name (D003 regex).
+      list    print registered projects (table by default, JSON with
+              `--json`).
+      show    print one entry (JSON with `--json`).
+      remove  unregister; default is dry-run preview, `--yes` actually
+              deletes.
+
+    All subcommands accept `--json` for machine-readable output so agents
+    shelling out can parse without screen-scraping. F002 ships CRUD only;
+    supervisor wiring (per-project override precedence) lands in F003 per
+    D004 / D007.
+    """
+    if not argv:
+        print(_PROJECTS_USAGE, file=sys.stderr)
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    if sub == "add":
+        return _projects_add(rest)
+    if sub == "list":
+        return _projects_list(rest)
+    if sub == "show":
+        return _projects_show(rest)
+    if sub == "remove":
+        return _projects_remove(rest)
+    print(f"[projects] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_PROJECTS_USAGE, file=sys.stderr)
+    return 2
+
+
+def _projects_add(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects add",
+        add_help=True,
+    )
+    parser.add_argument("name", help="Project name (D003 regex)")
+    parser.add_argument("path", help="Project directory (must exist)")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing entry with the same name. Requires --yes for non-interactive use.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Skip confirmation prompt. Required with --force.",
+    )
+    parser.add_argument("--implementer", default=None)
+    parser.add_argument("--auditor", default=None)
+    parser.add_argument("--notes", default=None)
+    parser.add_argument(
+        "--init-config",
+        action="store_true",
+        dest="init_config",
+        help=(
+            "Plan 2026-05-03-001 F003: scaffold an empty per-project config "
+            "at <project>/.dontpanic/dontpanic.json after registration. Default "
+            "behavior (without this flag) is no scaffold — operators who "
+            "want a per-project config opt in explicitly to avoid surprise."
+        ),
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    if args.force and not args.yes:
+        # Non-interactive: refuse without --yes. Keeps the surface scriptable
+        # without taking on a TTY-prompting dependency.
+        print(
+            "[projects add] --force requires --yes for non-interactive use",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        entry = projects_registry.add_project(
+            name=args.name,
+            path=args.path,
+            force=args.force,
+            default_implementer=args.implementer,
+            default_auditor=args.auditor,
+            notes=args.notes,
+        )
+    except projects_registry.ProjectsRegistryError as exc:
+        print(f"[projects add] {exc}", file=sys.stderr)
+        return 2
+
+    scaffold_path: Path | None = None
+    scaffold_skipped = False
+    if args.init_config:
+        try:
+            scaffold_path = project_config.scaffold_empty_config(Path(entry.path))
+        except FileExistsError:
+            # Pre-existing per-project config — leave it alone, surface the
+            # fact in the human/JSON output. Don't fail the add.
+            scaffold_skipped = True
+
+    payload: dict[str, object] = {
+        "action": "added",
+        "project": projects_registry.to_public_dict(entry),
+    }
+    if args.init_config:
+        if scaffold_skipped:
+            payload["scaffold"] = "skipped (config already exists)"
+        elif scaffold_path is not None:
+            payload["scaffold"] = str(scaffold_path)
+
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[projects add] registered {entry.name!r} → {entry.path}")
+        if args.init_config:
+            if scaffold_skipped:
+                print(
+                    "[projects add] per-project config already exists at "
+                    f"{project_config.project_config_path(Path(entry.path))} — left untouched"
+                )
+            elif scaffold_path is not None:
+                print(f"[projects add] scaffolded empty per-project config at {scaffold_path}")
+    return 0
+
+
+def _projects_list(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects list",
+        add_help=True,
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+    reg = projects_registry.load_registry()
+
+    if args.as_json:
+        print(
+            json.dumps(
+                {"projects": [projects_registry.to_public_dict(p) for p in reg.projects]},
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
+    if not reg.projects:
+        print("[projects list] no projects registered")
+        return 0
+
+    name_w = max(len("NAME"), *(len(p.name) for p in reg.projects))
+    path_w = max(len("PATH"), *(len(p.path) for p in reg.projects))
+    header = f"{'NAME':<{name_w}}  {'PATH':<{path_w}}  LAST_USED"
+    print(header)
+    for p in reg.projects:
+        print(f"{p.name:<{name_w}}  {p.path:<{path_w}}  {p.last_used_at or '(never)'}")
+    return 0
+
+
+def _projects_show(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects show",
+        add_help=True,
+    )
+    parser.add_argument("name")
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    entry = projects_registry.find_project(args.name)
+    if entry is None:
+        print(f"[projects show] project not found: {args.name!r}", file=sys.stderr)
+        return 2
+
+    payload = projects_registry.to_public_dict(entry)
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        # Human-readable: same JSON shape, just pretty-printed (operators
+        # asked for "readable JSON" in the F002 spec).
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _projects_remove(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects remove",
+        add_help=True,
+    )
+    parser.add_argument("name")
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Actually delete. Default is dry-run preview.",
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    entry = projects_registry.find_project(args.name)
+    if entry is None:
+        print(f"[projects remove] project not found: {args.name!r}", file=sys.stderr)
+        return 2
+
+    if not args.yes:
+        # Dry-run: report what would happen, leave registry untouched.
+        if args.as_json:
+            print(
+                json.dumps(
+                    {
+                        "action": "dry_run",
+                        "project": projects_registry.to_public_dict(entry),
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+        else:
+            print(
+                f"[projects remove] dry-run: would remove {entry.name!r} → "
+                f"{entry.path}. Pass --yes to actually delete."
+            )
+        return 0
+
+    removed = projects_registry.remove_project(args.name)
+    # `removed` is the same entry we just looked up; safe to assert non-None.
+    assert removed is not None
+    payload = {"action": "removed", "project": projects_registry.to_public_dict(removed)}
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[projects remove] removed {removed.name!r}")
+    return 0
+
+
+_MANIFEST_USAGE = (
+    "usage: dontpanic manifest {init|show} [--json]\n"
+    "  init [--force --yes] [--cli-path PATH] [--install-source pipx|pip-editable|source]\n"
+    "  show"
+)
+
+
+def _manifest_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-003 F001: agent manifest CRUD.
+
+    Subcommands:
+      init  Bootstrap a fresh manifest at ~/.dontpanic/agent-manifest.json
+            (or the legacy ~/.jarvis/agent-manifest.json when only
+            $JARVIS_HOME is set). Refuses on collision unless `--force --yes`.
+      show  Print the current manifest as JSON, or refuse with exit 2 if
+            missing.
+
+    Both subcommands accept `--json`. `init` --force requires --yes for
+    non-interactive use (parity with `dontpanic projects add` per D008 of
+    plan 2026-05-03-001 / D004 of this plan).
+    """
+    if not argv:
+        print(_MANIFEST_USAGE, file=sys.stderr)
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    if sub == "init":
+        return _manifest_init(rest)
+    if sub == "show":
+        return _manifest_show(rest)
+    print(f"[manifest] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_MANIFEST_USAGE, file=sys.stderr)
+    return 2
+
+
+def _manifest_init(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic manifest init",
+        add_help=True,
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing manifest. Requires --yes for non-interactive use.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Skip confirmation prompt. Required with --force.",
+    )
+    parser.add_argument(
+        "--cli-path",
+        default="dontpanic",
+        help="Path to the dontpanic CLI binary (default: 'dontpanic').",
+    )
+    parser.add_argument(
+        "--install-source",
+        choices=["pipx", "pip-editable", "source"],
+        default="source",
+        help="Where this DontPanic install came from (default: 'source').",
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    if args.force and not args.yes:
+        # Non-interactive safety rail — same shape as `projects add` (D008
+        # of plan 2026-05-03-001). Destructive intent is two-flag, not
+        # one-flag-with-prompt, so the surface stays scriptable.
+        print(
+            "[manifest init] --force requires --yes for non-interactive use",
+            file=sys.stderr,
+        )
+        return 2
+
+    existing = agent_manifest.manifest_path()
+    if existing.is_file() and not args.force:
+        print(
+            f"[manifest init] manifest already exists at {existing}; "
+            f"pass --force --yes to overwrite",
+            file=sys.stderr,
+        )
+        return 2
+
+    manifest = agent_manifest.bootstrap_manifest(
+        install_source=args.install_source,
+        cli_path=args.cli_path,
+    )
+    agent_manifest.write_manifest(manifest)
+
+    payload = {
+        "action": "wrote",
+        "manifest": agent_manifest.to_public_dict(manifest),
+    }
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[manifest init] wrote {existing}")
+    return 0
+
+
+def _manifest_show(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic manifest show",
+        add_help=True,
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    manifest = agent_manifest.load_manifest()
+    if manifest is None:
+        print(
+            f"[manifest show] manifest not found at "
+            f"{agent_manifest.manifest_path()}; run "
+            "`dontpanic manifest init` first",
+            file=sys.stderr,
+        )
+        return 2
+
+    payload = agent_manifest.to_public_dict(manifest)
+    # Default `show` already prints structured JSON (operators asked for
+    # "readable JSON"); --json is the same shape, kept explicit so agents
+    # parsing the output don't depend on default semantics.
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    _ = args  # parser ran for --help / unknown-arg validation; flag itself unused.
+    return 0
+
+
+def _mcp_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-003 F002: ``dontpanic mcp serve`` thin local MCP server.
+
+    Phase B is local-only (D003). ``serve`` is the only subcommand; it runs
+    the stdio JSON-RPC loop. The future ``tools`` introspection subcommand
+    is reserved but intentionally not implemented in F002 so the surface
+    stays minimal.
+    """
+    return mcp_server.main(argv)
+
+
+def _calibrate_claude_main(argv: list[str]) -> int:
+    """Plan 2026-04-30-001 F005: write Claude calibration ratio to the sticky
+    file at ~/.jarvis/quota_calibration.json so F006 can convert the local
+    weighted_tokens_local_proxy signal into a comparable percent_of_plan number.
+
+    Reads observed_native from the requested window of the current
+    ~/.jarvis/quota_state.json. The operator supplies the matching dashboard
+    percent (claude.ai/settings/usage). Ratio = dashboard_pct / observed_native.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic calibrate-claude",
+        description=__doc__,
+    )
+    parser.add_argument(
+        "--dashboard-pct",
+        type=float,
+        required=True,
+        help=(
+            "Current weekly% (rolling_7d) or session% (rolling_5h) shown on "
+            "claude.ai/settings/usage. Must be in (0, 100]."
+        ),
+    )
+    parser.add_argument(
+        "--window",
+        default="rolling_7d",
+        choices=sorted(calibration_loader.SUPPORTED_WINDOWS),
+        help="Window to calibrate (default: rolling_7d).",
+    )
+    args = parser.parse_args(argv)
+
+    # Read the corresponding observed_native from current quota state. We need
+    # the latest tracker output; if missing, ask operator to refresh first.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    try:
+        import quota_check  # noqa: F401  # presence check: validates scripts/ is on sys.path
+    except ImportError as exc:
+        print(f"[calibrate-claude] failed to import quota_check: {exc}", file=sys.stderr)
+        return 2
+
+    state_path = Path.home() / ".jarvis" / "quota_state.json"
+    if not state_path.is_file():
+        print(
+            f"[calibrate-claude] {state_path} missing; run "
+            "`python3 scripts/quota_check.py` first to generate it",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        import json as _json
+
+        state = _json.loads(state_path.read_text())
+    except (OSError, _json.JSONDecodeError) as exc:
+        print(f"[calibrate-claude] failed to read quota_state: {exc}", file=sys.stderr)
+        return 2
+
+    claude_block = state.get("vendors", {}).get("claude", {})
+    window_block = claude_block.get("windows", {}).get(args.window, {})
+    observed_native = window_block.get("observed_native")
+    if not isinstance(observed_native, (int, float)) or observed_native <= 0:
+        print(
+            f"[calibrate-claude] vendors.claude.windows.{args.window}.observed_native "
+            f"is missing or zero in {state_path}; refresh tracker first or pick the "
+            "other window. Calibrating against zero observed is meaningless.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        entry = calibration_loader.write_calibration(
+            vendor="claude",
+            window=args.window,
+            dashboard_pct=args.dashboard_pct,
+            observed_native=float(observed_native),
+        )
+    except calibration_loader.CalibrationError as exc:
+        print(f"[calibrate-claude] {exc}", file=sys.stderr)
+        return 2
+
+    print(
+        f"[calibrate-claude] wrote {calibration_loader.CALIBRATION_FILE}\n"
+        f"  vendor=claude window={args.window}\n"
+        f"  dashboard_pct={entry['dashboard_pct']}  observed_native={int(entry['observed_native'])}\n"
+        f"  ratio={entry['ratio']:.6e}  confidence={entry['confidence']}\n"
+        f"  stamped_at={entry['stamped_at']}\n"
+        "Re-run `python3 scripts/quota_check.py` to see the calibrated state."
+    )
+    return 0
+
+
+# ────────────────────────  dontpanic doctor (F003)  ──────────────────────────
+
+
+def _doctor_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-001 F003: ``dontpanic doctor`` wraps
+    ``scripts/jarvis_doctor.py`` so users have a single console-script
+    entry point. Includes per-project preflight by default and uses the
+    strict 0/1/2 exit-code matrix.
+
+    The bare script (``python3 scripts/jarvis_doctor.py``) keeps its
+    legacy 0/1 contract and skips per-project checks unless the operator
+    explicitly opts in via ``--include-projects --strict-codes``. This
+    wrapper is the new canonical surface; the legacy script remains for
+    backward compatibility per AC#5.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic doctor",
+        description=(
+            "Run the full doctor battery (structural + auth + per-project "
+            "preflight). Output structured PASS / WARN / FAIL per check; "
+            "exit 0 if all PASS, 1 if any WARN, 2 if any FAIL."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Machine-readable output (mirrors the legacy script's shape).",
+    )
+    parser.add_argument(
+        "--skip-auth",
+        action="store_true",
+        help="Omit gcloud-auth + firebase-auth probes (CI / fresh-clone mode).",
+    )
+    args = parser.parse_args(argv)
+
+    # Lazy import: scripts/ may not be on sys.path when the console script
+    # is installed via pipx. Add it before importing jarvis_doctor.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    try:
+        import jarvis_doctor as jd  # type: ignore[import-not-found]
+    finally:
+        sys.path.pop(0)
+
+    results = jd.run_all_checks(skip_auth=args.skip_auth, include_projects=True)
+    print(jd.render_json(results) if args.json else jd.render_text(results))
+    return jd.compute_strict_exit(results)
+
+
+# ──────────────────────────  dispatch-from-plan (F002)  ──────────────────────────
+
+
+# Remediation lines surfaced by --confirm when readiness is non-ok. Kept here
+# (not in supervisor or quota_caps_loader) because the strings are CLI-shaped:
+# they reference the other `python -m dontpanic_orchestrate ...` subcommands the
+# operator would run from the same shell. Test acceptance pins each substring.
+_READINESS_REMEDIATION: dict[str, str] = {
+    "config_required": (
+        "Remediation: run `python -m dontpanic_orchestrate quota-caps init` "
+        "(or edit ~/.jarvis/quota_caps.json if already present)."
+    ),
+    "calibration_required": (
+        "Remediation: run `python -m dontpanic_orchestrate calibrate-claude "
+        "--dashboard-pct N` after sampling claude.ai/settings/usage."
+    ),
+    "unit_mismatch": (
+        "Remediation: edit ~/.jarvis/quota_caps.json so each cap.unit matches "
+        "what `quota_check.py` reports as observed_unit for that vendor/window."
+    ),
+    "missing_state": (
+        "Remediation: run `python scripts/quota_check.py` to populate ~/.jarvis/quota_state.json."
+    ),
+}
+
+
+def _read_quota_state_for_readiness() -> dict | None:
+    """Honor JARVIS_QUOTA_STATE_PATH for hermetic test isolation; mirrors the
+    convention in circuit_breakers._read_quota_state. Returns None when the
+    file is missing OR malformed OR has no vendors{} block — all three reduce
+    to readiness=missing_state because dispatch_volley needs vendors{} for
+    its quota gate."""
+    import json
+    import os
+
+    env_override = os.environ.get("JARVIS_QUOTA_STATE_PATH")
+    p = Path(env_override) if env_override else (Path.home() / ".jarvis" / "quota_state.json")
+    if not p.is_file():
+        return None
+    try:
+        state = json.loads(p.read_text())
+    except (OSError, ValueError):
+        return None
+    vendors = state.get("vendors")
+    if not isinstance(vendors, dict) or not vendors:
+        return None
+    return state
+
+
+def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | None]:
+    """Reduce per-agent collect_agent_coverage outcomes into one of:
+
+      ok / config_required / calibration_required / unit_mismatch / missing_state
+
+    Order of precedence when impl/auditor disagree: alphabetical by agent name
+    (matches `_check_budget_v2`'s sorted-iteration). Returns
+    (label, summary_line). For label=ok the summary line is `claude=N% / codex=N%`
+    formatted from primary.pct_of_cap; for non-ok it is None.
+
+    TRIPPED is not a readiness label (the plan enumerates 5 states, none are
+    "tripped"): a tripped quota is a runtime concern that supervisor.dispatch_volley
+    handles via its own breaker, not a config issue the operator must fix
+    before invoking this CLI.
+    """
+    state = _read_quota_state_for_readiness()
+    if state is None:
+        return "missing_state", None
+
+    try:
+        caps = quota_caps_loader.load()
+    except quota_caps_loader.QuotaCapsError:
+        return "config_required", None
+
+    vendors = state.get("vendors") or {}
+    agents = sorted({implementer, auditor})
+    primary_pct: dict[str, int] = {}
+    for agent in agents:
+        report = cb.collect_agent_coverage(agent=agent, vendors=vendors, caps=caps)
+        if report.terminal is not None:
+            outcome = report.terminal.outcome
+            if outcome == cb.WindowOutcome.CALIBRATION_REQUIRED:
+                return "calibration_required", None
+            if outcome == cb.WindowOutcome.UNIT_MISMATCH:
+                return "unit_mismatch", None
+            # TRIPPED: fall through, dispatch_volley owns the runtime breaker
+        if report.config_cause is not None:
+            return "config_required", None
+        if report.primary is not None and report.primary.pct_of_cap is not None:
+            primary_pct[agent] = int(round(report.primary.pct_of_cap * 100))
+
+    summary = " / ".join(f"{a}={primary_pct.get(a, 0)}%" for a in agents)
+    return "ok", summary
+
+
+def _print_preflight_block(
+    *,
+    plan_dir: Path,
+    feature_id: str,
+    tier: str,
+    target_env: str,
+    target_project: str | None,
+    implementer: str,
+    auditor: str,
+    human_gates: list[str],
+    max_iterations: int | None,
+    readiness: str,
+    readiness_summary: str | None,
+) -> None:
+    """Print the 10 required fields in declared order. The list rendering
+    (gates, target_project=None) is intentionally simple — operator review
+    explicitly preferred a flat printable block over a tree/yaml dump so it
+    pastes cleanly into Discord (Plan B) and INBOX entries."""
+    print("[dispatch-from-plan] pre-flight context")
+    print(f"  plan_path:      {plan_dir}")
+    print(f"  feature:        {feature_id}")
+    print(f"  tier:           {tier}")
+    print(f"  target_env:     {target_env}")
+    project_render = target_project if target_project is not None else "(none)"
+    print(f"  target_project: {project_render}")
+    print(f"  implementer:    {implementer}")
+    print(f"  auditor:        {auditor}")
+    gates_render = ",".join(human_gates) if human_gates else "(none)"
+    print(f"  human_gates:    {gates_render}")
+    iters_render = str(max_iterations) if max_iterations is not None else "(plan default)"
+    print(f"  max_iterations: {iters_render}")
+    print(f"  quota_readiness: {readiness}")
+    if readiness == "ok" and readiness_summary:
+        print(f"    {readiness_summary}")
+
+
+def _dispatch_from_plan_main(argv: list[str]) -> int:
+    """F002 — strict-dry-run pre-flight wrapper around supervisor.dispatch_volley.
+
+    Without `--confirm`: print the 10-field block, exit 0. Always. No TTY-
+    conditional branching, no interactive prompt — deferred to D006 `--ask`.
+
+    With `--confirm`: gate on quota readiness == ok, then call
+    supervisor.dispatch_volley(...) IN-PROCESS with the same forwarded kwargs
+    the existing top-level CLI surfaces. Same module, same enforcement, same
+    audit/INBOX/transcript artifacts.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic dispatch-from-plan",
+        description=(
+            "Strict-dry-run pre-flight wrapper. Prints 10-field context block "
+            "and exits 0; pass --confirm to actually dispatch in-process via "
+            "supervisor.dispatch_volley."
+        ),
+        epilog=(
+            "Quota readiness states that block --confirm (exit 3):\n"
+            "  missing_state         ~/.jarvis/quota_state.json absent or unreadable\n"
+            "                        → run: python scripts/quota_check.py\n"
+            "  config_required       caps file or vendor block missing\n"
+            "                        → run: python -m dontpanic_orchestrate quota-caps init\n"
+            "                          (or edit ~/.jarvis/quota_caps.json if vendor entry missing)\n"
+            "  calibration_required  Claude window has percent_of_plan cap with non-manual confidence\n"
+            "                        → run: python -m dontpanic_orchestrate calibrate-claude --dashboard-pct N\n"
+            "  unit_mismatch         non-Claude vendor cap.unit ≠ observed_unit\n"
+            "                        → edit ~/.jarvis/quota_caps.json so cap.unit matches observed_unit\n"
+            "Stale calibration is warning-only (not blocking). Dry-run mode prints the\n"
+            "label without refusal."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path"
+    )
+    parser.add_argument("--feature", default="F001", help="Feature ID (default F001)")
+    parser.add_argument(
+        "--implementer", default=None, help="Implementer agent (default: agents_required[0])"
+    )
+    parser.add_argument(
+        "--auditor", default=None, help="Auditor agent (default: agents_required[1])"
+    )
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=None,
+        help="Override loop_caps.max_iterations",
+    )
+    parser.add_argument(
+        "--mode",
+        default=None,
+        choices=["interactive", "autonomous"],
+        help=(
+            "Runtime dispatch class override. interactive=bypass admission gates; "
+            "autonomous=enforce. P0 is plan-derived only and cannot be forced. "
+            "Default: derived from plan.tier."
+        ),
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help=(
+            "Commit to in-process dispatch_volley. Without this flag, "
+            "dispatch-from-plan is a strict dry-run."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    # Plan resolution. Distinct exit code (2) from the dispatch path so
+    # operator wrappers (Discord, cron) can disambiguate "plan invalid" from
+    # "quota blocked". F003: route through the shared resolver so registered
+    # projects' per-project ``plans_dir`` is honored, not just hardcoded
+    # ``./docs/plans/``.
+    plan_arg = args.plan
+    try:
+        plan_dir_candidate = _resolve_plan_dir(plan_arg)
+    except SystemExit:
+        print(
+            f"[dispatch-from-plan] plan not found: {plan_arg!r} "
+            "(checked literal path, registered projects' plans_dir, and "
+            "./docs/plans/)",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        loaded = plan_loader.load(plan_dir_candidate)
+    except (FileNotFoundError, ValueError) as exc:
+        # plan_loader raises ValueError for schema/frontmatter problems and
+        # FileNotFoundError for missing plan.md / features.json. Both are
+        # exit-2 ("plan resolution / schema validation error") per the plan.
+        print(f"[dispatch-from-plan] plan validation failed: {exc}", file=sys.stderr)
+        return 2
+
+    plan_dir = loaded.plan_dir
+    plan = loaded.plan
+
+    # Resolve impl/auditor with the same fallback dispatch_volley uses, so
+    # the printed defaults match what dispatch will actually run with.
+    # F003: chain is CLI arg > plan.agents_required > per-project config >
+    # global config > hardcoded.
+    agents_req = list(plan.agents_required or [])
+    project_match = project_config.find_project_for_plan_dir(plan_dir)
+    project_path_for_resolve = project_match[0] if project_match else None
+    resolved_defaults = project_config.resolve_dispatch_defaults(project_path_for_resolve)
+    plan_impl = str(agents_req[0]).split(".")[-1] if agents_req else None
+    plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
+    impl = args.implementer or plan_impl or resolved_defaults["implementer"]
+    aud = args.auditor or plan_aud or resolved_defaults["auditor"]
+
+    human_gates = [g.value if hasattr(g, "value") else str(g) for g in (plan.human_gates or [])]
+    loop_caps = plan.loop_caps
+    plan_max_iter = loop_caps.max_iterations if loop_caps is not None else None
+    effective_max_iter = args.max_iterations if args.max_iterations is not None else plan_max_iter
+
+    readiness, readiness_summary = _compute_readiness(implementer=impl, auditor=aud)
+
+    _print_preflight_block(
+        plan_dir=plan_dir,
+        feature_id=args.feature,
+        tier=str(plan.tier.value if hasattr(plan.tier, "value") else plan.tier),
+        target_env=loaded.target_env,
+        target_project=loaded.target_project,
+        implementer=impl,
+        auditor=aud,
+        human_gates=human_gates,
+        max_iterations=effective_max_iter,
+        readiness=readiness,
+        readiness_summary=readiness_summary,
+    )
+
+    if not args.confirm:
+        # Strict dry-run. Always exit 0 — no TTY check, no interactive prompt.
+        # The plan's D006 leaves room for a future `--ask` flag; this branch
+        # holds firm so automation (Discord / cron) sees deterministic
+        # exit-0-and-print behavior.
+        return 0
+
+    if readiness != "ok":
+        remediation = _READINESS_REMEDIATION.get(readiness, "")
+        print(
+            f"[dispatch-from-plan] BLOCKED: quota readiness={readiness!r}; refusing to dispatch.",
+            file=sys.stderr,
+        )
+        if remediation:
+            print(remediation, file=sys.stderr)
+        return 3
+
+    # In-process hand-off. NO subprocess shell-out — same interpreter, same
+    # supervisor module, same active_supervisors registry entry, same
+    # audit/INBOX/transcript files. The dispatch_from_plan wrapper is purely
+    # a pre-flight + readiness check on top of dispatch_volley.
+    print(
+        f"[dispatch-from-plan] readiness=ok; dispatching {loaded.plan_id} via supervisor.dispatch_volley"
+    )
+    try:
+        result = supervisor.dispatch_volley(
+            plan_dir=plan_dir,
+            feature_id=args.feature,
+            implementer_agent=args.implementer,
+            auditor_agent=args.auditor,
+            max_iterations=args.max_iterations,
+            mode=args.mode,
+        )
+    except QuotaExceeded as exc:
+        print(f"[dispatch-from-plan] BLOCKED by quota gate: {exc}", file=sys.stderr)
+        return 2
+    except (FileNotFoundError, KeyError, ValueError, RuntimeError) as exc:
+        print(f"[dispatch-from-plan] ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"\n[dispatch-from-plan] volley terminal: {result.final_status} "
+        f"after {result.rounds} round(s)"
+    )
+    print(f"[dispatch-from-plan] reason: {result.reason}")
+    print(f"[dispatch-from-plan] {len(result.audit_paths)} audit JSONs written")
+    return 0 if result.final_status == "signed_off" else 3
+
+
+def main(argv: list[str] | None = None) -> int:
+    raw = argv if argv is not None else sys.argv[1:]
+    # --version / -V prints the public package name and version, resolving
+    # to `dontpanic_orchestrate.__version__` as the single source of truth.
+    if raw and raw[0] in ("--version", "-V"):
+        from dontpanic_orchestrate import __version__
+
+        print(f"dontpanic {__version__}")
+        return 0
+    if raw and raw[0] == "ps":
+        return _ps_main(raw[1:])
+    if raw and raw[0] == "approve":
+        return _approve_main(raw[1:])
+    if raw and raw[0] == "resume":
+        return _resume_main(raw[1:])
+    if raw and raw[0] == "claude-touch":
+        return _claude_touch_main(raw[1:])
+    if raw and raw[0] == "quota-caps":
+        return _quota_caps_main(raw[1:])
+    if raw and raw[0] == "projects":
+        return _projects_main(raw[1:])
+    if raw and raw[0] == "manifest":
+        return _manifest_main(raw[1:])
+    if raw and raw[0] == "mcp":
+        return _mcp_main(raw[1:])
+    if raw and raw[0] == "calibrate-claude":
+        return _calibrate_claude_main(raw[1:])
+    if raw and raw[0] == "dispatch-from-plan":
+        return _dispatch_from_plan_main(raw[1:])
+    if raw and raw[0] == "doctor":
+        return _doctor_main(raw[1:])
+
+    p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
+    p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
+    p.add_argument("--feature", default="F001", help="Feature ID to dispatch (default F001)")
+    p.add_argument(
+        "--role", default="implementer", help="Single-agent mode: agent role (default implementer)"
+    )
+    p.add_argument(
+        "--iteration", type=int, default=0, help="Single-agent mode: iteration number (default 0)"
+    )
+    p.add_argument(
+        "--volley",
+        action="store_true",
+        help="Volley mode: implementer/auditor pair iterating until signoff or cap",
+    )
+    p.add_argument(
+        "--implementer",
+        default=None,
+        help="Volley mode: implementer agent (default: agents_required[0])",
+    )
+    p.add_argument(
+        "--auditor", default=None, help="Volley mode: auditor agent (default: agents_required[1])"
+    )
+    p.add_argument(
+        "--max-iterations",
+        type=int,
+        default=None,
+        help="Volley mode: override loop_caps.max_iterations",
+    )
+    p.add_argument(
+        "--mode",
+        default=None,
+        choices=["interactive", "autonomous"],
+        help="F007: runtime dispatch class override. interactive=bypass admission gates; "
+        "autonomous=enforce. P0 is plan-derived only (plan.tier=p0) and cannot be "
+        "forced via this flag — that would silently expand emergency-lane scope. "
+        "Default: derived from plan.tier (p0 → p0; else autonomous).",
+    )
+    p.add_argument(
+        "--allow-depth",
+        type=int,
+        default=None,
+        help="Plan 2026-05-02-003 F001 (D002): operator-only override for nested-"
+        "orchestration depth_limit. Frontmatter cannot raise the platform cap "
+        "(default 3); this flag does, and the override is recorded in the "
+        "audit envelope's validation_performed for audit-trail visibility.",
+    )
+    args = p.parse_args(raw)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    print(f"[supervisor] plan_dir={plan_dir}")
+
+    if args.volley:
+        print(
+            f"[supervisor] mode=volley feature={args.feature} "
+            f"impl={args.implementer or '(plan default)'} "
+            f"aud={args.auditor or '(plan default)'} "
+            f"runtime_class={args.mode or '(derived)'}"
+        )
+        try:
+            result = supervisor.dispatch_volley(
+                plan_dir=plan_dir,
+                feature_id=args.feature,
+                implementer_agent=args.implementer,
+                auditor_agent=args.auditor,
+                max_iterations=args.max_iterations,
+                mode=args.mode,
+                allow_depth=args.allow_depth,
+            )
+        except QuotaExceeded as exc:
+            print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
+            return 2
+        except (FileNotFoundError, KeyError, ValueError, RuntimeError) as exc:
+            print(f"[supervisor] ERROR: {exc}", file=sys.stderr)
+            return 1
+
+        print(
+            f"\n[supervisor] volley terminal: {result.final_status} after {result.rounds} round(s)"
+        )
+        print(f"[supervisor] reason: {result.reason}")
+        print(f"[supervisor] {len(result.audit_paths)} audit JSONs written")
+        # Exit 0 only if signed_off; non-zero for any non-success terminal
+        return 0 if result.final_status == "signed_off" else 3
+
+    # Single-agent path (F004 + F007 admission)
+    print(
+        f"[supervisor] mode=single feature={args.feature} role={args.role} "
+        f"iter={args.iteration} runtime_class={args.mode or '(derived)'}"
+    )
+    try:
+        audit_path = supervisor.dispatch_single_agent(
+            plan_dir=plan_dir,
+            feature_id=args.feature,
+            agent_role=args.role,
+            iteration=args.iteration,
+            mode=args.mode,
+            allow_depth=args.allow_depth,
+        )
+    except QuotaExceeded as exc:
+        print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
+        return 2
+    except supervisor.PausedOnGate as exc:
+        print(f"[supervisor] PAUSED on gate: {exc}", file=sys.stderr)
+        return 3
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        print(f"[supervisor] ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"[supervisor] ✓ wrote {audit_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

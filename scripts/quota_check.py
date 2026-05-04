@@ -491,13 +491,13 @@ def _build_state(now: dt.datetime | None = None) -> dict[str, Any]:
     # missing/malformed input) so the tracker never crashes on calibration
     # issues. Lazy import keeps quota_check standalone-runnable when only
     # scripts/ is on PYTHONPATH (the calibration_loader module lives under the
-    # jarvis_orchestrate package).
+    # dontpanic_orchestrate package).
     calibration_data: dict[str, Any] = {}
     try:
         import sys as _sys
 
         _sys.path.insert(0, str(Path(__file__).resolve().parent))
-        from jarvis_orchestrate import calibration_loader  # noqa: E402
+        from dontpanic_orchestrate import calibration_loader  # noqa: E402
 
         calibration_data = calibration_loader.load()
     except (ImportError, OSError):
@@ -618,7 +618,7 @@ def main() -> int:
     # _build_state.
     try:
         _sys.path.insert(0, str(Path(__file__).resolve().parent))
-        from jarvis_orchestrate import calibration_loader  # noqa: E402
+        from dontpanic_orchestrate import calibration_loader  # noqa: E402
 
         for wname, w in state.get("vendors", {}).get("claude", {}).get("windows", {}).items():
             cal = w.get("calibration") or {}
@@ -627,7 +627,7 @@ def main() -> int:
                     f"⚠ claude.{wname} calibration is older than "
                     f"{calibration_loader.STALE_WARNING_DAYS} days "
                     f"(stamped_at={cal.get('stamped_at')}); re-run "
-                    "`python -m jarvis_orchestrate calibrate-claude --dashboard-pct N "
+                    "`python -m dontpanic_orchestrate calibrate-claude --dashboard-pct N "
                     f"--window {wname}`",
                     file=_sys.stderr,
                 )
