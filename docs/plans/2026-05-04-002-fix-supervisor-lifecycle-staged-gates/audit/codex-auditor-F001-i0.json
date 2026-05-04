@@ -1,0 +1,95 @@
+{
+  "task_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates",
+  "audit_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-04T16:53:38Z",
+  "completed_at": "2026-05-04T16:56:30Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-04-002-fix-supervisor-lifecycle-staged-gates-7h8_acr7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 201315 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1079944,
+    "tokens_out": 11317,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\nCommand: audit verification complete\n\nOverall verdict: needs_changes. Implementer target declaration is present and matches `{Repo: DontPanic, Env: dev, Project: (none)}`; `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): Required lifecycle acceptance tests were not added. Evidence: `scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py` does not exist; grep for the required `del.*sys.modules` assertion fails with “No such file or directory.” Recommendation: add the specified staged lifecycle test file covering ordering, pre_impl/pre_merge behavior, legacy schema, CLI flows, breaker non-interaction, and idempotency.\n\nFINDING (high, correctness): `approve` and `resume --gate` do not enforce “currently pending stage only.” Evidence: [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:473) accepts any declared gate, [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:486) clears it, and [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:487) returns 0 for already-cleared gates instead of exit 2. Recommendation: consult `pending_stage`/`pause_gates` before clearing; refuse non-pending, undeclared, or already-cleared lifecycle gates with exit 2.\n\nFINDING (high, correctness): `resume --all` still bulk-clears every declared gate, not just pending gates for the ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py -q",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/gate_pause.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/gate_pause.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py",
+      "git diff --stat scripts/dontpanic_orchestrate/circuit_breakers.py | wc -l",
+      "grep -rn 'del.*sys\\.modules' scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py",
+      "python scripts/sanitization_check.py",
+      "git diff --name-only HEAD | awk '/^docs\\/plans\\// && $0 !~ /^docs\\/plans\\/2026-05-04-002-fix-supervisor-lifecycle-staged-gates\\// {print}'",
+      "git diff --check"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Required lifecycle acceptance tests were not added. Evidence: `scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py` does not exist; grep for the required `del.*sys.modules` assertion fails with “No such file or directory.” Recommendation: add the specified staged lifecycle test file covering ordering, pre_impl/pre_merge behavior, legacy schema, CLI flows, breaker non-interaction, and idempotency.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`approve` and `resume --gate` do not enforce “currently pending stage only.” Evidence: [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:473) accepts any declared gate, [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:486) clears it, and [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:487) returns 0 for already-cleared gates instead of exit 2. Recommendation: consult `pending_s",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`resume --all` still bulk-clears every declared gate, not just pending gates for the current stage. Evidence: [gate_pause.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/gate_pause.py:287) documents “Clear every declared gate,” and [gate_pause.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/gate_pause.py:296) computes `newly` from all declared gates. Recommendation: make `--all` clear only the current `pending_stage` gates plus active tra",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Stage evaluation is not idempotent on resume. Evidence: [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1153) calls `evaluate_human_gates(..., stage=\"pre_impl\")` on every fresh dispatch iteration 0 even after the stage is cleared, and [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1316) always evaluates `pre_merge` on signed-off auditor results. Recommendation: persist completed stage s",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Fresh staged pauses do not always write the additive new schema. Evidence: [gate_pause.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/gate_pause.py:337) records `pending_stage`, but does not initialize `gate_events`; the required new shape says fresh staged dispatch writes `cleared_gates`, `gate_events`, and `pending_stage`. Recommendation: ensure staged writes always include `gate_events: []` and preserve round-trip structural equivalence.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "The durability invariant is violated by unrelated plan file changes. Evidence: `git diff --name-only HEAD` reports modified files under `docs/plans/2026-04-29-001-feat-changelog-skill/` and `docs/plans/2026-04-30-001-fix-quota-tracker-vendor-native/plan.md`. Recommendation: remove all `docs/plans/` changes outside `2026-05-04-002-fix-supervisor-lifecycle-staged-gates/`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F001",
+      "issue": "Formatting is not clean. Evidence: `ruff format --check --no-cache ...` reports `scripts/dontpanic_orchestrate/gate_pause.py` would be reformatted. Recommendation: run Ruff format on touched files.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F001",
+      "issue": "`git diff --check` fails. Evidence: `docs/plans/2026-04-29-001-feat-changelog-skill/audit/transcript.md:15: new blank line at EOF.` Recommendation: remove the unrelated whitespace change. Checks run: $ PYTHONDONTWRITEBYTECODE=1 pytest scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py -q $ ruff check --no-cache scripts/dontpanic_orchestrate/gate_pause.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py $ ruff format ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates",
+  "audit_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-04T17:06:30Z",
+  "completed_at": "2026-05-04T17:09:02Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-04-002-fix-supervisor-lifecycle-staged-gates-7h8_acr7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 177456 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 592443,
+    "tokens_out": 11292,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. EC5 target declaration is OK: implementer summary includes `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context.commands_run` is empty, so no forbidden command shapes.\n\nFINDING (high, correctness): Implementer did not actually complete the dispatch. Evidence: audit JSON summary says `DISPATCH FAILED: TimeoutExpired ... timed out after 600 seconds` and `audit_status` is `blocked`. Recommendation: rerun implementation to completion and persist a successful implementer audit.\n\nFINDING (high, test_coverage): Required lifecycle staged-gates test file is absent. Evidence: `scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py` does not exist, and no lifecycle/staged test file was found. Recommendation: add the required parametric tests covering pre_impl ordering, pre_merge success-only behavior, legacy/new schema, resume/approve flows, breaker non-interaction, and sys.modules grep.\n\nFINDING (high, test_coverage): Existing CLI tests were not updated for the new staged pending-gate semantics. Evidence: `test_cli_resume.py` still expects `resume --gate pre_impl` and direct `approve pre_impl` to succeed on a fresh plan, while `cli.py` now returns 2 unless the lifecycle gate is currently pending. Recommendation: update those tests or add staged pending fixtures so the full suite can pass without regressions.\n\nFINDING (medium, style): Ruff format check is not clean. Evidence: `r",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_cli_resume.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py::test_cli_approve_warns_for_unknown_gate -q",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/gate_pause.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/gate_pause.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py",
+      "python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Implementer did not actually complete the dispatch. Evidence: audit JSON summary says `DISPATCH FAILED: TimeoutExpired ... timed out after 600 seconds` and `audit_status` is `blocked`. Recommendation: rerun implementation to completion and persist a successful implementer audit.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "Required lifecycle staged-gates test file is absent. Evidence: `scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py` does not exist, and no lifecycle/staged test file was found. Recommendation: add the required parametric tests covering pre_impl ordering, pre_merge success-only behavior, legacy/new schema, resume/approve flows, breaker non-interaction, and sys.modules grep.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "Existing CLI tests were not updated for the new staged pending-gate semantics. Evidence: `test_cli_resume.py` still expects `resume --gate pre_impl` and direct `approve pre_impl` to succeed on a fresh plan, while `cli.py` now returns 2 unless the lifecycle gate is currently pending. Recommendation: update those tests or add staged pending fixtures so the full suite can pass without regressions.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "style",
+      "feature_id": "F001",
+      "issue": "Ruff format check is not clean. Evidence: `ruff format --check --no-cache ...` reports `cli.py`, `gate_pause.py`, and `supervisor.py` would be reformatted. Recommendation: run `ruff format` on touched files. Checks run: $ PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_cli_resume.py scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py -q $ PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

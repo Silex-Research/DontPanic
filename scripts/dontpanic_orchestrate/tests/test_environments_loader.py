@@ -429,11 +429,18 @@ def _run_volley_with_counting(plan_dir: Path):
     from dontpanic_orchestrate import plan_loader as _pl
 
     _loaded_for_gates = _pl.load(plan_dir)
-    gate_pause.resume_all(
-        plan_dir,
-        plan_id=_loaded_for_gates.plan_id,
-        declared_gates=list(_loaded_for_gates.plan.human_gates or []),
-    )
+    for gate in list(_loaded_for_gates.plan.human_gates or []):
+        gate_name = gate.value if hasattr(gate, "value") else str(gate)
+        if gate_pause.is_lifecycle_gate(gate_name):
+            gate_pause.record_pause(
+                plan_dir,
+                plan_id=_loaded_for_gates.plan_id,
+                pause_gates=[gate_name],
+                stage=gate_name,
+            )
+            gate_pause.approve_gate(plan_dir, gate_name, plan_id=_loaded_for_gates.plan_id)
+        else:
+            gate_pause.approve_gate(plan_dir, gate_name, plan_id=_loaded_for_gates.plan_id)
     try:
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
     finally:

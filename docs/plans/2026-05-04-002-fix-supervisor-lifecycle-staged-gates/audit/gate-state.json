@@ -1,0 +1,40 @@
+{
+  "plan_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-04T16:33:44Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl",
+        "pre_merge"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-04T16:43:30Z",
+      "actor": "operator"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-04T16:43:31Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-04T17:09:02Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds"
+    }
+  ],
+  "active_breakers": [
+    "breaker:no_progress"
+  ]
+}
