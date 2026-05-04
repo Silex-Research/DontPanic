@@ -14,8 +14,51 @@
         "Sanitize: ensure no path string in the manifest leaks operator-specific secrets (no API keys, no service-account JSON paths, no auth tokens). The `cli_path` is OK; anything else credential-shaped must be excluded by the schema (no `*_token`/`*_key`/`*_secret` field names allowed)."
       ],
       "acceptance": "(1) `~/.dontpanic/agent-manifest.json` validates as Pydantic `AgentManifest` v1.0 with `extra='forbid'`; legacy `~/.jarvis/agent-manifest.json` is read when the preferred file is absent; missing field set rejected, unknown fields rejected. (2) `dontpanic manifest init` writes the preferred manifest; `dontpanic manifest show` prints it; `--json` shape across both. `init` refuses on existing preferred or legacy file with exit 2 + clear message unless `--force --yes` overwrites the preferred file (parity with `dontpanic projects add`). (3) `write_manifest` is regenerable: invoking it twice with the same inputs produces a byte-identical file (asserted by parametric test). (4) Manifest is secret-free: schema rejects fields containing `_token`/`_key`/`_secret`; sanitization scan against a written manifest reports 0 findings. (5) `load_manifest()` is total: missing → None (no warn), invalid JSON → WARN+None, schema-violation → WARN+None — never raises. (6) The `mcp_server` block is OPTIONAL in the schema; F001 ships without populating it (F002 lands the server + re-runs `bootstrap_manifest` to fill it in). (7) All new tests pass. Ruff + sanitization clean. Full orchestrate suite still green.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-03T18:30:00Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/agent_manifest.py",
+          "captured_by": "claude",
+          "note": "New module. AgentManifest Pydantic v2 model (extra='forbid', schema_version='1.0'); InstallSource Literal['pipx','pip-editable','source']; optional McpServerSpec for F002 to populate; manifest_path() / load_manifest (total — missing→None, invalid-JSON→WARN+None, schema-violation→WARN+None) / write_manifest (regenerable: byte-identical for same inputs, exclude_none, no timestamps) / bootstrap_manifest (pins version from jarvis_orchestrate.__version__, seeds safety_rules with the canonical no-auto-dispatch rule per D007). Import-time _assert_no_credential_shaped_fields rejects future schema fields containing _token/_key/_secret per D006."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "Added agent_manifest import + `dontpanic manifest {init|show}` subcommand. _manifest_main dispatches; _manifest_init handles --force/--yes/--cli-path/--install-source/--json with collision-exit-2 and --force-without-yes-refused (parity with projects add per D004 of this plan + D008 of plan 2026-05-03-001); _manifest_show prints structured JSON or exits 2 if missing."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f001_agent_manifest.py",
+          "captured_by": "claude",
+          "note": "53 tests across 8 classes: TestSchema (minimum-valid + extra-forbid + install-source enum +/- + credential-shaped extras rejected + design-discipline schema-introspection assertion that no schema field contains _token/_key/_secret + safety-rules carry the canonical D007 string + required-fields-missing); TestPaths (DONTPANIC_HOME + JARVIS_HOME legacy fallback); TestLoadSave (missing→None + roundtrip + invalid-JSON→WARN + extra-field→WARN + creates-home + legacy-JARVIS_HOME-still-writes); TestRegenerable (byte-identical rewrite + no-ISO-timestamp regression + None-fields-excluded); TestSecretFree (no credential substrings in body); TestBootstrap (version-pinned + schema-version-1.0 + safety-rule-verbatim + idempotent + project_registry_path under DONTPANIC_HOME + supported_commands core set + mcp_server omitted in F001 ship); TestCLIInit + TestCLIShow + TestCLIDispatch."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/jarvis_orchestrate/tests/test_f001_agent_manifest.py",
+          "captured_by": "claude",
+          "note": "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_f001_agent_manifest.py — 53 passed in 0.17s (targeted). Full orchestrate suite excluding pre-existing-broken test_ec5_classifier.py: 748 passed, 6 skipped (ec5_classifier::test_classifier_is_pure_no_io is broken post-directory-rename, NOT introduced by F001 — see D011 caveat). Ruff: clean across F001-touched files. Sanitization: 0 findings, 602 files scanned."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo — direct-path rationale per D010, what landed, EC5 classifier purity-test caveat (queued as separate platform fix, not F001 scope), command-surface canonicalization to `dontpanic` for operator-facing CLI."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/decisions.jsonl",
+          "captured_by": "operator",
+          "note": "D011 records the F001 close-out plus the EC5 caveat with reproducer (test_ec5_classifier.py::test_classifier_is_pure_no_io, Path.stat monkeypatch fragility, post-rename incidental disk I/O via target_context_prelude.resolve_repo). Excluded from F001 scope per operator authorization."
+        }
+      ]
     },
     {
       "id": "F002",

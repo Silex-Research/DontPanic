@@ -52,6 +52,7 @@ from pathlib import Path
 
 from jarvis_orchestrate import (
     active_supervisors,
+    agent_manifest,
     calibration_loader,
     gate_pause,
     inbox,
@@ -862,6 +863,134 @@ def _projects_remove(argv: list[str]) -> int:
     return 0
 
 
+_MANIFEST_USAGE = (
+    "usage: dontpanic manifest {init|show} [--json]\n"
+    "  init [--force --yes] [--cli-path PATH] [--install-source pipx|pip-editable|source]\n"
+    "  show"
+)
+
+
+def _manifest_main(argv: list[str]) -> int:
+    """Plan 2026-05-03-003 F001: agent manifest CRUD.
+
+    Subcommands:
+      init  Bootstrap a fresh manifest at ~/.dontpanic/agent-manifest.json
+            (or the legacy ~/.jarvis/agent-manifest.json when only
+            $JARVIS_HOME is set). Refuses on collision unless `--force --yes`.
+      show  Print the current manifest as JSON, or refuse with exit 2 if
+            missing.
+
+    Both subcommands accept `--json`. `init` --force requires --yes for
+    non-interactive use (parity with `dontpanic projects add` per D008 of
+    plan 2026-05-03-001 / D004 of this plan).
+    """
+    if not argv:
+        print(_MANIFEST_USAGE, file=sys.stderr)
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    if sub == "init":
+        return _manifest_init(rest)
+    if sub == "show":
+        return _manifest_show(rest)
+    print(f"[manifest] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_MANIFEST_USAGE, file=sys.stderr)
+    return 2
+
+
+def _manifest_init(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic manifest init",
+        add_help=True,
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing manifest. Requires --yes for non-interactive use.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="yes",
+        help="Skip confirmation prompt. Required with --force.",
+    )
+    parser.add_argument(
+        "--cli-path",
+        default="dontpanic",
+        help="Path to the dontpanic CLI binary (default: 'dontpanic').",
+    )
+    parser.add_argument(
+        "--install-source",
+        choices=["pipx", "pip-editable", "source"],
+        default="source",
+        help="Where this DontPanic install came from (default: 'source').",
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    if args.force and not args.yes:
+        # Non-interactive safety rail — same shape as `projects add` (D008
+        # of plan 2026-05-03-001). Destructive intent is two-flag, not
+        # one-flag-with-prompt, so the surface stays scriptable.
+        print(
+            "[manifest init] --force requires --yes for non-interactive use",
+            file=sys.stderr,
+        )
+        return 2
+
+    existing = agent_manifest.manifest_path()
+    if existing.is_file() and not args.force:
+        print(
+            f"[manifest init] manifest already exists at {existing}; "
+            f"pass --force --yes to overwrite",
+            file=sys.stderr,
+        )
+        return 2
+
+    manifest = agent_manifest.bootstrap_manifest(
+        install_source=args.install_source,
+        cli_path=args.cli_path,
+    )
+    agent_manifest.write_manifest(manifest)
+
+    payload = {
+        "action": "wrote",
+        "manifest": agent_manifest.to_public_dict(manifest),
+    }
+    if args.as_json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"[manifest init] wrote {existing}")
+    return 0
+
+
+def _manifest_show(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="dontpanic manifest show",
+        add_help=True,
+    )
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    args = parser.parse_args(argv)
+
+    manifest = agent_manifest.load_manifest()
+    if manifest is None:
+        print(
+            f"[manifest show] manifest not found at "
+            f"{agent_manifest.manifest_path()}; run "
+            "`dontpanic manifest init` first",
+            file=sys.stderr,
+        )
+        return 2
+
+    payload = agent_manifest.to_public_dict(manifest)
+    # Default `show` already prints structured JSON (operators asked for
+    # "readable JSON"); --json is the same shape, kept explicit so agents
+    # parsing the output don't depend on default semantics.
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    _ = args  # parser ran for --help / unknown-arg validation; flag itself unused.
+    return 0
+
+
 def _calibrate_claude_main(argv: list[str]) -> int:
     """Plan 2026-04-30-001 F005: write Claude calibration ratio to the sticky
     file at ~/.jarvis/quota_calibration.json so F006 can convert the local
@@ -1332,6 +1461,8 @@ def main(argv: list[str] | None = None) -> int:
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":
         return _projects_main(raw[1:])
+    if raw and raw[0] == "manifest":
+        return _manifest_main(raw[1:])
     if raw and raw[0] == "calibrate-claude":
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":
