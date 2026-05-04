@@ -992,8 +992,21 @@ def dispatch_volley(
     # AGENT_REGISTRY can't produce the named agents. Approval-required
     # breakers must preempt resolution for the same reason the global
     # breaker does — otherwise an empty registry KeyErrors before pausing.
+    #
+    # Plan 2026-05-04-002 F001 — lifecycle-staged human gates (`pre_impl`,
+    # `pre_merge`) are intentionally EXCLUDED from this upfront check; they
+    # fire at their canonical lifecycle points below (pre_impl just before the
+    # iter-0 implementer subprocess spawns; pre_merge immediately before
+    # signoff_writer.write_signoff(passes=True) on the candidate-success
+    # path). Other declared human gates (e.g. on_escalation, tier_promotion)
+    # remain in the upfront bucket per D003.
     declared_gates = list(loaded.plan.human_gates or [])
-    gate_check = gate_pause.evaluate(loaded.plan_dir, declared_gates)
+    upfront_declared_gates = [
+        g
+        for g in declared_gates
+        if (g.value if hasattr(g, "value") else str(g)) not in gate_pause.LIFECYCLE_STAGED_GATES
+    ]
+    gate_check = gate_pause.evaluate(loaded.plan_dir, upfront_declared_gates)
     if gate_check.paused:
         gate_pause.record_pause(
             loaded.plan_dir, plan_id=loaded.plan_id, pause_gates=gate_check.unmet
@@ -1126,6 +1139,61 @@ def dispatch_volley(
                     iteration,
                 )
 
+            # Plan 2026-05-04-002 F001 — `pre_impl` staged check. Evaluated
+            # AFTER plan load + capability checks (executor resolution above
+            # already ran) and AFTER the upfront breaker/defer gate check, but
+            # BEFORE the implementer subprocess spawns. Idempotency contract
+            # (D006 audit-focus item 8): the stage is evaluated AT MOST ONCE
+            # per plan-lifetime — once `pre_impl` is in `completed_stages`,
+            # the supervisor skips evaluate_human_gates entirely, including
+            # across resume boundaries. Only fires on iteration 0; iteration
+            # 1+ within the same loop has by-construction already passed the
+            # check.
+            if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
+                pre_impl_info = gate_pause.evaluate_human_gates(
+                    loaded.plan_dir, declared_gates, stage="pre_impl"
+                )
+                if pre_impl_info.paused:
+                    gate_pause.record_pause(
+                        loaded.plan_dir,
+                        plan_id=loaded.plan_id,
+                        pause_gates=pre_impl_info.pending,
+                        stage="pre_impl",
+                    )
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="gate_hit",
+                        plan_id=loaded.plan_id,
+                        body=(
+                            "Supervisor paused at lifecycle stage 'pre_impl' "
+                            "before iteration 0 implementer dispatch.\n\n"
+                            f"Awaiting: {pre_impl_info.pending}\n\n"
+                            f"Clear one (preferred): python -m dontpanic_orchestrate "
+                            f"approve {loaded.plan_id} <gate>\n"
+                            f"Clear all (explicit):  python -m dontpanic_orchestrate "
+                            f"resume {loaded.plan_id} --all"
+                        ),
+                        unmet_gates=",".join(pre_impl_info.pending),
+                        stage="pre_impl",
+                        target_env=effective_env,
+                        target_project=effective_project or "(none)",
+                        feature_id=feature_id,
+                    )
+                    notify.notify(
+                        title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
+                        message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
+                        subtitle=feature_id,
+                    )
+                    print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
+                    return VolleyResult(
+                        "paused_on_gate",
+                        0,
+                        f"unmet pre_impl gates: {pre_impl_info.pending}; "
+                        f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+                        f"`jarvis resume {loaded.plan_id} --all`",
+                        audit_paths,
+                    )
+
             # Implementer round
             try:
                 impl_pct, impl_quota_line = _quota_gate(impl_name)
@@ -1232,6 +1300,68 @@ def dispatch_volley(
             print(f"[volley] iter={iteration} auditor verdict: {aud_status}")
 
             if aud_status == "signed_off":
+                # Plan 2026-05-04-002 F001 — `pre_merge` staged check fires
+                # ONLY on the candidate-success path (D005). It runs after
+                # the auditor's terminal `signed_off` verdict is observed
+                # (no blocking findings — `audit_status == 'signed_off'`
+                # already implies that) and immediately BEFORE
+                # `signoff_writer.write_signoff(passes=True)` would persist
+                # the success envelope (signoff_writer is invoked inside
+                # _emit_volley_terminal). When pre_merge is uncleared, the
+                # supervisor pauses with paused_on_gate WITHOUT writing a
+                # success signoff; failure-path terminals (handled in the
+                # branches below) NEVER consult pre_merge — failure evidence
+                # is unconditionally durable per D005.
+                # Idempotency: once `pre_merge` is in `completed_stages`,
+                # skip evaluate_human_gates entirely (audit-focus item 8).
+                pre_merge_info = (
+                    None
+                    if gate_pause.is_stage_completed(loaded.plan_dir, "pre_merge")
+                    else gate_pause.evaluate_human_gates(
+                        loaded.plan_dir, declared_gates, stage="pre_merge"
+                    )
+                )
+                if pre_merge_info is not None and pre_merge_info.paused:
+                    gate_pause.record_pause(
+                        loaded.plan_dir,
+                        plan_id=loaded.plan_id,
+                        pause_gates=pre_merge_info.pending,
+                        stage="pre_merge",
+                    )
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="gate_hit",
+                        plan_id=loaded.plan_id,
+                        body=(
+                            "Supervisor paused at lifecycle stage 'pre_merge' "
+                            "after auditor signoff and before success-signoff write.\n\n"
+                            f"Awaiting: {pre_merge_info.pending}\n\n"
+                            f"Clear one (preferred): python -m dontpanic_orchestrate "
+                            f"approve {loaded.plan_id} <gate>\n"
+                            f"Clear all (explicit):  python -m dontpanic_orchestrate "
+                            f"resume {loaded.plan_id} --all"
+                        ),
+                        unmet_gates=",".join(pre_merge_info.pending),
+                        stage="pre_merge",
+                        target_env=effective_env,
+                        target_project=effective_project or "(none)",
+                        feature_id=feature_id,
+                    )
+                    notify.notify(
+                        title=f"jarvis: pre_merge gate pause — {loaded.plan_id}",
+                        message=f"Awaiting: {', '.join(pre_merge_info.pending)}",
+                        subtitle=feature_id,
+                    )
+                    print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
+                    return VolleyResult(
+                        "paused_on_gate",
+                        iteration + 1,
+                        f"unmet pre_merge gates: {pre_merge_info.pending}; "
+                        f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+                        f"`jarvis resume {loaded.plan_id} --all`",
+                        audit_paths,
+                    )
+
                 transcript.append_terminal(
                     loaded.plan_dir,
                     feature_id,

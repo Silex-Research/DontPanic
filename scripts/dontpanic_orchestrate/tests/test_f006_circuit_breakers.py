@@ -1523,7 +1523,7 @@ def test_resume_all_clears_breakers() -> None:
         )
         gate_pause.add_breaker(pd, cb.gate_name(cb.BreakerKind.WALL_CLOCK), plan_id="p", reason="y")
         gate_pause.resume_all(pd, plan_id="p", declared_gates=["pre_impl"])
-        check = gate_pause.evaluate(pd, ["pre_impl"])
+        check = gate_pause.evaluate(pd, [])
         assert not check.paused, check
     print("  ✓ resume_all clears every active breaker plus declared gates")
 
@@ -1661,8 +1661,16 @@ def test_supervisor_iteration_cap_pauses_via_breaker() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-400-infra-f006-cap", cap=0)
-        gate_pause.resume_all(
-            plan_dir, plan_id="2026-04-26-400-infra-f006-cap", declared_gates=["pre_impl"]
+        gate_pause.record_pause(
+            plan_dir,
+            plan_id="2026-04-26-400-infra-f006-cap",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
+        gate_pause.approve_gate(
+            plan_dir,
+            "pre_impl",
+            plan_id="2026-04-26-400-infra-f006-cap",
         )
         impl = _ScriptedExecutor(
             "claude", role="implementer", summaries=["Synthetic implementer summary."]

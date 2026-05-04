@@ -218,6 +218,41 @@ def _approve_main(argv: list[str]) -> int:
             f"and not a known breaker:* name; recording anyway",
             file=sys.stderr,
         )
+    # Plan 2026-05-04-002 F001 — staged lifecycle gates (`pre_impl`,
+    # `pre_merge`) may only be cleared via `approve` when the supervisor
+    # recorded them as currently pending: either the gate is in `pause_gates`
+    # OR the gate is the canonical gate of the persisted `pending_stage`.
+    # Already-cleared lifecycle gates exit 2 (vs the legacy 0 for the
+    # idempotent re-approve path) so operators don't accidentally treat
+    # "no-op" as a successful re-clearance signal. Non-lifecycle gates
+    # (on_escalation, breaker:*, defer:*) keep their existing relaxed
+    # semantics — pre-clearing a future on_escalation is still allowed.
+    if gate_pause.is_lifecycle_gate(gate):
+        compat = gate_pause.load_gate_state_compat(plan_dir)
+        currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
+        stage_match = compat.pending_stage is not None and gate in {
+            *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
+        }
+        if gate in compat.cleared_gates:
+            print(
+                f"[approve] REFUSED gate {gate!r} — already cleared "
+                f"(staged lifecycle gates exit 2 on re-clear so callers "
+                f"distinguish no-op from success).",
+                file=sys.stderr,
+            )
+            return 2
+        if not (currently_pending or stage_match):
+            persisted_pause = (
+                gate_pause.load_gate_state_compat(plan_dir).raw.get("pause_gates") or []
+            )
+            print(
+                f"[approve] REFUSED lifecycle gate {gate!r} — not currently pending. "
+                f"pending_stage={compat.pending_stage or '(none)'}, "
+                f"pause_gates={list(persisted_pause)}. "
+                f"Lifecycle gates may only be cleared once the supervisor pauses on them.",
+                file=sys.stderr,
+            )
+            return 2
     changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
     if changed:
         inbox.append_event(
@@ -479,6 +514,35 @@ def _resume_main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+        # Plan 2026-05-04-002 F001 — staged lifecycle gates may only be cleared
+        # via `resume --gate` when the supervisor recorded them as currently
+        # pending. Mirrors the `_approve_main` enforcement so per-gate
+        # clearance has the same constraint regardless of entry path.
+        # Already-cleared lifecycle gates exit 2 (not 0) so the operator
+        # doesn't read no-op as success. Non-lifecycle declared gates and
+        # active breakers/defers keep their legacy relaxed semantics.
+        if gate_pause.is_lifecycle_gate(gate):
+            compat = gate_pause.load_gate_state_compat(plan_dir)
+            currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
+            stage_match = compat.pending_stage is not None and gate in {
+                *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
+            }
+            if gate in compat.cleared_gates:
+                print(
+                    f"[resume --gate] REFUSED gate {gate!r} — already cleared "
+                    f"(staged lifecycle gates exit 2 on re-clear).",
+                    file=sys.stderr,
+                )
+                return 2
+            if not (currently_pending or stage_match):
+                persisted_pause = compat.raw.get("pause_gates") or []
+                print(
+                    f"[resume --gate] REFUSED lifecycle gate {gate!r} — not currently pending. "
+                    f"pending_stage={compat.pending_stage or '(none)'}, "
+                    f"pause_gates={list(persisted_pause)}.",
+                    file=sys.stderr,
+                )
+                return 2
         # Idempotent re-clear: approve_gate returns False when the gate is
         # already cleared (or — for transient breaker:* / defer:* — no longer
         # active). In that case we exit 0 with state untouched and emit no

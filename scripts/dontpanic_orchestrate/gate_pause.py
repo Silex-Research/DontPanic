@@ -42,6 +42,21 @@ from typing import Any
 
 GATE_STATE_FILENAME = "gate-state.json"
 
+# Plan 2026-05-04-002 F001 — lifecycle stages for staged human-gate evaluation.
+# Maps each canonical lifecycle stage to the human-gate names that fire there.
+# Other declared human gates (e.g. on_escalation, tier_promotion) remain in the
+# upfront-evaluation bucket — F001 explicitly does not stage those (D003).
+LIFECYCLE_STAGES: tuple[str, ...] = ("pre_impl", "pre_merge")
+_STAGE_GATES: dict[str, tuple[str, ...]] = {
+    "pre_impl": ("pre_impl",),
+    "pre_merge": ("pre_merge",),
+}
+# Inverse: the set of human-gate names handled by lifecycle staging. Used by
+# the supervisor to filter out staged gates from the upfront evaluate() call.
+LIFECYCLE_STAGED_GATES: frozenset[str] = frozenset(
+    g for gates in _STAGE_GATES.values() for g in gates
+)
+
 
 def _now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -79,6 +94,27 @@ def _read_state(plan_dir: Path) -> dict[str, Any]:
         return {"plan_id": None, "cleared_gates": [], "history": []}
 
 
+def _coerce_cleared_gates(raw: Any) -> list[str]:
+    """Plan 2026-05-04-002 F001 D004 — tolerate two legacy `cleared_gates`
+    shapes plus the canonical list shape:
+
+      - list[str]  (existing canonical shape)
+      - dict[str, bool]  (illustrative legacy shape from upfront regime — a
+        gate is cleared iff its mapped value is truthy)
+      - None / missing  (treat as empty)
+
+    The returned list is the de-duplicated set of gates currently considered
+    cleared, preserving insertion order for the canonical list shape.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(g) for g in raw]
+    if isinstance(raw, dict):
+        return [str(g) for g, v in raw.items() if v]
+    return []
+
+
 def _write_state(plan_dir: Path, state: dict[str, Any]) -> None:
     p = gate_state_path(plan_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -86,17 +122,112 @@ def _write_state(plan_dir: Path, state: dict[str, Any]) -> None:
 
 
 def is_gate_cleared(plan_dir: Path, gate: str) -> bool:
-    return gate in (_read_state(plan_dir).get("cleared_gates") or [])
+    return gate in _coerce_cleared_gates(_read_state(plan_dir).get("cleared_gates"))
 
 
 def cleared_gates(plan_dir: Path) -> list[str]:
-    return list(_read_state(plan_dir).get("cleared_gates") or [])
+    return _coerce_cleared_gates(_read_state(plan_dir).get("cleared_gates"))
 
 
 def unmet_gates(plan_dir: Path, declared_gates: list[Any]) -> list[str]:
     cleared = set(cleared_gates(plan_dir))
     declared_strs = _stringify_gates(declared_gates)
     return [g for g in declared_strs if g not in cleared]
+
+
+def _stage_for_gate(gate: str) -> str | None:
+    """Plan 2026-05-04-002 F001 — return the lifecycle stage the named gate
+    belongs to, or None for non-lifecycle gates (e.g. on_escalation, breaker:*).
+    """
+    for stage, gates in _STAGE_GATES.items():
+        if gate in gates:
+            return stage
+    return None
+
+
+def is_lifecycle_gate(gate: str) -> bool:
+    """Plan 2026-05-04-002 F001 — True iff ``gate`` is one of the lifecycle-
+    staged human gates (``pre_impl``, ``pre_merge``). Non-lifecycle gate names
+    (``on_escalation``, ``breaker:*``, ``defer:*``, ``pre_resume_after_child:*``)
+    follow their existing approve/resume semantics; the staged-only constraints
+    apply only to the lifecycle-gate subset."""
+    return gate in LIFECYCLE_STAGED_GATES
+
+
+def _append_gate_event(state: dict[str, Any], gate: str, stage: str, actor: str, when: str) -> None:
+    events = list(state.get("gate_events") or [])
+    events.append(
+        {
+            "gate": gate,
+            "stage": stage,
+            "cleared_at": when,
+            "cleared_by": actor,
+        }
+    )
+    state["gate_events"] = events
+
+
+def _mark_stage_completed_if_done(state: dict[str, Any], stage: str) -> None:
+    """Plan 2026-05-04-002 F001 — append ``stage`` to ``completed_stages``
+    on the in-memory state dict iff every gate in that stage is now present
+    in ``cleared_gates``. Idempotent: re-marking a completed stage is a no-op.
+    The supervisor consults ``completed_stages`` to decide whether to skip
+    re-evaluating the stage on subsequent dispatch iterations or on resume
+    (D006 audit-focus item 8 — idempotent stage evaluation)."""
+    if stage not in _STAGE_GATES:
+        return
+    cleared = set(_coerce_cleared_gates(state.get("cleared_gates")))
+    if not all(g in cleared for g in _STAGE_GATES[stage]):
+        return
+    completed = list(state.get("completed_stages") or [])
+    if stage in completed:
+        return
+    completed.append(stage)
+    state["completed_stages"] = completed
+
+
+def is_stage_completed(plan_dir: Path, stage: str) -> bool:
+    """Plan 2026-05-04-002 F001 — True iff ``stage`` is recorded as completed
+    in ``gate-state.json`` (every gate of the stage has been cleared at some
+    earlier point). Used by the supervisor to short-circuit re-evaluation on
+    multi-iteration loops and on resume.
+
+    Backwards-compat: a legacy ``gate-state.json`` predating ``completed_stages``
+    is also treated as "completed" for any stage whose gates are all listed in
+    ``cleared_gates`` (D004 + D009 — legacy upfront-cleared plans resume
+    without re-prompting)."""
+    if stage not in _STAGE_GATES:
+        return False
+    state = _read_state(plan_dir)
+    completed = state.get("completed_stages") or []
+    if isinstance(completed, list) and stage in completed:
+        return True
+    cleared = set(_coerce_cleared_gates(state.get("cleared_gates")))
+    return all(g in cleared for g in _STAGE_GATES[stage])
+
+
+def is_gate_currently_pending(plan_dir: Path, gate: str) -> bool:
+    """Plan 2026-05-04-002 F001 — True iff ``gate`` is currently in the
+    supervisor's pending pause set (``pause_gates``). Used by the CLI's
+    ``approve`` and ``resume --gate`` paths to enforce the
+    "currently-pending-stage only" constraint on lifecycle gates: a lifecycle
+    gate may only be cleared when it's the gate the supervisor is actually
+    waiting on, never to pre-clear a future stage. Non-lifecycle gates use
+    their existing relaxed semantics — see ``_approve_main`` for the wiring.
+    """
+    state = _read_state(plan_dir)
+    pause_gates = state.get("pause_gates") or []
+    if not isinstance(pause_gates, list):
+        return False
+    return gate in pause_gates
+
+
+def pending_stage(plan_dir: Path) -> str | None:
+    """Plan 2026-05-04-002 F001 — return the lifecycle stage currently paused,
+    or None if no stage pause is active. Wraps the persisted ``pending_stage``
+    field on ``gate-state.json``; reads via :func:`load_gate_state_compat` so
+    legacy state shapes return None."""
+    return load_gate_state_compat(plan_dir).pending_stage
 
 
 def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
@@ -118,7 +249,7 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
     pending = state.get("pause_gates") or []
     if not pending:
         return
-    cleared = set(state.get("cleared_gates") or [])
+    cleared = set(_coerce_cleared_gates(state.get("cleared_gates")))
     active_breakers_set = set(state.get("active_breakers") or [])
     active_defers_set = set(state.get("active_defers") or [])
     active_pre_resume_set = set(state.get("active_pre_resume_after_children") or [])
@@ -137,6 +268,12 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
     if all(_is_resolved(g) for g in pending):
         state.pop("paused_at", None)
         state.pop("pause_gates", None)
+        # Plan 2026-05-04-002 F001 — pending_stage tracks which lifecycle stage
+        # the run is currently waiting on. When the corresponding gates are all
+        # cleared, the run has moved past that stage; drop the marker so a
+        # re-dispatch isn't misread as still-pending. The supervisor re-sets it
+        # when the next staged check pauses.
+        state.pop("pending_stage", None)
 
 
 def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "operator") -> bool:
@@ -177,9 +314,17 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         if gate_str in cleared:
             return False
 
+    now = _now_iso()
     history = list(state.get("history") or [])
-    history.append({"action": "approve", "gate": gate_str, "at": _now_iso(), "actor": actor})
+    history.append({"action": "approve", "gate": gate_str, "at": now, "actor": actor})
     state["history"] = history
+
+    # Plan 2026-05-04-002 F001 D004 — record a per-clearance audit entry on
+    # `gate_events` whenever a lifecycle-staged gate is cleared. Non-lifecycle
+    # gates (on_escalation, breaker:*, defer:*) do not write `gate_events`.
+    stage = _stage_for_gate(gate_str)
+    if stage is not None:
+        _append_gate_event(state, gate_str, stage, actor, now)
 
     if is_breaker:
         # F006 transient lifecycle: pop from active_breakers; do NOT accumulate
@@ -204,37 +349,93 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         cleared.append(gate_str)
         state["cleared_gates"] = cleared
 
+    # Plan 2026-05-04-002 F001 — when a lifecycle gate is cleared, mark its
+    # stage completed iff every stage gate is now in cleared_gates. The
+    # supervisor consults completed_stages on subsequent dispatches to skip
+    # re-evaluating the stage (idempotency contract).
+    if stage is not None:
+        _mark_stage_completed_if_done(state, stage)
+
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
     return True
 
 
 def resume_all(
-    plan_dir: Path, *, plan_id: str, declared_gates: list[Any], actor: str = "operator"
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    declared_gates: list[Any],
+    actor: str = "operator",
 ) -> list[str]:
-    """Clear every declared gate AND every active transient gate (breakers +
-    F007 defers). Returns the list of names newly cleared in this call."""
+    """Plan 2026-05-04-002 F001 — clear the gates the supervisor is currently
+    paused on (``pause_gates``), narrowed to the current ``pending_stage``'s
+    canonical gate set when a lifecycle stage is active, plus every active
+    transient gate (breakers + F007 defers). Returns the list of names newly
+    cleared in this call.
+
+    Bulk-clear scope (D012, audit-focus item 11): under the staged regime,
+    ``--all`` MUST NOT silently pre-clear future-stage gates. When the
+    supervisor recorded a ``pending_stage`` (``pre_impl`` or ``pre_merge``),
+    this call clears the gates of THAT stage only. Other declared lifecycle
+    gates remain uncleared and re-pause at their canonical lifecycle point.
+    Non-lifecycle declared gates (``on_escalation``, etc.) are also cleared
+    when they're in ``pause_gates`` — they live in the upfront pause bucket.
+    Active transient breakers/defers are always cleared; they never live on a
+    lifecycle stage.
+
+    ``declared_gates`` is the plan's declared human-gate list and used as a
+    safety filter so the helper never invents a gate the plan doesn't declare.
+    """
     declared_strs = _stringify_gates(declared_gates)
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
-    cleared = set(state.get("cleared_gates") or [])
-    newly = [g for g in declared_strs if g not in cleared]
+    cleared = set(_coerce_cleared_gates(state.get("cleared_gates")))
     pending_breakers = list(state.get("active_breakers") or [])
     pending_defers = list(state.get("active_defers") or [])
-    # Don't early-return when declared_gates were already cleared if any
-    # transient gate still exists — operator's "resume all" must reach those.
+    persisted_pause_gates = state.get("pause_gates") or []
+    pending_stage_value = state.get("pending_stage")
+
+    # Compute the candidate set: current pause_gates intersected with declared
+    # human gates — never widen beyond what the supervisor recorded as pending.
+    declared_set = set(declared_strs)
+    pause_set = set(persisted_pause_gates) & declared_set
+    if pending_stage_value in _STAGE_GATES:
+        # Stage active: also include the stage's canonical gates that are
+        # declared but somehow not in pause_gates (defensive — covers a stale
+        # pause_gates write). Excludes other-stage gates per D012.
+        pause_set |= set(_STAGE_GATES[pending_stage_value]) & declared_set
+    elif not persisted_pause_gates:
+        # No pause active: legacy bulk-clear convenience for the case where
+        # operator runs `resume --all` without an active pause (e.g. clearing
+        # leftover non-lifecycle declared gates from a prior regime). Only
+        # touches non-lifecycle gates so a future staged pause still fires.
+        pause_set = {g for g in declared_set if not is_lifecycle_gate(g)}
+    newly = sorted(pause_set - cleared)
+
+    # Don't early-return when there's nothing in the staged scope but a
+    # transient is still active — operator's "resume all" must still reach
+    # breakers/defers.
     if not newly and not pending_breakers and not pending_defers:
         return []
     if newly:
         cleared.update(newly)
         state["cleared_gates"] = sorted(cleared)
     history = list(state.get("history") or [])
+    now = _now_iso()
+    cleared_stages: set[str] = set()
     for g in newly:
-        history.append({"action": "resume_all", "gate": g, "at": _now_iso(), "actor": actor})
+        history.append({"action": "resume_all", "gate": g, "at": now, "actor": actor})
+        # Plan 2026-05-04-002 F001 — bulk-clear also records gate_events for
+        # lifecycle-staged gates so the audit log reflects the clearance.
+        stage = _stage_for_gate(g)
+        if stage is not None:
+            _append_gate_event(state, g, stage, actor, now)
+            cleared_stages.add(stage)
     for b in pending_breakers:
-        history.append({"action": "resume_all", "gate": b, "at": _now_iso(), "actor": actor})
+        history.append({"action": "resume_all", "gate": b, "at": now, "actor": actor})
     for d in pending_defers:
-        history.append({"action": "resume_all", "gate": d, "at": _now_iso(), "actor": actor})
+        history.append({"action": "resume_all", "gate": d, "at": now, "actor": actor})
     if pending_breakers:
         state.pop("active_breakers", None)
     if pending_defers:
@@ -247,6 +448,9 @@ def resume_all(
             for c in (state.get("cleared_gates") or [])
             if not c.startswith("breaker:") and not c.startswith("defer:")
         )
+    # Mark stage completion for any lifecycle stage whose gates just cleared.
+    for stage_name in cleared_stages:
+        _mark_stage_completed_if_done(state, stage_name)
     state["history"] = history
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
@@ -258,13 +462,32 @@ def record_pause(
     *,
     plan_id: str,
     pause_gates: list[Any],
+    stage: str | None = None,
 ) -> None:
-    """Record that the supervisor paused waiting on these gates."""
+    """Record that the supervisor paused waiting on these gates.
+
+    Plan 2026-05-04-002 F001 — when ``stage`` is one of ``LIFECYCLE_STAGES``,
+    also records ``pending_stage`` on the state file so resume-time logic can
+    tell which lifecycle stage the run is waiting on. Omitted/None ``stage``
+    leaves ``pending_stage`` untouched (preserves the existing upfront-pause
+    contract for transient breakers/defers and non-lifecycle human gates).
+    """
     pause_strs = _stringify_gates(pause_gates)
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
     state["paused_at"] = _now_iso()
     state["pause_gates"] = pause_strs
+    if stage is not None:
+        if stage not in LIFECYCLE_STAGES:
+            raise ValueError(f"unknown lifecycle stage {stage!r}; valid: {list(LIFECYCLE_STAGES)}")
+        state["pending_stage"] = stage
+        # Plan 2026-05-04-002 F001 — fresh staged pause must always materialize
+        # the additive new schema (cleared_gates + gate_events + pending_stage),
+        # so a round-trip read of a never-cleared staged pause shows the empty
+        # event log explicitly rather than leaving the field absent. Legacy
+        # state files (which never enter this branch) keep their old shape.
+        if "gate_events" not in state or not isinstance(state.get("gate_events"), list):
+            state["gate_events"] = []
     history = list(state.get("history") or [])
     history.append(
         {
@@ -272,6 +495,7 @@ def record_pause(
             "at": state["paused_at"],
             "actor": "supervisor",
             "pause_gates": pause_strs,
+            **({"stage": stage} if stage is not None else {}),
         }
     )
     state["history"] = history
@@ -293,6 +517,102 @@ class GateCheck:
     unmet: list[str]
 
 
+@dataclass(frozen=True)
+class GatePauseInfo:
+    """Plan 2026-05-04-002 F001 — staged human-gate evaluation result.
+
+    Returned by :func:`evaluate_human_gates`. ``pending`` is the list of
+    declared human-gate names mapped to ``stage`` that have NOT yet been
+    cleared. Empty pending means the supervisor may proceed past that
+    lifecycle stage.
+    """
+
+    stage: str
+    pending: list[str]
+    declared: list[str]
+
+    @property
+    def paused(self) -> bool:
+        return bool(self.pending)
+
+
+@dataclass(frozen=True)
+class CompatGateState:
+    """Plan 2026-05-04-002 F001 D004 — normalized gate-state.json view.
+
+    `cleared_gates` is coerced from either the canonical list shape or the
+    illustrative legacy dict shape (``{gate: bool}``). `gate_events` and
+    `pending_stage` default to empty/None when the state file predates the
+    staged-evaluation regime, so legacy in-flight plans load without error.
+    """
+
+    cleared_gates: list[str]
+    gate_events: list[dict[str, Any]]
+    pending_stage: str | None
+    raw: dict[str, Any]
+
+
+def load_gate_state_compat(plan_dir: Path) -> CompatGateState:
+    """Plan 2026-05-04-002 F001 step 5 — read gate-state.json into a
+    normalized object regardless of input shape.
+
+    Tolerates absence of `gate_events` / `pending_stage` (legacy shape readable
+    unchanged). Tolerates either list-shape or dict-shape `cleared_gates`. The
+    raw dict is preserved for callers that need fields outside the normalized
+    surface (history, active_breakers, active_defers, etc.).
+    """
+    state = _read_state(plan_dir)
+    raw_events = state.get("gate_events")
+    events = list(raw_events) if isinstance(raw_events, list) else []
+    pending_stage_raw = state.get("pending_stage")
+    pending_stage = (
+        str(pending_stage_raw) if isinstance(pending_stage_raw, str) and pending_stage_raw else None
+    )
+    return CompatGateState(
+        cleared_gates=_coerce_cleared_gates(state.get("cleared_gates")),
+        gate_events=events,
+        pending_stage=pending_stage,
+        raw=state,
+    )
+
+
+def evaluate_human_gates(
+    plan_dir: Path,
+    declared_gates: list[Any],
+    stage: str,
+) -> GatePauseInfo:
+    """Plan 2026-05-04-002 F001 step 3 — evaluate declared human gates for a
+    single lifecycle stage.
+
+    Returns a :class:`GatePauseInfo` whose ``pending`` field is the list of
+    declared gates mapped to ``stage`` that are NOT yet cleared. Pure read —
+    does not write to gate-state.json. The caller (typically the supervisor)
+    decides whether to record_pause + emit INBOX events when ``pending`` is
+    non-empty.
+
+    Stage routing (D003): ``pre_impl`` → the ``pre_impl`` human gate, fires
+    before implementer iteration 0. ``pre_merge`` → the ``pre_merge`` human
+    gate, fires immediately before ``signoff_writer.write_signoff(passes=True)``
+    on the candidate-success path. Non-lifecycle declared gates
+    (``on_escalation``, etc.) are NOT evaluated here — they remain in the
+    upfront-evaluation bucket per D003.
+
+    Backwards compat (D004 + D009): the load tolerates legacy `gate-state.json`
+    shapes where `gate_events` / `pending_stage` are absent and `cleared_gates`
+    may be a dict (illustrative legacy shape) or list (canonical). A plan whose
+    legacy state has both gates cleared resumes cleanly under the staged code —
+    every stage's pending list is empty, so no re-prompting fires.
+    """
+    if stage not in _STAGE_GATES:
+        raise ValueError(f"unknown lifecycle stage {stage!r}; valid: {list(LIFECYCLE_STAGES)}")
+    declared_strs = _stringify_gates(declared_gates)
+    compat = load_gate_state_compat(plan_dir)
+    cleared = set(compat.cleared_gates)
+    stage_gates = _STAGE_GATES[stage]
+    pending = [g for g in declared_strs if g in stage_gates and g not in cleared]
+    return GatePauseInfo(stage=stage, pending=pending, declared=list(declared_strs))
+
+
 def evaluate(plan_dir: Path, declared_gates: list[Any]) -> GateCheck:
     """Pure read of current gate state vs declared gates. Does not write.
 
@@ -306,7 +626,7 @@ def evaluate(plan_dir: Path, declared_gates: list[Any]) -> GateCheck:
     """
     declared_strs = _stringify_gates(declared_gates)
     state = _read_state(plan_dir)
-    cleared = list(state.get("cleared_gates") or [])
+    cleared = _coerce_cleared_gates(state.get("cleared_gates"))
     active_breakers_list = list(state.get("active_breakers") or [])
     active_defers_list = list(state.get("active_defers") or [])
     # Plan 2026-05-02-003 F003 — pre_resume_after_child:* gates participate in
@@ -544,7 +864,11 @@ def reconcile_defers(
 
 __all__ = [
     "GATE_STATE_FILENAME",
+    "LIFECYCLE_STAGED_GATES",
+    "LIFECYCLE_STAGES",
+    "CompatGateState",
     "GateCheck",
+    "GatePauseInfo",
     "active_breakers",
     "active_defers",
     "active_pre_resume_after_children",
@@ -555,8 +879,14 @@ __all__ = [
     "clear_pre_resume_after_child",
     "cleared_gates",
     "evaluate",
+    "evaluate_human_gates",
     "gate_state_path",
     "is_gate_cleared",
+    "is_gate_currently_pending",
+    "is_lifecycle_gate",
+    "is_stage_completed",
+    "load_gate_state_compat",
+    "pending_stage",
     "reconcile_defers",
     "record_pause",
     "reset_for_test",

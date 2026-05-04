@@ -334,26 +334,43 @@ def test_e2e_pause_then_approve_then_resume() -> None:
         os.environ[notify.DISABLE_ENV] = "1"
         try:
             # Step 1: first dispatch must pause without calling executors.
+            # Plan 2026-05-04-002 F001 — `pre_impl` is now lifecycle-staged
+            # (fires inside the iteration loop right before iter-0 implementer
+            # spawn), so the upfront pause exposes only the non-staged
+            # `on_escalation` gate. The cross-stage flow this test exercises
+            # (pause → approve → still pauses → resume_all → signs off) is
+            # preserved: upfront blocks on on_escalation here, then pre_impl
+            # gets staged-paused after on_escalation clears, then resume --all
+            # clears both.
             result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
             assert result.final_status == "paused_on_gate", result
             assert len(impl.dispatches) == 0 and len(aud.dispatches) == 0
             events = inbox.read_events(plan_dir)
             assert any(e.event == "gate_hit" for e in events), [e.event for e in events]
             state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
-            assert "pause_gates" in state and "pre_impl" in state["pause_gates"]
+            assert "pause_gates" in state and "on_escalation" in state["pause_gates"]
             print(
                 "  ✓ first dispatch paused; no executor called; INBOX gate_hit + state file written"
             )
 
-            # Step 2: operator approves one gate via CLI; supervisor should still pause.
+            # Step 2: operator approves the currently-pending upfront gate
+            # (on_escalation). Plan 2026-05-04-002 F001 — pre_impl is now
+            # lifecycle-staged, so it isn't pending until the supervisor
+            # reaches its canonical lifecycle point inside the volley loop.
+            # Approving on_escalation lets the next dispatch progress past
+            # the upfront pause, where it then staged-pauses on pre_impl.
             buf = io.StringIO()
             with redirect_stdout(buf):
-                rc = cli.main(["approve", str(plan_dir), "pre_impl"])
+                rc = cli.main(["approve", str(plan_dir), "on_escalation"])
             assert rc == 0
             result2 = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
             assert result2.final_status == "paused_on_gate", result2
             assert len(impl.dispatches) == 0
-            print("  ✓ partial approve still pauses on remaining gate")
+            # Second-pass pause is now on the staged pre_impl gate.
+            state2 = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
+            assert "pre_impl" in (state2.get("pause_gates") or []), state2
+            assert state2.get("pending_stage") == "pre_impl", state2
+            print("  ✓ partial approve still pauses on staged pre_impl gate")
 
             # Step 3: operator resumes all → next dispatch enters volley + signs off.
             # Plan 2026-05-02-001 F001: bare `resume <plan>` now exits 2; the
@@ -402,6 +419,12 @@ def test_cli_approve_no_false_warning_for_declared_gate() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-300-infra-cli-approve-warn", gates=["pre_impl"])
+        gate_pause.record_pause(
+            plan_dir,
+            plan_id="2026-04-26-300-infra-cli-approve-warn",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
         buf_out = io.StringIO()
         buf_err = io.StringIO()
         from contextlib import redirect_stderr
@@ -498,8 +521,16 @@ def test_quota_warn_inbox_event_fires_at_soft_threshold() -> None:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-302-infra-quota-warn-event", gates=["pre_impl"])
         # Pre-clear gates so volley enters the loop and the quota check fires.
-        gate_pause.resume_all(
-            plan_dir, plan_id="2026-04-26-302-infra-quota-warn-event", declared_gates=["pre_impl"]
+        gate_pause.record_pause(
+            plan_dir,
+            plan_id="2026-04-26-302-infra-quota-warn-event",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
+        gate_pause.approve_gate(
+            plan_dir,
+            "pre_impl",
+            plan_id="2026-04-26-302-infra-quota-warn-event",
         )
         impl = _CountingExecutor("claude")
         aud = _CountingExecutor("codex")
@@ -555,8 +586,16 @@ def test_error_inbox_event_fires_on_executor_failure() -> None:
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         plan_dir = _make_plan(repo, "2026-04-26-303-infra-error-event", gates=["pre_impl"])
-        gate_pause.resume_all(
-            plan_dir, plan_id="2026-04-26-303-infra-error-event", declared_gates=["pre_impl"]
+        gate_pause.record_pause(
+            plan_dir,
+            plan_id="2026-04-26-303-infra-error-event",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
+        gate_pause.approve_gate(
+            plan_dir,
+            "pre_impl",
+            plan_id="2026-04-26-303-infra-error-event",
         )
         impl = _FailingExecutor("claude")
         aud = _CountingExecutor("codex")

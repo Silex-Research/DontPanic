@@ -3,12 +3,12 @@
 Covers the seven CLI shapes from the plan's acceptance:
 
   a. bare `resume <plan>`                       → exit 2, state unchanged
-  b. `resume <plan> --gate <valid uncleared>`   → exit 0, single gate cleared
+  b. `resume <plan> --gate <valid pending>`     → exit 0, single gate cleared
   c. `resume <plan> --gate <unknown>`           → exit 2, state unchanged
   d. `resume <plan> --gate breaker:global_...`  → exit 2, state unchanged
   e. `resume <plan> --gate X --all` (mutex)     → exit 2, state unchanged
-  f. `resume <plan> --gate <already-cleared>`   → exit 0, byte-identical state
-  g. `resume <plan> --all`                      → exit 0, bulk-cleared
+  f. `resume <plan> --gate <already-cleared>`   → exit 2, byte-identical state
+  g. `resume <plan> --all`                      → exit 0, pending stage cleared
 
 Plus parity with `approve` + INBOX `gate_hit` template assertions.
 """
@@ -132,7 +132,10 @@ def _shape_a_bare_no_flag(plan_dir: Path) -> None:
 
 
 def _shape_b_gate_valid_uncleared(plan_dir: Path) -> None:
-    """(b) `resume --gate <valid>` → exit 0; single gate cleared; gate_cleared event."""
+    """(b) `resume --gate <valid>` → exit 0; single pending gate cleared."""
+    gate_pause.record_pause(
+        plan_dir, plan_id=plan_dir.name, pause_gates=["pre_impl"], stage="pre_impl"
+    )
     rc, out, err = _run_cli(["resume", str(plan_dir), "--gate", "pre_impl"])
     assert rc == 0, (rc, out, err)
     state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
@@ -174,23 +177,31 @@ def _shape_e_gate_and_all_mutex(plan_dir: Path) -> None:
 
 
 def _shape_f_gate_already_cleared_idempotent(plan_dir: Path) -> None:
-    """(f) re-clearing an already-cleared gate is byte-stable (no dup history/event)."""
+    """(f) re-clearing an already-cleared lifecycle gate refuses and is byte-stable."""
+    gate_pause.record_pause(
+        plan_dir, plan_id=plan_dir.name, pause_gates=["pre_impl"], stage="pre_impl"
+    )
     rc, _, _ = _run_cli(["resume", str(plan_dir), "--gate", "pre_impl"])
     assert rc == 0
     snapshot_state = _state_bytes(plan_dir)
     snapshot_inbox = _inbox_bytes(plan_dir)
     rc, out, err = _run_cli(["resume", str(plan_dir), "--gate", "pre_impl"])
-    assert rc == 0, (rc, out, err)
+    assert rc == 2, (rc, out, err)
+    assert "already cleared" in err, err
     assert _state_bytes(plan_dir) == snapshot_state, "gate-state.json mutated on re-clear"
     assert _inbox_bytes(plan_dir) == snapshot_inbox, "INBOX changed on re-clear"
 
 
 def _shape_g_all_bulk_clear(plan_dir: Path) -> None:
-    """(g) `resume --all` → exit 0; all gates cleared; event=resumed with bulk phrase."""
+    """(g) `resume --all` → exit 0; current lifecycle stage cleared only."""
+    gate_pause.record_pause(
+        plan_dir, plan_id=plan_dir.name, pause_gates=["pre_impl"], stage="pre_impl"
+    )
     rc, out, err = _run_cli(["resume", str(plan_dir), "--all"])
     assert rc == 0, (rc, out, err)
     state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
-    assert set(state["cleared_gates"]) == {"pre_impl", "pre_merge"}, state
+    assert state["cleared_gates"] == ["pre_impl"], state
+    assert "pre_merge" not in state["cleared_gates"], state
     events = inbox.read_events(plan_dir)
     bulk_events = [e for e in events if e.event == "resumed"]
     assert len(bulk_events) == 1, [e.event for e in events]
@@ -247,6 +258,18 @@ def test_resume_gate_event_parity_with_approve() -> None:
         # Two separate plans so each fixture has a clean INBOX.
         approve_plan = _make_plan(repo, "2026-05-02-708-infra-parity-approve", ["pre_impl"])
         resume_plan = _make_plan(repo, "2026-05-02-709-infra-parity-resume", ["pre_impl"])
+        gate_pause.record_pause(
+            approve_plan,
+            plan_id="2026-05-02-708-infra-parity-approve",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
+        gate_pause.record_pause(
+            resume_plan,
+            plan_id="2026-05-02-709-infra-parity-resume",
+            pause_gates=["pre_impl"],
+            stage="pre_impl",
+        )
         rc_a, _, _ = _run_cli(["approve", str(approve_plan), "pre_impl"])
         rc_r, _, _ = _run_cli(["resume", str(resume_plan), "--gate", "pre_impl"])
         assert rc_a == 0 and rc_r == 0
