@@ -1,0 +1,73 @@
+{
+  "task_id": "2026-05-04-001-refactor-canonical-dontpanic-module",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Flip the canonical Python module from `jarvis_orchestrate` to `dontpanic_orchestrate`. Move every module file under `scripts/jarvis_orchestrate/` (excluding `tests/` — see step 3) into `scripts/dontpanic_orchestrate/`, overwriting the existing thin alias. Flip every intra-package import inside the canonical tree to use the canonical name. Convert `scripts/jarvis_orchestrate/` into a thin compatibility shim: `__init__.py` plus per-submodule re-export modules (one per public submodule), each re-exporting the canonical module's public surface and triggering a single process-wide `DeprecationWarning` via a guard module imported from `__init__.py`. Move `scripts/jarvis_orchestrate/tests/` to `scripts/dontpanic_orchestrate/tests/` and flip test imports to canonical names. Update `pyproject.toml`: console scripts `dontpanic` and `jarvis` both resolve to `dontpanic_orchestrate.cli:main`; `version = { attr = \"dontpanic_orchestrate.__version__\" }`; `find.include = [\"dontpanic_orchestrate*\", \"jarvis_orchestrate*\"]` (canonical first); test exclusion updated to canonical path. Update `scripts/dontpanic_orchestrate/__main__.py` to invoke `dontpanic_orchestrate.cli.main` directly (no jarvis_orchestrate hop). Update operator-facing live docs (README, ECOSYSTEM.md, PRODUCT.md, ROADMAP.md, CONTRIBUTING.md, claude/PORTABILITY.md) — flip `jarvis_orchestrate` import examples to `dontpanic_orchestrate`; preserve historical context references where semantically correct. **Do NOT touch historical `docs/plans/` records outside this plan's own new directory (per D003 — historical plan folders, evidence strings, audit envelopes are durable records).** **Do NOT touch `claude/shared/` (agent-conventions subtree — upstream).** **Do NOT change `~/.jarvis/` filesystem fallback semantics in `global_config.py` — Phase A's read-fallback stays.** **Do NOT alter the `jarvis` console-script alias — it stays as a legacy alias re-pointing at the canonical entrypoint per D004.**",
+      "steps": [
+        "Pre-flight: clear stale `__pycache__` under `scripts/` (`find scripts -type d -name __pycache__ -exec rm -rf {} +`); record baseline test count from the full orchestrate suite (excluding `test_ec5_classifier.py` per plan 003 D011 caveat) for post-rename comparison.",
+        "Move implementation: `git mv` every `.py` under `scripts/jarvis_orchestrate/` (excluding `tests/` and excluding any subdirectory) to `scripts/dontpanic_orchestrate/`, overwriting the existing `__init__.py` and `__main__.py` thin-alias files. The new canonical `__init__.py` exposes `__version__` and the same module-level surface that `jarvis_orchestrate/__init__.py` had.",
+        "Move tests: `git mv scripts/jarvis_orchestrate/tests scripts/dontpanic_orchestrate/tests`. Flip every test import from `from jarvis_orchestrate ...` / `import jarvis_orchestrate ...` to the canonical name.",
+        "Flip canonical-tree imports: inside `scripts/dontpanic_orchestrate/` (modules + tests), replace `from jarvis_orchestrate` with `from dontpanic_orchestrate` and `import jarvis_orchestrate` with `import dontpanic_orchestrate`. Verify with grep: `grep -r 'jarvis_orchestrate' scripts/dontpanic_orchestrate/` returns zero hits.",
+        "Build the compatibility shim: `scripts/jarvis_orchestrate/__init__.py` imports a `_deprecation.py` guard module that emits a single `DeprecationWarning` per process (idempotent via a module-level flag). The init re-exports `__version__` and any module-level public symbols from `dontpanic_orchestrate`. For every public submodule X that previously existed (cli, supervisor, plan_loader, agent_manifest, mcp_server, projects_registry, project_config, global_config, gate_pause, inbox, audit_writer, signoff_writer, circuit_breakers, etc.), create `scripts/jarvis_orchestrate/X.py` containing exactly: the deprecation guard import (no-op after the first call) and `from dontpanic_orchestrate.X import *`. Plus an explicit `__getattr__` fallback in the package `__init__.py` that lazily proxies any attribute not enumerated, to cover `jarvis_orchestrate.X` access patterns where X is a submodule reference rather than a star-imported symbol. The shim does NOT contain any business logic.",
+        "Update packaging: `pyproject.toml` — flip `[project.scripts]` so both `dontpanic` and `jarvis` map to `dontpanic_orchestrate.cli:main`; flip `version = { attr = \"dontpanic_orchestrate.__version__\" }`; flip `[tool.setuptools.packages.find]` so `include = [\"dontpanic_orchestrate*\", \"jarvis_orchestrate*\"]` (canonical first); update `exclude` to reference canonical tests path. Re-install with `pip install -e .` so the egg-info regenerates and console scripts re-register.",
+        "Update `scripts/dontpanic_orchestrate/__main__.py` to invoke `dontpanic_orchestrate.cli.main` directly — no jarvis_orchestrate hop.",
+        "Flip live docs: README.md, README-public.md (if exists), docs/ECOSYSTEM.md, docs/PRODUCT.md, docs/ROADMAP.md, CONTRIBUTING.md, claude/PORTABILITY.md, scripts/bootstrap.sh, scripts/jarvis_doctor.py (rename to scripts/dontpanic_doctor.py with a thin alias kept). Replace live `jarvis_orchestrate` import examples and `python -m jarvis_orchestrate` invocations with the canonical name. Preserve historical narrative references (e.g. \"originally Jarvis\") where semantically correct. Do NOT touch historical files under `docs/plans/` outside this plan's own new plan/evidence files.",
+        "Add shim-behavior tests in `scripts/dontpanic_orchestrate/tests/test_legacy_shim_compatibility.py`: (a) `from jarvis_orchestrate import cli` succeeds; (b) `from jarvis_orchestrate.cli import main` succeeds; (c) `import jarvis_orchestrate.supervisor as s; s.dispatch_volley` resolves to the canonical attribute; (d) parametric test across the public submodule list confirming each legacy import path resolves; (e) the deprecation warning fires exactly once per process under `pytest.warns(DeprecationWarning)`; (f) **no-shim-relay test** (acceptance #11): wrap `dontpanic_orchestrate.cli.main(['manifest', 'show', '--json'])` and `dontpanic_orchestrate.cli.main(['projects', 'list', '--json'])` in `warnings.catch_warnings()` with `simplefilter('error', DeprecationWarning)` and assert no warning escapes — proves canonical-only call paths never route through the shim.",
+        "Verify: `find scripts -type d -name __pycache__ -exec rm -rf {} +`; full orchestrate test suite from the canonical path with `--ignore=scripts/dontpanic_orchestrate/tests/test_ec5_classifier.py`; targeted shim-test file runs green; ruff check + ruff format --check across canonical tree + shim files; sanitization_check.py clean; `git diff --name-only` shows zero entries under historical `docs/plans/` directories outside this plan's own new directory; `which dontpanic` and `which jarvis` both report a path that ends with the canonical entrypoint."
+      ],
+      "acceptance": "(1) `from dontpanic_orchestrate import cli` and every other submodule import works without warnings. (2) `from jarvis_orchestrate import cli` and every other legacy submodule import works AND emits exactly one `DeprecationWarning` per process (verified by `pytest.warns(DeprecationWarning)` parametric over the public submodule list). (3) `which dontpanic` and `which jarvis` both invoke `dontpanic_orchestrate.cli:main` (verified by reading the resolved console-script shim). (4) `python -m dontpanic_orchestrate <subcommand>` invokes the canonical CLI. (5) Inside `scripts/dontpanic_orchestrate/`, `grep -r 'jarvis_orchestrate' .` returns hits ONLY inside `tests/test_legacy_shim_compatibility.py` (the shim is the unit under test there). Every other file in the canonical tree — modules and other test files — is self-referential. (6) `scripts/jarvis_orchestrate/` contains only the shim plus per-submodule re-export modules; no module file in the shim contains business logic. (7) Full orchestrate test suite passes from the canonical path (excluding `test_ec5_classifier.py` per plan 003 D011 caveat); test count delta vs baseline is exactly +N where N is the count of new shim-compatibility tests added in step 9. (8) Ruff check + format clean across canonical tree + shim files. (9) `python scripts/sanitization_check.py` reports 0 findings. (10) `git diff --name-only HEAD` for this commit shows zero entries under historical `docs/plans/` directories outside this plan's own new directory — historical plan dirs, evidence, decisions.jsonl, audit envelopes are byte-identical. (11) **No-shim-relay verification (catches the rename-looks-complete-but-still-routes-through-legacy failure mode):** invoking canonical surfaces end-to-end emits ZERO `DeprecationWarning` from `jarvis_orchestrate`. Specifically: (a) `python -m dontpanic_orchestrate manifest show --json` produces no deprecation output on stderr; (b) `dontpanic projects list --json` produces none; (c) a parametric pytest case wraps `dontpanic_orchestrate.cli.main(['manifest', 'show', '--json'])` and `dontpanic_orchestrate.cli.main(['projects', 'list', '--json'])` in a `warnings.catch_warnings()` block with `simplefilter('error', DeprecationWarning)` and asserts no warning is raised. The deprecation warning fires ONLY when consumers explicitly import the legacy name (verified by AC #2) — never on canonical-only call paths.",
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-04T10:30:00Z",
+      "verified_by": ["claude", "operator"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/",
+          "captured_by": "claude",
+          "note": "Canonical Python package (32 module files + executors/ subpackage + tests/). All intra-package imports reference dontpanic_orchestrate. Implementation moved here from scripts/jarvis_orchestrate/ via mv + sed pass."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/",
+          "captured_by": "claude",
+          "note": "Compatibility shim (36 files, ~1012 lines total). __init__.py + __main__.py + _deprecation.py guard + 30 top-level submodule re-export files + executors/{__init__,base,claude_cli,codex_cli}.py. Every shim file is ~28 lines of re-export plumbing — zero business logic. One-shot DeprecationWarning per process via _deprecation.warn_once() (idempotent flag)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_legacy_shim_compatibility.py",
+          "captured_by": "claude",
+          "note": "41 shim-compat tests across 3 classes: TestLegacyImportPaths (a-d, 38 parametric cases over the public submodule list + executors), TestDeprecationWarningSemantics (e — fires-once + message-content), TestNoShimRelay (AC #11 — 3 tests verifying canonical surfaces emit zero shim DeprecationWarning). The test file is the only file inside the canonical tree that imports the legacy name (per AC #5 exception)."
+        },
+        {
+          "type": "file",
+          "uri": "pyproject.toml",
+          "captured_by": "claude",
+          "note": "[project.scripts] both dontpanic and jarvis → dontpanic_orchestrate.cli:main (canonical entry per D004). [tool.setuptools.dynamic] version = dontpanic_orchestrate.__version__. [tool.setuptools.packages.find] include = [dontpanic_orchestrate*, jarvis_orchestrate*] (canonical first); exclude = dontpanic_orchestrate.tests*."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_doctor.py",
+          "captured_by": "claude",
+          "note": "Canonical doctor implementation. scripts/jarvis_doctor.py kept as a thin alias that prints a deprecation notice + runpy-executes the canonical script (per D004 — alias is non-removing in v1)."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/",
+          "captured_by": "claude",
+          "note": "Final sweep (excluding pre-existing-broken test_ec5_classifier.py per plan 003 D011 caveat): 873 passed, 6 skipped in 12.29s. Baseline pre-rename was 832+6=838 → +41 net delta = exactly the 41 shim-compat tests. ZERO regressions in any pre-existing test. Ruff check + format clean across canonical tree + shim files. Sanitization clean: 705 files scanned, 0 findings."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-04-001-refactor-canonical-dontpanic-module/evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo — direct-path rationale per D005, AC walk-through (all 11 items verified), ripple-effect tally, and pointers for shim removal (a future plan per D006)."
+        }
+      ]
+    }
+  ]
+}

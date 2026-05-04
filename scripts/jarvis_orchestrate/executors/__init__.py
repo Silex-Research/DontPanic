@@ -1,37 +1,32 @@
-"""Per-vendor agent executors + registry.
+"""Compatibility shim — re-exports from :mod:`dontpanic_orchestrate.executors`.
 
-Lookup: get_executor("claude") → ClaudeCLIExecutor instance.
-Add new executors by importing here and registering in AGENT_REGISTRY.
+Per-submodule re-export files exist for filesystem-discovery patterns;
+a package-level :func:`__getattr__` proxies anything they miss.
+
+Plan: ``2026-05-04-001-refactor-canonical-dontpanic-module`` D002.
 """
 
-from jarvis_orchestrate.executors.base import (
-    BaseExecutor,
-    DispatchResult,
-    DispatchTask,
-)
-from jarvis_orchestrate.executors.claude_cli import ClaudeCLIExecutor
-from jarvis_orchestrate.executors.codex_cli import CodexCLIExecutor
+from __future__ import annotations
 
-AGENT_REGISTRY: dict[str, type[BaseExecutor]] = {
-    "claude": ClaudeCLIExecutor,
-    "codex": CodexCLIExecutor,
-}
+from jarvis_orchestrate._deprecation import warn_once as _warn_once
+
+_warn_once()
+
+from dontpanic_orchestrate.executors import *  # noqa: F401, F403, E402
 
 
-def get_executor(agent_name: str) -> BaseExecutor:
-    """Instantiate the executor for the named agent. Raises KeyError if unknown."""
-    cls = AGENT_REGISTRY.get(agent_name)
-    if cls is None:
-        raise KeyError(f"unknown agent {agent_name!r}; registered: {sorted(AGENT_REGISTRY)}")
-    return cls()
+def __getattr__(name: str):
+    """Lazy proxy: ``jarvis_orchestrate.executors.X`` → canonical."""
+    import importlib
 
+    try:
+        return importlib.import_module(f"dontpanic_orchestrate.executors.{name}")
+    except ImportError:
+        from dontpanic_orchestrate import executors as _canonical
 
-__all__ = [
-    "AGENT_REGISTRY",
-    "BaseExecutor",
-    "ClaudeCLIExecutor",
-    "CodexCLIExecutor",
-    "DispatchResult",
-    "DispatchTask",
-    "get_executor",
-]
+        try:
+            return getattr(_canonical, name)
+        except AttributeError as exc:
+            raise AttributeError(
+                f"module 'jarvis_orchestrate.executors' has no attribute {name!r}"
+            ) from exc

@@ -1,66 +1,28 @@
-"""Append-only `audit/transcript.md` writer for human visibility.
+"""Compatibility shim — re-exports from :mod:`dontpanic_orchestrate.transcript`.
 
-Each round of a volley appends one line. `tail -f audit/transcript.md` shows live
-progress. The audit JSONs are the authoritative artifacts; the transcript is a
-human-friendly index.
+The implementation lives at :mod:`dontpanic_orchestrate.transcript`. Importing
+this module emits a one-shot ``DeprecationWarning`` per process via
+:mod:`jarvis_orchestrate._deprecation`.
+
+Plan: ``2026-05-04-001-refactor-canonical-dontpanic-module`` D002.
 """
 
 from __future__ import annotations
 
-import datetime as dt
-from pathlib import Path
+from jarvis_orchestrate._deprecation import warn_once as _warn_once
 
-HEADER = """# Volley transcript
+_warn_once()
 
-One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<feature_id>-i<N>.json`.
-
-| timestamp | feature | iter | agent / role | status | tokens in/out | audit |
-|---|---|---|---|---|---|---|
-"""
+from dontpanic_orchestrate.transcript import *  # noqa: F401, F403, E402
 
 
-def ensure_header(plan_dir: Path) -> Path:
-    transcript = plan_dir / "audit" / "transcript.md"
-    transcript.parent.mkdir(parents=True, exist_ok=True)
-    if not transcript.exists():
-        transcript.write_text(HEADER)
-    return transcript
+def __getattr__(name: str):
+    """Forward attribute lookups not covered by ``import *`` to canonical."""
+    from dontpanic_orchestrate import transcript as _canonical
 
-
-def append_round(
-    plan_dir: Path,
-    feature_id: str,
-    iteration: int,
-    agent: str,
-    role: str,
-    audit_status: str,
-    tokens_in: int | None,
-    tokens_out: int | None,
-    audit_path: Path,
-) -> None:
-    transcript = ensure_header(plan_dir)
-    ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    rel = audit_path.relative_to(plan_dir) if audit_path.is_relative_to(plan_dir) else audit_path
-    tin = "—" if tokens_in is None else f"{tokens_in:,}"
-    tout = "—" if tokens_out is None else f"{tokens_out:,}"
-    line = (
-        f"| {ts} | {feature_id} | i{iteration} | {agent} / {role} | "
-        f"{audit_status} | {tin} / {tout} | [{rel.name}]({rel}) |\n"
-    )
-    with transcript.open("a") as f:
-        f.write(line)
-
-
-def append_terminal(
-    plan_dir: Path,
-    feature_id: str,
-    final_status: str,
-    rounds: int,
-    reason: str,
-) -> None:
-    transcript = ensure_header(plan_dir)
-    ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with transcript.open("a") as f:
-        f.write(
-            f"\n**{ts}** — feature **{feature_id}** terminal: `{final_status}` after {rounds} round(s) — {reason}\n\n"
-        )
+    try:
+        return getattr(_canonical, name)
+    except AttributeError as exc:
+        raise AttributeError(
+            f"module 'jarvis_orchestrate.transcript' has no attribute {name!r}"
+        ) from exc

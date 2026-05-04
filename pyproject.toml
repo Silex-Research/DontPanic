@@ -3,9 +3,12 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# Rename phase 1: DontPanic is the public package and preferred console
-# command. The legacy `jarvis` command and `python -m jarvis_orchestrate`
-# continue to work for backward compatibility while internals migrate later.
+# Canonical: `dontpanic_orchestrate` is the implementation; `jarvis_orchestrate`
+# is a non-removing compatibility shim that re-exports + emits one
+# `DeprecationWarning` per process. Plan
+# 2026-05-04-001-refactor-canonical-dontpanic-module flipped the direction;
+# both the `dontpanic` and `jarvis` console scripts resolve to the canonical
+# entrypoint per D004.
 name = "dontpanic-orchestrate"
 description = "The safety layer between the agent says it's done and you merge it."
 readme = "README.md"
@@ -54,11 +57,12 @@ dev = [
 ]
 
 [project.scripts]
-# Preferred public command plus legacy alias. Backward-compat path
-# `python -m jarvis_orchestrate` is preserved by the existing module;
-# `python -m dontpanic_orchestrate` is a thin forward-compatible alias.
-dontpanic = "jarvis_orchestrate.cli:main"
-jarvis = "jarvis_orchestrate.cli:main"
+# Both the canonical command and the legacy alias resolve to the canonical
+# entrypoint per plan 2026-05-04-001 D004. The shim's `__main__.py` also
+# accepts `python -m jarvis_orchestrate` for backward compatibility (with
+# a single DeprecationWarning).
+dontpanic = "dontpanic_orchestrate.cli:main"
+jarvis = "dontpanic_orchestrate.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Silex-Research/DontPanic"
@@ -66,14 +70,14 @@ Repository = "https://github.com/Silex-Research/DontPanic"
 Issues = "https://github.com/Silex-Research/DontPanic/issues"
 
 [tool.setuptools.dynamic]
-version = { attr = "jarvis_orchestrate.__version__" }
+version = { attr = "dontpanic_orchestrate.__version__" }
 
 [tool.setuptools.packages.find]
-# Package source lives under `scripts/`. Excludes are belt-and-suspenders
-# against accidental inclusion of test fixtures.
+# Package source lives under `scripts/`. Canonical first, shim second.
+# Tests are excluded under the canonical path; the shim has no tests.
 where = ["scripts"]
-include = ["jarvis_orchestrate*", "dontpanic_orchestrate*"]
-exclude = ["jarvis_orchestrate.tests*"]
+include = ["dontpanic_orchestrate*", "jarvis_orchestrate*"]
+exclude = ["dontpanic_orchestrate.tests*"]
 
 [tool.ruff]
 target-version = "py310"

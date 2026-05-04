@@ -40,7 +40,7 @@ If no arguments: reads defaults and writes to `dashboard/state/cost-guard/INBOX.
 2. **Stale-data check** — if either input has `generated` >24h old, emit one `data_stale` finding and short-circuit.
 3. **Project** — compute MTD daily rate for each app (mirrors F001 cost-model). Compute week-to-date burn for each LLM model.
 4. **Compare** — for each app where `gcp_monthly_budget_usd > 0`, ratio = `projected_month_end / budget`. For each LLM model where `weekly_token_budget` (or `weekly_call_budget`) > 0, ratio = `projected_week_end / budget`.
-5. **Emit** — `cost_breach` (ratio >= 1.0) or `cost_warn` (ratio >= 0.8) entries via the F008 INBOX writer (`scripts/jarvis_orchestrate/inbox.py`). Always honor the resolved threshold values; the `--budgets` JSON may override defaults via `thresholds.warn` and `thresholds.breach`.
+5. **Emit** — `cost_breach` (ratio >= 1.0) or `cost_warn` (ratio >= 0.8) entries via the F008 INBOX writer (`scripts/dontpanic_orchestrate/inbox.py`). Always honor the resolved threshold values; the `--budgets` JSON may override defaults via `thresholds.warn` and `thresholds.breach`.
 6. **Idempotency** — dedupe key = `sha256(scope|kind|week_start)`. Re-runs within the same calendar week with the same condition append zero new INBOX entries.
 
 ## Output

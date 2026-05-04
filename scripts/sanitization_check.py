@@ -114,7 +114,7 @@ ALLOWED_FILES = {
     "CONTRIBUTING.md",
 }
 # Test fixtures may use historical IDs as test data.
-ALLOWED_GLOBS = ("scripts/jarvis_orchestrate/tests/",)
+ALLOWED_GLOBS = ("scripts/dontpanic_orchestrate/tests/",)
 
 
 def is_allowed(rel_path: str) -> bool:

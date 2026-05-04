@@ -3,7 +3,7 @@
 Reads costs.json + quota_state.json + config/cost_budgets.json. Compares observed run-rate to
 per-app warn (default 80%) and breach (default 100%) thresholds for both GCP $ and LLM tokens.
 On breach, appends a structured entry to INBOX.md via the F008 inbox writer
-(scripts/jarvis_orchestrate/inbox.py). Idempotent within a calendar week.
+(scripts/dontpanic_orchestrate/inbox.py). Idempotent within a calendar week.
 
 Distinct from F006 budget_ceiling which guards orchestration-agent quotas inside autonomous
 dispatches — cost-guard is app-level, F006 is dispatch-level.
@@ -27,7 +27,7 @@ import importlib.util
 import sys
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_inbox_path = _REPO_ROOT / "scripts" / "jarvis_orchestrate" / "inbox.py"
+_inbox_path = _REPO_ROOT / "scripts" / "dontpanic_orchestrate" / "inbox.py"
 _spec = importlib.util.spec_from_file_location("cost_guard_inbox", _inbox_path)
 inbox = importlib.util.module_from_spec(_spec)
 # Register before exec so @dataclass can resolve cls.__module__ via sys.modules.

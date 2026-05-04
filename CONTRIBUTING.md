@@ -17,7 +17,7 @@ welcome. Larger changes should start as a plan under `docs/plans/`.
    all green; if not, follow the remediation it prints. Use `--skip-auth`
    if you have not authenticated the gcloud/firebase CLIs yet (CI uses
    the same flag).
-3. **Run the test suite:** `pytest scripts/jarvis_orchestrate/tests/` —
+3. **Run the test suite:** `pytest scripts/dontpanic_orchestrate/tests/` —
    should be green before any change.
 
 ## Local CI Equivalent
@@ -25,10 +25,10 @@ welcome. Larger changes should start as a plan under `docs/plans/`.
 The exact checks CI runs on every PR. Run them locally before pushing:
 
 ```bash
-pytest scripts/jarvis_orchestrate/tests/    # unit + integration
-ruff check scripts/jarvis_orchestrate/      # lint
-ruff format --check scripts/jarvis_orchestrate/  # style
-python -c "from jarvis_orchestrate import circuit_breakers, gate_pause, quota_admission; print('imports OK')"
+pytest scripts/dontpanic_orchestrate/tests/    # unit + integration
+ruff check scripts/dontpanic_orchestrate/      # lint
+ruff format --check scripts/dontpanic_orchestrate/  # style
+python -c "from dontpanic_orchestrate import circuit_breakers, gate_pause, quota_admission; print('imports OK')"
 ```
 
 If any of these fail, fix them — there is no allowed-failure lint job.
@@ -41,6 +41,30 @@ Dependabot (`.github/dependabot.yml`) manages weekly updates with two distinct f
 - **`pip` ecosystem — configured but currently NO-OP, NOT dependency-security completion.** Dependabot's pip ecosystem requires a supported Python dependency manifest (requirements*.txt, pyproject.toml with a PEP 621 `[project]` table, Pipfile, etc.). Jarvis's `pyproject.toml` today carries only Ruff config — no `[project]` table — so the bot has nothing to maintain on the pip side. The entry stays configured so it activates the day a manifest lands; until then it is bookkeeping intent. Adding a `[project]` table changes Jarvis's packaging model (from "invoke as module" to "pip-installable") and is **deferred** to a future dep-security plan that also owns hash-pinning, lockfile enforcement, and `pip-audit`. **A green Dependabot pip PR is NOT supply-chain coverage even when one starts firing** — that gate belongs to the deferred plan (see plan `2026-05-01-003-feat-security-baseline` D004 deferral list).
 
 Both ecosystems are operator-managed via PR review. The bot opens, you review and merge.
+
+## Gate management
+
+Plans can declare `human_gates: [pre_impl, pre_merge, ...]` in their plan.md frontmatter. Before any dispatch begins, the supervisor checks each declared gate plus any active circuit breakers (`breaker:*`) and admission defers (`defer:*`). Unmet gates pause the volley with a `gate_hit` INBOX event. Three CLI shapes clear gates:
+
+- **Preferred — clear one gate (default operator action for partial clearance):**
+  ```
+  python -m dontpanic_orchestrate approve <plan-id> <gate>
+  ```
+  Use this whenever you want to release exactly one gate while keeping the rest armed. This is the safest default — it makes intent explicit per gate and matches the per-gate confirmation the supervisor was designed around.
+
+- **Parity alias — clear one gate via `resume`:**
+  ```
+  python -m dontpanic_orchestrate resume <plan-id> --gate <gate>
+  ```
+  Functionally identical to `approve <plan-id> <gate>` (idempotent, refuses `breaker:global_circuit_breaker`, errors on unknown gates). Exists for ergonomic consistency with `--all` below; INBOX records the entry path so audit trails distinguish `approve`-cleared from `resume --gate`-cleared.
+
+- **Explicit bulk-clear (the legacy bare-`resume` behavior, now behind a required flag):**
+  ```
+  python -m dontpanic_orchestrate resume <plan-id> --all
+  ```
+  Clears every plan-declared gate plus every active breaker/defer in one shot. Use when you've reviewed the full unmet set and intend bulk clearance.
+
+**Bare `resume <plan-id>` (no flag) exits 2** with a usage message — it used to silently clear every gate, which once let an assistant bypass an operator-armed gate during dogfood (see plan `2026-05-02-001-feat-resume-gate-discipline`). The new contract forces explicit bulk-vs-partial intent. After clearing the last gate the operator must still re-run `dispatch-from-plan --confirm` (or the equivalent supervisor entry point); gate clearance does not auto-continue the volley.
 
 ## Plan-Driven Changes
 
@@ -60,7 +84,7 @@ canonical example.
 
 ## Testing
 
-- Tests live in `scripts/jarvis_orchestrate/tests/test_*.py`
+- Tests live in `scripts/dontpanic_orchestrate/tests/test_*.py`
 - Run with `pytest`; the `conftest.py` autouse fixture isolates `~/.jarvis/`
   state per-test (breaker history, supervisor registry, interactive state,
   quota state). Tests run hermetically — no `~/.jarvis/` pollution.
