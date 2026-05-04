@@ -153,7 +153,7 @@
         "Tests: a small `test_f003_discoverability_docs.py` (or a check in `sanitization_check.py`) asserts that each documented `mcp.json` snippet parses as valid JSON and references `dontpanic mcp serve` correctly. The README + ECOSYSTEM.md + DISCOVERABILITY.md must each contain the 'do not dispatch without user approval' string verbatim."
       ],
       "acceptance": "(1) README.md has a 'How agents call DontPanic' section with copy-pasteable examples for Claude Code, Cursor, OpenClaw, and Codex CLI. Each example shows manifest-discovery + mcp.json wiring + a 1-2-tool call with parsed response. (2) `docs/DISCOVERABILITY.md` exists as a publish-readiness checklist. Items are marked as evidence-of-readiness, not delivery commitments. The actual PyPI / MCP-directory submissions are NOT acceptance items for F003. (3) The string 'do not dispatch without user approval' (or operator-approved equivalent wording) appears verbatim in: F001's `safety_rules` manifest field, README's agent-caller section, and ECOSYSTEM.md. Verified by parametric test. (4) Every documented `mcp.json` snippet parses as valid JSON and references `dontpanic mcp serve` correctly (asserted by test). (5) Cross-references between README \u2194 ECOSYSTEM.md \u2194 DISCOVERABILITY.md \u2194 ROADMAP.md are all live (no stale links). (6) Ruff + sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
