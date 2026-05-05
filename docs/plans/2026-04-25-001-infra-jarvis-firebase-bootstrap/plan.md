@@ -3,7 +3,7 @@ id: 2026-04-25-001-infra-jarvis-firebase-bootstrap
 title: Jarvis Firebase Bootstrap (jarvis-a6ee1) + Two-Axis Billing
 type: infra
 tier: local
-status: active
+status: abandoned
 date: "2026-04-25"
 dependencies:
   - 2026-04-19-001-infra-cross-agent-orchestration
@@ -21,6 +21,8 @@ links:
   features: ./features.json
   decisions: ./decisions.jsonl
 ---
+
+> **⊘ ABANDONED 2026-05-05** — superseded by `2026-04-19-001-infra-cross-agent-orchestration` F002 (Firebase project + Storage + creds), which shipped under parent-plan tasks F002-A through F002-K. The bootstrap work this sub-plan was scoped to land has already been delivered through the parent. Closed as housekeeping per `docs/GOAL_GOVERNANCE_V1.md` §10. Original plan content preserved below for historical reference.
 
 # Jarvis Firebase Bootstrap
 
