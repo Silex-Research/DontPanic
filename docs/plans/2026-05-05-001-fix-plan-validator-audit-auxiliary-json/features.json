@@ -1,0 +1,126 @@
+{
+  "task_id": "2026-05-05-001-fix-plan-validator-audit-auxiliary-json",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "agent-conventions upstream patch — replace filename-substring dispatch in `schemas/v1.0/validate.py` with explicit artifact classification. Three classes: (a) `signoff*.json` → Signoff model; (b) volley-pattern envelopes (`*-i\\d+.json`) → Audit model; (c) known auxiliary names (v1 list: `gate-state.json` only — D004) → skip with `  ⊘ <name> — auxiliary, skipped`; (d) unknown `audit/*.json` → warn + skip with `  ⚠ <name> — unknown audit artifact, skipped` (D005, NOT error). Bumps `VERSION` to `1.3.1` (semver patch — D007, no schema or Pydantic model changes). Tag `v1.3.1` in the agent-conventions repo. Worktree: `/Users/bayesian/Documents/GitHub/agent-conventions/`. Worktree boundary: F001 modifies ONLY `schemas/v1.0/validate.py` + `VERSION` + new test fixtures + new test runner — zero diffs to `schemas/v1.0/*.schema.json`, `schemas/v1.0/models/*.py`, `resolver/`, `conventions/`, `claude-md/`, `skill-standard/`. Direct path (D009).",
+      "steps": [
+        "Pre-flight: in agent-conventions worktree, confirm clean tree (`git status --porcelain` empty), confirm current `VERSION` reads `1.3.0`, confirm last tag is `v1.3.0` (or note v1.3.0 exists).",
+        "Create test scaffold under agent-conventions: `tests/validator/` directory with 4 fixture plan dirs — `_fixture_signoff/`, `_fixture_audit_envelope/`, `_fixture_aux_gate_state/`, `_fixture_unknown_audit/`. Each fixture has a minimal `plan.md` (frontmatter only), a minimal `features.json`, and an `audit/` directory with the relevant artifact (a real signoff, real audit envelope, `gate-state.json` lifted from a DontPanic plan, and a synthetic unknown-named JSON respectively).",
+        "Write `tests/validator/test_artifact_dispatch.py` (pytest module): 4 tests asserting (a) signoff fixture validates as Signoff with exit 0; (b) audit-envelope fixture validates as Audit with exit 0; (c) gate-state fixture is skipped with `⊘` info-line and exit 0; (d) unknown-named fixture is skipped with `⚠` info-line and exit 0. Test runs `validate.py` as a subprocess and inspects stdout + return code.",
+        "Run the new tests to confirm they FAIL against current `validate.py` (RED — proves the bug exists).",
+        "Modify `schemas/v1.0/validate.py`: extract a helper `_classify_audit_artifact(filename: str) -> tuple[str, type | None]` returning `('signoff', Signoff)`, `('audit', Audit)`, `('auxiliary', None)`, or `('unknown', None)`. Known-auxiliary v1 list: `_KNOWN_AUXILIARY = frozenset({'gate-state.json'})`. Audit-envelope detection: regex `re.compile(r'-i\\d+\\.json$')` matched against the filename (volley pattern). Signoff detection: filename starts with `signoff` (case-sensitive — matches existing convention).",
+        "Update the audit-dir loop in `validate_plan_dir()` to call `_classify_audit_artifact()` and dispatch accordingly. Auxiliary → print `  ⊘ {name} — auxiliary, skipped` and continue (no error increment). Unknown → print `  ⚠ {name} — unknown audit artifact, skipped` and continue (no error increment).",
+        "Re-run the 4 tests — all GREEN.",
+        "Run the full agent-conventions test suite to confirm zero regressions (other validator tests, resolver tests, etc. still pass).",
+        "Bump `VERSION` from `1.3.0` to `1.3.1`. Confirm no other file changed.",
+        "Verify: `git diff --name-only` shows ONLY `VERSION`, `schemas/v1.0/validate.py`, `tests/validator/test_artifact_dispatch.py`, and the 4 new fixture directories. Zero diffs to `schemas/v1.0/*.schema.json`, `schemas/v1.0/models/*.py`, `resolver/`, `conventions/`, `claude-md/`, `skill-standard/`.",
+        "Commit + tag `v1.3.1` in agent-conventions. Push to origin/main + push tag.",
+        "Surface F001 evidence to operator for pre_merge review BEFORE F002 starts (D006 — two-commit boundary)."
+      ],
+      "acceptance": "(1) **`_classify_audit_artifact()` exists and is the sole dispatch logic.** Greppable: `validate.py` no longer contains the line `model = Signoff if \"signoff\" in f.name else Audit`. (2) **Signoff dispatch correct:** test fixture with `audit/signoff-something.json` validates against Signoff; exit 0. (3) **Audit envelope dispatch correct:** test fixture with `audit/claude-implementer-i0.json` (or any `*-i\\d+.json`) validates against Audit; exit 0. (4) **Auxiliary skip correct:** test fixture with `audit/gate-state.json` produces an info-line `  ⊘ gate-state.json — auxiliary, skipped` and exit 0 (no model validation attempted). (5) **Unknown audit JSON warn-skip correct:** test fixture with `audit/some-unknown.json` produces `  ⚠ some-unknown.json — unknown audit artifact, skipped` and exit 0 (NOT exit 1). D005. (6) **VERSION bumped** to `1.3.1`. (7) **Zero schema/model diffs:** `git diff v1.3.0..HEAD -- schemas/v1.0/*.schema.json schemas/v1.0/models/` returns empty. D007. (8) **All pre-existing agent-conventions tests still green.** (9) **Tag `v1.3.1` exists** in agent-conventions repo. (10) **Push to origin/main complete** before F002 starts — N/A: no remote configured (matches v1.3.0 release pattern; F002 subtree-pulls from local agent-conventions worktree).",
+      "passes": true,
+      "depends_on": [],
+      "verified_at": "2026-05-05T00:00:00Z",
+      "verified_by": ["claude", "operator"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "schemas/v1.0/validate.py",
+          "captured_by": "claude",
+          "note": "F001: replaced filename-substring dispatch with explicit `_classify_audit_artifact()` helper (4 classes: signoff / audit / auxiliary / unknown). `_KNOWN_AUXILIARY = frozenset({'gate-state.json'})`. Volley regex: `r'-i\\d+\\.json$'`. Auxiliary → `⊘` info-line. Unknown → `⚠` info-line, exit 0 (not 1, per D005). Lives in agent-conventions repo at commit cedc190 / tag v1.3.1."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/test_validator_dispatch.py",
+          "captured_by": "claude",
+          "note": "F001: 4-case dispatch test suite (RED → GREEN). All 4 fixture plan dirs under `tests/validator/_fixture_*/` validate as expected. Lives in agent-conventions repo."
+        },
+        {
+          "type": "file",
+          "uri": "VERSION",
+          "captured_by": "claude",
+          "note": "F001: bumped 1.3.0 → 1.3.1 (semver patch — no schema or model changes per D007). Tag `v1.3.1` at agent-conventions HEAD."
+        },
+        {
+          "type": "log",
+          "uri": "agent-conventions commit cedc190",
+          "captured_by": "operator",
+          "note": "F001 single commit + tag v1.3.1 in agent-conventions repo. Two-commit boundary preserved (D006) — F001 lives entirely in agent-conventions; F002 in DontPanic. Local-only tag (no remote) — matches v1.3.0 release pattern."
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "DontPanic subtree import + regression coverage. After F001 is committed, tagged, and pushed, run `git subtree pull --prefix=claude/shared/ <agent-conventions-remote> v1.3.1 --squash` in the DontPanic worktree. Verify `claude/shared/VERSION` reads `1.3.1`. Run the patched validator against every plan dir under `docs/plans/` that has an `audit/` directory; capture before/after error counts. The 8+ existing `gate-state.json` files (Plans 001, 002, 004, 005, B, C, 2026-04-29-001-feat-changelog-skill, 2026-05-02-001-feat-resume-gate-discipline) must transition from false-fail → skipped. Real volley envelopes + signoffs in those same plans must continue validating green. Worktree boundary: F002's diff is confined to `claude/shared/**` (subtree pull only, NOT free-form edits — D010) plus the new `docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/` directory. Direct path (D009).",
+      "steps": [
+        "Pre-flight: in DontPanic worktree, confirm `claude/shared/VERSION` reads `1.3.0` (matches pre-F001 state). Confirm clean tree on the relevant paths.",
+        "Capture BASELINE error counts: run `python claude/shared/schemas/v1.0/validate.py docs/plans/2026-05-*` and `docs/plans/2026-04-29-001-feat-changelog-skill` and `docs/plans/2026-05-02-001-feat-resume-gate-discipline`. Save the output to `docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/evidence/baseline-validator-output.txt`. Expected: `gate-state.json` files show as Audit-validation failures.",
+        "Identify the agent-conventions remote in DontPanic git config (likely `agent-conventions` pointing to https://github.com/GodEquation/agent-conventions or local mirror). Confirm the remote tracks the v1.3.1 tag pushed by F001.",
+        "Run `git subtree pull --prefix=claude/shared/ agent-conventions v1.3.1 --squash`. The squash creates two commits — a squash commit with the upstream contents and a merge commit. Verify both land cleanly with no conflicts.",
+        "Verify `claude/shared/VERSION` now reads `1.3.1`. Verify `diff -r /Users/bayesian/Documents/GitHub/agent-conventions/schemas/v1.0/ claude/shared/schemas/v1.0/` returns empty (subtree byte-identical to upstream).",
+        "Capture POST-PULL error counts using the same command as the baseline. Save to `docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/evidence/post-pull-validator-output.txt`.",
+        "Diff baseline vs post-pull: confirm `gate-state.json` line transitions from `✗` (Audit-validation failure) to `⊘` (auxiliary, skipped) for every plan with one. Confirm `claude-implementer-*.json` and `codex-auditor-*.json` lines are unchanged. Confirm `signoff*.json` lines are unchanged.",
+        "Run the full DontPanic orchestrate test suite (`PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -p no:cacheprovider`) — confirm 979 passed, 6 skipped (Plan D close-out baseline). Zero regressions.",
+        "Run `ruff check` + `ruff format --check` on the touched files (none in scripts/, but spot-check claude/shared/schemas/v1.0/validate.py for the post-pull formatting). Run `python scripts/sanitization_check.py` — 0 findings.",
+        "Verify worktree boundary: `git diff --name-only HEAD` confined to (a) `claude/shared/**` (subtree pull diff), (b) `docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/**` (this plan's own dir). Zero diffs to any historical plan directory under `docs/plans/2026-05-*` outside Plan E's own dir. Zero diffs to `scripts/dontpanic_orchestrate/**`.",
+        "Write F002 close-out memo to `docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/evidence/f002-closeout-memo.md` with: subtree-pull commit SHA, before/after validator output diff summary, plan-by-plan gate-state.json transition table.",
+        "Commit Plan E close-out + subtree pull as a single DontPanic commit (the subtree-pull squash commit + Plan E evidence). Push to origin/main."
+      ],
+      "acceptance": "(1) **`claude/shared/VERSION` reads `1.3.1`** post-pull. (2) **`diff -r` between agent-conventions v1.3.1 and DontPanic `claude/shared/` returns empty** — subtree byte-identical to upstream. (3) **gate-state.json transitions from ✗ to ⊘** for every plan with one (7 of the 8 plans surveyed have one; Plan B's discord-notification-sink slot doesn't). Captured in `evidence/baseline-validator-output.txt` vs `evidence/post-pull-validator-output.txt`. (4) **Real audit envelopes still validate green** — `claude-implementer-*.json`, `codex-auditor-*.json` lines unchanged between baseline and post-pull. (5) **Real signoffs still validate green** — `signoff*.json` lines unchanged. (6) **Full DontPanic orchestrate suite still passes** — `979 passed, 6 skipped` (Plan D close-out baseline). Zero regressions. (7) **No free-form edits in `claude/shared/`** — the subtree-pull diff in DontPanic exactly matches the upstream v1.3.1 diff (modulo squash commit metadata). D010. (8) **Worktree boundary preserved** — `git diff --name-only HEAD` confined to `claude/shared/**` and Plan E's own dir. Zero diffs to other historical plan dirs under `docs/plans/`. (9) **Ruff + sanitization clean.** (10) **F002 close-out memo at `evidence/f002-closeout-memo.md`** with subtree-pull SHA + plan-by-plan transition table. (11) **Two-commit boundary preserved** — F001 commit lives in agent-conventions, F002 commit lives in DontPanic; neither commit touches the other repo. D006.",
+      "passes": true,
+      "depends_on": ["F001"],
+      "verified_at": "2026-05-05T00:00:00Z",
+      "verified_by": ["claude", "operator"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "claude/shared/VERSION",
+          "captured_by": "claude",
+          "note": "F002: subtree-pull bumped claude/shared/VERSION from 1.3.0 → 1.3.1. `diff -r` between agent-conventions v1.3.1 and DontPanic claude/shared/ is empty for all source files (only runtime __pycache__/*.pyc differ — untracked, irrelevant)."
+        },
+        {
+          "type": "log",
+          "uri": "DontPanic commits f213aba (subtree squash) + 7c900fc (subtree merge)",
+          "captured_by": "claude",
+          "note": "F002: `git subtree pull --prefix=claude/shared /Users/bayesian/Documents/GitHub/agent-conventions v1.3.1 --squash` produced two commits as expected. Initially blocked by dirty/untracked carryover; resolved via stash → pull → pop per operator authorization. Carryover (claude/PORTABILITY.md, dashboard/state/costs.json, untracked claude/skills/changelog/, etc.) preserved unchanged."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/baseline-validator-output.txt",
+          "captured_by": "claude",
+          "note": "F002: pre-fix v1.3.0 validator output across 8 surveyed plans. Captured by running `git show 4632079:claude/shared/schemas/v1.0/validate.py` (the pre-merge HEAD's claude/shared/validate.py — byte-equal to v1.3.0) against current plans."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/post-pull-validator-output.txt",
+          "captured_by": "claude",
+          "note": "F002: post-fix v1.3.1 validator output across the same 8 plans. Diff vs baseline is exactly: 7× `✗ audit/gate-state.json — task_id: Field required` → `⊘ audit/gate-state.json — auxiliary, skipped`. All other lines (signoff, audit envelopes, plan/features validation) byte-identical."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/",
+          "captured_by": "claude",
+          "note": "F002 regression sweep: `PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -p no:cacheprovider` → 979 passed, 6 skipped in 18.18s. Exactly Plan D close-out baseline. Zero regressions."
+        },
+        {
+          "type": "log",
+          "uri": "scripts/sanitization_check.py",
+          "captured_by": "claude",
+          "note": "F002: 0 findings across 714 files scanned (up from 693 pre-Plan-E; +21 = subtree-pull additions + Plan E evidence files)."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/evidence/f002-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F002 close-out memo — direct-path verification, all 11 ACs walked through, subtree-pull mechanics documented (stash → pull → pop), two-commit boundary preserved (D006), validator caveat closed going forward."
+        }
+      ]
+    }
+  ]
+}

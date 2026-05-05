@@ -1,0 +1,72 @@
+=== BASELINE (agent-conventions v1.3.0 — pre-Plan-E) ===
+
+[plan] 2026-05-01-001-feat-onboarding-ux
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-auditor-i2.json
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-05-01-001-feat-onboarding-ux.json
+
+[plan] 2026-05-01-002-feat-discord-notification-sink
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-01-004-feat-patch-completeness-gate
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+
+[plan] 2026-05-01-005-feat-target-context-platform-fix
+  ✓ plan.md frontmatter
+  ✗ features.json — features.1.evidence_refs.4.type: Input should be 'screenshot', 'log', 'test_output', 'diff', 'audit_json', 'commit', 'url' or 'file'
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-05-01-005-feat-target-context-platform-fix.json
+
+[plan] 2026-04-29-001-feat-changelog-skill
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/codex-auditor-i0.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-04-29-001-feat-changelog-skill.json
+
+[plan] 2026-05-02-001-feat-resume-gate-discipline
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-05-02-001-feat-resume-gate-discipline.json
+
+[plan] 2026-05-04-002-fix-supervisor-lifecycle-staged-gates
+  ✓ plan.md frontmatter
+  ✗ features.json — features.0.evidence_refs.0: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.2: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.3: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.4: Input should be a valid dictionary or instance of EvidenceRef
+  ✓ audit/claude-implementer-F001-i0.json
+  ✓ audit/claude-implementer-F001-i1.json
+  ✓ audit/codex-auditor-F001-i0.json
+  ✓ audit/codex-auditor-F001-i1.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-05-04-002-fix-supervisor-lifecycle-staged-gates.json
+
+[plan] 2026-05-04-003-fix-subprocess-timeout-envelope-durability
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-F003-i0.json
+  ✓ audit/claude-implementer-F003-i1.json
+  ✓ audit/codex-auditor-F003-i0.json
+  ✓ audit/codex-auditor-F003-i1.json
+  ✗ audit/gate-state.json — task_id: Field required; audit_id: Field required; agent: Field required; agent_role: Field required; iteration: Field required
+  ✓ audit/signoff-2026-05-04-003-fix-subprocess-timeout-envelope-durability.json
+
+✗ 9 validation error(s)
+=== exit: 1 ===
