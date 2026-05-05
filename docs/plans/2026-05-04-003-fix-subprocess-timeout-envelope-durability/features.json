@@ -128,11 +128,54 @@
         "Verify: clear `__pycache__`; targeted classifier test file runs green; full orchestrate suite from canonical path with `--ignore=test_ec5_classifier.py`; ruff check + format clean; sanitization clean; `git diff --name-only HEAD` shows zero entries under `docs/plans/` outside this plan's own dir; transcript writer line appears in a fresh dispatch's transcript.md when timeout-with-work pattern occurs."
       ],
       "acceptance": "(1) **Classifier helper** `_envelope_is_timeout_with_work(envelope)` exists; pure function returning True only for `audit_status: blocked AND worktree_changed=true`. (2) **No-progress detector excludes timeout-with-work**: parametric test over four envelope shapes confirms only `blocked-without-work` counts toward no-progress. (3) **Diminishing-returns detector excludes timeout-with-work**: same parametric coverage. (4) **Loop history fidelity**: every iteration's envelope (including timeout-with-work) appears in transcript.md and the audit dir — only the counters change. (5) **Plan B retroactive diagnosability**: a synthesized Plan-B-shaped run (both rounds = timeout-with-work, auditor `needs_changes` both) terminates at `stopped_cap`, NOT `stopped_no_progress`. (6) **No regression of legitimate no-progress**: a run with `blocked-without-work` envelopes both rounds still terminates `stopped_no_progress` (the current correct behavior). (7) **No breaker enum / threshold / terminal-status changes**: `git diff scripts/dontpanic_orchestrate/circuit_breakers.py` shows ONLY logic changes tied to the timeout-with-work classifier; no diff lines touching: terminal-status string literals, breaker enum values, threshold defaults, `no_progress_threshold` arithmetic. Verified by grep of the diff. (8) **Auditor invocation unchanged**: when a timeout-with-work envelope is produced, the auditor is still invoked next round and still produces its own verdict; the new classifier doesn't gate auditor execution. (9) **Transcript visibility**: a timeout-with-work iteration produces a clear transcript line acknowledging the classification (so operators reading transcripts after the fact see the signal without diving into envelopes). (10) **Test isolation discipline**: per Plan A / Plan B learning, F003 tests do NOT delete entries from `sys.modules`. Asserted by grep: `grep -rn 'del.*sys\\.modules' scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py` returns zero hits. (11) **Full orchestrate test suite passes** from canonical path with `--ignore=test_ec5_classifier.py`; test count delta exactly +N for new classifier tests; zero regressions in pre-existing tests. (12) Ruff check + format clean. (13) Sanitization clean. (14) `git diff --name-only HEAD` shows zero entries under `docs/plans/` outside this plan's own dir. (15) **No new audit envelope fields and no new audit_status enum values added in F003** — F003 is purely a supervisor-loop classifier change.",
-      "passes": false,
+      "passes": true,
       "depends_on": ["F002"],
-      "verified_at": null,
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_at": "2026-05-05T01:20:01Z",
+      "verified_by": ["claude", "codex", "operator"],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/circuit_breakers.py",
+          "captured_by": "claude",
+          "note": "F003 classifier helpers and detector wiring. Timeout-with-work is defined as audit_status=blocked plus validation_performed marker worktree_changed=true. No-progress and diminishing-returns exclude those rounds from counter accumulation without changing breaker statuses, thresholds, or terminal strings."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "dispatch_volley reads the implementer envelope, surfaces timeout-with-work classification in transcript notes, passes the envelope to no-progress detection, and avoids advancing prior_aud_status for skipped timeout-with-work rounds."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/transcript.py",
+          "captured_by": "claude",
+          "note": "append_note() adds operator-visible non-terminal classifier notes so timeout-with-work rounds remain visible in transcript.md without changing audit envelope shape."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+          "captured_by": "claude",
+          "note": "39 focused tests covering classifier purity, no-progress and diminishing-returns parametric shapes including signed_off, loop-history/transcript fidelity, Plan-B-shaped stopped_cap behavior, legitimate stopped_no_progress regression, prior-auditor-status carry-over, auditor invocation, boundary discipline, and no sys.modules deletion."
+        },
+        {
+          "type": "file",
+          "uri": "audit/claude-implementer-F003-i0.json",
+          "captured_by": "claude",
+          "note": "Volley iteration 0 implementer envelope. It timed out under the old classifier path and produced F002 timeout evidence with worktree_changed=unknown; auditor findings drove the i1 fixes."
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "captured_by": "codex",
+          "note": "Final volley auditor envelope. i0 substantive findings were resolved; remaining i1 finding was missing signed_off coverage in detector matrices, fixed during direct close-out before final verification."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f003-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F003 close-out memo with volley triage, acceptance coverage, verification results, and validator caveat for generated audit/gate-state.json."
+        }
+      ]
     }
   ]
 }

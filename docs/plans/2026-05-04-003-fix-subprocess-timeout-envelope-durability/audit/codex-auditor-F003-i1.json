@@ -1,0 +1,45 @@
+{
+  "task_id": "2026-05-04-003-fix-subprocess-timeout-envelope-durability",
+  "audit_id": "2026-05-04-003-fix-subprocess-timeout-envelope-durability#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-05T01:13:39Z",
+  "completed_at": "2026-05-05T01:18:08Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-04-003-fix-subprocess-timeout-envelope-durability-xq4phh15 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 301856 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2320412,
+    "tokens_out": 19594,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\nCommand: auditor verification; see `$` lines below\n\nOverall verdict: needs_changes. F001/F002 appear merged (`3b4c0b1` process-group subprocess runner, `3d47ce2` timeout evidence envelopes). Implementer target declaration is correct in prose and structured audit (`Env: dev`, `Project: null/(none)`), and I found no forbidden command shapes in `target_context.commands_run`.\n\nFINDING (medium, test_coverage): Required signed-off envelope shape is missing from the detector parametric coverage. Evidence: `TestNoProgressDetector.test_no_progress_parametric` and `TestDiminishingReturnsDetector.test_diminishing_returns_parametric` cover `blocked true/false/unknown/None`; the required fourth shape was `signed_off`, and diminishing-returns has no signed-off detector case. Recommendation: add `signed_off` to both detector parameter matrices; keep missing-marker as an extra case if desired.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py::TestClassifierHelper scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py::TestNoProgressDetector\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py::TestClassifierHelper scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py::TestNoProgressDetector",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import circuit_breakers as cb; mk=lambda status, marker: {'audit_status': status, 'validation_performed': [f'worktree_changed={marker}'] if marker is not None else []}; assert cb._envelope_is_timeout_with_work(mk('blocked','true')) is True; assert cb._envelope_is_timeout_with_work(mk('blocked','false')) is False; assert cb._envelope_is_timeout_with_work(mk('blocked','unknown')) is False; assert cb._envelope_is_timeout_with_work(mk('signed_off','true')) is False; assert cb.check_no_progress('needs_changes','needs_changes',current_impl_envelope=mk('blocked','true'))[0] is False; assert cb.check_no_progress('needs_changes','needs_changes',current_impl_envelope=mk('blocked','false'))[0] is True; print('direct classifier/no-progress checks passed')\"",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/circuit_breakers.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/transcript.py scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/circuit_breakers.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/transcript.py scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "grep -rn 'del.*sys\\.modules' scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "Required signed-off envelope shape is missing from the detector parametric coverage. Evidence: `TestNoProgressDetector.test_no_progress_parametric` and `TestDiminishingReturnsDetector.test_diminishing_returns_parametric` cover `blocked true/false/unknown/None`; the required fourth shape was `signed_off`, and diminishing-returns has no signed-off detector case. Recommendation: add `signed_off` to both detector parameter matrices; keep missing-marker as an extra case if desired. Checks run: $ PYTH",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

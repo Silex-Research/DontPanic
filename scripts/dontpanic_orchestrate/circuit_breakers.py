@@ -838,12 +838,95 @@ def check_wall_clock(start: dt.datetime, max_hours: float) -> tuple[bool, str]:
     return False, ""
 
 
+def _envelope_is_timeout_with_work(envelope: dict[str, Any] | None) -> bool:
+    """Plan 2026-05-04-003 F003 — pure classifier for the timeout-with-work
+    envelope shape introduced by F002.
+
+    Returns True iff the envelope is an implementer-style "blocked" audit
+    that nevertheless landed observable work on disk: ``audit_status ==
+    'blocked'`` AND ``validation_performed`` contains the literal marker
+    ``'worktree_changed=true'`` (as written by audit_writer._timeout_markers).
+
+    Returns False for every other shape:
+      - non-blocked status (signed_off, needs_changes, inconclusive, ...)
+      - blocked + ``worktree_changed=false``
+      - blocked + ``worktree_changed=unknown`` (non-git cwd or git unavailable)
+      - blocked with no ``worktree_changed=*`` marker (pre-F002 envelope)
+      - missing / non-dict / non-list inputs
+
+    Pure function — no I/O, no side effects, no module-level mutation. The
+    no-progress and diminishing-returns detectors call this on the implementer
+    envelope of each iteration so they can EXCLUDE timeout-with-work rounds
+    from their counters without dropping those rounds from the loop history
+    or gating auditor invocation (D008 + audit-focus items 3, 6, 7).
+    """
+    if not isinstance(envelope, dict):
+        return False
+    if envelope.get("audit_status") != "blocked":
+        return False
+    markers = envelope.get("validation_performed")
+    if not isinstance(markers, list):
+        return False
+    return "worktree_changed=true" in markers
+
+
+def _load_envelope(path: Path) -> dict[str, Any] | None:
+    """Best-effort JSON load of an audit envelope. Returns None for missing
+    or malformed files so the detectors degrade gracefully (matches existing
+    `try: json.loads ... except (OSError, JSONDecodeError): continue` idiom)."""
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _round_pairs(audit_paths: Iterable[Path]) -> list[tuple[dict[str, Any] | None, dict[str, Any]]]:
+    """Pair each auditor envelope with its preceding implementer envelope.
+
+    Iteration order in audit_paths mirrors dispatch_volley's append sequence:
+    impl_i0, aud_i0, impl_i1, aud_i1, ... The pairing is anchored on the
+    auditor — every auditor envelope owns the implementer envelope that came
+    immediately before it. Returns ``(impl_envelope_or_None, auditor_envelope)``
+    tuples in iteration order. Auditor envelopes without a preceding
+    implementer (degenerate / synthetic) get ``None`` for the implementer slot.
+    """
+    pairs: list[tuple[dict[str, Any] | None, dict[str, Any]]] = []
+    last_impl: dict[str, Any] | None = None
+    for ap in audit_paths:
+        env = _load_envelope(ap)
+        if env is None:
+            continue
+        role = env.get("agent_role")
+        if role == "implementer":
+            last_impl = env
+        elif role == "auditor":
+            pairs.append((last_impl, env))
+            last_impl = None
+    return pairs
+
+
 def check_no_progress(
-    prior_status: str | None, current_status: str, threshold_rounds: int = 2
+    prior_status: str | None,
+    current_status: str,
+    threshold_rounds: int = 2,
+    *,
+    current_impl_envelope: dict[str, Any] | None = None,
 ) -> tuple[bool, str]:
     """Synthetic threshold_rounds=2 — auditor verdict identical to last round.
     Mirrors the pre-existing supervisor behavior; kept here so the breaker
-    framework owns all 7 triggers symmetrically."""
+    framework owns all 7 triggers symmetrically.
+
+    Plan 2026-05-04-003 F003: when ``current_impl_envelope`` is supplied AND
+    classifies as timeout-with-work, the iteration is excluded from no-progress
+    counting. The envelope is still recorded in the loop history (caller's
+    responsibility — this function is pure); only the counter skips it. Plan B
+    pattern (timeout both rounds + work landed) terminates at ``stopped_cap``
+    rather than ``stopped_no_progress`` because no-progress never trips on
+    those rounds.
+    """
+    if _envelope_is_timeout_with_work(current_impl_envelope):
+        return False, ""
     if prior_status is None:
         return False, ""
     if prior_status == current_status and current_status not in {"signed_off", "blocked"}:
@@ -881,19 +964,24 @@ def check_diminishing_returns(audit_paths: list[Path]) -> tuple[bool, str]:
 
     Round-count threshold ``DIMINISHING_RETURNS_MIN_ROUNDS`` remains a
     constant — no operator config knob in v1 (D003).
+
+    Plan 2026-05-04-003 F003: rounds whose IMPLEMENTER envelope classifies
+    as timeout-with-work (``audit_status: blocked`` AND
+    ``worktree_changed=true``) are excluded from the diminishing-returns
+    window. Their auditor envelope still appears in audit_paths and on disk;
+    the counter just skips it. Without this, Plan B's pattern (timeout both
+    rounds, identical needs_changes verdicts on partial work) trips
+    diminishing_returns spuriously (D008 + audit-focus item 2).
     """
     # Late import to avoid load-time cycle (nested_orchestration imports
     # nothing from circuit_breakers).
     from dontpanic_orchestrate.nested_orchestration import compute_audit_finding_signature
 
     auditor_audits: list[dict[str, Any]] = []
-    for ap in audit_paths:
-        try:
-            data = json.loads(ap.read_text())
-        except (OSError, json.JSONDecodeError):
+    for impl_env, aud_env in _round_pairs(audit_paths):
+        if _envelope_is_timeout_with_work(impl_env):
             continue
-        if data.get("agent_role") == "auditor":
-            auditor_audits.append(data)
+        auditor_audits.append(aud_env)
     if len(auditor_audits) < DIMINISHING_RETURNS_MIN_ROUNDS:
         return False, ""
     recent = auditor_audits[-DIMINISHING_RETURNS_MIN_ROUNDS:]
@@ -1058,6 +1146,7 @@ __all__ = [
     "GlobalBreakerState",
     "QUOTA_STATE_PATH",
     "TERMINAL_STATUS",
+    "_envelope_is_timeout_with_work",
     "check_budget_ceiling",
     "check_convergence_collapse",
     "check_diminishing_returns",
