@@ -35,7 +35,6 @@ from dontpanic_orchestrate.target_context_prelude import (
     TargetContextError,
     parse_prelude_block,
     render_prelude,
-    resolve_repo,
     validate_target_context,
 )
 
@@ -88,7 +87,16 @@ def classify_ec5_severity(envelope: dict[str, Any]) -> EC5Verdict:
     # Canonical block present + struct valid. Compare parsed-from-summary
     # values against canonical-from-struct rendering. Any divergence is a
     # value-mismatch (case-g / D008) and stays i1 — the narrow-downgrade rule.
-    repo = resolve_repo(tc)
+    #
+    # Plan 2026-05-04-004 D002: classifier-local pure repo derivation.
+    # Previously this called the prelude module's git-shelling helper,
+    # which broke (a) classifier purity and (b) historical
+    # ``Repo: Jarvis`` fixtures after the DontPanic directory rename —
+    # the cwd-derived basename became ``DontPanic`` while the prelude
+    # still said ``Jarvis``. The classifier now picks ``repo`` purely
+    # from envelope data: struct first, parsed prelude second
+    # (preserves historical fixtures per D005), None otherwise.
+    repo = _derive_classifier_repo(tc, parsed)
     rendered = render_prelude({**tc, "repo": repo})
     expected = parse_prelude_block(rendered)
     # render_prelude is the canonical generator — its output MUST round-trip
@@ -101,6 +109,32 @@ def classify_ec5_severity(envelope: dict[str, Any]) -> EC5Verdict:
         return "i1"
 
     return "none"
+
+
+def _derive_classifier_repo(
+    tc: dict[str, Any],
+    parsed: dict[str, Any] | None,
+) -> str | None:
+    """Pick the ``repo`` value used for canonical render comparison.
+
+    Pure function — never reaches the filesystem (Plan 2026-05-04-004 D002).
+    Selection order:
+
+    1. ``tc['repo']`` if present and truthy — the structured-target path.
+    2. ``parsed['repo']`` if a prelude was parsed and contains a ``repo``
+       — preserves historical ``Repo: Jarvis`` fixtures predating the
+       DontPanic rename (D005). Comparing parsed-against-itself is correct
+       here because we're checking whether the prelude is internally
+       consistent with the struct, and the struct's ``repo`` (when
+       absent) is by definition whatever the prelude claims.
+    3. ``None`` — caller passes through to ``render_prelude`` which
+       handles the missing-repo case per its own contract.
+    """
+    if tc and tc.get("repo"):
+        return tc["repo"]
+    if parsed is not None and "repo" in parsed:
+        return parsed["repo"]
+    return None
 
 
 def is_ec5_finding(finding: dict[str, Any]) -> bool:
