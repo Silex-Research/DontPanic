@@ -48,6 +48,38 @@ DEFAULT_DEPTH_LIMIT: int = 3
 LOWER value than this to tighten a single plan's allowed nesting; CLI's
 `--allow-depth N` is the only mechanism for raising the cap at dispatch."""
 
+GOAL_GAP_MIN_FINDINGS_PER_CLUSTER: int = 3
+"""Goal Governance F0: minimum findings in a coherent cluster before the
+triage classifier may recommend a child plan."""
+
+GOAL_GAP_MIN_SEVERITY_FOR_CHILD_PLAN: str = "medium"
+"""Goal Governance F0: at least one finding in the cluster must be medium+
+before the triage classifier may recommend a child plan."""
+
+GOAL_GAP_MAX_CHILD_PLANS_PER_PARENT_PASS: int = 3
+"""Goal Governance F0: cap on child plans spawned from one parent goal-audit
+pass. Safety rail only; does not auto-spawn children."""
+
+GOAL_GAP_MAX_NESTING_DEPTH: int = 2
+"""Goal Governance F0: tighter governance-specific cap nested within the
+platform DEFAULT_DEPTH_LIMIT=3. Parent -> child is the default; grandchildren
+remain out of scope without explicit operator override in a later plan."""
+
+GOAL_GOVERNANCE_EVIDENCE_PREFIX: str = "evidence/goal-governance"
+"""Goal Governance F0: plan-relative evidence prefix for objective-contract,
+sufficiency, completion, and journey-walk evidence."""
+
+GoalGapTriage = Literal["inline_fix", "child_plan", "follow_up_plan", "operator_deferred"]
+GoalGovernancePassName = Literal["pre_impl", "post_impl"]
+
+_GOAL_GAP_SEVERITY_RANK: dict[str, int] = {
+    "low": 0,
+    "advisory": 0,
+    "medium": 1,
+    "high": 2,
+    "critical": 3,
+}
+
 
 class NestedOrchestrationError(ValueError):
     """Raised when a nested-orchestration guard refuses dispatch."""
@@ -366,6 +398,276 @@ def check_repeated_finding(plan_dir: Path, *, plans_root: Path | None = None) ->
         if parent_orch is None:
             return  # Reached a top-level plan; no more parents to check.
         cur_orch = parent_orch
+
+
+# ──────────────────────────────  Goal Governance F0 — goal-gap config  ──────────────────────────────
+
+
+class GoalGapFinding(BaseModel):
+    """A normalized goal-governance finding used by the F0 triage classifier.
+
+    This is deliberately smaller than an audit envelope Finding. F1/F2 can
+    adapt richer auditor output into this typed shape before classification.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    severity: str = Field(..., min_length=1)
+    finding_id: str = Field(..., min_length=1)
+    issue: str = Field(..., min_length=1)
+    subsystem: str = Field(..., min_length=1)
+    journey: str = Field(..., min_length=1)
+
+    @field_validator("severity")
+    @classmethod
+    def _validate_severity(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in _GOAL_GAP_SEVERITY_RANK:
+            raise ValueError(f"unknown goal-gap severity: {value!r}")
+        return normalized
+
+
+class GoalGapClusterContext(BaseModel):
+    """Context for classifying one coherent goal-gap cluster."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    subsystem: str = Field(..., min_length=1)
+    journey: str = Field(..., min_length=1)
+    coherence_rule: Literal["subsystem_and_journey", "same_subsystem", "same_journey", "mixed"] = (
+        "subsystem_and_journey"
+    )
+    fits_existing_feature_scope: bool = False
+    explicitly_out_of_scope: bool = False
+    operator_deferred: bool = False
+    existing_goal_gap_children: list[Any] = Field(default_factory=list)
+
+
+def _goal_gap_severity_at_least(severity: str, threshold: str) -> bool:
+    """Compare goal-gap severities. Unknown values are invalid by design."""
+    try:
+        severity_rank = _GOAL_GAP_SEVERITY_RANK[severity.strip().lower()]
+        threshold_rank = _GOAL_GAP_SEVERITY_RANK[threshold.strip().lower()]
+    except KeyError as exc:
+        raise ValueError(f"unknown goal-gap severity: {exc.args[0]!r}") from None
+    return severity_rank >= threshold_rank
+
+
+def classify_goal_gap_cluster(
+    findings: list[GoalGapFinding],
+    cluster: GoalGapClusterContext,
+) -> GoalGapTriage:
+    """Pure goal-gap triage classifier.
+
+    Returns a recommendation only; it never spawns plans or mutates state.
+    Rules are the F0 encoding of GOAL_GOVERNANCE_V1 §3.3 + §6.4.
+    """
+    if not findings:
+        return "operator_deferred"
+    if cluster.operator_deferred:
+        return "operator_deferred"
+    if cluster.explicitly_out_of_scope:
+        return "follow_up_plan"
+
+    has_medium_plus = any(
+        _goal_gap_severity_at_least(f.severity, GOAL_GAP_MIN_SEVERITY_FOR_CHILD_PLAN)
+        for f in findings
+    )
+    if (
+        len(findings) >= GOAL_GAP_MIN_FINDINGS_PER_CLUSTER
+        and has_medium_plus
+        and cluster.coherence_rule == "subsystem_and_journey"
+    ):
+        return "child_plan"
+
+    if len(findings) <= 2 and not has_medium_plus and cluster.fits_existing_feature_scope:
+        return "inline_fix"
+
+    return "operator_deferred"
+
+
+def validate_goal_gap_child_plan_caps(
+    existing_goal_gap_children: list[Any],
+    *,
+    current_depth: int = 1,
+    max_children: int = GOAL_GAP_MAX_CHILD_PLANS_PER_PARENT_PASS,
+    max_depth: int = GOAL_GAP_MAX_NESTING_DEPTH,
+) -> None:
+    """Raise if goal-gap child-plan caps would be exceeded.
+
+    Caps are safety rails for operator-approved spawns, not auto-spawn
+    triggers. ``current_depth`` follows the existing nested-orchestration
+    convention: 1 is a top-level parent plan.
+    """
+    if len(existing_goal_gap_children) >= max_children:
+        raise ValueError(
+            "goal-gap child-plan cap exceeded: "
+            f"{len(existing_goal_gap_children)} existing children >= max {max_children}"
+        )
+    next_depth = current_depth + 1
+    if next_depth > max_depth:
+        raise ValueError(
+            f"goal-gap nesting depth cap exceeded: next_depth={next_depth} > max_depth={max_depth}"
+        )
+
+
+def goal_governance_evidence_path(
+    plan_dir: Path,
+    pass_name: GoalGovernancePassName,
+    artifact: str,
+) -> Path:
+    """Return a path under evidence/goal-governance/{pre_impl|post_impl}/."""
+    artifact_path = Path(artifact)
+    if artifact_path.is_absolute() or ".." in artifact_path.parts:
+        raise ValueError(f"artifact must be relative and stay under evidence prefix: {artifact!r}")
+    return plan_dir / GOAL_GOVERNANCE_EVIDENCE_PREFIX / pass_name / artifact_path
+
+
+GOAL_GAP_CHILD_CHARTER_TEMPLATE = """\
+# Goal-gap context (schema comments; builder validates these before rendering)
+# parent_objective_contract_id: "{parent_objective_contract_id}"
+# gap_class: "{gap_class}"
+# cluster_scope:
+{cluster_scope_comments}
+# severity: "{severity}"
+# surfaces_affected:
+{surfaces_affected_comments}
+# why_child_plan_not_feature: "{why_child_plan_not_feature}"
+child_charter:
+  kind: implementation
+  parent_objective: "{parent_objective}"
+  parent_acceptance_item: "{parent_acceptance_item}"
+  allowed_paths:
+{allowed_paths}
+  forbidden_decisions:
+{forbidden_decisions}
+  return_condition_summary: "{return_condition_summary}"
+  may_edit_product_code: {may_edit_product_code}
+  may_spawn_children: false
+"""
+"""Reference template for goal-gap child charters. F1/F2 may render this into
+plan.md frontmatter after explicit operator approval."""
+
+
+def _yaml_block(value: Any, *, indent: int = 4) -> str:
+    dumped = yaml.safe_dump(value, default_flow_style=False, sort_keys=False).rstrip()
+    return "\n".join((" " * indent) + line for line in dumped.splitlines())
+
+
+def _comment_block(value: Any) -> str:
+    dumped = yaml.safe_dump(value, default_flow_style=False, sort_keys=False).rstrip()
+    return "\n".join(f"#   {line}" for line in dumped.splitlines())
+
+
+def build_goal_gap_charter(
+    *,
+    parent_objective_contract_id: str,
+    gap_class: str,
+    cluster_scope: dict[str, Any],
+    severity: str,
+    surfaces_affected: list[str],
+    why_child_plan_not_feature: str,
+    existing_goal_gap_children: list[Any],
+    parent_objective: str = "Close a bounded goal-governance gap.",
+    parent_acceptance_item: str = "Goal-governance child gap closes.",
+    allowed_paths: list[str] | None = None,
+    forbidden_decisions: list[str] | None = None,
+    return_condition_summary: str | None = None,
+    may_edit_product_code: bool = True,
+) -> str:
+    """Render a goal-gap child-charter YAML snippet.
+
+    The rationale is intentionally required; it records why this gap is a
+    bounded child plan rather than another feature or a follow-up plan.
+    """
+    validate_goal_gap_child_plan_caps(existing_goal_gap_children)
+    if len(why_child_plan_not_feature.strip()) < 20:
+        raise ValueError("why_child_plan_not_feature must be at least 20 characters")
+    if not parent_objective_contract_id.strip():
+        raise ValueError("parent_objective_contract_id is required")
+    if not gap_class.strip():
+        raise ValueError("gap_class is required")
+    if not surfaces_affected:
+        raise ValueError("surfaces_affected must not be empty")
+    _goal_gap_severity_at_least(severity, "low")
+
+    resolved_allowed_paths = allowed_paths or ["**/*"]
+    resolved_forbidden = forbidden_decisions or []
+    resolved_return = return_condition_summary or (
+        f"Goal-gap child closes {gap_class} for objective {parent_objective_contract_id}."
+    )
+    return GOAL_GAP_CHILD_CHARTER_TEMPLATE.format(
+        parent_objective_contract_id=parent_objective_contract_id,
+        gap_class=gap_class,
+        cluster_scope_comments=_comment_block(cluster_scope),
+        severity=severity.strip().lower(),
+        surfaces_affected_comments=_comment_block(surfaces_affected),
+        why_child_plan_not_feature=why_child_plan_not_feature.strip(),
+        parent_objective=parent_objective,
+        parent_acceptance_item=parent_acceptance_item,
+        allowed_paths=_yaml_block(resolved_allowed_paths),
+        forbidden_decisions=_yaml_block(resolved_forbidden),
+        return_condition_summary=resolved_return,
+        may_edit_product_code=str(may_edit_product_code).lower(),
+    )
+
+
+GOAL_GAP_FAN_IN_MEMO_TEMPLATE = """\
+# Fan-in from {child_plan_id}
+
+objective_contract_id: {objective_contract_id}
+gap_class_closed: {gap_class_closed}
+
+## What changed in the child
+<one or two sentences summarizing the child's contribution>
+
+## How the parent objective contract was observed
+<which artifact / commit / test demonstrates the goal gap is closed>
+
+## Open follow-ups
+<anything the parent's next iteration should pick up; '(none)' is fine>
+
+## Return Condition
+
+status: satisfied
+"""
+"""Goal-gap-specific fan-in memo template. The standard Return Condition
+section remains unchanged; the sibling parser validates the two goal fields."""
+
+
+_GOAL_GAP_OBJECTIVE_CONTRACT_RE = re.compile(
+    r"^\s*objective_contract_id\s*:\s*(\S.*?)\s*$",
+    re.MULTILINE,
+)
+_GOAL_GAP_CLASS_CLOSED_RE = re.compile(
+    r"^\s*gap_class_closed\s*:\s*(\S.*?)\s*$",
+    re.MULTILINE,
+)
+
+
+def parse_goal_gap_fan_in_memo_fields(memo_path: Path) -> dict[str, str]:
+    """Parse goal-gap-specific fan-in memo fields.
+
+    This sibling parser leaves the generic fan-in status parser untouched. It
+    first reuses parse_return_condition_section() so malformed return-condition
+    memos fail with the existing errors, then validates the two goal fields.
+    """
+    parse_return_condition_section(memo_path)
+    text = memo_path.read_text()
+    objective_match = _GOAL_GAP_OBJECTIVE_CONTRACT_RE.search(text)
+    if objective_match is None:
+        raise ReturnConditionError(
+            f"goal-gap fan-in memo missing `objective_contract_id:` line in {memo_path}"
+        )
+    gap_match = _GOAL_GAP_CLASS_CLOSED_RE.search(text)
+    if gap_match is None:
+        raise ReturnConditionError(
+            f"goal-gap fan-in memo missing `gap_class_closed:` line in {memo_path}"
+        )
+    return {
+        "objective_contract_id": objective_match.group(1).strip(),
+        "gap_class_closed": gap_match.group(1).strip(),
+    }
 
 
 # ──────────────────────────────  F002 — child charter + commit policy  ──────────────────────────────
@@ -1026,6 +1328,13 @@ def approve_pre_resume_after_child(
 __all__ = [
     "DEFAULT_DEPTH_LIMIT",
     "FAN_IN_MEMO_TEMPLATE",
+    "GOAL_GAP_CHILD_CHARTER_TEMPLATE",
+    "GOAL_GAP_FAN_IN_MEMO_TEMPLATE",
+    "GOAL_GAP_MAX_CHILD_PLANS_PER_PARENT_PASS",
+    "GOAL_GAP_MAX_NESTING_DEPTH",
+    "GOAL_GAP_MIN_FINDINGS_PER_CLUSTER",
+    "GOAL_GAP_MIN_SEVERITY_FOR_CHILD_PLAN",
+    "GOAL_GOVERNANCE_EVIDENCE_PREFIX",
     "PRE_RESUME_GATE_PREFIX",
     "ChildCharter",
     "ChildCharterKind",
@@ -1033,6 +1342,10 @@ __all__ = [
     "ChildPauseApproveError",
     "CommitPolicy",
     "CommitPolicyMode",
+    "GoalGapClusterContext",
+    "GoalGapFinding",
+    "GoalGapTriage",
+    "GoalGovernancePassName",
     "NestedOrchestrationError",
     "Orchestration",
     "RequiresItem",
@@ -1041,21 +1354,26 @@ __all__ = [
     "SpawnFinding",
     "SpawnReason",
     "approve_pre_resume_after_child",
+    "build_goal_gap_charter",
     "check_child_charter_compliance",
     "check_cycle",
     "check_depth",
     "check_repeated_finding",
     "child_compliance_side_car_path",
+    "classify_goal_gap_cluster",
     "compute_audit_finding_signature",
     "compute_depth",
     "compute_finding_signature",
     "events_log_path",
     "fan_in_memo_path",
+    "goal_governance_evidence_path",
+    "parse_goal_gap_fan_in_memo_fields",
     "parse_fan_in_memo_status",
     "parse_return_condition_section",
     "pre_resume_gate_name",
     "read_child_compliance",
     "record_event",
+    "validate_goal_gap_child_plan_caps",
     "validate_charter_policy_consistency",
     "walk_parent_chain",
 ]
