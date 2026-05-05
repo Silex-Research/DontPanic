@@ -6,14 +6,18 @@ Usage:
 For each plan directory:
 - Load plan.md frontmatter, validate against Plan model.
 - Load features.json, validate against Features model.
-- Load any audit/*.json, validate against Audit model.
-- Load any audit/signoff*.json, validate against Signoff model.
+- Classify each audit/*.json by artifact type and dispatch:
+    - signoff*.json                -> Signoff model
+    - *-i\\d+.json (volley pattern) -> Audit envelope model
+    - gate-state.json (auxiliary)  -> skip with info-line
+    - anything else                -> warn + skip (not error)
 
 Exits 0 if all validate, 1 if any error.
 """
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +31,33 @@ from models.audit_model import Audit  # noqa: E402
 from models.features_model import Features  # noqa: E402
 from models.plan_model import Plan  # noqa: E402
 from models.signoff_model import Signoff  # noqa: E402
+
+# v1 known-auxiliary list — files under audit/ that are written by orchestrator
+# subsystems but are NOT audit envelopes. The validator skips them with an
+# info-line instead of false-failing them against the Audit model.
+# Extending the list is a one-line change + a new fixture under tests/validator/.
+_KNOWN_AUXILIARY = frozenset({"gate-state.json"})
+
+# Volley-pattern audit envelopes end with `-i<digits>.json`
+# (e.g. claude-implementer-i0.json, codex-auditor-F002-i1.json).
+_AUDIT_ENVELOPE_RE = re.compile(r"-i\d+\.json$")
+
+
+def _classify_audit_artifact(filename: str) -> str:
+    """Return one of: 'signoff', 'audit', 'auxiliary', 'unknown'.
+
+    Pure function; explicit dispatch (not filename-substring). Order:
+    signoff prefix wins over volley pattern (both could conceivably match
+    a name like 'signoff-i0.json', but signoff is the more specific
+    semantic class).
+    """
+    if filename.startswith("signoff"):
+        return "signoff"
+    if _AUDIT_ENVELOPE_RE.search(filename):
+        return "audit"
+    if filename in _KNOWN_AUXILIARY:
+        return "auxiliary"
+    return "unknown"
 
 
 def _frontmatter(path: Path) -> dict:
@@ -75,8 +106,15 @@ def validate_plan_dir(plan_dir: Path) -> int:
     audit_dir = plan_dir / "audit"
     if audit_dir.is_dir():
         for f in sorted(audit_dir.glob("*.json")):
+            kind = _classify_audit_artifact(f.name)
+            if kind == "auxiliary":
+                print(f"  ⊘ audit/{f.name} — auxiliary, skipped")
+                continue
+            if kind == "unknown":
+                print(f"  ⚠ audit/{f.name} — unknown audit artifact, skipped")
+                continue
             data = json.loads(f.read_text())
-            model = Signoff if "signoff" in f.name else Audit
+            model = Signoff if kind == "signoff" else Audit
             ok, line = _check(f"audit/{f.name}", model, data)
             print(line)
             errors += 0 if ok else 1
