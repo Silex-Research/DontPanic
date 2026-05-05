@@ -1,0 +1,17 @@
+{
+  "task_id": "9999-12-31-003-fix-fixture-aux-gate-state",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Fixture feature for the auxiliary gate-state.json skip test. Not a real feature.",
+      "steps": ["See scripts/test_validator_dispatch.py"],
+      "acceptance": "Validator skips gate-state.json with a clear info-line.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    }
+  ]
+}
