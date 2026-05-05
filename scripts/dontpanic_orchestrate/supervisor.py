@@ -1244,6 +1244,28 @@ def dispatch_volley(
             )
             audit_paths.append(impl_audit_path)
 
+            # Plan 2026-05-04-003 F003 — surface timeout-with-work classification
+            # in the transcript so operators see the signal without parsing
+            # envelope JSON. The auditor still runs next; this round is just
+            # excluded from no-progress / diminishing-returns counters.
+            impl_envelope: dict[str, Any] | None
+            try:
+                impl_envelope = json.loads(impl_audit_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                impl_envelope = None
+            is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(impl_envelope)
+            if is_timeout_with_work:
+                transcript.append_note(
+                    loaded.plan_dir,
+                    feature_id,
+                    iteration,
+                    (
+                        "envelope is blocked-with-worktree-changes; not counted "
+                        "toward no-progress / diminishing-returns; auditor still "
+                        "inspecting landed work"
+                    ),
+                )
+
             # Auditor round
             try:
                 aud_pct, aud_quota_line = _quota_gate(aud_name)
@@ -1427,10 +1449,14 @@ def dispatch_volley(
                     iteration + 1,
                 )
 
-            # No-progress: auditor verdict identical to last round
+            # No-progress: auditor verdict identical to last round.
+            # Plan 2026-05-04-003 F003: pass the implementer envelope so the
+            # detector skips counting timeout-with-work iterations (D008 +
+            # audit-focus item 1).
             np_tripped, np_reason = circuit_breakers.check_no_progress(
                 prior_aud_status,
                 aud_status,
+                current_impl_envelope=impl_envelope,
             )
             if np_tripped:
                 transcript.append_terminal(
@@ -1447,7 +1473,14 @@ def dispatch_volley(
                 )
 
             prior_aud_path = aud_audit_path
-            prior_aud_status = aud_status
+            # Plan 2026-05-04-003 F003 (audit-focus item 1): a skipped
+            # timeout-with-work round must NOT establish the no-progress
+            # baseline for the next round. Only countable rounds advance
+            # `prior_aud_status`. `prior_aud_path` still updates because the
+            # implementer prompt benefits from the freshest auditor context
+            # (orthogonal to counter accumulation).
+            if not is_timeout_with_work:
+                prior_aud_status = aud_status
 
         # F006 — iteration cap. Triggers the breaker (counted toward the global
         # circuit breaker's 24h window) and writes a synthetic gate so next-run

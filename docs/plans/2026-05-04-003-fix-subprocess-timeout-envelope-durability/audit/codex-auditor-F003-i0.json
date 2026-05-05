@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-05-04-003-fix-subprocess-timeout-envelope-durability",
+  "audit_id": "2026-05-04-003-fix-subprocess-timeout-envelope-durability#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-05T01:04:12Z",
+  "completed_at": "2026-05-05T01:07:56Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-04-003-fix-subprocess-timeout-envelope-durability-xq4phh15 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 225316 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1367450,
+    "tokens_out": 16710,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer summary has the correct target declaration (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (high, correctness): no-progress exclusion is only current-envelope aware, so a skipped timeout-with-work round can still become the prior status for the next round. Evidence: [circuit_breakers.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/circuit_breakers.py:928) only checks `current_impl_envelope`, while [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1474) always stores `prior_aud_status = aud_status`; my probe returned `(True, ...)` for the next legitimate round. Recommendation: track the last countable auditor status, or pass filtered loop history into no-progress so timeout-with-work rounds do not update the no-progress baseline.\n\nFINDING (high, test_coverage): AC #6 requires blocked-without-work two-round runs to terminate `stopped_no_progress`, but the test explicitly allows `stopped_diminishing_returns`. Evidence: [test_timeout_with_work_classifier.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py:561). Recommendation: make the regression test assert exact `stopped_no_progress`, shaping findings to avoid DR if needed or updating detector or",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests --ignore=scripts/dontpanic_orchestrate/tests/test_ec5_classifier.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/circuit_breakers.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/transcript.py scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/circuit_breakers.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/transcript.py scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "rg -n 'del.*sys\\.modules' scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+      "git diff --unified=0 -- scripts/dontpanic_orchestrate/circuit_breakers.py | rg -n -P '^[+-](?![+-]).*(\"stopped_no_progress\"|\"stopped_diminishing_returns\"|\"stopped_cap\"|BreakerKind|DIMINISHING_RETURNS_MIN_ROUNDS\\s*=|CONVERGENCE_COLLAPSE_WINDOW\\s*=|GLOBAL_THRESHOLD_HITS\\s*=|no_progress_threshold)'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "no-progress exclusion is only current-envelope aware, so a skipped timeout-with-work round can still become the prior status for the next round. Evidence: [circuit_breakers.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/circuit_breakers.py:928) only checks `current_impl_envelope`, while [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1474) always stores `prior_aud_status = aud_status`; my probe returned `(True, ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "AC #6 requires blocked-without-work two-round runs to terminate `stopped_no_progress`, but the test explicitly allows `stopped_diminishing_returns`. Evidence: [test_timeout_with_work_classifier.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py:561). Recommendation: make the regression test assert exact `stopped_no_progress`, shaping findings to avoid DR if needed or updating detector order only if the spec changes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "loop history fidelity coverage does not verify that all four envelope shapes appear in `transcript.md`. Evidence: [test_timeout_with_work_classifier.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py:337) only asserts audit files remain on disk. Recommendation: extend the test to write/read transcript rows for all four shapes, including timeout-with-work. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

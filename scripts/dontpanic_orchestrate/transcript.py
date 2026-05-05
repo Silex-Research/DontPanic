@@ -64,3 +64,20 @@ def append_terminal(
         f.write(
             f"\n**{ts}** — feature **{feature_id}** terminal: `{final_status}` after {rounds} round(s) — {reason}\n\n"
         )
+
+
+def append_note(
+    plan_dir: Path,
+    feature_id: str,
+    iteration: int,
+    note: str,
+) -> None:
+    """Plan 2026-05-04-003 F003 — operator-visible note line for non-terminal
+    classifier signals. Used today to surface "blocked-with-worktree-changes"
+    iterations: the round still appears in the transcript via append_round +
+    its on-disk envelope, but a separate note explains why no-progress /
+    diminishing-returns counters are skipping this iteration."""
+    transcript = ensure_header(plan_dir)
+    ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with transcript.open("a") as f:
+        f.write(f"\n_{ts}_ — `[volley]` iter={iteration} feature={feature_id}: {note}\n\n")
