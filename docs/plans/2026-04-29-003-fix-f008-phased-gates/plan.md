@@ -3,7 +3,7 @@ id: 2026-04-29-003-fix-f008-phased-gates
 title: F008 phased gates — split pre_impl and pre_merge across the volley lifecycle
 type: fix
 tier: local
-status: active
+status: abandoned
 date: "2026-04-29"
 description: |
   The supervisor currently evaluates ALL declared `human_gates` upfront before iteration 0 of any volley. That makes pre_merge a duplicate operator-confirmation gate alongside pre_impl rather than a true post-implementation merge checkpoint. This fix splits gate evaluation across the volley lifecycle: pre_impl gates fire before round 0; pre_merge gates fire only after the volley terminates with `signed_off` (and therefore never fire on `paused_on_gate` or `stopped_*` terminals). Other lifecycle-phase gates can be added the same way.
@@ -39,6 +39,8 @@ links:
   audits_dir: ./audit/
   evidence_dir: ./evidence/
 ---
+
+> **⊘ ABANDONED 2026-05-05** — superseded by `2026-05-04-002-fix-supervisor-lifecycle-staged-gates` (Plan B), which shipped 2026-05-04 with the same lifecycle-staged design (pre_impl evaluated before iteration 0; pre_merge evaluated only on candidate-success). The fix this plan was scoped to land has already been delivered. Closed as housekeeping per `docs/GOAL_GOVERNANCE_V1.md` §10. Original plan content preserved below for historical reference.
 
 # F008 phased gates — split pre_impl and pre_merge across the volley lifecycle
 
