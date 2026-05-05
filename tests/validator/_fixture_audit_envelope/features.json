@@ -1,0 +1,17 @@
+{
+  "task_id": "9999-12-31-002-fix-fixture-audit-envelope",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Fixture feature for the audit envelope dispatch test. Not a real feature.",
+      "steps": ["See scripts/test_validator_dispatch.py"],
+      "acceptance": "Validator dispatches claude-implementer-i0.json to the Audit model.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    }
+  ]
+}

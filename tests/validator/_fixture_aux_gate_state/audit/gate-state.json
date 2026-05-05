@@ -1,0 +1,12 @@
+{
+  "plan_id": "9999-12-31-003-fix-fixture-aux-gate-state",
+  "cleared_gates": ["pre_impl"],
+  "history": [
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "9999-12-31T00:00:00Z",
+      "actor": "operator"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "9999-12-31-001-fix-fixture-signoff",
+  "signoff_id": "9999-12-31-001-fix-fixture-signoff#signoff#1",
+  "iteration": 1,
+  "tier": "cross-cutting",
+  "agents_in_panel": ["claude", "codex"],
+  "audits": ["audit/claude-implementer-i0.json"],
+  "vote_summary": {
+    "signed_off_count": 2,
+    "needs_changes_count": 0,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "fixture",
+  "next_action": "merge",
+  "decided_at": "9999-12-31T00:00:00Z"
+}
