@@ -28,9 +28,45 @@
         "Write F001 close-out memo at `evidence/f001-closeout-memo.md` mirroring Plan E F002 closeout structure: deliverable-by-deliverable verification, before/after test counts, additive-invariant confirmation against the amended wording, queued-for-F1 note."
       ],
       "acceptance": "(1) **Triage classifier exists, pure, and typed.** `classify_goal_gap_cluster(findings: list[GoalGapFinding], cluster: GoalGapClusterContext) -> Literal['inline_fix', 'child_plan', 'follow_up_plan', 'operator_deferred']` is a module-level function with no side effects. Greppable. (2) **Child-plan threshold codified per Goal Governance V1 §6.4:** classifier returns `child_plan` iff cluster has ≥3 findings AND ≥1 finding ranks ≥ medium AND `coherence_rule == 'subsystem_and_journey'`. Tested across all 4 cases including negative cases (5 advisory findings → not child_plan). (3) **Threshold constants present:** `GOAL_GAP_MIN_FINDINGS_PER_CLUSTER`, `GOAL_GAP_MIN_SEVERITY_FOR_CHILD_PLAN`, `GOAL_GAP_MAX_CHILD_PLANS_PER_PARENT_PASS`, `GOAL_GAP_MAX_NESTING_DEPTH`. Greppable. (4) **Severity rank table location:** `_GOAL_GAP_SEVERITY_RANK` is in `nested_orchestration.py`, NOT `audit_writer.py`. Greppable in both files. (5) **Typed input structures:** `GoalGapFinding` and `GoalGapClusterContext` are Pydantic models with `extra='forbid'`. `GoalGapFinding.severity` validates against `_GOAL_GAP_SEVERITY_RANK` keys at construction time; `GoalGapFinding(severity='bogus')` raises `ValueError` (D010). (6) **Goal-gap child-charter template + builder:** `build_goal_gap_charter()` requires all 6 input fields (parent_objective_contract_id, gap_class, cluster_scope, severity, surfaces_affected, why_child_plan_not_feature) plus `existing_goal_gap_children` for cap enforcement; raises ValueError if (a) cap exceeded, (b) severity is unknown, (c) `why_child_plan_not_feature` is empty or <20 chars. (7) **Cap-enforcement helper exists:** `validate_goal_gap_child_plan_caps(existing_goal_gap_children)` is a module-level function that raises ValueError when len ≥ `GOAL_GAP_MAX_CHILD_PLANS_PER_PARENT_PASS`. Tested directly + via charter builder. (8) **Anti-recursion inheritance:** goal-gap children still hit Plan 003's depth/cycle/signature guards. Test confirms a goal-gap charter past `DEFAULT_DEPTH_LIMIT` is refused; same for cyclic spawn; same for repeated-finding signature collision. (9) **Evidence path convention:** `GOAL_GOVERNANCE_EVIDENCE_PREFIX` constant + `goal_governance_evidence_path()` helper produce paths matching `evidence/goal-governance/{pre_impl|post_impl}/<artifact>`. Tested. (10) **Goal-gap fan-in sibling parser:** `parse_goal_gap_fan_in_memo_fields()` is a SIBLING to the existing fan-in memo parser, NOT an extension of it. It reuses `parse_return_condition_section()` for status parsing and rejects memos missing `objective_contract_id:` or `gap_class_closed:`. Existing generic fan-in memo parser is unchanged. (11) **Return-condition parser unchanged but verified:** existing `_LEGAL_STATUSES = {satisfied, blocked, superseded}` covers goal-gap children (D007 — no new statuses). Test fixture exercises a goal-gap return condition through the existing parser without modification. (12) **Unknown severity rejection (D010):** classifier never silently treats unknown severity as below threshold. Pydantic validation rejects at `GoalGapFinding` construction time; `build_goal_gap_charter()` rejects at builder time. Both paths tested with `severity='bogus'`. (13) **Tests added at `test_goal_governance_config.py`** covering classifier (all 4 cases + severity + coherence + unknown severity), charter validation (rationale rejection × 2 + unknown severity), cap helper (direct + via builder), anti-recursion, sibling fan-in parser, return-condition fixture, evidence path. (14) **Reference doc at `docs/GOAL_GOVERNANCE_F0_REFERENCE.md`** maps F0 additions to GOAL_GOVERNANCE_V1.md §3.3 / §6.3 / §6.4 / §9 sections with cross-links. (15) **Existing tests still green:** full orchestrate suite returns 979 + N passed, 6 skipped, where N is the count of new tests added (step 12). Zero regressions in pre-existing tests. (16) **Additive-only invariant (D001 amended wording):** all of — (i) no behavior changes to existing public APIs; (ii) no changes to existing Pydantic model fields; (iii) no changes to existing guard conditions (depth/cycle/signature); (iv) no changes to existing return-condition statuses; (v) additive helpers/constants/templates/typed structures only, plus `__all__` exports as needed. Verified by manual diff review + targeted grep. Modified lines for `__all__` updates and import re-grouping are acceptable; behavior preservation is the lock. (17) **Boundary preserved:** `git diff --name-only HEAD` confined to F0's own surface (nested_orchestration.py additive + new test file + new doc + this plan dir). Zero diffs elsewhere. (18) **Ruff + sanitization clean.** (19) **F001 close-out memo at `evidence/f001-closeout-memo.md`** with deliverable-by-deliverable verification + queued-for-F1 note.",
-      "passes": false,
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/nested_orchestration.py",
+          "captured_by": "codex",
+          "note": "F001 implementation: additive GOAL_GAP_* constants, GoalGapFinding/GoalGapClusterContext Pydantic inputs, pure classify_goal_gap_cluster(), validate_goal_gap_child_plan_caps(), goal_governance_evidence_path(), goal-gap child charter builder, and sibling parse_goal_gap_fan_in_memo_fields(). Existing depth/cycle/signature guards and return-condition statuses are unchanged."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_goal_governance_config.py",
+          "captured_by": "codex",
+          "note": "18 focused F0 tests covering classifier outcomes, severity/coherence negatives, unknown severity rejection, cap enforcement, charter validation, inherited anti-recursion guards, sibling fan-in parsing, return-condition compatibility, and evidence path escaping."
+        },
+        {
+          "type": "file",
+          "uri": "docs/GOAL_GOVERNANCE_F0_REFERENCE.md",
+          "captured_by": "codex",
+          "note": "Reference doc mapping F0 constants/helpers/templates to GOAL_GOVERNANCE_V1.md sections and documenting that F0 configures nested orchestration without runtime spawning automation."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests",
+          "captured_by": "codex",
+          "note": "Full canonical orchestrate suite: 997 passed, 6 skipped, 1 warning. Baseline 979+6 from Plan E close-out plus 18 new F0 tests, zero regressions."
+        },
+        {
+          "type": "log",
+          "uri": "docs/plans/2026-05-05-002-feat-goal-governance-nested-orchestration-config/evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo with deliverable verification, acceptance coverage, test count progression, additive-invariant review, and F1 handoff."
+        }
+      ],
+      "verified_at": "2026-05-05T22:56:05Z",
+      "verified_by": [
+        "codex",
+        "operator"
+      ]
     }
   ]
 }
