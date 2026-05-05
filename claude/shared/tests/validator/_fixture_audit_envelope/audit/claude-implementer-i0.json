@@ -1,0 +1,12 @@
+{
+  "task_id": "9999-12-31-002-fix-fixture-audit-envelope",
+  "audit_id": "9999-12-31-002-fix-fixture-audit-envelope#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "iteration": 0,
+  "started_at": "9999-12-31T00:00:00Z",
+  "completed_at": "9999-12-31T00:01:00Z",
+  "audit_status": "signed_off",
+  "validation_performed": ["fixture envelope, no real volley ran"],
+  "summary": "Fixture audit envelope used by the validator dispatch test. All required fields present; should validate against the Audit model."
+}
