@@ -192,9 +192,19 @@ Spin & Dine is the primary motivating example, so Android parity remains a parti
 - F2 against an Android plan produces a goal audit explicitly marked `runtime_evidence_level: limited` and lists the journeys that *would* have been walked if the Android MCP existed.
 - **G5 (Android MCP) is queued as high-priority follow-on** — if Spin & Dine becomes the F1 dogfood (per §9 Plan F1 acceptance), G5 jumps to the front of the post-V1 queue.
 
-### 6.7 OpenClaw boundary
+### 6.7 OpenClaw boundary (resolved per OpenClaw Audit V1, 2026-05-05)
 
-Open until §8 audit completes. V1 placeholder: DontPanic produces structured outcomes (objective contract, audit envelopes, signoff, gap-triage classifications). OpenClaw — if its capability map covers them — handles routing / surfaces / cross-instance coordination / approval channels. Anything OpenClaw doesn't cover lands in Plan H.
+The §8 audit (full doc at `docs/OPENCLAW_AUDIT.md`) resolves this from "open" to **decided**:
+
+- **OpenClaw is a caller / personal-assistant control plane, not the governance layer.** It owns channels, voice, multi-channel inbox, multi-agent isolation per workspace, and single-instance session state.
+- **DontPanic owns the routing protocol, approval semantics, plan-aware status surfaces, and goal-governance artifacts** (objective contract, audit envelopes, signoff, gap-triage classifications, INBOX, gate state).
+- **OpenClaw may relay or invoke DontPanic, but does not define the protocol.** The OpenClaw-as-caller recipe in `docs/ECOSYSTEM.md` (a thin OpenClaw skill that shells out to `dontpanic intake / dispatch / status / approve`) is the integration contract.
+
+Three downstream consequences:
+
+1. Plan H ships the H-DontPanic variant (see §9 Plan H entry).
+2. Cross-instance coordination is a confirmed DontPanic gap, not an OpenClaw deferral.
+3. F0 / F1 / G / F2 lock with no OpenClaw dependency.
 
 ---
 
@@ -343,14 +353,21 @@ Depends on Plan G. **F2 lock blocked on G close-out or an explicit reduced-evide
 - **F2.3:** Gap triage classifier — finding → {inline_fix, child_plan, follow_up_plan, operator_deferred}.
 - **F2.4:** Token controls — milestone definition, sampling selection, child-plan threshold caps.
 
-### Plan H — Visibility surface (dashboard)
+### Plan H — Visibility surface (locked: H-DontPanic variant)
 
-Decision-pending until OpenClaw audit completes.
+**Locked per OpenClaw Audit V1 (2026-05-05).** H-OpenClaw variant ruled out — OpenClaw renders its own session/channel state, not plan-locked workflow state. DontPanic ships its own visibility surface.
 
-- **H-OpenClaw variant:** if OpenClaw covers cross-instance status / dashboard / Discord, DontPanic ships only the structured data; OpenClaw renders.
-- **H-DontPanic variant:** if OpenClaw doesn't cover, DontPanic ships wterm CLI dashboard plus an Axiom dashboard repoint per `2026-05-03-002` F004.
+- **H1 — wterm CLI dashboard** (primary, ships first). Local terminal surface for plan / volley / signoff state. Most aligned with PRODUCT.md's "no custom daemon" principle. Smallest scope.
+- **H2 — Axiom dashboard repoint** (optional, follow-on). Per `2026-05-03-002` F004; repoints Axiom's existing dashboard surface at the personal DontPanic/OpenClaw setup. Web/hosted UI. Operator-installable, not bundled with DontPanic OSS.
 
-H-OpenClaw is preferred (smaller DontPanic surface, less duplication). H-DontPanic is the fallback.
+**Cross-instance coordination — explicitly called out as separate scope:**
+
+The OpenClaw audit confirmed that cross-instance coordination ("instance A pauses on a gate that instance B can approve") is a real DontPanic gap, not an OpenClaw deferral. Decision pending at Plan H lock time:
+
+- **Option A: expand Plan H scope** — bundle a global INBOX broker + shared approval registry into H, alongside the wterm/Axiom rendering work.
+- **Option B: split as Plan I** — keep H focused on single-instance visibility; open `Plan I — Cross-instance coordination` as a separate slice.
+
+Option B is cleaner (smaller H, separable design) but pushes the cross-instance gap further out. Operator decision required at H lock time. Default expectation: Option B, with Plan I queued as immediate follow-on if H ships.
 
 ---
 
@@ -369,10 +386,11 @@ Four plans on disk are likely superseded and should be closed as housekeeping (m
 
 ## 11. Next Steps
 
-1. **Commit this doc as the decision register.** Policy anchor for everything below; not an implementation plan.
-2. **OpenClaw audit pass** against §8 questions, in parallel with **stale plan triage** (§10). Both are housekeeping/strategy and do not block each other.
-3. **Lock Plan F0** — nested orchestration configuration for goal governance. Configures the already-shipped substrate (`2026-05-02-003`) for the new governance use case.
-4. **Lock Plan F1** — objective contract + pre-impl sufficiency audit. F1 dogfood (F1.5–F1.7) proves both F0 and F1 land correctly.
-5. **Plan Plan G** — MCP prerequisites — drafted during or after F1 lock; ships before F2.
-6. **F1 + G close-out → Lock Plan F2** — post-impl completion audit + gap triage. F2 lock blocked on G close-out OR explicit reduced-evidence decision recorded as a D-entry.
-7. **F2 close-out + OpenClaw audit outcome → Lock Plan H** — visibility surface. Variant (H-OpenClaw vs H-DontPanic) determined by §8 audit results.
+1. ✅ **Commit decision register** — `docs/GOAL_GOVERNANCE_V1.md` committed at `28880ab` (2026-05-05).
+2. ✅ **OpenClaw audit** — `docs/OPENCLAW_AUDIT.md` committed at `7e5ef30` (2026-05-05); decisions folded back into §6.7 + §9 Plan H.
+3. **Stale plan triage** (§10) — markdown housekeeping. Next concrete action.
+4. **Lock Plan F0** — nested orchestration configuration for goal governance. Configures the already-shipped substrate (`2026-05-02-003`) for the new governance use case. No OpenClaw dependency (per §6.7).
+5. **Lock Plan F1** — objective contract + pre-impl sufficiency audit. F1 dogfood (F1.5–F1.7) proves both F0 and F1 land correctly.
+6. **Plan Plan G** — MCP prerequisites — drafted during or after F1 lock; ships before F2.
+7. **F1 + G close-out → Lock Plan F2** — post-impl completion audit + gap triage. F2 lock blocked on G close-out OR explicit reduced-evidence decision recorded as a D-entry.
+8. **F2 close-out → Lock Plan H** — H-DontPanic variant (wterm + optional Axiom). Decide at H lock time whether to expand H scope to include cross-instance coordination, or split it as Plan I (default expectation: split).
