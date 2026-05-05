@@ -6,6 +6,7 @@ Run: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_ec5_clas
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -266,19 +267,35 @@ def test_aggregation_does_not_mutate_input_list() -> None:
 
 
 def test_classifier_is_pure_no_io(monkeypatch: pytest.MonkeyPatch) -> None:
-    """classify_ec5_severity must not perform disk I/O. Smoke check by patching
-    Path.read_text/write_text/open to fail loudly; the call must complete."""
+    """classify_ec5_severity must not perform disk I/O.
+
+    Plan 2026-05-04-004 D001: targeted purity sentinels around
+    classifier-reachable collaborators. Patch set:
+
+    - ``subprocess.run`` (the classifier's only legitimate I/O candidate
+      when it called ``resolve_repo`` pre-D002 — kept as a tripwire)
+    - ``Path.read_text`` / ``Path.write_text`` / ``Path.open``
+      (file content read/write surfaces)
+
+    Explicitly NOT patched: ``Path.stat`` and ``Path.exists``. Pytest's
+    traceback formatter (``_pytest/_code/code.py``) calls ``code.path``
+    → ``p.exists()`` → ``self.stat()`` during failure rendering, and
+    class-level traps there turn assertion failures into
+    ``INTERNALERROR`` instead of normal reds — the exact pathology Plan
+    D's D001 closes. Pytest framework internals + capture machinery use
+    them benignly during setup/teardown too.
+    """
     audit = _load_fixture("case-c-golden-valid-struct-valid-prelude.json", agent="claude")
 
-    def _explode(*args: Any, **kwargs: Any) -> None:
-        raise AssertionError("classifier touched disk I/O")
+    def _trip(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("classifier reached disk I/O")
 
-    # Sentinel-patch the most likely I/O paths the classifier might leak to.
-    # resolve_repo can shell out to git rev-parse but only when struct lacks
-    # repo; case-c has explicit project/env so resolve is from struct.
-    monkeypatch.setattr(Path, "read_text", _explode)
-    monkeypatch.setattr(Path, "write_text", _explode)
-    monkeypatch.setattr(Path, "stat", _explode)
+    # Targeted sentinels — content-read/write surfaces + subprocess.
+    # Path.stat / Path.exists are intentionally absent (D001).
+    monkeypatch.setattr(subprocess, "run", _trip)
+    monkeypatch.setattr(Path, "read_text", _trip)
+    monkeypatch.setattr(Path, "write_text", _trip)
+    monkeypatch.setattr(Path, "open", _trip)
 
     assert classify_ec5_severity(audit) == "none"
 
