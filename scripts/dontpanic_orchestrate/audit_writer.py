@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import sys
 from pathlib import Path
@@ -72,6 +73,22 @@ def build_audit(
     populate target_context.commands_run by parsing `$ <cmd>` lines from
     the agent's prose summary. Supervisor performs the cross-check of
     declared env/project + forbidden-command detection post-build.
+
+    Plan 2026-05-04-003 F002: when ``result.subprocess_result`` indicates a
+    subprocess timeout, layer in diagnostic evidence WITHIN the existing
+    schema (no new top-level fields, no new ``audit_status`` enum value):
+
+    - structured timeout block prepended to ``summary``
+    - timeout markers + sidecar references appended to ``validation_performed``
+    - ``correctness/medium`` finding appended when timeout AND worktree
+      changed (``timed_out=true AND worktree_changed=true``)
+    - partial stdout/stderr written under
+      ``<plan_dir>/audit/partials/<audit_id>.{stdout,stderr}.{txt,bin}``
+      (referenced from ``validation_performed`` only — never inline)
+
+    Non-timeout dispatches and successful runs are byte-stable: the
+    timeout helpers no-op and ``validation_performed`` / ``summary`` /
+    ``findings`` are unchanged.
     """
     audit_id = f"{loaded.plan_id}#{result.agent}#{result.iteration}"
     findings = (extra or {}).get("findings") or []
@@ -80,6 +97,19 @@ def build_audit(
         status_hint = _extract_status_hint(result.summary)
         if not findings:
             findings = _extract_findings(result.summary, feature_id)
+
+    # Plan 2026-05-04-003 F002: timeout evidence layered in within existing
+    # schema. All four helpers are no-ops when subprocess_result is None or
+    # when the run did not time out, preserving byte-stability.
+    spr = result.subprocess_result
+    timeout_markers = _timeout_markers(spr)
+    if timeout_markers:
+        sidecar_markers = _write_partial_sidecars(loaded.plan_dir, audit_id, spr)
+        validation_performed = [*validation_performed, *timeout_markers, *sidecar_markers]
+        timeout_finding = _timeout_finding(spr, feature_id)
+        if timeout_finding is not None:
+            findings = [*findings, timeout_finding]
+
     audit: dict[str, Any] = {
         "task_id": loaded.plan_id,
         "audit_id": audit_id,
@@ -201,7 +231,140 @@ def _summary(result: DispatchResult, feature_id: str) -> str:
         prefix = f"[{feature_id}] "
         body = result.summary or "(no summary returned)"
         return prefix + body[:1500]
+    spr = getattr(result, "subprocess_result", None)
+    if spr is not None and getattr(spr, "timed_out", False):
+        return f"[{feature_id}] {_timeout_summary_block(spr)}"
     return f"[{feature_id}] DISPATCH FAILED: {result.error or 'unknown error'}"
+
+
+# Plan 2026-05-04-003 F002 — timeout evidence helpers.
+# These helpers are no-ops when ``subprocess_result`` is None or when the
+# subprocess did not time out, preserving byte-stability for non-timeout
+# envelopes (D004, AC #11).
+
+
+def _render_worktree_value(worktree_changed: bool | None) -> str:
+    """Render the ternary worktree state for marker / finding text."""
+    if worktree_changed is None:
+        return "unknown"
+    return "true" if worktree_changed else "false"
+
+
+def _timeout_summary_block(spr: Any) -> str:
+    """Structured timeout context — replaces the bare ``DISPATCH FAILED:``
+    text when the subprocess hit the wrapper timeout.
+
+    Schema-wise this is just a longer ``summary`` string; no new fields. The
+    block lists timeout duration, captured byte counts, worktree delta, and
+    grace-period state — all observable from outside the subprocess
+    (Plan C D001).
+    """
+    lines = [
+        f"DISPATCH TIMED OUT after {spr.timeout_seconds}s",
+        f"  captured stdout: {spr.captured_stdout_bytes} bytes",
+        f"  captured stderr: {spr.captured_stderr_bytes} bytes",
+        f"  worktree changed: {_render_worktree_value(spr.worktree_changed)}",
+        f"  grace period used: {str(spr.grace_period_used).lower()}",
+    ]
+    env_markers = list(getattr(spr, "env_markers", []) or [])
+    if env_markers:
+        lines.append("  env fallbacks:")
+        lines.extend(f"    - {m}" for m in env_markers)
+    return "\n".join(lines)
+
+
+def _timeout_markers(spr: Any) -> list[str]:
+    """Render ``validation_performed`` markers when subprocess timed out.
+
+    Returns ``[]`` when ``spr`` is None or did not time out, so the caller
+    can unconditionally splat the result into validation_performed without
+    branching.
+    """
+    if spr is None or not getattr(spr, "timed_out", False):
+        return []
+    markers = [
+        f"subprocess_timeout_seconds={spr.timeout_seconds}",
+        f"timeout_stdout_bytes={spr.captured_stdout_bytes}",
+        f"timeout_stderr_bytes={spr.captured_stderr_bytes}",
+        f"worktree_changed={_render_worktree_value(spr.worktree_changed)}",
+        f"grace_period_used={str(spr.grace_period_used).lower()}",
+    ]
+    env_markers = list(getattr(spr, "env_markers", []) or [])
+    markers.extend(env_markers)
+    return markers
+
+
+def _timeout_finding(spr: Any, feature_id: str) -> dict[str, Any] | None:
+    """Structured ``correctness/medium`` finding when subprocess timed out
+    AND ``worktree_changed=true``.
+
+    Returns None for the three non-firing cases (no timeout, timeout without
+    worktree change, timeout with ``worktree_changed=unknown``) so the
+    caller can append unconditionally — never a false positive (D006, D007).
+    Category stays ``correctness`` per D007 (existing schema-locked enum).
+    """
+    if spr is None or not getattr(spr, "timed_out", False):
+        return None
+    if getattr(spr, "worktree_changed", None) is not True:
+        return None
+    return {
+        "severity": "medium",
+        "category": "correctness",
+        "feature_id": feature_id,
+        "issue": (
+            "executor timed out after observable worktree changes; partial work landed on disk"
+        ),
+        "evidence": (
+            f"{spr.timeout_seconds}s timeout exceeded; "
+            f"{spr.captured_stdout_bytes} stdout bytes captured; "
+            "git status --porcelain=v1 differs before/after"
+        ),
+        "recommendation": (
+            "audit the working-tree changes and either re-dispatch or accept on direct review"
+        ),
+    }
+
+
+def _write_partial_sidecars(plan_dir: Path, audit_id: str, spr: Any) -> list[str]:
+    """Write captured stdout/stderr to ``audit/partials/`` sidecars.
+
+    Layout per D004:
+
+    - ``<plan_dir>/audit/partials/<audit_id>.stdout.txt`` (UTF-8) OR
+      ``<plan_dir>/audit/partials/<audit_id>.stdout.bin`` (raw bytes when
+      stdout cannot be UTF-8 decoded)
+    - same for stderr
+
+    The path is referenced ONLY from ``validation_performed`` markers
+    (returned here as marker strings), never as a top-level audit JSON
+    field — schema has ``additionalProperties: false``.
+
+    Empty captured streams produce no file and no marker (AC #8).
+    """
+    if spr is None or not getattr(spr, "timed_out", False):
+        return []
+
+    markers: list[str] = []
+    partials_dir = plan_dir / "audit" / "partials"
+    safe_audit_id = audit_id.replace("/", "_").replace(os.sep, "_")
+
+    for stream_name, raw_bytes, byte_count in (
+        ("stdout", spr.stdout, spr.captured_stdout_bytes),
+        ("stderr", spr.stderr, spr.captured_stderr_bytes),
+    ):
+        if byte_count <= 0 or not raw_bytes:
+            continue
+        try:
+            text = raw_bytes.decode("utf-8")
+            ext = f".{stream_name}.txt"
+            partials_dir.mkdir(parents=True, exist_ok=True)
+            (partials_dir / f"{safe_audit_id}{ext}").write_text(text)
+        except UnicodeDecodeError:
+            ext = f".{stream_name}.bin"
+            partials_dir.mkdir(parents=True, exist_ok=True)
+            (partials_dir / f"{safe_audit_id}{ext}").write_bytes(raw_bytes)
+        markers.append(f"partial_{stream_name}_path=audit/partials/{safe_audit_id}{ext}")
+    return markers
 
 
 def _normalize_summary(audit: dict[str, Any]) -> dict[str, Any]:
