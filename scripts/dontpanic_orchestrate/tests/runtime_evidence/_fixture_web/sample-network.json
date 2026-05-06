@@ -1,0 +1,4 @@
+[
+  {"url": "/api/missing", "status": 404, "method": "GET", "duration_ms": 142},
+  {"url": "/api/timeout", "status": 0, "method": "POST", "duration_ms": 30000, "error": "timeout"}
+]
