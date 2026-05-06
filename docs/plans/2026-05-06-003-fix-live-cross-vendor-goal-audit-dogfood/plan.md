@@ -68,7 +68,10 @@ description: |
        (a) real platform issue — file as separate follow-up plan;
        (b) prompt-tuning gap — patch
        `scripts/dontpanic_orchestrate/prompts/completion_audit_prompt.md`
-       in scope only if the diff is ≤ ~30 lines and operator approves;
+       in scope only if the change conforms to D006's behavioral
+       boundary (clarifies already-locked F2 semantics; no schema /
+       policy / module changes) AND operator approves AND it gets
+       recorded in the close-out memo;
        (c) spec-clarification — record in this plan's
        decisions.jsonl as a doc-only D-entry;
        (d) false-positive — record as a counter-example for the v2
@@ -198,8 +201,11 @@ Direct path. No phase gating; F001 is the entire deliverable.
   - **(b) Prompt-tuning gap** — auditor template wording surfaces a
     consistent misinterpretation. Patch
     `scripts/dontpanic_orchestrate/prompts/completion_audit_prompt.md`
-    in scope ONLY IF the diff is ≤ ~30 lines AND operator approves
-    (D006). Anything larger → separate follow-up.
+    in scope ONLY IF the change conforms to D006's behavioral
+    boundary (clarifies already-locked F2 semantics; no schema /
+    policy / module changes) AND operator approves AND it gets
+    recorded in the close-out memo. Anything that crosses the
+    behavioral boundary → separate follow-up.
   - **(c) Spec-clarification** — finding is technically correct but
     surfaces ambiguity in the contract spec or operator workflow.
     Record as a doc-only D-entry in this plan's decisions.jsonl;
@@ -207,17 +213,23 @@ Direct path. No phase gating; F001 is the entire deliverable.
   - **(d) False-positive** — finding is wrong. Record as a counter-
     example feeding the v2 completion-test schema follow-up (F2
     D011's release valve). No fix in this plan.
-- **D006:** Tiny in-scope fixes acceptable; larger work queued. The
-  ~30-line cap on prompt-template diffs + the exclusion of
-  F001/F002/F003 module changes from this plan's scope keep this as
-  a validation wrapper, not a v2 of the F2 pipeline. If the live run
-  reveals systemic auditor-prompt issues that need >30 lines of
-  rewrite, abort the in-scope fix and queue a "completion auditor
-  prompt v2" follow-up.
+- **D006:** In-scope prompt changes are limited to **clarifying** the
+  completion-audit prompt so it better follows already-locked F2
+  semantics. They must NOT change schema, add new gap classes, alter
+  same-vendor / offline policy, change override behavior, or modify
+  F001 / F002 / F003 module code. Any prompt change requires explicit
+  operator approval and must be recorded in the close-out memo. If
+  the live run reveals a need for code changes or semantic policy
+  changes, F001 stays unresolved and a follow-up plan is opened.
+  (Pre-lock amendment: original draft used a ~30-line cap on diffs;
+  reframed as a behavioral boundary because line-count is bad
+  governance — a 12-line change can be conceptually risky and a
+  50-line change can be purely clarifying.)
 - **D007:** No changes to F001 / F002 / F003 module code, no changes
   to runtime_evidence/ adapters, no changes to F1 surface. Only
-  permissible code mutation in this plan: prompt template under D006
-  cap. Worktree-boundary verification at commit time.
+  permissible code mutation in this plan: prompt template clarifications
+  conforming to D006's behavioral boundary. Worktree-boundary
+  verification at commit time.
 
 ## Acceptance bar
 
@@ -247,7 +259,9 @@ This plan's F001 acceptance:
    `disposition.md`.
 7. Operator-judged PASS in `disposition.md`: real cross-vendor
    dispatch verified end-to-end + no unresolved class-(a) findings
-   AND any in-scope class-(b) prompt fix is ≤ ~30 lines + approved.
+   AND any in-scope class-(b) prompt change conforms to D006's
+   behavioral boundary (clarification only, no semantic changes) +
+   explicitly approved + recorded in the close-out memo.
 8. Cumulative orchestrate suite still green; if a prompt-template
    diff landed, the F002 greppable-framing tests still pass.
 9. ruff + sanitization clean.
