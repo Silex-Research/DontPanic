@@ -211,11 +211,77 @@
         "Final F1 close-out: if F005 PASS, the plan's overall close-out memo + signoff envelope can be authored. If F005 FAIL, the close-out memo records the failure diagnosis and F1 stays at status `active` (does not flip to `completed`) until the diagnosed root cause is fixed and F005 re-runs."
       ],
       "acceptance": "(1) **Spin & Dine dogfood fixture authored** at `evidence/dogfood/spin-and-dine/objective_contract.json` (plan-local, NOT top-level dogfood/). Validates against `ObjectiveContract` model. user_journeys cover onboarding, restaurant voting, saved lists, subscription UX with sufficient detail to surface real parity gaps. Static curated content \u2014 no live repo coupling. (2) **Glam dogfood fixture authored** at `evidence/dogfood/glam/objective_contract.json` (plan-local). Validates against `ObjectiveContract` model. user_journeys cover create/edit/preview/publish/analytics/profile with sufficient detail to surface real integration gaps. Static curated content. (3) **Sufficiency auditor run** against both fixture plans via F004's gate path or direct F003 invocation. Findings captured to `evidence/{spin-and-dine,glam}-sufficiency-findings.json` (plan-level evidence). (4) **Operator disposition written for Spin & Dine** at `evidence/spin-and-dine-disposition.md`. Required sections: PASS/FAIL verdict on materially-correct judgment + cited findings + recommendations if FAIL. (5) **Operator disposition written for Glam** at `evidence/glam-disposition.md`. Same required sections. (6) **For the Spin & Dine fixture, the auditor MUST surface \u22651 materially correct gap class** (parity matrix incompleteness \u2014 any iOS-vs-Android coverage gap not represented as a feature in the fixture's features.json). Operator confirms via disposition. (7) **For the Glam fixture, the auditor MUST surface \u22651 materially correct gap class** (integrated Creator Hub journey-coverage \u2014 cross-feature integration concern, not just per-feature completeness). Operator confirms via disposition. (8) **D010 gating** \u2014 F1 close-out blocked if either disposition records FAIL. F005 close-out memo records diagnosis and which root cause (prompt / schema / decomposition / fixture authoring) needs revision. (9) **F005 close-out memo at `evidence/f005-closeout-memo.md`** records both fixture-plan paths, both findings files, both dispositions, summary of caught gap classes, prompt-tuning recommendations. (10) **Plan F1 itself still validates clean** (no goal_type, backward compat). (11) **Project-agnostic invariant verified (D013)** \u2014 no project-name-specific behavior in DontPanic code (`scripts/dontpanic_orchestrate/`); project names appear only in fixture content under `evidence/dogfood/` and in close-out evidence files. Greppable assertion: `git diff --name-only` shows ZERO matches for project-named modules, classes, or special-cases in `scripts/`. (12) **Worktree boundary preserved** \u2014 no diffs outside this plan dir + features.json passes flip. NO top-level `dogfood/` directory created.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/spin-and-dine/objective_contract.json",
+          "note": "Spin & Dine dogfood fixture \u2014 parity goal, 4 user journeys, static curated content (D013 project-agnostic invariant honored)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/spin-and-dine/plan.md",
+          "note": "Spin & Dine synthetic plan dir frontmatter (goal_type=parity, links.objective_contract)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/spin-and-dine/features.json",
+          "note": "Spin & Dine synthetic features.json with intentional decomposition gaps"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/glam/objective_contract.json",
+          "note": "Glam dogfood fixture \u2014 new_feature/integrated-product-surface goal, 6 user journeys, static curated content"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/glam/plan.md",
+          "note": "Glam synthetic plan dir frontmatter (goal_type=new_feature, links.objective_contract)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dogfood/glam/features.json",
+          "note": "Glam synthetic features.json with per-feature decomposition lacking integration features"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/spin-and-dine-sufficiency-findings.json",
+          "note": "F003 auditor findings against Spin & Dine fixture \u2014 7 findings (3 high parity_gaps + 4 medium); cross-vendor invariant relaxed for dogfood"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/glam-sufficiency-findings.json",
+          "note": "F003 auditor findings against Glam fixture \u2014 8 findings (3 high incl. integration_gap + 2 missing_feature; 5 medium)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/spin-and-dine-disposition.md",
+          "note": "Operator disposition for Spin & Dine \u2014 CONFIRMED PASS 2026-05-05 (7/7 materially correct, parity matrix incompleteness target gap class caught)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/glam-disposition.md",
+          "note": "Operator disposition for Glam \u2014 CONFIRMED PASS 2026-05-05 (8/8 materially correct, integrated Creator Hub journey-coverage target gap class caught)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f005-closeout-memo.md",
+          "note": "F005 close-out memo \u2014 fixture paths, finding summaries by gap class, D010 gate satisfied for both halves, cross-vendor caveat recorded, prompt-tuning recommendations"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/spin-and-dine-auditor-prompt.txt",
+          "note": "Preserved auditor prompt for Spin & Dine fixture (reproducibility)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/glam-auditor-prompt.txt",
+          "note": "Preserved auditor prompt for Glam fixture (reproducibility)"
+        }
+      ]
     }
   ]
 }

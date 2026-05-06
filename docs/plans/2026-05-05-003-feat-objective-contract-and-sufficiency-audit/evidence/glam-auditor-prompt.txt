@@ -1,0 +1,143 @@
+# Pre-impl sufficiency audit
+
+Walk the proposed features against the user-facing outcome described in the objective contract below. Surface gap-class findings the operator must resolve before the plan locks for implementation.
+
+## Objective contract
+- goal_type: new_feature
+- source_of_truth: Curated static reference: Glam Creator Hub PRD v1 as documented in this fixture. NOT a live read from any external repo — the fixture is reproducible from this file alone. Treated as a generic integrated-product-surface example per D013; project name is content, not a product-code dependency.
+- completion_test: Creator Hub works as a unified product surface — a creator can move from create → edit → preview → publish → analytics → drill-down → profile and feel one cohesive product, not a collection of feature screens. The journeys compose: a creator who publishes a post should see analytics for that post within 5 minutes, and tapping the post in analytics should drill into the same canonical post detail the public sees on the profile.
+- non_goals:
+  - Android Creator Hub (Android creator experience is a separate track)
+  - Live-streaming integration (Creator Hub v1 is post-based; live is v2)
+  - Brand-side collaboration management UI (creators see their side; brand UI is a separate product)
+- required_evidence (post-impl):
+  - End-to-end walk: create → edit → preview → publish → analytics → click into single-post drill-down
+  - Publish-failure recovery walk: trigger moderation flag, return to compose, resolve, re-publish
+  - Analytics drill-down: from analytics tile, tap a published post, verify the per-post breakdown matches the tile total
+  - Cross-device draft resume: save draft on iOS, open Creator Hub on web within 30s, confirm draft surfaces
+  - Profile handle change: change handle, verify old-handle URL redirects for 30 days
+
+## User journeys
+### create
+Creator opens Creator Hub and starts a new post: chooses a try-on result from their history (or composes new), enters caption + tags, picks an audience (public / followers / collaboration), and saves a draft. Drafts persist locally and sync to backend so the creator can resume on another device. The draft step is required — creators cannot publish without first saving a draft (this enforces the moderation-pre-screen the PRD specifies).
+- surfaces: ios, web
+- states: empty_history, history_loaded, compose_open, draft_saved_local, draft_synced, draft_resume_other_device
+- acceptance_signals:
+  - Try-on history loads within 2s on Wi-Fi
+  - Caption accepts up to 280 chars; tags up to 10
+  - Draft persists across app restart
+  - Draft surfaces on second device within 30s of save
+
+### edit
+Creator opens an existing draft (or published post) and edits caption / tags / audience. Edits to a published post create a revision history entry visible in analytics; edits to a draft just overwrite. The edit experience uses the same composer as create — no separate edit surface.
+- surfaces: ios, web
+- states: draft_edit_open, published_edit_open, revision_recorded, edit_conflict_resolution
+- acceptance_signals:
+  - Edit surface is the unified composer, not a separate screen
+  - Published-post edits log a revision with timestamp + diff
+  - Concurrent edits across devices surface a conflict-resolution UI
+
+### preview
+Creator previews how a draft will render in the public feed before publishing — the same renderer the public sees. Preview is interactive: tapping the preview's like / comment affordances shows a coach-mark explaining 'this is preview; engagement disabled'. Preview must reflect any pending moderation flags (e.g. 'this caption contains a flagged term — review before publishing').
+- surfaces: ios, web
+- states: preview_clean, preview_with_moderation_flag, preview_engagement_coach_mark
+- acceptance_signals:
+  - Preview uses the same render path as the public feed
+  - Moderation-flag banner surfaces when caption / tags trip the screening rules
+  - Engagement actions show coach-mark, not error toast
+
+### publish
+Creator confirms publish from preview. Publish triggers: (1) backend moderation pass (synchronous, <3s), (2) feed-fanout job (async, propagates within 60s), (3) push-notification fan-out to followers if audience=followers / public, (4) analytics impression-tracker initialization. If moderation fails, creator returns to compose with a flag annotation; if any non-moderation step fails, post is published but a 'publishing in progress' banner surfaces in the creator's feed view until the async fan-out completes.
+- surfaces: ios, web, backend
+- states: publish_in_progress, moderation_failed, publish_succeeded_fanout_pending, publish_succeeded_fanout_complete, fanout_partial_failure
+- acceptance_signals:
+  - Moderation pass completes within 3s
+  - Feed fan-out completes within 60s for ≥99% of publishes
+  - Push-notification dispatch matches audience
+  - Analytics impression-tracker is initialized synchronously with publish
+
+### analytics
+Creator views analytics on the dashboard: impressions, likes, comments, shares, follower-growth attributable to this post. Default range is 7-day; user can switch to 30-day or all-time. Each metric tile is tappable, opening a per-post breakdown when the metric is post-level and a per-period breakdown when the metric is account-level. Analytics tiles refresh every 5 minutes; staler data shows a 'last updated <time>' subtext.
+- surfaces: ios, web
+- states: analytics_loading, analytics_ready, analytics_stale, analytics_per_post_drill_down, analytics_per_period_drill_down
+- acceptance_signals:
+  - Default 7-day range loads within 2s
+  - Range selector preserves selection across navigation
+  - Tile drill-down opens the right breakdown (post-level vs account-level)
+  - Stale-data subtext appears when last refresh > 5 minutes old
+
+### profile
+Creator profile shows the public-facing identity: avatar, handle, bio, follower / following counts, and a feed of published posts. Editing the profile (avatar / bio / handle) is gated by the unified composer's audience-aware preview — handle changes show a 'this URL will redirect' warning since the old handle URL stays valid for 30 days post-change. Profile is the canonical entry point creators send to brands during collaboration negotiation.
+- surfaces: ios, web
+- states: profile_owner_view, profile_visitor_view, profile_edit_avatar, profile_edit_bio, profile_edit_handle_with_redirect_warning
+- acceptance_signals:
+  - Owner / visitor views differ in available actions (Edit vs Follow)
+  - Avatar upload accepts JPG / PNG up to 5MB
+  - Handle change preserves the 30-day redirect from the old handle
+
+## Proposed features
+### F001
+Creator Hub composer (iOS + web): pick try-on result, enter caption + tags, choose audience, save draft. Drafts persist locally and sync via the existing draft-sync service.
+- acceptance: Creator can compose and save a draft. Draft persists across app restarts.
+- steps:
+  - ComposerViewModel handles try-on selection + caption + tags + audience
+  - DraftRepository persists locally and pushes to backend
+  - Audience picker offers public / followers / collaboration
+  - Validation: caption ≤ 280 chars, tags ≤ 10
+
+### F002
+Creator Hub publish pipeline: backend moderation pass + feed-fanout job + push-notification fan-out. iOS + web invoke the same publish endpoint; the endpoint orchestrates the three downstream steps.
+- acceptance: Publishing a draft triggers moderation within 3s and feed-fanout within 60s for ≥99% of publishes. Push notifications dispatch to the right audience.
+- steps:
+  - Publish endpoint accepts {draft_id, audience} and triggers moderation synchronously
+  - ModerationService scores caption + tags; returns pass/fail with flag annotation
+  - FeedFanoutJob queues async fan-out on moderation pass
+  - PushNotifService dispatches to follower / public audience
+
+### F003
+Analytics dashboard: impressions, likes, comments, shares, follower-growth tiles. Default 7-day range; user can switch to 30-day or all-time. Tiles refresh every 5 minutes.
+- acceptance: 7-day range loads within 2s. Range selector switches the underlying data correctly.
+- steps:
+  - AnalyticsDashboardViewModel fetches tiles for the selected range
+  - RangeSelector switches between 7d / 30d / all-time
+  - 5-minute refresh cron updates the tiles in the background
+  - Each tile renders metric value + sparkline
+
+### F004
+Profile editing: avatar / bio / handle. Avatar upload validates JPG/PNG up to 5MB. Bio supports 160 chars. Handle change preserves the 30-day redirect from the old handle.
+- acceptance: Profile edits persist. Handle change creates the redirect record.
+- steps:
+  - ProfileEditViewModel handles avatar / bio / handle edits
+  - AvatarUpload validates type + size
+  - Bio enforces 160-char limit
+  - HandleChange writes a redirect record valid for 30 days
+
+### F005
+Per-feature unit tests + integration tests for composer, publish pipeline, analytics, and profile editing. Each feature gets its own test suite.
+- acceptance: All four test suites green.
+- steps:
+  - ComposerViewModel unit tests
+  - Publish-pipeline integration tests against a backend emulator
+  - AnalyticsDashboard view-state tests
+  - ProfileEdit unit tests
+
+## Gap classes to surface
+Use exactly one of these strings for each finding's `gap_class` field:
+- `coverage_gap`
+- `missing_feature`
+- `wiring_gap`
+- `parity_gap`
+- `integration_gap`
+
+Severity must be one of: advisory, critical, high, low, medium
+
+## Output contract
+Reply with a SINGLE JSON array. Each element is a finding object with these fields:
+- `severity` (string, one of the allowed values)
+- `journey_id` (string, must match a `name` from the user_journeys above)
+- `gap_class` (string, one of the gap classes above)
+- `description` (string, ≥ 40 characters of substantive prose)
+- `feature_refs` (list of feature IDs that relate; empty for missing-feature gaps)
+- `recommendation` (optional string; null when not applicable)
+
+Return an empty JSON array `[]` if you find no gaps. Do NOT wrap the array in any object, prose, or fenced markdown — emit raw JSON only.

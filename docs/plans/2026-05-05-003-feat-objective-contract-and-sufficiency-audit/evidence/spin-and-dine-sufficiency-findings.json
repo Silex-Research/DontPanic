@@ -1,0 +1,65 @@
+{
+  "auditor": "claude (F005 dogfood self-audit; cross-vendor invariant relaxed via DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR=1 — recorded in evidence/f005-closeout-memo.md)",
+  "implementer": "claude",
+  "fixture_plan_dir": "evidence/dogfood/spin-and-dine",
+  "fixture_plan_id": "2026-05-05-999-feat-spin-and-dine-android-parity",
+  "auditor_prompt_path": "evidence/spin-and-dine-auditor-prompt.txt",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "onboarding",
+      "gap_class": "parity_gap",
+      "description": "iOS supports a returning_user_fast_path state that bypasses the radius-picker when a saved radius exists; Android features only cover the cold-start happy path through location-permission. F001 acceptance ('Splash → terms → location prompt → home renders identically to iOS for the success path') does not mention saved-radius bypass. Without an explicit feature acceptance, Android will likely re-show the radius picker on every launch, breaking parity.",
+      "feature_refs": ["F001"],
+      "recommendation": "Add an acceptance criterion (or a new feature) covering the returning-user fast path: when a saved radius exists in user defaults, app opens directly to home_populated and skips the radius picker."
+    },
+    {
+      "severity": "high",
+      "journey_id": "restaurant-voting",
+      "gap_class": "parity_gap",
+      "description": "iOS supports both no_network_cached (cached fallback with badge) and no_network_uncached_error states; Android F002 makes no mention of offline behavior at all. The acceptance signal 'Offline cached fallback shows cached results badge and continues to spin from local pool' is not represented. This is a complete parity gap on the offline path, which is high-severity given core product behavior depends on it.",
+      "feature_refs": ["F002"],
+      "recommendation": "Add a feature (or acceptance) covering offline state: VoteRepository caches the recent restaurant pool; SpinViewModel reads from the cache when network is unavailable and surfaces the 'cached results' badge; shows uncached_error state when no cache + no network."
+    },
+    {
+      "severity": "high",
+      "journey_id": "subscription-ux",
+      "gap_class": "parity_gap",
+      "description": "iOS supports a 16-day pro_grace_period for failed renewals; Android F004 has no corresponding acceptance. Acceptance signal 'Grace period gives identical 16-day buffer on both platforms' is unmet. Without grace-period support, Android Pro users lose access immediately on a single renewal failure — direct revenue + UX parity break, and likely operationally costly to backfill once Pro users hit it in production.",
+      "feature_refs": ["F004"],
+      "recommendation": "Either extend F004 acceptance to cover pro_grace_period (Play Billing grace period semantics + 16-day window) OR introduce a dedicated F004a feature for the grace state."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "saved-lists",
+      "gap_class": "parity_gap",
+      "description": "F003 mentions deep-linking to a 'shared-list landing screen' but does not specify the list_detail_shared_readonly state — read-only mode for non-owners with 'Shared by <name>' banner. The acceptance signal 'Shared-list read-only state visually distinct from owner state' has no Android feature acceptance, meaning Android may render shared lists as if the receiver owned them.",
+      "feature_refs": ["F003"],
+      "recommendation": "Tighten F003 acceptance: shared-list deep-link route renders a read-only ListDetailActivity state with the 'Shared by' banner and no Rename/Reorder/Share affordances."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "restaurant-voting",
+      "gap_class": "parity_gap",
+      "description": "iOS supports a no_results_after_relaxation state with a coaching prompt offering 'clear vote history' or 'expand radius' when every nearby restaurant has been voted-down within the past week. F002 covers vote + cooldown but not this empty-pool recovery state. Without it, Android users hitting this state will see a frozen wheel with no path forward.",
+      "feature_refs": ["F002"],
+      "recommendation": "Extend F002 acceptance: when the spin pool is empty after relaxation, surface the coaching prompt with the same copy and CTAs as iOS."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "subscription-ux",
+      "gap_class": "coverage_gap",
+      "description": "F004 covers the happy path of Pro purchase but does not address purchase_in_progress / purchase_failed states. Objective contract acceptance signal 'Purchase failure surfaces a recoverable error with a Retry CTA' has no corresponding Android feature acceptance. Play Billing failures are common (network drops, declined cards); Android needs explicit recovery UX.",
+      "feature_refs": ["F004"],
+      "recommendation": "Extend F004 acceptance to cover purchase_in_progress (loading) and purchase_failed (recoverable error + Retry CTA) states."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "subscription-ux",
+      "gap_class": "wiring_gap",
+      "description": "Objective contract describes Pro tier as 'unlimited spins + voice spin shortcut + family sharing'. F004 mentions monthly/annual SKUs and tier display but voice shortcut and family sharing are absent from every feature. The Pro tier delta is incomplete, so Android Pro users will pay the same price for fewer benefits — risk of refund / app-store complaints.",
+      "feature_refs": ["F004"],
+      "recommendation": "Either add Android-equivalent features for voice 'spin' shortcut + family sharing OR document a v2.x phased rollout in non_goals if intentionally deferred (and surface the deferral in the upsell sheet so users aren't misled)."
+    }
+  ]
+}

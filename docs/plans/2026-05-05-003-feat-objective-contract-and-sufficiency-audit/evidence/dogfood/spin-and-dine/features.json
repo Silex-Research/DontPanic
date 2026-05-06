@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "task_id": "2026-05-05-999-feat-spin-and-dine-android-parity",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Android onboarding flow: splash \u2192 terms \u2192 location-permission prompt \u2192 home screen. Mirrors iOS visual design and copy. Implements the splash, terms, location-permission-pending, and home-populated states.",
+      "steps": [
+        "Build SplashActivity with iOS-equivalent fade timing",
+        "Build TermsActivity with the same accept-or-quit semantics",
+        "Build LocationPermissionPrompt with rationale string identical to iOS",
+        "Build HomeActivity with Spin button + nearby restaurants list"
+      ],
+      "acceptance": "Splash \u2192 terms \u2192 location prompt \u2192 home renders identically to iOS for the success path. Empty home state shows the same Spin button affordance.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Android restaurant voting (Spin): wheel animation, card reveal, thumbs-up / thumbs-down / spin-again actions. Persists votes to local DB and syncs to backend. Honors 7-day thumbs-down cooldown.",
+      "steps": [
+        "SpinViewModel drives wheel animation with iOS-matching ~1.2s duration",
+        "RestaurantCardView renders name / cuisine / distance / hours / price / rating",
+        "VoteRepository persists vote actions to Room DB and pushes to backend",
+        "Cooldown logic: thumbs-down restaurant excluded from spin pool for 7 days"
+      ],
+      "acceptance": "Tapping Spin animates the wheel and reveals a restaurant card. Thumbs-up / thumbs-down persist across app restarts and respect the 7-day cooldown.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Android saved lists: lists tab with cover thumbnails, list detail view, rename / reorder via long-press menu. Receive-shared-list flow via deep link.",
+      "steps": [
+        "SavedListsTab renders all lists with 4-tile cover thumbnails (most-recent restaurants)",
+        "ListDetailActivity shows restaurants ordered by date-saved",
+        "Long-press menu surfaces Rename / Reorder / Share options",
+        "Deep-link handler /lists/shared/{token} routes to a shared-list landing screen"
+      ],
+      "acceptance": "Lists tab populates with cover thumbnails; long-press surfaces the action menu; share-link deep links route to the correct list.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Android subscription UX: Free-tier daily-spin counter (5/day) with Pro upsell at the limit; Pro purchase via Play Billing for monthly + annual SKUs; profile-tab subscription tile showing tier + renewal date.",
+      "steps": [
+        "DailySpinCounter resets at local midnight; surfaces 'X spins left' on home",
+        "ProUpsellSheet triggers when free-tier user hits the daily limit",
+        "PlayBillingClient wires monthly + annual SKUs with the same prices as iOS",
+        "ProfileTab renders subscription tile with tier + renewal date + manage link"
+      ],
+      "acceptance": "Free tier enforces the 5-spin daily limit and surfaces the upsell at the limit. Pro purchase flow completes via Play Billing and the profile tile reflects the new tier within 30 seconds of purchase.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F005",
+      "category": "test",
+      "phase": 3,
+      "description": "Espresso UI tests covering the four core flows on Android. Side-by-side screenshot comparison harness vs. iOS reference screenshots for each user journey's primary states.",
+      "steps": [
+        "Espresso tests for onboarding success path",
+        "Espresso tests for spin \u2192 vote \u2192 cooldown",
+        "Espresso tests for saved-lists rename / reorder",
+        "Espresso tests for subscription purchase happy path"
+      ],
+      "acceptance": "All four Espresso suites green; side-by-side screenshot diffs within design-tolerance thresholds for primary states.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "evidence_refs": []
+    }
+  ]
+}

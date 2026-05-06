@@ -1,0 +1,68 @@
+{
+  "goal_type": "parity",
+  "source_of_truth": "Curated static reference: iOS Spin & Dine v2.x flows as documented in this fixture. NOT a live read from any external repo — the fixture is reproducible from this file alone. Treated as a generic parity-goal example per D013; project name is content, not a product-code dependency.",
+  "user_journeys": [
+    {
+      "name": "onboarding",
+      "description": "First-launch flow: user lands on splash, accepts terms, is prompted for location permission (with skip option), then sees an empty home screen with a 'Get started' CTA. Tapping CTA opens the radius-picker sheet. After radius is set, the home screen populates with 'Spin' button + nearby restaurants list. iOS supports a returning-user path that bypasses radius-picker if a saved radius exists in user defaults.",
+      "surfaces": ["ios", "android"],
+      "states": ["splash", "terms_pending", "location_permission_pending", "location_skipped_empty", "radius_picker_open", "home_populated", "returning_user_fast_path"],
+      "acceptance_signals": [
+        "Splash → terms → location prompt sequence renders identically on both platforms",
+        "Location-skipped state shows the same 'Set radius manually' empty CTA",
+        "Returning-user fast path: app opens directly to home_populated when saved radius exists",
+        "Radius-picker sheet uses the same 1mi / 5mi / 10mi / custom presets"
+      ]
+    },
+    {
+      "name": "restaurant-voting",
+      "description": "Core 'spin' interaction: user taps Spin, wheel animates and lands on a restaurant card. Card shows name, cuisine, distance, hours, price tier, and a star rating. User can tap thumbs-up (saves to favorites + records vote), thumbs-down (records negative vote, never re-shows for 7 days), or 'spin again'. iOS supports a 'no-network cached fallback': when offline, the wheel pulls from the last-cached restaurant pool with a 'cached results' badge. iOS also supports a 'no-results-after-relaxation' state: if every nearby restaurant is voted-down within the past week, a coaching message offers to clear vote history or expand radius.",
+      "surfaces": ["ios", "android"],
+      "states": ["spinning_animation", "card_revealed", "vote_recorded", "no_network_cached", "no_network_uncached_error", "no_results_after_relaxation", "expanding_radius_prompt"],
+      "acceptance_signals": [
+        "Spin animation duration matches across platforms (~1.2s)",
+        "Vote actions persist across app restarts",
+        "7-day cooldown on thumbs-down honored on both platforms",
+        "Offline cached fallback shows 'cached results' badge and continues to spin from local pool",
+        "no_results_after_relaxation state triggers the same coaching prompt copy and CTAs"
+      ]
+    },
+    {
+      "name": "saved-lists",
+      "description": "Users can organize favorited restaurants into named lists ('Date night', 'Quick lunch', etc.). Saved-lists tab shows all lists with cover thumbnails (4 most-recent restaurants per list). Tapping a list opens detail view with restaurants ordered by date-saved. Long-press on a list offers rename / reorder / share. iOS has a 'shared list' state: a list owned by another user (received via share link) shows a banner 'Shared by <name>' and read-only mode for non-owners.",
+      "surfaces": ["ios", "android"],
+      "states": ["lists_empty", "lists_populated", "list_detail_owner", "list_detail_shared_readonly", "rename_modal", "reorder_drag_active", "share_link_sheet"],
+      "acceptance_signals": [
+        "Lists tab renders 4-tile cover thumbnail consistently",
+        "Long-press menu items match across platforms",
+        "Shared-list read-only state visually distinct from owner state",
+        "Rename modal accepts up to 32 chars with the same validation"
+      ]
+    },
+    {
+      "name": "subscription-ux",
+      "description": "Free tier supports 5 spins/day. Pro tier ($4.99/mo, $39/yr) supports unlimited spins + voice 'spin' shortcut + family sharing. Subscription is purchased via in-app StoreKit (iOS) / Play Billing (Android). Subscription state surfaces in the profile tab as a tile showing tier + renewal date + manage link. iOS has a 'grace period' state: if renewal fails, the user retains Pro features for 16 days while StoreKit retries.",
+      "surfaces": ["ios", "android"],
+      "states": ["free_tier_at_limit", "free_tier_under_limit", "pro_active", "pro_grace_period", "pro_expired", "manage_subscription_sheet", "purchase_in_progress", "purchase_failed"],
+      "acceptance_signals": [
+        "Daily spin counter resets at local midnight on both platforms",
+        "Pro upsell appears at the same trigger points",
+        "Grace period gives identical 16-day buffer on both platforms",
+        "Purchase failure surfaces a recoverable error with a Retry CTA"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "Side-by-side screenshot comparison: iOS vs Android for each user journey's primary states",
+    "State coverage matrix: for each journey, for each state, mark iOS✓/Android✓/missing",
+    "Network-failure walk: spin while offline; verify cached fallback + uncached error states",
+    "Subscription edge cases: forced renewal failure to trigger grace period; verify 16-day buffer",
+    "Saved-lists shared-mode walk: receive a shared list via deep link, confirm read-only banner"
+  ],
+  "non_goals": [
+    "Web platform parity (web is not a target surface for v2)",
+    "Tablet-specific layouts (phone-first; tablet handled via stretched-phone for v2)",
+    "Localization beyond English (v2 ships English-only)"
+  ],
+  "completion_test": "Android matches iOS for the four user journeys end-to-end including state coverage, wiring (deep links + share extensions), and edge cases (offline fallback, subscription grace period, shared-list read-only). A user who switched between an iOS and Android device mid-flow should see identical behavior at every state transition."
+}
