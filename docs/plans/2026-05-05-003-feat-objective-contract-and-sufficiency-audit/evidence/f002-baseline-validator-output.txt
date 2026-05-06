@@ -1,0 +1,121 @@
+
+[plan] 2026-05-01-001-feat-onboarding-ux
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-auditor-i2.json
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-01-001-feat-onboarding-ux.json
+
+[plan] 2026-05-01-002-feat-discord-notification-sink
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-01-003-feat-security-baseline
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-01-004-feat-patch-completeness-gate
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+
+[plan] 2026-05-01-005-feat-target-context-platform-fix
+  ✓ plan.md frontmatter
+  ✗ features.json — features.1.evidence_refs.4.type: Input should be 'screenshot', 'log', 'test_output', 'diff', 'audit_json', 'commit', 'url' or 'file'
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-01-005-feat-target-context-platform-fix.json
+
+[plan] 2026-05-02-001-feat-resume-gate-discipline
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/claude-implementer-i1.json
+  ✓ audit/codex-auditor-i0.json
+  ✓ audit/codex-auditor-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-02-001-feat-resume-gate-discipline.json
+
+[plan] 2026-05-02-002-fix-audit-envelope-filename
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-02-003-feat-nested-orchestration-v1
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-02-004-fix-diminishing-returns-signature-based
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-03-001-feat-global-install-project-registry
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-F003-i0.json
+  ✓ audit/claude-implementer-F003-i1.json
+  ✓ audit/codex-auditor-F003-i0.json
+  ✓ audit/codex-auditor-F003-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-03-001-feat-global-install-project-registry.json
+
+[plan] 2026-05-03-002-infra-personal-openclaw-axiom-jarvis
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-03-003-feat-agent-access-manifest-thin-mcp
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-F002-i0.json
+  ✓ audit/claude-implementer-F002-i1.json
+  ✓ audit/codex-auditor-F002-i0.json
+  ✓ audit/codex-auditor-F002-i1.json
+  ✓ audit/signoff-2026-05-03-003-feat-agent-access-manifest-thin-mcp.json
+
+[plan] 2026-05-04-001-refactor-canonical-dontpanic-module
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-04-002-fix-supervisor-lifecycle-staged-gates
+  ✓ plan.md frontmatter
+  ✗ features.json — features.0.evidence_refs.0: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.2: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.3: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.4: Input should be a valid dictionary or instance of EvidenceRef
+  ✓ audit/claude-implementer-F001-i0.json
+  ✓ audit/claude-implementer-F001-i1.json
+  ✓ audit/codex-auditor-F001-i0.json
+  ✓ audit/codex-auditor-F001-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-04-002-fix-supervisor-lifecycle-staged-gates.json
+
+[plan] 2026-05-04-003-fix-subprocess-timeout-envelope-durability
+  ✓ plan.md frontmatter
+  ✓ features.json
+  ✓ audit/claude-implementer-F003-i0.json
+  ✓ audit/claude-implementer-F003-i1.json
+  ✓ audit/codex-auditor-F003-i0.json
+  ✓ audit/codex-auditor-F003-i1.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-05-04-003-fix-subprocess-timeout-envelope-durability.json
+
+[plan] 2026-05-04-004-fix-ec5-classifier-purity
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-05-001-fix-plan-validator-audit-auxiliary-json
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-05-002-feat-goal-governance-nested-orchestration-config
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+[plan] 2026-05-05-003-feat-objective-contract-and-sufficiency-audit
+  ✓ plan.md frontmatter
+  ✓ features.json
+
+✗ 2 validation error(s)
