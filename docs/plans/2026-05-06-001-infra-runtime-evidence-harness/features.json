@@ -6,36 +6,77 @@
       "id": "F001",
       "category": "tooling",
       "phase": 1,
-      "description": "**G1 — Web runtime evidence capture.** New `WebEvidenceCollector` interface in `scripts/dontpanic_orchestrate/runtime_evidence/web.py`. Default driver is Playwright behind a swap seam so future plans can substitute Puppeteer / Selenium / etc. without changing the adapter contract. Captures: full-page screenshot at journey-start + journey-end, DOM snapshot via `page.content()`, console errors via console listener, network failures via response listener. Optional artifacts when configured: trace file (Playwright `tracing.start()`/`.stop()`), recorded video (`record_video_dir`). Base URL + driver options come from operator-supplied config — no hardcoded URLs anywhere in adapter code (D004). Skips gracefully with a recorded skip-reason record when the driver can't initialize (no browser binary, no operator config).",
+      "description": "**G1 \u2014 Web runtime evidence capture.** New `WebEvidenceCollector` interface in `scripts/dontpanic_orchestrate/runtime_evidence/web.py`. Default driver is Playwright behind a swap seam so future plans can substitute Puppeteer / Selenium / etc. without changing the adapter contract. Captures: full-page screenshot at journey-start + journey-end, DOM snapshot via `page.content()`, console errors via console listener, network failures via response listener. Optional artifacts when configured: trace file (Playwright `tracing.start()`/`.stop()`), recorded video (`record_video_dir`). Base URL + driver options come from operator-supplied config \u2014 no hardcoded URLs anywhere in adapter code (D004). Skips gracefully with a recorded skip-reason record when the driver can't initialize (no browser binary, no operator config).",
       "steps": [
         "Create `scripts/dontpanic_orchestrate/runtime_evidence/__init__.py` package marker.",
         "Define `WebEvidenceCollector` class in `runtime_evidence/web.py`. Public surface: `collect(journey, base_url, session_config) -> list[EvidenceRef]`. Accepts a `driver` param defaulting to a Playwright-backed driver but pluggable via callable.",
         "Implement Playwright-default driver: launch browser headless, navigate to journey URLs, capture screenshot + DOM at each waypoint, attach console + network listeners, optionally start tracing/video when `session_config` requests them.",
         "Write artifacts under `evidence/goal-governance/post_impl/web/<journey-id>/<artifact>` with deterministic naming (e.g. `screenshot-{step}-{ts}.png`, `dom-{step}.html`, `console.log`, `network.jsonl`, `trace.zip`, `video.webm`).",
         "Build `EvidenceRef` instances per artifact: `type` from existing v1 enum (screenshot / log / file / url), `uri` = relative path, `hash` = SHA-256 of bytes, `captured_at` = ISO 8601 UTC, `captured_by` = `'playwright-driver'` (or operator-overridden driver name).",
-        "Skip-reason path: when the driver can't init (no browser, no config, page-load timeout), return a list with one `EvidenceRef(type='log', uri=skip-reason file, note='skipped: <reason>')` — never raise to the caller.",
+        "Skip-reason path: when the driver can't init (no browser, no config, page-load timeout), return a list with one `EvidenceRef(type='log', uri=skip-reason file, note='skipped: <reason>')` \u2014 never raise to the caller.",
         "Write tests at `scripts/dontpanic_orchestrate/tests/test_runtime_evidence_web.py` covering: happy path with stub driver against fixture; missing base URL refuses cleanly with structured error; partial failure (network timeout mid-capture) records partial artifacts + skip note.",
         "Static fixture under `scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/` providing a synthetic Playwright trace + DOM snapshot + console log so the round-trip ingest test runs without a live browser.",
         "Run `ruff check` + `ruff format --check` on new files. Run sanitization. Both clean.",
         "Run full orchestrate suite. Confirm baseline + G1 test count = N+M passed; zero regressions."
       ],
-      "acceptance": "(1) `WebEvidenceCollector.collect()` exists with documented signature. (2) Captures screenshot + DOM + console + network failures end-to-end against the fixture; optional trace/video honored when requested in session_config. (3) Base URL is operator-supplied — greppable assertion that no http(s):// URLs are hardcoded in `web.py`. (4) Skip reason recorded as a typed EvidenceRef when the driver can't init — never raises to the caller. (5) Tests cover happy path + missing config + partial failure, all green. (6) Ruff + sanitization clean. (7) Zero regressions in cumulative suite. (8) Driver is pluggable: a stub driver passed via the `driver` param replaces Playwright cleanly (verified by the test stub).",
-      "passes": false,
+      "acceptance": "(1) `WebEvidenceCollector.collect()` exists with documented signature. (2) Captures screenshot + DOM + console + network failures end-to-end against the fixture; optional trace/video honored when requested in session_config. (3) Base URL is operator-supplied \u2014 greppable assertion that no http(s):// URLs are hardcoded in `web.py`. (4) Skip reason recorded as a typed EvidenceRef when the driver can't init \u2014 never raises to the caller. (5) Tests cover happy path + missing config + partial failure, all green. (6) Ruff + sanitization clean. (7) Zero regressions in cumulative suite. (8) Driver is pluggable: a stub driver passed via the `driver` param replaces Playwright cleanly (verified by the test stub).",
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/runtime_evidence/__init__.py",
+          "note": "Plan G runtime_evidence package marker; documents D002-D005 boundaries"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/runtime_evidence/web.py",
+          "note": "G1/F001 \u2014 WebEvidenceCollector + Playwright-default driver swap seam + WebJourneyStep + WebSessionConfig + WebDriver/WebSession protocols + WebDriverError"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_runtime_evidence_web.py",
+          "note": "G1/F001 test module \u2014 18 tests covering acceptance #1-#8 plus D003 path discipline + URL composition + default-driver-skip"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/runtime_evidence/__init__.py",
+          "note": "Test package marker"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-dom.html",
+          "note": "Synthetic DOM snapshot fixture"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-console.txt",
+          "note": "Synthetic console error fixture"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-network.json",
+          "note": "Synthetic network failures fixture"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/",
+          "note": "Cumulative orchestrate suite post-F001: 1070 passed, 6 skipped (= 1052 Plan G lock baseline + 18 new G1 tests). Zero regressions."
+        }
+      ]
     },
     {
       "id": "F002",
       "category": "tooling",
       "phase": 1,
-      "description": "**G2 — iOS evidence capture.** New `IosEvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/ios.py`. Drives `xcrun simctl` for screenshots; uses `simctl spawn ... log show --predicate ...` for simulator logs scoped by time + bundle id; ingests crash reports from `~/Library/Logs/DiagnosticReports/` filtered by app bundle_id + capture window. Graceful skip with recorded reason when no simulator runtime is available — never errors the caller. Operator supplies the simulator device id (or accepts the booted-default), app bundle id, and the time-window for capture; no project-specific behavior in adapter code (D004).",
+      "description": "**G2 \u2014 iOS evidence capture.** New `IosEvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/ios.py`. Drives `xcrun simctl` for screenshots; uses `simctl spawn ... log show --predicate ...` for simulator logs scoped by time + bundle id; ingests crash reports from `~/Library/Logs/DiagnosticReports/` filtered by app bundle_id + capture window. Graceful skip with recorded reason when no simulator runtime is available \u2014 never errors the caller. Operator supplies the simulator device id (or accepts the booted-default), app bundle id, and the time-window for capture; no project-specific behavior in adapter code (D004).",
       "steps": [
         "Define `IosEvidenceCollector` in `runtime_evidence/ios.py`. Public: `collect(journey, simulator_id=None, app_bundle_id, capture_window) -> list[EvidenceRef]`. `simulator_id=None` resolves to the booted-default device.",
         "Screenshot path: `xcrun simctl io <device> screenshot <out_path>` per journey waypoint; write under `evidence/goal-governance/post_impl/ios/<journey-id>/screenshot-{step}.png`.",
         "Simulator log path: `xcrun simctl spawn <device> log show --start <iso8601> --predicate 'subsystem CONTAINS \"<bundle_id>\"' --info` captured to `<journey-id>/simulator-{step}.log`.",
         "Crash report ingestion: scan `~/Library/Logs/DiagnosticReports/` for `*.ips`/`*.crash` matching app_bundle_id + within capture_window; copy under `<journey-id>/crash-{filename}` with EvidenceRef type=`file`.",
         "Build EvidenceRef per artifact (same convention as G1): type from v1 enum, uri = relative path, hash = SHA-256, captured_at = ISO 8601 UTC, captured_by = 'simctl-driver'.",
-        "Skip-reason path: if `xcrun simctl list devices` returns no booted device, OR if `simctl io` exits nonzero with no fallback, write a skip-reason EvidenceRef and return — do not raise.",
+        "Skip-reason path: if `xcrun simctl list devices` returns no booted device, OR if `simctl io` exits nonzero with no fallback, write a skip-reason EvidenceRef and return \u2014 do not raise.",
         "Subprocess discipline: shell=False, command list, parameterized arguments only (no string interpolation of operator input into shell commands).",
         "Write tests at `tests/test_runtime_evidence_ios.py`: happy path with stub `simctl_runner` callable replacing real simctl; no-simulator skip; partial failure (log collection times out) records what it captured + a skip note for the missing piece.",
         "Static fixture under `tests/runtime_evidence/_fixture_ios/` with a synthetic screenshot PNG + simctl log lines + crash report stub.",
@@ -50,19 +91,19 @@
       "id": "F003",
       "category": "tooling",
       "phase": 1,
-      "description": "**G3 — Android evidence capture, capture-only (D009).** New `AndroidEvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/android.py`. Two modes — both capture-only, neither runs tests:\n\n- **passive_observe** — `adb exec-out screencap -p` for screenshots; `adb logcat -d -t '<since>' [--pid=<pkg-pid>]` for time/package-scoped logcat; `adb pull /data/tombstones/...` for crash tombstones; `adb pull /data/anr/...` for ANR traces.\n- **post_hoc_ingest** — accepts an operator-supplied artifacts directory (Gradle test reports / Espresso HTML / Maestro recordings / CI artifact bundles) and ingests existing files into typed EvidenceRef without running anything. Type-classify by extension/path (`*.png`→screenshot, `logcat-*.txt`→log, `*.html` Espresso reports→test_output, etc.).\n\nDontPanic does NOT own Android test orchestration in v1 (D009). Strict assertion: source-grep test asserts no `gradlew test`, `am instrument`, `mvn test`, or equivalent command-execution substrings appear in `android.py`.",
+      "description": "**G3 \u2014 Android evidence capture, capture-only (D009).** New `AndroidEvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/android.py`. Two modes \u2014 both capture-only, neither runs tests:\n\n- **passive_observe** \u2014 `adb exec-out screencap -p` for screenshots; `adb logcat -d -t '<since>' [--pid=<pkg-pid>]` for time/package-scoped logcat; `adb pull /data/tombstones/...` for crash tombstones; `adb pull /data/anr/...` for ANR traces.\n- **post_hoc_ingest** \u2014 accepts an operator-supplied artifacts directory (Gradle test reports / Espresso HTML / Maestro recordings / CI artifact bundles) and ingests existing files into typed EvidenceRef without running anything. Type-classify by extension/path (`*.png`\u2192screenshot, `logcat-*.txt`\u2192log, `*.html` Espresso reports\u2192test_output, etc.).\n\nDontPanic does NOT own Android test orchestration in v1 (D009). Strict assertion: source-grep test asserts no `gradlew test`, `am instrument`, `mvn test`, or equivalent command-execution substrings appear in `android.py`.",
       "steps": [
         "Define `AndroidEvidenceCollector` in `runtime_evidence/android.py`. Public: `collect(journey, mode, ...) -> list[EvidenceRef]` with `mode in {'passive_observe', 'post_hoc_ingest'}`.",
         "Passive-observe mode: takes `(adb_device_serial=None, package_name, capture_window)`. None resolves to default device. Runs the four adb commands listed above; writes artifacts under `evidence/goal-governance/post_impl/android/<journey-id>/{screenshot,logcat,tombstone,anr}-...`.",
         "Post-hoc-ingest mode: takes `(artifacts_dir)`. Walks the dir, type-classifies each file by extension/path, writes EvidenceRef instances pointing at copies under `evidence/goal-governance/post_impl/android/<journey-id>/`. Path-classification table is data-only, no project-specific branches.",
-        "Skip-reason path: passive_observe with `adb devices` empty → skip-reason EvidenceRef; post_hoc_ingest with `artifacts_dir` not a directory → skip-reason EvidenceRef. Never raise.",
+        "Skip-reason path: passive_observe with `adb devices` empty \u2192 skip-reason EvidenceRef; post_hoc_ingest with `artifacts_dir` not a directory \u2192 skip-reason EvidenceRef. Never raise.",
         "**No-orchestration discipline (D009):** add a test at `tests/test_runtime_evidence_android.py::test_no_test_orchestration_substrings` that grep-asserts the source contains no `gradlew test`, `am instrument`, `mvn test`, `./gradlew connectedAndroidTest`, or `adb shell am start ... -e mode test` substrings. Catches future drift.",
         "Subprocess discipline same as G2: shell=False, command list.",
         "Tests at `tests/test_runtime_evidence_android.py`: passive-observe happy path (stub adb_runner); post-hoc-ingest happy path (synthetic artifacts dir from fixture); no-device skip; no-artifacts-dir skip; the no-orchestration grep assertion above; mode='unknown' raises clearly.",
         "Static fixture under `tests/runtime_evidence/_fixture_android/` with synthetic logcat sample + screenshot PNG + Espresso report HTML + a tombstone stub for ingest test.",
         "Ruff + sanitization clean. Zero regressions."
       ],
-      "acceptance": "(1) `AndroidEvidenceCollector.collect()` exists with documented signature, accepts both modes. (2) passive_observe captures screenshot + logcat + tombstone + ANR against stub adb_runner. (3) post_hoc_ingest classifies + ingests fixture artifacts dir into typed EvidenceRefs. (4) **No-orchestration grep test green** — source contains zero `gradlew test` / `am instrument` / `./gradlew connectedAndroidTest` substrings (D009 invariant). (5) No-device + no-artifacts paths return typed skip-reason EvidenceRefs without raising. (6) Greppable: zero hardcoded device serials, zero hardcoded package names. (7) Subprocess shell=False discipline holds. (8) Ruff + sanitization clean. (9) Zero regressions.",
+      "acceptance": "(1) `AndroidEvidenceCollector.collect()` exists with documented signature, accepts both modes. (2) passive_observe captures screenshot + logcat + tombstone + ANR against stub adb_runner. (3) post_hoc_ingest classifies + ingests fixture artifacts dir into typed EvidenceRefs. (4) **No-orchestration grep test green** \u2014 source contains zero `gradlew test` / `am instrument` / `./gradlew connectedAndroidTest` substrings (D009 invariant). (5) No-device + no-artifacts paths return typed skip-reason EvidenceRefs without raising. (6) Greppable: zero hardcoded device serials, zero hardcoded package names. (7) Subprocess shell=False discipline holds. (8) Ruff + sanitization clean. (9) Zero regressions.",
       "passes": false,
       "depends_on": [],
       "evidence_refs": []
@@ -71,20 +112,20 @@
       "id": "F004",
       "category": "tooling",
       "phase": 1,
-      "description": "**G4 — Backend observability capture, provider-adapter based (D010).** New `BackendEvidenceCollector` interface in `scripts/dontpanic_orchestrate/runtime_evidence/backend/__init__.py` plus three concrete adapters:\n\n- **Firebase** (`backend/firebase.py`) — production-ready in v1; reuses F022 service account; fetches Cloud Logging entries + Crashlytics issue/event data + Performance traces scoped by `(project, app, time_window)`. No new credential storage (D005).\n- **Supabase** (`backend/supabase.py`) — **provider slot only** in v1; interface implemented + fixture-test only; production paths raise `NotImplementedError` with a clear 'wire when needed' message. Production wiring is demand-driven follow-up.\n- **Generic** (`backend/generic.py`) — operator-supplied HTTP endpoint + log-file path + JSONL export. Transports raw bytes; operator passes credentials at runtime via env var or session config. No Plan-G credential storage (D005).\n\nA `BackendCollectorRegistry` resolves provider name → adapter. **No Firebase-specific assumptions in the registry or in the common harness (D010).**",
+      "description": "**G4 \u2014 Backend observability capture, provider-adapter based (D010).** New `BackendEvidenceCollector` interface in `scripts/dontpanic_orchestrate/runtime_evidence/backend/__init__.py` plus three concrete adapters:\n\n- **Firebase** (`backend/firebase.py`) \u2014 production-ready in v1; reuses F022 service account; fetches Cloud Logging entries + Crashlytics issue/event data + Performance traces scoped by `(project, app, time_window)`. No new credential storage (D005).\n- **Supabase** (`backend/supabase.py`) \u2014 **provider slot only** in v1; interface implemented + fixture-test only; production paths raise `NotImplementedError` with a clear 'wire when needed' message. Production wiring is demand-driven follow-up.\n- **Generic** (`backend/generic.py`) \u2014 operator-supplied HTTP endpoint + log-file path + JSONL export. Transports raw bytes; operator passes credentials at runtime via env var or session config. No Plan-G credential storage (D005).\n\nA `BackendCollectorRegistry` resolves provider name \u2192 adapter. **No Firebase-specific assumptions in the registry or in the common harness (D010).**",
       "steps": [
-        "Create `runtime_evidence/backend/__init__.py` with the `BackendEvidenceCollector` ABC: `fetch_logs(query) -> list[EvidenceRef]`. Plus a `BackendCollectorRegistry` mapping provider name → adapter class.",
+        "Create `runtime_evidence/backend/__init__.py` with the `BackendEvidenceCollector` ABC: `fetch_logs(query) -> list[EvidenceRef]`. Plus a `BackendCollectorRegistry` mapping provider name \u2192 adapter class.",
         "Implement `FirebaseBackendCollector` in `runtime_evidence/backend/firebase.py`. Reuse F022 SA via existing `firebase_client` module path; fetch Cloud Logging entries (writes JSONL under `<journey-id>/firebase/cloud-logging.jsonl`); fetch Crashlytics issue list (`<journey-id>/firebase/crashlytics.json`); fetch Performance traces (`<journey-id>/firebase/performance.json`). EvidenceRef type=`log` for the JSONL, type=`file` for the JSON. Optional: signed URLs to long artifacts via type=`url`.",
         "Implement `SupabaseBackendCollector` slot in `runtime_evidence/backend/supabase.py`. Class exists, interface methods present, but production paths raise `NotImplementedError('Supabase production wiring is a follow-up plan; v1 ships fixture support only')`. Fixture-mode call path returns synthetic data when called via test stub.",
-        "Implement `GenericBackendCollector` in `runtime_evidence/backend/generic.py`. Accepts `(endpoint_url|log_file_path|jsonl_path, headers=None, auth_callable=None)`. Reads bytes; writes EvidenceRef pointing at copy under `<journey-id>/<provider>/...`. Operator supplies credentials via `auth_callable` at call time — Plan G does not store any of them.",
-        "Wire `BackendCollectorRegistry`: registers Firebase, Supabase (slot), Generic by string key; lookup raises `KeyError(provider)` with the registered list. No Firebase fast-paths anywhere — registry treats all three uniformly (D010).",
+        "Implement `GenericBackendCollector` in `runtime_evidence/backend/generic.py`. Accepts `(endpoint_url|log_file_path|jsonl_path, headers=None, auth_callable=None)`. Reads bytes; writes EvidenceRef pointing at copy under `<journey-id>/<provider>/...`. Operator supplies credentials via `auth_callable` at call time \u2014 Plan G does not store any of them.",
+        "Wire `BackendCollectorRegistry`: registers Firebase, Supabase (slot), Generic by string key; lookup raises `KeyError(provider)` with the registered list. No Firebase fast-paths anywhere \u2014 registry treats all three uniformly (D010).",
         "Subprocess + HTTP discipline: shell=False; HTTP via `requests` or stdlib with explicit timeouts; never log credentials.",
         "Tests at `tests/test_runtime_evidence_backend.py`: Firebase happy path with stubbed firebase-admin; Supabase production path raises `NotImplementedError`; Supabase fixture path returns synthetic data; Generic happy path with stubbed HTTP fetch + stubbed local file read; registry resolves all three provider keys; registry KeyError on unknown provider.",
         "Static fixtures under `tests/runtime_evidence/_fixture_backend_firebase/`, `_fixture_backend_supabase/`, `_fixture_backend_generic/` with synthetic responses.",
         "Sanitization invariant: greppable assertion that adapters do NOT log or persist credential bytes (no `password`, `bearer`, `api_key` in log/output paths).",
         "Ruff + sanitization clean. Zero regressions."
       ],
-      "acceptance": "(1) `BackendEvidenceCollector` ABC + 3 adapters + registry exist. (2) Firebase adapter fetches Cloud Logging + Crashlytics + Performance against stubbed admin SDK; reuses F022 SA path (no new credential storage — verify D005). (3) Supabase production paths raise `NotImplementedError` with the documented message; fixture-mode tests pass. (4) Generic adapter handles HTTP + local file + JSONL inputs; operator-supplied credentials passed at call time, not stored. (5) Registry resolves all three providers; unknown provider raises clean KeyError. (6) **No Firebase-specific branches in the registry or anywhere outside `firebase.py` (D010)** — greppable. (7) Sanitization: no credential bytes leak into logs/output paths. (8) Tests cover happy + slot + skip + KeyError, all green. (9) Ruff + sanitization clean. (10) Zero regressions.",
+      "acceptance": "(1) `BackendEvidenceCollector` ABC + 3 adapters + registry exist. (2) Firebase adapter fetches Cloud Logging + Crashlytics + Performance against stubbed admin SDK; reuses F022 SA path (no new credential storage \u2014 verify D005). (3) Supabase production paths raise `NotImplementedError` with the documented message; fixture-mode tests pass. (4) Generic adapter handles HTTP + local file + JSONL inputs; operator-supplied credentials passed at call time, not stored. (5) Registry resolves all three providers; unknown provider raises clean KeyError. (6) **No Firebase-specific branches in the registry or anywhere outside `firebase.py` (D010)** \u2014 greppable. (7) Sanitization: no credential bytes leak into logs/output paths. (8) Tests cover happy + slot + skip + KeyError, all green. (9) Ruff + sanitization clean. (10) Zero regressions.",
       "passes": false,
       "depends_on": [],
       "evidence_refs": []
@@ -93,24 +134,29 @@
       "id": "F005",
       "category": "tooling",
       "phase": 2,
-      "description": "**G5 — Common evidence harness.** Top-level `EvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/__init__.py` exposing the integrating API:\n\n```python\nEvidenceCollector.collect(\n    journey: str,\n    context: dict,\n    sources: list[str] = ['web', 'ios', 'android', 'backend'],\n) -> list[EvidenceRef]\n```\n\nComposes G1+G2+G3+G4 adapters behind one interface. Pure orchestration: zero source-specific logic in the core (D004/D010 invariant landing point). Writes a top-level `manifest.json` per journey listing every captured EvidenceRef under `evidence/goal-governance/post_impl/<journey-id>/manifest.json`. Per-source skip reasons surface in the manifest (never silently dropped). Library-only in v1 — F2 imports it directly. MCP tool wrap is a follow-up plan.\n\nThis is the F005 close-out feature: writes the plan-level close-out memo at `evidence/plan-g-closeout-memo.md` and queues the formal plan-level status flip as the next motion (separate commit per F1 precedent).",
+      "description": "**G5 \u2014 Common evidence harness.** Top-level `EvidenceCollector` in `scripts/dontpanic_orchestrate/runtime_evidence/__init__.py` exposing the integrating API:\n\n```python\nEvidenceCollector.collect(\n    journey: str,\n    context: dict,\n    sources: list[str] = ['web', 'ios', 'android', 'backend'],\n) -> list[EvidenceRef]\n```\n\nComposes G1+G2+G3+G4 adapters behind one interface. Pure orchestration: zero source-specific logic in the core (D004/D010 invariant landing point). Writes a top-level `manifest.json` per journey listing every captured EvidenceRef under `evidence/goal-governance/post_impl/<journey-id>/manifest.json`. Per-source skip reasons surface in the manifest (never silently dropped). Library-only in v1 \u2014 F2 imports it directly. MCP tool wrap is a follow-up plan.\n\nThis is the F005 close-out feature: writes the plan-level close-out memo at `evidence/plan-g-closeout-memo.md` and queues the formal plan-level status flip as the next motion (separate commit per F1 precedent).",
       "steps": [
         "Define `EvidenceCollector` in `runtime_evidence/__init__.py` with the documented `collect(journey, context, sources)` signature.",
-        "Implement adapter dispatch: source-name → adapter-callable lookup using the same registry pattern as the backend layer. Register web/ios/android/backend defaults; allow runtime override via constructor for testing.",
+        "Implement adapter dispatch: source-name \u2192 adapter-callable lookup using the same registry pattern as the backend layer. Register web/ios/android/backend defaults; allow runtime override via constructor for testing.",
         "Compose: dispatch sources in the order given; collect each adapter's EvidenceRef list; aggregate; write `manifest.json` at `<journey-id>/manifest.json` listing every EvidenceRef + per-source status (success/skipped/partial).",
         "Pass-through: `context` dict carries source-specific config keyed by source name (`context['web']['base_url']`, `context['android']['mode']`, etc.). Harness core only knows source-name keys; never reaches into source-specific shape.",
-        "Skip propagation: per-source skip-reason EvidenceRef bubbles up into the manifest's per-source status block — never silently dropped.",
+        "Skip propagation: per-source skip-reason EvidenceRef bubbles up into the manifest's per-source status block \u2014 never silently dropped.",
         "Public surface: export `EvidenceCollector`, `EvidenceCollectorError`, source-name constants from `dontpanic_orchestrate.runtime_evidence` so F2 (and future callers) import directly. No MCP wrap.",
         "Tests at `tests/test_runtime_evidence_harness.py`: end-to-end with all four adapters stubbed; per-source skip propagation visible in manifest; manifest ordering matches `sources` arg; harness raises `EvidenceCollectorError` on unknown source name with the registered list.",
         "Static fixture under `tests/runtime_evidence/_fixture_harness/` exercises the full compose path against synthetic stubs (no live drivers).",
-        "**Greppable D004/D010 invariant assertion** in tests: `EvidenceCollector` source code must contain ZERO occurrences of `playwright`, `simctl`, `adb`, `firebase`, `supabase` substrings — the harness core is source-agnostic.",
+        "**Greppable D004/D010 invariant assertion** in tests: `EvidenceCollector` source code must contain ZERO occurrences of `playwright`, `simctl`, `adb`, `firebase`, `supabase` substrings \u2014 the harness core is source-agnostic.",
         "Run final cumulative regression sweep across the dontpanic_orchestrate test suite. Confirm baseline + total G test count. Zero regressions.",
         "Ruff + sanitization clean.",
-        "Write F005 close-out memo at `evidence/f005-closeout-memo.md` summarizing G1–G5 deliverables, fixture coverage, public API surface, and queueing the plan-level close-out as the next separate commit (per F1 precedent — implementation files NOT touched in plan-level close-out)."
+        "Write F005 close-out memo at `evidence/f005-closeout-memo.md` summarizing G1\u2013G5 deliverables, fixture coverage, public API surface, and queueing the plan-level close-out as the next separate commit (per F1 precedent \u2014 implementation files NOT touched in plan-level close-out)."
       ],
-      "acceptance": "(1) `EvidenceCollector.collect()` exists with documented signature; library-only — no MCP wrap (per locked answer #2). (2) Composes web/ios/android/backend adapters via registry; pure orchestration — zero source-specific logic in `runtime_evidence/__init__.py` (greppable). (3) Manifest written at `<journey-id>/manifest.json` listing every EvidenceRef + per-source status. (4) Per-source skip reasons propagate into the manifest, never silently dropped. (5) Unknown source name raises `EvidenceCollectorError` with the registered list. (6) Greppable D004/D010 invariant: harness core source contains zero `playwright`/`simctl`/`adb`/`firebase`/`supabase` substrings. (7) End-to-end test exercises full compose with stubbed adapters. (8) Ruff + sanitization clean. (9) Zero regressions cumulative. (10) F005 close-out memo at `evidence/f005-closeout-memo.md` with deliverable summary + queued-for-plan-G-close-out note.",
+      "acceptance": "(1) `EvidenceCollector.collect()` exists with documented signature; library-only \u2014 no MCP wrap (per locked answer #2). (2) Composes web/ios/android/backend adapters via registry; pure orchestration \u2014 zero source-specific logic in `runtime_evidence/__init__.py` (greppable). (3) Manifest written at `<journey-id>/manifest.json` listing every EvidenceRef + per-source status. (4) Per-source skip reasons propagate into the manifest, never silently dropped. (5) Unknown source name raises `EvidenceCollectorError` with the registered list. (6) Greppable D004/D010 invariant: harness core source contains zero `playwright`/`simctl`/`adb`/`firebase`/`supabase` substrings. (7) End-to-end test exercises full compose with stubbed adapters. (8) Ruff + sanitization clean. (9) Zero regressions cumulative. (10) F005 close-out memo at `evidence/f005-closeout-memo.md` with deliverable summary + queued-for-plan-G-close-out note.",
       "passes": false,
-      "depends_on": ["F001", "F002", "F003", "F004"],
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
       "evidence_refs": []
     }
   ]
