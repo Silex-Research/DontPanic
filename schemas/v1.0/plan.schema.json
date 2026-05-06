@@ -51,6 +51,10 @@
       "additionalProperties": false
     },
     "privacy_tier": { "enum": ["public", "internal", "secret"] },
+    "goal_type": {
+      "enum": ["mechanical", "infra", "refactor", "parity", "new_feature", "migration", "incident"],
+      "description": "Goal-completion governance category. When set to one of {parity, new_feature, migration, incident}, the plan must declare links.objective_contract pointing at an ObjectiveContract file. mechanical/infra/refactor plans don't require a contract; backward-compatible default is null/absent."
+    },
     "protected_paths": {
       "type": "array",
       "items": { "type": "string" },
@@ -79,7 +83,11 @@
         "features": { "type": "string" },
         "decisions": { "type": "string" },
         "audits_dir": { "type": "string" },
-        "evidence_dir": { "type": "string" }
+        "evidence_dir": { "type": "string" },
+        "objective_contract": {
+          "type": "string",
+          "description": "Path reference (relative to plan dir) to an ObjectiveContract JSON file. Required when goal_type ∈ {parity, new_feature, migration, incident}; the plan-level validator enforces presence + file-exists + ObjectiveContract validation."
+        }
       }
     },
     "storage": {
