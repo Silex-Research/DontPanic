@@ -1,0 +1,127 @@
+# Pre-impl sufficiency audit
+
+Walk the proposed features against the user-facing outcome described in the objective contract below. Surface gap-class findings the operator must resolve before the plan locks for implementation.
+
+## Objective contract
+- goal_type: parity
+- source_of_truth: Curated static reference: iOS Spin & Dine v2.x flows as documented in this fixture. NOT a live read from any external repo — the fixture is reproducible from this file alone. Treated as a generic parity-goal example per D013; project name is content, not a product-code dependency.
+- completion_test: Android matches iOS for the four user journeys end-to-end including state coverage, wiring (deep links + share extensions), and edge cases (offline fallback, subscription grace period, shared-list read-only). A user who switched between an iOS and Android device mid-flow should see identical behavior at every state transition.
+- non_goals:
+  - Web platform parity (web is not a target surface for v2)
+  - Tablet-specific layouts (phone-first; tablet handled via stretched-phone for v2)
+  - Localization beyond English (v2 ships English-only)
+- required_evidence (post-impl):
+  - Side-by-side screenshot comparison: iOS vs Android for each user journey's primary states
+  - State coverage matrix: for each journey, for each state, mark iOS✓/Android✓/missing
+  - Network-failure walk: spin while offline; verify cached fallback + uncached error states
+  - Subscription edge cases: forced renewal failure to trigger grace period; verify 16-day buffer
+  - Saved-lists shared-mode walk: receive a shared list via deep link, confirm read-only banner
+
+## User journeys
+### onboarding
+First-launch flow: user lands on splash, accepts terms, is prompted for location permission (with skip option), then sees an empty home screen with a 'Get started' CTA. Tapping CTA opens the radius-picker sheet. After radius is set, the home screen populates with 'Spin' button + nearby restaurants list. iOS supports a returning-user path that bypasses radius-picker if a saved radius exists in user defaults.
+- surfaces: ios, android
+- states: splash, terms_pending, location_permission_pending, location_skipped_empty, radius_picker_open, home_populated, returning_user_fast_path
+- acceptance_signals:
+  - Splash → terms → location prompt sequence renders identically on both platforms
+  - Location-skipped state shows the same 'Set radius manually' empty CTA
+  - Returning-user fast path: app opens directly to home_populated when saved radius exists
+  - Radius-picker sheet uses the same 1mi / 5mi / 10mi / custom presets
+
+### restaurant-voting
+Core 'spin' interaction: user taps Spin, wheel animates and lands on a restaurant card. Card shows name, cuisine, distance, hours, price tier, and a star rating. User can tap thumbs-up (saves to favorites + records vote), thumbs-down (records negative vote, never re-shows for 7 days), or 'spin again'. iOS supports a 'no-network cached fallback': when offline, the wheel pulls from the last-cached restaurant pool with a 'cached results' badge. iOS also supports a 'no-results-after-relaxation' state: if every nearby restaurant is voted-down within the past week, a coaching message offers to clear vote history or expand radius.
+- surfaces: ios, android
+- states: spinning_animation, card_revealed, vote_recorded, no_network_cached, no_network_uncached_error, no_results_after_relaxation, expanding_radius_prompt
+- acceptance_signals:
+  - Spin animation duration matches across platforms (~1.2s)
+  - Vote actions persist across app restarts
+  - 7-day cooldown on thumbs-down honored on both platforms
+  - Offline cached fallback shows 'cached results' badge and continues to spin from local pool
+  - no_results_after_relaxation state triggers the same coaching prompt copy and CTAs
+
+### saved-lists
+Users can organize favorited restaurants into named lists ('Date night', 'Quick lunch', etc.). Saved-lists tab shows all lists with cover thumbnails (4 most-recent restaurants per list). Tapping a list opens detail view with restaurants ordered by date-saved. Long-press on a list offers rename / reorder / share. iOS has a 'shared list' state: a list owned by another user (received via share link) shows a banner 'Shared by <name>' and read-only mode for non-owners.
+- surfaces: ios, android
+- states: lists_empty, lists_populated, list_detail_owner, list_detail_shared_readonly, rename_modal, reorder_drag_active, share_link_sheet
+- acceptance_signals:
+  - Lists tab renders 4-tile cover thumbnail consistently
+  - Long-press menu items match across platforms
+  - Shared-list read-only state visually distinct from owner state
+  - Rename modal accepts up to 32 chars with the same validation
+
+### subscription-ux
+Free tier supports 5 spins/day. Pro tier ($4.99/mo, $39/yr) supports unlimited spins + voice 'spin' shortcut + family sharing. Subscription is purchased via in-app StoreKit (iOS) / Play Billing (Android). Subscription state surfaces in the profile tab as a tile showing tier + renewal date + manage link. iOS has a 'grace period' state: if renewal fails, the user retains Pro features for 16 days while StoreKit retries.
+- surfaces: ios, android
+- states: free_tier_at_limit, free_tier_under_limit, pro_active, pro_grace_period, pro_expired, manage_subscription_sheet, purchase_in_progress, purchase_failed
+- acceptance_signals:
+  - Daily spin counter resets at local midnight on both platforms
+  - Pro upsell appears at the same trigger points
+  - Grace period gives identical 16-day buffer on both platforms
+  - Purchase failure surfaces a recoverable error with a Retry CTA
+
+## Proposed features
+### F001
+Android onboarding flow: splash → terms → location-permission prompt → home screen. Mirrors iOS visual design and copy. Implements the splash, terms, location-permission-pending, and home-populated states.
+- acceptance: Splash → terms → location prompt → home renders identically to iOS for the success path. Empty home state shows the same Spin button affordance.
+- steps:
+  - Build SplashActivity with iOS-equivalent fade timing
+  - Build TermsActivity with the same accept-or-quit semantics
+  - Build LocationPermissionPrompt with rationale string identical to iOS
+  - Build HomeActivity with Spin button + nearby restaurants list
+
+### F002
+Android restaurant voting (Spin): wheel animation, card reveal, thumbs-up / thumbs-down / spin-again actions. Persists votes to local DB and syncs to backend. Honors 7-day thumbs-down cooldown.
+- acceptance: Tapping Spin animates the wheel and reveals a restaurant card. Thumbs-up / thumbs-down persist across app restarts and respect the 7-day cooldown.
+- steps:
+  - SpinViewModel drives wheel animation with iOS-matching ~1.2s duration
+  - RestaurantCardView renders name / cuisine / distance / hours / price / rating
+  - VoteRepository persists vote actions to Room DB and pushes to backend
+  - Cooldown logic: thumbs-down restaurant excluded from spin pool for 7 days
+
+### F003
+Android saved lists: lists tab with cover thumbnails, list detail view, rename / reorder via long-press menu. Receive-shared-list flow via deep link.
+- acceptance: Lists tab populates with cover thumbnails; long-press surfaces the action menu; share-link deep links route to the correct list.
+- steps:
+  - SavedListsTab renders all lists with 4-tile cover thumbnails (most-recent restaurants)
+  - ListDetailActivity shows restaurants ordered by date-saved
+  - Long-press menu surfaces Rename / Reorder / Share options
+  - Deep-link handler /lists/shared/{token} routes to a shared-list landing screen
+
+### F004
+Android subscription UX: Free-tier daily-spin counter (5/day) with Pro upsell at the limit; Pro purchase via Play Billing for monthly + annual SKUs; profile-tab subscription tile showing tier + renewal date.
+- acceptance: Free tier enforces the 5-spin daily limit and surfaces the upsell at the limit. Pro purchase flow completes via Play Billing and the profile tile reflects the new tier within 30 seconds of purchase.
+- steps:
+  - DailySpinCounter resets at local midnight; surfaces 'X spins left' on home
+  - ProUpsellSheet triggers when free-tier user hits the daily limit
+  - PlayBillingClient wires monthly + annual SKUs with the same prices as iOS
+  - ProfileTab renders subscription tile with tier + renewal date + manage link
+
+### F005
+Espresso UI tests covering the four core flows on Android. Side-by-side screenshot comparison harness vs. iOS reference screenshots for each user journey's primary states.
+- acceptance: All four Espresso suites green; side-by-side screenshot diffs within design-tolerance thresholds for primary states.
+- steps:
+  - Espresso tests for onboarding success path
+  - Espresso tests for spin → vote → cooldown
+  - Espresso tests for saved-lists rename / reorder
+  - Espresso tests for subscription purchase happy path
+
+## Gap classes to surface
+Use exactly one of these strings for each finding's `gap_class` field:
+- `coverage_gap`
+- `missing_feature`
+- `wiring_gap`
+- `parity_gap`
+- `integration_gap`
+
+Severity must be one of: advisory, critical, high, low, medium
+
+## Output contract
+Reply with a SINGLE JSON array. Each element is a finding object with these fields:
+- `severity` (string, one of the allowed values)
+- `journey_id` (string, must match a `name` from the user_journeys above)
+- `gap_class` (string, one of the gap classes above)
+- `description` (string, ≥ 40 characters of substantive prose)
+- `feature_refs` (list of feature IDs that relate; empty for missing-feature gaps)
+- `recommendation` (optional string; null when not applicable)
+
+Return an empty JSON array `[]` if you find no gaps. Do NOT wrap the array in any object, prose, or fenced markdown — emit raw JSON only.

@@ -1,0 +1,73 @@
+{
+  "auditor": "claude (F005 dogfood self-audit; cross-vendor invariant relaxed via DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR=1 — recorded in evidence/f005-closeout-memo.md)",
+  "implementer": "claude",
+  "fixture_plan_dir": "evidence/dogfood/glam",
+  "fixture_plan_id": "2026-05-05-998-feat-creator-hub-v1",
+  "auditor_prompt_path": "evidence/glam-auditor-prompt.txt",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "preview",
+      "gap_class": "missing_feature",
+      "description": "The `preview` user journey is entirely absent from features.json. F001 covers compose, F002 covers publish, but no feature covers the preview surface that lets a creator see how a draft renders in the public feed before publishing. Required evidence 'End-to-end walk: create → edit → preview → publish → analytics' is not satisfiable as decomposed. Preview also has its own state model (preview_clean / preview_with_moderation_flag / preview_engagement_coach_mark) — none of it is in any feature acceptance.",
+      "feature_refs": [],
+      "recommendation": "Add a dedicated preview feature (e.g. F006) that uses the same render path as the public feed, surfaces moderation-flag annotations, and shows the engagement coach-mark when interactive affordances are tapped."
+    },
+    {
+      "severity": "high",
+      "journey_id": "edit",
+      "gap_class": "missing_feature",
+      "description": "The `edit` user journey for posts is entirely absent from features.json. F004 covers profile editing (avatar / bio / handle) but post-editing — the unified-composer-for-edit, draft_edit_open / published_edit_open / revision_recorded / edit_conflict_resolution states — has no feature. The objective contract specifies 'edit experience uses the same composer as create'; without a feature acceptance, either editing won't work at all or it'll ship as a separate (non-unified) surface.",
+      "feature_refs": [],
+      "recommendation": "Add a post-edit feature (e.g. F007) that reuses ComposerViewModel from F001 with edit-mode state, captures revision history for published-post edits, and surfaces edit-conflict resolution UI for concurrent cross-device edits."
+    },
+    {
+      "severity": "high",
+      "journey_id": "publish",
+      "gap_class": "integration_gap",
+      "description": "The completion_test demands 'Creator Hub works as a unified product surface, not a feature collection — a creator can move from create → edit → preview → publish → analytics → drill-down → profile and feel one cohesive product.' Features F001–F005 are decomposed strictly per-feature with no acceptance criterion that exercises the cross-feature flow. There's no 'integrated-journey' feature whose acceptance walks the end-to-end product surface, no smoke test that confirms a published post propagates into analytics within 5 minutes and is reachable from the profile feed. This is the canonical integration gap the contract was written to surface — features will likely ship green individually but fail the unified-surface acceptance.",
+      "feature_refs": ["F001", "F002", "F003", "F004"],
+      "recommendation": "Add an integration feature (e.g. F008) whose acceptance walks the full create → edit → preview → publish → analytics → drill-down → profile journey end-to-end on both iOS and web, with timing assertions matching the contract's acceptance signals (analytics within 5 min, fanout within 60s)."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "analytics",
+      "gap_class": "wiring_gap",
+      "description": "F003 covers analytics tile rendering and the range selector, but does not address tile drill-down (analytics_per_post_drill_down + analytics_per_period_drill_down). The contract calls drill-down out as journey-bridging ('tile drill-down opens the right breakdown post-level vs account-level' and 'tapping the post in analytics should drill into the same canonical post detail the public sees on the profile'). Without explicit feature acceptance, drill-down will not be wired and the unified-surface guarantee fails.",
+      "feature_refs": ["F003"],
+      "recommendation": "Extend F003 acceptance: each tile is tappable; post-level metrics drill into the post breakdown; account-level metrics drill into the period breakdown; the post-level drill-down lands on the canonical post detail (same view the public profile renders)."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "publish",
+      "gap_class": "wiring_gap",
+      "description": "F002 acceptance focuses on success metrics (3s moderation, 60s fanout, push dispatch) but does not address the publish_succeeded_fanout_pending state — the 'publishing in progress' banner that should surface in the creator's feed view while async fanout is incomplete. The fanout_partial_failure state is also unaddressed. Without these, creators will see a publish-confirmed toast but their post will appear missing for up to 60s with no UX explanation.",
+      "feature_refs": ["F002"],
+      "recommendation": "Extend F002 acceptance: surface 'publishing in progress' banner in the creator's feed view between publish-succeeded and fanout-complete; surface a partial-failure state with a recoverable retry path."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "analytics",
+      "gap_class": "coverage_gap",
+      "description": "F003 mentions a 5-minute refresh cron but does not surface the analytics_stale state with 'last updated <time>' subtext that the contract calls out as an acceptance signal. Without it, creators looking at analytics during a refresh failure will see stale data with no visual cue, leading to wrong conclusions about post performance.",
+      "feature_refs": ["F003"],
+      "recommendation": "Extend F003 acceptance: each tile renders a 'last updated <time>' subtext; subtext switches to 'stale (last refresh > 5 min ago)' visual treatment when the cron lags."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "publish",
+      "gap_class": "wiring_gap",
+      "description": "Contract acceptance signal 'Analytics impression-tracker is initialized synchronously with publish' is not in any feature's acceptance. F002 lists four publish steps (moderation, fan-out, push notifications) but synchronous impression-tracker init is missing. F003 fetches tiles assuming the tracker exists, so a publish without tracker init will silently produce 0-impression analytics — a hard-to-debug data integrity bug.",
+      "feature_refs": ["F002", "F003"],
+      "recommendation": "Add a fifth step to F002 acceptance: 'AnalyticsImpressionTracker.initialize(post_id) is called synchronously as part of publish, before the publish endpoint returns success.'"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "create",
+      "gap_class": "coverage_gap",
+      "description": "F001 acceptance says 'Draft persists across app restarts' but does not cover the cross-device draft resume SLO ('draft surfaces on second device within 30s of save'). Required evidence specifies this walk explicitly. Without coverage, drafts may sync only on next manual refresh, breaking the cross-device continuity promise.",
+      "feature_refs": ["F001"],
+      "recommendation": "Extend F001 acceptance: DraftRepository pushes to backend within 5s of save; second-device Creator Hub fetches drafts on tab-open and within 30s of remote save."
+    }
+  ]
+}

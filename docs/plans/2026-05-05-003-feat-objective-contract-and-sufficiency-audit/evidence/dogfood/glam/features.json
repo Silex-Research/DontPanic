@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "task_id": "2026-05-05-998-feat-creator-hub-v1",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Creator Hub composer (iOS + web): pick try-on result, enter caption + tags, choose audience, save draft. Drafts persist locally and sync via the existing draft-sync service.",
+      "steps": [
+        "ComposerViewModel handles try-on selection + caption + tags + audience",
+        "DraftRepository persists locally and pushes to backend",
+        "Audience picker offers public / followers / collaboration",
+        "Validation: caption \u2264 280 chars, tags \u2264 10"
+      ],
+      "acceptance": "Creator can compose and save a draft. Draft persists across app restarts.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Creator Hub publish pipeline: backend moderation pass + feed-fanout job + push-notification fan-out. iOS + web invoke the same publish endpoint; the endpoint orchestrates the three downstream steps.",
+      "steps": [
+        "Publish endpoint accepts {draft_id, audience} and triggers moderation synchronously",
+        "ModerationService scores caption + tags; returns pass/fail with flag annotation",
+        "FeedFanoutJob queues async fan-out on moderation pass",
+        "PushNotifService dispatches to follower / public audience"
+      ],
+      "acceptance": "Publishing a draft triggers moderation within 3s and feed-fanout within 60s for \u226599% of publishes. Push notifications dispatch to the right audience.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Analytics dashboard: impressions, likes, comments, shares, follower-growth tiles. Default 7-day range; user can switch to 30-day or all-time. Tiles refresh every 5 minutes.",
+      "steps": [
+        "AnalyticsDashboardViewModel fetches tiles for the selected range",
+        "RangeSelector switches between 7d / 30d / all-time",
+        "5-minute refresh cron updates the tiles in the background",
+        "Each tile renders metric value + sparkline"
+      ],
+      "acceptance": "7-day range loads within 2s. Range selector switches the underlying data correctly.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Profile editing: avatar / bio / handle. Avatar upload validates JPG/PNG up to 5MB. Bio supports 160 chars. Handle change preserves the 30-day redirect from the old handle.",
+      "steps": [
+        "ProfileEditViewModel handles avatar / bio / handle edits",
+        "AvatarUpload validates type + size",
+        "Bio enforces 160-char limit",
+        "HandleChange writes a redirect record valid for 30 days"
+      ],
+      "acceptance": "Profile edits persist. Handle change creates the redirect record.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F005",
+      "category": "test",
+      "phase": 3,
+      "description": "Per-feature unit tests + integration tests for composer, publish pipeline, analytics, and profile editing. Each feature gets its own test suite.",
+      "steps": [
+        "ComposerViewModel unit tests",
+        "Publish-pipeline integration tests against a backend emulator",
+        "AnalyticsDashboard view-state tests",
+        "ProfileEdit unit tests"
+      ],
+      "acceptance": "All four test suites green.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "evidence_refs": []
+    }
+  ]
+}
