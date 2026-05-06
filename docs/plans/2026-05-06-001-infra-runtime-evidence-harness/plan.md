@@ -21,9 +21,18 @@ description: |
   prerequisites for F2's post-impl completion-test auditor. Does
   **not** ship F2; provides the harness F2 will consume.
 
-  Five features split along independent source surfaces + one
-  integrating harness layer (D003):
+  Six features (one config surface, four capture surfaces, one
+  integrating harness layer per D003 + D013):
 
+  - **G0 (F006)** — Minimum operator configuration surface (added
+    by amendment 2026-05-06 per D013): `roles` block (implementer /
+    auditor / goal_auditor) plus `runtime_evidence` block (project-
+    only per D015). New CLI: `dontpanic config show/set`,
+    `dontpanic project config init/set`, `dontpanic setup` (preview-
+    by-default; mutation requires `--yes`), extended
+    `dontpanic doctor` registration framework. Credentials are
+    pointers, never values (D014). Legacy `default_implementer` /
+    `default_auditor` keys remain readable.
   - **G1 (F001)** — Web runtime evidence capture (Playwright-default
     driver, swap seam): screenshot, DOM snapshot, console errors,
     network failures, optional trace/video. Base URL operator-supplied.
@@ -48,8 +57,12 @@ description: |
     to `evidence/goal-governance/post_impl/<source>/<journey-id>/
     <artifact>` (D003).
 
-  G1–G4 are independent and can ship in any order; G5 lands last.
-  Six commits total (4 capture + 1 harness + 1 plan-level close-out).
+  G0 lands first (provides defaults the capture adapters consume);
+  G1 already shipped at `62cdce6` with per-call config and does NOT
+  depend on G0 (additive, layered config: per-call > project > global
+  > fallback per D004). G2–G4 are independent and depend on G0; G5
+  lands last and depends on F001–F004 + F006. Seven commits total
+  (1 config + 4 capture + 1 harness + 1 plan-level close-out).
 
   **F2 is BLOCKED until G closes** (D001). The only legitimate bypass
   is a reduced-evidence D-entry recorded in F2's plan dir naming
@@ -67,9 +80,17 @@ description: |
   device serial) lives in operator-edited config files, NOT in
   adapter code.
 
-  **No new credential storage (D005):** Firebase reuses F022 SA;
-  Supabase/generic adapters accept operator-supplied runtime
-  credentials only.
+  **No new credential storage (D005 + D014):** Firebase reuses F022
+  SA; Supabase/generic adapters accept operator-supplied runtime
+  credentials only. D014 (added 2026-05-06) enumerates allowed
+  pointer shapes: `adc`, path-only references, `env:NAME` env-var
+  pointers — never credential values themselves.
+
+  **Runtime evidence is project-scoped (D015, added 2026-05-06):**
+  global config may define agent roles, but never runtime target
+  defaults (base URLs, simulator names, Android package IDs, Firebase
+  / Supabase project IDs, backend provider settings). Those belong
+  in per-project config or per-call overrides.
 
   **Schema discipline (D007):** EvidenceRef in agent-conventions
   v1.4.0 already covers all G adapter outputs (screenshot / log /
@@ -85,9 +106,10 @@ description: |
   cross-vendor invariant is an audit-time concern that engages when
   F2 ships.
 
-  **Feature ID ↔ roadmap ID convention (D011):** features.json uses
-  F001–F005 per agent-conventions schema. Prose may refer to G1–G5
-  for roadmap clarity. Both naming surfaces are correct.
+  **Feature ID ↔ roadmap ID convention (D011, extended 2026-05-06):**
+  features.json uses F001–F006 per agent-conventions schema. Prose
+  may refer to G0–G5 for roadmap clarity (G0 ↔ F006, the config
+  surface added by amendment). Both naming surfaces are correct.
 
 motivation: |
   Without runtime evidence capture, F2's post-impl completion-test
@@ -115,16 +137,18 @@ motivation: |
 # Plan G — Runtime evidence harness
 
 The capture-only prerequisites layer for F2 (Goal Governance V1
-post-impl completion-test auditor). Five features, library-only in
-v1, single-repo (no agent-conventions schema bump needed).
+post-impl completion-test auditor). Six features, library-only in
+v1, single-repo (no agent-conventions schema bump needed). G0 added
+by amendment 2026-05-06 (D013).
 
 See `evidence/plan-g-closeout-memo.md` (written at plan-level
-close-out) for the cumulative summary across G1–G5.
+close-out) for the cumulative summary across G0–G5.
 
-## Feature roadmap → schema feature ID map (D011)
+## Feature roadmap → schema feature ID map (D011, extended 2026-05-06)
 
 | Roadmap ID | features.json ID | Surface |
 |------------|------------------|---------|
+| G0 | F006 | Minimum operator configuration surface (added by amendment) |
 | G1 | F001 | Web |
 | G2 | F002 | iOS |
 | G3 | F003 | Android |
@@ -143,4 +167,7 @@ close-out) for the cumulative summary across G1–G5.
 - **D008:** reduced-evidence override is recorded in F2's plan dir, not G's.
 - **D009:** Android v1 is capture-only; no test orchestration.
 - **D010:** Backend is provider-adapter based; no Firebase-specific assumptions in the harness.
-- **D011:** F001–F005 schema IDs ↔ G1–G5 roadmap names.
+- **D011:** F001–F006 schema IDs ↔ G0–G5 roadmap names (G0 ↔ F006 added by amendment).
+- **D013** (amendment 2026-05-06): F006 added as G0. G1 stays as-is. G2–G5 depend on F006. Roles + runtime-evidence config layered: roles can be global+project; runtime-evidence per-project only.
+- **D014** (amendment 2026-05-06): Credentials are pointers, never values. Allowed pointer shapes: `adc`, path-only, `env:NAME`. Forbidden: any literal credential bytes in config or DontPanic-managed state.
+- **D015** (amendment 2026-05-06): Runtime evidence is project-scoped. Global config never carries runtime target defaults (base URLs, simulator names, Android package IDs, backend provider settings).
