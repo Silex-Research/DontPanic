@@ -41,6 +41,8 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from dontpanic_orchestrate import global_config as gc
 from dontpanic_orchestrate import projects_registry as pr
+from dontpanic_orchestrate.config.roles import RolesConfig
+from dontpanic_orchestrate.config.runtime_evidence import RuntimeEvidenceConfig
 from dontpanic_orchestrate.executors import AGENT_REGISTRY
 
 _LOG = logging.getLogger(__name__)
@@ -122,6 +124,19 @@ class ProjectConfig(BaseModel):
     protected_paths: list[str] | None = None
     """Per-project default ``protected_paths`` list (paths that are off-
     limits for the implementer to edit)."""
+
+    roles: RolesConfig | None = None
+    """Plan G F006 / D013 — per-project agent role names. Canonical
+    write target for ``dontpanic project config set roles.<role>
+    <agent>``. Wins over the legacy top-level ``implementer`` /
+    ``auditor`` fields when both are set; falls through to global per
+    :func:`config.resolvers.resolve_role`."""
+
+    runtime_evidence: RuntimeEvidenceConfig | None = None
+    """Plan G F006 / D015 — project-scoped runtime evidence defaults
+    (web base URL, iOS scheme, Android package, backend provider).
+    **Project-scoped only**; global config never carries these values
+    because runtime targets are project-specific by definition."""
 
     @field_validator("human_gates")
     @classmethod

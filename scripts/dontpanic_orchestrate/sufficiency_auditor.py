@@ -265,7 +265,14 @@ def _resolve_goal_auditor_agent(
     project_path = project_match[0] if project_match is not None else None
 
     defaults = project_config.resolve_dispatch_defaults(project_path)
-    auditor = defaults["auditor"]
+
+    # Plan G F006 / D013 — prefer the explicit roles.goal_auditor when set,
+    # falling through to the legacy default_auditor / hardcoded path otherwise.
+    # Imported lazily so the F1 module load isn't coupled to the F006 package
+    # at import time (only matters when the operator sets roles.goal_auditor).
+    from dontpanic_orchestrate.config import resolvers as _resolvers
+
+    auditor = _resolvers.resolve_role(plan_dir, "goal_auditor")
     resolved_implementer = implementer_agent or defaults["implementer"]
 
     if not auditor:

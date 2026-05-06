@@ -191,9 +191,45 @@
         "Verify worktree boundary: diff confined to `scripts/dontpanic_orchestrate/config/` (new package), `scripts/dontpanic_orchestrate/global_config.py` (additive), `scripts/dontpanic_orchestrate/project_config.py` (additive), `scripts/dontpanic_orchestrate/cli.py` (additive subcommands), `scripts/dontpanic_orchestrate/sufficiency_auditor.py` (additive read of `roles.goal_auditor`), the new test module + fixture dir, and Plan G's evidence/F006 close-out memo. Zero diffs to `claude/shared/`, F1 plan dir, or unrelated modules."
       ],
       "acceptance": "(1) `RolesConfig` + `RuntimeEvidenceConfig` Pydantic models defined under `scripts/dontpanic_orchestrate/config/`. (2) Global config accepts `roles` block; project config accepts `roles` + `runtime_evidence` blocks. (3) **D015 enforced**: `runtime_evidence` cannot be set on global config \u2014 greppable + Pydantic validation refuse. (4) Legacy `default_implementer` / `default_auditor` keys remain readable; `dontpanic config show` reports resolved view across both old + new shapes; new writes use `roles.*` (canonical). (5) New CLI subcommands exist: `dontpanic config show/set`, `dontpanic project config init/set`, `dontpanic setup`, extended `dontpanic doctor`. (6) **`dontpanic setup` is preview-by-default** \u2014 mutation requires `--yes` flag (consistent with DontPanic write-side commands). (7) **D014 enforced**: greppable assertion that adapters / CLI store pointers (`adc`, path-only, `env:NAME`), never credential values. `setup` refuses secret-shaped values for pointer fields. (8) Doctor registration framework exists (`register_doctor_check` + `run_all_checks`); F006 ships only a baseline check, NOT adapter-specific checks (D013 \u2014 don't make F006 know about future adapters). (9) `_resolve_goal_auditor_agent` in F003 reads `roles.goal_auditor` first, falls through to existing fallback when absent \u2014 F1's locked behavior preserved. (10) Tests cover all 10 step-12 cases plus the F003 amendment, all green. (11) Ruff + sanitization clean. (12) Zero regressions in cumulative orchestrate suite. (13) Worktree boundary preserved \u2014 zero diffs to `claude/shared/`, F1 plan dir, or unrelated modules.",
-      "passes": false,
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "note": "68 tests covering Pydantic shape, D015 enforcement, resolve_role/resolve_runtime_evidence layering, CLI config show/set, project config init/set, setup preview/--yes, credential pointer validation, doctor framework, F003 roles.goal_auditor lookup, D014 source-grep",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_f006_config_setup_surface.py"
+        },
+        {
+          "type": "test_output",
+          "note": "1138 passed, 6 skipped, 0 regressions",
+          "uri": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/"
+        },
+        {
+          "type": "file",
+          "note": "new package: roles.py, runtime_evidence.py, resolvers.py, setup.py, cli_helpers.py, doctor_registry.py",
+          "uri": "scripts/dontpanic_orchestrate/config/"
+        },
+        {
+          "type": "file",
+          "note": "extended with optional roles: RolesConfig field; greppable D015 assertion confirms no runtime_evidence field",
+          "uri": "scripts/dontpanic_orchestrate/global_config.py"
+        },
+        {
+          "type": "file",
+          "note": "extended with optional roles: RolesConfig and runtime_evidence: RuntimeEvidenceConfig fields",
+          "uri": "scripts/dontpanic_orchestrate/project_config.py"
+        },
+        {
+          "type": "file",
+          "note": "added config / project / setup subcommands",
+          "uri": "scripts/dontpanic_orchestrate/cli.py"
+        },
+        {
+          "type": "file",
+          "note": "_resolve_goal_auditor_agent now reads roles.goal_auditor first via config.resolvers; F1 locked behavior preserved",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_auditor.py"
+        }
+      ]
     }
   ]
 }
