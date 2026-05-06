@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "dogfood-synthetic-completion-audit",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Synthetic feature standing in for the dogfood plan's implementation surface. Marked passes:true so the gate sees a 'shipped' plan; the F2 pipeline does not consume features.json beyond hashing it for the override input-bound contract.",
+      "steps": [
+        "Author objective_contract.json with 3 user_journeys + 5 required_evidence matchers.",
+        "Populate post_impl/<source>/<journey>/<filename> with 4 captured artifacts (1 matcher intentionally unmatched, 1 journey intentionally orphan).",
+        "Run F001 + F002 (offline) + F003 close path; capture decisions in disposition.md."
+      ],
+      "acceptance": "F001 surfaces ≥1 missing_evidence finding (matcher 'crash-NoneObserved') AND ≥1 journey_gap finding (journey 'error_recovery'). F002 produces the offline envelope. F003 close blocks then honors a recorded override.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": []
+    }
+  ]
+}

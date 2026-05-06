@@ -1,0 +1,5 @@
+[plan close] REFUSED:
+plan close refused for 2026-05-06-999-dogfood-synthetic-completion-audit — blocking decision:
+  - audit envelope status='dispatch_skipped_offline' and no operator override supplied — record one with --ignore-completion-findings <reason> if the offline run was intentional
+to override: dontpanic plan close <plan-id> --ignore-completion-findings "<reason>"
+[plan close] plan_dir=docs/plans/2026-05-06-002-feat-post-impl-completion-audit/evidence/dogfood/synthetic-plan

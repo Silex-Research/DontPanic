@@ -1,0 +1,2 @@
+[synthetic stub — represents a captured checkout-confirmation log from the backend adapter. See disposition.md.]
+2026-05-06T15:36:00Z INFO orders.create — order_id=ord_dogfood_001 total_cents=4999 confirmed

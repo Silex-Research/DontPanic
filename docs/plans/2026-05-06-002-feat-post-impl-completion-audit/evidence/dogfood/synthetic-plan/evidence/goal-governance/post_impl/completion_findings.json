@@ -1,0 +1,36 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-06T20:40:55.243571+00:00",
+  "plan_id": "2026-05-06-999-dogfood-synthetic-completion-audit",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/backend/checkout_journey/log-checkout-confirmed.log",
+    "evidence/goal-governance/post_impl/ios/checkout_journey/screenshot-checkout-success.png",
+    "evidence/goal-governance/post_impl/web/browse_journey/log-browse-render.log",
+    "evidence/goal-governance/post_impl/web/browse_journey/screenshot-browse-landing.png"
+  ],
+  "findings": [
+    {
+      "finding_id": "F2C-E005",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'crash-NoneObserved' not captured",
+      "narrative": "The contract declares required_evidence='crash-NoneObserved' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "web",
+      "journey": "browse_journey",
+      "matcher_string": "crash-NoneObserved",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J003",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'error_recovery'",
+      "narrative": "The contract's user_journey 'error_recovery' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "web",
+      "journey": "error_recovery",
+      "matcher_string": null,
+      "evidence_uris": []
+    }
+  ]
+}
