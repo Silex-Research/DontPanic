@@ -3,7 +3,7 @@ id: 2026-05-05-003-feat-objective-contract-and-sufficiency-audit
 title: Plan F1 — Objective contract schema + pre-impl sufficiency audit + Spin & Dine / Glam dogfood
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-05"
 description: |
   **Plan F1 of the Goal Governance V1 sequence** (per
