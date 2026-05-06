@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.app.SmokeSuite" tests="1" failures="0" errors="0" time="0.123">
+  <testcase classname="com.example.app.SmokeSuite" name="testLaunch" time="0.123"/>
+</testsuite>
