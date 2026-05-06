@@ -83,11 +83,32 @@
         "Ruff + sanitization clean. Zero regressions."
       ],
       "acceptance": "(1) `IosEvidenceCollector.collect()` exists with documented signature, accepts a swappable simctl-runner for testing. (2) Captures screenshot + simulator log + crash reports against the fixture; honors capture_window scoping. (3) Greppable: zero hardcoded simulator device ids, zero hardcoded bundle ids in `ios.py`. (4) No-simulator path returns a typed skip-reason EvidenceRef without raising. (5) `subprocess.run` calls use `shell=False` + command list throughout (sanitization invariant). (6) Tests cover happy path + skip + partial-failure, all green. (7) Ruff + sanitization clean. (8) Zero regressions.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_ios.py",
+          "note": "23 tests covering happy path (per-step screenshot+log, crash drain, evidence path), config layering (per-call > project > none, D015), skip discipline (empty journey, driver init, activate_step, screenshot/log/crash failures, close), default _SimctlDriver behavior (xcrun missing / no simulator / unwired), doctor framework (warn-only, never fail), source-grep invariants (D003/D004/D005)"
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/",
+          "note": "1161 passed, 6 skipped, 0 regressions"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/runtime_evidence/ios.py",
+          "note": "IosEvidenceCollector + IosJourneyStep + IosSessionConfig + IosDriver/IosSession Protocols + _SimctlDriver default + ios_simctl doctor check (warn-only)"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_ios/",
+          "note": "synthetic fixtures: sample-screenshot.png, sample-simulator.log, sample-crash.crash"
+        }
+      ]
     },
     {
       "id": "F003",
