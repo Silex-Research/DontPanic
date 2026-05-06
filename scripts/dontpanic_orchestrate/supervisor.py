@@ -35,6 +35,7 @@ from dontpanic_orchestrate import (
     quota_admission,
     quota_caps_loader,
     signoff_writer,
+    sufficiency_gate,
     transcript,
 )
 from dontpanic_orchestrate.environments_loader import (
@@ -560,6 +561,12 @@ def dispatch_single_agent(
     :data:`AGENT_REGISTRY` rather than hardcoded to Claude — this is the
     single-agent parity contract for F003.
     """
+    # Goal Governance V1 F004: dispatch backstop. Refuse to act on any plan
+    # whose declared goal_type requires a pre-impl sufficiency check unless
+    # the findings are non-blocking or a valid (hash-bound) override exists.
+    # No-op for plans without goal_type — full backward compat.
+    sufficiency_gate.enforce_sufficiency_gate(plan_dir)
+
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
 
@@ -831,6 +838,12 @@ def dispatch_volley(
     cleanup runs on volley terminate. target_env / target_project remain
     optional until EC2 lands a plan-level Target contract.
     """
+    # Goal Governance V1 F004: dispatch backstop. Refuse to act on any plan
+    # whose declared goal_type requires a pre-impl sufficiency check unless
+    # the findings are non-blocking or a valid (hash-bound) override exists.
+    # No-op for plans without goal_type — full backward compat.
+    sufficiency_gate.enforce_sufficiency_gate(plan_dir)
+
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
 

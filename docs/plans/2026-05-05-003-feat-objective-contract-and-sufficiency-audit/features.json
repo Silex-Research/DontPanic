@@ -154,11 +154,42 @@
         "Write F004 close-out memo at `evidence/f004-closeout-memo.md`: enumerate the lock paths surveyed + gated, document the override mechanism + evidence shape, before/after test count, queued-for-F005 note."
       ],
       "acceptance": "(1) **`enforce_sufficiency_gate()` exists** as the canonical gate entry point. Pure function modulo the auditor call + evidence write. (2) **Every plan-lock path gated** (D011) \u2014 CLI lock subcommand, plan-validator (at next validation run), MCP lock paths. Lock paths surveyed and documented in F004 close-out memo. (3) **Gate is no-op for non-gated plans** \u2014 `goal_type \u2209 {parity, new_feature, migration, incident}` skips the audit entirely. Tested. (4) **Refuses lock on blocking findings without override** \u2014 structured error points at the findings file. Tested. (5) **Override mechanism** \u2014 `--ignore-sufficiency-findings <reason>` CLI flag (text reason required); reason recorded to `evidence/goal-governance/pre_impl/override.json` with timestamp + reason + bypassed findings. Tested. (6) **Backward compat** \u2014 Plans A\u2013E + F0 (no goal_type) lock without sufficiency check. Tested. (7) **Tests cover the 6 cases listed in step 6**, all green. (8) **No regressions** \u2014 full suite 997 + N + M passed, 6 skipped. (9) **Ruff + sanitization clean.** (10) **F004 close-out memo at `evidence/f004-closeout-memo.md`** enumerating lock paths surveyed + gated, override mechanism documentation.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/sufficiency_gate.py",
+          "note": "F004 module \u2014 enforce_sufficiency_gate (read-only) + lock_plan (mutating) + input-bound override flow + medium+ blocking threshold"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_sufficiency_gate.py",
+          "note": "F004 test module \u2014 33 tests covering the 6 step-6 cases plus locked design points (A medium+ threshold, B input-bound override, C mutating lock command, D011 backstop)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "Additive +84 lines \u2014 `dontpanic plan lock <plan-dir> [--ignore-sufficiency-findings <reason>]` subcommand wiring"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/supervisor.py",
+          "note": "Additive +13 lines \u2014 gate backstop at top of dispatch_single_agent + dispatch_volley (catches hand-edited locks)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f004-closeout-memo.md",
+          "note": "F004 close-out memo \u2014 lock-path survey table (D011 coverage), 3 locked judgment calls (A/B/C), test coverage map, queued-for-F005 notes"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/",
+          "note": "Full orchestrate suite post-F004: 1052 passed, 6 skipped (= 1019 baseline + 33 new). Zero regressions."
+        }
+      ]
     },
     {
       "id": "F005",
