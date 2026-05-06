@@ -1,0 +1,15 @@
+Incident Identifier: 00000000-0000-0000-0000-000000000000
+Hardware Model:      iPhone15,2 (Simulator)
+Process:             SampleApp [1234]
+Path:                /Applications/SampleApp.app/SampleApp
+Identifier:          com.example.sample
+Version:             1.0
+Code Type:           ARM-64
+OS Version:          iOS 17.0
+
+Exception Type:  EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes: 0x0000000000000001, 0x0000000000000000
+
+Thread 0 Crashed:
+0   SampleApp                       0x0000000100000000 0x100000000 + 0
+1   UIKitCore                       0x0000000100000100 0x100000000 + 256
