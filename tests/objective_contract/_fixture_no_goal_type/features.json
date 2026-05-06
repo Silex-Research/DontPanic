@@ -1,0 +1,17 @@
+{
+  "task_id": "9999-12-31-005-feat-fixture-no-goal-type",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Fixture feature for objective_contract dispatch test. Not a real feature.",
+      "steps": ["See scripts/test_objective_contract.py"],
+      "acceptance": "Validator dispatches correctly per the fixture's goal_type.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    }
+  ]
+}

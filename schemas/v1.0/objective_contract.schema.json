@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/objective_contract.schema.json",
+  "title": "ObjectiveContract",
+  "description": "Goal-completion governance contract. Required when Plan.goal_type ∈ {parity, new_feature, migration, incident}. Describes the user-facing outcome the plan must satisfy, separate from the mechanical artifacts produced (which features.json describes). The plan-level validator enforces that goal_type here matches Plan.goal_type when both are present.",
+  "type": "object",
+  "required": ["goal_type", "source_of_truth", "user_journeys", "completion_test"],
+  "properties": {
+    "goal_type": {
+      "enum": ["parity", "new_feature", "migration", "incident"],
+      "description": "Must match Plan.goal_type at the parent plan when both are present. The four values that require an objective contract per Goal Governance V1 §4."
+    },
+    "source_of_truth": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reference to the canonical source (PRD path, source-platform name for parity, incident report URL, prior plan id, etc.). Does NOT need to be a live repo URL; static curated references are valid."
+    },
+    "user_journeys": {
+      "type": "array",
+      "minItems": 1,
+      "description": "User-facing flows the goal must satisfy end-to-end. The auditor walks these against the proposed features at pre-impl time and against shipped patches at post-impl time.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Short identifier for the journey (e.g., 'onboarding', 'creator-publish-flow')."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "What the user does, end-to-end. Substantive enough that the auditor can reason about coverage gaps."
+          },
+          "surfaces": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Surfaces the journey touches (e.g., 'ios', 'android', 'web', 'backend'). Optional."
+          },
+          "states": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "States the journey transitions through (e.g., 'empty', 'loading', 'error', 'success'). Optional."
+          },
+          "acceptance_signals": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "What the auditor should look for to confirm journey coverage. Optional but recommended."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_evidence": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Evidence the post-impl audit (Plan F2) must produce (screenshots, logs, journey walks). Optional at pre-impl time; load-bearing at post-impl."
+    },
+    "non_goals": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Explicit out-of-scope items. Prevents scope-creep findings during sufficiency audit and integration audit."
+    },
+    "completion_test": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One-sentence prose answering 'how do we know this is done?'. The completion test is the operator's stake in the ground; the auditor checks the proposed features against it."
+    },
+    "cluster_overrides": {
+      "type": "string",
+      "description": "Optional override notes for the Goal Governance V1 §6.3 cluster coherence rule. Free-form for v1; future versions may structure this. Only set when the default rule (subsystem_and_journey intersection) doesn't fit the plan's gap-clustering pattern."
+    }
+  },
+  "additionalProperties": false
+}
