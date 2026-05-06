@@ -1589,12 +1589,220 @@ def _plan_lock_main(argv: list[str]) -> int:
         return 3
 
     if args.override_reason is not None:
-        override_path = (
-            plan_dir / "evidence" / "goal-governance" / "pre_impl" / "override.json"
-        )
+        override_path = plan_dir / "evidence" / "goal-governance" / "pre_impl" / "override.json"
         if override_path.is_file():
             print(f"[plan lock] override recorded at {override_path}")
     print(f"[plan lock] status flipped: draft → active in {plan_md}")
+    return 0
+
+
+# ─────────────────────────  config / project / setup (F006)  ─────────────────────────
+
+
+def _config_main(argv: list[str]) -> int:
+    """``dontpanic config <subcommand>`` — global config CRUD (Plan G F006)."""
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "usage: dontpanic config <subcommand>\n\n"
+            "subcommands:\n"
+            "  show              Print resolved global config (roles + legacy fields)\n"
+            "  set <key> <value> Write a single dotted key under ~/.dontpanic/config.json\n"
+            "                    Canonical role keys: roles.implementer / roles.auditor /\n"
+            "                    roles.goal_auditor. Legacy default_implementer /\n"
+            "                    default_auditor still accepted.\n"
+            "                    runtime_evidence.* refused at global tier (D015 — use\n"
+            "                    `dontpanic project config set` instead).",
+            file=sys.stderr,
+        )
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    from dontpanic_orchestrate import global_config as _gc
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+
+    if sub == "show":
+        cfg = _gc.load_config()
+        print(_ch.render_global_show(cfg))
+        return 0
+    if sub == "set":
+        if len(rest) != 2:
+            print("usage: dontpanic config set <dotted-key> <value>", file=sys.stderr)
+            return 2
+        key, value = rest
+        try:
+            path = _ch.write_global_dotted_key(key, value)
+        except _ch.InvalidKeyError as exc:
+            print(f"[config set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        print(f"[config set] wrote {key} → {path}")
+        return 0
+    print(f"dontpanic config: unknown subcommand {sub!r}", file=sys.stderr)
+    return 2
+
+
+def _project_main(argv: list[str]) -> int:
+    """``dontpanic project <subcommand>`` — currently routes to ``project config`` (F006)."""
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "usage: dontpanic project <subcommand>\n\n"
+            "subcommands:\n"
+            "  config init [--overwrite]   Scaffold <cwd>/.dontpanic/dontpanic.json\n"
+            "  config set <key> <value>    Write a single dotted key in the per-project config",
+            file=sys.stderr,
+        )
+        return 2
+    if argv[0] == "config":
+        return _project_config_main(argv[1:])
+    print(f"dontpanic project: unknown subcommand {argv[0]!r}", file=sys.stderr)
+    return 2
+
+
+def _project_config_main(argv: list[str]) -> int:
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "usage: dontpanic project config <subcommand>\n\n"
+            "subcommands:\n"
+            "  init [--overwrite]\n"
+            "      Scaffold <cwd>/.dontpanic/dontpanic.json (refuses if it exists\n"
+            "      unless --overwrite is passed).\n"
+            "  set <dotted-key> <value>\n"
+            "      Write a single key. Examples:\n"
+            "        roles.goal_auditor codex\n"
+            "        runtime_evidence.web.base_url http://localhost:3000\n"
+            "        runtime_evidence.backend.auth env:GLAM_FIREBASE_SA",
+            file=sys.stderr,
+        )
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    from dontpanic_orchestrate import project_config as _pc
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+
+    project_dir = Path.cwd().resolve()
+
+    if sub == "init":
+        overwrite = False
+        if rest and rest[0] == "--overwrite":
+            overwrite = True
+            rest = rest[1:]
+        if rest:
+            print(f"unexpected args after init: {rest}", file=sys.stderr)
+            return 2
+        path = _pc.project_config_path(project_dir)
+        if path.exists() and not overwrite:
+            print(
+                f"[project config init] REFUSED: per-project config already exists at "
+                f"{path}; pass --overwrite to replace it",
+                file=sys.stderr,
+            )
+            return 3
+        try:
+            if path.exists():
+                # Overwrite path: blow it away then scaffold.
+                path.unlink()
+            _pc.scaffold_empty_config(project_dir)
+        except FileExistsError as exc:
+            # ``scaffold_empty_config`` only raises this when the legacy
+            # ``.jarvis/jarvis.json`` exists — that's not handled by the
+            # plain `--overwrite` path, surface the refusal clearly.
+            print(f"[project config init] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        print(f"[project config init] wrote {_pc.project_config_path(project_dir)}")
+        return 0
+
+    if sub == "set":
+        if len(rest) != 2:
+            print(
+                "usage: dontpanic project config set <dotted-key> <value>",
+                file=sys.stderr,
+            )
+            return 2
+        key, value = rest
+        try:
+            path = _ch.write_project_dotted_key(project_dir, key, value)
+        except _ch.InvalidKeyError as exc:
+            print(f"[project config set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        print(f"[project config set] wrote {key} → {path}")
+        return 0
+
+    print(f"dontpanic project config: unknown subcommand {sub!r}", file=sys.stderr)
+    return 2
+
+
+def _setup_main(argv: list[str]) -> int:
+    """``dontpanic setup`` — preview-by-default; mutation requires ``--yes``."""
+    parser = argparse.ArgumentParser(
+        prog="dontpanic setup",
+        description=(
+            "Bootstrap operator config: roles + per-project runtime evidence "
+            "defaults. Preview-by-default; use --yes to actually write."
+        ),
+    )
+    parser.add_argument("--implementer", help="Set roles.implementer (global)")
+    parser.add_argument("--auditor", help="Set roles.auditor (global)")
+    parser.add_argument("--goal-auditor", help="Set roles.goal_auditor (global)")
+    parser.add_argument(
+        "--project-dir",
+        type=Path,
+        help="Per-project target for runtime_evidence.* writes (D015 — required)",
+    )
+    parser.add_argument("--web-base-url", help="runtime_evidence.web.base_url")
+    parser.add_argument("--ios-scheme", help="runtime_evidence.ios.scheme")
+    parser.add_argument("--ios-simulator", help="runtime_evidence.ios.simulator")
+    parser.add_argument("--android-package", help="runtime_evidence.android.package")
+    parser.add_argument(
+        "--android-adb-device-serial",
+        help="runtime_evidence.android.adb_device_serial",
+    )
+    parser.add_argument("--backend-provider", help="runtime_evidence.backend.provider")
+    parser.add_argument("--backend-project", help="runtime_evidence.backend.project")
+    parser.add_argument(
+        "--backend-auth",
+        help="runtime_evidence.backend.auth (POINTER only: 'adc', 'env:NAME', or path)",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Actually perform the writes. Without this flag, setup is preview-only.",
+    )
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate.config import setup as _setup
+
+    setup_args = _setup.SetupArgs(
+        implementer=args.implementer,
+        auditor=args.auditor,
+        goal_auditor=args.goal_auditor,
+        project_dir=args.project_dir,
+        web_base_url=args.web_base_url,
+        ios_scheme=args.ios_scheme,
+        ios_simulator=args.ios_simulator,
+        android_package=args.android_package,
+        android_adb_device_serial=args.android_adb_device_serial,
+        backend_provider=args.backend_provider,
+        backend_project=args.backend_project,
+        backend_auth=args.backend_auth,
+    )
+    try:
+        plan = _setup.plan_setup(setup_args)
+    except _setup.SetupError as exc:
+        print(f"[setup] REFUSED: {exc}", file=sys.stderr)
+        return 2
+
+    for line in plan.preview_lines:
+        print(line)
+
+    if not args.yes:
+        print("\n[setup] preview-only run; pass --yes to apply these writes.")
+        return 0
+
+    try:
+        _setup.apply_setup(plan)
+    except Exception as exc:  # noqa: BLE001 — surface to operator with exit 3
+        print(f"[setup] FAILED during apply: {exc}", file=sys.stderr)
+        return 3
+    print("\n[setup] applied.")
     return 0
 
 
@@ -1625,6 +1833,12 @@ def main(argv: list[str] | None = None) -> int:
         return _mcp_main(raw[1:])
     if raw and raw[0] == "plan":
         return _plan_main(raw[1:])
+    if raw and raw[0] == "config":
+        return _config_main(raw[1:])
+    if raw and raw[0] == "project":
+        return _project_main(raw[1:])
+    if raw and raw[0] == "setup":
+        return _setup_main(raw[1:])
     if raw and raw[0] == "calibrate-claude":
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":

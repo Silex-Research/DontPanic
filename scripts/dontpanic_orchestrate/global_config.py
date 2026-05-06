@@ -23,6 +23,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from dontpanic_orchestrate.config.roles import RolesConfig
+
 _LOG = logging.getLogger(__name__)
 
 DONTPANIC_HOME_ENV = "DONTPANIC_HOME"
@@ -66,6 +68,15 @@ class GlobalConfig(BaseModel):
     """Optional pointer to a calibration file (e.g., a non-default
     ``~/.dontpanic/quota_calibration.json``). When None, the supervisor
     uses the default location."""
+
+    roles: RolesConfig | None = None
+    """Plan G F006 / D013 — agent role names by capability
+    (``implementer`` / ``auditor`` / ``goal_auditor``). Canonical write
+    target for ``dontpanic config set roles.<role> <agent>``. Layered
+    with the legacy ``default_implementer`` / ``default_auditor`` fields
+    by :func:`config.resolvers.resolve_role`. D015: this Pydantic model
+    intentionally has NO ``runtime_evidence`` field — runtime evidence
+    is project-scoped only."""
 
 
 def dontpanic_home() -> Path:
@@ -204,6 +215,7 @@ __all__ = [
     "GlobalConfig",
     "JARVIS_HOME_ENV",
     "LEGACY_DIRNAME",
+    "RolesConfig",
     "config_path",
     "dontpanic_home",
     "ensure_dontpanic_home",
