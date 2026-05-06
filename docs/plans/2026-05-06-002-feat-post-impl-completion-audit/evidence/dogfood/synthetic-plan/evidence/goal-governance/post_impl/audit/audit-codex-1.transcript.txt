@@ -1,0 +1,9 @@
+# Offline dispatch placeholder (DONTPANIC_GOAL_AUDITOR_OFFLINE truthy)
+
+resolved auditor: codex
+implementer: <unspecified>
+iteration: 1
+
+No executor was invoked. Operator must either re-run with the
+offline env unset OR record an --ignore-completion-findings
+override at plan-close time (F003).

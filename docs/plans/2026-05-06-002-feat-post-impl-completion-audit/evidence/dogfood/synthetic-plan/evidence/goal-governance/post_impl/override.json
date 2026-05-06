@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "F2/F004 dogfood — operator confirmed cross-vendor sanity check by reading completion_findings.json + audit-codex-1.json manually; offline mode is the design-mandated path (per F002 D013 + F004 cross-vendor caveat clause) for runs where Codex is intentionally bypassed for reproducibility",
+  "approved_by": "bayesian",
+  "approved_at": "2026-05-06T20:40:55Z",
+  "plan_id": "2026-05-06-999-dogfood-synthetic-completion-audit",
+  "goal_type": "parity",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "audit envelope status='dispatch_skipped_offline' and no operator override supplied — record one with --ignore-completion-findings <reason> if the offline run was intentional",
+  "features_hash": "sha256:4b2f9404c4b8fc3f3079c6c60e7f18ab660542526f770d914e9933a42a09bd24",
+  "objective_contract_hash": "sha256:191dc8ddc73a975be008eb815d21392235e8cee4b922c7c2994718094ae2f4fb",
+  "completion_findings_hash": "sha256:2de8b0f3824c2bf37d646feeec97790d2e79599007e8618aff6f2f6632f227d4",
+  "evidence_manifest_hash": "sha256:ae7c384a03fe475ba11f8c267ab314ef10a1cfca02e7109cf26629e8e698609e"
+}

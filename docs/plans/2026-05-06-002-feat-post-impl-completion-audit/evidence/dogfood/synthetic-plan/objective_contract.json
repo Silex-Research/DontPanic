@@ -1,0 +1,41 @@
+{
+  "goal_type": "parity",
+  "source_of_truth": "Synthetic dogfood contract for Plan F2 / F004. Mirrors a representative parity goal (browse + checkout + error_recovery journeys). Not a real product surface — intentionally constructed so F001 surfaces one missing_evidence + one journey_gap finding.",
+  "user_journeys": [
+    {
+      "name": "browse_journey",
+      "description": "Visitor lands on the catalog, scrolls a product list, and renders item cards without errors. Used by the dogfood as a journey with full evidence coverage (web + log artifacts captured under post_impl).",
+      "surfaces": ["web"],
+      "acceptance_signals": [
+        "catalog page renders within 2 seconds",
+        "≥1 product card displays a price string"
+      ]
+    },
+    {
+      "name": "checkout_journey",
+      "description": "Authenticated user completes a checkout from cart through confirmation, with the backend persisting the order and the iOS surface presenting the success screen.",
+      "surfaces": ["ios", "backend"],
+      "acceptance_signals": [
+        "checkout success screen renders within 3 seconds of submit",
+        "backend log records order id + total"
+      ]
+    },
+    {
+      "name": "error_recovery",
+      "description": "User encounters a network error mid-checkout and the surface recovers (retries automatically OR surfaces a retry affordance) without crashing or losing cart state. Intentionally orphan in this dogfood — zero captured artifacts under any source surface — so F001 emits a journey_gap finding.",
+      "surfaces": ["web", "ios"],
+      "acceptance_signals": [
+        "retry banner appears within 1 second of network failure",
+        "cart contents preserved across retry"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "screenshot-browse-landing",
+    "log-browse-render",
+    "screenshot-checkout-success",
+    "log-checkout-confirmed",
+    "crash-NoneObserved"
+  ],
+  "completion_test": "Both browse_journey and checkout_journey complete end-to-end without operator intervention, AND error_recovery presents a retry affordance instead of crashing on simulated network failure. The first four required_evidence matchers map to artifacts captured by the runtime adapters; the fifth (crash-NoneObserved) is intentionally NOT captured so the v1 evidence-coverage heuristic emits a missing_evidence finding."
+}

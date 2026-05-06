@@ -1,0 +1,9 @@
+[plan audit] DECISION: blocking
+[plan audit] plan_dir=docs/plans/2026-05-06-002-feat-post-impl-completion-audit/evidence/dogfood/synthetic-plan
+  audit: codex → status=dispatch_skipped_offline (iter=1, 0 disposition(s))
+  envelope: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-06-002-feat-post-impl-completion-audit/evidence/dogfood/synthetic-plan/evidence/goal-governance/post_impl/audit/audit-codex-1.json
+  v1 findings: 2
+  cluster web/browse_journey: 1 finding(s) → operator_deferred
+  cluster web/error_recovery: 1 finding(s) → operator_deferred
+  reasons:
+    - audit envelope status='dispatch_skipped_offline' and no operator override supplied — record one with --ignore-completion-findings <reason> if the offline run was intentional
