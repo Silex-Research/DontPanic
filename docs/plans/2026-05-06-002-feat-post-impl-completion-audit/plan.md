@@ -3,7 +3,7 @@ id: 2026-05-06-002-feat-post-impl-completion-audit
 title: Plan F2 — Post-impl completion audit + cross-vendor goal-audit dispatch
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-06"
 goal_type: infra
 agents_required:
