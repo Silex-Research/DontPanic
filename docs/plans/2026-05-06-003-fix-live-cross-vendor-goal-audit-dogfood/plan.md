@@ -93,9 +93,11 @@ description: |
   **What this plan IS NOT:**
   - Not a re-close of Plan G. Plan G's `status: completed` stays.
     Plan G's plan.md is never mutated by this plan.
-  - Not a v2 of Plan F2's auditor pipeline. Tiny in-scope fixes are
-    OK if they're prompt-template wording or executor-config defaults
-    (D006); anything larger is a separate follow-up plan.
+  - Not a v2 of Plan F2's auditor pipeline. The only in-scope code
+    mutation is clarifying-only edits to the completion-audit prompt
+    template, conforming to D006's behavioral boundary (no schema /
+    policy / module changes). Anything that crosses the boundary is
+    a separate follow-up plan.
   - Not a substitute for the queued real-plan dogfood (F2 D005) — but
     it substantively overlaps and combining the two motions in this
     one plan is the whole point.
