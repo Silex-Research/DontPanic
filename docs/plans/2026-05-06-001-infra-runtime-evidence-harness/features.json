@@ -84,7 +84,9 @@
       ],
       "acceptance": "(1) `IosEvidenceCollector.collect()` exists with documented signature, accepts a swappable simctl-runner for testing. (2) Captures screenshot + simulator log + crash reports against the fixture; honors capture_window scoping. (3) Greppable: zero hardcoded simulator device ids, zero hardcoded bundle ids in `ios.py`. (4) No-simulator path returns a typed skip-reason EvidenceRef without raising. (5) `subprocess.run` calls use `shell=False` + command list throughout (sanitization invariant). (6) Tests cover happy path + skip + partial-failure, all green. (7) Ruff + sanitization clean. (8) Zero regressions.",
       "passes": false,
-      "depends_on": [],
+      "depends_on": [
+        "F006"
+      ],
       "evidence_refs": []
     },
     {
@@ -105,7 +107,9 @@
       ],
       "acceptance": "(1) `AndroidEvidenceCollector.collect()` exists with documented signature, accepts both modes. (2) passive_observe captures screenshot + logcat + tombstone + ANR against stub adb_runner. (3) post_hoc_ingest classifies + ingests fixture artifacts dir into typed EvidenceRefs. (4) **No-orchestration grep test green** \u2014 source contains zero `gradlew test` / `am instrument` / `./gradlew connectedAndroidTest` substrings (D009 invariant). (5) No-device + no-artifacts paths return typed skip-reason EvidenceRefs without raising. (6) Greppable: zero hardcoded device serials, zero hardcoded package names. (7) Subprocess shell=False discipline holds. (8) Ruff + sanitization clean. (9) Zero regressions.",
       "passes": false,
-      "depends_on": [],
+      "depends_on": [
+        "F006"
+      ],
       "evidence_refs": []
     },
     {
@@ -127,7 +131,9 @@
       ],
       "acceptance": "(1) `BackendEvidenceCollector` ABC + 3 adapters + registry exist. (2) Firebase adapter fetches Cloud Logging + Crashlytics + Performance against stubbed admin SDK; reuses F022 SA path (no new credential storage \u2014 verify D005). (3) Supabase production paths raise `NotImplementedError` with the documented message; fixture-mode tests pass. (4) Generic adapter handles HTTP + local file + JSONL inputs; operator-supplied credentials passed at call time, not stored. (5) Registry resolves all three providers; unknown provider raises clean KeyError. (6) **No Firebase-specific branches in the registry or anywhere outside `firebase.py` (D010)** \u2014 greppable. (7) Sanitization: no credential bytes leak into logs/output paths. (8) Tests cover happy + slot + skip + KeyError, all green. (9) Ruff + sanitization clean. (10) Zero regressions.",
       "passes": false,
-      "depends_on": [],
+      "depends_on": [
+        "F006"
+      ],
       "evidence_refs": []
     },
     {
@@ -155,8 +161,38 @@
         "F001",
         "F002",
         "F003",
-        "F004"
+        "F004",
+        "F006"
       ],
+      "evidence_refs": []
+    },
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 0,
+      "description": "**G0 \u2014 Minimum operator configuration surface** (added by amendment 2026-05-06 per D013). The operator-facing config UX the G adapters consume. Two new typed config blocks:\n\n- `roles` block (`implementer`, `auditor`, `goal_auditor`) \u2014 readable from global + per-project config; canonical write target for `dontpanic config set`. Legacy `default_implementer` / `default_auditor` remain readable (migration helper exposes them through `roles` in `config show`).\n- `runtime_evidence` block (`web`, `ios`, `android`, `backend`) \u2014 **per-project only (D015)**. Global config never carries runtime target defaults.\n\nNew CLI surface (no MCP wrap, library-only per Plan G locked answer #2 stays \u2014 these are CLI subcommands invoked by the operator, not runtime-callable tools):\n\n- `dontpanic config show` / `dontpanic config set <key> <value>` \u2014 global config CRUD.\n- `dontpanic project config init` / `dontpanic project config set <key> <value>` \u2014 per-project config CRUD.\n- `dontpanic setup` \u2014 interactive bootstrap. **Preview-by-default; mutation requires `--yes`** (consistent with other DontPanic write-side commands).\n- `dontpanic doctor` extension \u2014 registration framework only. Each adapter (G2\u2013G5) registers its own per-source check during implementation; F006 does NOT bundle adapter-specific checks (D013 \u2014 don't make F006 know about future adapters).\n\nCredentials discipline (D005 + new D014): DontPanic stores **pointers and provider names, never values**. Allowed pointer shapes: `adc` (assume gcloud Application Default Credentials), path-only references (`./secrets/sa.json`), `env:NAME` env-var pointers. Forbidden: any literal credential bytes in config or DontPanic-managed state. Greppable assertion enforces.\n\nForward-looking: F003 (`sufficiency_auditor._resolve_goal_auditor_agent`) is amended additively to read `roles.goal_auditor` first when present, falling through to existing fallback. Makes the goal-auditor role first-class without breaking the locked F1 surface.",
+      "steps": [
+        "Create `scripts/dontpanic_orchestrate/config/__init__.py` package marker. Define `RolesConfig` Pydantic model with optional fields `implementer`, `auditor`, `goal_auditor` (all `str | None`).",
+        "Define `RuntimeEvidenceConfig` Pydantic model in `runtime_evidence_config.py` (under the new `config/` package). Sub-models: `WebDefaults` (base_url, driver_options pass-through dict), `IosDefaults` (scheme, simulator, app_bundle_id), `AndroidDefaults` (package, adb_device_serial), `BackendDefaults` (provider, project, auth pointer string). All fields optional; sub-models all carry `extra='forbid'`.",
+        "Extend `global_config.py` `Config` model with optional `roles: RolesConfig | None`. Migration helper: when reading legacy `default_implementer` / `default_auditor`, surface them through `roles` in the resolved view; new writes use `roles.*`. **Greppable assertion** (D015): `Config` MUST NOT carry a `runtime_evidence` field.",
+        "Extend `project_config.py` `ProjectConfig` model with `roles: RolesConfig | None` and `runtime_evidence: RuntimeEvidenceConfig | None`. Same legacy-field migration as global. Per-project is the ONLY tier where `runtime_evidence` is accepted (D015).",
+        "Add `resolve_role(plan_dir: Path, role: Literal['implementer','auditor','goal_auditor']) -> str` helper. Precedence: per-call (caller-supplied) > project.roles > global.roles > legacy default_* > hardcoded fallback (`claude` / `codex`). Tested with all four layers.",
+        "Add `resolve_runtime_evidence(plan_dir: Path, source: Literal['web','ios','android','backend']) -> dict` helper. Precedence: per-call (kwarg dict) > project.runtime_evidence.<source> > empty dict (no global tier per D015). Returns `dict` (not the typed sub-model) so adapters can pick fields they understand.",
+        "CLI subcommand `dontpanic config` with `show` (resolved view) + `set <dotted-key> <value>` (validates against `Config` schema; writes `~/.dontpanic/config.json` atomically). `set roles.implementer claude` is canonical write path.",
+        "CLI subcommand `dontpanic project config` with `init` (writes `<cwd>/.dontpanic/dontpanic.json` skeleton if absent; refuses if exists unless `--overwrite`) + `set <dotted-key> <value>`. `set runtime_evidence.web.base_url http://localhost:3000` writes per-project only \u2014 refuses global writes for `runtime_evidence.*` per D015.",
+        "CLI subcommand `dontpanic setup` \u2014 interactive bootstrap. **Preview-by-default**: prints planned writes (paths + values) to stdout, exits 0 without mutating. Adding `--yes` performs the writes. Non-interactive mode (no TTY): refuses without `--yes`; with `--yes` reads from env vars / flags. Sanitization invariant: `setup` MUST NOT accept secret-shaped values for any pointer field \u2014 only `adc`, path-only, `env:NAME` shapes (D014).",
+        "Doctor framework: in `cli.py` (or a new `doctor_registry.py`) add `register_doctor_check(name: str, callable_: Callable[[], DoctorResult]) -> None` and a `run_all_checks() -> list[DoctorResult]` runner. F006 registers a baseline check (Python version + DontPanic packaging importable); G2\u2013G5 each call `register_doctor_check` during their adapter import to add per-source checks. Registration is idempotent.",
+        "**F003 amendment (additive)**: extend `sufficiency_auditor._resolve_goal_auditor_agent()` to read `roles.goal_auditor` from resolved config first; fall through to existing logic when absent. Tested via a fixture plan with a project config carrying `roles.goal_auditor`. Operator note: F1's locked behavior is preserved \u2014 this is purely additive read of a new optional field.",
+        "Tests at `scripts/dontpanic_orchestrate/tests/test_config_setup_surface.py` covering: roles resolution layering across all 4 tiers; runtime_evidence project-only enforcement (greppable + Pydantic); `setup` preview-by-default; `setup --yes` mutation; `setup` refuses secret-shaped pointer values (D014 grep); CLI `config show/set` happy + invalid-key paths; CLI `project config init/set` happy + `--overwrite` discipline; doctor framework registration + idempotency; legacy `default_implementer`/`default_auditor` migration into resolved view; F003 goal-auditor lookup honors `roles.goal_auditor` when set, falls through when absent.",
+        "Static fixture under `scripts/dontpanic_orchestrate/tests/config/_fixture_setup/` providing synthetic `~/.dontpanic/config.json` + `<repo>/.dontpanic/dontpanic.json` for the layering tests.",
+        "**Greppable D014 assertion**: source-grep test asserts `scripts/dontpanic_orchestrate/config/` and the new CLI subcommand bodies contain zero substrings matching `password=`, `bearer `, `api_key=`, etc. (operator-supplied pointer values cannot leak into log/output paths).",
+        "Run `ruff check` + `ruff format --check`. Run `python3 scripts/sanitization_check.py`. Both clean.",
+        "Run full orchestrate suite. Confirm baseline + G0 test count = N+M passed; zero regressions including the F003 sufficiency_auditor tests (which gain new coverage but must not lose existing tests).",
+        "Verify worktree boundary: diff confined to `scripts/dontpanic_orchestrate/config/` (new package), `scripts/dontpanic_orchestrate/global_config.py` (additive), `scripts/dontpanic_orchestrate/project_config.py` (additive), `scripts/dontpanic_orchestrate/cli.py` (additive subcommands), `scripts/dontpanic_orchestrate/sufficiency_auditor.py` (additive read of `roles.goal_auditor`), the new test module + fixture dir, and Plan G's evidence/F006 close-out memo. Zero diffs to `claude/shared/`, F1 plan dir, or unrelated modules."
+      ],
+      "acceptance": "(1) `RolesConfig` + `RuntimeEvidenceConfig` Pydantic models defined under `scripts/dontpanic_orchestrate/config/`. (2) Global config accepts `roles` block; project config accepts `roles` + `runtime_evidence` blocks. (3) **D015 enforced**: `runtime_evidence` cannot be set on global config \u2014 greppable + Pydantic validation refuse. (4) Legacy `default_implementer` / `default_auditor` keys remain readable; `dontpanic config show` reports resolved view across both old + new shapes; new writes use `roles.*` (canonical). (5) New CLI subcommands exist: `dontpanic config show/set`, `dontpanic project config init/set`, `dontpanic setup`, extended `dontpanic doctor`. (6) **`dontpanic setup` is preview-by-default** \u2014 mutation requires `--yes` flag (consistent with DontPanic write-side commands). (7) **D014 enforced**: greppable assertion that adapters / CLI store pointers (`adc`, path-only, `env:NAME`), never credential values. `setup` refuses secret-shaped values for pointer fields. (8) Doctor registration framework exists (`register_doctor_check` + `run_all_checks`); F006 ships only a baseline check, NOT adapter-specific checks (D013 \u2014 don't make F006 know about future adapters). (9) `_resolve_goal_auditor_agent` in F003 reads `roles.goal_auditor` first, falls through to existing fallback when absent \u2014 F1's locked behavior preserved. (10) Tests cover all 10 step-12 cases plus the F003 amendment, all green. (11) Ruff + sanitization clean. (12) Zero regressions in cumulative orchestrate suite. (13) Worktree boundary preserved \u2014 zero diffs to `claude/shared/`, F1 plan dir, or unrelated modules.",
+      "passes": false,
+      "depends_on": [],
       "evidence_refs": []
     }
   ]
