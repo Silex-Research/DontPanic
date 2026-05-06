@@ -109,11 +109,32 @@
         "Write F003 close-out memo at `evidence/f003-closeout-memo.md`: deliverable-by-deliverable verification, before/after test count, vendor-resolution path documentation, queued-for-F004 note."
       ],
       "acceptance": "(1) **`sufficiency_auditor.py` module exists** at `scripts/dontpanic_orchestrate/sufficiency_auditor.py` with the documented function shape: `run_sufficiency_audit(plan_dir: Path, implementer_agent: str | None = None) -> list[SufficiencyFinding]`. Pure function, no MCP. (2) **`SufficiencyFinding` Pydantic model defined** with required fields `severity`, `journey_id`, `gap_class`, `description`, `feature_refs`; severity validation rejects unknown values (reuses F0 pattern). (3) **Vendor resolution via agent_manifest, NOT hardcoded** \u2014 `_resolve_goal_auditor_agent()` reads from manifest config; raises ValueError if same-vendor without operator override. Tested directly. (4) **Evidence written to `evidence/goal-governance/pre_impl/sufficiency-findings.json`** per F0's path convention. (5) **Tests cover the 9 cases listed in step 8**, all green. (6) **No regressions** \u2014 997 + N passed, 6 skipped. (7) **Ruff + sanitization clean.** (8) **Worktree boundary** \u2014 diff confined to F003 module + tests + close-out memo. Zero diffs to `nested_orchestration.py`, `claude/shared/`, or other modules. (9) **F003 close-out memo at `evidence/f003-closeout-memo.md`** with deliverable verification + vendor-resolution path documentation.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/sufficiency_auditor.py",
+          "note": "F003 module \u2014 pre-impl sufficiency auditor (run_sufficiency_audit + SufficiencyFinding + cross-vendor _resolve_goal_auditor_agent + ObjectiveContract loader, all pure text-only)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_sufficiency_auditor.py",
+          "note": "F003 test module \u2014 22 tests covering the 9 step-8 cases (contract load happy/4 failure modes, goal-auditor resolution, same-vendor refuse + override, prompt structure, response parser happy + 5 reject paths, end-to-end with mocked dispatch)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f003-closeout-memo.md",
+          "note": "F003 close-out memo \u2014 deliverable verification + vendor-resolution path doc + queued-for-F004 notes"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/",
+          "note": "Full orchestrate suite post-F003: 1019 passed, 6 skipped (= 997 baseline + 22 new). Zero regressions."
+        }
+      ]
     },
     {
       "id": "F004",
