@@ -64,6 +64,7 @@ from dontpanic_orchestrate import (
     projects_registry,
     quota_admission,
     quota_caps_loader,
+    sufficiency_gate,
     supervisor,
 )
 from dontpanic_orchestrate import (
@@ -1516,6 +1517,87 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     return 0 if result.final_status == "signed_off" else 3
 
 
+def _plan_main(argv: list[str]) -> int:
+    """Top-level dispatch for ``dontpanic plan <subcommand>``. F004 ships
+    only ``lock``; future plan-scoped subcommands (``plan show``,
+    ``plan validate``, etc.) attach here so the surface stays
+    single-namespace and discoverable."""
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "usage: dontpanic plan <subcommand>\n\n"
+            "subcommands:\n"
+            "  lock <plan-dir> [--ignore-sufficiency-findings <reason>]\n"
+            "      Run the pre-impl sufficiency gate (Goal Governance V1 F004)\n"
+            "      and flip plan.md status from draft → active. Refuses if the\n"
+            "      gate finds blocking findings unless --ignore-sufficiency-\n"
+            "      findings <reason> is supplied (operator override is recorded\n"
+            "      to evidence/goal-governance/pre_impl/override.json).",
+            file=sys.stderr,
+        )
+        return 2
+    sub = argv[0]
+    rest = argv[1:]
+    if sub == "lock":
+        return _plan_lock_main(rest)
+    print(f"dontpanic plan: unknown subcommand {sub!r}", file=sys.stderr)
+    return 2
+
+
+def _plan_lock_main(argv: list[str]) -> int:
+    """``dontpanic plan lock`` — canonical lock-time entry point for Goal
+    Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan lock",
+        description=(
+            "Run the pre-impl sufficiency gate, then flip plan.md status from "
+            "draft to active. For plans without goal_type, the gate is a no-op "
+            "but the status flip still proceeds."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    parser.add_argument(
+        "--ignore-sufficiency-findings",
+        default=None,
+        metavar="REASON",
+        dest="override_reason",
+        help=(
+            "Operator override: bypass blocking sufficiency findings with a "
+            "recorded reason. Writes evidence/goal-governance/pre_impl/"
+            "override.json (durable but invalidated by changes to "
+            "features.json / objective contract / sufficiency findings)."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    if args.override_reason is not None and not args.override_reason.strip():
+        print(
+            "[plan lock] --ignore-sufficiency-findings requires a non-empty reason",
+            file=sys.stderr,
+        )
+        return 2
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    print(f"[plan lock] plan_dir={plan_dir}")
+
+    try:
+        plan_md = sufficiency_gate.lock_plan(
+            plan_dir,
+            override_reason=args.override_reason,
+        )
+    except sufficiency_gate.SufficiencyGateError as exc:
+        print(f"[plan lock] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    if args.override_reason is not None:
+        override_path = (
+            plan_dir / "evidence" / "goal-governance" / "pre_impl" / "override.json"
+        )
+        if override_path.is_file():
+            print(f"[plan lock] override recorded at {override_path}")
+    print(f"[plan lock] status flipped: draft → active in {plan_md}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     # --version / -V prints the public package name and version, resolving
@@ -1541,6 +1623,8 @@ def main(argv: list[str] | None = None) -> int:
         return _manifest_main(raw[1:])
     if raw and raw[0] == "mcp":
         return _mcp_main(raw[1:])
+    if raw and raw[0] == "plan":
+        return _plan_main(raw[1:])
     if raw and raw[0] == "calibrate-claude":
         return _calibrate_claude_main(raw[1:])
     if raw and raw[0] == "dispatch-from-plan":
