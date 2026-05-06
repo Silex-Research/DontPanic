@@ -1,0 +1,6 @@
+----- pid 1234 at 2026-05-06 09:00:05 -----
+Cmd line: com.example.app
+
+DALVIK THREADS (12):
+"main" prio=5 tid=1 Native
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x12c00000 self=0x7000abcd

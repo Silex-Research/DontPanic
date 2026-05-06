@@ -127,11 +127,32 @@
         "Ruff + sanitization clean. Zero regressions."
       ],
       "acceptance": "(1) `AndroidEvidenceCollector.collect()` exists with documented signature, accepts both modes. (2) passive_observe captures screenshot + logcat + tombstone + ANR against stub adb_runner. (3) post_hoc_ingest classifies + ingests fixture artifacts dir into typed EvidenceRefs. (4) **No-orchestration grep test green** \u2014 source contains zero `gradlew test` / `am instrument` / `./gradlew connectedAndroidTest` substrings (D009 invariant). (5) No-device + no-artifacts paths return typed skip-reason EvidenceRefs without raising. (6) Greppable: zero hardcoded device serials, zero hardcoded package names. (7) Subprocess shell=False discipline holds. (8) Ruff + sanitization clean. (9) Zero regressions.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_android.py",
+          "note": "31 tests covering passive_observe (per-step screenshot+logcat, tombstone+ANR drain, evidence path), post_hoc_ingest (5 artifact patterns + unrecognized skip), config layering (per-call > project > none, D015), skip discipline (driver init, activate_step, capture failures, missing/empty artifact_dir), default _AdbDriver (warn-only when adb missing or unwired), doctor framework (warn-only across all failure modes), source-grep invariants (D003/D004/D005/D009 \u2014 no test orchestration tokens)"
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/",
+          "note": "1191 passed, 7 skipped, 0 regressions"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/runtime_evidence/android.py",
+          "note": "AndroidEvidenceCollector + AndroidJourneyStep + AndroidSessionConfig + AndroidMode (Literal) + AndroidDriver/AndroidSession Protocols + _AdbDriver default + post_hoc_ingest artifact pattern map + android_adb doctor check (warn-only, capability/readiness only)"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_android/",
+          "note": "synthetic Gradle/Espresso/Maestro-shaped fixtures: screenshots/{launch,closet}.png, logcat/run.log, tombstones/tombstone_00, anr/traces.txt, test-results/junit.xml, random.dat (skipped)"
+        }
+      ]
     },
     {
       "id": "F004",

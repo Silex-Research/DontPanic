@@ -1,0 +1,4 @@
+05-06 09:00:00.001  1234  5678 I MainActivity: onCreate
+05-06 09:00:00.123  1234  5678 D ClosetViewModel: load start
+05-06 09:00:01.456  1234  5678 W ImageLoader: retry attempt 1/3
+05-06 09:00:02.789  1234  5678 I TryOnRequest: dispatched

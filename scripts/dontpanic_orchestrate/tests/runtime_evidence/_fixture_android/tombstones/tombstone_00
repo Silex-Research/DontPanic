@@ -1,0 +1,5 @@
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'Android/sdk_gphone_x86_64/emu64x:14/UE1A.230829.036/12077443:userdebug/dev-keys'
+ABI: 'x86_64'
+pid: 1234, tid: 1234, name: com.example.app  >>> com.example.app <<<
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
