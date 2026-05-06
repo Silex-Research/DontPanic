@@ -1,0 +1,11 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Curated fixture reference for new_feature validator test",
+  "user_journeys": [
+    {
+      "name": "primary-journey",
+      "description": "User completes the primary flow this fixture covers; substantive description for validator round-trip."
+    }
+  ],
+  "completion_test": "The validator accepts this fixture as a valid ObjectiveContract instance for goal_type=new_feature."
+}
