@@ -29,6 +29,9 @@
 !/docs/plans/**/*.jsonl
 !/docs/plans/*/decisions.jsonl
 
+# Plan G runtime-evidence fixtures use .jsonl as a tested format shape
+!/scripts/dontpanic_orchestrate/tests/runtime_evidence/**/*.jsonl
+
 # Python bytecode
 **/__pycache__/
 **/*.pyc

@@ -1,0 +1,4 @@
+{"ts": "2026-05-06T09:00:00Z", "level": "info", "event": "audit_started"}
+{"ts": "2026-05-06T09:00:01Z", "level": "info", "event": "ruleset_evaluated", "rules": 12}
+this line is not json and should be marked malformed
+{"ts": "2026-05-06T09:00:02Z", "level": "warn", "event": "rule_violation", "id": "RG-7"}

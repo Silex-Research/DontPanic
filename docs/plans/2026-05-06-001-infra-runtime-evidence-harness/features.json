@@ -172,11 +172,32 @@
         "Ruff + sanitization clean. Zero regressions."
       ],
       "acceptance": "(1) `BackendEvidenceCollector` ABC + 3 adapters + registry exist. (2) Firebase adapter fetches Cloud Logging + Crashlytics + Performance against stubbed admin SDK; reuses F022 SA path (no new credential storage \u2014 verify D005). (3) Supabase production paths raise `NotImplementedError` with the documented message; fixture-mode tests pass. (4) Generic adapter handles HTTP + local file + JSONL inputs; operator-supplied credentials passed at call time, not stored. (5) Registry resolves all three providers; unknown provider raises clean KeyError. (6) **No Firebase-specific branches in the registry or anywhere outside `firebase.py` (D010)** \u2014 greppable. (7) Sanitization: no credential bytes leak into logs/output paths. (8) Tests cover happy + slot + skip + KeyError, all green. (9) Ruff + sanitization clean. (10) Zero regressions.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_backend.py",
+          "note": "36 tests covering generic provider (http_get/log_file/jsonl_stream + max_bytes/max_lines + missing path), firebase provider (refuses without project/auth, refuses non-pointer auth, refuses unknown probe kinds, skips when SDK unavailable), supabase provider (always raises slot-only message, refuses non-pointer auth), collector skip discipline (empty journey, unknown provider, open_session failure, unexpected fault, per-probe skip, no probes configured, close failure swallowed), config layering (per-call > project > none, D015), doctor framework (firebase warn-when-SDK-missing, supabase always-warn-slot, generic always-pass, none ever fail), source-grep invariants (D003/D004/D005/D014 + no live cloud-shell tokens)"
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/",
+          "note": "1227 passed, 7 skipped, 0 regressions"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/runtime_evidence/backend.py",
+          "note": "BackendEvidenceCollector + BackendProbe + BackendSessionConfig + BackendProvider/BackendProviderSession Protocols + 3 default providers (_FirebaseProvider deferred, _SupabaseProvider slot, _GenericProvider stdlib) + 3 doctor checks (warn-only)"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_backend/",
+          "note": "synthetic fixtures: server.log, audit.jsonl (with one malformed line), http_response.json"
+        }
+      ]
     },
     {
       "id": "F005",
