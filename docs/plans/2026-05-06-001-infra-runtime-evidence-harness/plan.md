@@ -3,7 +3,7 @@ id: 2026-05-06-001-infra-runtime-evidence-harness
 title: Plan G — Runtime evidence harness (Goal Governance V1 prerequisites for F2)
 type: infra
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-06"
 goal_type: infra
 agents_required:
