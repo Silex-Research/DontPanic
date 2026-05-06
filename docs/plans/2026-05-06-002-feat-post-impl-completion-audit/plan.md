@@ -39,8 +39,12 @@ description: |
     agent-conventions v1.4.0 ObjectiveContract carries enough; richer
     completion-test rule shape lands in a follow-up after real use).
     No richer per-rule semantics in v1 — the matcher is exact-substring
-    against `EvidenceRef.uri` / `EvidenceRef.note`. F1 sufficiency
-    pattern is the template.
+    against `EvidenceRef.uri` / `EvidenceRef.note`, framed
+    explicitly as a **v1 evidence-coverage heuristic, NOT a semantic
+    completion proof** (D002). Findings envelope carries
+    `audit_kind: "v1_evidence_coverage_heuristic"` so downstream
+    consumers don't over-trust empty-findings as completeness. F1
+    sufficiency pattern is the template.
 
   - **F002 — Cross-vendor dispatcher wiring for goal audit.** The one
     place we do NOT defer (D003): wire the existing
@@ -175,9 +179,19 @@ plan-level acceptance gate before close-out.
   unmodified by F2.
 - **D002:** Single-repo plan in v1; no agent-conventions schema bump.
   Existing v1.4.0 `ObjectiveContract.completion_test.required_evidence`
-  string list is sufficient. Richer per-rule schema (assertion shapes,
-  journey-walk semantics) lands in a follow-up plan after real use
-  shows the shape.
+  string list is sufficient. **The substring matcher is a v1
+  evidence-coverage heuristic, NOT a semantic completion proof.** It
+  flags missing evidence (no captured ref matches a declared
+  required_evidence string) and orphan journeys (zero captured refs
+  for a contract user_journey); it does not certify journey
+  correctness or assert that captured artifacts demonstrate intended
+  behavior. Empty findings means "no obvious coverage gaps detected,"
+  NOT "plan complete." Findings envelope carries
+  `audit_kind: "v1_evidence_coverage_heuristic"` so downstream
+  consumers (F003 plan-close gate, dogfood dispositions, future
+  follow-ups) read the correct semantics. Richer per-rule schema
+  (regex, structured assertions, journey-walk semantics) lands in a
+  follow-up plan after real use shows the shape.
 - **D003:** Cross-vendor dispatcher is IN SCOPE (F002). Reusing F1's
   `_resolve_goal_auditor_agent` for resolution; F2/F002 adds the
   missing dispatch wiring so the resolved auditor is actually called.
