@@ -54,6 +54,7 @@ from dontpanic_orchestrate import (
     active_supervisors,
     agent_manifest,
     calibration_loader,
+    completion_gate,
     gate_pause,
     inbox,
     interactive_state,
@@ -1518,10 +1519,20 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
 
 def _plan_main(argv: list[str]) -> int:
-    """Top-level dispatch for ``dontpanic plan <subcommand>``. F004 ships
-    only ``lock``; future plan-scoped subcommands (``plan show``,
-    ``plan validate``, etc.) attach here so the surface stays
-    single-namespace and discoverable."""
+    """Top-level dispatch for ``dontpanic plan <subcommand>``.
+
+    Subcommands:
+      ``lock``    — F1 / F004: pre-impl sufficiency gate + draft → active flip.
+      ``audit``   — F2 / F003: post-impl audit-only entry. Runs the F1+F002+F0
+                    pipeline and prints the decision. No mutation.
+      ``close``   — F2 / F003: post-impl close gate + active → completed flip.
+                    Refuses on blocking decision unless --ignore-completion-
+                    findings <reason> is supplied (operator override is
+                    recorded to evidence/goal-governance/post_impl/override.json).
+
+    Future plan-scoped subcommands (``plan show``, ``plan validate``, etc.)
+    attach here so the surface stays single-namespace and discoverable.
+    """
     if not argv or argv[0] in ("-h", "--help"):
         print(
             "usage: dontpanic plan <subcommand>\n\n"
@@ -1531,7 +1542,15 @@ def _plan_main(argv: list[str]) -> int:
             "      and flip plan.md status from draft → active. Refuses if the\n"
             "      gate finds blocking findings unless --ignore-sufficiency-\n"
             "      findings <reason> is supplied (operator override is recorded\n"
-            "      to evidence/goal-governance/pre_impl/override.json).",
+            "      to evidence/goal-governance/pre_impl/override.json).\n"
+            "  audit <plan-dir>\n"
+            "      Run the post-impl completion audit (F001 + F002 + F0\n"
+            "      classifier) and print the decision. No status flip.\n"
+            "  close <plan-dir> [--dry-run] [--ignore-completion-findings <reason>]\n"
+            "      Run the post-impl gate and flip plan.md status from active\n"
+            "      → completed. Refuses on blocking decision unless --ignore-\n"
+            "      completion-findings <reason> is supplied (operator override\n"
+            "      is recorded to evidence/goal-governance/post_impl/override.json).",
             file=sys.stderr,
         )
         return 2
@@ -1539,6 +1558,10 @@ def _plan_main(argv: list[str]) -> int:
     rest = argv[1:]
     if sub == "lock":
         return _plan_lock_main(rest)
+    if sub == "audit":
+        return _plan_audit_main(rest)
+    if sub == "close":
+        return _plan_close_main(rest)
     print(f"dontpanic plan: unknown subcommand {sub!r}", file=sys.stderr)
     return 2
 
@@ -1593,6 +1616,219 @@ def _plan_lock_main(argv: list[str]) -> int:
         if override_path.is_file():
             print(f"[plan lock] override recorded at {override_path}")
     print(f"[plan lock] status flipped: draft → active in {plan_md}")
+    return 0
+
+
+# ──────────────────────────────  plan audit / close (F2/F003)  ──────────────────────────────
+
+
+def _format_decision_summary(result: completion_gate.AuditPlanResult) -> list[str]:
+    """Render an operator-readable summary of an
+    :class:`completion_gate.AuditPlanResult`. Kept short — full envelope
+    + findings JSON live on disk; CLI prints the headline only so a
+    typical close-out fits on one screen."""
+    lines: list[str] = []
+    if result.audit_transcript is not None:
+        env = result.audit_transcript
+        lines.append(
+            f"  audit: {env.auditor_agent} → status={env.status} "
+            f"(iter={env.iteration}, {len(env.findings_dispositions)} disposition(s))"
+        )
+        lines.append(f"  envelope: {env.envelope_path}")
+    lines.append(f"  v1 findings: {len(result.findings)}")
+    if result.cluster_decisions:
+        for d in result.cluster_decisions[:6]:
+            lines.append(
+                f"  cluster {d.subsystem}/{d.journey}: {d.finding_count} finding(s) → {d.triage}"
+            )
+        extra = len(result.cluster_decisions) - 6
+        if extra > 0:
+            lines.append(f"  … and {extra} more cluster(s)")
+    if result.reasons:
+        lines.append("  reasons:")
+        for r in result.reasons:
+            lines.append(f"    - {r}")
+    return lines
+
+
+def _plan_audit_main(argv: list[str]) -> int:
+    """``dontpanic plan audit`` — F2/F003 audit-only entry point.
+
+    Runs F001 (completion auditor) + F002 (cross-vendor dispatcher) +
+    F0 classifier and prints the decision. Does NOT mutate plan.md.
+
+    Exit-code matrix mirrors ``plan close``:
+      0 — non-blocking decision (or exempt plan)
+      2 — usage error / argparse failure
+      3 — blocking decision (refuse-equivalent for the audit-only surface)
+      4 — F001 audit-error (objective contract / findings file failure)
+      5 — F002 vendor-error (SameVendorRefused, no override env)
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan audit",
+        description=(
+            "Run the post-impl completion audit (F001 + F002 + F0 classifier) "
+            "and print the decision. No status mutation. Exits 3 if the "
+            "decision is blocking."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    print(f"[plan audit] plan_dir={plan_dir}")
+
+    try:
+        result = completion_gate.audit_plan(plan_dir)
+    except completion_gate.SameVendorRefused as exc:
+        print(f"[plan audit] VENDOR ERROR: {exc}", file=sys.stderr)
+        print(
+            "  set DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR=1 to override "
+            "(record the override in close-out evidence)",
+            file=sys.stderr,
+        )
+        return 5
+    except completion_gate.CompletionAuditError as exc:
+        print(f"[plan audit] AUDIT ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.CompletionDispatchError as exc:
+        print(f"[plan audit] DISPATCH ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.SufficiencyAuditError as exc:
+        # Resolver failures (no goal_auditor configured, etc.).
+        print(f"[plan audit] AUDIT ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.CompletionGateError as exc:
+        print(f"[plan audit] ERROR: {exc}", file=sys.stderr)
+        return 4
+
+    for line in _format_decision_summary(result):
+        print(line)
+
+    if result.blocking:
+        print("[plan audit] DECISION: blocking", file=sys.stderr)
+        return 3
+    print("[plan audit] DECISION: non-blocking")
+    return 0
+
+
+def _plan_close_main(argv: list[str]) -> int:
+    """``dontpanic plan close`` — canonical close-time entry point for
+    Goal Governance V1 F2/F003. Wraps :func:`completion_gate.close_plan`.
+
+    Exit-code matrix:
+      0 — pass (clean close OR honored override OR exempt-plan flip OR
+          idempotent re-close on already-completed plan)
+      2 — usage error / argparse failure / draft-status refuse / empty
+          override reason / --skip-audit (refused)
+      3 — blocking decision, no override
+      4 — F001 audit-error
+      5 — F002 vendor-error (SameVendorRefused, no override env)
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan close",
+        description=(
+            "Run the post-impl completion gate (F001 + F002 + F0 classifier) "
+            "and flip plan.md status from active to completed on success. "
+            "For exempt plans (goal_type outside the gated set), the gate is "
+            "a no-op but the status flip still proceeds."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Run the audit + decision pipeline but do NOT mutate plan.md "
+            "or write override.json. Operator preview tool."
+        ),
+    )
+    parser.add_argument(
+        "--ignore-completion-findings",
+        default=None,
+        metavar="REASON",
+        dest="override_reason",
+        help=(
+            "Operator override: bypass blocking completion findings with a "
+            "recorded reason. Writes evidence/goal-governance/post_impl/"
+            "override.json (input-bound — drift in features.json / objective "
+            "contract / completion_findings.json / evidence manifest "
+            "invalidates it)."
+        ),
+    )
+    parser.add_argument(
+        "--skip-audit",
+        action="store_true",
+        help=argparse.SUPPRESS,  # parsed but always refused — see below
+    )
+    args = parser.parse_args(argv)
+
+    if args.skip_audit:
+        print(
+            "[plan close] --skip-audit is refused in v1.\n"
+            "  If you intentionally need to close without honoring the audit\n"
+            "  decision, run: dontpanic plan close <plan-id> "
+            '--ignore-completion-findings "<reason>"',
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.override_reason is not None and not args.override_reason.strip():
+        print(
+            "[plan close] --ignore-completion-findings requires a non-empty reason",
+            file=sys.stderr,
+        )
+        return 2
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    print(f"[plan close] plan_dir={plan_dir}{' (dry-run)' if args.dry_run else ''}")
+
+    try:
+        result = completion_gate.close_plan(
+            plan_dir,
+            override_reason=args.override_reason,
+            dry_run=args.dry_run,
+        )
+    except completion_gate.SameVendorRefused as exc:
+        print(f"[plan close] VENDOR ERROR: {exc}", file=sys.stderr)
+        print(
+            "  set DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR=1 to override "
+            "(record the override in close-out evidence)",
+            file=sys.stderr,
+        )
+        return 5
+    except completion_gate.CompletionAuditError as exc:
+        print(f"[plan close] AUDIT ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.CompletionDispatchError as exc:
+        print(f"[plan close] DISPATCH ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.SufficiencyAuditError as exc:
+        print(f"[plan close] AUDIT ERROR: {exc}", file=sys.stderr)
+        return 4
+    except completion_gate.CompletionGateError as exc:
+        # Distinguish refusal-on-blocking from usage errors (status mismatch,
+        # contract missing, etc.). Refusal-on-blocking carries the literal
+        # 'plan close refused' prefix from close_plan; usage errors don't.
+        msg = str(exc)
+        if "refusing to close" in msg:
+            print(f"[plan close] USAGE ERROR: {msg}", file=sys.stderr)
+            return 2
+        if "plan close refused" in msg:
+            print(f"[plan close] REFUSED:\n{msg}", file=sys.stderr)
+            return 3
+        print(f"[plan close] ERROR: {msg}", file=sys.stderr)
+        return 2
+
+    if result.audit_result is not None:
+        for line in _format_decision_summary(result.audit_result):
+            print(line)
+    for note in result.notes:
+        print(f"[plan close] {note}")
+    if result.override_recorded:
+        print(f"[plan close] override recorded at {completion_gate._override_path(plan_dir)}")
+    if result.status_flipped:
+        print(f"[plan close] status flipped: active → completed in {result.plan_md}")
     return 0
 
 

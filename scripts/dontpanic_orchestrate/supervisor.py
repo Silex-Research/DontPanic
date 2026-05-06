@@ -24,6 +24,7 @@ from dontpanic_orchestrate import (
     audit_writer,
     circuit_breakers,
     command_guard,
+    completion_gate,
     gate_pause,
     inbox,
     nested_orchestration,
@@ -566,6 +567,12 @@ def dispatch_single_agent(
     # the findings are non-blocking or a valid (hash-bound) override exists.
     # No-op for plans without goal_type — full backward compat.
     sufficiency_gate.enforce_sufficiency_gate(plan_dir)
+    # Goal Governance V1 F2/F003: post-impl backstop. Refuse dispatch against
+    # plans hand-edited to status='completed' that lack the required F2 audit
+    # evidence (completion_findings.json + audit envelope OR a valid input-bound
+    # override). Mirror of the F1 backstop above but on the close boundary.
+    # No-op for plans not in status='completed' or with non-gated goal_type.
+    completion_gate.enforce_completion_gate(plan_dir)
 
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
@@ -843,6 +850,12 @@ def dispatch_volley(
     # the findings are non-blocking or a valid (hash-bound) override exists.
     # No-op for plans without goal_type — full backward compat.
     sufficiency_gate.enforce_sufficiency_gate(plan_dir)
+    # Goal Governance V1 F2/F003: post-impl backstop. Refuse dispatch against
+    # plans hand-edited to status='completed' that lack the required F2 audit
+    # evidence (completion_findings.json + audit envelope OR a valid input-bound
+    # override). Mirror of the F1 backstop above but on the close boundary.
+    # No-op for plans not in status='completed' or with non-gated goal_type.
+    completion_gate.enforce_completion_gate(plan_dir)
 
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
