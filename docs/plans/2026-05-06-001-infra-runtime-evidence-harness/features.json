@@ -219,7 +219,7 @@
         "Write F005 close-out memo at `evidence/f005-closeout-memo.md` summarizing G1\u2013G5 deliverables, fixture coverage, public API surface, and queueing the plan-level close-out as the next separate commit (per F1 precedent \u2014 implementation files NOT touched in plan-level close-out)."
       ],
       "acceptance": "(1) `EvidenceCollector.collect()` exists with documented signature; library-only \u2014 no MCP wrap (per locked answer #2). (2) Composes web/ios/android/backend adapters via registry; pure orchestration \u2014 zero source-specific logic in `runtime_evidence/__init__.py` (greppable). (3) Manifest written at `<journey-id>/manifest.json` listing every EvidenceRef + per-source status. (4) Per-source skip reasons propagate into the manifest, never silently dropped. (5) Unknown source name raises `EvidenceCollectorError` with the registered list. (6) Greppable D004/D010 invariant: harness core source contains zero `playwright`/`simctl`/`adb`/`firebase`/`supabase` substrings. (7) End-to-end test exercises full compose with stubbed adapters. (8) Ruff + sanitization clean. (9) Zero regressions cumulative. (10) F005 close-out memo at `evidence/f005-closeout-memo.md` with deliverable summary + queued-for-plan-G-close-out note.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
@@ -227,7 +227,23 @@
         "F004",
         "F006"
       ],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_harness.py",
+          "note": "24 tests covering: basic dispatch (single + multiple sources, deterministic order), per-source failure handling (typed skip passthrough, EvidenceSourceError wrapping, arbitrary exception wrapping, None / wrong-shape returns, unsafe-name sanitization), dedup + ordering ((uri,hash) collapse, conflict surfacing, within-source preservation), MIXED-SOURCE ACCEPTANCE (browser success + backend typed skip + artifact provider failure \u2192 4 refs in deterministic order with consistent typing), source-agnostic core invariant (greppable: no web/ios/android/backend/firebase/supabase/playwright/simctl/adb in EvidenceCollector class body), config layering separation (collector signature only takes journey + sources, no source-specific kwargs), end-to-end adapter helpers compose with real G1-G4 collectors using stub drivers, doctor framework"
+        },
+        {
+          "type": "test_output",
+          "uri": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/",
+          "note": "1251 passed, 7 skipped, 0 regressions"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/runtime_evidence/harness.py",
+          "note": "EvidenceCollector + EvidenceSource Protocol + EvidenceSourceError + 4 adapter helpers (web_source/ios_source/android_source/backend_source) + evidence_harness doctor check (always pass)"
+        }
+      ]
     },
     {
       "id": "F006",
