@@ -3,7 +3,7 @@ id: 2026-05-07-002-fix-cross-vendor-dogfood-fixture-runtime-artifacts
 title: Live cross-vendor dogfood — fair fixture + parser-corrected re-run
 type: fix
 tier: local
-status: draft
+status: active
 date: "2026-05-07"
 goal_type: infra
 agents_required:
