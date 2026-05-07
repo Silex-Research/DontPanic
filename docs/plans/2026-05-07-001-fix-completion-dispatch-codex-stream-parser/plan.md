@@ -173,7 +173,9 @@ Direct path. Single feature.
   agent_message found, JSONL parse error mid-stream, text is
   malformed) → fall through to the existing raw-JSON path
   unchanged. The existing path remains the default for stub /
-  manual / non-streaming responses.
+  manual / non-streaming responses. **Tightened by D008** —
+  shape-gated recognition, deterministic last-wins, raw-failure
+  surface preserved.
 - **D003:** Fixture file lives at
   `scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt`
   (NOT cross-plan-referenced). The fixture is a copy of the
@@ -205,6 +207,30 @@ Direct path. Single feature.
   (`completion_gate.py`), F1 surface, runtime_evidence/, executors/,
   cli.py, supervisor.py, agent-conventions schemas, parent plan
   dirs.
+- **D008 (pre-lock amendment, operator-requested):** Parser must be
+  format-tolerant but conservative. Four explicit acceptance
+  properties added — see decisions.jsonl D008 for full text:
+  - **(a) shape-gated recognition** — helper returns None unless
+    at least one parsed line carries `type` ∈ {`thread.started`,
+    `turn.started`, `turn.completed`, `item.started`,
+    `item.completed`}. Arbitrary line-delimited JSON without any
+    recognized codex event type is NOT treated as a stream — falls
+    through to the existing raw-JSON path.
+  - **(b) last complete assistant message wins** — extraction
+    restricted to `item.completed` events with
+    `item.type=='agent_message'`. Partial events (`item.started`
+    without matching `item.completed`) are ignored. Other
+    `item.type` values (`tool_use`, `function_call`, `reasoning`)
+    are ignored.
+  - **(c) deterministic ambiguity resolution** — when multiple
+    `agent_message` items exist in one stream, the LAST one in
+    stream order is chosen. No first-found / longest-text /
+    random heuristic.
+  - **(d) malformed input → raw failure path with useful error**
+    — helper returning None NEVER short-circuits. Downstream raw
+    path runs on the original `response`. On failure: envelope
+    `status='dispatch_response_malformed'`, `raw_response`
+    preserves original bytes verbatim. NO silent empty result.
 
 ## Acceptance bar
 
@@ -222,11 +248,29 @@ This plan's F001 acceptance:
 4. New test reads the fixture; asserts parser produces the full
    14-disposition list (12 v1 + 2 auditor-overlay) with correct
    `agree` / `severity_disposition` values.
-5. New tests cover edge cases: no `agent_message` item in stream;
-   multiple `agent_message` items (last wins); `agent_message`
-   text is fenced JSON; empty / whitespace-only `agent_message`
-   text; mid-stream malformed JSON line; non-streaming raw-JSON
-   input (regression for backward compat).
+5. **D008 conservatism — format-tolerant but conservative.** New
+   tests assert the four positive properties:
+   - **(a) shape-gated recognition** — well-formed line-delimited
+     JSON with NO recognized codex `type` field → helper returns
+     None → falls through to raw-JSON path → produces
+     `dispatch_response_malformed` (NOT silent empty).
+   - **(b) last complete assistant message wins** — partial
+     `item.started` events ignored; non-`agent_message`
+     `item.type` values (`tool_use`, `reasoning`) ignored;
+     extraction confined to `item.completed.agent_message.text`.
+   - **(c) deterministic ambiguity** — three `agent_message`
+     items in one stream → LAST one's text wins (asserted by
+     identity, not by superset).
+   - **(d) malformed input → raw failure path** — truncated /
+     mid-event stream → helper returns None or partial → raw
+     path runs on ORIGINAL response → envelope
+     `status='dispatch_response_malformed'` with `raw_response`
+     preserving original bytes verbatim.
+   Plus existing edge-case tests: no `agent_message` in stream;
+   fenced `agent_message` text; empty / whitespace-only
+   `agent_message` text; mid-stream malformed JSON line skipped
+   not aborted; non-streaming raw-JSON input (regression for
+   backward compat).
 6. Existing
    `test_production_path_invokes_resolved_executor` continues to
    pass unchanged (stub returns raw JSON).
