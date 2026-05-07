@@ -3,7 +3,7 @@ id: 2026-05-07-001-fix-completion-dispatch-codex-stream-parser
 title: F002 parser — codex streaming-output support
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-07"
 goal_type: infra
 agents_required:
