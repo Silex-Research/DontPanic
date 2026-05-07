@@ -870,3 +870,330 @@ def test_dispatch_fn_typing_is_callable():
 
     typed: DispatchFn = fn
     assert typed("codex", "ignore") == "[]"
+
+
+# ────────────────  D008 codex JSONL streaming-output decoder  ────────────────
+
+
+_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
+_CODEX_STREAM_FIXTURE = _FIXTURE_DIR / "codex_stream_dogfood_001.txt"
+
+
+def _build_stream(events: list[dict]) -> str:
+    """Render a list of codex stream events as line-delimited JSON,
+    matching the protocol shape captured in the dogfood fixture."""
+    return "\n".join(json.dumps(e) for e in events) + "\n"
+
+
+class TestCodexStreamingDecoder:
+    """D008 conservatism — `_extract_codex_streaming_payload()` is
+    format-tolerant but conservative.
+
+    Plan 2026-05-07-001 lock-time properties:
+      (a) shape-gated recognition — only treats input as a codex stream
+          when at least one recognized event ``type`` is present;
+      (b) last complete assistant message wins — extraction confined to
+          ``item.completed`` events whose ``item.type == 'agent_message'``;
+          partial events and non-agent_message item types ignored;
+      (c) deterministic ambiguity — multiple ``agent_message`` items →
+          last in stream order, asserted by identity not superset;
+      (d) malformed input → existing raw failure path with useful error,
+          NOT silent empty: helper returning None never short-circuits;
+          downstream raw-JSON path runs on the original ``response``;
+          on failure ``status='dispatch_response_malformed'`` with
+          ``raw_response`` preserving original bytes.
+    """
+
+    # ──────  (a) shape-gated recognition  ──────
+
+    def test_helper_is_exposed(self):
+        """White-box: the conservative extractor is a real attribute on
+        the module so the integration point is exercisable in tests
+        independent of dispatch_completion_audit's full plumbing."""
+        assert hasattr(cd, "_extract_codex_streaming_payload"), (
+            "D008 helper `_extract_codex_streaming_payload` must exist on "
+            "completion_dispatch module"
+        )
+
+    def test_arbitrary_jsonl_without_codex_shape_returns_none(self):
+        """Two valid JSON objects per line, but neither carries a
+        recognized codex ``type``. Helper must NOT misidentify this as
+        a codex stream."""
+        arbitrary = '{"foo":"bar"}\n{"baz":42}\n'
+        assert cd._extract_codex_streaming_payload(arbitrary) is None
+
+    def test_arbitrary_jsonl_falls_through_to_existing_raw_path(self, tmp_path):
+        """End-to-end (a)+(d): non-codex JSONL input → helper None →
+        raw-JSON path runs on original → ``dispatch_response_malformed``
+        envelope with original bytes preserved verbatim. NO silent empty
+        result."""
+        plan_dir = _write_plan(tmp_path / "plan")
+        non_codex = '{"foo":"bar"}\n{"baz":42}\n'
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=[],
+            implementer_agent="claude",
+            dispatch=lambda a, p: non_codex,
+        )
+        assert transcript.status == "dispatch_response_malformed"
+        assert transcript.raw_response == non_codex
+        assert transcript.findings_dispositions[0].finding_id == "dispatch_response_malformed"
+
+    def test_recognized_stream_with_no_agent_message_returns_none(self):
+        """Stream shape recognized but no ``agent_message`` item — helper
+        returns None per D008(a)+(b). Falls through to raw path."""
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {"type": "turn.started"},
+                {"type": "turn.completed"},
+            ]
+        )
+        assert cd._extract_codex_streaming_payload(stream) is None
+
+    # ──────  (b) last complete assistant message wins  ──────
+
+    def test_only_non_agent_message_item_types_returns_none(self):
+        """``tool_use`` / ``reasoning`` / ``command_execution`` items are
+        NOT extracted from. Only ``item.type == 'agent_message'`` counts."""
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_0", "type": "tool_use", "text": "[{}]"},
+                },
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_1", "type": "reasoning", "text": "[{}]"},
+                },
+                {"type": "turn.completed"},
+            ]
+        )
+        assert cd._extract_codex_streaming_payload(stream) is None
+
+    def test_partial_item_started_without_completed_is_ignored(self):
+        """Mid-stream ``item.started`` for an agent_message that was
+        never followed by ``item.completed`` MUST NOT be extracted."""
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {
+                    "type": "item.started",
+                    "item": {"id": "item_0", "type": "agent_message", "text": "[{}]"},
+                },
+            ]
+        )
+        # No item.completed agent_message → no candidate text → None.
+        assert cd._extract_codex_streaming_payload(stream) is None
+
+    # ──────  (c) deterministic ambiguity resolution — last wins  ──────
+
+    def test_multiple_agent_messages_returns_last_text_identity(self):
+        """When multiple ``item.completed`` agent_messages appear in one
+        stream, the LAST one's text is chosen — not the first, not the
+        longest. Asserted by identity (``==``), not superset."""
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_0", "type": "agent_message", "text": "FIRST"},
+                },
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_1", "type": "agent_message", "text": "MIDDLE"},
+                },
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_2", "type": "agent_message", "text": "LAST"},
+                },
+                {"type": "turn.completed"},
+            ]
+        )
+        result = cd._extract_codex_streaming_payload(stream)
+        assert result == "LAST", (
+            "D008(c) deterministic ambiguity — last-in-stream-order agent_message wins"
+        )
+
+    # ──────  (d) malformed input → raw failure path with useful error  ──────
+
+    def test_truncated_stream_yields_dispatch_response_malformed_with_raw(self, tmp_path):
+        """Recognized stream prefix but truncated mid-event in the final
+        line — final line cannot parse as JSON. No agent_message text
+        was completed. Helper returns None; raw path runs on the original
+        truncated bytes; envelope is ``dispatch_response_malformed`` and
+        ``raw_response`` is preserved verbatim. NO silent empty."""
+        plan_dir = _write_plan(tmp_path / "plan")
+        truncated = (
+            '{"type":"thread.started"}\n'
+            '{"type":"item.completed","item":{"id":"item_0","type":"agent_message",'
+            '"text":"[{\\"truncate'
+        )
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=[],
+            implementer_agent="claude",
+            dispatch=lambda a, p: truncated,
+        )
+        assert transcript.status == "dispatch_response_malformed"
+        assert transcript.raw_response == truncated, (
+            "raw_response must preserve the truncated input verbatim for diagnosis"
+        )
+
+    # ──────  per-line malformed tolerance (helper does not abort scan)  ──────
+
+    def test_mid_stream_malformed_line_is_skipped_scan_continues(self):
+        """An unparseable line mid-stream MUST NOT abort the scan —
+        subsequent lines still register and the agent_message is still
+        extracted. (Real codex streams have occasionally emitted
+        partial-write lines under load.)"""
+        stream = (
+            '{"type":"thread.started"}\n'
+            "this is not valid JSON at all\n"
+            '{"type":"item.completed","item":{"id":"item_0","type":"agent_message",'
+            '"text":"OK"}}\n'
+            '{"type":"turn.completed"}\n'
+        )
+        assert cd._extract_codex_streaming_payload(stream) == "OK"
+
+    # ──────  empty / whitespace-only agent_message text  ──────
+
+    def test_empty_agent_message_text_returns_none(self):
+        """An ``agent_message`` whose ``text`` is empty or whitespace-only
+        is treated as non-extractable — helper returns None and the raw
+        path runs on the original."""
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {
+                    "type": "item.completed",
+                    "item": {"id": "item_0", "type": "agent_message", "text": ""},
+                },
+                {"type": "turn.completed"},
+            ]
+        )
+        assert cd._extract_codex_streaming_payload(stream) is None
+
+    # ──────  fenced agent_message text passes through strip-fence  ──────
+
+    def test_fenced_agent_message_text_is_strip_fenced(self, tmp_path):
+        """Codex sometimes wraps the JSON payload in ```json fences inside
+        its agent_message ``text``. The existing strip-fence path must
+        still kick in after streaming extraction."""
+        plan_dir = _write_plan(tmp_path / "plan")
+        stream = _build_stream(
+            [
+                {"type": "thread.started"},
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "id": "item_0",
+                        "type": "agent_message",
+                        "text": "```json\n[]\n```",
+                    },
+                },
+                {"type": "turn.completed"},
+            ]
+        )
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=[],
+            implementer_agent="claude",
+            dispatch=lambda a, p: stream,
+        )
+        # Empty array against empty findings → "agree" (existing behavior).
+        assert transcript.status == "agree"
+
+    # ──────  fixture-driven happy path (acceptance #4)  ──────
+
+    def test_fixture_dogfood_extracts_full_disposition_list(self, tmp_path):
+        """End-to-end fixture-driven assertion. Reads the captured-from-
+        dogfood transcript at
+        ``tests/fixtures/codex_stream_dogfood_001.txt`` (origin: parent
+        plan ``2026-05-06-003`` close-out commit ``616ad94``) and
+        asserts the parser extracts the disposition payload intact.
+
+        Fixture truth: 12 v1 finding_ids ``F2C-E001..F2C-E012`` plus 1
+        ``auditor-overlay-001`` = 13 dispositions total. Plan F001
+        acceptance bar item (4) cited 14 (12 v1 + 2 overlays) — that
+        prose, inherited from the parent close-out memo, was a
+        fixture-citation artifact; the captured transcript actually
+        contains 13. This test asserts what the fixture truly contains."""
+        assert _CODEX_STREAM_FIXTURE.is_file(), f"D003 fixture missing at {_CODEX_STREAM_FIXTURE}"
+        fixture_text = _CODEX_STREAM_FIXTURE.read_text()
+
+        plan_dir = _write_plan(tmp_path / "plan")
+        # Construct findings whose finding_ids match the fixture's
+        # disposition payload so the parser's valid_finding_ids gate
+        # accepts each v1 disposition. The auditor-overlay-* prefix is
+        # accepted regardless via the dispatcher's existing prefix rule.
+        findings = [
+            CompletionFinding(
+                finding_id=f"F2C-E{i:03d}",
+                gap_class="missing_evidence",
+                severity="high",
+                title=f"v1 fixture finding {i}",
+                narrative="seeded for codex_stream_dogfood_001 fixture-driven test",
+                subsystem="goal-governance",
+                journey="configure-runtime-evidence",
+            )
+            for i in range(1, 13)
+        ]
+
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=findings,
+            implementer_agent="claude",
+            dispatch=lambda a, p: fixture_text,
+        )
+
+        # Most load-bearing property: status is no longer
+        # dispatch_response_malformed once the parser understands the
+        # streaming format.
+        assert transcript.status != "dispatch_response_malformed", (
+            "parser must recognize codex streaming output as the dogfood transcript"
+        )
+        # 12 v1 + 1 auditor-overlay-001 = 13 (fixture truth, not the 14
+        # cited in plan acceptance — see test docstring for context).
+        assert len(transcript.findings_dispositions) == 13
+        v1_ids = sorted(
+            d.finding_id
+            for d in transcript.findings_dispositions
+            if not d.finding_id.startswith("auditor-overlay-")
+        )
+        assert v1_ids == [f"F2C-E{i:03d}" for i in range(1, 13)]
+        overlay_ids = sorted(
+            d.finding_id
+            for d in transcript.findings_dispositions
+            if d.finding_id.startswith("auditor-overlay-")
+        )
+        assert overlay_ids == ["auditor-overlay-001"]
+
+    # ──────  backward-compat regression for raw-JSON inputs  ──────
+
+    def test_raw_json_array_input_falls_through_unchanged(self, tmp_path):
+        """D004 — non-streaming raw-JSON inputs (the legacy stub
+        contract) must still parse via the existing path. The bare list
+        does not parse line-by-line into a recognized codex shape —
+        ``saw_recognized_shape`` stays False — helper returns None —
+        existing strip-fence + raw-JSON parse runs unchanged."""
+        plan_dir = _write_plan(tmp_path / "plan")
+        bare_json = json.dumps(
+            [
+                {
+                    "finding_id": "auditor-overlay-001",
+                    "agree": True,
+                    "severity_disposition": "agree",
+                    "comment": "ok",
+                }
+            ]
+        )
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=[],
+            implementer_agent="claude",
+            dispatch=lambda a, p: bare_json,
+        )
+        assert transcript.status == "agree"
+        assert len(transcript.findings_dispositions) == 1

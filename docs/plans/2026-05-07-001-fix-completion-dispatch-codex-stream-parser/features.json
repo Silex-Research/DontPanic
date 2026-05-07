@@ -22,9 +22,35 @@
         "Commit (one local commit) covering: parser change + tests + fixture + plan dir updates + close-out memo. NO live codex invocation in this commit; NO prompt template diff unless parser tests proved it strictly necessary (D006 release valve)."
       ],
       "acceptance": "(1) `completion_dispatch._parse_audit_response()` recognizes codex's JSONL streaming protocol and extracts `agent_message` `text` as the JSON disposition payload. (2) Streaming-format detection runs FIRST; on no-match falls through to the existing `_strip_code_fence` + raw-JSON path on the ORIGINAL response; existing path is unchanged. (3) Fixture `scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt` exists with the captured-from-dogfood transcript bytes. (4) New test reads the fixture; parser produces the full 14-disposition list (12 v1 finding_ids F2C-E001..F2C-E012 + 2 auditor-overlay items) with correct `agree` / `severity_disposition` values; envelope status reflects the agree/disagree from those dispositions, NOT `dispatch_response_malformed`. (5) **D008 conservatism — format-tolerant but conservative.** New tests assert FOUR positive properties: (a) **shape-gated recognition** — `_extract_codex_streaming_payload()` returns None unless at least one parsed line has `type` ∈ {`thread.started`, `turn.started`, `turn.completed`, `item.started`, `item.completed`}; arbitrary line-delimited JSON without any recognized codex event shape MUST fall through to the existing raw-JSON path, NOT be misidentified as a codex stream; (b) **last complete assistant message wins** — extraction is restricted to `item.completed` events whose `item.type == 'agent_message'`; partial / mid-stream events (`item.started` without matching `item.completed`) are ignored; non-`agent_message` `item.type` values (`tool_use`, `function_call`, `reasoning`, etc.) are ignored; (c) **deterministic ambiguity** — when multiple `item.completed` agent_messages exist in one stream, the LAST one (in stream order) is chosen; the test asserts identity not superset; no random / first-found / longest-text heuristic; (d) **malformed input → raw failure path with useful error** — helper returning None NEVER short-circuits the pipeline; downstream raw-JSON path runs on the ORIGINAL response; on raw-path failure, envelope `status='dispatch_response_malformed'` with `raw_response` preserving the original bytes verbatim for diagnosis; NO silent empty result. (6) Plus existing edge-case tests: no `agent_message` in stream → fall-through; fenced `agent_message` text → strip-fence still applies; empty `agent_message` text → fall-through; mid-stream malformed JSON line → skipped not aborted; non-streaming raw-JSON input (regression for backward compat). (7) Existing `test_production_path_invokes_resolved_executor` and all prior tests pass unchanged. (8) Cumulative orchestrate suite green; ruff + sanitization clean. (9) Worktree boundary preserved (D007): diff confined to completion_dispatch.py + test_completion_dispatch.py + new fixture file + this plan dir. Zero diffs to F001/F003 module code, F1 surface, runtime_evidence/, executors/, cli.py, supervisor.py, agent-conventions schemas, parent plan dirs. (10) NO live codex invocation in the implementation commit; the captured transcript fixture is the regression artifact. (11) NO prompt template diff in this plan unless explicitly justified by parser-test failure that no parser-only fix can resolve (D006 release valve; default expectation: parser fix is sufficient). (12) Plan-level close via exempt-plan flow exits 0; supervisor backstop silent on the post-close plan. (13) Close-out memo + D-entry appended.",
-      "passes": false,
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/completion_dispatch.py",
+          "note": "F002 module — adds _extract_codex_streaming_payload() + _RECOGNIZED_CODEX_STREAM_TYPES constant + _parse_audit_response() input-transform integration"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py",
+          "note": "F002 tests — adds TestCodexStreamingDecoder class (13 tests covering D008(a)-(d) properties + backward compat regression)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt",
+          "note": "Test fixture — copy of parent dogfood transcript at commit 616ad94; sha256 31164fb2f47a458c5255e5d062cef6ab7be35f220073e7fa7c15bce637204111"
+        },
+        {
+          "type": "file",
+          "uri": "decisions.jsonl",
+          "note": "D001-D009 — D008 conservatism amendment + D009 ship record"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/plan-closeout-memo.md",
+          "note": "F001 close-out memo — verification numbers, D008 property→test mapping, fixture-truth correction"
+        }
+      ]
     }
   ]
 }
