@@ -28,9 +28,70 @@
         "Commit close-out artifacts (plan.md status flip + decisions.jsonl + plan-closeout-memo.md) in a single final commit."
       ],
       "acceptance": "(1) Retrospective ObjectiveContract.json for Plan G validates against agent-conventions v1.4.0; gated goal_type; ≥5 user_journeys covering G's adapter sources; required_evidence matchers map onto G's actual close-out artifacts. (2) Validation fixture at evidence/g-mirror/synthetic-plan/ is complete: plan.md (status=active, gated goal_type) + features.json (≥1 feature passes:true, evidence_refs back to G commits) + objective_contract.json + copied evidence artifacts. (3) Live audit envelope captured shows auditor_agent != implementer_agent AND status ∈ {agree, disagree, dispatch_response_malformed} — explicitly NOT dispatch_skipped_offline. (4) Captured artifacts under evidence/g-mirror/: completion_findings.json + audit/audit-<auditor>-<iter>.{json,transcript.txt} + transcripts/{plan-audit,plan-close}.{stdout,stderr}. (5) F003 plan-close decision recorded (pass with status flip OR block-with-classification with optional override.json). (6) Every blocking finding classified into D005 buckets (a/b/c/d) in disposition.md with rationale. (7) Operator-judged PASS in disposition.md: real cross-vendor dispatch verified end-to-end + no unresolved class-(a) findings + any in-scope class-(b) prompt change conforms to D006's behavioral boundary (clarification only, no semantic changes) + explicitly approved + recorded in close-out memo. (8) Cumulative orchestrate suite still green (1344 baseline + any new); F002 greppable-framing tests still pass if a prompt-template diff landed. (9) ruff + sanitization clean. (10) Worktree boundary preserved: zero diffs to Plan G plan dir, zero diffs to F001/F002/F003 module code (modulo D006-approved prompt patch), zero diffs to runtime_evidence/ or F1 surface. (11) D-entries per finding-classification + final operator PASS/FAIL D-entry. (12) Plan-level close via exempt-plan flow exits 0; supervisor backstop silent on the post-close state.",
-      "passes": false,
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/objective_contract.json",
+          "note": "Retrospective ObjectiveContract for Plan G — operator-authored, validated against agent-conventions v1.4.0; D-entry pre-lock D006 amendment + post-lock D008 prose alignment"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/plan.md",
+          "note": "Plan G mirror plan.md (status=completed post-override-honored close; goal_type=new_feature so F2 gate engaged)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/features.json",
+          "note": "Plan G mirror features.json — 6 features (G0-G5) with passes:true and evidence_refs back-pointing to G's commits"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/audit/audit-codex-1.json",
+          "note": "Live audit envelope — auditor=codex, status=dispatch_response_malformed (parser couldn't extract codex streaming output)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/audit/audit-codex-1.transcript.txt",
+          "note": "Live codex transcript — JSONL streaming events; substantive 14-disposition payload at item_5.text (manually extracted by operator)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/completion_findings.json",
+          "note": "F001 v1 evidence-coverage findings — 12 missing_evidence findings from the matcher hit/miss matrix"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/override.json",
+          "note": "F003 input-bound override.json — all four D004 hashes recorded"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/disposition.md",
+          "note": "Operator-judged classification + PASS/FAIL narrative + 3 follow-ups queued"
+        },
+        {
+          "type": "log",
+          "uri": "evidence/g-mirror/transcripts/plan-audit.stdout",
+          "note": "Step A — dontpanic plan audit live run (exit 3, blocking)"
+        },
+        {
+          "type": "log",
+          "uri": "evidence/g-mirror/transcripts/plan-audit.stderr",
+          "note": "Step A — stderr"
+        },
+        {
+          "type": "log",
+          "uri": "evidence/g-mirror/transcripts/plan-close-blocked.stdout",
+          "note": "Step B — close without override (exit 3, REFUSED, fixture untouched)"
+        },
+        {
+          "type": "log",
+          "uri": "evidence/g-mirror/transcripts/plan-close-overridden.stdout",
+          "note": "Step C — close with --ignore-completion-findings (exit 0, fixture status flipped, override.json written)"
+        }
+      ]
     }
   ]
 }

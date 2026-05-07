@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0",
+  "task_id": "runtime-evidence-harness-mirror",
+  "features": [
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 0,
+      "description": "G0 (F006) — Minimum operator configuration surface (added by Plan G amendment 2026-05-06 per D013). RolesConfig + RuntimeEvidenceConfig Pydantic models; layered config resolvers per D004 (per-call > project > global > fallback for roles; per-call > project > default-none for runtime_evidence per D015); CLI subcommands (dontpanic config / project config / setup / doctor); credential-pointer rule (D014).",
+      "steps": ["Mirror of Plan G F006 — see Plan G features.json + decisions D013–D016."],
+      "acceptance": "G0 acceptance per Plan G features.json — config surface + CLI + doctor + credential-pointer enforcement.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {"type": "commit", "uri": "d0031c9", "note": "G0/F006 ship — config surface + 68 tests + D016"}
+      ]
+    },
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "G1 (F001) — Web runtime evidence capture: Playwright-default driver (swap seam), screenshot + DOM snapshot + console errors + network failures + optional trace/video. Base URL operator-supplied.",
+      "steps": ["Mirror of Plan G F001 — see Plan G features.json + decisions D012."],
+      "acceptance": "G1 acceptance per Plan G features.json.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {"type": "commit", "uri": "62cdce6", "note": "G1/F001 ship — web evidence collector + 18 tests + D012"}
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 1,
+      "description": "G2 (F002) — iOS runtime evidence capture: xcrun simctl driven screenshots + simulator log + crash reports. Graceful skip with recorded reason on no-simulator.",
+      "steps": ["Mirror of Plan G F002 — see Plan G features.json + decisions D017."],
+      "acceptance": "G2 acceptance per Plan G features.json.",
+      "passes": true,
+      "depends_on": ["F006"],
+      "evidence_refs": [
+        {"type": "commit", "uri": "9b0fcfb", "note": "G2/F002 ship — iOS evidence collector + 23 tests + D017"}
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 1,
+      "description": "G3 (F003) — Android runtime evidence capture (capture-only per D009): two operator-selectable modes — passive_observe (live adb capture) + post_hoc_ingest (consume existing CI artifacts). NO test orchestration.",
+      "steps": ["Mirror of Plan G F003 — see Plan G features.json + decisions D018."],
+      "acceptance": "G3 acceptance per Plan G features.json.",
+      "passes": true,
+      "depends_on": ["F006"],
+      "evidence_refs": [
+        {"type": "commit", "uri": "069bcf5", "note": "G3/F003 ship — Android evidence collector + 31 tests + D018"}
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 1,
+      "description": "G4 (F004) — Backend runtime evidence capture (provider-adapter pattern per D010): Firebase + Supabase slot + Generic providers. No new credential storage (D005 + D014).",
+      "steps": ["Mirror of Plan G F004 — see Plan G features.json + decisions D019."],
+      "acceptance": "G4 acceptance per Plan G features.json.",
+      "passes": true,
+      "depends_on": ["F006"],
+      "evidence_refs": [
+        {"type": "commit", "uri": "c58e60a", "note": "G4/F004 ship — Backend evidence collector + 36 tests + D019"}
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "tooling",
+      "phase": 2,
+      "description": "G5 (F005) — Common harness: EvidenceCollector.collect(journey, context, sources=[...]) composing G1-G4 adapters; pure orchestration; library-only in v1.",
+      "steps": ["Mirror of Plan G F005 — see Plan G features.json + decisions D020."],
+      "acceptance": "G5 acceptance per Plan G features.json.",
+      "passes": true,
+      "depends_on": ["F001", "F002", "F003", "F004", "F006"],
+      "evidence_refs": [
+        {"type": "commit", "uri": "f445220", "note": "G5/F005 ship — Common harness + 24 tests + mixed-source acceptance + D020"}
+      ]
+    }
+  ]
+}
