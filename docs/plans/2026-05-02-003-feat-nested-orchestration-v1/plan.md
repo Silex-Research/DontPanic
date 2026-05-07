@@ -3,7 +3,7 @@ id: 2026-05-02-003-feat-nested-orchestration-v1
 title: Nested orchestration v1 — safe parent/child plan nesting
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-02"
 description: |
   Establish the minimum primitives for nested plan orchestration: a parent
