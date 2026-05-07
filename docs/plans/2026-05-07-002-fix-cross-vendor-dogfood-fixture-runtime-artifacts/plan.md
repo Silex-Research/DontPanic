@@ -285,10 +285,19 @@ Direct path. Single feature.
     (features + objective_contract + completion_findings +
     evidence_manifest) recorded.
   - **Envelope `status='disagree'`, any finding classified (a)/(b)**
-    → close with override, citing the queued follow-up plan(s)
-    in the override reason. The override is the deliberate
-    operator choice, NOT a workaround; the follow-up captures
-    the real work.
+    → close with override, AND every (a)/(b) finding MUST be
+    dispositioned and queued (not silently ignored). Each
+    (a)/(b) finding gets explicit per-finding accounting:
+    `finding_id` + bucket tag + queued follow-up plan slug.
+    Per-finding entries appear in BOTH (i) the override.json
+    reason text AND (ii) the close-out memo's
+    queued-followups list. A close-with-override that does not
+    enumerate every (a)/(b) finding by id is a FORBIDDEN path
+    — silent ignore is not the same as deliberate override.
+    The override is the operator's deliberate choice; the
+    follow-up plan captures the real work and unblocks THIS
+    plan from staying open indefinitely. All four D004 hashes
+    recorded; reason text is the per-finding accounting table.
   - **Envelope `status='dispatch_response_malformed'`** → STOP
     and escalate. This would mean the parser plan didn't fully
     solve the format gap; do NOT close with override; surface
@@ -296,7 +305,9 @@ Direct path. Single feature.
     not to fire after parser plan.)
 
   Override usage is exercised, not avoided. The point of this
-  plan is to drive a real envelope to a real close.
+  plan is to drive a real envelope to a real close. Silent
+  ignore of any (a)/(b) finding is forbidden — the override
+  path REQUIRES per-finding accounting.
 
 ## Acceptance bar
 
@@ -328,7 +339,12 @@ This plan's F001 acceptance:
 7. **Close path exercised end-to-end (D007).** Operator-judged
    path (without override / with override + reason / escalate)
    recorded in close-out memo. Override.json (if used) carries
-   all four D004 input-bound hashes.
+   all four D004 input-bound hashes. **If Path 3 (disagree with
+   any (a)/(b)) was taken: every (a)/(b) finding is
+   dispositioned by `finding_id` with a queued follow-up plan
+   slug, appearing in BOTH override.json reason AND close-out
+   memo's queued-followups list. Silent ignore of any (a)/(b)
+   finding is a FORBIDDEN close path.**
 8. **Worktree boundary preserved (D004).** Diff confined to this
    plan dir. Zero diffs to F1 / F2 module code, runtime_evidence/
    adapters, executors/, cli.py, supervisor.py, agent-conventions
