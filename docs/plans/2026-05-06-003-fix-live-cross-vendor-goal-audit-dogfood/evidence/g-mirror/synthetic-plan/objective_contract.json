@@ -1,0 +1,114 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Plan G (`docs/plans/2026-05-06-001-infra-runtime-evidence-harness/`) at lock checkpoint `8316568` plus amendment `9f1bae0` (which added F006/G0 + decisions D013–D015). The promise is what Plan G's plan.md description, motivation, and locked features.json acceptances declared at lock time — NOT what the shipped commits happen to do. This contract encodes the goal F003's live cross-vendor audit must evaluate; it deliberately does not parrot the shipped implementation diff (`62cdce6`, `d0031c9`, `9b0fcfb`, `069bcf5`, `c58e60a`, `f445220`) because the live dogfood is testing whether the auditor can evaluate goal completion, not whether it can rubber-stamp the latest code state.",
+  "user_journeys": [
+    {
+      "name": "configure-runtime-evidence",
+      "description": "An operator working on a project (e.g. axiom, glam) declares which runtime evidence sources apply to their plans and supplies the per-source connection details. The operator runs `dontpanic project config` (or hand-edits per-project config) to set web base URLs, iOS simulator names, Android device serials / package IDs, backend provider configuration. Global config may carry agent roles (`roles.implementer / auditor / goal_auditor`) but never runtime-evidence target defaults (D015). All credential references are pointer-shaped (`adc`, `env:NAME`, path-only — D014); literal credential values are refused. After configuration, `dontpanic doctor` reports the runtime-evidence registration health for each declared source.",
+      "states": ["configured", "preview-only", "validated"],
+      "acceptance_signals": [
+        "operator can set roles via `dontpanic config set roles.implementer claude` (and equivalent for auditor / goal_auditor)",
+        "operator can set per-project runtime-evidence sources via `dontpanic project config set runtime_evidence.<source>.<key> <value>` for any of the four capture surfaces",
+        "runtime_evidence config resolves with precedence per-call > project config > default-none (no global tier per D015); a per-call override beats project config, project config beats absence-of-config, and absence-of-config does NOT fall through to a global default",
+        "global config refuses `runtime_evidence.*` keys with an actionable error pointing at the project-config command",
+        "credential literals in config are refused; only pointer shapes (`adc`, `env:NAME`, path-only) are accepted",
+        "`dontpanic setup` is preview-by-default; mutation requires `--yes` for non-interactive consistency",
+        "`dontpanic doctor` reports per-source registration health (configured / missing / unhealthy with reason)"
+      ]
+    },
+    {
+      "name": "capture-web-evidence",
+      "description": "During a feature close-out for a plan with web journeys, the operator invokes the web evidence collector against an operator-supplied base URL. The collector captures per-step screenshots + DOM snapshots + console errors + network failures, with optional trace + video honored when the operator requests them. The driver default is Playwright but the implementation exposes a swap seam for alternate drivers. Captured artifacts land at `evidence/goal-governance/post_impl/web/<journey-id>/<artifact>` per the D003 convention. The capture is project-agnostic — there is no project-name special-casing in the adapter or driver code.",
+      "surfaces": ["web"],
+      "states": ["captured", "skipped-with-reason"],
+      "acceptance_signals": [
+        "screenshot artifact is written under `evidence/goal-governance/post_impl/web/<journey>/` for each captured step",
+        "DOM snapshot accompanies each screenshot",
+        "console-error and network-failure artifacts are captured per step",
+        "trace + video are captured when the operator requests them via per-call config",
+        "base URL is operator-supplied; no hardcoded URLs in adapter or driver code",
+        "driver is swappable behind a documented seam (Playwright is the default)",
+        "no project-name tokens (e.g. `spin_dine_*`, `glam_*`, `creator_hub_*`) appear in the web adapter source"
+      ]
+    },
+    {
+      "name": "capture-ios-evidence",
+      "description": "During a feature close-out for a plan with iOS journeys, the operator invokes the iOS evidence collector against a configured simulator runtime. The collector drives `xcrun simctl` to capture per-step screenshots + simulator log slices + per-session crash reports. When no simulator runtime is available, the collector skips gracefully with a recorded reason rather than raising. The driver accepts a swappable simctl-runner for testing.",
+      "surfaces": ["ios"],
+      "states": ["captured", "skipped-with-reason"],
+      "acceptance_signals": [
+        "screenshot artifact is written under `evidence/goal-governance/post_impl/ios/<journey>/` for each captured step",
+        "simulator-log slice is captured per step or per session",
+        "crash-report artifact is drained per session (when crashes occurred)",
+        "no-simulator-available case produces a typed-skip evidence ref with operator-readable reason, NOT an exception",
+        "simctl-runner is swappable for testing; no hard dependency on a specific simulator device name in adapter code"
+      ]
+    },
+    {
+      "name": "capture-android-evidence",
+      "description": "During a feature close-out for a plan with Android journeys, the operator chooses one of two capture-only modes (D009): `passive_observe` runs `adb screencap` / `logcat` slices / tombstone + ANR drains against an existing device or emulator the operator has already started; `post_hoc_ingest` consumes existing artifacts the operator's CI / test-runner already produced (Gradle / Espresso / Maestro output). DontPanic does NOT own Android test orchestration in v1 — the adapter explicitly refuses to spawn Gradle, Espresso runners, Maestro, or `am instrument`.",
+      "surfaces": ["android"],
+      "states": ["captured", "skipped-with-reason"],
+      "acceptance_signals": [
+        "passive_observe mode captures screenshot + logcat slice + tombstone + ANR drain artifacts under `evidence/goal-governance/post_impl/android/<journey>/`",
+        "post_hoc_ingest mode consumes a caller-supplied artifact tree without re-orchestrating tests",
+        "operator selects the mode explicitly via per-call config; there is no implicit fallback between modes",
+        "the adapter source contains no test-orchestration tokens (`gradle`, `gradlew`, `espressoRunner`, `am instrument`, `maestro test`, `maestro studio`, `androidx.test.runner`)",
+        "no-device-available case produces a typed-skip evidence ref with operator-readable reason"
+      ]
+    },
+    {
+      "name": "capture-backend-evidence",
+      "description": "During a feature close-out for a plan with backend journeys, the operator selects a backend provider (Firebase / Supabase / Generic) and the collector captures observability artifacts for the journey's time window. The Firebase provider reuses the F022 service-account path (no new credential storage per D005); Supabase ships as a provider slot with fixture tests only (no live auth in v1); the Generic provider accepts operator-supplied runtime credentials only via D014 pointer shapes. The adapter is provider-adapter based (D010) — no Firebase-specific assumptions appear in the common harness layer.",
+      "surfaces": ["backend"],
+      "states": ["captured", "skipped-with-reason"],
+      "acceptance_signals": [
+        "Firebase adapter fetches Cloud Logging + Crashlytics + Performance artifacts; reuses F022 SA path",
+        "Supabase adapter is registered as a provider slot; fixture tests cover the slot shape; no live Supabase auth in v1",
+        "Generic provider accepts HTTP / log-file / JSONL inputs via operator-supplied connection details",
+        "all credential references are pointer-shaped (`adc`, `env:NAME`, path-only); literal credentials are refused",
+        "the backend ABC + adapters live in the backend adapter layer; the common harness contains zero `firebase_*` / `supabase_*` / provider-specific tokens"
+      ]
+    },
+    {
+      "name": "compose-mixed-source-evidence",
+      "description": "The common harness lets a feature close-out journey collect evidence from multiple source surfaces in one call. The operator invokes `EvidenceCollector.collect(journey, context, sources=[...])` with a list naming any subset of {web, ios, android, backend}; the harness composes the per-source adapters via a registry and returns a uniform `list[EvidenceRef]`. The harness is pure orchestration: zero source-specific logic in the core, no MCP wrap in v1 (library-only consumption by F2), uniform artifact path layout per D003. A typed-skip from one source must not abort the others.",
+      "surfaces": ["web", "ios", "android", "backend"],
+      "states": ["composed", "partial"],
+      "acceptance_signals": [
+        "`EvidenceCollector.collect(journey, context, sources=[...])` exists with the documented signature",
+        "the harness composes any subset of {web, ios, android, backend} per call",
+        "harness output is `list[EvidenceRef]` with uniform path layout `evidence/goal-governance/post_impl/<source>/<journey-id>/<artifact>`",
+        "the harness core contains zero source-specific tokens (web / ios / android / backend / firebase / supabase / playwright / simctl / adb / logcat / tombstone)",
+        "a typed-skip from one source does not prevent other sources from completing their captures",
+        "library-only consumption — no MCP tool wrap shipped in v1"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "config-surface-tests",
+    "config-cli-doctor",
+    "web-collector-tests",
+    "web-collector-driver-seam",
+    "ios-collector-tests",
+    "ios-collector-skip-path",
+    "android-collector-tests",
+    "android-no-test-orchestration",
+    "backend-collector-tests",
+    "backend-provider-slots",
+    "harness-mixed-source-tests",
+    "harness-source-agnostic-core",
+    "plan-g-closeout-memo"
+  ],
+  "non_goals": [
+    "F2 audit semantics — Plan G ships capture only (D002); any assertion / scoring / journey-walk / completion-test logic belongs to F2 and is explicitly out of scope",
+    "Cross-vendor dogfood dispatcher — D006 queues the cross-vendor invariant as a separate follow-up plan; G is capture-only and does not engage the cross-vendor surface (this contract therefore does not require evidence of cross-vendor dispatch)",
+    "Android test orchestration — D009 makes G3 capture-only; the adapter must not spawn Gradle / Espresso / Maestro / `am instrument`",
+    "New credential storage — D005 + D014 forbid storing literal credential values anywhere DontPanic manages; only pointer shapes (`adc`, `env:NAME`, path-only) are permitted",
+    "Global runtime-evidence defaults — D015 makes runtime evidence project-scoped; global config may carry agent roles but never runtime target defaults",
+    "agent-conventions schema bump — D007 confirms EvidenceRef v1.4.0 type enum covers all G adapter outputs; no v1.5.0 bump (single-repo plan)",
+    "MCP tool wrap — locked at lock turn as a follow-up; G is library-only consumed by F2 in-process",
+    "Project-name special cases in adapter code — D004 (inherited from F1 D013): no `spin_dine_*` / `glam_*` / `creator_hub_*` tokens anywhere in adapters or harness core"
+  ],
+  "completion_test": "Plan G is complete when an operator working on any project (regardless of stack composition) can: (1) configure agent roles globally and runtime-evidence sources per-project via the config surface, with credential pointers only and `dontpanic doctor` reporting per-source health; (2) capture per-step screenshots + per-session logs + crash artifacts on web, iOS, and Android during a feature close-out, with graceful typed-skip when a runtime is unavailable; (3) capture provider-adapted backend observability artifacts via Firebase / Supabase-slot / Generic providers with operator-supplied credential pointers; (4) compose any subset of those four source surfaces via `EvidenceCollector.collect(journey, context, sources=[...])` and receive a uniform `list[EvidenceRef]` with a stable artifact path layout under `evidence/goal-governance/post_impl/<source>/<journey-id>/`; (5) verify by inspection that the harness core and adapters contain no project-name special cases and no test-orchestration tokens (Android), and that the EvidenceRef shape matches agent-conventions v1.4.0 without requiring a schema bump. Empty findings against this contract means 'Plan G's promise is materially captured by the runtime evidence harness'; per F2 D002 it does NOT mean 'every adapter is bug-free' — only that the goal-completion surface is intact at the v1 evidence-coverage heuristic level."
+}

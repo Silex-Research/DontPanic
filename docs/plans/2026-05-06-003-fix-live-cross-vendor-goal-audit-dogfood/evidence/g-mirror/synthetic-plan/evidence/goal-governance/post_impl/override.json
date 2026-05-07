@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "Live cross-vendor dogfood invoked Codex and produced substantive JSON dispositions, but F002 parser could not extract the JSON payload from Codex streaming output. Operator manually reviewed transcript and classified findings; closing this validation wrapper with follow-ups for parser support and fixture-fairness improvements.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-05-07T01:23:20Z",
+  "plan_id": "2026-05-06-001-infra-runtime-evidence-harness-mirror",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "audit envelope status='dispatch_response_malformed' (cross-vendor disagreement or auditor response failed schema); cluster unknown/configure-runtime-evidence (12 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:ea6481b30bf621715fab05b85749857ff1e43853ccc67ab0e289bfb12e42e19e",
+  "objective_contract_hash": "sha256:3e7c91864248cd68b2f8894a1a0bd017b17b114285412bb2f086a49d8e41f7c7",
+  "completion_findings_hash": "sha256:a5e1e6430c126aea26619b6f5c8577a9cdfcee542fcad382275416e83ad57a46",
+  "evidence_manifest_hash": "sha256:39fa01a44892d0c60f1daa24f163d56a16ec186683f9ed3d93db33044edf43e0"
+}

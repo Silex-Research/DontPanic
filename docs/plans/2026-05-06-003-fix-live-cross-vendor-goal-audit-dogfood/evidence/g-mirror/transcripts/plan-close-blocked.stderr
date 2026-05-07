@@ -1,0 +1,5 @@
+[plan close] REFUSED:
+plan close refused for 2026-05-06-001-infra-runtime-evidence-harness-mirror — blocking decision:
+  - audit envelope status='dispatch_response_malformed' (cross-vendor disagreement or auditor response failed schema)
+  - cluster unknown/configure-runtime-evidence (12 finding(s)) classified as 'child_plan'
+to override: dontpanic plan close <plan-id> --ignore-completion-findings "<reason>"

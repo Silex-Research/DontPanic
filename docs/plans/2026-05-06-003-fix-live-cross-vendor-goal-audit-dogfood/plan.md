@@ -3,7 +3,7 @@ id: 2026-05-06-003-fix-live-cross-vendor-goal-audit-dogfood
 title: Live cross-vendor goal-audit dogfood — validation wrapper around Plan G
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-06"
 goal_type: infra
 agents_required:
