@@ -3,7 +3,7 @@ id: 2026-05-04-001-refactor-canonical-dontpanic-module
 title: Refactor — Canonical Python module flip (jarvis_orchestrate → dontpanic_orchestrate)
 type: refactor
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-04"
 description: |
   Flip the canonical Python module from `jarvis_orchestrate` to
