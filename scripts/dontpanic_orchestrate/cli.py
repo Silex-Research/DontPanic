@@ -2042,6 +2042,33 @@ def _setup_main(argv: list[str]) -> int:
     return 0
 
 
+def _print_top_level_help(*, file) -> None:
+    print(
+        """usage: dontpanic <command> [args]
+
+Private-alpha command surface:
+  setup                         Preview or write global roles + project runtime defaults
+  config show|set               Inspect or edit ~/.dontpanic/config.json
+  project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
+  projects add|list|show|remove  Register local projects for plan resolution
+  manifest init|show             Publish the machine-readable agent manifest
+  doctor                         Run local readiness checks
+  plan lock|audit|close          Goal-governed plan lifecycle gates
+  dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
+  approve|resume|ps              Clear gates and inspect active supervisors
+  quota-caps|calibrate-claude    Configure local quota guardrails
+  mcp serve                      Start the local MCP server
+
+Compatibility:
+  dontpanic <plan-id> [--volley] [--feature F001] still runs the legacy direct
+  dispatch entry point. Prefer `dontpanic dispatch-from-plan <plan-id>` for new
+  work because it prints the preflight context and is dry-run by default.
+
+Use `dontpanic <command> --help` for command-specific options.""",
+        file=file,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     # --version / -V prints the public package name and version, resolving
@@ -2050,6 +2077,12 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate import __version__
 
         print(f"dontpanic {__version__}")
+        return 0
+    if not raw:
+        _print_top_level_help(file=sys.stderr)
+        return 2
+    if raw[0] in ("--help", "-h", "help"):
+        _print_top_level_help(file=sys.stdout)
         return 0
     if raw and raw[0] == "ps":
         return _ps_main(raw[1:])

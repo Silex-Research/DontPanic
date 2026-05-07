@@ -1,0 +1,21 @@
+{
+  "task_id": "2026-05-07-001-infra-hello-dontpanic",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "doc",
+      "phase": 1,
+      "description": "Demonstrate that a minimal infra plan can validate, lock, and close without dispatch.",
+      "steps": [
+        "Validate this plan directory against the bundled agent-conventions schemas.",
+        "Run dontpanic plan lock against a temporary copy of this plan.",
+        "Run dontpanic plan close against the same temporary copy."
+      ],
+      "acceptance": "The plan validates, plan lock flips status from draft to active, and plan close flips status from active to completed without dispatching an agent.",
+      "passes": false,
+      "depends_on": [],
+      "evidence_refs": []
+    }
+  ]
+}

@@ -158,6 +158,36 @@ class TestVersion:
         assert result.stdout.strip() == f"dontpanic {__version__}"
 
 
+class TestTopLevelHelp:
+    def test_help_flag_lists_modern_private_alpha_surface(self, capsys):
+        rc = cli.main(["--help"])
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert captured.err == ""
+        out = captured.out
+        for token in (
+            "setup",
+            "config show|set",
+            "project config init|set",
+            "projects add|list|show|remove",
+            "manifest init|show",
+            "doctor",
+            "plan lock|audit|close",
+            "dispatch-from-plan",
+            "mcp serve",
+        ):
+            assert token in out
+        assert "dry-run by default" in out
+
+    def test_no_args_prints_help_to_stderr_and_exits_usage(self, capsys):
+        rc = cli.main([])
+        assert rc == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "usage: dontpanic <command> [args]" in captured.err
+        assert "dispatch-from-plan" in captured.err
+
+
 # ──────────────────────────────  global config loader  ──────────────────────────────
 
 
