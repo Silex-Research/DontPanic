@@ -1,0 +1,5 @@
+# crash-or-no-crash marker for capture-ios-evidence
+status: no-crash
+ts: 2026-05-07T12:00:00.500Z
+journey: capture-ios-evidence
+exit_code: 0

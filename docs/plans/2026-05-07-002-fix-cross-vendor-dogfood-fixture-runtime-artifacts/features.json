@@ -28,9 +28,40 @@
         "Commit (one local commit) covering: enriched fixture + envelope + transcript + override.json (if used) + close-out memo + decisions D-entries + features.json passes:true. NO module / test / fixture / prompt edits."
       ],
       "acceptance": "(1) Fixture enrichment bounded by D001 — only the three categories (adapter sources + runtime-like artifacts + read-only Plan G provenance). NO additions outside those categories. (2) NO matcher tuning — fixture `objective_contract.json` `required_evidence` byte-identical to Plan 003's. (3) Exactly ONE live codex invocation (D002), recorded with transcript filename + token cost numbers in close-out memo. NO additional invocations without explicit operator approval. (4) Parser fix verified at envelope level — `envelope.status ∈ {'agree', 'disagree'}`, NOT `dispatch_response_malformed`. If malformed, D007 escape fires (STOP, escalate, no flip). (5) Cross-vendor invariant verified at envelope level (D003) — `envelope.auditor_agent == 'codex'` AND `envelope.implementer_agent == 'claude'` AND no `DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR` set. (6) Each `findings_dispositions[i]` classified through D005's 4-bucket taxonomy with explicit (a)/(b)/(c)/(d) tag in decisions.jsonl. (7) Close path exercised end-to-end (D007): operator-judged path (without override / with override / escalate-and-stop) recorded in close-out memo; override.json (if used) carries all 4 D004 hashes; **if Path 3 (disagree with any (a)/(b)) was taken: every (a)/(b) finding is dispositioned by `finding_id` with a bucket tag + queued follow-up plan slug, appearing in BOTH override.json reason AND close-out memo's queued-followups list. Silent ignore of any (a)/(b) finding is a FORBIDDEN close path.** (8) Worktree boundary D004 preserved — diff confined to this plan dir. Zero diffs to F1/F2 module code, runtime_evidence/, executors/, cli.py, supervisor.py, agent-conventions schemas, prompt template, parent plan dirs, tests/, tests/fixtures/. (9) NO module / test / fixture-file / prompt edits in this plan. F2 patches forbidden by default; tiny-fix release valve requires explicit operator approval before edit. (10) Cumulative orchestrate suite stays green at the 1357-passed baseline (no module changes → no regression risk; smoke-checked anyway). (11) Plan-level close via exempt-plan flow (`goal_type=infra`) exits 0; supervisor backstop silent on the post-close plan. (12) Close-out memo + D-entry appended.",
-      "passes": false,
+      "passes": true,
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/audit/audit-codex-1.json",
+          "note": "Live codex envelope — status=disagree, 13 dispositions (12 v1 F2C-E001..F2C-E012 + 1 auditor-overlay-001); parser fix 080b907 verified at envelope level"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/audit/audit-codex-1.transcript.txt",
+          "note": "Raw codex stream transcript — 30 lines JSONL; cost numbers in turn.completed event (85575 input / 5414 output tokens)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/override.json",
+          "note": "D007 Path 3 override — all 4 D004 input-bound hashes recorded; reason text = per-finding accounting (1151 chars; 12x(c)+1x(b); cites queued follow-up slug)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/g-mirror/synthetic-plan/evidence/goal-governance/post_impl/completion_findings.json",
+          "note": "v1 completion findings produced by F2 auditor during the live audit run — 12 findings"
+        },
+        {
+          "type": "file",
+          "uri": "decisions.jsonl",
+          "note": "D001-D008 — D007 amended pre-lock for per-finding accounting requirement; D008 ship record"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/plan-closeout-memo.md",
+          "note": "F001 close-out memo — 4-bucket classification table for all 13 dispositions, verification numbers, queued follow-up slug"
+        }
+      ]
     }
   ]
 }

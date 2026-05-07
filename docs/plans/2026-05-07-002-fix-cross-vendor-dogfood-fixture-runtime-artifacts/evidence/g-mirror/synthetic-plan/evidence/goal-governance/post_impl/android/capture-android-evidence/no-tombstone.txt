@@ -1,0 +1,5 @@
+# tombstone-or-no-tombstone marker for capture-android-evidence
+status: no-tombstone
+ts: 2026-05-07T12:00:00.500Z
+journey: capture-android-evidence
+exit_code: 0

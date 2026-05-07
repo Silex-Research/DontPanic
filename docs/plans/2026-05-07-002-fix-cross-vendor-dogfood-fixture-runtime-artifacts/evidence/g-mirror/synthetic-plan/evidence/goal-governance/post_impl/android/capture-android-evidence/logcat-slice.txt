@@ -1,0 +1,4 @@
+# Synthetic Android logcat slice for capture-android-evidence
+05-07 12:00:00.001  1234  1234 I JourneyRunner: starting capture-android-evidence
+05-07 12:00:00.122  1234  1234 I JourneyRunner: activity mounted: CaptureEvidenceActivity
+05-07 12:00:00.318  1234  1234 I JourneyRunner: state=completed; no errors
