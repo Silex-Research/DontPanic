@@ -1,0 +1,1 @@
+{"id":"D001","ts":"2026-05-07T00:00:00Z","by":"operator","title":"Keep the sample safe","body":"This sample exists for private-alpha onboarding. It intentionally omits goal_type so the F1/F2 goal-governance gates take the exempt path, and it should be copied to a temporary directory before lock/close so the repository checkout stays clean."}
