@@ -1,0 +1,4 @@
+# Synthetic iOS log slice for capture-ios-evidence
+2026-05-07 12:00:00.001 [Info] [JourneyRunner] starting capture-ios-evidence
+2026-05-07 12:00:00.142 [Info] [JourneyRunner] view-controller mounted: CaptureEvidenceViewController
+2026-05-07 12:00:00.354 [Info] [JourneyRunner] state=completed; no errors

@@ -1,0 +1,17 @@
+[
+  {
+    "level": "log",
+    "ts": "2026-05-07T12:00:00.001Z",
+    "msg": "[capture-web-evidence] runner started"
+  },
+  {
+    "level": "log",
+    "ts": "2026-05-07T12:00:00.250Z",
+    "msg": "[capture-web-evidence] DOM ready"
+  },
+  {
+    "level": "log",
+    "ts": "2026-05-07T12:00:00.412Z",
+    "msg": "[capture-web-evidence] journey-state=completed"
+  }
+]

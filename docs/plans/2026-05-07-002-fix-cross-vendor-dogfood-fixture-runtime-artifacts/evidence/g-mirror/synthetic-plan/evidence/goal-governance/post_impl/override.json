@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "Plan 2026-05-07-002 D007 Path 3 close. Classification: 12x(c)+1x(b). v1 findings F2C-E001..F2C-E012 all bucket (c) spec-clarification — codex consistently identifies these as matcher substring drift between contract required_evidence labels and actual evidence filenames; v1 evidence-coverage heuristic working as designed (Plan F2 D002 v1_evidence_coverage_heuristic intentionally simple); semantic artifacts present, contract literal labels not in filenames; record+dismiss; no action required. auditor-overlay-001 bucket (b) prompt-tuning gap — codex flagged identical screenshot hashes across web/iOS/Android, no Android ANR drain artifact, generic backend request/response JSONL → \"does not validate the per-runtime capture promise\"; observationally correct but interprets D001 pre-approved fixture stub-quality as a runtime quality claim; queued follow-up: 2026-05-XX-feat-completion-audit-prompt-fixture-stub-disclaimer (add fixture-stub disclaimer language to completion_audit_prompt.md so auditors do not downgrade based on synthetic-stub generic-ness alone). No matcher tuning, no F2 patches, no prompt edits performed in this plan per D002.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-05-07T05:37:31Z",
+  "plan_id": "2026-05-06-001-infra-runtime-evidence-harness-mirror",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "audit envelope status='disagree' (cross-vendor disagreement or auditor response failed schema); cluster unknown/configure-runtime-evidence (12 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:ea6481b30bf621715fab05b85749857ff1e43853ccc67ab0e289bfb12e42e19e",
+  "objective_contract_hash": "sha256:3e7c91864248cd68b2f8894a1a0bd017b17b114285412bb2f086a49d8e41f7c7",
+  "completion_findings_hash": "sha256:5eb27809cc88958c4f04cd6587813178d38eae48f5ce59e7fc79c3f8011a28c0",
+  "evidence_manifest_hash": "sha256:bac04728dc1403476f916d26404289abc4867c7b61461fb953bed390e927e9f3"
+}

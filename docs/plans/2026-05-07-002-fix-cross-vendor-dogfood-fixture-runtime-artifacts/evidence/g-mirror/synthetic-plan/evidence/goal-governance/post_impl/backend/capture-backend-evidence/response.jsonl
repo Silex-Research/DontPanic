@@ -1,0 +1,2 @@
+{"ts": "2026-05-07T12:00:00.045Z", "request_id": "req-001", "status": 202, "body": {"job_id": "job-1", "state": "accepted"}}
+{"ts": "2026-05-07T12:00:00.301Z", "request_id": "req-002", "status": 200, "body": {"state": "completed"}}

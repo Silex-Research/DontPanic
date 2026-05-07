@@ -1,0 +1,2 @@
+{"ts": "2026-05-07T12:00:00.001Z", "method": "POST", "path": "/v1/runtime-evidence/capture", "journey": "capture-backend-evidence", "request_id": "req-001"}
+{"ts": "2026-05-07T12:00:00.234Z", "method": "GET", "path": "/v1/runtime-evidence/status", "journey": "capture-backend-evidence", "request_id": "req-002"}
