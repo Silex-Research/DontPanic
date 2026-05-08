@@ -3,7 +3,7 @@ id: 2026-05-05-001-fix-plan-validator-audit-auxiliary-json
 title: Fix — agent-conventions plan validator dispatches by artifact type, skips auxiliary audit JSON
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-05"
 description: |
   Two-step coordinated fix for the plan validator's naive
