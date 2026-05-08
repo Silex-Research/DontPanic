@@ -96,3 +96,58 @@ Three caveats remain queued, each as a future standalone slice:
 | C | Subprocess timeout / envelope durability (F001+F002+F003) | direct + direct + volley | `3b4c0b1`, `3d47ce2`, `89061a3` |
 | D | EC5 classifier purity | direct | `4632079` |
 | E | Plan validator audit-auxiliary-JSON dispatch | direct (cross-repo) | agent-conventions: `cedc190`/v1.3.1; DontPanic: `f213aba`+`7c900fc`+ this close-out |
+
+---
+
+## Status-flip close-out verification (added 2026-05-07)
+
+This section was added at the formal `active → completed` flip in the Tier 2/3 close-out batch and re-verifies the central correctness claim against live state, after agent-conventions had moved past `v1.3.1`.
+
+### Central correctness claim (operator-named)
+
+> Does the validator distinguish schema-bearing audit envelopes from auxiliary JSON artifacts **without silently skipping real audit files**?
+
+**Answer: yes.** Verified at three levels:
+
+1. **Code-level** — `claude/shared/schemas/v1.0/validate.py` `_classify_audit_artifact()` (line 68) returns exactly one of `signoff` / `audit` / `auxiliary` / `unknown`. `signoff` prefix wins over volley pattern (intentional, commented). `_KNOWN_AUXILIARY = frozenset({"gate-state.json"})` (line 61) is the v1 allow-list. Dispatch at line 208–216 sends `signoff` to Signoff model, `audit` to Audit model, `auxiliary` to a visible `⊘ ...auxiliary, skipped` info-line, `unknown` to a warn+skip. There is **no silent-skip path** — every artifact prints either a `✓` (validated), a `✗` (failed), a `⊘` (auxiliary), or a warn line.
+
+2. **Live behavior** — running the validator on closed plans with real audit envelopes:
+
+   - **Plan 2026-05-03-001 (Phase A, has gate-state.json)**:
+     ```
+     ✓ audit/claude-implementer-F003-i0.json
+     ✓ audit/claude-implementer-F003-i1.json
+     ✓ audit/codex-auditor-F003-i0.json
+     ✓ audit/codex-auditor-F003-i1.json
+     ⊘ audit/gate-state.json — auxiliary, skipped
+     ✓ audit/signoff-2026-05-03-001-feat-global-install-project-registry.json
+     ```
+     — 4 real audit envelopes dispatched, 1 signoff dispatched, 1 auxiliary visibly skipped.
+
+   - **Plan 2026-05-03-003 (Phase B, no gate-state.json — uses `evidence/f002-generated/` for that)**:
+     ```
+     ✓ audit/claude-implementer-F002-i0.json
+     ✓ audit/claude-implementer-F002-i1.json
+     ✓ audit/codex-auditor-F002-i0.json
+     ✓ audit/codex-auditor-F002-i1.json
+     ✓ audit/signoff-2026-05-03-003-feat-agent-access-manifest-thin-mcp.json
+     ```
+     — 4 real audit envelopes + 1 signoff dispatched, no auxiliary in scope, nothing silently skipped.
+
+3. **Self-validation** — running the validator on this plan's own dir (irony check): `audit/` contains only `.gitkeep`, so no dispatch cases trigger. `plan.md` frontmatter and `features.json` validate green.
+
+### Note on agent-conventions version drift since F002 ship
+
+The F002 close-out memo (impl-time, above) records `claude/shared/VERSION` reading `1.3.1` and the subtree being byte-identical to agent-conventions `v1.3.1`. Both claims were true at F002 commit time. Since then, agent-conventions has been bumped to **`v1.4.0`** (per a later plan's subtree pull — most likely Plan 2026-05-05-003 objective-contract-and-sufficiency-audit, which shipped after this plan and added objective-contract validation). The validator's `_classify_audit_artifact` dispatch logic introduced by this plan is preserved byte-for-byte through that version bump — verified by the live-run evidence above.
+
+The historical AC#1 ("VERSION reads 1.3.1") in the impl-time table is intentionally **NOT** updated. It is a record of the verification at F002 ship time, not a current-state assertion. Future readers comparing the version on disk to that AC entry should expect drift forward, not backward.
+
+### What this plan does NOT solve
+
+Per the impl-time memo's "Queued caveats" section + lessons surfaced during the close-out batch, the following remain separate:
+
+- **Real `gate-state.schema.json`** — D001 of this plan deferred validating gate-state shape via a real schema; v1 skips by name. v2 may validate if shape stability warrants it. No real-world trigger has surfaced yet.
+- **Per-plan `loop_caps.subprocess_timeout_seconds`** — deferred from Plan C D003.
+- **`jarvis_orchestrate` shim removal timeline** — deferred from Plan A D006.
+
+This plan's correctness claim is narrowly scoped: artifact-type-aware dispatch in the existing validator, no false-fail on `gate-state.json`, no silent skip of real audit files. It does NOT introduce a new schema for auxiliary artifacts or change validator semantics for non-`audit/` artifacts.
