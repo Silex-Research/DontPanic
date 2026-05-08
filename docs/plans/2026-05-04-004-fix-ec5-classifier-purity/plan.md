@@ -3,7 +3,7 @@ id: 2026-05-04-004-fix-ec5-classifier-purity
 title: Fix — EC5 classifier purity (no filesystem reach, classifier-local repo derivation)
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-04"
 description: |
   Two-part scoped fix for the long-standing EC5 classifier purity test
