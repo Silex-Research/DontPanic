@@ -1,0 +1,964 @@
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_doctor.py:123:9
+    |
+121 |         return _bad("gcloud-auth", "gcloud missing", "install gcloud first")
+122 |     proc = subprocess.run(
+123 |         ["gcloud", "auth", "print-access-token"],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+124 |         capture_output=True,
+125 |         text=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_doctor.py:141:9
+    |
+139 |         return _bad("firebase-auth", "firebase CLI missing", "npm i -g firebase-tools")
+140 |     proc = subprocess.run(
+141 |         ["firebase", "login:list"],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+142 |         capture_output=True,
+143 |         text=True,
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_doctor.py:201:12
+    |
+199 |     # whether or not the directory exists — `git check-ignore` works on
+200 |     # paths regardless of filesystem state.
+201 |     proc = subprocess.run(
+    |            ^^^^^^^^^^^^^^
+202 |         ["git", "-C", str(REPO_ROOT), "check-ignore", "-q", str(SECRETS_DIR / "probe.json")],
+203 |         capture_output=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_doctor.py:202:9
+    |
+200 |     # paths regardless of filesystem state.
+201 |     proc = subprocess.run(
+202 |         ["git", "-C", str(REPO_ROOT), "check-ignore", "-q", str(SECRETS_DIR / "probe.json")],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+203 |         capture_output=True,
+204 |     )
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_doctor.py:322:12
+    |
+320 |             "agent-conventions out of date — subtree pull",
+321 |         )
+322 |     proc = subprocess.run(
+    |            ^^^^^^^^^^^^^^
+323 |         [sys.executable, str(validator), str(PARENT_PLAN_DIR)],
+324 |         capture_output=True,
+    |
+
+S101 Use of `assert` detected
+   --> scripts/dontpanic_orchestrate/cli.py:960:5
+    |
+958 |     removed = projects_registry.remove_project(args.name)
+959 |     # `removed` is the same entry we just looked up; safe to assert non-None.
+960 |     assert removed is not None
+    |     ^^^^^^
+961 |     payload = {"action": "removed", "project": projects_registry.to_public_dict(removed)}
+962 |     if args.as_json:
+    |
+
+S101 Use of `assert` detected
+   --> scripts/dontpanic_orchestrate/ec5_classifier.py:106:5
+    |
+104 |     # helpers have drifted apart and F001's own tests will catch it; we keep
+105 |     # the guard rather than silently returning a wrong verdict.
+106 |     assert expected is not None, "render_prelude output failed parse_prelude_block round-trip"
+    |     ^^^^^^
+107 |
+108 |     if parsed != expected:
+    |
+
+S101 Use of `assert` detected
+  --> scripts/dontpanic_orchestrate/execution_environment.py:85:9
+   |
+83 |         """Return only Jarvis-owned environment keys for this execution."""
+84 |         self._require_active()
+85 |         assert self.root is not None
+   |         ^^^^^^
+86 |
+87 |         env = {key: str(self.root.joinpath(*parts)) for key, parts in ISOLATED_ENV_PATHS.items()}
+   |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/git_state.py:118:13
+    |
+116 |     try:
+117 |         result = subprocess.run(
+118 |             ["git", "rev-parse", "--show-toplevel"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+119 |             cwd=cwd,
+120 |             capture_output=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/git_state.py:134:13
+    |
+132 |     try:
+133 |         status = subprocess.run(
+134 |             ["git", "status", "--porcelain=v1", "-z"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+135 |             cwd=cwd,
+136 |             capture_output=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/nested_orchestration.py:951:13
+    |
+949 |     try:
+950 |         result = subprocess.run(
+951 |             ["git", "diff", "--name-only", "HEAD"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+952 |             cwd=repo_root,
+953 |             capture_output=True,
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+  --> scripts/dontpanic_orchestrate/notify.py:59:16
+   |
+57 |         cmd += ["-group", group]
+58 |     try:
+59 |         proc = subprocess.run(
+   |                ^^^^^^^^^^^^^^
+60 |             cmd,
+61 |             capture_output=True,
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> scripts/dontpanic_orchestrate/patch_completeness_gate.py:268:9
+    |
+266 |                   report_path=str(report_path),
+267 |               )
+268 | /         except Exception:  # pragma: no cover — INBOX write is best-effort
+269 | |             pass
+    | |________________^
+270 |           raise PatchCompletenessError(promoted_report, plan_dir)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/runtime_evidence/android.py:655:13
+    |
+653 |     try:
+654 |         result = subprocess.run(
+655 |             ["adb", "devices"],
+    |             ^^^^^^^^^^^^^^^^^^
+656 |             check=False,
+657 |             capture_output=True,
+    |
+
+S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+   --> scripts/dontpanic_orchestrate/runtime_evidence/backend.py:208:15
+    |
+206 |         from urllib.request import Request, urlopen
+207 |
+208 |         req = Request(url, headers=headers)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+209 |         try:
+210 |             with urlopen(req, timeout=timeout) as resp:  # noqa: S310 — operator-supplied URL
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/runtime_evidence/ios.py:456:13
+    |
+454 |     try:
+455 |         result = subprocess.run(
+456 |             ["xcrun", "simctl", "help"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+457 |             check=False,
+458 |             capture_output=True,
+    |
+
+S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+  --> scripts/dontpanic_orchestrate/smoke_test_storage.py:42:10
+   |
+41 |     print("[2/3] Fetching signed URL...")
+42 |     with urllib.request.urlopen(url, timeout=15) as resp:
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+43 |         status = resp.status
+44 |         body = resp.read()
+   |
+
+S101 Use of `assert` detected
+  --> scripts/dontpanic_orchestrate/smoke_test_storage.py:50:5
+   |
+48 |     print("[3/3] Verifying round-trip...")
+49 |     received = json.loads(body)
+50 |     assert received == fixture, f"mismatch: sent {fixture}, got {received}"
+   |     ^^^^^^
+51 |     assert status == 200, f"expected 200, got {status}"
+   |
+
+S101 Use of `assert` detected
+  --> scripts/dontpanic_orchestrate/smoke_test_storage.py:51:5
+   |
+49 |     received = json.loads(body)
+50 |     assert received == fixture, f"mismatch: sent {fixture}, got {received}"
+51 |     assert status == 200, f"expected 200, got {status}"
+   |     ^^^^^^
+52 |
+53 |     # Persist evidence log
+   |
+
+S607 Starting a process with a partial executable path
+  --> scripts/dontpanic_orchestrate/subprocess_runner.py:85:13
+   |
+83 |     try:
+84 |         proc = subprocess.run(
+85 |             ["git", "status", "--porcelain=v1"],
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+86 |             cwd=str(cwd),
+87 |             capture_output=True,
+   |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/subprocess_runner.py:140:16
+    |
+138 |     before = _snapshot_worktree(cwd)
+139 |     try:
+140 |         proc = subprocess.Popen(
+    |                ^^^^^^^^^^^^^^^^
+141 |             list(cmd),
+142 |             stdin=subprocess.PIPE if stdin_bytes is not None else None,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/target_context_prelude.py:115:13
+    |
+113 |     try:
+114 |         completed = subprocess.run(
+115 |             ["git", "rev-parse", "--show-toplevel"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+116 |             cwd=os.getcwd(),
+117 |             capture_output=True,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/x.txt"
+   --> scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py:216:40
+    |
+214 |                     "iteration": 1,
+215 |                     "findings_dispositions": [],
+216 |                     "transcript_path": "/tmp/x.txt",
+    |                                        ^^^^^^^^^^^^
+217 |                     "envelope_path": "/tmp/x.json",
+218 |                     "generated_at": "2026-05-06T12:00:00+00:00",
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/x.json"
+   --> scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py:217:38
+    |
+215 |                     "findings_dispositions": [],
+216 |                     "transcript_path": "/tmp/x.txt",
+217 |                     "envelope_path": "/tmp/x.json",
+    |                                      ^^^^^^^^^^^^^
+218 |                     "generated_at": "2026-05-06T12:00:00+00:00",
+219 |                     "stranger_field": "nope",
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/x.txt"
+   --> scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py:233:40
+    |
+231 |                     "iteration": 1,
+232 |                     "findings_dispositions": [],
+233 |                     "transcript_path": "/tmp/x.txt",
+    |                                        ^^^^^^^^^^^^
+234 |                     "envelope_path": "/tmp/x.json",
+235 |                     "generated_at": "2026-05-06T12:00:00+00:00",
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/x.json"
+   --> scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py:234:38
+    |
+232 |                     "findings_dispositions": [],
+233 |                     "transcript_path": "/tmp/x.txt",
+234 |                     "envelope_path": "/tmp/x.json",
+    |                                      ^^^^^^^^^^^^^
+235 |                     "generated_at": "2026-05-06T12:00:00+00:00",
+236 |                 }
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+  --> scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py:46:23
+   |
+44 |     t = DispatchTask(
+45 |         plan_id="p",
+46 |         plan_dir=Path("/tmp/p"),
+   |                       ^^^^^^^^
+47 |         feature_id="F001",
+48 |         feature_description="d",
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/repo"
+  --> scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py:52:18
+   |
+50 |         feature_steps=[],
+51 |         agent_role="implementer",
+52 |         cwd=Path("/tmp/repo"),
+   |                  ^^^^^^^^^^^
+53 |     )
+54 |     assert t.cwd == Path("/tmp/repo"), t.cwd
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/repo"
+  --> scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py:54:26
+   |
+52 |         cwd=Path("/tmp/repo"),
+53 |     )
+54 |     assert t.cwd == Path("/tmp/repo"), t.cwd
+   |                          ^^^^^^^^^^^
+55 |     # Default is None
+56 |     t2 = DispatchTask(
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+  --> scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py:58:23
+   |
+56 |     t2 = DispatchTask(
+57 |         plan_id="p",
+58 |         plan_dir=Path("/tmp/p"),
+   |                       ^^^^^^^^
+59 |         feature_id="F001",
+60 |         feature_description="d",
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+   --> scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py:135:23
+    |
+133 |     out = prompts.implementer_prompt(
+134 |         plan_id="2026-04-26-200-infra-cwd-prompt",
+135 |         plan_dir=Path("/tmp/p"),
+    |                       ^^^^^^^^
+136 |         feature={"id": "F001", "description": "d", "acceptance": "a", "steps": []},
+137 |         iteration=0,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/cfg"
+  --> scripts/dontpanic_orchestrate/tests/test_ec13_active_supervisors.py:45:75
+   |
+43 |     with tempfile.TemporaryDirectory() as td:
+44 |         _redirect_registry(Path(td))
+45 |         e = aS.register("2026-04-26-400-infra-rt", "dev", "jarvis-a6ee1", "/tmp/cfg")
+   |                                                                           ^^^^^^^^^^
+46 |         assert e.pid == os.getpid() and e.target_env == "dev"
+47 |         active = aS.list_active()
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/a"
+  --> scripts/dontpanic_orchestrate/tests/test_ec13_active_supervisors.py:59:64
+   |
+57 |     with tempfile.TemporaryDirectory() as td:
+58 |         _redirect_registry(Path(td))
+59 |         aS.register("2026-04-26-401-infra-pid-x", "dev", "p1", "/tmp/a", pid=os.getpid())
+   |                                                                ^^^^^^^^
+60 |         # Manually inject a different-pid entry for the same plan_id
+61 |         with aS.REGISTRY_PATH.open("a") as f:
+   |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/c1"
+   --> scripts/dontpanic_orchestrate/tests/test_ec13_active_supervisors.py:117:65
+    |
+115 |     with tempfile.TemporaryDirectory() as td:
+116 |         _redirect_registry(Path(td))
+117 |         aS.register("2026-04-26-403-infra-reentry", "dev", "x", "/tmp/c1")
+    |                                                                 ^^^^^^^^^
+118 |         hit = aS.check_reentrancy("2026-04-26-403-infra-reentry")
+119 |         assert hit is not None and hit.target_project == "x"
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/cfg-x"
+   --> scripts/dontpanic_orchestrate/tests/test_ec13_active_supervisors.py:144:77
+    |
+142 |     with tempfile.TemporaryDirectory() as td:
+143 |         _redirect_registry(Path(td))
+144 |         aS.register("2026-04-26-404-infra-ps-table", "dev", "jarvis-a6ee1", "/tmp/cfg-x")
+    |                                                                             ^^^^^^^^^^^^
+145 |         buf = io.StringIO()
+146 |         with redirect_stdout(buf):
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/test-plan"
+   --> scripts/dontpanic_orchestrate/tests/test_ec5_classifier.py:311:23
+    |
+309 |     rendered = auditor_prompt(
+310 |         plan_id="2026-05-02-test",
+311 |         plan_dir=Path("/tmp/test-plan"),
+    |                       ^^^^^^^^^^^^^^^^
+312 |         feature={"id": "F001", "acceptance": "x", "steps": ["s"]},
+313 |         iteration=0,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/impl.json"
+   --> scripts/dontpanic_orchestrate/tests/test_ec5_classifier.py:314:37
+    |
+312 |         feature={"id": "F001", "acceptance": "x", "steps": ["s"]},
+313 |         iteration=0,
+314 |         implementer_audit_path=Path("/tmp/impl.json"),
+    |                                     ^^^^^^^^^^^^^^^^
+315 |         target_env="dev",
+316 |         target_project=None,
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_execution_environment.py:99:16
+    |
+ 97 |         cleanup=True,
+ 98 |     ) as env:
+ 99 |         proc = subprocess.run(
+    |                ^^^^^^^^^^^^^^
+100 |             [
+101 |                 str(fake_gcloud),
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_execution_environment.py:114:16
+    |
+112 |         assert proc.returncode == 0, proc.stderr
+113 |
+114 |         proc = subprocess.run(
+    |                ^^^^^^^^^^^^^^
+115 |             [str(fake_gcloud), "config", "get-value", "project"],
+116 |             capture_output=True,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/isolated"
+   --> scripts/dontpanic_orchestrate/tests/test_execution_environment.py:180:33
+    |
+178 |     assert_allowed(
+179 |         "gcloud config configurations activate dev",
+180 |         env={"CLOUDSDK_CONFIG": "/tmp/isolated"},
+    |                                 ^^^^^^^^^^^^^^^
+181 |     )
+182 |     print("  ✓ forbidden global-state mutations rejected")
+    |
+
+S104 Possible binding to all interfaces
+   --> scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py:566:27
+    |
+564 |         """No call to bind() / listen() / 0.0.0.0 in the module source."""
+565 |         src = Path(mcp_server.__file__).read_text()
+566 |         for forbidden in ("0.0.0.0", ".bind(", ".listen(", 'host="0.0.0.0"'):
+    |                           ^^^^^^^^^
+567 |             assert forbidden not in src, (
+568 |                 f"mcp_server.py contains {forbidden!r} — D003 forbids "
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f005b_executor_argv.py:503:20
+    |
+501 |     yubikey, etc.) that would otherwise fail in a test fixture without the
+502 |     signing material wired up."""
+503 |     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^
+504 |     subprocess.run(
+505 |         [
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f005b_executor_argv.py:505:9
+    |
+503 |       subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+504 |       subprocess.run(
+505 | /         [
+506 | |             "git",
+507 | |             "-c",
+508 | |             "user.email=test@x",
+509 | |             "-c",
+510 | |             "user.name=t",
+511 | |             "-c",
+512 | |             "commit.gpgsign=false",
+513 | |             "commit",
+514 | |             "--allow-empty",
+515 | |             "--no-gpg-sign",
+516 | |             "-m",
+517 | |             "init",
+518 | |             "-q",
+519 | |         ],
+    | |_________^
+520 |           cwd=tmp_path,
+521 |           check=True,
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+  --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:25:12
+   |
+23 |     env.pop("JARVIS_FIREBASE_PROJECT", None)
+24 |     env.pop("JARVIS_BILLING_ACCOUNT", None)
+25 |     return subprocess.run(
+   |            ^^^^^^^^^^^^^^
+26 |         ["bash", str(BOOTSTRAP), *args],
+27 |         capture_output=True,
+   |
+
+S607 Starting a process with a partial executable path
+  --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:26:9
+   |
+24 |     env.pop("JARVIS_BILLING_ACCOUNT", None)
+25 |     return subprocess.run(
+26 |         ["bash", str(BOOTSTRAP), *args],
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+27 |         capture_output=True,
+28 |         text=True,
+   |
+
+S603 `subprocess` call: check for execution of untrusted input
+  --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:94:12
+   |
+92 |     env["DONTPANIC_FIREBASE_PROJECT"] = "test-id"
+93 |     env["DONTPANIC_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
+94 |     proc = subprocess.run(
+   |            ^^^^^^^^^^^^^^
+95 |         ["bash", str(BOOTSTRAP), "--dry-run"],
+96 |         capture_output=True,
+   |
+
+S607 Starting a process with a partial executable path
+  --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:95:9
+   |
+93 |     env["DONTPANIC_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
+94 |     proc = subprocess.run(
+95 |         ["bash", str(BOOTSTRAP), "--dry-run"],
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+96 |         capture_output=True,
+97 |         text=True,
+   |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:113:12
+    |
+111 |     env["JARVIS_FIREBASE_PROJECT"] = "test-id"
+112 |     env["JARVIS_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
+113 |     proc = subprocess.run(
+    |            ^^^^^^^^^^^^^^
+114 |         ["bash", str(BOOTSTRAP), "--dry-run"],
+115 |         capture_output=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f022_bootstrap_parser.py:114:9
+    |
+112 |     env["JARVIS_BILLING_ACCOUNT"] = "ABCDEF-012345-FEDCBA"
+113 |     proc = subprocess.run(
+114 |         ["bash", str(BOOTSTRAP), "--dry-run"],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+115 |         capture_output=True,
+116 |         text=True,
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:117:5
+    |
+115 |     import subprocess as _sp
+116 |
+117 |     _sp.run(["git", "init", "-q", str(fresh_repo)], check=True)
+    |     ^^^^^^^
+118 |     # Note: .secrets/ deliberately not created
+119 |     monkeypatch.setattr(doctor, "SECRETS_DIR", fresh_repo / ".secrets")
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:117:13
+    |
+115 |     import subprocess as _sp
+116 |
+117 |     _sp.run(["git", "init", "-q", str(fresh_repo)], check=True)
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+118 |     # Note: .secrets/ deliberately not created
+119 |     monkeypatch.setattr(doctor, "SECRETS_DIR", fresh_repo / ".secrets")
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:136:5
+    |
+134 |     import subprocess as _sp
+135 |
+136 |     _sp.run(["git", "init", "-q", str(bad_repo)], check=True)
+    |     ^^^^^^^
+137 |     monkeypatch.setattr(doctor, "SECRETS_DIR", bad_repo / ".secrets")
+138 |     monkeypatch.setattr(doctor, "REPO_ROOT", bad_repo)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:136:13
+    |
+134 |     import subprocess as _sp
+135 |
+136 |     _sp.run(["git", "init", "-q", str(bad_repo)], check=True)
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+137 |     monkeypatch.setattr(doctor, "SECRETS_DIR", bad_repo / ".secrets")
+138 |     monkeypatch.setattr(doctor, "REPO_ROOT", bad_repo)
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:153:5
+    |
+151 |     import subprocess as _sp
+152 |
+153 |     _sp.run(["git", "init", "-q", str(bad_repo)], check=True)
+    |     ^^^^^^^
+154 |     monkeypatch.setattr(doctor, "SECRETS_DIR", secrets)
+155 |     monkeypatch.setattr(doctor, "REPO_ROOT", bad_repo)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py:153:13
+    |
+151 |     import subprocess as _sp
+152 |
+153 |     _sp.run(["git", "init", "-q", str(bad_repo)], check=True)
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+154 |     monkeypatch.setattr(doctor, "SECRETS_DIR", secrets)
+155 |     monkeypatch.setattr(doctor, "REPO_ROOT", bad_repo)
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+  --> scripts/dontpanic_orchestrate/tests/test_f022_sanitization.py:30:12
+   |
+28 | def test_current_repo_has_no_leaks() -> None:
+29 |     """End-to-end: run the script as a subprocess and assert exit 0."""
+30 |     proc = subprocess.run(
+   |            ^^^^^^^^^^^^^^
+31 |         ["python3", str(CHECK_PATH)],
+32 |         capture_output=True,
+   |
+
+S607 Starting a process with a partial executable path
+  --> scripts/dontpanic_orchestrate/tests/test_f022_sanitization.py:31:9
+   |
+29 |     """End-to-end: run the script as a subprocess and assert exit 0."""
+30 |     proc = subprocess.run(
+31 |         ["python3", str(CHECK_PATH)],
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+32 |         capture_output=True,
+33 |         text=True,
+   |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:184:20
+    |
+182 | def _init_git_repo(repo: Path) -> None:
+183 |     """Init a quiet git repo with deterministic identity."""
+184 |     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+185 |     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+186 |     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:185:20
+    |
+183 |     """Init a quiet git repo with deterministic identity."""
+184 |     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, check=True)
+185 |     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+186 |     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+187 |     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo, check=True)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:186:20
+    |
+184 |     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, check=True)
+185 |     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+186 |     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+187 |     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo, check=True)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:187:20
+    |
+185 |     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+186 |     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+187 |     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:200:20
+    |
+198 |     # committed baseline
+199 |     (tmp_path / "committed.py").write_text("# committed\n")
+200 |     subprocess.run(["git", "add", "committed.py"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+201 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:201:20
+    |
+199 |     (tmp_path / "committed.py").write_text("# committed\n")
+200 |     subprocess.run(["git", "add", "committed.py"], cwd=tmp_path, check=True)
+201 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+202 |
+203 |     # produce one of each status
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:205:20
+    |
+203 |     # produce one of each status
+204 |     (tmp_path / "staged_add.py").write_text("# new\n")
+205 |     subprocess.run(["git", "add", "staged_add.py"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+206 |
+207 |     (tmp_path / "committed.py").write_text("# unstaged change\n")  # unstaged_modify
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:257:20
+    |
+255 |     _init_git_repo(tmp_path)
+256 |     (tmp_path / "a.py").write_text("# a\n")
+257 |     subprocess.run(["git", "add", "a.py"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^
+258 |     (tmp_path / "b.py").write_text("# untracked\n")
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:261:9
+    |
+260 |     before = subprocess.run(
+261 |         ["git", "status", "--porcelain=v1", "-z"],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+262 |         cwd=tmp_path,
+263 |         check=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:270:9
+    |
+269 |     after = subprocess.run(
+270 |         ["git", "status", "--porcelain=v1", "-z"],
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+271 |         cwd=tmp_path,
+272 |         check=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:309:20
+    |
+307 |     _init_git_repo(tmp_path)
+308 |     (tmp_path / "tracked.py").write_text("# tracked\n")
+309 |     subprocess.run(["git", "add", "tracked.py"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+310 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+311 |     (tmp_path / "wip.py").write_text("# wip\n")  # untracked
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:310:20
+    |
+308 |     (tmp_path / "tracked.py").write_text("# tracked\n")
+309 |     subprocess.run(["git", "add", "tracked.py"], cwd=tmp_path, check=True)
+310 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+311 |     (tmp_path / "wip.py").write_text("# wip\n")  # untracked
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:365:20
+    |
+363 |     _init_git_repo(tmp_path)
+364 |     (tmp_path / "tracked.py").write_text("# tracked\n")
+365 |     subprocess.run(["git", "add", "tracked.py"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+366 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+367 |     (tmp_path / "wip.py").write_text("# wip\n")
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_git_state.py:366:20
+    |
+364 |     (tmp_path / "tracked.py").write_text("# tracked\n")
+365 |     subprocess.run(["git", "add", "tracked.py"], cwd=tmp_path, check=True)
+366 |     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+367 |     (tmp_path / "wip.py").write_text("# wip\n")
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp"
+   --> scripts/dontpanic_orchestrate/tests/test_patch_completeness_gate.py:112:47
+    |
+110 |         files=["needs.py", "wip.py"],
+111 |     )
+112 |     err = PatchCompletenessError(report, Path("/tmp"))
+    |                                               ^^^^^^
+113 |     rendered = str(err)
+114 |     assert "test_imports_uncommitted | block | needs.py | r1 | Run: git add needs.py" in rendered
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_subprocess_runner.py:166:20
+    |
+165 | def test_worktree_detection_git_repo_no_changes(tmp_path: Path) -> None:
+166 |     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^
+167 |
+168 |     result = runner.run_subprocess([sys.executable, "-c", "print('ok')"], cwd=tmp_path)
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_subprocess_runner.py:175:20
+    |
+174 | def test_worktree_detection_git_repo_changes(tmp_path: Path) -> None:
+175 |     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^
+176 |
+177 |     result = runner.run_subprocess(
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+   --> scripts/dontpanic_orchestrate/tests/test_target_context.py:309:23
+    |
+307 |     out = prompts.implementer_prompt(
+308 |         plan_id="p",
+309 |         plan_dir=Path("/tmp/p"),
+    |                       ^^^^^^^^
+310 |         feature={"id": "F001", "description": "x", "acceptance": "y", "steps": []},
+311 |         iteration=0,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+   --> scripts/dontpanic_orchestrate/tests/test_target_context.py:327:23
+    |
+325 |     out = prompts.implementer_prompt(
+326 |         plan_id="p",
+327 |         plan_dir=Path("/tmp/p"),
+    |                       ^^^^^^^^
+328 |         feature={"id": "F001", "description": "x", "acceptance": "y", "steps": []},
+329 |         iteration=0,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+   --> scripts/dontpanic_orchestrate/tests/test_target_context.py:343:23
+    |
+341 |     out = prompts.auditor_prompt(
+342 |         plan_id="p",
+343 |         plan_dir=Path("/tmp/p"),
+    |                       ^^^^^^^^
+344 |         feature={"id": "F001", "description": "x", "acceptance": "y", "steps": []},
+345 |         iteration=0,
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p/audit/claude-implementer-i0.json"
+   --> scripts/dontpanic_orchestrate/tests/test_target_context.py:346:37
+    |
+344 |         feature={"id": "F001", "description": "x", "acceptance": "y", "steps": []},
+345 |         iteration=0,
+346 |         implementer_audit_path=Path("/tmp/p/audit/claude-implementer-i0.json"),
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+347 |         target_env="dev",
+348 |         target_project="jarvis-a6ee1",
+    |
+
+S108 Probable insecure usage of temporary file or directory: "/tmp/p"
+   --> scripts/dontpanic_orchestrate/tests/test_target_context.py:359:23
+    |
+357 |     out = prompts.implementer_prompt(
+358 |         plan_id="p",
+359 |         plan_dir=Path("/tmp/p"),
+    |                       ^^^^^^^^
+360 |         feature={"id": "F001", "description": "x", "acceptance": "y", "steps": []},
+361 |         iteration=0,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_target_context_prelude.py:176:20
+    |
+174 |     repo_dir = tmp_path / "FakeRepoName"
+175 |     repo_dir.mkdir()
+176 |     subprocess.run(["git", "init", "-q"], cwd=repo_dir, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^
+177 |     monkeypatch.chdir(repo_dir)
+178 |     assert resolve_repo({"env": "dev"}) == "FakeRepoName"
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_target_context_prelude.py:196:20
+    |
+194 |     repo_dir = tmp_path / "ComposedRepo"
+195 |     repo_dir.mkdir()
+196 |     subprocess.run(["git", "init", "-q"], cwd=repo_dir, check=True)
+    |                    ^^^^^^^^^^^^^^^^^^^^^
+197 |     monkeypatch.chdir(repo_dir)
+198 |     tc = {"env": "dev", "project": None, "commands_run": ["pytest -q"]}
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py:891:20
+    |
+889 |         repo_root = Path(__file__).resolve().parents[3]
+890 |         try:
+891 |             diff = subprocess.run(
+    |                    ^^^^^^^^^^^^^^
+892 |                 [
+893 |                     "git",
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py:892:17
+    |
+890 |           try:
+891 |               diff = subprocess.run(
+892 | /                 [
+893 | |                     "git",
+894 | |                     "-C",
+895 | |                     str(repo_root),
+896 | |                     "diff",
+897 | |                     "HEAD",
+898 | |                     "--",
+899 | |                     "scripts/dontpanic_orchestrate/circuit_breakers.py",
+900 | |                 ],
+    | |_________________^
+901 |                   capture_output=True,
+902 |                   text=True,
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/quota_check.py:429:13
+    |
+427 |     try:
+428 |         out = subprocess.run(
+429 |             ["ollama", "ps"], capture_output=True, text=True, timeout=5, check=False
+    |             ^^^^^^^^^^^^^^^^
+430 |         )
+431 |     except (subprocess.SubprocessError, OSError):
+    |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> scripts/sanitization_check.py:141:12
+    |
+139 |     staging — a leak in an unstaged new file is still surfaced.
+140 |     """
+141 |     proc = subprocess.run(
+    |            ^^^^^^^^^^^^^^
+142 |         [
+143 |             "git",
+    |
+
+S607 Starting a process with a partial executable path
+   --> scripts/sanitization_check.py:142:9
+    |
+140 |       """
+141 |       proc = subprocess.run(
+142 | /         [
+143 | |             "git",
+144 | |             "-C",
+145 | |             str(REPO_ROOT),
+146 | |             "ls-files",
+147 | |             "--cached",
+148 | |             "--others",
+149 | |             "--exclude-standard",
+150 | |         ],
+    | |_________^
+151 |           capture_output=True,
+152 |           text=True,
+    |
+
+Found 86 errors.
