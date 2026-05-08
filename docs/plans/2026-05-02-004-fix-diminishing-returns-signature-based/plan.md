@@ -3,7 +3,7 @@ id: 2026-05-02-004-fix-diminishing-returns-signature-based
 title: Diminishing-returns breaker — signature-based, not count-based
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-02"
 description: |
   Replace the count-only diminishing-returns heuristic with a signature-based
