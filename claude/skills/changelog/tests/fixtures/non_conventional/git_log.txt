@@ -1,0 +1,28 @@
+--COMMIT--
+1111aaaa000000000000000000000000aaaa1111
+1111aaa
+2026-04-10T10:00:00+00:00
+Greta NoConvention <greta@example.com>
+
+Initial commit
+--FILES--
+A	README.md
+A	src/main.py
+--COMMIT--
+2222bbbb000000000000000000000000bbbb2222
+2222bbb
+2026-04-11T11:00:00+00:00
+Hank Tinkerer <hank@example.com>
+
+Tweak the build a little
+--FILES--
+M	Makefile
+--COMMIT--
+3333cccc000000000000000000000000cccc3333
+3333ccc
+2026-04-12T12:00:00+00:00
+Iris Wip <iris@example.com>
+
+WIP: experimental work
+--FILES--
+M	src/main.py

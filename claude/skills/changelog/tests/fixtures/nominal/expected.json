@@ -1,0 +1,129 @@
+{
+  "range": {
+    "from": "v1.0.0",
+    "to": "HEAD"
+  },
+  "commit_count": 6,
+  "groups": [
+    {
+      "type": "feat",
+      "title": "Features",
+      "commit_count": 1,
+      "files_touched": 2,
+      "files_added": 1,
+      "files_modified": 1,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "aaaa1111000000000000000000000000aaaa1111",
+          "short": "aaaa111",
+          "date": "2026-04-01T10:00:00+00:00",
+          "author": "Alice Engineer <alice@example.com>",
+          "parents": [],
+          "subject": "add OAuth2 login",
+          "is_merge": false
+        }
+      ]
+    },
+    {
+      "type": "fix",
+      "title": "Fixes",
+      "commit_count": 1,
+      "files_touched": 1,
+      "files_added": 0,
+      "files_modified": 1,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "bbbb2222000000000000000000000000bbbb2222",
+          "short": "bbbb222",
+          "date": "2026-04-02T11:30:00+00:00",
+          "author": "Bob Maintainer <bob@example.com>",
+          "parents": [],
+          "subject": "handle 429 retry",
+          "is_merge": false
+        }
+      ]
+    },
+    {
+      "type": "refactor",
+      "title": "Refactor",
+      "commit_count": 1,
+      "files_touched": 2,
+      "files_added": 1,
+      "files_modified": 1,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "dddd4444000000000000000000000000dddd4444",
+          "short": "dddd444",
+          "date": "2026-04-04T14:00:00+00:00",
+          "author": "Dan Refactor <dan@example.com>",
+          "parents": [],
+          "subject": "extract token store helper",
+          "is_merge": false
+        }
+      ]
+    },
+    {
+      "type": "docs",
+      "title": "Documentation",
+      "commit_count": 1,
+      "files_touched": 2,
+      "files_added": 0,
+      "files_modified": 2,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "cccc3333000000000000000000000000cccc3333",
+          "short": "cccc333",
+          "date": "2026-04-03T09:15:00+00:00",
+          "author": "Carol Docs <carol@example.com>",
+          "parents": [],
+          "subject": "update README contributing section",
+          "is_merge": false
+        }
+      ]
+    },
+    {
+      "type": "test",
+      "title": "Tests",
+      "commit_count": 1,
+      "files_touched": 1,
+      "files_added": 1,
+      "files_modified": 0,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "ffff6666000000000000000000000000ffff6666",
+          "short": "ffff666",
+          "date": "2026-04-06T16:45:00+00:00",
+          "author": "Frank Tester <frank@example.com>",
+          "parents": [],
+          "subject": "add coverage for retry logic",
+          "is_merge": false
+        }
+      ]
+    },
+    {
+      "type": "chore",
+      "title": "Chore",
+      "commit_count": 1,
+      "files_touched": 1,
+      "files_added": 0,
+      "files_modified": 1,
+      "files_deleted": 0,
+      "commits": [
+        {
+          "sha": "eeee5555000000000000000000000000eeee5555",
+          "short": "eeee555",
+          "date": "2026-04-05T08:00:00+00:00",
+          "author": "Eve DepBot <eve@example.com>",
+          "parents": [],
+          "subject": "bump deps",
+          "is_merge": false
+        }
+      ]
+    }
+  ]
+}

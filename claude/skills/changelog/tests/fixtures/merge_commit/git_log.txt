@@ -1,0 +1,28 @@
+--COMMIT--
+1234abcd000000000000000000000000abcd1234
+1234abc
+2026-04-15T10:00:00+00:00
+Kim Branch <kim@example.com>
+
+feat(api): add endpoint
+--FILES--
+A	src/api/endpoint.py
+--COMMIT--
+5678efgh00000000000000000000000056780000
+5678efg
+2026-04-15T12:00:00+00:00
+Lee Merger <lee@example.com>
+1234abcd000000000000000000000000abcd1234 9876dcba000000000000000000000000dcba9876
+
+Merge branch 'feature/foo'
+--FILES--
+M	src/api/endpoint.py
+--COMMIT--
+90abcdef000000000000000000000000abcdef90
+90abcde
+2026-04-15T15:00:00+00:00
+Mira Postfix <mira@example.com>
+
+fix: post-merge tweak
+--FILES--
+M	src/api/endpoint.py
