@@ -41,6 +41,7 @@ for _candidate in _SCHEMA_CANDIDATES:
 from models.audit_model import Audit  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
+from dontpanic_orchestrate import git_state  # noqa: E402
 from dontpanic_orchestrate.ec5_classifier import (  # noqa: E402
     apply_ec5_classifier_to_findings,
 )
@@ -467,4 +468,33 @@ def write(audit: dict[str, Any], plan_dir: Path, *, feature_id: str) -> Path:
     iteration = audit.get("iteration", 0)
     out = audit_dir / f"{audit['agent']}-{audit['agent_role']}-{feature_id}-i{iteration}.json"
     out.write_text(json.dumps(audit, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
+
+    # Plan 2026-05-01-004 F001: capture git state alongside each envelope as
+    # evidence for the F002 patch-completeness analyzer. Best-effort — failure
+    # to capture (not a git repo, git missing, etc.) logs a warning and does
+    # not affect the envelope write.
+    _write_git_state_sidecar(plan_dir, iteration=iteration, role=audit["agent_role"])
+
     return out
+
+
+def _write_git_state_sidecar(plan_dir: Path, *, iteration: int, role: str) -> None:
+    """F001 sidecar: ``<plan_dir>/evidence/git-state-{iteration}-{role}.json``.
+
+    Capture runs against ``plan_dir`` — ``git_state.capture`` walks up to the
+    repo toplevel via ``rev-parse --show-toplevel``, so any plan dir nested in
+    a git repo resolves correctly. Returns silently on any failure.
+    """
+    try:
+        state = git_state.capture(plan_dir)
+    except Exception as exc:  # defensive — capture is documented best-effort
+        _LOGGER.warning("audit_writer: git_state.capture raised %s; skipping sidecar", exc)
+        return
+
+    if state is None:
+        return
+
+    evidence_dir = plan_dir / "evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    sidecar = evidence_dir / f"git-state-{iteration}-{role}.json"
+    sidecar.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n")

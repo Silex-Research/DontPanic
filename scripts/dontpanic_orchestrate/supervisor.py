@@ -29,6 +29,7 @@ from dontpanic_orchestrate import (
     inbox,
     nested_orchestration,
     notify,
+    patch_completeness_gate,
     plan_loader,
     project_config,
     projects_registry,
@@ -762,10 +763,18 @@ def _emit_volley_terminal(
     loaded: plan_loader.LoadedPlan,
     feature_id: str,
     agents_in_panel: list[str],
+    allow_incomplete_patch_reason: str | None = None,
+    unrelated_dirty_state_note: str | None = None,
 ) -> VolleyResult:
     """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
     any volley terminal state. Returns the input result unchanged so callers
     can `return _emit_volley_terminal(...)`.
+
+    Plan 2026-05-01-004 F003: between notify and signoff_writer we run the
+    patch-completeness gate. Block-tier findings without override raise
+    ``PatchCompletenessError`` and skip signoff persistence. The pass /
+    override path threads the resulting block into ``signoff.json`` via the
+    new ``patch_completeness`` kwarg.
     """
     plan_dir = loaded.plan_dir
     inbox.append_event(
@@ -788,13 +797,36 @@ def _emit_volley_terminal(
         subtitle=feature_id,
     )
     if result.audit_paths:
+        iteration = max(0, result.rounds - 1)
+        # Plan 2026-05-01-004 F003: pre-signoff patch-completeness gate.
+        # Fires ONLY on the signed_off terminal (the supervisor would
+        # otherwise flip passes:true). Other terminals (blocked, paused,
+        # quota_exceeded) skip the gate — the volley already failed for
+        # a different reason and the gate's PatchCompletenessError would
+        # mask it. Persisted report still reflects state on disk via
+        # the F001 sidecar.
+        patch_completeness_block: dict | None = None
+        if result.final_status == "signed_off":
+            affected_paths = getattr(loaded.plan, "affected_paths", None) or []
+            patch_completeness_block = patch_completeness_gate.enforce(
+                plan_dir,
+                plan_id=loaded.plan_id,
+                iteration=iteration,
+                role="implementer",
+                audit_paths=list(result.audit_paths),
+                affected_paths=list(affected_paths) if affected_paths else None,
+                repo_root=plan_dir,
+                allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+                unrelated_dirty_state_note=unrelated_dirty_state_note,
+                dry_run=False,
+            )
         try:
             signoff_writer.write_signoff(
                 plan_id=loaded.plan_id,
                 tier=loaded.plan.tier.value
                 if hasattr(loaded.plan.tier, "value")
                 else str(loaded.plan.tier),
-                iteration=max(0, result.rounds - 1),
+                iteration=iteration,
                 agents_in_panel=agents_in_panel,
                 audit_paths=list(result.audit_paths),
                 plan_dir=plan_dir,
@@ -810,6 +842,7 @@ def _emit_volley_terminal(
                 # best-effort volley.return_to_parent trace on the child's
                 # events.jsonl. None for top-level plans.
                 orchestration=loaded.orchestration,
+                patch_completeness=patch_completeness_block,
             )
         except (
             signoff_writer.SignoffWriteError,
@@ -829,6 +862,8 @@ def dispatch_volley(
     target_project: str | None = None,
     mode: str | None = None,
     allow_depth: int | None = None,
+    allow_incomplete_patch_reason: str | None = None,
+    unrelated_dirty_state_note: str | None = None,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
 
@@ -1422,6 +1457,11 @@ def dispatch_volley(
                     loaded=loaded,
                     feature_id=feature_id,
                     agents_in_panel=[impl_name, aud_name],
+                    # Plan 2026-05-01-004 F003: thread operator overrides only on
+                    # the signed_off path. Other terminals skip the gate per
+                    # _emit_volley_terminal's final_status check.
+                    allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+                    unrelated_dirty_state_note=unrelated_dirty_state_note,
                 )
 
             if aud_status == "blocked":
