@@ -3,7 +3,7 @@ id: 2026-05-03-001-feat-global-install-project-registry
 title: Phase A — global install, project registry, doctor integration
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-03"
 description: |
   Turn Jarvis from a private orchestration repo (operated only by the
