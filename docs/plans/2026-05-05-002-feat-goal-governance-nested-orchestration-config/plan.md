@@ -3,7 +3,7 @@ id: 2026-05-05-002-feat-goal-governance-nested-orchestration-config
 title: Plan F0 — Nested orchestration configuration for goal governance
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-05"
 description: |
   **Plan F0 of the Goal Governance V1 sequence** (per
