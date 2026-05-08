@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-08-001-feat-ruff-s-remediation",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "security",
+      "phase": 1,
+      "description": "Enable Ruff S in `pyproject.toml` and add the narrowest test-surface ignore — `\"**/tests/**\" = [\"S101\"]` only — to `[tool.ruff.lint.per-file-ignores]`. The comment block above the per-file-ignore entry cites the rationale verbatim: 'assert is idiomatic test syntax (pytest discovery uses bare `assert`); S101 in test code does NOT reflect runtime security posture'. NO broader test-tree ignore is added in this slice — runtime test-helper modules under `tests/` that USE subprocess or /tmp still surface S607 / S108 etc. and route through F002. After F001 lands, run `ruff check --select S scripts/` and persist the output to `evidence/f001/post-test-policy-inventory.txt`. The residual count must drop substantially (from ~2745 dominated by S101 down to roughly the non-S101 base of ~80–100 findings); F001 acceptance does NOT require zero — it requires the test-policy slice to be clean and the residual inventoried for F002 to consume.",
+      "steps": [
+        "Read current pyproject.toml `[tool.ruff.lint]` block to confirm shape; the `S` rule is added without disturbing existing select / ignore / per-file-ignores",
+        "Edit pyproject.toml: append `\"S\"` to `[tool.ruff.lint].select` (preserving alphabetical / curated order with a comment); append `\"**/tests/**\" = [\"S101\"]` to `[tool.ruff.lint.per-file-ignores]` with a one-line rationale comment immediately above the entry",
+        "Verify ruff itself parses pyproject by running `ruff check --version` then `ruff check --select S scripts/`",
+        "Persist the residual inventory: `ruff check --select S scripts/ > evidence/f001/post-test-policy-inventory.txt 2>&1` (capture exit code separately)",
+        "Categorize the residual by rule code into a small markdown summary at `evidence/f001/residual-by-rule.md` listing rule code → count → file count → notable file paths. This becomes F002's input.",
+        "Run the full orchestrate test sweep to confirm no regression: `PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q --no-header`. Test count must be ≥ baseline (1443 passed)."
+      ],
+      "acceptance": "(1) `pyproject.toml` `[tool.ruff.lint].select` contains `\"S\"` (verified by grep). (2) `pyproject.toml` `[tool.ruff.lint.per-file-ignores]` contains exactly the entry `\"**/tests/**\" = [\"B011\", \"S101\"]` with a comment immediately above citing the rationale (B011 was pre-existing). (3) NO additional per-file-ignore added for `scripts/`, `dontpanic_orchestrate/`, or any runtime tree — the slice is test-surface only. (4) `evidence/f001/post-test-policy-inventory.txt` exists and contains the post-F001 ruff output. (5) `evidence/f001/residual-by-rule.md` exists and groups residual findings by rule code with counts. (6) Residual count is ≤ 200 and S101 count INSIDE `**/tests/**` is 0 (D006 — non-test S101 findings are expected since assert in non-test code is the rule's purpose; F002's walk handles them). (7) Full orchestrate test sweep stays green (≥ 1443 passed, 7 skipped). (8) NO behavioral code change in this feature — the only edits are in `pyproject.toml` and the new evidence files.",
+      "passes": true,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "security",
+      "phase": 2,
+      "description": "Walk the residual non-test S findings rule-class-at-a-time, in the fixed order: S607 → S108 → S603 → S310 → S110 → S104 → S101 (S101 added per D006; non-test asserts get per-finding disposition). For each rule class, produce `evidence/f002/<rule>-disposition.md` recording the before-count, the per-finding disposition (fix / noqa-with-rationale / behavioral-change), and the after-count. Disposition discipline: (a) **fix** when the change improves correctness or security without changing observable behavior — examples: replacing `subprocess.run([\"git\", ...])` with `subprocess.run([\"/usr/bin/git\", ...])` is NOT a fix because PATH-relative invocation is the convention here; replacing `tempfile.mktemp()` with `tempfile.NamedTemporaryFile()` IS a fix; (b) **noqa-with-rationale** when the pattern is intentional and the rationale references a real constraint — every `# noqa: SXXX` in scripts/ outside `**/tests/**` must end with `  # <one-line reason>` on the same line; (c) **behavioral change** is allowed only when a finding directly cites a real defect; in that case the change is recorded in the per-rule disposition note with a one-line justification. NEVER `# noqa: S` (blanket). NEVER add a new per-file ignore for runtime code in this plan. After all six rule classes are walked, `ruff check --select S scripts/` exits 0 and all existing orchestrate tests stay green.",
+      "steps": [
+        "S607 (start_process_with_partial_path): walk each finding. Most are `subprocess.run([\"git\", ...])` style — the convention for this repo is PATH-relative invocation (D001 of this plan). Default disposition for git/python/ruff/pytest invocations: `# noqa: S607  # PATH-relative tool invocation is the project convention; absolute path would couple to host layout`. Where the call site supplies user input as the executable name (none expected, but check), that's a fix.",
+        "S108 (insecure /tmp usage): walk each finding. Tests should use pytest's `tmp_path` fixture — but those should already live under `**/tests/**` and be ignored. Non-test /tmp usage is rare and likely warrants a fix (use `tempfile.mkdtemp()` or an explicit operator-supplied dir). Per-finding disposition recorded.",
+        "S603 (subprocess-without-shell-equals-true / partial-path-shell-injection-class): mostly the same call sites as S607. Disposition: explicit `shell=False` on subprocess.run is the project default; where the finding reflects a known-trusted argv list, noqa with rationale is acceptable; where a call passes a shell string, FIX it.",
+        "S310 (urlopen with non-https/file/data scheme): there are 2 findings. One is already noqa'd at `runtime_evidence/backend.py:210` (operator-supplied URL). The second needs review.",
+        "S110 (try-except-pass): one site. Either fix by adding a logging/comment that names the swallowed exception class, or noqa with rationale tying to a documented best-effort contract.",
+        "S104 (hardcoded bind to all interfaces, 0.0.0.0): one site. If this is a Firebase emulator or test harness binding, the rationale is bounded — noqa. If production code, FIX.",
+        "S101 (assert in non-test code, residual 5 sites): walk each site (cli.py:960, ec5_classifier.py:106, execution_environment.py:85, smoke_test_storage.py:50/51). Default disposition: replace `assert <cond>` with `if not <cond>: raise <Specific>Error(<msg>)` when the invariant is real and stripping under `python -O` would silently break behavior. Use `# noqa: S101  # cheap defensive check for <doc'd contract>` only when the assert is genuinely defensive coding for a contract documented elsewhere.",
+        "After the walk, run `ruff check --select S scripts/` — must exit 0. Persist final inventory at `evidence/f002/final-inventory.txt`.",
+        "Run full orchestrate test sweep: `PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q --no-header`. Must stay ≥ 1443 passed.",
+        "Append D-entries: per-rule-class disposition summary referencing the per-rule evidence files; one D-entry on the parent security-baseline plan recording resolution-by-reference."
+      ],
+      "acceptance": "(1) `ruff check --select S scripts/` exits 0 after F002. (2) `evidence/f002/<rule>-disposition.md` exists for each of the 7 rule classes (S607, S108, S603, S310, S110, S104, S101 per D006) and records before-count, per-finding disposition, after-count. (3) Every `# noqa: SXXX` added by this plan in `scripts/` outside `**/tests/**` carries `# <rationale>` on the same line; auditor verifies via `grep -nR 'noqa: S' scripts/ | grep -v '**/tests/**' | grep -v '#.*'` returning empty (no noqa without rationale). (4) NO blanket `# noqa: S` exists in the diff (search must find zero matches for `noqa: S$` or `noqa: S[^0-9]`). (5) NO new per-file-ignore entry added to `pyproject.toml` in this feature beyond F001's tests-S101 entry. (6) `evidence/f002/final-inventory.txt` is empty (zero findings). (7) Orchestrate test sweep stays green (≥ 1443 passed). (8) Behavioral changes (where any) are documented per-finding in the rule's disposition file with a one-line justification. (9) Decisions.jsonl D-entry on this plan summarizes total fixes vs noqa counts. (10) Decisions.jsonl D-entry appended to the parent `2026-05-01-003-feat-security-baseline` plan records the stop-rule resolution-by-reference, citing this plan's signoff path.",
+      "passes": true,
+      "depends_on": ["F001"]
+    }
+  ]
+}

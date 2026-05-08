@@ -105,6 +105,7 @@ select = [
   "I",   # import sorting
   "UP",  # pyupgrade — modernize syntax
   "B",   # flake8-bugbear — likely-bug patterns
+  "S",   # flake8-bandit (security) — baseline lint, NOT a SAST substitute. Plan 2026-05-08-001.
 ]
 ignore = [
   "E501",  # line length — relax; format handles wrapping
@@ -114,7 +115,18 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Tests are allowed to use unused fixture-style locals + asserts that
 # would otherwise read as bugbear false positives.
-"**/tests/**" = ["B011"]
+# S-rules ignored under tests/ are EXACTLY the four below. Each is
+# a test-idiom pattern, not a runtime security posture concern:
+#   S101 — `assert` is idiomatic test syntax (pytest uses bare assert).
+#   S607 — `subprocess.run(["git", "init", ...])` for real-repo fixtures.
+#   S108 — hardcoded /tmp paths in test setup (when not using tmp_path).
+#   S603 — subprocess invocations testing shape with shell=False default.
+# Plan 2026-05-08-001 D002 + D007 records this scoping. Adding any rule to
+# this list requires updating tests/test_pyproject_security_carve_out.py
+# which asserts the tuple matches exactly. S104 / S110 / S310 are NOT
+# included because their test-side count is ≤1 — the carve-out is for
+# repeated test-fixture patterns, not blanket exemption.
+"**/tests/**" = ["B011", "S101", "S603", "S607", "S108"]
 
 [tool.ruff.format]
 # Default style; explicit so future updates don't surprise us.
