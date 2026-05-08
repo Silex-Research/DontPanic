@@ -453,7 +453,7 @@ def _ios_simctl_check() -> doctor_registry.DoctorResult:
         )
     try:
         result = subprocess.run(
-            ["xcrun", "simctl", "help"],
+            ["xcrun", "simctl", "help"],  # noqa: S607  # PATH-relative xcrun invocation per D001
             check=False,
             capture_output=True,
             timeout=5,

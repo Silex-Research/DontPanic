@@ -652,7 +652,7 @@ def _android_adb_check() -> doctor_registry.DoctorResult:
         )
     try:
         result = subprocess.run(
-            ["adb", "devices"],
+            ["adb", "devices"],  # noqa: S607  # PATH-relative adb invocation per D001
             check=False,
             capture_output=True,
             timeout=5,

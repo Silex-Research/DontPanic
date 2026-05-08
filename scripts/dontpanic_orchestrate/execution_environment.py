@@ -82,7 +82,10 @@ class ExecutionEnvironment:
     def overlay(self) -> dict[str, str]:
         """Return only Jarvis-owned environment keys for this execution."""
         self._require_active()
-        assert self.root is not None
+        # `_require_active()` guarantees self.root is set; the explicit
+        # narrowing keeps mypy happy without relying on assert (S101 / D006).
+        if self.root is None:  # pragma: no cover — invariant of _require_active
+            raise RuntimeError("ExecutionEnvironment.root is None after _require_active()")
 
         env = {key: str(self.root.joinpath(*parts)) for key, parts in ISOLATED_ENV_PATHS.items()}
         env.update(

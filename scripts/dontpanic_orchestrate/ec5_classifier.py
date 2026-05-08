@@ -100,10 +100,16 @@ def classify_ec5_severity(envelope: dict[str, Any]) -> EC5Verdict:
     rendered = render_prelude({**tc, "repo": repo})
     expected = parse_prelude_block(rendered)
     # render_prelude is the canonical generator — its output MUST round-trip
-    # through parse_prelude_block. If this assert ever fires it means the two
-    # helpers have drifted apart and F001's own tests will catch it; we keep
-    # the guard rather than silently returning a wrong verdict.
-    assert expected is not None, "render_prelude output failed parse_prelude_block round-trip"
+    # through parse_prelude_block. If this raises it means the two helpers
+    # have drifted apart and F001's own tests will catch it; we keep the
+    # guard rather than silently returning a wrong verdict. Replaced from
+    # `assert` (strips under `python -O`) per S101 / D006 of plan
+    # 2026-05-08-001.
+    if expected is None:
+        raise RuntimeError(
+            "render_prelude output failed parse_prelude_block round-trip — "
+            "the two helpers have drifted; check F001 prelude tests"
+        )
 
     if parsed != expected:
         return "i1"

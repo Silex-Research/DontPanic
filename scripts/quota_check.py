@@ -426,7 +426,7 @@ def _ollama_models_loaded() -> list[str]:
         return []
     try:
         out = subprocess.run(
-            ["ollama", "ps"], capture_output=True, text=True, timeout=5, check=False
+            ["ollama", "ps"], capture_output=True, text=True, timeout=5, check=False  # noqa: S607  # PATH-relative claude invocation per D001
         )
     except (subprocess.SubprocessError, OSError):
         return []

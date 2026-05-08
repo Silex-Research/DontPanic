@@ -563,7 +563,7 @@ class TestLocalOnlyInvariant:
     def test_module_does_not_bind_non_loopback(self):
         """No call to bind() / listen() / 0.0.0.0 in the module source."""
         src = Path(mcp_server.__file__).read_text()
-        for forbidden in ("0.0.0.0", ".bind(", ".listen(", 'host="0.0.0.0"'):
+        for forbidden in ("0.0.0.0", ".bind(", ".listen(", 'host="0.0.0.0"'):  # noqa: S104  # test asserts mcp_server.py has no 0.0.0.0; the literal here is the assertion needle
             assert forbidden not in src, (
                 f"mcp_server.py contains {forbidden!r} — D003 forbids "
                 "binding a non-stdio transport in Phase B."

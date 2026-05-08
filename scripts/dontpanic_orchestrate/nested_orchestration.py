@@ -948,7 +948,7 @@ def _git_modified_files(plan_dir: Path) -> list[str]:
 
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
+            ["git", "diff", "--name-only", "HEAD"],  # noqa: S607  # PATH-relative git invocation per D001
             cwd=repo_root,
             capture_output=True,
             text=True,

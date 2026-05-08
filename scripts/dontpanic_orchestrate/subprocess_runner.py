@@ -82,7 +82,7 @@ def _snapshot_worktree(cwd: Path | None) -> str | None:
         return None
     try:
         proc = subprocess.run(
-            ["git", "status", "--porcelain=v1"],
+            ["git", "status", "--porcelain=v1"],  # noqa: S607  # PATH-relative tool invocation per D001
             cwd=str(cwd),
             capture_output=True,
             text=True,
@@ -137,7 +137,7 @@ def run_subprocess(
 
     before = _snapshot_worktree(cwd)
     try:
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # noqa: S603  # trusted argv + shell=False default per D001
             list(cmd),
             stdin=subprocess.PIPE if stdin_bytes is not None else None,
             stdout=subprocess.PIPE,
