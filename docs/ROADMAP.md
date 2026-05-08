@@ -57,6 +57,16 @@ ambiguous requests into valid plans (Phase C). After those, DontPanic
 delivers on the ecosystem-position framing in
 [`ECOSYSTEM.md`](./ECOSYSTEM.md).
 
+Planned external adapter work should credit the source ecosystem rather
+than present it as native DontPanic capability. In particular, the
+Printing Press adapter direction builds on
+[CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) and
+the [Printing Press Library](https://github.com/mvanhorn/printing-press-library),
+which supply the agent-native CLI/MCP pattern DontPanic is evaluating for
+SaaS evidence sources. DontPanic's boundary remains the trust layer:
+allowlists, provenance, read-only policy, redaction, normalized evidence,
+and signoff.
+
 ## Phase A — Global Install + Project Registry  [SHIPPED]
 
 **Status:** **shipped 2026-05-03** in plan
@@ -183,6 +193,11 @@ until real usage informs it.
 - Human approval before any implementation dispatch.
 - The MCP `dontpanic.intake` tool from Phase B becomes the canonical
   caller surface for OpenClaw / Claude Code / Codex CLI agents.
+- **External SaaS evidence adapters (planned, credited).** Evaluate
+  Printing Press-generated or library-provided CLIs/MCP servers as
+  read-only intake/sufficiency inputs for services such as Linear, Sentry,
+  Slack, and Notion. Attribute this adapter pattern to CLI Printing Press;
+  DontPanic owns only the adapter governance and evidence normalization.
 
 **Sufficiency criteria (what counts as "ready to plan"):**
 

@@ -1,0 +1,66 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator-approved v0 design captured in project_skill_applicability_v0.md memory and this plan's D001-D007 decisions. The feature is an advisory lock-time sidecar, not a central router or gate.",
+  "user_journeys": [
+    {
+      "name": "plan-author-declares-surfaces",
+      "description": "A plan author marks a plan with the surfaces it touches using the canonical optional surfaces field. Existing plans without the field still validate and load with an empty surface list.",
+      "surfaces": ["infra", "docs"],
+      "states": ["plan_without_surfaces", "plan_with_valid_surfaces", "plan_with_invalid_surface"],
+      "acceptance_signals": [
+        "Valid surfaces reach LoadedPlan as a list",
+        "Missing surfaces remain backward-compatible",
+        "Invalid surface values fail schema validation clearly"
+      ]
+    },
+    {
+      "name": "skill-author-self-declares-applicability",
+      "description": "A skill author adds applies_to frontmatter to SKILL.md declaring applicable surfaces and goal types. The skill may also declare inert external_cli metadata for an externally-backed adapter. The matcher validates the block, skips missing or malformed declarations, and does not require a central router update.",
+      "surfaces": ["docs", "infra"],
+      "states": ["skill_without_applies_to", "skill_with_valid_applies_to", "skill_with_malformed_applies_to"],
+      "acceptance_signals": [
+        "Valid applies_to declarations can match a plan",
+        "Valid external_cli metadata is copied into a match as provenance without execution",
+        "Missing declarations produce a non-blocking skip",
+        "Malformed declarations produce a non-blocking parse skip"
+      ]
+    },
+    {
+      "name": "operator-reviews-advisory-sidecar",
+      "description": "When a plan locks, DontPanic writes evidence/applicable-skills.json with matched skills and skip rationale. The operator sees a one-line summary and can decide manually whether any matched skill should be invoked.",
+      "surfaces": ["infra"],
+      "states": ["lock_success", "sidecar_written", "matcher_error_best_effort"],
+      "acceptance_signals": [
+        "Lock never fails solely because the matcher has no matches",
+        "Sidecar has stable JSON round-trip shape",
+        "Matcher failures are best-effort and do not block lock"
+      ]
+    },
+    {
+      "name": "ux-plan-surfaces-design-review-signal",
+      "description": "A UI or product-journey plan that declares ux or web surfaces receives at least one relevant UX-capable skill match from the demonstrative backfill, making the original design-review gap visible at lock time.",
+      "surfaces": ["ux", "web"],
+      "states": ["ux_plan_locked", "ux_skill_matched", "operator_decides"],
+      "acceptance_signals": [
+        "At least one backfilled skill declares ux applicability",
+        "A surfaces=[ux] fixture produces a real match",
+        "No hard gate requires the operator to invoke the matched skill"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "Validator output showing the plan schema accepts valid surfaces, rejects invalid surfaces, and remains backward-compatible when surfaces is missing",
+    "Unit test output for match correctness, missing applies_to skip, malformed applies_to skip, empty-surfaces behavior, and JSON round-trip",
+    "Unit test output showing external_cli metadata is validated and copied into the report without invoking the command",
+    "Manual or automated lock-time proof that evidence/applicable-skills.json is written after a successful lock",
+    "Fixture or backfilled-plan proof that a ux-surface plan produces at least one UX-capable skill match"
+  ],
+  "non_goals": [
+    "No hard gate based on matched skills",
+    "No scope-change re-probe during an active volley",
+    "No automatic plan-surface classifier",
+    "No exhaustive backfill across every plan or every skill",
+    "No Printing Press or other external CLI install, invocation, allowlisting, binary hashing, or live provenance validation"
+  ],
+  "completion_test": "A plan with declared surfaces can lock successfully and produce an advisory applicable-skills sidecar that highlights relevant self-declared skills, including a UX-capable match for a UX/product-journey plan and inert external CLI provenance when declared, while preserving backward compatibility and never blocking lock."
+}
