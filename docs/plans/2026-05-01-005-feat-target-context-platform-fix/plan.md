@@ -3,7 +3,7 @@ id: 2026-05-01-005-feat-target-context-platform-fix
 title: Target-context platform fix — EC5 as a formatting/signaling concern, not agent-behavior retraining
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-01"
 description: |
   Fix EC5 (target-context prelude requirement) at the platform layer. Today
