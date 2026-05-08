@@ -3,7 +3,7 @@ id: 2026-04-29-002-feat-agent-permission-wiring
 title: F005b — non-interactive permission policy for orchestrator-dispatched agents
 type: feat
 tier: local
-status: draft
+status: completed
 date: "2026-04-29"
 description: |
   Add non-interactive permission policy to Claude and Codex CLI executors so the supervisor's subprocess dispatches don't deadlock on permission prompts. Currently `subprocess.run(['claude', '-p', ...])` and `subprocess.run(['codex', 'exec', '--json', ...])` pass no permission flags; with no TTY for an operator to type yes/no, any tool-use prompt blocks until the 600s timeout. Role-aware defaults: implementer can edit in cwd; auditor is read/check-only with prompts denied (not prompted) on out-of-allowlist requests. F023's resolved registry-repo cwd remains the containment boundary; the user's existing PreToolUse hooks (~/.claude/settings.json) are opportunistic defense-in-depth where present, not an OSS-boundary guarantee.
