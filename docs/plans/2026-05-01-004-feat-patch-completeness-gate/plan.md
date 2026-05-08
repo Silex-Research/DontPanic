@@ -3,7 +3,7 @@ id: 2026-05-01-004-feat-patch-completeness-gate
 title: Patch-completeness gate — block signoff when committed/staged surface is incomplete
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-01"
 description: |
   Close the "works locally but missing from commit" failure class by adding a
@@ -43,6 +43,9 @@ loop_caps:
   wall_clock_hours: 4
   hard_stop: false
 privacy_tier: internal
+surfaces:
+  - infra
+  - security
 protected_paths:
   - claude/PORTABILITY.md
   - claude/scripts/sync-harness.sh

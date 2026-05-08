@@ -21,6 +21,9 @@ loop_caps:
   wall_clock_hours: 2
   hard_stop: false
 privacy_tier: internal
+surfaces:
+  - ux
+  - docs
 protected_paths:
   - claude/PORTABILITY.md
   - claude/scripts/sync-harness.sh

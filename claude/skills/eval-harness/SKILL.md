@@ -3,6 +3,9 @@ name: eval-harness
 description: Define and run evaluation criteria against code changes. Supports code-based (deterministic), model-based (LLM-as-judge), and human (flag for review) graders. Pairs with autoresearch for metric-driven optimization.
 disable-model-invocation: true
 argument-hint: <eval_name> [--grader code|model|human] [--threshold <number>] [--pass-at-k <k>]
+applies_to:
+  surfaces: [ml, ux]
+  goal_types: [new_feature, parity]
 ---
 
 # Eval Harness — Define and Run Evaluations

@@ -5,6 +5,9 @@ trigger_keywords: [cost projection, spend forecast, cost model, project costs]
 file_patterns: []
 applicable_agents: [all]
 phase: on-demand
+applies_to:
+  surfaces: [infra]
+  goal_types: [infra, new_feature, migration]
 ---
 
 # cost-model

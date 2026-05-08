@@ -21,7 +21,29 @@
         "Run full orchestrate test sweep — must stay ≥ 1445 passed (post-2026-05-08-001 baseline)."
       ],
       "acceptance": "(1) `claude/shared/schemas/v1.0/plan.schema.json` contains `surfaces` property with 10-value enum, optional. (2) agent-conventions repo at v1.5.0; subtree pulled into DontPanic. (3) `claude/shared/schemas/v1.0/models/plan_model.py` Pydantic model includes `surfaces: list[str]` (regenerated, not hand-edited). (4) `dontpanic_orchestrate.plan_loader.LoadedPlan` exposes `surfaces` as a list (default empty). (5) Three existing plans backfilled with `surfaces:` frontmatter; each plan still validates. (6) `claude/skills/SKILL_APPLIES_TO.md` exists with documented schema + 5 surface-coverage examples, including optional inert `external_cli` metadata and explicit no-execution language. (7) Five existing skills backfilled with `applies_to:` frontmatter covering distinct surfaces, and at least one skill must declare `ux` so a `surfaces: [\"ux\"]` plan can produce a real match. (8) `test_plan_surfaces_field.py` covers valid/missing/invalid cases + asserts schema version. (9) Full orchestrate test sweep ≥ 1445 passed. (10) NO behavior change beyond schema acceptance + Pydantic regeneration — no matcher logic in F001.",
-      "passes": false,
+      "passes": true,
+      "evidence": {
+        "schema_v1_5_0": "claude/shared/schemas/v1.0/plan.schema.json — surfaces property with 10-value enum, additionalProperties:false at root. agent-conventions VERSION=1.5.0 (commit df559fc, tag v1.5.0). Sync into DontPanic via D009 side-channel (subtree-pull deferred per dirty working tree).",
+        "pydantic_model": "claude/shared/schemas/v1.0/models/plan_model.py — Surface enum with 10 members + Plan.surfaces: list[Surface] | None field. Regenerated (datamodel-codegen).",
+        "loaded_plan": "scripts/dontpanic_orchestrate/plan_loader.py — LoadedPlan.surfaces: list[str] = field(default_factory=list). Populated in load() from plan.surfaces enum values; mirrors target_env / target_project surfacing pattern.",
+        "plan_backfills": [
+          "docs/plans/2026-05-01-004-feat-patch-completeness-gate/plan.md surfaces: [infra, security]",
+          "docs/plans/2026-05-01-005-feat-target-context-platform-fix/plan.md surfaces: [infra]",
+          "docs/plans/2026-05-01-001-feat-onboarding-ux/plan.md surfaces: [ux, docs]"
+        ],
+        "applies_to_doc": "claude/skills/SKILL_APPLIES_TO.md — documents shape, 5 surface examples, optional inert external_cli metadata, and v0 no-execution policy per D007.",
+        "skill_backfills": [
+          "claude/skills/pr-reviewer/SKILL.md applies_to.surfaces=[backend, infra]",
+          "claude/skills/eval-harness/SKILL.md applies_to.surfaces=[ml, ux]",
+          "claude/skills/security-review/SKILL.md applies_to.surfaces=[security, backend, infra]",
+          "claude/skills/cost-model/SKILL.md applies_to.surfaces=[infra]",
+          "claude/skills/agent-browser/SKILL.md applies_to.surfaces=[web, ux]"
+        ],
+        "ux_coverage": "eval-harness and agent-browser both declare ux per D007 motivating gap.",
+        "test_module": "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py — 4 cases: valid surfaces validates + reaches LoadedPlan, missing surfaces validates with [], invalid enum value raises ValidationError, agent-conventions VERSION=1.5.0 assert.",
+        "sweep": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ → 1449 passed, 7 skipped (baseline 1445/7 pre-F001; +4 from new test_plan_surfaces_field.py).",
+        "behavior_change_scope": "F001 ships zero behavior change beyond schema acceptance + Pydantic regen + LoadedPlan.surfaces surfacing. F002 owns matcher logic and lock-time wiring."
+      },
       "depends_on": []
     },
     {

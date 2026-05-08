@@ -2,6 +2,9 @@
 name: pr-reviewer
 description: Automated GitHub PR code review with diff analysis, lint integration, and structured reports. Use when reviewing pull requests, checking for security issues, error handling gaps, test coverage, or code style problems. Supports Go, Python, and JavaScript/TypeScript. Requires `gh` CLI authenticated with repo access.
 disable-model-invocation: true
+applies_to:
+  surfaces: [backend, infra]
+  goal_types: [refactor, new_feature, fix]
 ---
 
 # PR Reviewer
