@@ -23,9 +23,35 @@
         "Surface F001 evidence to operator for pre_merge review BEFORE F002 starts (D009 \u2014 two-commit boundary)."
       ],
       "acceptance": "(1) **`objective_contract.schema.json` exists** at `schemas/v1.0/` with `additionalProperties: false`, required fields = `{goal_type, source_of_truth, user_journeys, completion_test}`, optional fields = `{required_evidence, non_goals, cluster_overrides}`. Greppable. (2) **`objective_contract_model.py` exists** at `schemas/v1.0/models/`, generated via datamodel-codegen, importable, validates the fixture cases. (3) **`plan.schema.json` extended** with optional `goal_type` enum and `links.objective_contract` path reference. Greppable. (4) **`plan_model.py` regenerated** with `Plan.goal_type: GoalType | None = None` and `Links.objective_contract: str | None = None`. Existing fields unchanged. (5) **`validate.py` rule added** \u2014 gated on `goal_type \u2208 {parity, new_feature, migration, incident}`. (6) **All 7 fixture cases pass** the new test (`scripts/test_objective_contract.py` exits 0 for cases 1\u20135, 7; exits with the expected structured error for case 6). (7) **Backward compat verified** \u2014 existing fixtures (Plan E's `_fixture_signoff`, `_fixture_audit_envelope`, `_fixture_aux_gate_state`, `_fixture_unknown_audit`) still validate green; no regressions in Plan E v1.3.1 dispatch tests. (8) **VERSION bumped** to `1.4.0`. (9) **Zero diffs in unrelated schemas/models** \u2014 `audit.schema.json`, `signoff.schema.json`, `features.schema.json`, `environments.schema.json` byte-identical to v1.3.1. (10) **Tag `v1.4.0` exists** at agent-conventions HEAD. Local-only (matches Plan E pattern).",
-      "passes": false,
+      "passes": true,
+      "verified_at": "2026-05-05T19:52:18Z",
+      "verified_by": [
+        "claude",
+        "operator"
+      ],
       "depends_on": [],
-      "evidence_refs": []
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "d5bab1b",
+          "note": "agent-conventions v1.4.0 release commit. Adds objective_contract.schema.json, ObjectiveContract model, Plan.goal_type and links.objective_contract schema/model fields, validator applicability rule, VERSION bump, and objective-contract dispatch fixtures."
+        },
+        {
+          "type": "commit",
+          "uri": "v1.4.0",
+          "note": "Local agent-conventions tag pointing at d5bab1b. Confirms the F001 release boundary consumed by DontPanic F002 subtree pull."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f002-closeout-memo.md",
+          "note": "DontPanic import memo records F001 upstream boundary: agent-conventions d5bab1b / tag v1.4.0, subtree byte-equality after pull, and backward-compat validation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/plan-f1-closeout-memo.md",
+          "note": "Plan-level F1 close-out memo lists F001 as complete with commit d5bab1b, tag v1.4.0, 7 new objective-contract fixtures plus 4 Plan E regression tests green, and all 5 features passes:true."
+        }
+      ]
     },
     {
       "id": "F002",
