@@ -27,16 +27,66 @@
         "operator"
       ],
       "evidence_refs": [
-        "audit/claude-implementer-F001-i0.json",
-        "audit/codex-auditor-F001-i0.json",
-        "audit/claude-implementer-F001-i1.json",
-        "audit/codex-auditor-F001-i1.json",
-        "audit/signoff-2026-05-04-002-fix-supervisor-lifecycle-staged-gates.json",
-        "audit/transcript.md",
-        "evidence/f001-closeout-memo.md",
-        "scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py",
-        "scripts/dontpanic_orchestrate/tests/test_cli_resume.py",
-        "scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py"
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i0.json",
+          "captured_by": "claude",
+          "note": "Volley iteration 0 implementer envelope preserved verbatim. The run timed out before clean completion, which later fed the D010 direct-review caveat."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "captured_by": "codex",
+          "note": "Volley iteration 0 auditor envelope. Findings identified the initial unrelated-plan churn and runtime-ordering/test coverage gaps."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "captured_by": "claude",
+          "note": "Volley iteration 1 implementer envelope. Work landed on disk but the wrapper timeout truncated a clean success path, matching D010's accepted direct-review caveat."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "captured_by": "codex",
+          "note": "Volley iteration 1 auditor envelope. Remaining findings were remediated during the operator close-out slice before F001 was flipped passes:true."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/signoff-2026-05-04-002-fix-supervisor-lifecycle-staged-gates.json",
+          "captured_by": "operator",
+          "note": "Historical non-success signoff envelope from the timeout-truncated volley. It remains preserved as evidence of the old runtime behavior, not as the final implementation verdict."
+        },
+        {
+          "type": "log",
+          "uri": "audit/transcript.md",
+          "captured_by": "operator",
+          "note": "Volley transcript preserving gate/runtime behavior and the stopped_no_progress terminal path."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/f001-closeout-memo.md",
+          "captured_by": "operator",
+          "note": "F001 close-out memo. Documents the timeout-truncated volley, direct-review acceptance, behavior landed, verification sweep, and remaining Plan C / Plan D follow-ups."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py",
+          "captured_by": "claude",
+          "note": "Dedicated lifecycle-staged gate tests covering pre_impl ordering, pre_merge success-only behavior, legacy/new gate-state compatibility, idempotency, and breaker non-interaction."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_cli_resume.py",
+          "captured_by": "claude",
+          "note": "Resume CLI regression coverage updated for pending-stage semantics: bare resume remains exit 2, --gate clears only the canonical pending stage, and --all clears the current stage."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_f008_engagement_surface.py",
+          "captured_by": "claude",
+          "note": "Existing engagement-surface tests updated where synthetic helpers previously used resume_all as an upfront pre-clear shortcut."
+        }
       ]
     }
   ]
