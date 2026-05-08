@@ -3,7 +3,7 @@ id: 2026-05-02-002-fix-audit-envelope-filename
 title: Audit envelope filename includes feature_id (forward-only)
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-02"
 description: |
   Include `feature_id` in the audit envelope filename so multiple features
