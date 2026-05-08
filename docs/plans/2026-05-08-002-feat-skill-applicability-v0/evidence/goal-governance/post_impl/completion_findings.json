@@ -1,0 +1,14 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-08T20:00:20.329129+00:00",
+  "plan_id": "2026-05-08-002-feat-skill-applicability-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/harness/operator-reviews-advisory-sidecar/applicable-skills-lock-time-sidecar.log",
+    "evidence/goal-governance/post_impl/harness/plan-author-declares-surfaces/validator-surfaces-valid-missing-invalid.log",
+    "evidence/goal-governance/post_impl/harness/skill-author-self-declares-applicability/external-cli-provenance-no-invoke.log",
+    "evidence/goal-governance/post_impl/harness/skill-author-self-declares-applicability/matcher-correctness-skip-malformed-empty-json-roundtrip.log",
+    "evidence/goal-governance/post_impl/harness/ux-plan-surfaces-design-review-signal/ux-surface-plan-match-proof.log"
+  ],
+  "findings": []
+}

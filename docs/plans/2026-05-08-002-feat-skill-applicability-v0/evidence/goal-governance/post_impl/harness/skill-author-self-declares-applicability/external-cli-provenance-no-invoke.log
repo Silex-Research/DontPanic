@@ -1,0 +1,20 @@
+Plan: 2026-05-08-002-feat-skill-applicability-v0
+Journey: skill-author-self-declares-applicability
+Evidence marker: external-cli-provenance-no-invoke.log
+
+F002 supports inert external_cli metadata in applies_to frontmatter.
+When a matching skill declares external_cli, the matcher copies
+provider/name/command/version_pin into the Match and sets
+provenance='external'.
+
+Verification was captured by TestExternalProvenance in
+scripts/dontpanic_orchestrate/tests/test_skill_applicability.py:
+
+- valid external_cli metadata passes through to the report.
+- external provenance is recorded without install, invoke, allowlist, hash,
+  score, or live CLI validation.
+- TestPurity verifies skill_applicability.py contains no subprocess,
+  logging.getLogger, or print() execution surface.
+
+This preserves the Printing Press adapter hook while keeping v0 advisory
+and non-executing.

@@ -3,7 +3,7 @@ id: 2026-05-08-002-feat-skill-applicability-v0
 title: Skill-applicability evidence sidecar — v0 (advisory, lock-time only)
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-08"
 description: |
   Decentralized v0 of the skill-applicability layer. Two surgical features:

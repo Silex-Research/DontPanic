@@ -1,0 +1,20 @@
+Plan: 2026-05-08-002-feat-skill-applicability-v0
+Journey: ux-plan-surfaces-design-review-signal
+Evidence marker: ux-surface-plan-match-proof.log
+
+F001 required the demonstrative skill backfill to exercise the motivating
+UX/design/product-journey gap.
+
+Backfilled skills with ux applicability:
+
+- claude/skills/eval-harness/SKILL.md declares surfaces including ux.
+- claude/skills/agent-browser/SKILL.md declares surfaces including web and ux.
+
+Backfilled plan surface:
+
+- docs/plans/2026-05-01-001-feat-onboarding-ux/plan.md declares
+  surfaces: [ux, docs].
+
+F002 test coverage includes a surfaces=['ux'] plan matching a skill whose
+applies_to.surfaces includes ux. This proves a UX-surface plan can produce
+a UX-capable advisory skill match without promoting v0 to a gate.
