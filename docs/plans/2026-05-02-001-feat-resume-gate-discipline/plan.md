@@ -3,7 +3,7 @@ id: 2026-05-02-001-feat-resume-gate-discipline
 title: Resume CLI gate discipline — require explicit --gate or --all
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-02"
 description: |
   Tighten the `jarvis resume` CLI so it cannot silently bypass gates the
