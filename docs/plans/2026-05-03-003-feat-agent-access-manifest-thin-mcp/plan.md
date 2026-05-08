@@ -3,7 +3,7 @@ id: 2026-05-03-003-feat-agent-access-manifest-thin-mcp
 title: Phase B — Agent Access Manifest + Thin MCP Surface
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-03"
 description: |
   Phase B of the OpenClaw-repositioned roadmap (see docs/ROADMAP.md and
