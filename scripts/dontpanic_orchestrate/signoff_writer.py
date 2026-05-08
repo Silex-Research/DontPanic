@@ -136,6 +136,7 @@ def build_signoff_dict(
     plan_dir: Path,
     volley_status: str,
     signoff_reason: str | None = None,
+    patch_completeness: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not audit_paths:
         raise SignoffWriteError("cannot write signoff: no audit paths")
@@ -163,10 +164,17 @@ def build_signoff_dict(
         payload["quota_consumed_total"] = quota
 
     # Strict validation — surfaces drift between code + schema early.
+    # Plan 2026-05-01-004 F003: ``patch_completeness`` is recorded in
+    # signoff.json as a sibling key, but the canonical agent-conventions
+    # Signoff schema is NOT bumped here (D004 defers v1.4.0). We validate
+    # the payload WITHOUT the extra block, then attach it post-validation.
+    # This satisfies acceptance #11's "validator-level acceptance only".
     try:
         Signoff.model_validate(payload)
     except ValidationError as exc:
         raise SignoffWriteError(f"signoff payload failed validation: {exc}") from exc
+    if patch_completeness is not None:
+        payload["patch_completeness"] = patch_completeness
     return payload
 
 
@@ -194,6 +202,7 @@ def write_signoff(
     commit_policy: Any = None,
     modified_files: list[str] | None = None,
     orchestration: Any = None,
+    patch_completeness: dict[str, Any] | None = None,
 ) -> Path:
     """Build, validate, and write the signoff.json closeout. Returns the path.
 
@@ -218,6 +227,7 @@ def write_signoff(
         plan_dir=plan_dir,
         volley_status=volley_status,
         signoff_reason=signoff_reason,
+        patch_completeness=patch_completeness,
     )
 
     compliance: dict[str, Any] | None = None
