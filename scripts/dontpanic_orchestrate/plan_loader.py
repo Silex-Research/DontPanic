@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +82,11 @@ class LoadedPlan:
     schemas_dir: Path
     target_env: str = "dev"
     target_project: str | None = None
+    # Plan 2026-05-08-002 F001: surfaces this plan declares it touches.
+    # Always a list (empty when plan omits the optional `surfaces:` field);
+    # consumers iterate without None-checking. Values are the canonical
+    # 10-value enum from agent-conventions v1.5.0 plan.schema.json.
+    surfaces: list[str] = field(default_factory=list)
     # Plan 2026-05-02-003 F001: optional `orchestration` block (parent/child
     # metadata). None for top-level plans; populated for child plans that
     # declare an `orchestration:` frontmatter section.
@@ -205,6 +210,10 @@ def load(plan_dir: Path) -> LoadedPlan:
         required_override=required_override,
     )
 
+    surfaces_list: list[str] = (
+        [s.value for s in plan.surfaces] if plan.surfaces else []
+    )
+
     return LoadedPlan(
         plan_dir=plan_dir,
         plan_id=plan.id,
@@ -213,6 +222,7 @@ def load(plan_dir: Path) -> LoadedPlan:
         schemas_dir=SCHEMAS_DIR,
         target_env=target["target_env"],
         target_project=normalize_target_project(target["target_project"]),
+        surfaces=surfaces_list,
         orchestration=orchestration,
         child_charter=child_charter,
         commit_policy=commit_policy,

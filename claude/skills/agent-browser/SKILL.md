@@ -2,6 +2,9 @@
 name: agent-browser
 description: Specialized browser automation for agent workflows with structured data extraction, multi-step workflows, error recovery, and state persistence.
 disable-model-invocation: true
+applies_to:
+  surfaces: [web, ux]
+  goal_types: [new_feature, parity]
 ---
 
 # Agent Browser Skill

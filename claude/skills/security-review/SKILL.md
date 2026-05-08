@@ -3,6 +3,9 @@ name: security-review
 description: OWASP-informed security review adapted for Swift/iOS, TypeScript/Cloudflare/Firebase, Python, Ruby, SQL/Supabase. Can be invoked manually or triggered proactively when touching auth/security code.
 disable-model-invocation: true
 argument-hint: [--scope <path>] [--focus auth|injection|data|infra|all]
+applies_to:
+  surfaces: [security, backend, infra]
+  goal_types: [new_feature, fix, refactor, migration]
 ---
 
 # Security Review — Stack-Specific Security Audit
