@@ -96,3 +96,28 @@ volley-improvement workflow, no longer trips.
 
 No operator config knob, no schema bump, no migration of historical
 audit envelopes. The fallback path makes legacy data safe to read.
+
+---
+
+## Cross-plan context (added 2026-05-07 at status-flip close-out)
+
+This section was added at the formal `active → completed` flip in the Tier 2/3 close-out batch and is deliberately scoped narrower than a casual reader might expect.
+
+### What this plan does NOT solve
+
+This plan fixes a `diminishing_returns` false-positive class. It does **not** address the broader `stopped_no_progress` / timeout / stale-envelope class. Specifically:
+
+- **`stopped_no_progress`** (`circuit_breakers.check_no_progress`) — fires when the auditor *verdict* (e.g. `needs_changes`) is unchanged across N consecutive rounds. That breaker is verdict-based, not count-based, and is unaffected by this plan.
+- **Timeout / stale-envelope** — when an implementer subprocess hits the 600s deadline and the audit envelope JSON does not flush, downstream auditors flag the truncated envelope as a finding. This is a runtime/durability issue, not a finding-identity issue.
+
+The Phase A F003 close-out (Plan 2026-05-03-001 D009, closed `cb6d3cc`) and the Phase B F002 close-out (Plan 2026-05-03-003 D012, closed `7ca7a23`) both terminated `stopped_no_progress` — that is the **verdict-based** breaker, not the count-based one this plan rewrites. They are adjacent failure modes, not the same one.
+
+### What this plan does solve
+
+The breaker now compares **persistent unresolved finding *signatures*** across the last N `needs_changes` rounds. A round-pair where the auditor flags **the same** problems still trips; a round-pair where the auditor flags *different* problems of similar cardinality (the legitimate volley-improvement shape, observed concretely as the SpinDine 2026-05-01-001 `[3, 3]` false-positive) no longer trips.
+
+### What remains a separate question
+
+Whether to harden `stopped_no_progress` to distinguish *feature-defect* unchanged-verdict (real implementer regression) from *environmental* unchanged-verdict (auditor sandbox tempdir absence, stale-envelope from upstream timeout, etc.) is a separate platform discussion. This plan does **not** implement that distinction, and the Phase B close-out memo's "platform-shape signal worth tracking" line was correctly framed as *adjacent* to this work, not subsumed by it.
+
+If a future plan implements that distinction, it would touch `check_no_progress` (and possibly the auditor envelope shape), not `check_diminishing_returns`. That plan will be drafted on a real-world trigger, not on the memo cross-link alone.
