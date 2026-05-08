@@ -3,7 +3,7 @@ id: 2026-05-04-003-fix-subprocess-timeout-envelope-durability
 title: Fix — Subprocess timeout handling and envelope diagnosability
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-04"
 description: |
   Three concrete fixes that turn the volley's hardcoded 600s subprocess
