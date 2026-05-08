@@ -3,7 +3,7 @@ id: 2026-05-01-001-feat-onboarding-ux
 title: Onboarding UX — README "Run your first volley" + dispatch-from-plan CLI subcommand
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-01"
 description: |
   Close the gap between "I have an authored plan" and "the supervisor is running it." Two deliverables: (1) a README "Run your first volley" section that walks a new operator through `quota-caps init` → `calibrate-claude` → `python -m jarvis_orchestrate <plan-id> --volley` → INBOX → `approve`/`resume`, including `--mode`, `--max-iterations`, target_env semantics, and the post-run artifact map (audit/, signoff.json, transcript.md). Refresh the stale "Setup checklist" to reflect supervisor maturity (F004/F005a/F006/F008/F023 all green; vendor-native quota tracker shipped). (2) A `python -m jarvis_orchestrate dispatch-from-plan <plan-id>` subcommand that is strict dry-run unless `--confirm` is passed: prints a 10-field pre-flight context block (resolved plan path, feature, tier, target_env, target_project, implementer/auditor defaults, declared gates, max_iterations, quota readiness) and exits 0 without dispatching. With `--confirm` and quota readiness == ok, calls `supervisor.dispatch_volley` in-process — no subprocess shell-out, no interactive prompt. CLI-first so it is reusable by Discord (Plan B) or any future automation; a wrapper skill can layer on later. A future opt-in `--ask` flag for interactive y/N is recorded as deferred (D006).
