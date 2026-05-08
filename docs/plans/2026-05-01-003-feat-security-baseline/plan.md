@@ -3,7 +3,7 @@ id: 2026-05-01-003-feat-security-baseline
 title: Security baseline — secret-scan / CI hardening / SECURITY.md / key-age / Ruff S / actions pinning
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-01"
 description: |
   Close the highest-risk-lowest-effort security gaps in the Jarvis platform itself (NOT project-level review — the existing `security-review` skill covers that). Three independently lockable features: F001 baseline hardening (sanitization_check.py secret-pattern expansion + CI workflow permissions + `SECURITY.md` stub + `jarvis_doctor` SA-key-age warning), F002 Ruff `S` ruleset as baseline security lint (explicitly NOT a SAST claim — coverage is bandit-style in-tree checks for subprocess/shell/eval/pickle/weak-crypto patterns; first-wave findings fixed or documented with targeted `# noqa: SXXX`), F003 SHA-pin GitHub Actions + add a Dependabot/Renovate updater policy (or document the absence and accept manual rotation). Each feature is small enough to land in one or two commits; bundling them into one plan prevents the "opportunistic patch" anti-pattern flagged in operator review.
