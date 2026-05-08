@@ -3,7 +3,7 @@ id: 2026-05-04-002-fix-supervisor-lifecycle-staged-gates
 title: Fix — Lifecycle-staged human-gate evaluation in the supervisor
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-04"
 description: |
   Stage human-gate evaluation across the dispatch lifecycle. The
