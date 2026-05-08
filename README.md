@@ -41,6 +41,14 @@ through reusable skills and learned memory, turns non-trivial work into
 machine-checkable plans, executes those plans across model/vendor boundaries, and
 preserves proof through audits, evidence, signoff, and protected-path checks.
 
+DontPanic may use external service adapters when they improve intake or
+evidence quality. The planned Printing Press adapter work explicitly credits
+[CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) and the
+[Printing Press Library](https://github.com/mvanhorn/printing-press-library)
+for the agent-native CLI/MCP adapter pattern. Those tools remain external;
+DontPanic's responsibility is the allowlist, provenance, read-only policy,
+redaction, normalized evidence, and signoff boundary around any adapter it uses.
+
 ---
 
 ## Prerequisites

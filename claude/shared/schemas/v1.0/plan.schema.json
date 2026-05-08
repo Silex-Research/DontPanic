@@ -55,6 +55,14 @@
       "enum": ["mechanical", "infra", "refactor", "parity", "new_feature", "migration", "incident"],
       "description": "Goal-completion governance category. When set to one of {parity, new_feature, migration, incident}, the plan must declare links.objective_contract pointing at an ObjectiveContract file. mechanical/infra/refactor plans don't require a contract; backward-compatible default is null/absent."
     },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "enum": ["web", "ios", "android", "backend", "infra", "security", "data", "ux", "ml", "docs"]
+      },
+      "uniqueItems": true,
+      "description": "v1.5.0 — surface taxonomy this plan touches. Optional; backward-compatible default is absent. Consumed by skill-applicability matchers (DontPanic plan 2026-05-08-002) to surface which skills are advisory for the plan. Adding a new surface requires a v1.6.0 schema bump with explicit operator approval."
+    },
     "protected_paths": {
       "type": "array",
       "items": { "type": "string" },

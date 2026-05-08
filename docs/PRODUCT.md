@@ -195,6 +195,15 @@ agents, gates, standards, and deployment rules.
 **Evidence-backed.** Every decision, finding, audit, test result, and
 signoff is saved.
 
+**Adapter-aware.** DontPanic can use external tools as evidence sources
+when they fit the contract. The planned Printing Press adapter work
+credits [CLI Printing Press](https://github.com/mvanhorn/cli-printing-press)
+and the [Printing Press Library](https://github.com/mvanhorn/printing-press-library)
+for the agent-native CLI/MCP pattern: compact structured output, dry-run
+flows, typed exits, local caches, and generated service adapters. DontPanic
+does not own that project; it owns the allowlist, provenance, redaction,
+evidence normalization, and signoff rules around any adapter it uses.
+
 **Governed recursion.** If work needs a child plan, DontPanic bounds it
 with depth limits, cycle checks, child charters, return conditions, and
 human re-entry.

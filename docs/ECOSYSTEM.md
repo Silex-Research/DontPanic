@@ -27,6 +27,30 @@ solved problems in mature systems like
 | ChatGPT / Grok / other LLMs | Output an LLM-authored plan dir (schema documented in README); `dontpanic plan validate` accepts it | Bridge from any LLM to verified delivery without per-vendor integration |
 | Direct human operator | `dontpanic` CLI from a registered project | The original use case; everything else is a generalization |
 
+## External adapter ecosystem
+
+DontPanic can also consume service-specific tools as evidence providers,
+as long as they enter through DontPanic's own contract: explicit
+allowlisting, read-only defaults, pinned provenance, redaction, normalized
+evidence, and human-visible signoff.
+
+The current adapter direction is inspired by and explicitly credits
+[CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) and
+the [Printing Press Library](https://github.com/mvanhorn/printing-press-library).
+Printing Press generates agent-native CLIs and MCP servers around services
+such as Linear, Sentry, Slack, and other APIs. DontPanic's planned use is
+not to rebrand or absorb those tools; it is to treat them as external
+capability providers whose outputs can be normalized into plan evidence.
+
+Near-term integration stays conservative:
+
+- skill applicability may record inert `external_cli` metadata so operators
+  can see that a matched skill depends on an external adapter;
+- no generated CLI is installed, invoked, or trusted during plan dispatch
+  without a separate adapter-governance plan;
+- future adapter plans own binary/version pinning, cache disposition,
+  read-only policy, and evidence normalization.
+
 ## Safety rules for agent callers
 
 Every agent runtime should treat DontPanic as a human-gated delivery system,
