@@ -138,8 +138,8 @@ def tracked_files() -> list[str]:
     .firebaserc) and submodule contents. This makes the check honest before
     staging — a leak in an unstaged new file is still surfaced.
     """
-    proc = subprocess.run(
-        [
+    proc = subprocess.run(  # noqa: S603  # trusted argv + shell=False default per D001
+        [  # noqa: S607  # PATH-relative git invocation per D001
             "git",
             "-C",
             str(REPO_ROOT),

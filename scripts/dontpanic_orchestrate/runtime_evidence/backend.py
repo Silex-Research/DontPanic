@@ -205,7 +205,7 @@ class _GenericProviderSession:
         from urllib.error import URLError
         from urllib.request import Request, urlopen
 
-        req = Request(url, headers=headers)
+        req = Request(url, headers=headers)  # noqa: S310  # operator-supplied URL passed through urllib.Request
         try:
             with urlopen(req, timeout=timeout) as resp:  # noqa: S310 — operator-supplied URL
                 payload = resp.read()

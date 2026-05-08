@@ -39,7 +39,7 @@ def main() -> int:
     print(f"      signed URL: {url[:80]}...")
 
     print("[2/3] Fetching signed URL...")
-    with urllib.request.urlopen(url, timeout=15) as resp:
+    with urllib.request.urlopen(url, timeout=15) as resp:  # noqa: S310  # smoke-test fetch of operator-supplied signed URL
         status = resp.status
         body = resp.read()
 
@@ -47,8 +47,8 @@ def main() -> int:
 
     print("[3/3] Verifying round-trip...")
     received = json.loads(body)
-    assert received == fixture, f"mismatch: sent {fixture}, got {received}"
-    assert status == 200, f"expected 200, got {status}"
+    assert received == fixture, f"mismatch: sent {fixture}, got {received}"  # noqa: S101  # smoke-test script abort-fast on storage round-trip mismatch
+    assert status == 200, f"expected 200, got {status}"  # noqa: S101  # smoke-test script abort-fast on non-200
 
     # Persist evidence log
     evidence_dir = (

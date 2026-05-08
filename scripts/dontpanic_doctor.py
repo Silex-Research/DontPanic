@@ -120,7 +120,7 @@ def check_gcloud_auth() -> CheckResult:
     if shutil.which("gcloud") is None:
         return _bad("gcloud-auth", "gcloud missing", "install gcloud first")
     proc = subprocess.run(
-        ["gcloud", "auth", "print-access-token"],
+        ["gcloud", "auth", "print-access-token"],  # noqa: S607  # PATH-relative gcloud invocation per D001
         capture_output=True,
         text=True,
         timeout=15,
@@ -138,7 +138,7 @@ def check_firebase_auth() -> CheckResult:
     if shutil.which("firebase") is None:
         return _bad("firebase-auth", "firebase CLI missing", "npm i -g firebase-tools")
     proc = subprocess.run(
-        ["firebase", "login:list"],
+        ["firebase", "login:list"],  # noqa: S607  # PATH-relative firebase invocation per D001
         capture_output=True,
         text=True,
         timeout=15,
@@ -198,8 +198,8 @@ def check_secrets_dir(project: str | None) -> CheckResult:
     # Belt-and-suspenders: ask git directly. We probe a synthetic path
     # whether or not the directory exists — `git check-ignore` works on
     # paths regardless of filesystem state.
-    proc = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "check-ignore", "-q", str(SECRETS_DIR / "probe.json")],
+    proc = subprocess.run(  # noqa: S603  # trusted argv + shell=False default per D001
+        ["git", "-C", str(REPO_ROOT), "check-ignore", "-q", str(SECRETS_DIR / "probe.json")],  # noqa: S607  # PATH-relative git invocation per D001
         capture_output=True,
     )
     git_ignores = proc.returncode == 0
@@ -319,7 +319,7 @@ def check_parent_plan_validates() -> CheckResult:
             f"validator missing at {validator}",
             "agent-conventions out of date — subtree pull",
         )
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603  # trusted argv + shell=False default per D001
         [sys.executable, str(validator), str(PARENT_PLAN_DIR)],
         capture_output=True,
         text=True,

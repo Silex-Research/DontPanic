@@ -112,7 +112,7 @@ def resolve_repo(target_context: dict[str, Any]) -> str:
 
     try:
         completed = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
+            ["git", "rev-parse", "--show-toplevel"],  # noqa: S607  # PATH-relative git invocation per D001
             cwd=os.getcwd(),
             capture_output=True,
             text=True,

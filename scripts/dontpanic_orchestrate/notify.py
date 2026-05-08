@@ -56,7 +56,7 @@ def notify(
     if group:
         cmd += ["-group", group]
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603  # trusted argv + shell=False default per D001
             cmd,
             capture_output=True,
             text=True,
