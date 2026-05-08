@@ -49,11 +49,11 @@
     }
   ],
   "required_evidence": [
-    "Validator output showing the plan schema accepts valid surfaces, rejects invalid surfaces, and remains backward-compatible when surfaces is missing",
-    "Unit test output for match correctness, missing applies_to skip, malformed applies_to skip, empty-surfaces behavior, and JSON round-trip",
-    "Unit test output showing external_cli metadata is validated and copied into the report without invoking the command",
-    "Manual or automated lock-time proof that evidence/applicable-skills.json is written after a successful lock",
-    "Fixture or backfilled-plan proof that a ux-surface plan produces at least one UX-capable skill match"
+    "validator-surfaces-valid-missing-invalid.log",
+    "matcher-correctness-skip-malformed-empty-json-roundtrip.log",
+    "external-cli-provenance-no-invoke.log",
+    "applicable-skills-lock-time-sidecar.log",
+    "ux-surface-plan-match-proof.log"
   ],
   "non_goals": [
     "No hard gate based on matched skills",

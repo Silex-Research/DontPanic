@@ -1,0 +1,22 @@
+Plan: 2026-05-08-002-feat-skill-applicability-v0
+Journey: plan-author-declares-surfaces
+Evidence marker: validator-surfaces-valid-missing-invalid.log
+
+F001 landed the canonical Plan.surfaces schema in agent-conventions v1.5.0
+and synced it into DontPanic:
+
+- claude/shared/VERSION is 1.5.0.
+- claude/shared/schemas/v1.0/plan.schema.json contains the optional
+  surfaces field with the locked 10-value enum.
+- claude/shared/schemas/v1.0/models/plan_model.py was regenerated and
+  exposes the Surface enum plus Plan.surfaces.
+
+Verification was captured by scripts/dontpanic_orchestrate/tests/
+test_plan_surfaces_field.py:
+
+- valid surfaces validate and reach LoadedPlan.surfaces.
+- missing surfaces remain backward-compatible and load as [].
+- invalid surface values fail schema validation.
+- the synced agent-conventions VERSION is asserted as 1.5.0.
+
+Close-out sweep after F001: 1449 passed, 7 skipped.

@@ -1,0 +1,19 @@
+Plan: 2026-05-08-002-feat-skill-applicability-v0
+Journey: skill-author-self-declares-applicability
+Evidence marker: matcher-correctness-skip-malformed-empty-json-roundtrip.log
+
+F002 added scripts/dontpanic_orchestrate/skill_applicability.py with a pure
+match(plan, skills_dir) function and stable report dataclasses.
+
+Verification was captured by scripts/dontpanic_orchestrate/tests/
+test_skill_applicability.py:
+
+- surface intersection emits a Match.
+- goal_type intersection emits a Match.
+- no overlap with an applies_to declaration silently omits the skill.
+- skills without applies_to produce Skip entries.
+- malformed applies_to blocks produce non-crashing parse skips.
+- empty-surface/no-goal plans produce no false-positive matches.
+- ApplicabilityReport JSON round-trip is pinned.
+
+Close-out sweep after F002: 1478 passed, 7 skipped.

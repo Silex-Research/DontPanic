@@ -1,0 +1,17 @@
+Plan: 2026-05-08-002-feat-skill-applicability-v0
+Journey: operator-reviews-advisory-sidecar
+Evidence marker: applicable-skills-lock-time-sidecar.log
+
+F002 wires the matcher into dontpanic plan lock after a successful lock
+status flip. The hook:
+
+- loads the plan through the existing plan loader;
+- resolves claude/skills via the repo-walk helper;
+- writes evidence/applicable-skills.json;
+- prints one line in the form:
+  [applicable-skills] N matches, M skips written to evidence/applicable-skills.json
+- wraps matcher/report errors so they never block the lock outcome.
+
+Dogfood on this plan produced 4 matches via goal_type=new_feature and 24
+skips for non-opted skills. D010 records the lock seam, advisory invariant,
+and dogfood result.
