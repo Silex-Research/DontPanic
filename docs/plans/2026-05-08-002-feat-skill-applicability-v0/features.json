@@ -22,28 +22,78 @@
       ],
       "acceptance": "(1) `claude/shared/schemas/v1.0/plan.schema.json` contains `surfaces` property with 10-value enum, optional. (2) agent-conventions repo at v1.5.0; subtree pulled into DontPanic. (3) `claude/shared/schemas/v1.0/models/plan_model.py` Pydantic model includes `surfaces: list[str]` (regenerated, not hand-edited). (4) `dontpanic_orchestrate.plan_loader.LoadedPlan` exposes `surfaces` as a list (default empty). (5) Three existing plans backfilled with `surfaces:` frontmatter; each plan still validates. (6) `claude/skills/SKILL_APPLIES_TO.md` exists with documented schema + 5 surface-coverage examples, including optional inert `external_cli` metadata and explicit no-execution language. (7) Five existing skills backfilled with `applies_to:` frontmatter covering distinct surfaces, and at least one skill must declare `ux` so a `surfaces: [\"ux\"]` plan can produce a real match. (8) `test_plan_surfaces_field.py` covers valid/missing/invalid cases + asserts schema version. (9) Full orchestrate test sweep ≥ 1445 passed. (10) NO behavior change beyond schema acceptance + Pydantic regeneration — no matcher logic in F001.",
       "passes": true,
-      "evidence": {
-        "schema_v1_5_0": "claude/shared/schemas/v1.0/plan.schema.json — surfaces property with 10-value enum, additionalProperties:false at root. agent-conventions VERSION=1.5.0 (commit df559fc, tag v1.5.0). Sync into DontPanic via D009 side-channel (subtree-pull deferred per dirty working tree).",
-        "pydantic_model": "claude/shared/schemas/v1.0/models/plan_model.py — Surface enum with 10 members + Plan.surfaces: list[Surface] | None field. Regenerated (datamodel-codegen).",
-        "loaded_plan": "scripts/dontpanic_orchestrate/plan_loader.py — LoadedPlan.surfaces: list[str] = field(default_factory=list). Populated in load() from plan.surfaces enum values; mirrors target_env / target_project surfacing pattern.",
-        "plan_backfills": [
-          "docs/plans/2026-05-01-004-feat-patch-completeness-gate/plan.md surfaces: [infra, security]",
-          "docs/plans/2026-05-01-005-feat-target-context-platform-fix/plan.md surfaces: [infra]",
-          "docs/plans/2026-05-01-001-feat-onboarding-ux/plan.md surfaces: [ux, docs]"
-        ],
-        "applies_to_doc": "claude/skills/SKILL_APPLIES_TO.md — documents shape, 5 surface examples, optional inert external_cli metadata, and v0 no-execution policy per D007.",
-        "skill_backfills": [
-          "claude/skills/pr-reviewer/SKILL.md applies_to.surfaces=[backend, infra]",
-          "claude/skills/eval-harness/SKILL.md applies_to.surfaces=[ml, ux]",
-          "claude/skills/security-review/SKILL.md applies_to.surfaces=[security, backend, infra]",
-          "claude/skills/cost-model/SKILL.md applies_to.surfaces=[infra]",
-          "claude/skills/agent-browser/SKILL.md applies_to.surfaces=[web, ux]"
-        ],
-        "ux_coverage": "eval-harness and agent-browser both declare ux per D007 motivating gap.",
-        "test_module": "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py — 4 cases: valid surfaces validates + reaches LoadedPlan, missing surfaces validates with [], invalid enum value raises ValidationError, agent-conventions VERSION=1.5.0 assert.",
-        "sweep": "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ → 1449 passed, 7 skipped (baseline 1445/7 pre-F001; +4 from new test_plan_surfaces_field.py).",
-        "behavior_change_scope": "F001 ships zero behavior change beyond schema acceptance + Pydantic regen + LoadedPlan.surfaces surfacing. F002 owns matcher logic and lock-time wiring."
-      },
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/plan.schema.json",
+          "note": "F001 schema — surfaces property with 10-value enum, additionalProperties:false at root; agent-conventions VERSION=1.5.0 (commit df559fc, tag v1.5.0); synced into DontPanic via D009 side-channel"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/models/plan_model.py",
+          "note": "F001 Pydantic — Surface enum (10 members) + Plan.surfaces field; regenerated via datamodel-codegen"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/plan_loader.py",
+          "note": "F001 loader — LoadedPlan.surfaces: list[str] field(default_factory=list); populated in load() from plan.surfaces enum values"
+        },
+        {
+          "type": "file",
+          "uri": "../2026-05-01-004-feat-patch-completeness-gate/plan.md",
+          "note": "F001 plan backfill — surfaces: [infra, security]"
+        },
+        {
+          "type": "file",
+          "uri": "../2026-05-01-005-feat-target-context-platform-fix/plan.md",
+          "note": "F001 plan backfill — surfaces: [infra]"
+        },
+        {
+          "type": "file",
+          "uri": "../2026-05-01-001-feat-onboarding-ux/plan.md",
+          "note": "F001 plan backfill — surfaces: [ux, docs]"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/SKILL_APPLIES_TO.md",
+          "note": "F001 docs — frontmatter shape, 5 surface examples, inert external_cli metadata, v0 no-execution policy per D007"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/pr-reviewer/SKILL.md",
+          "note": "F001 skill backfill — applies_to.surfaces=[backend, infra]"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/eval-harness/SKILL.md",
+          "note": "F001 skill backfill — applies_to.surfaces=[ml, ux] (ux per D007)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/security-review/SKILL.md",
+          "note": "F001 skill backfill — applies_to.surfaces=[security, backend, infra]"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/cost-model/SKILL.md",
+          "note": "F001 skill backfill — applies_to.surfaces=[infra]"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/skills/agent-browser/SKILL.md",
+          "note": "F001 skill backfill — applies_to.surfaces=[web, ux] (ux per D007)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py",
+          "note": "F001 tests — 4 cases: valid validates+reaches LoadedPlan, missing validates with [], invalid raises ValidationError, agent-conventions VERSION=1.5.0 assert"
+        },
+        {
+          "type": "file",
+          "uri": "decisions.jsonl",
+          "note": "F001 D001-D009 design + scope decisions; sweep result 1449 passed / 7 skipped (baseline 1445/7 pre-F001; +4 from new test_plan_surfaces_field.py)"
+        }
+      ],
       "depends_on": []
     },
     {
@@ -69,7 +119,29 @@
         "Add D-entry summarizing v0 disposition + the future-v1 trigger conditions (real false-positive data, scope-change re-probe demand)."
       ],
       "acceptance": "(1) `scripts/dontpanic_orchestrate/skill_applicability.py` exists with `match(plan, skills_dir)` exported. (2) Module is pure-function (auditor verifies via source grep — no subprocess, no logging side-effects, no print). (3) `ApplicabilityReport(schema_version, plan_id, plan_surfaces, plan_goal_type, matches, skipped)` envelope with `Match` + `Skip` dataclasses; Match includes `provenance: internal|external` and optional `external_cli`; JSON round-trip works (test pins shape). (4) Match logic: surface intersection OR goal_type intersection triggers a Match; neither → Skip if no applies_to OR omit from output if applies_to present but no overlap. (5) Skills without `applies_to:` are Skipped with rationale; matcher never crashes on missing/malformed frontmatter. (6) Valid `applies_to.external_cli` metadata is validated and copied into matching report entries without installing, invoking, or allowlisting the command. (7) `dontpanic plan lock` writes `<plan_dir>/evidence/applicable-skills.json` after successful lock; matcher errors are logged-and-continue, NEVER block. (8) Operator-facing output is one line summarizing N matches / M skips. (9) Test coverage: parametrized match correctness (4+ cases), skip-no-applies_to, malformed-applies_to, empty-surfaces, external-provenance pass-through, JSON round-trip — all green. (10) NO blocking behavior — auditor verifies by attempting `dontpanic plan lock` on a fixture plan with no matching skills; lock still succeeds with status:active flip. (11) NO scope-change re-probe code in F002 — locked-out per memory's v0 design + future-v1 trigger documented in D-entry. (12) All existing orchestrate test modules stay green (≥ 1445 passed).",
-      "passes": false,
+      "passes": true,
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/skill_applicability.py",
+          "note": "F002 module — pure match() + write_report() + ApplicabilityReport/Match/Skip/ExternalCli dataclasses + AppliesToModel/ExternalCliModel Pydantic validation. Source contains no subprocess, no logging.getLogger, no print() — purity verified by TestPurity test."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "F002 wiring — `dontpanic plan lock` post-success path: load plan, resolve claude/skills via _resolve_skills_dir(), match(), write_report(), print one-line `[applicable-skills] N matches, M skips written to evidence/applicable-skills.json`. Wrapped in try/except — matcher errors NEVER block lock (D004 advisory contract)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_skill_applicability.py",
+          "note": "F002 tests — 29 cases across 10 classes: TestPurity (source-grep), TestMatchCorrectness (5 cases), TestSkipPath (2 cases), TestMalformedAppliesTo (3 cases), TestEmptySurfacesPlan, TestExternalProvenance (2 cases), TestJsonRoundTrip (3 cases including write_report serialization), TestEdgeCases (3 cases — missing skills_dir, sorted iteration, plain-string goal_type), TestModuleConstants, TestCoverageManifest, plus parametrize over 5 surface/goal logic cases."
+        },
+        {
+          "type": "file",
+          "uri": "decisions.jsonl",
+          "note": "F002 D010 records lock-seam choice + advisory-only invariant + dogfood result. Sweep result: 1478 passed, 7 skipped (baseline 1449/7 post-F001; +29 from new test_skill_applicability.py)."
+        }
+      ],
       "depends_on": ["F001"]
     }
   ]

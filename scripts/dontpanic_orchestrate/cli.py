@@ -56,22 +56,59 @@ from dontpanic_orchestrate import (
     calibration_loader,
     completion_gate,
     gate_pause,
+    git_state,
     inbox,
     interactive_state,
     mcp_server,
     nested_orchestration,
+    patch_completeness_gate,
     plan_loader,
     project_config,
     projects_registry,
     quota_admission,
     quota_caps_loader,
+    skill_applicability,
     sufficiency_gate,
     supervisor,
 )
 from dontpanic_orchestrate import (
     circuit_breakers as cb,
 )
+from dontpanic_orchestrate.patch_completeness_gate import (
+    MIN_REASON_LEN as _PATCH_MIN_REASON_LEN,
+)
+from dontpanic_orchestrate.patch_completeness_gate import (
+    PatchCompletenessError,
+)
 from dontpanic_orchestrate.supervisor import QuotaExceeded
+
+
+def _validate_patch_reason(flag: str):
+    """Argparse layer-A validator factory for the F003 override flags.
+
+    Returns a callable suitable for ``add_argument(type=...)`` that raises
+    ``argparse.ArgumentTypeError`` with a remediation message on values
+    shorter than ``MIN_REASON_LEN`` non-whitespace chars. The patch_
+    completeness_gate.validate_reason() function re-checks at layer B
+    (defense-in-depth) when the supervisor consumes the flag.
+    """
+
+    def _coerce(value: str) -> str:
+        if not isinstance(value, str):
+            raise argparse.ArgumentTypeError(
+                f"{flag} reason must be a string; got {type(value).__name__}"
+            )
+        stripped = value.strip()
+        if len(stripped) < _PATCH_MIN_REASON_LEN:
+            raise argparse.ArgumentTypeError(
+                f"{flag} reason must be at least {_PATCH_MIN_REASON_LEN} non-whitespace "
+                f"characters; got {len(stripped)} ({value!r}). Provide a substantive "
+                "operator note explaining why the patch surface is allowed to ship "
+                "with this gap."
+            )
+        return value
+
+    return _coerce
 
 
 def _resolve_plan_dir(plan_arg: str) -> Path:
@@ -920,8 +957,13 @@ def _projects_remove(argv: list[str]) -> int:
         return 0
 
     removed = projects_registry.remove_project(args.name)
-    # `removed` is the same entry we just looked up; safe to assert non-None.
-    assert removed is not None
+    if removed is None:
+        # Same entry just looked up via `find_project_by_name`; if the
+        # registry lost it between read and write, surface as a real error
+        # rather than relying on `assert` (strips under `python -O`).
+        raise RuntimeError(
+            f"projects registry race: {args.name!r} disappeared between lookup and remove"
+        )
     payload = {"action": "removed", "project": projects_registry.to_public_dict(removed)}
     if args.as_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -1404,6 +1446,31 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "dispatch-from-plan is a strict dry-run."
         ),
     )
+    # Plan 2026-05-01-004 F003: patch-completeness gate operator overrides.
+    # Layer A — argparse validates the >=8 char minimum; layer B in
+    # patch_completeness_gate.validate_reason re-validates programmatically.
+    parser.add_argument(
+        "--allow-incomplete-patch",
+        type=_validate_patch_reason("--allow-incomplete-patch"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Override the patch-completeness gate even when block-severity "
+            "findings are present. REASON must be >=8 non-whitespace chars; "
+            "lands verbatim in signoff.json under patch_completeness.override_reason."
+        ),
+    )
+    parser.add_argument(
+        "--unrelated-dirty-state-note",
+        type=_validate_patch_reason("--unrelated-dirty-state-note"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Acknowledge unstaged-modified files outside the plan's touched "
+            "set. REASON must be >=8 non-whitespace chars; lands verbatim in "
+            "signoff.json under patch_completeness.unrelated_dirty_state_note."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Plan resolution. Distinct exit code (2) from the dispatch path so
@@ -1474,6 +1541,47 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         # The plan's D006 leaves room for a future `--ask` flag; this branch
         # holds firm so automation (Discord / cron) sees deterministic
         # exit-0-and-print behavior.
+        # Plan 2026-05-01-004 F003 D009: in dry-run, run the patch-
+        # completeness gate against the current working tree so the operator
+        # previews what the post-volley enforcement would surface. Findings
+        # render to stdout; gate never raises in dry-run.
+        try:
+            preview_state = git_state.capture(plan_dir)
+        except Exception:  # defensive — capture is documented best-effort
+            preview_state = None
+        if preview_state is not None:
+            affected = getattr(plan, "affected_paths", None) or []
+            try:
+                preview_block = patch_completeness_gate.enforce(
+                    plan_dir,
+                    plan_id=loaded.plan_id,
+                    iteration=0,
+                    role="implementer",
+                    audit_paths=[],
+                    affected_paths=list(affected) if affected else None,
+                    repo_root=plan_dir,
+                    allow_incomplete_patch_reason=args.allow_incomplete_patch,
+                    unrelated_dirty_state_note=args.unrelated_dirty_state_note,
+                    dry_run=True,
+                    git_state_override=preview_state,
+                )
+            except ValueError as exc:
+                # Layer-B reject of a malformed reason (shouldn't happen
+                # because argparse layer-A already validated, but kept for
+                # defense-in-depth). Surface as exit-2 to mirror argparse.
+                print(f"[dispatch-from-plan] {exc}", file=sys.stderr)
+                return 2
+            if preview_block is not None:
+                print(
+                    f"[dispatch-from-plan] patch-completeness preview: "
+                    f"status={preview_block['status']} "
+                    f"findings={len(preview_block['findings'])}"
+                )
+                for finding in preview_block["findings"]:
+                    print(
+                        f"  {finding['mode']} | {finding['severity']} | "
+                        f"{','.join(finding['files'])} | {finding['recommendation']}"
+                    )
         return 0
 
     if readiness != "ok":
@@ -1501,7 +1609,15 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             auditor_agent=args.auditor,
             max_iterations=args.max_iterations,
             mode=args.mode,
+            allow_incomplete_patch_reason=args.allow_incomplete_patch,
+            unrelated_dirty_state_note=args.unrelated_dirty_state_note,
         )
+    except PatchCompletenessError as exc:
+        # Plan 2026-05-01-004 F003: dedicated exit code (4) so operator
+        # wrappers can disambiguate "patch incomplete" from quota / generic
+        # failures.
+        print(f"[dispatch-from-plan] BLOCKED by patch-completeness gate:\n{exc}", file=sys.stderr)
+        return 4
     except QuotaExceeded as exc:
         print(f"[dispatch-from-plan] BLOCKED by quota gate: {exc}", file=sys.stderr)
         return 2
@@ -1616,7 +1732,46 @@ def _plan_lock_main(argv: list[str]) -> int:
         if override_path.is_file():
             print(f"[plan lock] override recorded at {override_path}")
     print(f"[plan lock] status flipped: draft → active in {plan_md}")
+
+    # Plan 2026-05-08-002 F002 — emit advisory applicable-skills sidecar.
+    # Best-effort: matcher errors are surfaced as a one-line warning but
+    # NEVER block the lock outcome (D004: advisory only).
+    try:
+        loaded = plan_loader.load(plan_dir)
+        skills_dir = _resolve_skills_dir(plan_dir)
+        if skills_dir is not None:
+            report = skill_applicability.match(loaded, skills_dir)
+            sidecar = skill_applicability.write_report(report, plan_dir)
+            print(
+                f"[applicable-skills] {len(report.matches)} matches, "
+                f"{len(report.skipped)} skips written to "
+                f"{sidecar.relative_to(plan_dir)}"
+            )
+        else:
+            print(
+                "[applicable-skills] skipped — no claude/skills dir found "
+                "above plan_dir"
+            )
+    except Exception as exc:  # noqa: BLE001 — advisory matcher must never block
+        print(
+            f"[applicable-skills] WARN: matcher failed ({exc!r}); "
+            "lock succeeded — sidecar NOT written",
+            file=sys.stderr,
+        )
+
     return 0
+
+
+def _resolve_skills_dir(plan_dir: Path) -> Path | None:
+    """Walk up from plan_dir looking for ``claude/skills/``. Returns the
+    first hit; ``None`` when no such directory exists in any ancestor.
+    Kept here (not in skill_applicability) so the matcher stays focused
+    on pure matching with an injectable skills_dir."""
+    for ancestor in [plan_dir, *plan_dir.parents]:
+        candidate = ancestor / "claude" / "skills"
+        if candidate.is_dir():
+            return candidate
+    return None
 
 
 # ──────────────────────────────  plan audit / close (F2/F003)  ──────────────────────────────
