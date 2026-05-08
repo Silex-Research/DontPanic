@@ -1,0 +1,56 @@
+{
+  "task_id": "2026-05-01-001-feat-onboarding-ux",
+  "audit_id": "2026-05-01-001-feat-onboarding-ux#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-01T14:07:18Z",
+  "completed_at": "2026-05-01T14:10:21Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Implementer summary does not declare the target context in the required extractable form before logged side-effect commands. Evidence: `claude-implementer-i1.json` summary begins with test-pass text and `$` commands; `Repo: Jarvis · Env: dev · Project: (none)` appears later inline, and the wrapper already recorded a missing `Env:` line. Recommendation: start the summary with separate `Repo: Jarvis`, `Env: dev`, `Project: (none)`, `Command: ...` lines before any `$` command log.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "style",
+      "feature_id": "F002",
+      "issue": "The added dispatch-from-plan test file fails ruff. Evidence: `ruff check --no-cache scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py` reports import ordering plus nine unused `plan_dir` locals. Recommendation: remove unused assignments and satisfy import formatting.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "documentation",
+      "feature_id": "F002",
+      "issue": "`dispatch-from-plan --help` does not document the four blocking readiness states, even though top-level help does. Evidence: subcommand help only describes strict dry-run and `--confirm`. Recommendation: add the readiness states/remediations to the subcommand parser description or epilog. No forbidden command shapes were present in `target_context.commands_run`; it only listed two pytest invocations. Checks run: $ PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_dispatch",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=3.1122514",
+    "reviewing implementer audit at claude-implementer-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-001-feat-onboarding-ux-fd81_a_7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 193721 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1625226,
+    "tokens_out": 13006,
+    "api_calls": 1
+  },
+  "summary": "[F002] Repo: Jarvis\nEnv: dev\nProject: (none)\nCommand: audit verification completed; checks listed below\n\nVerdict: needs_changes.\n\nFINDING (high, correctness): Implementer summary does not declare the target context in the required extractable form before logged side-effect commands. Evidence: `claude-implementer-i1.json` summary begins with test-pass text and `$` commands; `Repo: Jarvis · Env: dev · Project: (none)` appears later inline, and the wrapper already recorded a missing `Env:` line. Recommendation: start the summary with separate `Repo: Jarvis`, `Env: dev`, `Project: (none)`, `Command: ...` lines before any `$` command log.\n\nFINDING (medium, style): The added dispatch-from-plan test file fails ruff. Evidence: `ruff check --no-cache scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py` reports import ordering plus nine unused `plan_dir` locals. Recommendation: remove unused assignments and satisfy import formatting.\n\nFINDING (low, documentation): `dispatch-from-plan --help` does not document the four blocking readiness states, even though top-level help does. Evidence: subcommand help only describes strict dry-run and `--confirm`. Recommendation: add the readiness states/remediations to the subcommand parser description or epilog.\n\nNo forbidden command shapes were present in `target_context.commands_run`; it only listed two pytest invocations.\n\nChecks run:\n$ PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py -q\n$ PYTHONDON",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import ast, pathlib; ast.parse(pathlib.Path('scripts/jarvis_orchestrate/cli.py').read_text(), filename='scripts/jarvis_orchestrate/cli.py'); print('syntax ok')\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan 2026-05-01-001-feat-onboarding-ux",
+      "PYTHONDONTWRITEBYTECODE=1 ruff check --no-cache scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py"
+    ]
+  }
+}

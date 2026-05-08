@@ -1,0 +1,34 @@
+{
+  "plan_id": "2026-05-01-001-feat-onboarding-ux",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-01T13:56:00Z",
+      "actor": "operator"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-01T13:56:01Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:diminishing_returns",
+      "at": "2026-05-01T14:10:21Z",
+      "actor": "supervisor",
+      "reason": "diminishing returns: auditor finding counts [2, 3] non-decreasing across 2 consecutive needs_changes rounds"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:diminishing_returns",
+      "at": "2026-05-01T18:26:09Z",
+      "actor": "operator"
+    }
+  ]
+}
