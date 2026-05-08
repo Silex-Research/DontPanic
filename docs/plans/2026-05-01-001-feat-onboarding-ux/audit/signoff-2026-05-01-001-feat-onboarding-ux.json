@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-05-01-001-feat-onboarding-ux",
+  "signoff_id": "2026-05-01-001-feat-onboarding-ux#signoff#1",
+  "iteration": 1,
+  "tier": "local",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-i0.json",
+    "audit/codex-auditor-i0.json",
+    "audit/claude-implementer-i1.json",
+    "audit/codex-auditor-i1.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 4,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "diminishing returns: auditor finding counts [2, 3] non-decreasing across 2 consecutive needs_changes rounds",
+  "next_action": "remediate",
+  "decided_at": "2026-05-01T14:10:21Z"
+}

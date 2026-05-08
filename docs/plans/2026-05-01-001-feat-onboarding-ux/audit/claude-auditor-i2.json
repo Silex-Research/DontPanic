@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-01-001-feat-onboarding-ux",
+  "audit_id": "2026-05-01-001-feat-onboarding-ux#claude#2",
+  "agent": "claude",
+  "agent_role": "auditor",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 2,
+  "started_at": "2026-05-01T18:26:15Z",
+  "completed_at": "2026-05-01T18:28:56Z",
+  "audit_status": "blocked",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "issue": "Missing or mismatched `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "validation_performed": [
+    "read ~/.jarvis/quota_state.json (claude pct=13.524671892978493)",
+    "claude -p --output-format json (binary=/Users/bayesian/.local/bin/claude)",
+    "captured stdout 5004 bytes",
+    "subprocess exit 0",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-001-feat-onboarding-ux-8bybmauo",
+    "target_env=dev target_project=(none)",
+    "target_source=plan",
+    "env_registry=(none)",
+    "cwd=(inherit)"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1605247,
+    "tokens_out": 9243,
+    "api_calls": 1
+  },
+  "summary": "[F002] I've completed an audit of the F002 implementation as the iteration-2 reviewer; Bash execution was denied in this session so I performed a code-review-only audit and could not re-run pytest/ruff.\n\n**Findings from i1 (addressed in current state):**\n- (low/docs) `dispatch-from-plan --help` now documents all four blocking states + remediations in an `argparse` epilog with `RawDescriptionHelpFormatter` (cli.py:524–537); the captured `evidence/f002/dispatch-from-plan-help.txt` confirms the rendered output.\n- (medium/style/ruff) The 9 unused `plan_dir` assignments in `test_dispatch_from_plan.py` were trimmed; every remaining `plan_dir` (lines 75, 479, 518, 584) is referenced. Imports are stdlib-only and correctly grouped.\n\n**Spec coverage (11 acceptance criteria) verified by reading cli.py:506–683 and test_dispatch_from_plan.py:**\n- 10-field pre-flight block in declared order (`_print_preflight_block`); dry-run unconditionally returns 0 with no `dispatch_volley` call (cli.py:637–642; `test_dry_run_never_dispatches_regardless_of_tty` spies on the function).\n- `target_env`/`target_project` come from `loaded.target_env`/`loaded.target_project` (plan_loader → plan_target.parse_target_section), exercised by `test_target_env_and_project_pulled_from_target_section`.\n- `_compute_readiness` reduces to {ok, config_required, calibration_required, unit_mismatch, missing_state} via `circuit_breakers.collect_agent_coverage`; ok appends `claude=N% / codex=N%`.\n- `--confirm` ≠ ok exits 3 with the ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  }
+}

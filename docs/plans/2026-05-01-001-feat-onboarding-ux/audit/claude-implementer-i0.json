@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-01-001-feat-onboarding-ux",
+  "audit_id": "2026-05-01-001-feat-onboarding-ux#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-01T13:56:08Z",
+  "completed_at": "2026-05-01T14:03:13Z",
+  "audit_status": "needs_changes",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "issue": "Missing or mismatched `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.524671892978493",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-01-001-feat-onboarding-ux-fd81_a_7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3833 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 5137585,
+    "tokens_out": 31006,
+    "api_calls": 1
+  },
+  "summary": "[F002] Side-effect commands invoked during this implementation:\n\n$ python -c \"from jarvis_orchestrate import cli; print('ok')\"\n$ PYTHONPATH=/Users/bayesian/Documents/GitHub/Jarvis/scripts python -c \"from jarvis_orchestrate import cli; rc = cli.main(['dispatch-from-plan', '2026-05-01-001-feat-onboarding-ux']); print('rc=', rc)\"\n$ PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py -x -v\n$ PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/\n$ PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan 2026-05-01-001-feat-onboarding-ux\n\n## Summary\n\nImplemented F002 of plan 2026-05-01-001-feat-onboarding-ux: a new `dispatch-from-plan <plan-id>` CLI subcommand in `scripts/jarvis_orchestrate/cli.py` that is a strict dry-run by default (always prints the 10-field pre-flight block — `plan_path`, `feature`, `tier`, `target_env`, `target_project`, `implementer`, `auditor`, `human_gates`, `max_iterations`, `quota_readiness` — and exits 0 regardless of TTY) and only commits to dispatch when `--confirm` is passed.\n\nThe readiness label is computed via `_compute_readiness()` which calls `circuit_breakers.collect_agent_coverage` per resolved (impl, auditor) agent, mapping the structured outcomes onto the five required states `{ok, config_required, calibration_required, unit_mismatch, missing_state}` (with a `claude=N% / codex=N%` summary line under `ok`). Under `--confirm`, blocking states each exit 3 with a kind-specific remediat",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -c \"from jarvis_orchestrate import cli; print('ok')\"",
+      "PYTHONPATH=/Users/bayesian/Documents/GitHub/Jarvis/scripts python -c \"from jarvis_orchestrate import cli; rc = cli.main(['dispatch-from-plan', '2026-05-01-001-feat-onboarding-ux']); print('rc=', rc)\"",
+      "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/test_dispatch_from_plan.py -x -v",
+      "PYTHONPATH=scripts python -m pytest scripts/jarvis_orchestrate/tests/",
+      "PYTHONPATH=scripts python -m jarvis_orchestrate dispatch-from-plan 2026-05-01-001-feat-onboarding-ux"
+    ]
+  }
+}
