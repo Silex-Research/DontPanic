@@ -1802,6 +1802,75 @@ def dispatch_volley(
                     agents_in_panel=[impl_name, aud_name],
                 )
 
+            # Plan 2026-05-09-002 F003 — environmental volley short-circuit.
+            # Fires BEFORE the no_progress / diminishing_returns / convergence
+            # checks: when the auditor verdict is `needs_changes` AND every
+            # finding classifies as `environmental_reproduction_failure`
+            # (advisory aggregate, blocking=False), the volley terminates
+            # immediately with `stopped_environmental_blocker` so no second
+            # implementer round dispatches against an env the agent provably
+            # can't satisfy. Mixed (env + defect), defect-only, scope, and
+            # unknown aggregates all fall through to the existing iterate
+            # path. Malformed envelopes also fall through (classify_terminal
+            # collapses to unknown+blocking, which doesn't match here).
+            if aud_status == "needs_changes":
+                env_envelope = (
+                    json.loads(aud_audit_path.read_text())
+                    if aud_audit_path.is_file()
+                    else {}
+                )
+                env_classification = auditor_taxonomy.classify_terminal(
+                    feature_id=feature_id,
+                    final_audit_envelope=env_envelope,
+                    prior_envelopes=_load_prior_envelopes_for_classification(
+                        audit_paths, exclude=aud_audit_path
+                    ),
+                )
+                if (
+                    env_classification.aggregate
+                    == auditor_taxonomy.FindingClass.ENVIRONMENTAL_REPRODUCTION_FAILURE
+                    and not env_classification.blocking
+                ):
+                    try:
+                        auditor_taxonomy.write_classification_sidecar(
+                            plan_dir=loaded.plan_dir,
+                            feature_id=feature_id,
+                            iteration=iteration + 1,
+                            classification=env_classification,
+                        )
+                    except OSError as exc:
+                        print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="environmental_blocker_short_circuit",
+                        plan_id=loaded.plan_id,
+                        body=auditor_taxonomy.format_inbox_body(env_classification),
+                        aggregate=env_classification.aggregate.value,
+                        blocking=str(env_classification.blocking).lower(),
+                        feature_id=feature_id,
+                        iteration=str(iteration + 1),
+                    )
+                    env_reason = (
+                        f"environmental blocker — round {iteration + 1} auditor "
+                        f"findings classify as environmental_reproduction_failure "
+                        f"(advisory, non-blocking); recommended: "
+                        f"{env_classification.recommended_action}"
+                    )
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        circuit_breakers.TERMINAL_STATUS[
+                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                        ],
+                        iteration + 1,
+                        reason=env_reason,
+                    )
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
+                        env_reason,
+                        iteration + 1,
+                    )
+
             # F006 — diminishing returns + convergence collapse heuristics.
             # Run before the no-progress check so they're surfaced explicitly
             # when their pattern fits, even if no_progress would also fire.

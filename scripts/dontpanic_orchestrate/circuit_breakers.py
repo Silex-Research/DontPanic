@@ -62,10 +62,16 @@ class BreakerKind(str, Enum):
     DIMINISHING_RETURNS = "diminishing_returns"
     CONVERGENCE_COLLAPSE = "convergence_collapse"
     GLOBAL_CIRCUIT_BREAKER = "global_circuit_breaker"
+    # Plan 2026-05-09-002 F003 — env-only first-round short-circuit.
+    # Trips when auditor verdict=needs_changes AND auditor_taxonomy classifies
+    # every finding as environmental_reproduction_failure (blocking=False).
+    # Operator clears via the existing approve CLI after running local
+    # verification — parity with NO_PROGRESS / WALL_CLOCK / etc.
+    ENVIRONMENTAL_BLOCKER = "environmental_blocker"
 
 
-# Six of seven trip the pause-for-approval flow. The global breaker is hard
-# stop and intentionally has no operator clearance.
+# Approval-required breakers fall through the pause-for-approval flow. The
+# global breaker is hard stop and intentionally has no operator clearance.
 APPROVAL_BREAKERS: frozenset[BreakerKind] = frozenset(
     {
         BreakerKind.ITERATION_CAP,
@@ -74,6 +80,7 @@ APPROVAL_BREAKERS: frozenset[BreakerKind] = frozenset(
         BreakerKind.NO_PROGRESS,
         BreakerKind.DIMINISHING_RETURNS,
         BreakerKind.CONVERGENCE_COLLAPSE,
+        BreakerKind.ENVIRONMENTAL_BLOCKER,
     }
 )
 
@@ -87,6 +94,7 @@ TERMINAL_STATUS: dict[BreakerKind, str] = {
     BreakerKind.DIMINISHING_RETURNS: "stopped_diminishing_returns",
     BreakerKind.CONVERGENCE_COLLAPSE: "stopped_convergence_collapse",
     BreakerKind.GLOBAL_CIRCUIT_BREAKER: "stopped_global_breaker",
+    BreakerKind.ENVIRONMENTAL_BLOCKER: "stopped_environmental_blocker",
 }
 
 

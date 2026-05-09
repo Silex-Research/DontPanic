@@ -861,6 +861,10 @@ class TestBoundaryDiscipline:
         assert cb.TERMINAL_STATUS[cb.BreakerKind.GLOBAL_CIRCUIT_BREAKER] == "stopped_global_breaker"
 
     def test_breaker_kind_enum_values_unchanged(self) -> None:
+        # Plan 2026-05-09-002 F003 added BreakerKind.ENVIRONMENTAL_BLOCKER —
+        # the env-only first-round short-circuit terminal. The pre-existing
+        # seven values stay frozen; the new value is included so the
+        # snapshot keeps locking the public BreakerKind surface.
         assert {k.value for k in cb.BreakerKind} == {
             "iteration_cap",
             "budget_ceiling",
@@ -869,6 +873,7 @@ class TestBoundaryDiscipline:
             "diminishing_returns",
             "convergence_collapse",
             "global_circuit_breaker",
+            "environmental_blocker",
         }
 
     def test_threshold_defaults_unchanged(self) -> None:
