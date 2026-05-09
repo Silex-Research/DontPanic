@@ -1,0 +1,92 @@
+{
+  "task_id": "2026-05-03-002-infra-personal-openclaw-axiom-jarvis",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Install `openclaw@2026.5.2` locally and harden it for personal laptop operation. Gateway binds to loopback by default, auth secrets stay outside git, Control UI is not exposed publicly, and `openclaw security audit --deep` becomes the baseline verification command.",
+      "steps": [
+        "Install `openclaw@2026.5.2` with npm or the official installer.",
+        "Create or verify `~/.openclaw/openclaw.json` with loopback bind and gateway auth.",
+        "Run `openclaw --version`, `openclaw doctor`, and `openclaw security audit --deep`.",
+        "Record any critical findings in this plan's INBOX before enabling external channels."
+      ],
+      "acceptance": "(1) `openclaw --version` reports 2026.5.2. (2) Gateway binds to loopback or an explicitly documented tailnet-only endpoint. (3) Gateway auth token/password exists outside git. (4) `openclaw security audit --deep` is run and critical findings are resolved or documented.",
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Create OpenClaw workspace bootstrap files from the useful parts of Axiom's SOUL.md, AGENTS.md, and TOOLS.md. Keep identity, action tiers, dashboard reporting, group-chat boundaries, and security posture. Remove Cloudflare/R2/container/clawdbot-specific assumptions.",
+      "steps": [
+        "Create `~/.openclaw/workspace/SOUL.md` from trimmed Axiom SOUL.md.",
+        "Create `~/.openclaw/workspace/AGENTS.md` with action tiers, memory boundaries, dashboard reporting, and group-chat behavior.",
+        "Create `~/.openclaw/workspace/TOOLS.md` with local OpenClaw, DontPanic, Axiom dashboard, GitHub, and messaging references.",
+        "Add a DontPanic operations section that lists allowed and approval-required commands.",
+        "Document canonical DontPanic paths (`~/.dontpanic`, `.dontpanic/dontpanic.json`) and legacy Jarvis fallback paths."
+      ],
+      "acceptance": "(1) SOUL.md, AGENTS.md, and TOOLS.md exist in the OpenClaw workspace. (2) Cloudflare/R2/container/clawdbot-specific references are removed or rewritten. (3) Group-chat memory and owner-approval boundaries are explicit. (4) Canonical DontPanic paths/env vars are documented, with Jarvis paths/env vars marked legacy fallback.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 3,
+      "description": "Expose DontPanic to OpenClaw through a narrow command wrapper rather than arbitrary shell. The wrapper supports status, plan intake, dispatch preview, and owner-approved gate operations, while refusing destructive or free-form commands from shared channels.",
+      "steps": [
+        "Design an allowlisted wrapper for `dontpanic ps`, quota/caps status, plan status, and dispatch dry-run. Keep the legacy `jarvis` alias as a compatibility fallback only.",
+        "Discover DontPanic through `~/.dontpanic/agent-manifest.json` when present.",
+        "Require owner approval for `dispatch --confirm`, `approve`, and `resume`.",
+        "Refuse arbitrary shell passthrough and log denied attempts.",
+        "Test wrapper behavior from local shell before exposing through Discord or Telegram."
+      ],
+      "acceptance": "(1) DontPanic status commands can be invoked through a narrow wrapper. (2) Dispatch confirmation and gate approval are owner-only operations. (3) No arbitrary shell passthrough is exposed to Discord, Telegram, or WhatsApp. (4) The wrapper prefers canonical DontPanic module/paths and only reads legacy Jarvis paths as fallback.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "description": "Retain Axiom's differentiated dashboard surfaces and repoint them at the personal DontPanic/OpenClaw setup. The dashboard should show Kanban tasks, projects, agent status, active supervisors, gates, signoff state, OpenClaw health, and security/approval events.",
+      "steps": [
+        "Map existing dashboard task fields to DontPanic plan ids, GitHub issue ids, branches, and Discord thread ids.",
+        "Add a DontPanic artifact reader for active supervisors, INBOX, gate-state, and signoff files under canonical DontPanic paths.",
+        "Add OpenClaw health/status summary ingestion.",
+        "Document multi-tenant Cloudflare runtime paths as archived rather than active."
+      ],
+      "acceptance": "(1) Dashboard shows Kanban tasks linked to DontPanic plan ids. (2) Dashboard shows active supervisors/gates/signoff state from DontPanic artifacts, preferring `~/.dontpanic` and `.dontpanic/dontpanic.json`. (3) Dashboard shows OpenClaw channel/runtime health. (4) Tenant provisioning and multi-tenant Cloudflare runtime paths are documented as archived.",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "Configure Discord as the primary shared project workspace for friends who run their own local DontPanic instances. Deconfliction uses GitHub issues, branches, PRs, DontPanic plan ids, and Discord threads. Telegram remains owner-private; WhatsApp remains optional notification-only.",
+      "steps": [
+        "Document Discord server/category/channel naming conventions.",
+        "Document the invariant: one task = one GitHub issue + one DontPanic plan + one branch + one Discord thread.",
+        "Configure OpenClaw Discord allowlists and group mention requirements.",
+        "Ensure shared Discord channels cannot approve owner-only or destructive operations."
+      ],
+      "acceptance": "(1) Discord server/channel convention is documented. (2) One task = one GitHub issue + one DontPanic plan + one branch + one Discord thread is documented. (3) Shared Discord channels cannot approve owner-only or destructive actions.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F003"
+      ]
+    }
+  ]
+}
