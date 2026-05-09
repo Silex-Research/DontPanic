@@ -1,0 +1,30 @@
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 23 items
+
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[bold-signed-off] PASSED [  4%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[bold-needs-changes] PASSED [  8%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[overall-signed-off-period] PASSED [ 13%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[overall-blocked-period] PASSED [ 17%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[plain-inconclusive] PASSED [ 21%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[plain-redaction-required] PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_canonical_patterns_match[embedded-bold-line] PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[empty] PASSED [ 34%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[none] PASSED [ 39%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[no-canonical-line] PASSED [ 43%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[mid-sentence-prose] PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[unknown-token] PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[non-enum-word] PASSED [ 56%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestParseNarrativeVerdict::test_non_matching_returns_none[missing-token] PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_mismatch_signed_off_narrative_with_needs_changes_structured PASSED [ 65%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_agreement_returns_none PASSED [ 69%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_narrative_only_no_structured_returns_none PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_structured_only_no_narrative_returns_none PASSED [ 78%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_phrasing_variants_all_detect_mismatch PASSED [ 82%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_unknown_status_in_summary_returns_none PASSED [ 86%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestDetectVerdictMismatch::test_inbox_body_format PASSED [ 91%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestSupervisorWiring::test_supervisor_raises_on_mismatch_and_writes_inbox PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py::TestSupervisorWiring::test_supervisor_proceeds_when_narrative_and_structured_agree PASSED [100%]
+
+============================== 23 passed in 0.22s ==============================

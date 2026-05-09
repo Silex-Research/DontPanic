@@ -193,6 +193,9 @@ def _install_runtime(
     )
 
 
+from dontpanic_orchestrate.tests.conftest import _rewrite_summary_verdict  # noqa: E402
+
+
 def _force_auditor_status(monkeypatch: pytest.MonkeyPatch, statuses: list[str]) -> None:
     original = supervisor._run_round
     counter = {"i": 0}
@@ -205,6 +208,12 @@ def _force_auditor_status(monkeypatch: pytest.MonkeyPatch, statuses: list[str]) 
             status = statuses[idx] if idx < len(statuses) else statuses[-1]
             data = json.loads(path.read_text())
             data["audit_status"] = status
+            # Plan 2026-05-09-002 F001 — keep summary's narrative verdict
+            # consistent with the overridden structured field; otherwise the
+            # supervisor's verdict-mismatch detector fires on what is just
+            # test-fixture drift between the executor's static `_summary`
+            # and the wrapper's status override.
+            data["summary"] = _rewrite_summary_verdict(data.get("summary", ""), status)
             path.write_text(json.dumps(data, indent=2) + "\n")
         return path
 

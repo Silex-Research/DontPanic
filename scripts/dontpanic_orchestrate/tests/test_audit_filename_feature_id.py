@@ -389,13 +389,13 @@ def test_dispatch_volley_writes_filename_with_feature_id() -> None:
     """Acceptance #2 (volley path): supervisor.dispatch_volley persists
     audit envelopes with feature_id in the filename."""
     impl_summary = (
-        "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n"
-        "- Command: 1 (see structured target_context.commands_run)\n\n"
+        "## Target context\nRepo: Jarvis\nEnv: dev\nProject: (none)\n"
+        "Command: 1 (see structured target_context.commands_run)\n\n"
         "[F001] scripted body.\n\n$ pytest -q"
     )
     aud_summary = (
-        "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n"
-        "- Command: 1 (see structured target_context.commands_run)\n\n"
+        "## Target context\nRepo: Jarvis\nEnv: dev\nProject: (none)\n"
+        "Command: 1 (see structured target_context.commands_run)\n\n"
         "Verdict: signed_off.\n\n$ rg -n test"
     )
     with tempfile.TemporaryDirectory() as td:
@@ -416,8 +416,8 @@ def test_dispatch_single_agent_writes_filename_with_feature_id() -> None:
     """Acceptance #2 (single-agent path): supervisor.dispatch_single_agent
     persists audit envelope with feature_id in the filename."""
     impl_summary = (
-        "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n"
-        "- Command: 1 (see structured target_context.commands_run)\n\n"
+        "## Target context\nRepo: Jarvis\nEnv: dev\nProject: (none)\n"
+        "Command: 1 (see structured target_context.commands_run)\n\n"
         "[F001] scripted single-agent body.\n\n$ pytest -q"
     )
     with tempfile.TemporaryDirectory() as td:
@@ -439,13 +439,13 @@ def test_collision_free_two_features_via_supervisor() -> None:
     """Acceptance #2 + #3 end-to-end: dispatching F001 then F002 against
     the same plan dir leaves both features' envelopes coexisting."""
     impl_summary = (
-        "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n"
-        "- Command: 1 (see structured target_context.commands_run)\n\n"
+        "## Target context\nRepo: Jarvis\nEnv: dev\nProject: (none)\n"
+        "Command: 1 (see structured target_context.commands_run)\n\n"
         "scripted body.\n\n$ pytest -q"
     )
     aud_summary = (
-        "## Target context\n- Repo: Jarvis\n- Env: dev\n- Project: (none)\n"
-        "- Command: 1 (see structured target_context.commands_run)\n\n"
+        "## Target context\nRepo: Jarvis\nEnv: dev\nProject: (none)\n"
+        "Command: 1 (see structured target_context.commands_run)\n\n"
         "Verdict: signed_off.\n\n$ rg -n test"
     )
     with tempfile.TemporaryDirectory() as td:

@@ -47,7 +47,44 @@ redirected paths.
 
 from __future__ import annotations
 
+import re
+
 import pytest
+
+
+# Plan 2026-05-09-002 F001 — keep test envelope summaries consistent with
+# overridden audit_status. Tests that monkey-patch ``audit_status`` after
+# ``audit_writer.build_audit`` derived it from a static `_summary` builder
+# end up with envelopes whose narrative verdict line ("Overall verdict:
+# signed_off.") disagrees with the structured field — exactly the
+# regression F001 catches. This helper rewrites the canonical verdict
+# line to match, so test fixtures don't trigger production fail-loud
+# detection on what is just test-level drift.
+
+_VERDICT_LINE_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(p, re.IGNORECASE | re.MULTILINE), r)
+    for (p, r) in (
+        (r"^(\s*\*{2}\s*verdict\s*:\s*)[a-z_]+(\s*\*{2}\s*\.?\s*)$", r"\g<1>{status}\g<2>"),
+        (r"^(\s*overall\s+verdict\s*:\s*)[a-z_]+(\s*\.?\s*)$", r"\g<1>{status}\g<2>"),
+        (r"^(\s*verdict\s*:\s*)[a-z_]+(\s*\.?\s*)$", r"\g<1>{status}\g<2>"),
+    )
+)
+
+
+def _rewrite_summary_verdict(summary: str, status: str) -> str:
+    """Replace the first canonical narrative verdict line in ``summary``
+    with ``status``. Idempotent: returns ``summary`` unchanged when no
+    canonical pattern matches. Used by test fixtures that override
+    ``audit_status`` after the fact and need the summary to stay
+    consistent so plan 2026-05-09-002 F001's verdict-mismatch detector
+    doesn't fire on what is just test-fixture artifact."""
+    if not isinstance(summary, str):
+        return summary
+    for pattern, repl_template in _VERDICT_LINE_REWRITES:
+        new = pattern.sub(repl_template.format(status=status), summary, count=1)
+        if new != summary:
+            return new
+    return summary
 
 
 @pytest.fixture(autouse=True)

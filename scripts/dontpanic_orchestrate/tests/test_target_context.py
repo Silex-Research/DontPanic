@@ -420,6 +420,12 @@ def _run_volley(
             # Only overwrite if the natural pipeline didn't already produce a more severe state
             if data.get("audit_status") == "signed_off":
                 data["audit_status"] = force_status
+                # Plan 2026-05-09-002 F001 — keep narrative verdict
+                # consistent with the overridden structured field.
+                from dontpanic_orchestrate.tests.conftest import _rewrite_summary_verdict
+                data["summary"] = _rewrite_summary_verdict(
+                    data.get("summary", ""), force_status
+                )
                 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         return path
 
