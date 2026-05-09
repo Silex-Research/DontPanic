@@ -1,0 +1,104 @@
+{
+  "task_id": "2026-05-09-002-fix-verdict-status-environmental-frictions",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Auditor verdict-mismatch detection. The audit envelope schema has both a structured `audit_status` enum (signed_off / needs_changes / blocked / inconclusive / redaction_required) and an unstructured `summary` text field. Auditor agents sometimes write a canonical `**Verdict: X**` line in the summary that disagrees with the structured field — most commonly a `signed_off` narrative paired with `needs_changes` structured status because the auditor enumerated non-blocking findings and the JSON serializer defaulted to needs_changes on any high-severity finding presence. The supervisor reads only the structured field today, so the disagreement silently produces another paid iteration. F001 adds a parser that extracts the narrative verdict, raises a typed `VerdictMismatchError` (mirroring `gate_pause.GateStateReconciliationError`) when the two disagree, and writes a classified INBOX event for operator visibility. The error fields name plan_id, feature_id, iteration, structured_status, narrative_verdict, audit_path, and remediation. Pure parser — no schema changes.",
+      "steps": [
+        "Inspect audit envelope shape and supervisor's `aud_data['audit_status']` consumer in dispatch_volley (around the no-progress trip site).",
+        "Define the canonical narrative-verdict regex covering the realistic shapes seen in the wild: `**Verdict: <status>**`, `Overall verdict: <status>.`, `Verdict: <status>` (case-insensitive on the status token).",
+        "Add `auditor_taxonomy.parse_narrative_verdict(summary: str) -> str | None` (or new `audit_envelope.py` if the parsing surface justifies it). Pure function returning the lowercased status or None when no canonical line is present.",
+        "Define typed `VerdictMismatchError` exception with fields: plan_id, feature_id, iteration, structured_status, narrative_verdict, audit_path, remediation. Mirror `GateStateReconciliationError` shape so downstream error-handling consumers don't grow new surfaces.",
+        "Wire the parser+check into `supervisor.dispatch_volley` immediately after the auditor envelope is read (`aud_data = json.loads(aud_audit_path.read_text())`). When narrative verdict is present and disagrees with structured, write the INBOX event then raise.",
+        "Add fixture tests covering: (a) SpinDine F001-i1 case (signed_off narrative + needs_changes structured → raises); (b) agreement (both signed_off → ok); (c) narrative-only verdict line (structured field used as-is); (d) structured-only (no narrative line — current behavior preserved); (e) different narrative phrasings (`**Verdict:**`, `Overall verdict:`).",
+        "Run focused dispatch + auditor tests + full orchestrate sweep."
+      ],
+      "acceptance": "(1) Pure `parse_narrative_verdict` function lives in `auditor_taxonomy` (or `audit_envelope`) and returns the lowercased status or None. (2) Typed `VerdictMismatchError` is raised with all six named fields populated when narrative ≠ structured. (3) Supervisor wires the check at the post-auditor-round seam in `dispatch_volley`; INBOX records `event=verdict_mismatch` with the parsed values. (4) The SpinDine F001-i1 audit JSON used as a fixture either raises the error OR validates that the implementer reading the structured field would have continued for a second paid iteration (proving the test catches the original defect). (5) Five fixture cases pass (mismatch / agreement / narrative-only / structured-only / phrasing variants). (6) No agent-conventions schema bump. (7) Full orchestrate sweep passes under raw pytest.",
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-09T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/verdict-mismatch-fixtures.log",
+          "captured_by": "claude",
+          "note": "23/23 tests pass in test_verdict_mismatch_f001.py: 7 parser pattern matches (bold / overall / plain / embedded), 7 non-matching cases (empty / None / no canonical / mid-sentence / unknown token / non-enum word / missing token), 7 detect_verdict_mismatch unit cases (SpinDine F001-i1 mismatch / agreement / narrative-only / structured-only / phrasing variants / unknown-token rejection / INBOX body shape), 2 supervisor wiring end-to-end cases (raises + writes INBOX on mismatch / proceeds when narrative+structured agree)."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-raw-pytest.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep under raw pytest (no env-var hygiene): 1552 passed, 7 skipped, 0 failed. Net +23 over the post-2026-05-09-001 baseline of 1529 — F001 added zero regressions. The 8 pre-existing tests that overrode audit_status without rewriting summary now use a shared `_rewrite_summary_verdict` helper in conftest so test fixtures stay coherent under the new verdict-mismatch detector."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/auditor_taxonomy.py",
+          "captured_by": "claude",
+          "note": "Adds `parse_narrative_verdict` (line-anchored MULTILINE regex covering `**Verdict: X**` / `Overall verdict: X.` / `Verdict: X` shapes; rejects unknown tokens via `_KNOWN_VERDICTS` enum guard), `VerdictMismatchError` (typed exception with 7 named fields mirroring `gate_pause.GateStateReconciliationError` from plan 2026-05-08-003 F001), `detect_verdict_mismatch` (pure check returning a populated error or None), and `format_verdict_mismatch_inbox_body` (operator-readable INBOX body)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Wires `detect_verdict_mismatch` immediately after the auditor envelope is read in `dispatch_volley` and BEFORE any branching on `aud_status`. On detection: appends INBOX `event=verdict_mismatch` (carrying narrative_verdict + structured_status + audit_path + iteration headers), fires terminal-notifier, and raises the typed exception so the volley fails loud."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/conftest.py",
+          "captured_by": "claude",
+          "note": "Adds `_rewrite_summary_verdict` helper used by 3 pre-existing test files (test_lifecycle_staged_gates.py, test_f006_circuit_breakers.py, test_target_context.py) that override audit_status post-build_audit. The helper rewrites the canonical narrative-verdict line so test fixtures stay coherent and don't trigger F001 on what is just test-fixture drift."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_audit_filename_feature_id.py",
+          "captured_by": "claude",
+          "note": "Updated fixture summaries from markdown-list `- Repo: Jarvis` format to `Repo: Jarvis` plain format. The supervisor's `_summary_declares` regex doesn't match the dash-prefixed form, so the asymmetric_reject was previously firing silently and downgrading audit_status to `blocked` — F001 now exposes that drift. Same fix in test_target_context.py (reaches via _rewrite_summary_verdict)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module pinning all seven acceptance items across three classes (TestParseNarrativeVerdict / TestDetectVerdictMismatch / TestSupervisorWiring)."
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 1,
+      "description": "Plan-status → gate-state sync for `pre_impl` (status=active path). Phase 1's `2026-05-08-003` F002 auto-clears `pre_impl` on direct CLI dispatch (`direct_dispatch=True` from cli.py invocation sites). That covers operator interactive use but not the case the original spec named: an operator flips `plan.md` status to `active` (the agent-conventions enum value that signals 'lock complete, ready for implementer dispatch') without invoking the dispatch CLI, expecting the status flip + lock D-entry to be the load-bearing action. F002 here adds a NEW supervisor-side post-reconciliation sync step that, after `gate_pause.reconcile_gate_state` returns successfully (no contradictions), checks whether `loaded.plan.status == 'active'` AND `pre_impl` is declared AND `pre_impl` is uncleared, and if all three hold, records the implicit clearance via a NEW sync helper (`gate_pause.implicit_clear_pre_impl_for_active_plan` or similar — a mutating function that lives next to `record_pause`/`approve_gate`, NOT inside `reconcile_gate_state`). Critically: `reconcile_gate_state` stays documented-pure per its existing contract. The sync helper writes the gate_event with `actor='supervisor:plan_status_active'` distinguishing it from operator approve (`'operator'`) and from `2026-05-08-003` F002's `'supervisor:auto_clear_pre_impl'`. INBOX records `event=pre_impl_status_synced`. Trigger is `plan.status == 'active'` exactly: `ready_for_audit`, `in_audit`, `completed`, `abandoned`, `blocked` do NOT trigger implicit clearance (post-implementation states should not re-enable dispatch).",
+      "steps": [
+        "Confirm canonical plan.status enum is `draft / active / ready_for_audit / in_audit / completed / abandoned / blocked` from claude/shared/schemas/v1.0/plan.schema.json — already verified at draft time.",
+        "Add `plan_loader.plan_status_enables_implicit_pre_impl(loaded) -> bool` that returns True iff `loaded.plan.status == 'active'` exactly. Pure read.",
+        "Add `gate_pause.implicit_clear_pre_impl_for_active_plan(plan_dir, *, plan_id, declared_gates) -> bool` — a NEW mutating helper next to `approve_gate` / `record_pause`. Returns True when state changed (False when pre_impl wasn't declared, was already cleared, or no-op). On change, writes gate_event with actor='supervisor:plan_status_active'. Does NOT modify `reconcile_gate_state` (which stays documented-pure per the 2026-05-08-003 F001 contract).",
+        "Wire from `supervisor._reconcile_gate_state_or_raise`: AFTER reconcile_gate_state returns successfully, if `plan_loader.plan_status_enables_implicit_pre_impl(loaded)` is True, call the sync helper. INBOX `pre_impl_status_synced` event records plan_id, status, feature_id, and whether the clearance actually fired (idempotent path also writes an INBOX trace so the audit log shows the supervisor saw the active status).",
+        "Add fixture tests covering: (a) plan status=active + pre_impl declared + pre_impl uncleared → sync clears + records gate_event + INBOX; (b) plan status=draft + same shape → sync does NOT clear (unchanged behavior); (c) plan status=ready_for_audit + same shape → sync does NOT clear (post-impl state); (d) plan status=completed + same shape → sync does NOT clear (post-impl state — operator should not be re-dispatching a completed plan); (e) plan status=active + pre_impl already cleared → idempotent (no second event); (f) plan status=active but pre_impl is NOT in declared gates → no-op (don't invent gates); (g) verify `reconcile_gate_state` is still documented-pure (no test fixture mutates state via that function); (h) verify the `2026-05-08-003` F002 direct-dispatch path still fires for status=draft + direct_dispatch=True (no regression).",
+        "Run focused gate_pause + reconciliation tests + full orchestrate sweep."
+      ],
+      "acceptance": "(1) `plan_loader.plan_status_enables_implicit_pre_impl` returns True ONLY for `status == 'active'`. False for draft, ready_for_audit, in_audit, completed, abandoned, blocked. (2) New sync helper `gate_pause.implicit_clear_pre_impl_for_active_plan` is the ONLY surface that mutates state for this path; `reconcile_gate_state` is unchanged and stays documented-pure. (3) The implicit clearance writes a gate_event with `actor='supervisor:plan_status_active'` distinguishing it from operator approve and from `2026-05-08-003` F002's `'supervisor:auto_clear_pre_impl'`. (4) INBOX event=`pre_impl_status_synced` carries plan_id, status, and feature_id headers. (5) Eight fixture cases pass + the `2026-05-08-003` F002 tests still pass (no regression on direct-dispatch path). (6) Full orchestrate sweep passes under raw pytest. (7) `reconcile_gate_state`'s docstring contract ('No mutation regardless of outcome') is still honored — verified by re-reading the function and asserting no new write paths were added inside it.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 2,
+      "description": "Environmental volley short-circuit on first env-only auditor round. Phase 1's `2026-05-08-003` F003 added a closed-taxonomy classifier (`auditor_taxonomy.classify_terminal`) at the `stopped_no_progress` trip site — advisory only. The volley still iterates through max_iterations, paying for additional implementer + auditor rounds on dispatches the agents demonstrably can't complete. The original spec's intent was to STOP paying on environmentally-doomed dispatches; the exclude-from-counter shape proposed in the first draft of THIS plan would actually do the opposite (volley runs until iteration cap). F003 here takes the right shape: when the auditor's verdict is `needs_changes` AND `auditor_taxonomy.classify_terminal` aggregates the findings as exactly `environmental_reproduction_failure` (every finding env, none mixed in), the supervisor terminates the volley IMMEDIATELY with a distinct `stopped_environmental_blocker` final_status — BEFORE the next implementer round dispatches. Operator gets an INBOX `environmental_blocker_short_circuit` event naming the cited finding(s) and the recommended action: 'run the verification locally on a host that has the missing capability; if it passes, attach the evidence and close the volley as operator-verified.' The volley terminal stays non-success — F003 does not auto-sign-off, just routes the operator-local verification path explicitly. Saves the (implementer + auditor) round pair the volley would have paid for to confirm what the classifier already determined.",
+      "steps": [
+        "Inspect `supervisor.dispatch_volley`'s post-auditor-round verdict-evaluation path (around the `aud_status = aud_data.get('audit_status', ...)` read site and the existing `if aud_status == 'signed_off'` / `if aud_status == 'blocked'` branches).",
+        "Add a new branch BEFORE the no_progress check (and before the diminishing_returns + convergence_collapse branches): when `aud_status == 'needs_changes'` AND the auditor envelope's findings classify (via `auditor_taxonomy.classify_terminal`) to aggregate `environmental_reproduction_failure` with `blocking == False`, short-circuit.",
+        "Add `circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER = 'environmental_blocker'` and the matching `TERMINAL_STATUS[ENVIRONMENTAL_BLOCKER] = 'stopped_environmental_blocker'`. Add to `APPROVAL_BREAKERS` so the operator can clear it via `dontpanic approve <plan> breaker:environmental_blocker` after running local verification (parity with the other approval-required breakers).",
+        "Write the operator-facing INBOX event `environmental_blocker_short_circuit` with the classification body (reuse `auditor_taxonomy.format_inbox_body`), then trip the breaker via `_trip_and_return(BreakerKind.ENVIRONMENTAL_BLOCKER, reason, iteration + 1)`. The classification sidecar JSON from plan `2026-05-08-003` F003 still writes via the no_progress trip path; we add a parallel write here so the F2 close gate can cite the artifact regardless of which terminal fired.",
+        "Add fixture tests covering: (a) round-0 auditor env-only → volley terminates immediately with `stopped_environmental_blocker`, no second implementer round, sidecar JSON + INBOX both present; (b) round-0 auditor mixed (env + defect) → does NOT short-circuit, volley iterates per existing behavior; (c) round-0 auditor defect-only → does NOT short-circuit; (d) round-0 auditor unknown aggregate → does NOT short-circuit (preserves D006 invariant); (e) the SpinDine F001-i1 audit JSON used as the canonical env fixture — paid-iteration regression is closed (expected: 2 paid calls instead of 4); (f) malformed envelope → falls through to existing logic, no short-circuit (fail-open).",
+        "Run focused dispatch + auditor_taxonomy + circuit_breakers tests + full orchestrate sweep."
+      ],
+      "acceptance": "(1) New `BreakerKind.ENVIRONMENTAL_BLOCKER` value + `TERMINAL_STATUS` entry + `APPROVAL_BREAKERS` membership land in `circuit_breakers.py`. (2) Supervisor's volley path short-circuits on first env-only auditor round BEFORE another implementer round dispatches; final_status is `stopped_environmental_blocker`, NOT `stopped_no_progress`. (3) Mixed, defect-only, scope-overreach, evidence-shape, and unknown aggregates do NOT short-circuit — the existing iterate-until-cap behavior is preserved for everything except the narrow env-only case. (4) The SpinDine F001-i1 fixture, replayed as round-0 auditor input, terminates after 2 paid calls (one implementer, one auditor) instead of 4 — the documented regression is closed. (5) Operator can clear the breaker via the existing `dontpanic approve <plan> breaker:environmental_blocker` CLI (no new commands). (6) F003 does NOT auto-sign-off the feature; the breaker terminal stays non-success and `signoff.json` reflects that. (7) Six fixture cases pass + all `2026-05-08-003` F003 tests still pass + the broader breaker suite passes. (8) No agent-conventions schema bump.",
+      "passes": false,
+      "depends_on": ["F001"]
+    }
+  ]
+}

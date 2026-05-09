@@ -1641,6 +1641,8 @@ def _bypass_quota():
 
 def _force_auditor_status(force: str):
     """Wrap supervisor._run_round so the auditor returns the forced status."""
+    from dontpanic_orchestrate.tests.conftest import _rewrite_summary_verdict
+
     orig = supervisor._run_round
 
     def maybe_force(*args, **kwargs):
@@ -1648,6 +1650,9 @@ def _force_auditor_status(force: str):
         if kwargs.get("role") == "auditor":
             data = json.loads(path.read_text())
             data["audit_status"] = force
+            # Plan 2026-05-09-002 F001 — keep summary's narrative verdict
+            # consistent with the overridden structured field.
+            data["summary"] = _rewrite_summary_verdict(data.get("summary", ""), force)
             path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         return path
 

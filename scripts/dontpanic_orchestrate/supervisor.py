@@ -1599,6 +1599,46 @@ def dispatch_volley(
             # Read auditor's verdict
             aud_data = json.loads(aud_audit_path.read_text())
             aud_status = aud_data.get("audit_status", "inconclusive")
+
+            # Plan 2026-05-09-002 F001 — verdict-mismatch detection. The
+            # auditor can write a canonical narrative-verdict line in the
+            # summary that disagrees with the structured ``audit_status``
+            # field (the SpinDine vibe-plan-001 F001-i1 regression: summary
+            # said ``**Verdict: signed_off**`` while audit_status was
+            # ``needs_changes``). Reading only the structured field
+            # silently produces another paid iteration. Fail loud instead
+            # — INBOX classification + raise — mirroring the gate_pause
+            # GateStateReconciliationError discipline from plan 2026-05-08-
+            # 003 F001.
+            mismatch = auditor_taxonomy.detect_verdict_mismatch(
+                plan_id=loaded.plan_id,
+                feature_id=feature_id,
+                iteration=iteration,
+                audit_path=aud_audit_path,
+                audit_envelope=aud_data,
+            )
+            if mismatch is not None:
+                inbox.append_event(
+                    loaded.plan_dir,
+                    event="verdict_mismatch",
+                    plan_id=loaded.plan_id,
+                    body=auditor_taxonomy.format_verdict_mismatch_inbox_body(mismatch),
+                    narrative_verdict=mismatch.narrative_verdict,
+                    structured_status=mismatch.structured_status,
+                    audit_path=str(mismatch.audit_path),
+                    feature_id=feature_id,
+                    iteration=str(iteration),
+                )
+                notify.notify(
+                    title=f"jarvis: verdict mismatch — {loaded.plan_id}",
+                    message=(
+                        f"narrative={mismatch.narrative_verdict} vs "
+                        f"structured={mismatch.structured_status}"
+                    ),
+                    subtitle=feature_id,
+                )
+                raise mismatch
+
             print(f"[volley] iter={iteration} auditor verdict: {aud_status}")
 
             if aud_status == "signed_off":

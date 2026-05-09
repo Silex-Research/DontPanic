@@ -49,6 +49,190 @@ from typing import Any
 CLASSIFICATION_SIDECAR_PREFIX = "no_progress_classification"
 
 
+# ───────────────────── Plan 2026-05-09-002 F001 ─────────────────────
+#
+# Auditor verdict-mismatch detection. The audit envelope schema (agent-
+# conventions v1.0 audit.schema.json) has both a structured ``audit_status``
+# enum and an unstructured ``summary`` text field. Auditors sometimes write
+# a canonical narrative-verdict line in ``summary`` that disagrees with the
+# structured field — most commonly ``**Verdict: signed_off**`` while
+# ``audit_status`` defaults to ``needs_changes`` because the JSON serializer
+# flipped on a high-severity finding presence. The supervisor reads only
+# the structured field, so the disagreement silently produces another paid
+# iteration. F001 detects + raises VerdictMismatchError so the volley fails
+# loud rather than silently choosing one or the other.
+#
+# Design (D003 of plan 2026-05-09-002): regexes are line-anchored against
+# MULTILINE so canonical lead-in patterns at the START of a line match,
+# but quoted text mid-paragraph or recommendation prose does NOT trigger a
+# match. Matched token must intern against the canonical audit_status enum
+# (defensive — prevents arbitrary words from spoofing the verdict check).
+
+_KNOWN_VERDICTS: frozenset[str] = frozenset(
+    {
+        "signed_off",
+        "needs_changes",
+        "blocked",
+        "inconclusive",
+        "redaction_required",
+    }
+)
+
+_VERDICT_LINE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE | re.MULTILINE)
+    for p in (
+        # **Verdict: signed_off** — markdown-bolded canonical form
+        r"^\s*\*{2}\s*verdict\s*:\s*([a-z_]+)\s*\*{2}\s*\.?\s*$",
+        # Overall verdict: signed_off. — sentence form
+        r"^\s*overall\s+verdict\s*:\s*([a-z_]+)\s*\.?\s*$",
+        # Verdict: signed_off — plain canonical form
+        r"^\s*verdict\s*:\s*([a-z_]+)\s*\.?\s*$",
+    )
+)
+
+
+def parse_narrative_verdict(summary: str | None) -> str | None:
+    """Plan 2026-05-09-002 F001 — extract the auditor summary's narrative
+    verdict line, returning the lowercased status token or ``None``.
+
+    Pure / deterministic. Only canonical lead-in patterns at the start of a
+    line match: ``Verdict: X``, ``Overall verdict: X.``, ``**Verdict: X**``.
+    Quoted text mid-paragraph or recommendation prose does NOT trigger a
+    match. The matched token is checked against the canonical
+    ``audit_status`` enum; arbitrary words ("great", "tbd") return None
+    rather than being reported as the verdict.
+
+    Returns ``None`` when:
+      - ``summary`` is None or empty
+      - no canonical pattern matches
+      - matched token is not a known ``audit_status`` enum value
+    """
+    if not summary:
+        return None
+    for pattern in _VERDICT_LINE_PATTERNS:
+        match = pattern.search(summary)
+        if match is not None:
+            token = match.group(1).strip().lower()
+            if token in _KNOWN_VERDICTS:
+                return token
+    return None
+
+
+class VerdictMismatchError(Exception):
+    """Plan 2026-05-09-002 F001 — auditor envelope's narrative verdict
+    line disagrees with the structured ``audit_status`` field.
+
+    Mirrors the :class:`gate_pause.GateStateReconciliationError` shape from
+    plan 2026-05-08-003 F001 — typed exception with operator-readable
+    remediation. The supervisor catches once at the post-auditor-round
+    seam, writes an INBOX classification event, and re-raises so the
+    volley fails loud rather than silently choosing one field over the
+    other (D003 + D004).
+    """
+
+    def __init__(
+        self,
+        *,
+        plan_id: str,
+        feature_id: str,
+        iteration: int,
+        structured_status: str,
+        narrative_verdict: str,
+        audit_path: Path,
+        remediation: str,
+    ) -> None:
+        self.plan_id = plan_id
+        self.feature_id = feature_id
+        self.iteration = iteration
+        self.structured_status = structured_status
+        self.narrative_verdict = narrative_verdict
+        self.audit_path = audit_path
+        self.remediation = remediation
+        msg = (
+            f"auditor verdict mismatch [{plan_id}/{feature_id}/iter{iteration}]: "
+            f"narrative_verdict={narrative_verdict!r} but "
+            f"structured audit_status={structured_status!r}\n"
+            f"audit_path={audit_path}\n"
+            f"remediation: {remediation}"
+        )
+        super().__init__(msg)
+
+
+def detect_verdict_mismatch(
+    *,
+    plan_id: str,
+    feature_id: str,
+    iteration: int,
+    audit_path: Path,
+    audit_envelope: dict[str, Any],
+) -> VerdictMismatchError | None:
+    """Plan 2026-05-09-002 F001 — pure check returning a fully-populated
+    :class:`VerdictMismatchError` when the envelope's narrative verdict
+    disagrees with the structured ``audit_status`` field, or ``None`` when
+    they agree (or no narrative line is present, in which case the
+    existing structured-only behavior applies).
+
+    The caller — typically ``supervisor.dispatch_volley`` — raises the
+    returned error after writing an INBOX classification event. Returning
+    the populated error rather than raising directly keeps this function
+    pure and testable.
+    """
+    structured = audit_envelope.get("audit_status")
+    if not isinstance(structured, str):
+        # Missing / malformed structured field is a separate concern;
+        # callers handle it elsewhere (default to "inconclusive").
+        return None
+    summary = audit_envelope.get("summary")
+    narrative = parse_narrative_verdict(
+        summary if isinstance(summary, str) else None
+    )
+    if narrative is None:
+        # Narrative-absent: structured field is canonical. Existing
+        # behavior is preserved.
+        return None
+    if narrative == structured.lower():
+        return None
+    remediation = (
+        "Reconcile the auditor's verdict before re-dispatching: either "
+        "update the summary to match audit_status, or update audit_status "
+        "to match the canonical narrative verdict. Re-running without "
+        "reconciliation will hit this error again."
+    )
+    return VerdictMismatchError(
+        plan_id=plan_id,
+        feature_id=feature_id,
+        iteration=iteration,
+        structured_status=structured,
+        narrative_verdict=narrative,
+        audit_path=audit_path,
+        remediation=remediation,
+    )
+
+
+def format_verdict_mismatch_inbox_body(err: VerdictMismatchError) -> str:
+    """Plan 2026-05-09-002 F001 — operator-readable INBOX body for a
+    verdict-mismatch failure. Kept module-local so every call site emits
+    the same shape (parallel to :func:`format_reconciliation_inbox_body`
+    in gate_pause for the GateStateReconciliationError case)."""
+    return (
+        f"Auditor verdict mismatch on iteration {err.iteration}.\n\n"
+        f"Plan: {err.plan_id}\n"
+        f"Feature: {err.feature_id}\n"
+        f"Audit envelope: {err.audit_path}\n\n"
+        f"Narrative verdict line: {err.narrative_verdict!r}\n"
+        f"Structured audit_status: {err.structured_status!r}\n\n"
+        f"Remediation: {err.remediation}\n\n"
+        "The auditor wrote a canonical verdict line in the summary that "
+        "disagrees with the structured field. The supervisor refuses to "
+        "silently choose one or the other — silent disagreement is the "
+        "exact regression the SpinDine vibe-plan-001 F001-i1 dispatch "
+        "produced before this check landed."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+
+
 class FindingClass(str, Enum):
     IMPLEMENTATION_DEFECT = "implementation_defect"
     ENVIRONMENTAL_REPRODUCTION_FAILURE = "environmental_reproduction_failure"
@@ -558,9 +742,13 @@ __all__ = [
     "FindingClass",
     "FindingClassification",
     "TerminalClassification",
+    "VerdictMismatchError",
     "classify_finding",
     "classify_terminal",
     "collect_saved_evidence_paths",
+    "detect_verdict_mismatch",
     "format_inbox_body",
+    "format_verdict_mismatch_inbox_body",
+    "parse_narrative_verdict",
     "write_classification_sidecar",
 ]
