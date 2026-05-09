@@ -1,0 +1,58 @@
+{
+  "goal_type": "parity",
+  "source_of_truth": "Operator-approved harness-friction spec from 2026-05-08, preserved audit-trail memories on evidence-shape overgating and phase-level recursion, and existing lifecycle gate / completion-dispatch plan close-outs.",
+  "user_journeys": [
+    {
+      "name": "operator-sees-contradictory-gate-state-fail-loud",
+      "description": "When persisted gate-state conflicts with the plan's declared gates, the operator gets a clear reconciliation error and INBOX evidence instead of silent normalization or a confusing later pause.",
+      "surfaces": ["infra"],
+      "states": ["clean_gate_state", "unknown_pending_gate", "incompatible_pending_stage", "legacy_cleared_gates"],
+      "acceptance_signals": [
+        "Contradictory state raises a typed reconciliation error",
+        "The offending artifact path and remediation are named",
+        "Legacy cleared_gates-only state remains compatible",
+        "Gate-state bytes are unchanged on failure"
+      ]
+    },
+    {
+      "name": "operator-direct-dispatch-clears-pre-impl-once",
+      "description": "For an eligible dev/test plan, the operator's direct dispatch command counts as the pre_impl approval while preserving explicit audit-trail evidence.",
+      "surfaces": ["infra"],
+      "states": ["eligible_direct_dispatch", "protected_target", "multi_gate_state", "already_cleared"],
+      "acceptance_signals": [
+        "Eligible direct dispatch proceeds without a second approve/resume command",
+        "Gate-state event and INBOX event record the auto-clear",
+        "Protected and multi-gate cases still require explicit operator action",
+        "Manual approve/resume semantics remain unchanged"
+      ]
+    },
+    {
+      "name": "operator-can-distinguish-environmental-auditor-friction",
+      "description": "When a volley stalls because the auditor cannot reproduce due to sandbox, CLI auth, or equivalent-evidence disagreement, the terminal evidence distinguishes that from a genuine implementation defect.",
+      "surfaces": ["infra"],
+      "states": ["environmental_reproduction_failure", "evidence_shape_disagreement", "implementation_defect", "mixed_or_unknown"],
+      "acceptance_signals": [
+        "Environmental findings are classified separately from implementation defects",
+        "Evidence-shape disagreement requires equivalent saved/operator evidence",
+        "Mixed or unknown cases remain blocking",
+        "Terminal reporting recommends the next operator action without auto-signoff"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "gate-state-reconciliation-fail-loud.log",
+    "pre-impl-auto-clear-audit-trail.log",
+    "auditor-verdict-taxonomy-fixtures.log",
+    "stopped-no-progress-classification-reporting.log",
+    "full-orchestrate-regression-sweep.log"
+  ],
+  "non_goals": [
+    "No agent-conventions schema bump",
+    "No phase-mode dispatch or auto-commit implementation",
+    "No plan-level closeout aggregator",
+    "No conftest JARVIS_HOME or DONTPANIC_HOME isolation fix",
+    "No live nested orchestration during this plan's own implementation",
+    "No automatic signoff based on environmental or evidence-shape classification"
+  ],
+  "completion_test": "An eligible direct-dispatch plan can move through pre_impl with auditable auto-clear evidence, contradictory gate-state fails loud without mutation, and stopped/no-progress terminal reporting distinguishes environmental harness friction from real implementation defects while preserving blocking behavior for unknown or genuine defects."
+}

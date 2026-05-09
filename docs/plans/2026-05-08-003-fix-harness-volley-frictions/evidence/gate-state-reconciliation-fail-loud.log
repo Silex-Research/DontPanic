@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 15 items
+
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_legacy_cleared_gates_only_state_passes PASSED [  6%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_no_state_file_passes PASSED [ 13%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_undeclared_gate_in_cleared_gates_raises PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_undeclared_gate_in_pause_gates_raises PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_synthetic_breaker_name_in_pause_gates_passes PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_unknown_pending_stage_raises PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_pending_stage_with_non_declared_gate_raises PASSED [ 46%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_stale_active_defer_raises PASSED [ 53%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestReconcileDirect::test_known_active_defer_passes PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestSupervisorSurface::test_dispatch_volley_raises_and_writes_inbox PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestSupervisorSurface::test_dispatch_single_agent_raises_and_writes_inbox PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestCLISurface::test_cli_approve_refuses_on_contradiction PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestCLISurface::test_cli_resume_gate_refuses_on_contradiction PASSED [ 86%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestCLISurface::test_cli_resume_all_refuses_on_contradiction PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py::TestCLISurface::test_cli_approve_proceeds_when_state_consistent PASSED [100%]
+
+============================== 15 passed in 0.16s ==============================
