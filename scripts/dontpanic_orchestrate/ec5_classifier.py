@@ -55,7 +55,7 @@ EC5_VERDICT_SEVERITY: dict[str, str] = {"i0": "advisory"}
 # anchored on the bigram "target<sep>context" + "prelude", so generic phrases
 # like "missing prelude" alone don't match unrelated findings.
 _EC5_TEXT_HEURISTIC = re.compile(
-    r"(target[\s\-._]?context[^.]*prelude|prelude[^.]*target[\s\-._]?context)",
+    r"(\bEC5\b|target[\s\-._]?context[^.]*prelude|prelude[^.]*target[\s\-._]?context)",
     re.IGNORECASE,
 )
 
