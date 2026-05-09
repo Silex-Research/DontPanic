@@ -4,6 +4,61 @@ This guide is for private-alpha users installing from source. It assumes you
 are comfortable with a terminal and local agent CLIs, but it does not assume a
 Firebase project or any cloud account for the first smoke test.
 
+## Setup tracks — pick yours
+
+DontPanic has one **required** layer and several **optional** layers. The order
+is strict: each layer assumes the one above is already in place.
+
+```
+Required:
+  1. DontPanic core (this doc)        ← install + register a project + doctor
+
+Optional layers (add as needed):
+  2. Notification sink                ← see below — direct Discord webhook
+                                          (works without any broker)
+  3. Broker runtime (pick ONE)        ← only if you want bidirectional
+                                          commands from chat / dashboard /
+                                          hosted agent surface
+       3a. OpenClaw                   ← chat-channel runtime (Discord /
+                                          Telegram / WhatsApp). Best for
+                                          notify-while-away over chat.
+       3b. Claude dispatch            ← Claude.ai managed agents OR
+                                          Claude Code subagents. Best when
+                                          your runtime already has a
+                                          notification surface (dashboard,
+                                          email, hosted task queue).
+       3c. Cursor / Continue / IDE    ← Interactive desktop integration via
+                                          MCP. No "broker" needed — agents
+                                          read DontPanic state during your
+                                          active session.
+       3d. Custom MCP client          ← Anything that speaks MCP can call
+                                          DontPanic. Same pattern as 3a/3b.
+  4. Broker-specific skill            ← The skill INSIDE your chosen broker
+                                          that subscribes to DontPanic events
+                                          and routes them. Replaces the direct
+                                          sink in #2 once installed.
+```
+
+| Track | What you get | Time | Reference |
+|---|---|---|---|
+| **Solo dev, terminal only** | DontPanic core + agent CLIs | ~10 min | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) |
+| **Solo dev, want Discord notifications** | Above + receive-only Discord webhook (no broker) | +2 min | This doc → [`CONFIGURATION.md` § Notifications](./CONFIGURATION.md#notifications) |
+| **Personal-axiom (you + maybe friends, chat-channel surfaces)** | Above + OpenClaw as multi-channel router (Discord/Telegram/WhatsApp) with bidirectional commands | +1-2 days | This doc → plan `2026-05-03-002-infra-personal-openclaw-axiom-jarvis` |
+| **Hosted-agent flow (Claude.ai managed agents)** | DontPanic events surfaced through Claude.ai's dashboard/email; approvals via Claude.ai chat → MCP | varies | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → operator-side wiring |
+| **AI agent integrating DontPanic interactively** (Claude Code, Cursor, Codex CLI, Continue) | DontPanic core + agent-manifest + MCP server. No broker needed — agents read state in your active session | ~5 min | [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → [`ECOSYSTEM.md`](./ECOSYSTEM.md) |
+
+The first track is the only required one. **Don't install a broker just for
+notifications** — the direct Discord webhook in the second track is zero-config
+relative to standing up another runtime. Add a broker only when you want
+bidirectional commands from a chat or hosted-agent surface.
+
+**Picking 3a vs 3b vs 3c:** the axis is *interactive vs. notify-while-away*.
+If you're at the keyboard, your IDE/CLI agent (3c) reads DontPanic via MCP
+during the active session — no notification broker needed. If you want
+status when *not* at the keyboard, pick the broker (3a or 3b) whose native
+surface you'll actually check. OpenClaw owns chat channels; Claude.ai owns
+hosted-agent dashboards/email. Same architectural pattern, different host.
+
 ## Install
 
 ```bash

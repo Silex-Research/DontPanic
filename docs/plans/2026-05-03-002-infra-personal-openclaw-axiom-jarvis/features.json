@@ -87,6 +87,30 @@
         "F001",
         "F003"
       ]
+    },
+    {
+      "id": "F006",
+      "category": "tooling",
+      "phase": 6,
+      "description": "OpenClaw notification router skill \u2014 `dontpanic-notification-router` \u2014 that subscribes to DontPanic NotifyEvents (channel-agnostic) and fans out to the operator's channels per policy. DontPanic emits a single outbound NotifyEvent surface (kind + severity + plan_id + body + action_link, per plan 2026-05-01-002 F002); OpenClaw absorbs ALL per-channel knowledge (Discord webhooks, Telegram bot API, WhatsApp business API). The router applies policy: info+plan-boundary events \u2192 shared coordination channel (Discord); action_required+escalation events \u2192 owner-private channel (Telegram); optional after-hours mirror \u2192 WhatsApp. Bidirectional: when an operator replies in any channel (e.g. `/dp status`, `/dp inbox <plan>`), the router maps it to a DontPanic MCP tool call (from plan 2026-05-03-003 F002). Owner-only state changes (approve / resume / dispatch confirm) are gated on channel-AND-identity: Discord can only fire read-only commands; only Telegram private DM (or Control UI) can fire owner-approval commands per D003+D004. This absorbs the bidirectional Discord scope deferred in plan 2026-05-01-002 AND replaces the need for DontPanic to ever ship Telegram/WhatsApp-specific sinks. DontPanic keeps its built-in direct Discord sink as a no-OpenClaw solo-dev convenience (per plan 2026-05-01-002, status:completed); for THIS personal-axiom stack, the operator drops the direct DontPanic\u2192Discord config and points DontPanic's webhook at OpenClaw's local receiver instead (Path A) OR has OpenClaw watch `INBOX.md` for new events (Path B, pull-based). Path B is recommended for personal-axiom because it survives OpenClaw restarts cleanly and avoids local-port management.",
+      "steps": [
+        "Choose subscription mode: Path A (DontPanic webhook \u2192 OpenClaw receiver) or Path B (OpenClaw watches INBOX.md). Path B recommended for personal-axiom \u2014 record the choice in this plan's decisions.jsonl.",
+        "Create OpenClaw skill `~/.openclaw/workspace/skills/dontpanic-notification-router/SKILL.md` with: (a) NotifyEvent ingestion (Path A: HTTP receiver; Path B: file watcher on `<plan>/INBOX.md`), (b) policy table mapping event severity+kind\u2192channel set, (c) per-channel renderers (Discord embed shape, Telegram MarkdownV2, WhatsApp template).",
+        "Configure operator-side per-channel routing in `~/.openclaw/workspace/skills/dontpanic-notification-router/config.json` (gitignored): channel IDs, bot tokens (referenced by env name only), allowlists per channel.",
+        "Implement bidirectional command surface \u2014 operator messages in any channel \u2192 router parses intent \u2192 calls DontPanic MCP tool (`approve_gate` / `dispatch` / `status` / `read_evidence` / etc.). Read-only commands (`status`, `inbox`, `dispatch --dry-run`) allowed in shared channels (Discord); owner-only commands (`approve`, `resume`, `dispatch --confirm`) gated to Telegram private DM + identity allowlist per D003+D004.",
+        "Wire the skill's MCP client at `~/.openclaw/mcp.json` with `dontpanic mcp serve` as a tool source. The DontPanic agent-manifest from plan 2026-05-03-003 F001 is the discovery file the skill reads on first run.",
+        "If using Path A: drop the direct `~/.dontpanic/discord.json` from the personal-axiom stack and point DontPanic's webhook at `http://127.0.0.1:<openclaw-port>/notify`. If Path B: leave `~/.dontpanic/discord.json` unset entirely.",
+        "Document the policy table in `~/.openclaw/workspace/skills/dontpanic-notification-router/POLICY.md`: severity+kind matrix \u2192 channel set \u2192 renderer. Include the rationale that per-channel routing is policy, not delivery \u2014 it lives in OpenClaw because OpenClaw owns the chat-surface domain.",
+        "Test offline first: mock NotifyEvent ingestion + each channel renderer + each MCP-tool dispatch + reject-non-allowlisted-user. Only after offline tests pass, enable live channels."
+      ],
+      "acceptance": "(1) Skill exists at `~/.openclaw/workspace/skills/dontpanic-notification-router/` with SKILL.md, config.json (operator-supplied, gitignored), POLICY.md, and SECURITY.md. (2) Skill ingests DontPanic NotifyEvents via Path A (local HTTP) OR Path B (INBOX.md watcher) \u2014 choice recorded in decisions.jsonl. (3) Policy table maps severity+kind to channel set (e.g. info+plan_boundary \u2192 Discord; action_required+escalation \u2192 Telegram; optional WhatsApp mirror) and is editable WITHOUT code changes. (4) Bidirectional commands: read-only (`status`, `inbox`, `dispatch --dry-run`) allowed in Discord; owner-only state changes (`approve`, `resume`, `dispatch --confirm`) gated to Telegram private DM + Discord-user-ID allowlist per D003+D004. (5) Skill calls DontPanic exclusively through the MCP surface from plan 2026-05-03-003 F002 \u2014 no shell passthrough, no direct file reads of plan dirs (except INBOX.md watching when in Path B mode). (6) Non-allowlisted users in any channel are silently ignored (no reply \u2014 avoids confirming the bot's presence). (7) DontPanic itself is unchanged \u2014 no new emit points, no new MCP tools, no per-channel sinks beyond the existing Discord webhook (which stays for the no-OpenClaw solo-dev case). The router replaces the need for Telegram/WhatsApp sinks inside DontPanic. (8) Offline test fixture covers each policy-row \u00d7 each channel renderer + at least three rejection cases (unknown command / non-allowlisted user / malformed args).",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F005"
+      ]
     }
   ]
 }

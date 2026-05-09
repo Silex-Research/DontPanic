@@ -5,7 +5,26 @@
 
 This document is the operator-facing inventory. For the architectural why,
 see [`PLATFORM.md`](./PLATFORM.md). For the long-form roadmap, see
-[`ROADMAP.md`](./ROADMAP.md).
+[`ROADMAP.md`](./ROADMAP.md). For the recommended **setup order across
+optional layers**, see [`GETTING_STARTED.md` § Setup tracks](./GETTING_STARTED.md#setup-tracks--pick-yours).
+
+## Setup order (the short version)
+
+Each layer assumes the one above is already in place — don't skip ahead:
+
+1. **DontPanic core** (required) — `pipx install`, `dontpanic doctor`, register a project.
+2. **Notification sink** (optional) — pick one of three:
+   - **Direct Discord webhook** (zero-config, no broker needed): set `DONTPANIC_DISCORD_WEBHOOK_URL` or `~/.dontpanic/discord.json`. Receive-only; you respond from terminal. Best for solo dev who doesn't run a chat or hosted-agent runtime.
+   - **OpenClaw broker** (multi-channel chat: Discord/Telegram/WhatsApp): see plan `2026-05-03-002` F006. Skip the direct webhook — point DontPanic at OpenClaw's local receiver, OR have OpenClaw watch `INBOX.md`.
+   - **Claude.ai managed-agent broker** (cloud dispatch + dashboard/email surfaces): the managed agent reads DontPanic state via MCP polling or `INBOX.md` watching, surfaces blockers in Claude.ai's UI, and approves via MCP `approve_gate`. Same pattern, different runtime.
+   - **No broker, interactive only**: if you're using Claude Code, Cursor, Codex CLI, or Continue at the keyboard, skip notifications entirely. The agent reads DontPanic state via MCP during your active session — there's nowhere to "notify" you that you aren't already.
+3. **Per-project tuning** (optional) — `<repo>/.dontpanic/dontpanic.json` overrides global agents, tier, plans_dir.
+4. **Quota caps** (optional) — `~/.dontpanic/quota_caps.json` for per-vendor weekly token caps.
+
+The architectural invariant: any MCP-aware runtime can be the broker. DontPanic
+ships only the direct Discord webhook because it's the no-broker zero-config
+case. Telegram, WhatsApp, Slack, hosted-agent dashboards, and email are all
+intentionally **not** built into DontPanic — the broker absorbs that domain.
 
 ## What's available — at a glance
 
