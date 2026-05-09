@@ -72,6 +72,116 @@ class PausedOnGate(RuntimeError):
     pass
 
 
+# Plan 2026-05-08-003 F002 — operator/runtime envs that must NEVER auto-clear
+# `pre_impl` even on direct dispatch. Match is case-insensitive against
+# ``effective_env`` (the resolved string the supervisor stamps on INBOX).
+_AUTO_CLEAR_REFUSED_ENVS: frozenset[str] = frozenset({"prod", "production"})
+
+_AUTO_CLEAR_ACTOR: str = "supervisor:auto_clear_pre_impl"
+
+
+def _maybe_auto_clear_pre_impl(
+    *,
+    loaded: plan_loader.LoadedPlan,
+    declared_gates: list[Any],
+    direct_dispatch: bool,
+    effective_env: str | None,
+    effective_project: str | None,
+    feature_id: str,
+) -> str | None:
+    """Plan 2026-05-08-003 F002 — narrow auto-clear of the `pre_impl`
+    lifecycle gate for direct operator dispatch in eligible dev/test
+    contexts. Returns the recorded reason on auto-clear, ``None`` when
+    the policy refuses (caller falls through to the normal staged pause).
+
+    Refuses when any of the following holds:
+      - ``direct_dispatch`` is False (background/programmatic dispatch
+        keeps the normal manual approve/resume contract).
+      - ``effective_env`` matches a prod/production label.
+      - the plan does not declare ``pre_impl``.
+      - ``pre_impl`` is already in ``cleared_gates``.
+      - the staged ``pre_impl`` evaluation has more than one pending gate
+        (multi-gate states never auto-clear beyond the owned single-gate
+        case — D005).
+
+    On success: writes a normal gate event with ``actor='supervisor:
+    auto_clear_pre_impl'`` so the audit log distinguishes auto-clear from
+    operator approve/resume entries, plus an operator-readable INBOX
+    ``auto_cleared_pre_impl`` event naming the command context. Manual
+    approve/resume semantics for every other gate are unchanged.
+    """
+    if not direct_dispatch:
+        return None
+    if effective_env and effective_env.strip().lower() in _AUTO_CLEAR_REFUSED_ENVS:
+        return None
+
+    declared_strs = [g.value if hasattr(g, "value") else str(g) for g in declared_gates]
+    if "pre_impl" not in declared_strs:
+        return None
+
+    compat = gate_pause.load_gate_state_compat(loaded.plan_dir)
+    if "pre_impl" in compat.cleared_gates:
+        return None
+
+    pre_impl_info = gate_pause.evaluate_human_gates(
+        loaded.plan_dir, declared_gates, stage="pre_impl"
+    )
+    if pre_impl_info.pending != ["pre_impl"]:
+        # Either nothing pending (unusual at this seam — staged check
+        # already gated that), or a multi-gate stage state. D005 forbids
+        # the wide carve-out; defer to the manual flow.
+        return None
+
+    auto_reason = (
+        "direct operator dispatch; "
+        f"target_env={effective_env or '(none)'}; "
+        f"target_project={effective_project or '(none)'}; "
+        "pre_impl is the only pending lifecycle gate."
+    )
+    # Pause briefly so `gate_events` carries the same shape as the manual
+    # path (paused → cleared transition with stage='pre_impl'). This keeps
+    # downstream audit consumers — signoff_writer, transcripts — uniform
+    # whether the clear came from auto-clear or operator approve.
+    gate_pause.record_pause(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        pause_gates=["pre_impl"],
+        stage="pre_impl",
+    )
+    changed = gate_pause.approve_gate(
+        loaded.plan_dir,
+        "pre_impl",
+        plan_id=loaded.plan_id,
+        actor=_AUTO_CLEAR_ACTOR,
+    )
+    if not changed:
+        # Should not happen given the cleared_gates check above, but be
+        # defensive — failing closed (manual flow) is always safer than
+        # failing open.
+        return None
+
+    inbox.append_event(
+        loaded.plan_dir,
+        event="auto_cleared_pre_impl",
+        plan_id=loaded.plan_id,
+        body=(
+            "Supervisor auto-cleared the `pre_impl` lifecycle gate for "
+            "this direct CLI dispatch.\n\n"
+            f"Reason: {auto_reason}\n\n"
+            "This narrow carve-out applies only to direct operator "
+            "dispatch in dev/test contexts where `pre_impl` is the sole "
+            "pending lifecycle gate. Manual `approve` / `resume --gate` "
+            "/ `resume --all` semantics are unchanged for all other "
+            "paths and gates."
+        ),
+        actor=_AUTO_CLEAR_ACTOR,
+        target_env=effective_env or "(none)",
+        target_project=effective_project or "(none)",
+        feature_id=feature_id,
+    )
+    return auto_reason
+
+
 def _reconcile_gate_state_or_raise(
     plan_dir: Path,
     *,
@@ -916,6 +1026,7 @@ def dispatch_volley(
     allow_depth: int | None = None,
     allow_incomplete_patch_reason: str | None = None,
     unrelated_dirty_state_note: str | None = None,
+    direct_dispatch: bool = False,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
 
@@ -1273,49 +1384,69 @@ def dispatch_volley(
             # 1+ within the same loop has by-construction already passed the
             # check.
             if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
-                pre_impl_info = gate_pause.evaluate_human_gates(
-                    loaded.plan_dir, declared_gates, stage="pre_impl"
+                # Plan 2026-05-08-003 F002 — narrow auto-clear carve-out
+                # for direct operator CLI dispatch in eligible dev/test
+                # contexts. On success, the helper records a normal
+                # gate_event + INBOX entry and the staged check below
+                # naturally observes pre_impl as cleared, falling through
+                # to the implementer round without a separate operator
+                # approve/resume.
+                auto_clear_reason = _maybe_auto_clear_pre_impl(
+                    loaded=loaded,
+                    declared_gates=declared_gates,
+                    direct_dispatch=direct_dispatch,
+                    effective_env=effective_env,
+                    effective_project=effective_project,
+                    feature_id=feature_id,
                 )
-                if pre_impl_info.paused:
-                    gate_pause.record_pause(
-                        loaded.plan_dir,
-                        plan_id=loaded.plan_id,
-                        pause_gates=pre_impl_info.pending,
-                        stage="pre_impl",
+                if auto_clear_reason is not None:
+                    print(
+                        f"[volley] pre_impl auto-cleared: {auto_clear_reason}"
                     )
-                    inbox.append_event(
-                        loaded.plan_dir,
-                        event="gate_hit",
-                        plan_id=loaded.plan_id,
-                        body=(
-                            "Supervisor paused at lifecycle stage 'pre_impl' "
-                            "before iteration 0 implementer dispatch.\n\n"
-                            f"Awaiting: {pre_impl_info.pending}\n\n"
-                            f"Clear one (preferred): python -m dontpanic_orchestrate "
-                            f"approve {loaded.plan_id} <gate>\n"
-                            f"Clear all (explicit):  python -m dontpanic_orchestrate "
-                            f"resume {loaded.plan_id} --all"
-                        ),
-                        unmet_gates=",".join(pre_impl_info.pending),
-                        stage="pre_impl",
-                        target_env=effective_env,
-                        target_project=effective_project or "(none)",
-                        feature_id=feature_id,
+                else:
+                    pre_impl_info = gate_pause.evaluate_human_gates(
+                        loaded.plan_dir, declared_gates, stage="pre_impl"
                     )
-                    notify.notify(
-                        title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
-                        message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
-                        subtitle=feature_id,
-                    )
-                    print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
-                    return VolleyResult(
-                        "paused_on_gate",
-                        0,
-                        f"unmet pre_impl gates: {pre_impl_info.pending}; "
-                        f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
-                        f"`jarvis resume {loaded.plan_id} --all`",
-                        audit_paths,
-                    )
+                    if pre_impl_info.paused:
+                        gate_pause.record_pause(
+                            loaded.plan_dir,
+                            plan_id=loaded.plan_id,
+                            pause_gates=pre_impl_info.pending,
+                            stage="pre_impl",
+                        )
+                        inbox.append_event(
+                            loaded.plan_dir,
+                            event="gate_hit",
+                            plan_id=loaded.plan_id,
+                            body=(
+                                "Supervisor paused at lifecycle stage 'pre_impl' "
+                                "before iteration 0 implementer dispatch.\n\n"
+                                f"Awaiting: {pre_impl_info.pending}\n\n"
+                                f"Clear one (preferred): python -m dontpanic_orchestrate "
+                                f"approve {loaded.plan_id} <gate>\n"
+                                f"Clear all (explicit):  python -m dontpanic_orchestrate "
+                                f"resume {loaded.plan_id} --all"
+                            ),
+                            unmet_gates=",".join(pre_impl_info.pending),
+                            stage="pre_impl",
+                            target_env=effective_env,
+                            target_project=effective_project or "(none)",
+                            feature_id=feature_id,
+                        )
+                        notify.notify(
+                            title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
+                            message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
+                            subtitle=feature_id,
+                        )
+                        print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
+                        return VolleyResult(
+                            "paused_on_gate",
+                            0,
+                            f"unmet pre_impl gates: {pre_impl_info.pending}; "
+                            f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+                            f"`jarvis resume {loaded.plan_id} --all`",
+                            audit_paths,
+                        )
 
             # Implementer round
             try:

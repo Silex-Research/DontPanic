@@ -75,7 +75,41 @@
         "Run lifecycle gate, CLI resume, and full orchestrate tests."
       ],
       "acceptance": "(1) Direct dispatch of an eligible dev/test plan with only pending `pre_impl` proceeds without a separate approve/resume command. (2) The gate-state event log records the clearance with an auto-clear reason. (3) INBOX records an operator-readable event naming the auto-clear. (4) Protected/prod plans do not auto-clear. (5) Plans with additional pending gates do not auto-clear beyond the owned `pre_impl` case. (6) Manual approve/resume behavior remains unchanged. (7) Tests prove implementer spawn happens only after the auto-clear decision. (8) Full orchestrate sweep passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-08T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/pre-impl-auto-clear-audit-trail.log",
+          "captured_by": "claude",
+          "note": "11/11 fixture tests in test_pre_impl_auto_clear_f002.py pass: 7 direct unit cases on _maybe_auto_clear_pre_impl (default-False refuses, prod env refuses, PRODUCTION alias refuses, idempotent already-cleared, eligible dev clears + records gate_event/INBOX, multi-gate refusal, pre_impl-not-declared refusal) + 4 dispatch_volley surface cases (direct dispatch proceeds w/o operator action, default direct_dispatch=False pauses, prod target_env override pauses, pre_merge still pauses after pre_impl auto-cleared)."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-regression-sweep.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep with conftest global-config isolation env vars: 1504 passed, 7 skipped, 0 failed. Net +11 tests over the F001 baseline (1493) — F002 added zero regressions."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Adds _maybe_auto_clear_pre_impl helper with five-clause refusal policy (direct_dispatch + non-prod env + plan declares pre_impl + not already cleared + pre_impl is the only pending pre_impl-stage gate). Wired into dispatch_volley's iteration-0 staged check ahead of the existing pause path. Helper records normal gate_event with actor=supervisor:auto_clear_pre_impl + INBOX event=auto_cleared_pre_impl. dispatch_volley accepts new direct_dispatch kwarg (default False) — programmatic/test invocations preserve the manual contract."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "Sets direct_dispatch=True at the two CLI dispatch_volley invocation sites: the legacy `--volley` block (cli main) and the dispatch_from_plan wrapper. CLI approve/resume paths are NOT touched — manual semantics for non-dispatch operator flows remain identical."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module pinning all eight acceptance items including the multi-gate defensive coverage (mocks evaluate_human_gates to return ['pre_impl', 'pre_merge'] for the pre_impl stage even though current staging never produces that shape — guards future staging changes from accidentally widening the carve-out)."
+        }
+      ],
       "depends_on": ["F001"]
     },
     {

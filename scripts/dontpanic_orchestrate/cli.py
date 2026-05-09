@@ -1675,6 +1675,10 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             mode=args.mode,
             allow_incomplete_patch_reason=args.allow_incomplete_patch,
             unrelated_dirty_state_note=args.unrelated_dirty_state_note,
+            # Plan 2026-05-08-003 F002 — operator-initiated CLI dispatch
+            # is the canonical "direct dispatch" surface that the narrow
+            # pre_impl auto-clear targets.
+            direct_dispatch=True,
         )
     except PatchCompletenessError as exc:
         # Plan 2026-05-01-004 F003: dedicated exit code (4) so operator
@@ -2401,6 +2405,9 @@ def main(argv: list[str] | None = None) -> int:
                 max_iterations=args.max_iterations,
                 mode=args.mode,
                 allow_depth=args.allow_depth,
+                # Plan 2026-05-08-003 F002 — legacy `--volley` CLI is also
+                # operator-initiated direct dispatch.
+                direct_dispatch=True,
             )
         except QuotaExceeded as exc:
             print(f"[supervisor] BLOCKED by quota gate: {exc}", file=sys.stderr)
