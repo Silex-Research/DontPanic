@@ -3,7 +3,7 @@ id: 2026-05-08-003-fix-harness-volley-frictions
 title: Harness volley frictions — fail-loud gates, auto-clear pre-impl, and verdict taxonomy
 type: fix
 tier: local
-status: draft
+status: completed
 date: "2026-05-08"
 goal_type: parity
 surfaces:
