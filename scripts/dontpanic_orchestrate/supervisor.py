@@ -22,6 +22,7 @@ from typing import Any
 from dontpanic_orchestrate import (
     active_supervisors,
     audit_writer,
+    auditor_taxonomy,
     circuit_breakers,
     command_guard,
     completion_gate,
@@ -78,6 +79,31 @@ class PausedOnGate(RuntimeError):
 _AUTO_CLEAR_REFUSED_ENVS: frozenset[str] = frozenset({"prod", "production"})
 
 _AUTO_CLEAR_ACTOR: str = "supervisor:auto_clear_pre_impl"
+
+
+def _load_prior_envelopes_for_classification(
+    audit_paths: list[Path],
+    *,
+    exclude: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Plan 2026-05-08-003 F003 — load earlier audit envelopes (implementer
+    + auditor) for taxonomy ``collect_saved_evidence_paths`` so the
+    evidence-shape classifier sees evidence the implementer landed in
+    prior rounds. Best-effort: malformed JSON / missing files are skipped
+    silently — the classifier degrades to ``unknown``/``defect`` rather
+    than crashing the no-progress terminal."""
+    out: list[dict[str, Any]] = []
+    for ap in audit_paths:
+        if exclude is not None and ap == exclude:
+            continue
+        try:
+            text = ap.read_text()
+            payload = json.loads(text)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            out.append(payload)
+    return out
 
 
 def _maybe_auto_clear_pre_impl(
@@ -1718,6 +1744,51 @@ def dispatch_volley(
                 current_impl_envelope=impl_envelope,
             )
             if np_tripped:
+                # Plan 2026-05-08-003 F003 — taxonomy classification on the
+                # stopped_no_progress terminal. Classification is advisory:
+                # implementation_defect / mixed / unknown stay blocking, and
+                # the supervisor never auto-signs-off based on a downgraded
+                # class (D006). Output goes to (a) a sidecar JSON the F2
+                # close gate can cite, (b) a classified INBOX event the
+                # operator reads, and (c) the terminal reason string so
+                # signoff_writer / volley_terminal events name the class.
+                aud_envelope = (
+                    json.loads(aud_audit_path.read_text())
+                    if aud_audit_path.is_file()
+                    else {}
+                )
+                prior_envelopes = _load_prior_envelopes_for_classification(
+                    audit_paths, exclude=aud_audit_path
+                )
+                classification = auditor_taxonomy.classify_terminal(
+                    feature_id=feature_id,
+                    final_audit_envelope=aud_envelope,
+                    prior_envelopes=prior_envelopes,
+                )
+                try:
+                    auditor_taxonomy.write_classification_sidecar(
+                        plan_dir=loaded.plan_dir,
+                        feature_id=feature_id,
+                        iteration=iteration + 1,
+                        classification=classification,
+                    )
+                except OSError as exc:
+                    print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                inbox.append_event(
+                    loaded.plan_dir,
+                    event="no_progress_classification",
+                    plan_id=loaded.plan_id,
+                    body=auditor_taxonomy.format_inbox_body(classification),
+                    aggregate=classification.aggregate.value,
+                    blocking=str(classification.blocking).lower(),
+                    feature_id=feature_id,
+                )
+                np_reason = (
+                    f"{np_reason}\n"
+                    f"taxonomy=[{classification.aggregate.value}] "
+                    f"blocking={classification.blocking}; "
+                    f"recommended: {classification.recommended_action}"
+                )
                 transcript.append_terminal(
                     loaded.plan_dir,
                     feature_id,

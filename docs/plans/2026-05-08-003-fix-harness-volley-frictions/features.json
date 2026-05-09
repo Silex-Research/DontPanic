@@ -128,7 +128,59 @@
         "Run full orchestrate tests and close through the parity objective contract evidence path."
       ],
       "acceptance": "(1) Classifier is pure and deterministic; no subprocess, network, or filesystem probing. (2) Closed taxonomy values are used consistently in terminal evidence. (3) Environmental/sandbox reproduction failures are classified separately from implementation defects. (4) Evidence-shape disagreement is classified separately from implementation defects only when equivalent saved/operator evidence is present in the audit trail. (5) Mixed or unknown findings remain blocking and are never auto-signed-off. (6) `stopped_no_progress` reporting names the classification and recommended next operator action. (7) Tests cover environmental, evidence-shape, scope-overreach, genuine-defect, mixed, and unknown cases. (8) F2 objective-contract evidence artifacts land under stable filenames.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-09T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/auditor-verdict-taxonomy-fixtures.log",
+          "captured_by": "claude",
+          "note": "19/19 fixture tests in test_auditor_taxonomy_f003.py pass: 10 pure-classifier unit cases (Xcode/Jest/permission-denied env, evidence-shape with vs without saved evidence, scope-overreach via feature_id and via text, substantive defect, low-severity unknown, determinism check), 7 aggregate cases (all-environmental advisory, mixed defect+env elevates to defect+blocking, unknown-present blocks, empty findings collapse to unknown+blocking, evidence-shape uses prior envelopes, INBOX body asserts class+action, sidecar JSON persists), and 2 supervisor-wiring end-to-end cases (environmental no-progress emits sidecar+INBOX, defect no-progress remains blocking)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/auditor-verdict-taxonomy-fixtures.md",
+          "captured_by": "claude",
+          "note": "Operator-readable fixture-to-decision map. Names every test in the F003 module, the input shape, the expected class, and the rationale. Final section explains why false positives remain bounded — severity floor, saved-evidence gate, scope-via-feature-id, mixed-set escalation, empty-findings-blocks, no-auto-advance — pinning the D006 invariant structurally."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/stopped-no-progress-classification-reporting.log",
+          "captured_by": "claude",
+          "note": "Operator-facing reporting evidence — exercises classify_terminal + format_inbox_body + write_classification_sidecar across five representative fixtures (environmental, defect, evidence-shape with saved evidence, scope-overreach via feature_id, mixed) and prints the operator surface verbatim (aggregate label, blocking flag, recommended action, INBOX body, sidecar JSON contents)."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-regression-sweep.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep with conftest global-config isolation env vars: 1524 passed, 7 skipped, 0 failed. Net +20 tests over the F002 baseline (1504): 19 new F003 cases + 1 new parametric in test_legacy_shim_compatibility for the auditor_taxonomy submodule shim."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/auditor_taxonomy.py",
+          "captured_by": "claude",
+          "note": "New module — closed FindingClass enum (5 values), classify_finding (pure, severity+category+text-pattern), classify_terminal (aggregate over an envelope's findings list with worst-class-wins reduction), collect_saved_evidence_paths (scans summary/validation_performed/finding evidence text for evidence/* paths), format_inbox_body (operator-readable rendering), write_classification_sidecar (audit/no_progress_classification_<feature>_iter<N>.json). No agent-conventions schema changes — every input field is read from the existing finding shape."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Adds _load_prior_envelopes_for_classification + classifier invocation in the no-progress trip site of dispatch_volley. Terminal status stays stopped_no_progress (D006 — no auto-advance). Reason string is enriched with [aggregate] + blocking flag + recommended action so signoff_writer + volley_terminal INBOX events name the class. Adds standalone INBOX no_progress_classification event with the full operator-readable body."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/jarvis_orchestrate/auditor_taxonomy.py",
+          "captured_by": "claude",
+          "note": "Legacy shim mirroring the canonical surface; emits the existing one-shot DeprecationWarning. test_legacy_shim_compatibility.PUBLIC_SUBMODULES updated so the parametric coverage walks the new shim path."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module pinning all eight acceptance items across three classes (TestPureClassifier, TestTerminalClassification, TestNoProgressWiring)."
+        }
+      ],
       "depends_on": ["F001", "F002"]
     }
   ]

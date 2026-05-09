@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 19 items
+
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_environmental_xcode_unavailable PASSED [  5%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_environmental_jest_could_not_run PASSED [ 10%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_environmental_permission_denied PASSED [ 15%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_evidence_shape_with_saved_evidence_flips PASSED [ 21%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_evidence_shape_without_saved_evidence_stays_blocking PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_scope_overreach_via_feature_id_mismatch PASSED [ 31%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_scope_overreach_via_text PASSED [ 36%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_implementation_defect_substantive PASSED [ 42%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_unknown_for_low_severity_no_pattern PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestPureClassifier::test_classifier_is_pure_and_deterministic PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_all_environmental_advisory PASSED [ 57%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_mixed_defect_plus_environmental_stays_blocking PASSED [ 63%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_unknown_finding_present_remains_blocking PASSED [ 68%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_empty_findings_collapse_to_unknown_blocking PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_evidence_shape_uses_prior_envelopes PASSED [ 78%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_inbox_body_names_class_and_action PASSED [ 84%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestTerminalClassification::test_sidecar_json_persists PASSED [ 89%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestNoProgressWiring::test_environmental_no_progress_emits_classification PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py::TestNoProgressWiring::test_defect_no_progress_remains_blocking PASSED [100%]
+
+============================== 19 passed in 0.27s ==============================
