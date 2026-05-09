@@ -3,7 +3,7 @@ id: 2026-05-01-002-feat-discord-notification-sink
 title: Discord notification sink — webhook output mirroring terminal-notifier shape
 type: feat
 tier: local
-status: draft
+status: completed
 date: "2026-05-01"
 description: |
   Add a Discord webhook output sink alongside the existing macOS terminal-notifier sink so operators can monitor supervised dispatches from anywhere (mobile, away-from-keyboard, multi-machine). Three modules land together: (1) `notify_discord.py` mirroring the shape of `notify.py` — webhook URL loaded from `JARVIS_DISCORD_WEBHOOK_URL` env or `~/.jarvis/discord.json`, fail-soft when absent (returns False, never raises); (2) compact internal event envelope (`NotifyEvent` dataclass: kind, severity, plan_id, feature_id, body, action_link, timestamp) consumed by both `notify.py` and `notify_discord.py` so future sinks add without touching emit sites; (3) wire the four required emit points (volley_start, gate_paused, breaker_tripped per kind, signoff, calibration_required) using D059's level matrix — `JARVIS_NOTIFY_LEVEL=quiet|normal|verbose` with quiet=escalation only / normal=plan boundary + escalation / verbose=plan boundary + escalation + per-feature terminal. D059 requires @mention on escalation posts only (cap hit, quota >=90%, INBOX waiting); other posts are plain. Rate limiting and per-channel routing are explicit deferred decisions.

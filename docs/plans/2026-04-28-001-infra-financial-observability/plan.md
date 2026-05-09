@@ -3,7 +3,7 @@ id: 2026-04-28-001-infra-financial-observability
 title: Financial observability — cost-model, cost-guard, revenue-check
 type: infra
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-04-28"
 description: |
   Three sibling skills under Jarvis/claude/skills/ that turn the existing cost surface (LLM tokens via quota_check.py, GCP $ via refresh-costs.sh) plus a new revenue.json surface into a unified financial-observability layer for app-level (not orchestration-agent-level) decisions. cost-model projects spend, cost-guard enforces app-level budgets, revenue-check pulls product revenue and reports cash-flow position per app.
