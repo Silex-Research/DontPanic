@@ -3,6 +3,20 @@
 Agents should treat DontPanic as a local safety layer, not as permission to run
 unreviewed work. The manifest is the first discovery surface:
 
+> **Brokering chat or hosted-agent surfaces? Don't build them into DontPanic.**
+> If you're an MCP-aware runtime (OpenClaw, Claude.ai managed agents,
+> Claude Code, Codex CLI, Cursor, Continue, custom MCP clients) and you
+> want to bridge a chat channel OR a hosted-agent dashboard to DontPanic,
+> the canonical pattern is: **subscribe to DontPanic NotifyEvents** (via
+> webhook receiver, `INBOX.md` watcher, or `dontpanic status` polling),
+> apply per-runtime routing on your side, and call DontPanic via the MCP
+> tools below. DontPanic intentionally ships no Telegram/WhatsApp/Slack
+> sinks and no hosted-agent integrations — those are your runtime's
+> domain. The Discord direct sink in DontPanic is a no-broker solo-dev
+> convenience only. See plan `2026-05-03-002` F006 for an OpenClaw-specific
+> reference implementation; the same pattern applies to Claude dispatch
+> or any other MCP runtime.
+
 ```bash
 dontpanic manifest show --json
 ```
