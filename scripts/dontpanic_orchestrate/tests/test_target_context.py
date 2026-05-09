@@ -177,8 +177,8 @@ def test_build_audit_target_context_project_null_when_sentinel() -> None:
 # ──────────────────────────────  supervisor accountability validation  ──────────────────────────────
 
 
-def test_implementer_missing_env_declaration_downgraded_to_needs_changes() -> None:
-    print("\n[test] implementer_missing_env_declaration_downgraded_to_needs_changes ...")
+def test_implementer_missing_env_declaration_ec5_downgraded_to_advisory() -> None:
+    print("\n[test] implementer_missing_env_declaration_ec5_downgraded_to_advisory ...")
     audit = {
         "audit_status": "signed_off",
         "agent_role": "implementer",
@@ -189,11 +189,10 @@ def test_implementer_missing_env_declaration_downgraded_to_needs_changes() -> No
     supervisor._apply_target_accountability(
         audit, role="implementer", plan_target_env="dev", plan_target_project="<firebase-project-id>"
     )
-    assert audit["audit_status"] == "needs_changes", audit["audit_status"]
+    assert audit["audit_status"] == "signed_off", audit["audit_status"]
     assert any("Env" in f.get("issue", "") for f in audit["findings"]), audit["findings"]
-    print(
-        "  ✓ implementer summary missing `Env:` declaration → needs_changes + finding (non-terminal)"
-    )
+    assert all(f.get("severity") == "advisory" for f in audit["findings"]), audit["findings"]
+    print("  ✓ valid target_context + missing prose declaration → EC5 advisory, no status block")
 
 
 def test_auditor_env_mismatch_forces_blocked() -> None:
@@ -202,7 +201,14 @@ def test_auditor_env_mismatch_forces_blocked() -> None:
         "audit_status": "signed_off",
         "agent_role": "auditor",
         "findings": [],
-        "summary": "Repo: Jarvis\nEnv: prod\nProject: <firebase-project-id>\nLooks fine.",
+        "summary": (
+            "## Target context\n"
+            "- Repo: Jarvis\n"
+            "- Env: prod\n"
+            "- Project: <firebase-project-id>\n"
+            "- Command: 0 (see structured target_context.commands_run)\n\n"
+            "Looks fine."
+        ),
         "target_context": {"env": "dev", "project": "<firebase-project-id>", "commands_run": []},
     }
     supervisor._apply_target_accountability(
@@ -211,6 +217,30 @@ def test_auditor_env_mismatch_forces_blocked() -> None:
     assert audit["audit_status"] == "blocked", audit["audit_status"]
     assert any("env" in f.get("issue", "").lower() for f in audit["findings"]), audit["findings"]
     print("  ✓ auditor declaring different env than plan target → blocked + stop volley")
+
+
+def test_canonical_target_context_bullet_declaration_is_accepted() -> None:
+    print("\n[test] canonical_target_context_bullet_declaration_is_accepted ...")
+    audit = {
+        "audit_status": "signed_off",
+        "agent_role": "auditor",
+        "findings": [],
+        "summary": (
+            "## Target context\n"
+            "- Repo: Jarvis\n"
+            "- Env: dev\n"
+            "- Project: <firebase-project-id>\n"
+            "- Command: 0 (see structured target_context.commands_run)\n\n"
+            "Reviewed; signed off."
+        ),
+        "target_context": {"env": "dev", "project": "<firebase-project-id>", "commands_run": []},
+    }
+    supervisor._apply_target_accountability(
+        audit, role="auditor", plan_target_env="dev", plan_target_project="<firebase-project-id>"
+    )
+    assert audit["audit_status"] == "signed_off", audit["audit_status"]
+    assert audit["findings"] == [], audit["findings"]
+    print("  ✓ canonical `- Env:` / `- Project:` prelude lines satisfy accountability")
 
 
 def test_clean_implementer_unchanged() -> None:
@@ -423,9 +453,8 @@ def _run_volley(
                 # Plan 2026-05-09-002 F001 — keep narrative verdict
                 # consistent with the overridden structured field.
                 from dontpanic_orchestrate.tests.conftest import _rewrite_summary_verdict
-                data["summary"] = _rewrite_summary_verdict(
-                    data.get("summary", ""), force_status
-                )
+
+                data["summary"] = _rewrite_summary_verdict(data.get("summary", ""), force_status)
                 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         return path
 

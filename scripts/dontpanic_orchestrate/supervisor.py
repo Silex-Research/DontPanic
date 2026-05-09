@@ -26,6 +26,7 @@ from dontpanic_orchestrate import (
     circuit_breakers,
     command_guard,
     completion_gate,
+    ec5_classifier,
     gate_pause,
     inbox,
     nested_orchestration,
@@ -1132,10 +1133,7 @@ def _emit_volley_terminal(
             severity=_signoff_severity,
             plan_id=loaded.plan_id,
             feature_id=feature_id,
-            body=(
-                f"**{result.final_status}** — {result.reason[:300]}\n"
-                f"rounds: {result.rounds}"
-            ),
+            body=(f"**{result.final_status}** — {result.reason[:300]}\nrounds: {result.rounds}"),
             action_link=str(plan_dir / "signoff.json"),
             timestamp=dt.datetime.now(dt.timezone.utc),
         ),
@@ -1535,10 +1533,7 @@ def dispatch_volley(
             loaded.plan_dir,
             event="volley_start",
             plan_id=loaded.plan_id,
-            body=(
-                f"Volley begins: {impl_name} (impl) + {aud_name} (aud), "
-                f"max_iterations={cap}"
-            ),
+            body=(f"Volley begins: {impl_name} (impl) + {aud_name} (aud), max_iterations={cap}"),
             feature_id=feature_id,
             implementer=impl_name,
             auditor=aud_name,
@@ -1549,10 +1544,7 @@ def dispatch_volley(
                 severity=notify_event.SEVERITY_INFO,
                 plan_id=loaded.plan_id,
                 feature_id=feature_id,
-                body=(
-                    f"**Volley start** — `{impl_name}` (impl) + "
-                    f"`{aud_name}` (aud), cap={cap}"
-                ),
+                body=(f"**Volley start** — `{impl_name}` (impl) + `{aud_name}` (aud), cap={cap}"),
                 action_link=None,
                 timestamp=volley_start,
             ),
@@ -1626,9 +1618,7 @@ def dispatch_volley(
                     feature_id=feature_id,
                 )
                 if auto_clear_reason is not None:
-                    print(
-                        f"[volley] pre_impl auto-cleared: {auto_clear_reason}"
-                    )
+                    print(f"[volley] pre_impl auto-cleared: {auto_clear_reason}")
                 else:
                     pre_impl_info = gate_pause.evaluate_human_gates(
                         loaded.plan_dir, declared_gates, stage="pre_impl"
@@ -1965,9 +1955,7 @@ def dispatch_volley(
             # collapses to unknown+blocking, which doesn't match here).
             if aud_status == "needs_changes":
                 env_envelope = (
-                    json.loads(aud_audit_path.read_text())
-                    if aud_audit_path.is_file()
-                    else {}
+                    json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
                 )
                 env_classification = auditor_taxonomy.classify_terminal(
                     feature_id=feature_id,
@@ -2076,9 +2064,7 @@ def dispatch_volley(
                 # operator reads, and (c) the terminal reason string so
                 # signoff_writer / volley_terminal events name the class.
                 aud_envelope = (
-                    json.loads(aud_audit_path.read_text())
-                    if aud_audit_path.is_file()
-                    else {}
+                    json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
                 )
                 prior_envelopes = _load_prior_envelopes_for_classification(
                     audit_paths, exclude=aud_audit_path
@@ -2177,13 +2163,19 @@ def _apply_target_accountability(
     new_findings: list[dict[str, Any]] = []
 
     if not _summary_declares(summary, "Env", plan_target_env):
+        env_present_with_other_value = _summary_declares_key(summary, "Env")
         new_findings.append(
             {
                 "severity": "high",
                 "category": "correctness",
                 "issue": (
-                    f"Missing or mismatched `Env: {plan_target_env}` declaration in summary; "
-                    "F023 EC5 requires {repo, env, project, command} declaration before side-effect calls."
+                    f"Mismatched `Env: {plan_target_env}` declaration in summary; "
+                    "target accountability requires the declared env to match the plan target."
+                    if env_present_with_other_value
+                    else (
+                        f"Missing `Env: {plan_target_env}` declaration in summary; "
+                        "F023 EC5 requires {repo, env, project, command} declaration before side-effect calls."
+                    )
                 ),
                 "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
                 "recommendation": f"Add a line `Env: {plan_target_env}` near the top of the summary.",
@@ -2193,13 +2185,19 @@ def _apply_target_accountability(
     if plan_target_project is not None and not _summary_declares(
         summary, "Project", plan_target_project
     ):
+        project_present_with_other_value = _summary_declares_key(summary, "Project")
         new_findings.append(
             {
                 "severity": "high",
                 "category": "correctness",
                 "issue": (
-                    f"Missing or mismatched `Project: {plan_target_project}` declaration in summary; "
-                    "F023 EC5 requires the declared target_project to match plan target."
+                    f"Mismatched `Project: {plan_target_project}` declaration in summary; "
+                    "target accountability requires the declared project to match the plan target."
+                    if project_present_with_other_value
+                    else (
+                        f"Missing `Project: {plan_target_project}` declaration in summary; "
+                        "F023 EC5 requires the declared target_project to match plan target."
+                    )
                 ),
                 "evidence": "Parsed agent summary did not contain a matching `Project:` line.",
                 "recommendation": f"Add a line `Project: {plan_target_project}` near the top of the summary.",
@@ -2226,27 +2224,60 @@ def _apply_target_accountability(
     if not new_findings:
         return
 
-    audit["findings"] = findings + new_findings
+    prior_status = audit.get("audit_status")
+    classified_findings = ec5_classifier.apply_ec5_classifier_to_findings(
+        findings + new_findings,
+        audit,
+    )
+    audit["findings"] = classified_findings
+
+    has_blocking_finding = any(
+        f.get("severity") in {"critical", "high"} for f in classified_findings
+    )
     if role == "auditor":
-        audit["audit_status"] = "blocked"
-    else:
-        if audit.get("audit_status") == "signed_off":
-            audit["audit_status"] = "needs_changes"
+        if has_blocking_finding:
+            audit["audit_status"] = "blocked"
+        elif prior_status == "blocked":
+            # Preserve blocked statuses that predate target-accountability
+            # enrichment, such as executor failures. EC5 downgrades should not
+            # convert an already-blocked audit into signoff.
+            audit["audit_status"] = "blocked"
+        else:
+            audit["audit_status"] = prior_status or "signed_off"
+    elif has_blocking_finding and audit.get("audit_status") == "signed_off":
+        audit["audit_status"] = "needs_changes"
 
 
 _DECLARATION_RE_CACHE: dict[tuple[str, str], re.Pattern[str]] = {}
+_DECLARATION_KEY_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
 
 def _summary_declares(summary: str, key: str, value: str) -> bool:
-    """Check whether `summary` contains a line `<key>: <value>` (case-insensitive on key, exact on value)."""
+    """Check whether summary contains `<key>: <value>`.
+
+    Accept both legacy plain declarations (`Env: dev`) and the canonical
+    target-context prelude bullets (`- Env: dev`).
+    """
     cache_key = (key, value)
     pattern = _DECLARATION_RE_CACHE.get(cache_key)
     if pattern is None:
         pattern = re.compile(
-            rf"^[ \t]*{re.escape(key)}\s*:\s*{re.escape(value)}\s*$",
+            rf"^[ \t]*(?:-\s*)?{re.escape(key)}\s*:\s*{re.escape(value)}\s*$",
             re.MULTILINE | re.IGNORECASE,
         )
         _DECLARATION_RE_CACHE[cache_key] = pattern
+    return bool(pattern.search(summary))
+
+
+def _summary_declares_key(summary: str, key: str) -> bool:
+    """True when summary contains this declaration key with any value."""
+    pattern = _DECLARATION_KEY_RE_CACHE.get(key)
+    if pattern is None:
+        pattern = re.compile(
+            rf"^[ \t]*(?:-\s*)?{re.escape(key)}\s*:\s*\S+.*$",
+            re.MULTILINE | re.IGNORECASE,
+        )
+        _DECLARATION_KEY_RE_CACHE[key] = pattern
     return bool(pattern.search(summary))
 
 
