@@ -176,6 +176,23 @@ class TestPayloadShape:
         assert captured["body"]["username"] == "Jarvis"
         assert "F001" in captured["body"]["content"]
 
+    def test_user_agent_header_is_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Discord/Cloudflare returns 403 error 1010 to requests carrying
+        the default ``Python-urllib/X.Y`` UA. Regression guard: every
+        outbound POST MUST set a non-default User-Agent."""
+        captured = self._capture_post(monkeypatch)
+        ev = notify_event.NotifyEvent(
+            kind="signoff", severity="info", plan_id="t", feature_id="F001",
+            body="x", action_link=None, timestamp=dt.datetime.now(dt.timezone.utc),
+        )
+        notify_discord.notify(ev)
+        ua = captured["headers"].get("User-agent") or captured["headers"].get("User-Agent")
+        assert ua, f"User-Agent header missing; sent headers={captured['headers']}"
+        assert "Python-urllib" not in ua, (
+            f"User-Agent must not be the urllib default (Cloudflare 403 trigger): {ua!r}"
+        )
+        assert "DontPanic" in ua, f"expected DontPanic UA, got {ua!r}"
+
     def test_allowed_mentions_parse_is_always_empty(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
