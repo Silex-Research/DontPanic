@@ -58,6 +58,15 @@ _LEGACY_HOME_DIRNAME: Final[str] = ".jarvis"
 _NETWORK_TIMEOUT_SECONDS: Final[float] = 5.0
 _USERNAME: Final[str] = "Jarvis"
 
+# Discord's edge (Cloudflare) returns HTTP 403 + error 1010 to requests
+# carrying the default ``Python-urllib/X.Y`` User-Agent. Discord's API
+# docs specifically allow webhook clients to set any descriptive UA;
+# the webhook spec recommends ``ClientName/Version (URL)``. Setting a
+# real UA is the documented fix for the 1010 block.
+_USER_AGENT: Final[str] = (
+    "DontPanic-Webhook/1.0 (+https://github.com/Silex-Research/DontPanic)"
+)
+
 # Track whether we've already warned about a given failure cause so we don't
 # spam stderr per dispatch. Process-local — reset_warning_cache() exposed for
 # tests.
@@ -179,7 +188,10 @@ def notify(event: "NotifyEvent") -> bool:
     req = urllib.request.Request(  # noqa: S310 — scheme guarded above.
         url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": _USER_AGENT,
+        },
         method="POST",
     )
     try:
@@ -204,7 +216,9 @@ def _format_content(event: "NotifyEvent") -> str:
     header_parts = [f"**[{event.plan_id}]**"]
     if event.feature_id:
         header_parts.append(f"`{event.feature_id}`")
-    header_parts.append(f"_{event.kind}_")
+    # Use backticks for the kind — underscores would be eaten by Discord's
+    # markdown italic parser (e.g. `_volley_start_` renders as 'volleystart').
+    header_parts.append(f"`{event.kind}`")
     header = " ".join(header_parts)
     body = event.body.strip() if event.body else ""
     parts = [header]
