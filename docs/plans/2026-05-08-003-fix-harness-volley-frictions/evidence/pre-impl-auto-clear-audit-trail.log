@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 11 items
+
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_default_direct_dispatch_false_refuses PASSED [  9%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_prod_env_refuses PASSED [ 18%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_production_alias_also_refuses PASSED [ 27%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_already_cleared_is_idempotent PASSED [ 36%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_eligible_dev_clears_and_records PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_multi_gate_pending_refuses PASSED [ 54%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestMaybeAutoClearDirect::test_pre_impl_not_declared_refuses PASSED [ 63%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestDispatchVolleySurface::test_direct_dispatch_proceeds_without_separate_approve PASSED [ 72%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestDispatchVolleySurface::test_default_direct_dispatch_false_pauses PASSED [ 81%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestDispatchVolleySurface::test_prod_target_env_pauses_even_with_direct_dispatch PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py::TestDispatchVolleySurface::test_pre_merge_still_pauses_after_pre_impl_auto_cleared PASSED [100%]
+
+============================== 11 passed in 0.24s ==============================
