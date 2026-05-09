@@ -1,0 +1,49 @@
+{
+  // Personal Axiom secure OpenClaw baseline.
+  // This file intentionally contains no tokens, channel ids, or user ids.
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+    port: 18789,
+    auth: {
+      mode: "token",
+    },
+  },
+  session: {
+    dmScope: "per-channel-peer",
+  },
+  tools: {
+    profile: "messaging",
+    deny: [
+      "group:automation",
+      "group:runtime",
+      "group:fs",
+      "sessions_spawn",
+      "sessions_send",
+    ],
+    fs: {
+      workspaceOnly: true,
+    },
+    exec: {
+      security: "deny",
+      ask: "always",
+      applyPatch: {
+        workspaceOnly: true,
+      },
+    },
+    elevated: {
+      enabled: false,
+    },
+  },
+  channels: {
+    defaults: {
+      groupPolicy: "allowlist",
+      contextVisibility: "allowlist_quote",
+      heartbeat: {
+        showOk: false,
+        showAlerts: true,
+        useIndicator: true,
+      },
+    },
+  },
+}
