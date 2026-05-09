@@ -30,6 +30,7 @@ from dontpanic_orchestrate import (
     inbox,
     nested_orchestration,
     notify,
+    notify_event,
     patch_completeness_gate,
     plan_loader,
     project_config,
@@ -346,6 +347,54 @@ def _trip_breaker(
         message=reason[:120],
         subtitle=feature_id,
     )
+    # Plan 2026-05-01-002 F003 — Discord sink (terminal already fired above).
+    notify_event.dispatch_event(
+        notify_event.NotifyEvent(
+            kind="breaker_tripped",
+            severity=notify_event.SEVERITY_ESCALATION,
+            plan_id=plan_id,
+            feature_id=feature_id,
+            body=f"**Breaker** `{kind.value}` — {reason[:300]}",
+            action_link=str(plan_dir / "INBOX.md"),
+            timestamp=dt.datetime.now(dt.timezone.utc),
+        ),
+        sinks=(notify_event.SINK_DISCORD,),
+    )
+
+
+def _emit_gate_paused_discord(
+    plan_dir: Path,
+    plan_id: str,
+    feature_id: str,
+    *,
+    pending_gates: list[str],
+    stage: str = "general",
+) -> None:
+    """Plan 2026-05-01-002 F003 — Discord-only emit at every gate-pause site.
+
+    The terminal-notifier sink already fires from the call-site's existing
+    ``notify.notify`` (which has kind-specific titles like 'pre_merge gate
+    pause'). This helper adds the parallel Discord post so cross-machine
+    operators see the same event. Always action_required severity (pauses
+    are by definition operator-actionable). action_link points at the
+    plan's INBOX.md so operators can drill down."""
+    notify_event.dispatch_event(
+        notify_event.NotifyEvent(
+            kind="gate_paused",
+            severity=notify_event.SEVERITY_ACTION_REQUIRED,
+            plan_id=plan_id,
+            feature_id=feature_id,
+            body=(
+                f"**Gate pause** ({stage}) — awaiting: "
+                f"{', '.join(pending_gates) or '(none)'}\n"
+                f"Clear: `dontpanic approve {plan_id} <gate>` or "
+                f"`dontpanic resume {plan_id} --all`"
+            ),
+            action_link=str(plan_dir / "INBOX.md"),
+            timestamp=dt.datetime.now(dt.timezone.utc),
+        ),
+        sinks=(notify_event.SINK_DISCORD,),
+    )
 
 
 def _maybe_emit_quota_warn(
@@ -516,6 +565,24 @@ def _emit_budget_kind_specific_event(
             agent=bd_result.agent or "",
             window=bd_result.window or "",
             feature_id=feature_id,
+        )
+        # Plan 2026-05-01-002 F003 — calibration_required emit point.
+        notify_event.dispatch_event(
+            notify_event.NotifyEvent(
+                kind="calibration_required",
+                severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                plan_id=plan_id,
+                feature_id=feature_id,
+                body=(
+                    f"**Calibration required** for `{bd_result.agent}."
+                    f"{bd_result.window}`. Run "
+                    f"`python -m dontpanic_orchestrate calibrate-claude "
+                    f"--window {bd_result.window} --dashboard-pct N`."
+                ),
+                action_link=str(plan_dir / "INBOX.md"),
+                timestamp=dt.datetime.now(dt.timezone.utc),
+            ),
+            sinks=(notify_event.SINK_DISCORD,),
         )
     elif kind == circuit_breakers.BudgetCeilingKind.UNIT_MISMATCH:
         inbox.append_event(
@@ -923,6 +990,13 @@ def dispatch_single_agent(
             message=f"Awaiting: {', '.join(gate_check.unmet)}",
             subtitle=feature_id,
         )
+        _emit_gate_paused_discord(
+            loaded.plan_dir,
+            loaded.plan_id,
+            feature_id,
+            pending_gates=list(gate_check.unmet),
+            stage="general",
+        )
         raise PausedOnGate(
             f"single-agent paused on gates {gate_check.unmet}; "
             f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
@@ -1043,6 +1117,29 @@ def _emit_volley_terminal(
         title=f"jarvis: {result.final_status} — {loaded.plan_id}",
         message=result.reason[:120],
         subtitle=feature_id,
+    )
+    # Plan 2026-05-01-002 F003 — Discord sink for volley terminal/signoff.
+    # Severity routes by final_status: signed_off is info, every other
+    # terminal needs operator action.
+    _signoff_severity = (
+        notify_event.SEVERITY_INFO
+        if result.final_status == "signed_off"
+        else notify_event.SEVERITY_ACTION_REQUIRED
+    )
+    notify_event.dispatch_event(
+        notify_event.NotifyEvent(
+            kind="signoff" if result.final_status == "signed_off" else "volley_terminal",
+            severity=_signoff_severity,
+            plan_id=loaded.plan_id,
+            feature_id=feature_id,
+            body=(
+                f"**{result.final_status}** — {result.reason[:300]}\n"
+                f"rounds: {result.rounds}"
+            ),
+            action_link=str(plan_dir / "signoff.json"),
+            timestamp=dt.datetime.now(dt.timezone.utc),
+        ),
+        sinks=(notify_event.SINK_DISCORD,),
     )
     if result.audit_paths:
         iteration = max(0, result.rounds - 1)
@@ -1357,6 +1454,13 @@ def dispatch_volley(
             message=f"Awaiting: {', '.join(gate_check.unmet)}",
             subtitle=feature_id,
         )
+        _emit_gate_paused_discord(
+            loaded.plan_dir,
+            loaded.plan_id,
+            feature_id,
+            pending_gates=list(gate_check.unmet),
+            stage="upfront",
+        )
         print(f"[volley] PAUSED on gates: {gate_check.unmet}")
         return VolleyResult(
             "paused_on_gate",
@@ -1421,6 +1525,38 @@ def dispatch_volley(
                 if v is not None:
                     per_agent_caps[agent_field] = float(v)
         volley_start = dt.datetime.now(dt.timezone.utc)
+
+        # Plan 2026-05-01-002 F003 — volley_start emit point. Fires after
+        # admission, gate-pause, breaker, and executor resolution all clear,
+        # immediately before the first iteration. Operators monitoring
+        # Discord see "volley started" only when the volley actually begins
+        # paying for agent dispatches.
+        inbox.append_event(
+            loaded.plan_dir,
+            event="volley_start",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Volley begins: {impl_name} (impl) + {aud_name} (aud), "
+                f"max_iterations={cap}"
+            ),
+            feature_id=feature_id,
+            implementer=impl_name,
+            auditor=aud_name,
+        )
+        notify_event.dispatch_event(
+            notify_event.NotifyEvent(
+                kind="volley_start",
+                severity=notify_event.SEVERITY_INFO,
+                plan_id=loaded.plan_id,
+                feature_id=feature_id,
+                body=(
+                    f"**Volley start** — `{impl_name}` (impl) + "
+                    f"`{aud_name}` (aud), cap={cap}"
+                ),
+                action_link=None,
+                timestamp=volley_start,
+            ),
+        )
 
         def _trip_and_return(
             kind: circuit_breakers.BreakerKind, reason: str, rounds: int
@@ -1527,6 +1663,13 @@ def dispatch_volley(
                             title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
                             message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
                             subtitle=feature_id,
+                        )
+                        _emit_gate_paused_discord(
+                            loaded.plan_dir,
+                            loaded.plan_id,
+                            feature_id,
+                            pending_gates=list(pre_impl_info.pending),
+                            stage="pre_impl",
                         )
                         print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
                         return VolleyResult(
@@ -1757,6 +1900,13 @@ def dispatch_volley(
                         title=f"jarvis: pre_merge gate pause — {loaded.plan_id}",
                         message=f"Awaiting: {', '.join(pre_merge_info.pending)}",
                         subtitle=feature_id,
+                    )
+                    _emit_gate_paused_discord(
+                        loaded.plan_dir,
+                        loaded.plan_id,
+                        feature_id,
+                        pending_gates=list(pre_merge_info.pending),
+                        stage="pre_merge",
                     )
                     print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
                     return VolleyResult(

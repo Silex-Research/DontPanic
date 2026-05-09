@@ -80,6 +80,15 @@ _PEM_PRIVATE_KEY_RE = re.compile(
 # source: https://datatracker.ietf.org/doc/html/rfc7519 (JWT spec)
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}")
 
+# Discord webhook URL. Both discord.com and discordapp.com hostnames are
+# canonical; ID is 17-20 digits, token is base64url-style 60+ chars.
+# source: https://discord.com/developers/docs/resources/webhook (webhook URL format)
+# Plan 2026-05-01-002 F004 — added so live webhooks can never be committed
+# alongside the new Discord notification sink.
+_DISCORD_WEBHOOK_RE = re.compile(
+    r"https?://discord(?:app)?\.com/api/webhooks/\d{17,20}/[A-Za-z0-9_\-]{60,}"
+)
+
 SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
     _AWS_ACCESS_KEY_RE,
     _GH_PAT_RE,
@@ -89,6 +98,7 @@ SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
     _SLACK_TOKEN_RE,
     _PEM_PRIVATE_KEY_RE,
     _JWT_RE,
+    _DISCORD_WEBHOOK_RE,
 )
 
 # Path-prefix allowlist (relative to repo root). Plan dirs retain

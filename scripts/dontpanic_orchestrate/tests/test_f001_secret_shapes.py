@@ -91,6 +91,17 @@ CASES = [
         "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
         "https://example.invalid/webhook",  # placeholder URL — no eyJ + 3 segments
     ),
+    (
+        "_DISCORD_WEBHOOK_RE",
+        # Plan 2026-05-01-002 F004 — canonical Discord webhook URL shape.
+        # 17-20 digit ID + 60+ url-safe-base64 token. Either discord.com or
+        # discordapp.com hostname.
+        (
+            "https://discord.com/api/webhooks/12345678901234567890/"
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789Aa"
+        ),
+        "https://example.invalid/webhook",  # RFC 2606 reserved TLD — no match
+    ),
 ]
 
 
@@ -111,9 +122,11 @@ def test_secret_regex_negative_no_match(attr: str, positive: str, negative: str)
 
 
 def test_secret_regexes_count_and_export() -> None:
-    """sanitization_check.py exports exactly the 8 patterns enumerated in F001."""
+    """sanitization_check.py exports exactly the 9 patterns enumerated:
+    8 from plan 2026-05-01-003 F001 + Discord webhook from
+    plan 2026-05-01-002 F004."""
     mod = _load()
-    assert len(mod.SECRET_REGEXES) == 8
+    assert len(mod.SECRET_REGEXES) == 9
     expected_attrs = [c[0] for c in CASES]
     pattern_strs = {rx.pattern for rx in mod.SECRET_REGEXES}
     for attr in expected_attrs:
@@ -130,7 +143,7 @@ def test_scan_line_flags_violation_file_with_one_match_per_pattern(tmp_path) -> 
     assert all(rule is not None for rule in flagged), (
         f"some positives were not flagged: {list(zip(lines, flagged, strict=True))}"
     )
-    assert sum(1 for r in flagged if r is not None) == 8
+    assert sum(1 for r in flagged if r is not None) == 9
 
 
 def test_scan_line_does_not_flag_placeholders() -> None:

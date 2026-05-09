@@ -12,6 +12,10 @@ import os
 import shutil
 import subprocess
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from dontpanic_orchestrate.notify_event import NotifyEvent
 
 NOTIFIER_BINARY = "terminal-notifier"
 DISABLE_ENV = "JARVIS_NOTIFY_DISABLE"
@@ -68,4 +72,31 @@ def notify(
     return proc.returncode == 0
 
 
-__all__ = ["DEFAULT_GROUP", "DISABLE_ENV", "NOTIFIER_BINARY", "is_available", "notify"]
+def notify_event(event: "NotifyEvent") -> bool:
+    """Plan 2026-05-01-002 F002 — project a NotifyEvent onto title/subtitle/
+    message/group for the terminal-notifier sink.
+
+    Title: ``Jarvis [{plan_id}]`` (operator scans by plan).
+    Subtitle: ``{kind}`` (event kind verbatim, e.g. 'breaker_tripped').
+    Message: first 140 chars of ``event.body`` (notification UX limit).
+    Group: ``{plan_id}`` so a per-plan stack can be batch-cleared.
+
+    Returns True iff the underlying notifier fired successfully.
+    """
+    message = event.body[:140] if event.body else ""
+    return notify(
+        f"Jarvis [{event.plan_id}]",
+        message,
+        subtitle=event.kind,
+        group=event.plan_id,
+    )
+
+
+__all__ = [
+    "DEFAULT_GROUP",
+    "DISABLE_ENV",
+    "NOTIFIER_BINARY",
+    "is_available",
+    "notify",
+    "notify_event",
+]

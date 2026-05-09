@@ -1,0 +1,15 @@
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-quiet-calibration_required] PASSED [ 86%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-normal-volley_start] PASSED [ 87%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-normal-gate_paused] PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-normal-breaker_tripped] PASSED [ 89%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-normal-signoff] PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-normal-calibration_required] PASSED [ 91%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-verbose-volley_start] PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-verbose-gate_paused] PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-verbose-breaker_tripped] PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-verbose-signoff] PASSED [ 96%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_matrix[absent-verbose-calibration_required] PASSED [ 97%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestSinkMatrix::test_escalation_always_carries_action_link PASSED [ 98%]
+scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py::TestEmitPointInboxOrdering::test_breaker_emit_writes_inbox_before_dispatch PASSED [100%]
+
+============================== 86 passed in 0.30s ==============================
