@@ -1,0 +1,10 @@
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestCLIExitCodes::test_exit_three_on_blocking_decision PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestCLIExitCodes::test_exit_three_on_audit_subcommand_blocking PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestCLIExitCodes::test_exit_five_on_same_vendor_refusal PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestGreppableInvariants::test_no_runtime_evidence_imports PASSED [ 96%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestGreppableInvariants::test_no_project_name_special_cases PASSED [ 97%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::TestGreppableInvariants::test_four_hash_keys_documented_in_source PASSED [ 98%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::test_audit_plan_result_default_shape PASSED [ 99%]
+scripts/dontpanic_orchestrate/tests/test_completion_gate.py::test_close_plan_result_default_shape PASSED [100%]
+
+============================= 107 passed in 0.67s ==============================

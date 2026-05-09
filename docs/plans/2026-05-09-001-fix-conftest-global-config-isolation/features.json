@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-09-001-fix-conftest-global-config-isolation",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Redirect operator HOME-dir env vars in the orchestrate test isolation fixture. The autouse `_isolate_jarvis_state` fixture in `scripts/dontpanic_orchestrate/tests/conftest.py` already redirects four operator state files but does NOT redirect `DONTPANIC_HOME` / `JARVIS_HOME`. As a result, the global config resolver in `dontpanic_orchestrate.global_config.dontpanic_home()` falls through to the operator's real `~/.dontpanic/` or `~/.jarvis/` directory and leaks `roles.goal_auditor` (or any other operator config) into ~50 tests in `test_completion_dispatch.py`, `test_sufficiency_auditor.py`, and `test_completion_gate.py`. F001 extends the fixture by two `monkeypatch.setenv` calls so the redirect is complete, plus adds a regression test that proves the operator config shape is inert under the fixture.",
+      "steps": [
+        "Add `DONTPANIC_HOME=tmp_path/dontpanic_home` and `JARVIS_HOME=tmp_path/jarvis_home` redirects to the autouse fixture in `scripts/dontpanic_orchestrate/tests/conftest.py`. Keep the existing four redirects intact.",
+        "Update the conftest module docstring to describe the home-dir redirect as the fifth isolation surface.",
+        "Add a regression test (`test_conftest_global_config_isolation.py`) that: (a) confirms `DONTPANIC_HOME` + `JARVIS_HOME` env vars point at per-test paths, (b) writes a fake operator `roles.goal_auditor: claude` config under the redirected `JARVIS_HOME`, (c) confirms `dontpanic_orchestrate.global_config.dontpanic_home()` returns the redirected path, and (d) confirms a goal-auditor resolver call honors the redirected config (proving the redirect is wired through the global_config seam).",
+        "Run the previously-flaky modules without manual env-var hygiene (raw `pytest`) to demonstrate the leak is closed.",
+        "Run the full orchestrate sweep without manual env-var hygiene; compare to the F002/F003 sweep evidence that needed `JARVIS_HOME=/tmp/dp_baseline` plus `DONTPANIC_HOME=/tmp/dp_baseline_dp`."
+      ],
+      "acceptance": "(1) `scripts/dontpanic_orchestrate/tests/conftest.py` autouse fixture redirects both `DONTPANIC_HOME` and `JARVIS_HOME` to per-test `tmp_path` subdirectories. (2) Conftest docstring is updated to name home-dir redirect as the fifth isolation surface. (3) A regression test in `test_conftest_global_config_isolation.py` asserts the env vars are set, that `global_config.dontpanic_home()` returns the redirected path, and that an operator-shaped fake config under the redirected JARVIS_HOME is honored by the resolver (proving the seam is wired). (4) The previously-flaky modules `test_completion_dispatch.py`, `test_sufficiency_auditor.py`, and `test_completion_gate.py` pass under raw `pytest` (no env-var hygiene). (5) Full orchestrate sweep passes under raw `pytest` (no env-var hygiene). (6) No agent-conventions schema changes. (7) No production code changes outside the test isolation surface.",
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-09T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/regression-test-and-previously-flaky-modules.log",
+          "captured_by": "claude",
+          "note": "5/5 pass in test_conftest_global_config_isolation.py + 102/102 pass across the previously-flaky modules (test_completion_dispatch.py, test_sufficiency_auditor.py, test_completion_gate.py) under raw pytest with NO env-var hygiene. Total 107 passed in 0.67s. Confirms the leak is closed structurally."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-raw-pytest.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep under raw pytest (no JARVIS_HOME / DONTPANIC_HOME env-var hygiene): 1529 passed, 7 skipped, 0 failed. Net +5 tests over the post-F003 baseline (1524) — F001 added zero regressions. Critically: this is the first sweep that runs clean without manual env-var hygiene since the harness added global-config consultation."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/conftest.py",
+          "captured_by": "claude",
+          "note": "Adds `monkeypatch.setenv(DONTPANIC_HOME, tmp_path/dontpanic_home)` + `monkeypatch.setenv(JARVIS_HOME, tmp_path/jarvis_home)` to the autouse `_isolate_jarvis_state` fixture. Module docstring is updated to describe the home-dir redirect as the fifth isolation surface. No other changes."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_conftest_global_config_isolation.py",
+          "captured_by": "claude",
+          "note": "New regression-pinning test module. Five cases assert each layer of the redirect: env vars are set, both legacy and modern home env vars are redirected, global_config.dontpanic_home() returns the redirected path, an empty redirected DONTPANIC_HOME falls through to the codex hardcoded fallback (proving the operator's ambient config is invisible), and a deliberately-written operator-shaped config under the redirect IS honored (proving the seam is functional, not just env-shadowed)."
+        }
+      ],
+      "depends_on": []
+    }
+  ]
+}
