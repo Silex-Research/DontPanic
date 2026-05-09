@@ -1,0 +1,101 @@
+{
+  "task_id": "2026-05-08-003-fix-harness-volley-frictions",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Fail-loud gate-state reconciliation. Current gate-state reconciliation can leave the operator debugging stale or contradictory state when persisted gate-state artifacts disagree with declared plan gates. F001 adds an explicit reconciliation helper/error so contradictory persisted state is reported as a platform state problem, not silently normalized. The helper must preserve command_guard-style discipline: deterministic, local, no destructive cleanup, and no mutation before the contradiction is surfaced.",
+      "steps": [
+        "Inspect existing gate-state read/write and reconciliation code in `scripts/dontpanic_orchestrate/gate_pause.py`, `supervisor.py`, and CLI approve/resume paths.",
+        "Define the exact contradictory cases this plan owns: persisted pending/cleared gate not declared by the plan, persisted pending stage incompatible with the current lifecycle stage, and stale active defer state that cannot be mapped to a declared gate.",
+        "Add a small typed exception or result object for reconciliation failure with fields for plan_id, gate, stage, persisted_state_path, and remediation.",
+        "Wire the helper where gate-state is loaded for dispatch/approve/resume so contradictions fail before any new gate-state write occurs.",
+        "Record an INBOX event only after the failure is classified; do not mutate gate-state to auto-repair contradictions.",
+        "Add tests with fixture gate-state files covering every owned contradiction and the clean compatibility path from legacy `cleared_gates`-only state.",
+        "Run focused gate/resume tests plus the full orchestrate sweep."
+      ],
+      "acceptance": "(1) Contradictory gate-state/declaration cases fail loud with a clear typed error, not silent normalization. (2) Error text names the state path, offending gate/stage, and remediation. (3) No gate-state mutation occurs before the error is raised; test asserts file bytes unchanged. (4) Existing legacy `cleared_gates`-only state remains readable and compatible. (5) CLI dispatch/approve/resume paths surface the same reconciliation category consistently. (6) INBOX receives a classified event for operator visibility. (7) Focused gate/resume suite and full orchestrate sweep pass. (8) No schema changes under `claude/shared/`.",
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-08T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/gate-state-reconciliation-fail-loud.log",
+          "captured_by": "claude",
+          "note": "15/15 fixture tests in test_gate_state_reconciliation_f001.py pass: 9 direct unit cases (legacy compat, no-state-file, undeclared in cleared/pause, synthetic prefix allowed, unknown stage, stage-mismatch, stale defer, known defer) + 2 supervisor surfaces (dispatch_volley + dispatch_single_agent) + 4 CLI surfaces (approve refusal, resume --gate refusal, resume --all refusal, clean-state approve). Byte-stability assertions cover acceptance #3."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-regression-sweep.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep with conftest global-config isolation env vars (JARVIS_HOME=/tmp/dp_baseline DONTPANIC_HOME=/tmp/dp_baseline_dp): 1493 passed, 7 skipped, 0 failed. Without the env vars, ~50 phantom failures originate from the adjacent conftest gap memo'd as separate scope per D007."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/gate_pause.py",
+          "captured_by": "claude",
+          "note": "Adds GateStateReconciliationError + reconcile_gate_state + format_reconciliation_inbox_body. Three owned cases enforced: undeclared_gate_name, incompatible_pending_stage, stale_active_defer. Synthetic breaker:/defer:/pre_resume_after_child: prefixes preserved as legitimate."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Adds _reconcile_gate_state_or_raise wrapper invoked at the head of dispatch_single_agent and dispatch_volley, before any gate-state write (pre _arm_parent_pre_resume_gate_for_child / admission reconcile). On failure: INBOX event=gate_state_reconciliation_failed + notify + re-raise."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "Adds _reconcile_gate_state_for_cli helper invoked at the head of _approve_main and _resume_main after declared_strs is computed and before approve_gate / resume_all touch state. Returns exit 2 + writes classified INBOX event on contradiction."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module covering all owned contradictions, the legacy compatibility path, supervisor surfaces, and CLI surfaces. Plan IDs follow agent-conventions plan-id pattern."
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Dispatch-time `pre_impl` auto-clear. Ordinary local dev/test dispatches can hit a chicken-and-egg: the operator has already invoked dispatch intentionally, but the first lifecycle gate still forces an immediate `pre_impl` approve/resume cycle before any implementer work can start. F002 adds a conservative auto-clear only for that exact direct-dispatch context. It must write explicit INBOX/gate event evidence so the audit trail remains visible, and it must not weaken protected target or non-dispatch gate discipline.",
+      "steps": [
+        "Identify the canonical dispatch seam after plan load/capability checks and before implementer spawn.",
+        "Add a helper that decides whether `pre_impl` may be auto-cleared for this invocation. Inputs must include target_env/target_project, declared gates, invocation context, and current gate-state.",
+        "Allow auto-clear only for direct operator dispatch in non-prod/non-protected contexts where `pre_impl` is the only pending lifecycle gate at that stage.",
+        "Write the normal gate event plus an INBOX entry naming `auto_cleared_pre_impl`, the command context, and why manual approval was not required.",
+        "Preserve explicit manual paths: `dontpanic approve`, `dontpanic resume --gate`, and `dontpanic resume --all` keep their current semantics and do not silently clear unrelated gates.",
+        "Add tests covering allowed auto-clear, protected-target refusal, multi-gate refusal, already-cleared idempotency, INBOX evidence, and no implementer spawn before the helper returns.",
+        "Run lifecycle gate, CLI resume, and full orchestrate tests."
+      ],
+      "acceptance": "(1) Direct dispatch of an eligible dev/test plan with only pending `pre_impl` proceeds without a separate approve/resume command. (2) The gate-state event log records the clearance with an auto-clear reason. (3) INBOX records an operator-readable event naming the auto-clear. (4) Protected/prod plans do not auto-clear. (5) Plans with additional pending gates do not auto-clear beyond the owned `pre_impl` case. (6) Manual approve/resume behavior remains unchanged. (7) Tests prove implementer spawn happens only after the auto-clear decision. (8) Full orchestrate sweep passes.",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Auditor verdict taxonomy for environmental vs defect findings. Today repeated `needs_changes` can produce `stopped_no_progress` even when the remaining auditor objection is environmental: sandbox cannot run Jest/Xcode, CLI auth cannot reproduce operator evidence, or the auditor is disagreeing with an equivalent evidence shape. F003 adds a conservative classification layer that distinguishes harness/environmental blockers from genuine implementation defects without auto-signing off. It combines an explicit severity taxonomy with operator-facing reporting so no substantive defect is hidden.",
+      "steps": [
+        "Inventory existing audit envelope finding fields and no-progress terminal handling in `supervisor.py` and `circuit_breakers.py`.",
+        "Define a closed v0 taxonomy: `implementation_defect`, `environmental_reproduction_failure`, `evidence_shape_disagreement`, `scope_overreach`, and `unknown`.",
+        "Implement a pure classifier over structured findings plus known text patterns from the preserved audit trail. Unknown or mixed classifications remain blocking.",
+        "Wire classification into the stopped/no-progress terminal path as advisory operator evidence: terminal status remains non-success, but signoff/INBOX/reporting names the classification and recommended next action.",
+        "Ensure `implementation_defect` and `unknown` findings remain blocking with no auto-advance.",
+        "Add tests using fixtures modeled on the preserved evidence-shape overgating memory, sandbox reproduction failures, and genuine defect examples.",
+        "Add an evidence artifact that maps every test fixture to the taxonomy decision and explains why false positives remain bounded.",
+        "Run full orchestrate tests and close through the parity objective contract evidence path."
+      ],
+      "acceptance": "(1) Classifier is pure and deterministic; no subprocess, network, or filesystem probing. (2) Closed taxonomy values are used consistently in terminal evidence. (3) Environmental/sandbox reproduction failures are classified separately from implementation defects. (4) Evidence-shape disagreement is classified separately from implementation defects only when equivalent saved/operator evidence is present in the audit trail. (5) Mixed or unknown findings remain blocking and are never auto-signed-off. (6) `stopped_no_progress` reporting names the classification and recommended next operator action. (7) Tests cover environmental, evidence-shape, scope-overreach, genuine-defect, mixed, and unknown cases. (8) F2 objective-contract evidence artifacts land under stable filenames.",
+      "passes": false,
+      "depends_on": ["F001", "F002"]
+    }
+  ]
+}

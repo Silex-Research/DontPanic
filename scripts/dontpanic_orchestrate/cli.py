@@ -184,6 +184,49 @@ def _ps_main(argv: list[str]) -> int:
     return 0
 
 
+def _reconcile_gate_state_for_cli(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    declared_gates: list[str],
+    cli_label: str,
+) -> bool:
+    """Plan 2026-05-08-003 F001 — fail-loud reconciliation entry for CLI
+    approve/resume. Returns ``True`` when the operator should exit 2 (a
+    contradiction was surfaced); ``False`` when the persisted state is
+    consistent and the caller may proceed.
+
+    Side effects on contradiction: writes a classified INBOX event and prints
+    a remediation block to stderr. ``gate-state.json`` is never mutated (D004).
+    """
+    try:
+        gate_pause.reconcile_gate_state(
+            plan_dir,
+            plan_id=plan_id,
+            declared_gates=declared_gates,
+        )
+    except gate_pause.GateStateReconciliationError as exc:
+        inbox.append_event(
+            plan_dir,
+            event="gate_state_reconciliation_failed",
+            plan_id=plan_id,
+            body=gate_pause.format_reconciliation_inbox_body(exc),
+            kind=exc.kind,
+            gate=exc.gate or "",
+            stage=exc.stage or "",
+            persisted_state_path=str(exc.persisted_state_path),
+            cli=cli_label,
+        )
+        print(
+            f"[{cli_label}] REFUSED gate-state reconciliation [{exc.kind}] "
+            f"for {plan_id}.",
+            file=sys.stderr,
+        )
+        print(gate_pause.format_reconciliation_inbox_body(exc), file=sys.stderr)
+        return True
+    return False
+
+
 def _approve_main(argv: list[str]) -> int:
     """F008 Item 2 + F003: clear a single declared gate for a plan.
 
@@ -237,6 +280,17 @@ def _approve_main(argv: list[str]) -> int:
     declared_strs = [
         g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
     ]
+    # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation.
+    # Surfaces persisted-vs-declared contradictions before approve_gate would
+    # touch state. INBOX classification + exit 2 keep the artifact untouched
+    # for operator review.
+    if _reconcile_gate_state_for_cli(
+        plan_dir,
+        plan_id=loaded.plan_id,
+        declared_gates=declared_strs,
+        cli_label="approve",
+    ):
+        return 2
     # F006: synthetic breaker:<kind> gates are valid declared names too — the
     # supervisor adds them to active_breakers on trip. Don't false-warn when
     # operator approves a known breaker name (either currently active or any
@@ -509,6 +563,16 @@ def _resume_main(argv: list[str]) -> int:
     declared_strs = [
         g.value if hasattr(g, "value") else str(g) for g in (loaded.plan.human_gates or [])
     ]
+    # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation. Mirrors
+    # the approve path so persisted-vs-declared contradictions are surfaced
+    # before approve_gate / resume_all touch state.
+    if _reconcile_gate_state_for_cli(
+        plan_dir,
+        plan_id=loaded.plan_id,
+        declared_gates=declared_strs,
+        cli_label="resume",
+    ):
+        return 2
     active_breakers = gate_pause.active_breakers(plan_dir)
     active_defers = gate_pause.active_defers(plan_dir)
 

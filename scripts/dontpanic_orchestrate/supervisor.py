@@ -72,6 +72,47 @@ class PausedOnGate(RuntimeError):
     pass
 
 
+def _reconcile_gate_state_or_raise(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    declared_gates: list[Any],
+    feature_id: str | None = None,
+) -> None:
+    """Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation entry
+    point. Wraps :func:`gate_pause.reconcile_gate_state` so every dispatch path
+    surfaces the contradiction the same way: classified INBOX event +
+    terminal-notifier ping + re-raise for the supervisor's caller to surface.
+
+    No mutation of ``gate-state.json`` before the failure (D004); the artifact
+    stays inspectable for operator remediation.
+    """
+    try:
+        gate_pause.reconcile_gate_state(
+            plan_dir,
+            plan_id=plan_id,
+            declared_gates=declared_gates,
+        )
+    except gate_pause.GateStateReconciliationError as exc:
+        inbox.append_event(
+            plan_dir,
+            event="gate_state_reconciliation_failed",
+            plan_id=plan_id,
+            body=gate_pause.format_reconciliation_inbox_body(exc),
+            kind=exc.kind,
+            gate=exc.gate or "",
+            stage=exc.stage or "",
+            persisted_state_path=str(exc.persisted_state_path),
+            feature_id=feature_id or "",
+        )
+        notify.notify(
+            title=f"jarvis: gate-state contradiction — {plan_id}",
+            message=f"{exc.kind}: {exc.gate or exc.stage or 'see INBOX'}",
+            subtitle=feature_id,
+        )
+        raise
+
+
 def _trip_breaker(
     plan_dir: Path,
     plan_id: str,
@@ -578,6 +619,17 @@ def dispatch_single_agent(
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
 
+    # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation. Runs
+    # BEFORE _arm_parent_pre_resume_gate_for_child / admission reconcile / any
+    # other gate-state write, so contradictions are surfaced on the persisted
+    # artifact rather than silently normalized into a fresh write.
+    _reconcile_gate_state_or_raise(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        declared_gates=list(loaded.plan.human_gates or []),
+        feature_id=feature_id,
+    )
+
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
     # Plan 2026-05-02-003 F003: when a child plan dispatches, arm the parent's
@@ -894,6 +946,16 @@ def dispatch_volley(
 
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
+
+    # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation. Mirrors
+    # the dispatch_single_agent placement so volley dispatch refuses to
+    # proceed when persisted gate-state contradicts the plan declaration.
+    _reconcile_gate_state_or_raise(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        declared_gates=list(loaded.plan.human_gates or []),
+        feature_id=feature_id,
+    )
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)

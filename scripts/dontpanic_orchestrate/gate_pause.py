@@ -42,6 +42,18 @@ from typing import Any
 
 GATE_STATE_FILENAME = "gate-state.json"
 
+# Plan 2026-05-08-003 F001 — synthetic gate-name prefixes that are valid in
+# persisted state without being declared in plan.human_gates. Active breakers,
+# defers, and child-return gates live on the supervisor side of the lifecycle
+# (transient transitions) but their names show up in cleared_gates / pause_gates
+# during in-flight runs. The reconciliation helper treats any name with one of
+# these prefixes as legitimate even when the plan has not declared it.
+_SYNTHETIC_GATE_PREFIXES: tuple[str, ...] = (
+    "breaker:",
+    "defer:",
+    "pre_resume_after_child:",
+)
+
 # Plan 2026-05-04-002 F001 — lifecycle stages for staged human-gate evaluation.
 # Maps each canonical lifecycle stage to the human-gate names that fire there.
 # Other declared human gates (e.g. on_escalation, tier_promotion) remain in the
@@ -576,6 +588,198 @@ def load_gate_state_compat(plan_dir: Path) -> CompatGateState:
     )
 
 
+class GateStateReconciliationError(Exception):
+    """Plan 2026-05-08-003 F001 — persisted gate-state contradicts the plan
+    declaration in a way the supervisor refuses to silently normalize.
+
+    Carries the operator-facing remediation surface explicitly so callers
+    (supervisor / CLI) can render INBOX evidence without re-deriving the
+    fields. Per D004, no caller mutates ``gate-state.json`` before this error
+    is raised; the artifact is preserved for inspection.
+    """
+
+    KIND_UNDECLARED_GATE = "undeclared_gate_name"
+    KIND_INCOMPATIBLE_STAGE = "incompatible_pending_stage"
+    KIND_STALE_ACTIVE_DEFER = "stale_active_defer"
+
+    def __init__(
+        self,
+        *,
+        kind: str,
+        plan_id: str,
+        gate: str | None,
+        stage: str | None,
+        persisted_state_path: Path,
+        remediation: str,
+    ) -> None:
+        self.kind = kind
+        self.plan_id = plan_id
+        self.gate = gate
+        self.stage = stage
+        self.persisted_state_path = persisted_state_path
+        self.remediation = remediation
+        msg = (
+            f"gate-state reconciliation failed [{kind}]: "
+            f"plan_id={plan_id} gate={gate!r} stage={stage!r} "
+            f"path={persisted_state_path}\n"
+            f"remediation: {remediation}"
+        )
+        super().__init__(msg)
+
+
+def format_reconciliation_inbox_body(err: GateStateReconciliationError) -> str:
+    """Plan 2026-05-08-003 F001 — canonical INBOX body for a reconciliation
+    failure. Kept module-local so every supervisor / CLI entry point emits the
+    same operator-readable shape (kind + path + remediation)."""
+    return (
+        f"Gate-state reconciliation refused (kind={err.kind}).\n\n"
+        f"Plan: {err.plan_id}\n"
+        f"Persisted state: {err.persisted_state_path}\n"
+        f"Offending gate: {err.gate or '(none)'}\n"
+        f"Offending stage: {err.stage or '(none)'}\n\n"
+        f"Remediation: {err.remediation}\n\n"
+        "No gate-state.json mutation has occurred; inspect the artifact "
+        "above and repair before re-running."
+    )
+
+
+def _is_synthetic_gate_name(name: str) -> bool:
+    return any(name.startswith(p) for p in _SYNTHETIC_GATE_PREFIXES)
+
+
+def _known_defer_gate_names() -> frozenset[str]:
+    """Plan 2026-05-08-003 F001 — set of synthetic ``defer:<kind>`` names that
+    quota_admission can legitimately add to ``active_defers``. Imported lazily
+    so gate_pause stays loosely coupled to the admission module's import chain.
+    """
+    from dontpanic_orchestrate import quota_admission  # local to avoid cycles
+
+    return frozenset(quota_admission.gate_name(k) for k in quota_admission.DeferKind)
+
+
+def reconcile_gate_state(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    declared_gates: list[Any],
+) -> CompatGateState:
+    """Plan 2026-05-08-003 F001 — verify persisted gate-state is internally
+    consistent with the plan declaration before any caller mutates state.
+
+    Raises :class:`GateStateReconciliationError` on contradiction; returns the
+    loaded :class:`CompatGateState` on a clean read (including the legacy
+    ``cleared_gates``-only shape).
+
+    Owned contradictions:
+
+      1. ``undeclared_gate_name`` — ``cleared_gates`` or ``pause_gates``
+         contains a non-synthetic gate name absent from ``declared_gates``.
+      2. ``incompatible_pending_stage`` — ``pending_stage`` is set to a value
+         outside :data:`LIFECYCLE_STAGES`, or to a stage whose canonical gates
+         are not in ``declared_gates``.
+      3. ``stale_active_defer`` — ``active_defers`` contains an entry that
+         does not map back to any known :class:`quota_admission.DeferKind`.
+
+    No mutation to ``gate-state.json`` regardless of outcome (D004).
+    """
+    state_path = gate_state_path(plan_dir)
+    compat = load_gate_state_compat(plan_dir)
+    if not state_path.is_file():
+        # Nothing persisted yet — fresh runs cannot be in contradiction.
+        return compat
+
+    declared_set = set(_stringify_gates(declared_gates))
+
+    # Case 1: undeclared, non-synthetic gate names in cleared_gates / pause_gates.
+    raw_pause = compat.raw.get("pause_gates")
+    pause_list: list[str] = []
+    if isinstance(raw_pause, list):
+        pause_list = [g for g in raw_pause if isinstance(g, str)]
+    for source_name, gate_list in (
+        ("cleared_gates", compat.cleared_gates),
+        ("pause_gates", pause_list),
+    ):
+        for gate in gate_list:
+            if gate in declared_set or _is_synthetic_gate_name(gate):
+                continue
+            raise GateStateReconciliationError(
+                kind=GateStateReconciliationError.KIND_UNDECLARED_GATE,
+                plan_id=plan_id,
+                gate=gate,
+                stage=None,
+                persisted_state_path=state_path,
+                remediation=(
+                    f"Gate {gate!r} appears in {source_name} of "
+                    f"{state_path} but is not declared in plan.human_gates "
+                    f"({sorted(declared_set)}) and is not a synthetic "
+                    f"breaker:/defer:/pre_resume_after_child: gate. "
+                    "Either restore the declared gate in plan.md or remove "
+                    "the stale entry from gate-state.json after operator "
+                    "review."
+                ),
+            )
+
+    # Case 2: incompatible pending_stage.
+    if compat.pending_stage is not None:
+        if compat.pending_stage not in LIFECYCLE_STAGES:
+            raise GateStateReconciliationError(
+                kind=GateStateReconciliationError.KIND_INCOMPATIBLE_STAGE,
+                plan_id=plan_id,
+                gate=None,
+                stage=compat.pending_stage,
+                persisted_state_path=state_path,
+                remediation=(
+                    f"pending_stage={compat.pending_stage!r} in "
+                    f"{state_path} is not a valid lifecycle stage "
+                    f"(valid: {list(LIFECYCLE_STAGES)}). After operator "
+                    "review, repair gate-state.json — typically by clearing "
+                    "pending_stage when no stage pause is currently active."
+                ),
+            )
+        stage_gates = _STAGE_GATES.get(compat.pending_stage, ())
+        if stage_gates and not any(g in declared_set for g in stage_gates):
+            raise GateStateReconciliationError(
+                kind=GateStateReconciliationError.KIND_INCOMPATIBLE_STAGE,
+                plan_id=plan_id,
+                gate=None,
+                stage=compat.pending_stage,
+                persisted_state_path=state_path,
+                remediation=(
+                    f"pending_stage={compat.pending_stage!r} in "
+                    f"{state_path} maps to gates {list(stage_gates)} but "
+                    f"the plan declares {sorted(declared_set)}, none of "
+                    "which match this stage. Either declare the stage's "
+                    "gate in plan.md or remove pending_stage after "
+                    "operator review."
+                ),
+            )
+
+    # Case 3: stale active_defer entries.
+    raw_defers = compat.raw.get("active_defers")
+    if isinstance(raw_defers, list) and raw_defers:
+        valid_defers = _known_defer_gate_names()
+        for entry in raw_defers:
+            if not isinstance(entry, str):
+                continue
+            if entry in valid_defers:
+                continue
+            raise GateStateReconciliationError(
+                kind=GateStateReconciliationError.KIND_STALE_ACTIVE_DEFER,
+                plan_id=plan_id,
+                gate=entry,
+                stage=None,
+                persisted_state_path=state_path,
+                remediation=(
+                    f"active_defers contains {entry!r} in {state_path}, "
+                    f"which does not match any known defer kind "
+                    f"({sorted(valid_defers)}). After operator review, "
+                    "remove the stale entry from gate-state.json."
+                ),
+            )
+
+    return compat
+
+
 def evaluate_human_gates(
     plan_dir: Path,
     declared_gates: list[Any],
@@ -869,6 +1073,7 @@ __all__ = [
     "CompatGateState",
     "GateCheck",
     "GatePauseInfo",
+    "GateStateReconciliationError",
     "active_breakers",
     "active_defers",
     "active_pre_resume_after_children",
@@ -880,6 +1085,7 @@ __all__ = [
     "cleared_gates",
     "evaluate",
     "evaluate_human_gates",
+    "format_reconciliation_inbox_body",
     "gate_state_path",
     "is_gate_cleared",
     "is_gate_currently_pending",
@@ -888,6 +1094,7 @@ __all__ = [
     "load_gate_state_compat",
     "pending_stage",
     "reconcile_defers",
+    "reconcile_gate_state",
     "record_pause",
     "reset_for_test",
     "resume_all",
