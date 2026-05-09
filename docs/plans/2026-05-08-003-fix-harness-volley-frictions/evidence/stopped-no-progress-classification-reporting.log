@@ -1,0 +1,226 @@
+==============================================================================
+F003 stopped_no_progress classification reporting — operator surface
+==============================================================================
+
+------------------------------------------------------------------------------
+Fixture 1 — environmental (auditor sandbox cannot run Xcode)
+------------------------------------------------------------------------------
+aggregate         = environmental_reproduction_failure
+blocking          = False
+recommended       = Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+INBOX body (operator-facing):
+  Auditor verdict taxonomy [environmental_reproduction_failure] — ADVISORY.
+  
+  Feature: F001
+  Recommended next action: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+  
+  Per-finding classification:
+    - [environmental_reproduction_failure] severity=high, category=test_coverage: Auditor cannot run iOS UI tests; Xcode unavailable in this sandbox host.
+  
+  Aggregate class is advisory: every finding mapped to a non-defect harness/scope class. F003 does NOT auto-sign-off; the operator still owns the close decision.
+
+Sidecar JSON (no_progress_classification_F001_iter2.json):
+  {
+    "schema_version": "1.0",
+    "kind": "no_progress_classification",
+    "captured_at": "2026-05-09T05:46:44Z",
+    "feature_id": "F001",
+    "aggregate": "environmental_reproduction_failure",
+    "blocking": false,
+    "recommended_action": "Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+    "saved_evidence_paths": [],
+    "findings": [
+      {
+        "finding_index": 0,
+        "classification": "environmental_reproduction_failure",
+        "severity": "high",
+        "category": "test_coverage",
+        "issue_excerpt": "Auditor cannot run iOS UI tests; Xcode unavailable in this sandbox host.",
+        "rationale": "auditor reports a sandbox/host/auth blocker preventing reproduction; operator can run the verification locally."
+      }
+    ]
+  }
+
+------------------------------------------------------------------------------
+Fixture 2 — implementation_defect (race in auth listener)
+------------------------------------------------------------------------------
+aggregate         = implementation_defect
+blocking          = True
+recommended       = Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+saved_evidence    = ['evidence/auth-race.log']
+
+INBOX body (operator-facing):
+  Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+  
+  Feature: F001
+  Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+  
+  Per-finding classification:
+    - [implementation_defect] severity=critical, category=correctness: Race condition in token-refresh listener; sign-out callback can fire after refresh, crashing Firestore listener.
+  
+  Audit trail referenced existing evidence at: evidence/auth-race.log
+  Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+Sidecar JSON (no_progress_classification_F001_iter2.json):
+  {
+    "schema_version": "1.0",
+    "kind": "no_progress_classification",
+    "captured_at": "2026-05-09T05:46:44Z",
+    "feature_id": "F001",
+    "aggregate": "implementation_defect",
+    "blocking": true,
+    "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+    "saved_evidence_paths": [
+      "evidence/auth-race.log"
+    ],
+    "findings": [
+      {
+        "finding_index": 0,
+        "classification": "implementation_defect",
+        "severity": "critical",
+        "category": "correctness",
+        "issue_excerpt": "Race condition in token-refresh listener; sign-out callback can fire after refresh, crashing Firestore listener.",
+        "rationale": "severity=critical, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+      }
+    ]
+  }
+
+------------------------------------------------------------------------------
+Fixture 3 — evidence_shape_disagreement WITH equivalent saved evidence
+------------------------------------------------------------------------------
+aggregate         = unknown
+blocking          = True
+recommended       = Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+saved_evidence    = ['./evidence/retry-trace.json', './evidence/retry-trace.log', 'evidence/retry-trace.log']
+
+INBOX body (operator-facing):
+  Auditor verdict taxonomy [unknown] — BLOCKING.
+  
+  Feature: F001
+  Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+  
+  Per-finding classification:
+    - [unknown] severity=medium, category=documentation: Expected a JSON output for the retry trace; received only plain log.
+  
+  Audit trail referenced existing evidence at: ./evidence/retry-trace.json, ./evidence/retry-trace.log, evidence/retry-trace.log
+  Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+Sidecar JSON (no_progress_classification_F001_iter2.json):
+  {
+    "schema_version": "1.0",
+    "kind": "no_progress_classification",
+    "captured_at": "2026-05-09T05:46:44Z",
+    "feature_id": "F001",
+    "aggregate": "unknown",
+    "blocking": true,
+    "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+    "saved_evidence_paths": [
+      "./evidence/retry-trace.json",
+      "./evidence/retry-trace.log",
+      "evidence/retry-trace.log"
+    ],
+    "findings": [
+      {
+        "finding_index": 0,
+        "classification": "unknown",
+        "severity": "medium",
+        "category": "documentation",
+        "issue_excerpt": "Expected a JSON output for the retry trace; received only plain log.",
+        "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+      }
+    ]
+  }
+
+------------------------------------------------------------------------------
+Fixture 4 — scope_overreach (different feature_id)
+------------------------------------------------------------------------------
+aggregate         = scope_overreach
+blocking          = False
+recommended       = Queue the cited concerns as a separate plan / feature; they lie outside this volley's scope and should not block close-out.
+
+INBOX body (operator-facing):
+  Auditor verdict taxonomy [scope_overreach] — ADVISORY.
+  
+  Feature: F001
+  Recommended next action: Queue the cited concerns as a separate plan / feature; they lie outside this volley's scope and should not block close-out.
+  
+  Per-finding classification:
+    - [scope_overreach] severity=high, category=security: Authentication flow is missing rate limiting.
+  
+  Aggregate class is advisory: every finding mapped to a non-defect harness/scope class. F003 does NOT auto-sign-off; the operator still owns the close decision.
+
+Sidecar JSON (no_progress_classification_F001_iter2.json):
+  {
+    "schema_version": "1.0",
+    "kind": "no_progress_classification",
+    "captured_at": "2026-05-09T05:46:44Z",
+    "feature_id": "F001",
+    "aggregate": "scope_overreach",
+    "blocking": false,
+    "recommended_action": "Queue the cited concerns as a separate plan / feature; they lie outside this volley's scope and should not block close-out.",
+    "saved_evidence_paths": [],
+    "findings": [
+      {
+        "finding_index": 0,
+        "classification": "scope_overreach",
+        "severity": "high",
+        "category": "security",
+        "issue_excerpt": "Authentication flow is missing rate limiting.",
+        "rationale": "finding.feature_id='F042' differs from dispatched feature_id='F001'; routes as a follow-up against the cited feature, not against this volley's scope."
+      }
+    ]
+  }
+
+------------------------------------------------------------------------------
+Fixture 5 — mixed (defect + environmental → blocking)
+------------------------------------------------------------------------------
+aggregate         = implementation_defect
+blocking          = True
+recommended       = Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+INBOX body (operator-facing):
+  Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+  
+  Feature: F001
+  Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+  
+  Per-finding classification:
+    - [implementation_defect] severity=critical, category=correctness: Mutex held across await; risk of deadlock under contention.
+    - [environmental_reproduction_failure] severity=medium, category=test_coverage: Could not run npm test in sandbox to verify the lockfile fix.
+  
+  Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+Sidecar JSON (no_progress_classification_F001_iter2.json):
+  {
+    "schema_version": "1.0",
+    "kind": "no_progress_classification",
+    "captured_at": "2026-05-09T05:46:44Z",
+    "feature_id": "F001",
+    "aggregate": "implementation_defect",
+    "blocking": true,
+    "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+    "saved_evidence_paths": [],
+    "findings": [
+      {
+        "finding_index": 0,
+        "classification": "implementation_defect",
+        "severity": "critical",
+        "category": "correctness",
+        "issue_excerpt": "Mutex held across await; risk of deadlock under contention.",
+        "rationale": "severity=critical, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+      },
+      {
+        "finding_index": 1,
+        "classification": "environmental_reproduction_failure",
+        "severity": "medium",
+        "category": "test_coverage",
+        "issue_excerpt": "Could not run npm test in sandbox to verify the lockfile fix.",
+        "rationale": "auditor reports a sandbox/host/auth blocker preventing reproduction; operator can run the verification locally."
+      }
+    ]
+  }
+
+==============================================================================
+End of reporting evidence — five representative fixtures.
+==============================================================================

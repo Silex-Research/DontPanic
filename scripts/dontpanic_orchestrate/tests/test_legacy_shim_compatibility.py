@@ -29,6 +29,7 @@ PUBLIC_SUBMODULES = [
     "active_supervisors",
     "agent_manifest",
     "audit_writer",
+    "auditor_taxonomy",
     "calibration_loader",
     "circuit_breakers",
     "cli",
