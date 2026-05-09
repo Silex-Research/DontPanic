@@ -56,7 +56,7 @@ id: {plan_id}
 title: F001 reconciliation synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-08"
 description: Synthetic plan for fail-loud gate-state reconciliation tests.
 agents_required:

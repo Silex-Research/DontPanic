@@ -514,6 +514,99 @@ def record_pause(
     _write_state(plan_dir, state)
 
 
+def implicit_clear_pre_impl_for_active_plan(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    declared_gates: list[Any],
+) -> bool:
+    """Plan 2026-05-09-002 F002 — clear ``pre_impl`` on behalf of the
+    supervisor when ``plan.md`` status is ``active`` (i.e. the operator
+    explicitly locked the plan and expects the status flip + lock
+    D-entry to be load-bearing, without a separate ``dontpanic approve
+    <plan> pre_impl`` step).
+
+    Returns True iff state changed. Returns False (no-op) when:
+      - ``pre_impl`` is not declared in the plan's human gates;
+      - ``pre_impl`` is already in ``cleared_gates`` (idempotent);
+      - the persisted state's ``plan_id`` already shows the gate cleared
+        via this same path (idempotent re-call).
+
+    On state change: writes a normal ``gate_events`` entry with
+    ``actor='supervisor:plan_status_active'`` so the audit log
+    distinguishes this implicit clearance from operator approve/resume
+    (``'operator'``) AND from plan 2026-05-08-003 F002's direct-
+    dispatch auto-clear (``'supervisor:auto_clear_pre_impl'``).
+
+    Mirrors :func:`record_pause` + :func:`approve_gate` semantics so
+    downstream audit consumers (signoff_writer, transcripts) see the
+    same paused → cleared transition shape they always do.
+
+    Crucially, this helper does NOT live inside
+    :func:`reconcile_gate_state` — that function's contract added in
+    plan 2026-05-08-003 F001 D004 is ``"No mutation regardless of
+    outcome"``. F002 of plan 2026-05-09-002 keeps reconcile pure and
+    runs the sync as a separate post-reconcile step.
+    """
+    declared_strs = _stringify_gates(declared_gates)
+    if "pre_impl" not in declared_strs:
+        return False
+
+    state = _read_state(plan_dir)
+    cleared = list(_coerce_cleared_gates(state.get("cleared_gates")))
+    if "pre_impl" in cleared:
+        return False
+
+    state["plan_id"] = plan_id
+    pause_gates = state.get("pause_gates") or []
+    if not isinstance(pause_gates, list):
+        pause_gates = []
+    if "pre_impl" not in pause_gates:
+        # Pause briefly so the gate_events log carries the same shape as
+        # the manual approve flow (paused → cleared transition with
+        # stage='pre_impl'). Mirrors plan 2026-05-08-003 F002.
+        state["paused_at"] = _now_iso()
+        state["pause_gates"] = list(pause_gates) + ["pre_impl"]
+        if state.get("pending_stage") not in LIFECYCLE_STAGES:
+            state["pending_stage"] = "pre_impl"
+        if "gate_events" not in state or not isinstance(
+            state.get("gate_events"), list
+        ):
+            state["gate_events"] = []
+        history = list(state.get("history") or [])
+        history.append(
+            {
+                "action": "pause",
+                "at": state["paused_at"],
+                "actor": "supervisor",
+                "pause_gates": ["pre_impl"],
+                "stage": "pre_impl",
+            }
+        )
+        state["history"] = history
+
+    now = _now_iso()
+    cleared.append("pre_impl")
+    state["cleared_gates"] = cleared
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "approve",
+            "gate": "pre_impl",
+            "at": now,
+            "actor": "supervisor:plan_status_active",
+        }
+    )
+    state["history"] = history
+    _append_gate_event(
+        state, "pre_impl", "pre_impl", "supervisor:plan_status_active", now
+    )
+    _mark_stage_completed_if_done(state, "pre_impl")
+    _maybe_clear_pause_marker(state)
+    _write_state(plan_dir, state)
+    return True
+
+
 def reset_for_test(plan_dir: Path) -> None:
     """Test helper — wipe state."""
     p = gate_state_path(plan_dir)
@@ -1087,6 +1180,7 @@ __all__ = [
     "evaluate_human_gates",
     "format_reconciliation_inbox_body",
     "gate_state_path",
+    "implicit_clear_pre_impl_for_active_plan",
     "is_gate_cleared",
     "is_gate_currently_pending",
     "is_lifecycle_gate",

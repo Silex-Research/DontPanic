@@ -1,0 +1,25 @@
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 20 items
+
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[active-yes] PASSED [  5%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[draft-no] PASSED [ 10%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[ready-for-audit-no] PASSED [ 15%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[in-audit-no] PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[completed-no] PASSED [ 25%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[abandoned-no] PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestPlanStatusEnablesImplicitPreImpl::test_only_active_returns_true[blocked-no] PASSED [ 35%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestImplicitClearHelper::test_active_clears_pre_impl_with_distinct_actor PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestImplicitClearHelper::test_pre_impl_not_declared_is_noop PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestImplicitClearHelper::test_already_cleared_is_idempotent PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestReconcilePurity::test_reconcile_does_not_write_state_file PASSED [ 55%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_active_plan_dispatches_without_separate_approve PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_draft_plan_pauses_at_pre_impl PASSED [ 65%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_post_impl_states_do_not_trigger_sync[ready-for-audit] PASSED [ 70%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_post_impl_states_do_not_trigger_sync[in-audit] PASSED [ 75%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_post_impl_states_do_not_trigger_sync[completed] PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_post_impl_states_do_not_trigger_sync[abandoned] PASSED [ 85%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_post_impl_states_do_not_trigger_sync[blocked] PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_phase_1_direct_dispatch_still_fires_for_draft_plans PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py::TestSupervisorWiring::test_active_plan_with_pre_impl_not_declared_no_op PASSED [100%]
+
+============================== 20 passed in 0.33s ==============================

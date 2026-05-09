@@ -34,7 +34,7 @@ id: {plan_id}
 title: Resume CLI gate-discipline test
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-02"
 description: Synthetic plan for plan 2026-05-02-001 F001 tests.
 agents_required:

@@ -80,7 +80,47 @@
         "Run focused gate_pause + reconciliation tests + full orchestrate sweep."
       ],
       "acceptance": "(1) `plan_loader.plan_status_enables_implicit_pre_impl` returns True ONLY for `status == 'active'`. False for draft, ready_for_audit, in_audit, completed, abandoned, blocked. (2) New sync helper `gate_pause.implicit_clear_pre_impl_for_active_plan` is the ONLY surface that mutates state for this path; `reconcile_gate_state` is unchanged and stays documented-pure. (3) The implicit clearance writes a gate_event with `actor='supervisor:plan_status_active'` distinguishing it from operator approve and from `2026-05-08-003` F002's `'supervisor:auto_clear_pre_impl'`. (4) INBOX event=`pre_impl_status_synced` carries plan_id, status, and feature_id headers. (5) Eight fixture cases pass + the `2026-05-08-003` F002 tests still pass (no regression on direct-dispatch path). (6) Full orchestrate sweep passes under raw pytest. (7) `reconcile_gate_state`'s docstring contract ('No mutation regardless of outcome') is still honored — verified by re-reading the function and asserting no new write paths were added inside it.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-09T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/plan-status-sync-fixtures.log",
+          "captured_by": "claude",
+          "note": "20/20 tests pass in test_plan_status_pre_impl_sync_f002.py: 7 parametrized cases on plan_status_enables_implicit_pre_impl (active=True; draft/ready_for_audit/in_audit/completed/abandoned/blocked all False), 3 on the implicit_clear helper (active clears + distinct actor 'supervisor:plan_status_active' / pre_impl-not-declared no-op / already-cleared idempotent), 1 reconcile_gate_state purity check (no state file written), 9 supervisor wiring cases (active dispatches without approve / draft pauses / 5 post-impl states all pause / phase-1 direct-dispatch still fires for draft / active plan without pre_impl declaration is no-op)."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-raw-pytest.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep under raw pytest: 1572 passed, 7 skipped, 0 failed. Net +20 over the F001 baseline of 1552. Pre-existing test plans that hardcoded `status: active` and tested manual approve/resume flow were updated to `status: draft` in 6 sibling test files (test_lifecycle_staged_gates / test_pre_impl_auto_clear_f002 / test_gate_state_reconciliation_f001 / test_verdict_mismatch_f001 / test_auditor_taxonomy_f003 / test_cli_resume / test_f008_engagement_surface) — those tests were always relying on the manual flow that 'status: active' now bypasses; F002 phase-2 just made the inconsistency explicit."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/plan_loader.py",
+          "captured_by": "claude",
+          "note": "Adds `plan_status_enables_implicit_pre_impl(loaded) -> bool` — pure read of `loaded.plan.status`. Returns True ONLY for status='active'. Module-level `_IMPLICIT_PRE_IMPL_STATUSES = frozenset({'active'})` keeps the enum guard explicit and easy to audit."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/gate_pause.py",
+          "captured_by": "claude",
+          "note": "Adds `implicit_clear_pre_impl_for_active_plan(plan_dir, *, plan_id, declared_gates) -> bool` next to `approve_gate` / `record_pause`. Records a normal gate_event with actor='supervisor:plan_status_active' (distinguishing from operator and from phase-1's 'supervisor:auto_clear_pre_impl'). `reconcile_gate_state` is documented-pure per plan 2026-05-08-003 F001 D004; the F002 D004 invariant is structural — the mutation lives in this NEW helper, not inside reconcile."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Adds `_sync_pre_impl_for_active_plan` post-reconcile sync helper. Wired at both reconcile call sites (dispatch_single_agent + dispatch_volley) to fire AFTER reconcile_gate_state returns successfully. Writes INBOX `pre_impl_status_synced` event when state changes."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module pinning all seven acceptance items across four classes (TestPlanStatusEnablesImplicitPreImpl / TestImplicitClearHelper / TestReconcilePurity / TestSupervisorWiring)."
+        }
+      ],
       "depends_on": []
     },
     {

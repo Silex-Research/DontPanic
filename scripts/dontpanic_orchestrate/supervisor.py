@@ -208,6 +208,62 @@ def _maybe_auto_clear_pre_impl(
     return auto_reason
 
 
+def _sync_pre_impl_for_active_plan(
+    loaded: plan_loader.LoadedPlan,
+    *,
+    feature_id: str | None = None,
+) -> None:
+    """Plan 2026-05-09-002 F002 — post-reconcile sync: when ``plan.md``
+    status is ``active`` (lock complete + ready for implementer), clear
+    the ``pre_impl`` lifecycle gate implicitly so dispatch proceeds
+    without a separate ``dontpanic approve <plan> pre_impl`` step.
+
+    Runs AFTER :func:`_reconcile_gate_state_or_raise` returns
+    successfully (D004 of plan 2026-05-09-002): the reconciliation
+    helper stays documented-pure per its plan 2026-05-08-003 F001
+    contract, and the mutation lives in
+    :func:`gate_pause.implicit_clear_pre_impl_for_active_plan`.
+
+    Trigger is ``status == 'active'`` exactly. Post-implementation
+    states (``ready_for_audit``, ``in_audit``, ``completed``,
+    ``abandoned``, ``blocked``) explicitly do NOT trigger — a completed
+    plan should not be re-dispatchable through this seam (D005).
+    """
+    if not plan_loader.plan_status_enables_implicit_pre_impl(loaded):
+        return
+    declared = list(loaded.plan.human_gates or [])
+    changed = gate_pause.implicit_clear_pre_impl_for_active_plan(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        declared_gates=declared,
+    )
+    if not changed:
+        return
+    inbox.append_event(
+        loaded.plan_dir,
+        event="pre_impl_status_synced",
+        plan_id=loaded.plan_id,
+        body=(
+            "Supervisor implicitly cleared the `pre_impl` lifecycle gate "
+            "because plan.md status is `active`.\n\n"
+            f"Plan: {loaded.plan_id}\n"
+            f"Status: active\n"
+            f"Feature: {feature_id or '(none)'}\n\n"
+            "An operator who flips status to `active` (with a lock D-entry "
+            "in decisions.jsonl) is signaling that the plan is ready for "
+            "implementer dispatch. The supervisor treats the status flip as "
+            "the authorizing action — no separate `dontpanic approve <plan> "
+            "pre_impl` is required.\n\n"
+            "Manual approve/resume semantics for every other gate "
+            "(`pre_merge`, `on_escalation`, `breaker:*`, `defer:*`) are "
+            "unchanged. Only `pre_impl` is in scope for this implicit "
+            "clearance, and only when status is exactly `active`."
+        ),
+        status="active",
+        feature_id=feature_id or "",
+    )
+
+
 def _reconcile_gate_state_or_raise(
     plan_dir: Path,
     *,
@@ -765,6 +821,10 @@ def dispatch_single_agent(
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
     )
+    # Plan 2026-05-09-002 F002 — post-reconcile sync: when plan.status is
+    # `active`, treat the lock D-entry + status flip as the authorizing
+    # action and implicitly clear `pre_impl`. Reconcile stays pure.
+    _sync_pre_impl_for_active_plan(loaded, feature_id=feature_id)
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
@@ -1093,6 +1153,10 @@ def dispatch_volley(
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
     )
+    # Plan 2026-05-09-002 F002 — same post-reconcile sync as
+    # dispatch_single_agent so a status=active plan dispatched via the
+    # volley path also benefits from the implicit pre_impl clearance.
+    _sync_pre_impl_for_active_plan(loaded, feature_id=feature_id)
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)

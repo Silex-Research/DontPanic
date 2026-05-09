@@ -123,7 +123,7 @@ id: {plan_id}
 title: F002 auto-clear synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-08"
 description: Synthetic plan for F002 dispatch-time pre_impl auto-clear tests.
 agents_required:

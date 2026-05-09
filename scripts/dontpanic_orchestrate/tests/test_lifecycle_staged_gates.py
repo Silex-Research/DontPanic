@@ -100,7 +100,7 @@ id: {plan_id}
 title: Lifecycle staged gates synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-04"
 description: Synthetic plan for lifecycle-staged human-gate tests.
 agents_required:

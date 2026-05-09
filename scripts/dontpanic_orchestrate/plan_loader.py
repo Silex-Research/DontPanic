@@ -106,6 +106,42 @@ class LoadedPlan:
         raise KeyError(f"feature {feature_id!r} not in {self.plan_id}")
 
 
+# Plan 2026-05-09-002 F002 — post-reconcile sync trigger.
+#
+# The agent-conventions v1.0 plan.status enum is
+# {draft / active / ready_for_audit / in_audit / completed / abandoned /
+# blocked}. Only ``active`` signals "lock complete, ready for implementer
+# dispatch" (D004 of plan 2026-05-09-002). Post-implementation states
+# (ready_for_audit, in_audit, completed) and abnormal terminals
+# (abandoned, blocked) MUST NOT trigger implicit ``pre_impl`` clearance —
+# a completed plan should not be re-dispatchable through this seam.
+
+_IMPLICIT_PRE_IMPL_STATUSES: frozenset[str] = frozenset({"active"})
+
+
+def plan_status_enables_implicit_pre_impl(loaded: LoadedPlan) -> bool:
+    """Plan 2026-05-09-002 F002 — return True iff ``loaded.plan.status`` is
+    exactly ``active``. Pure read of the LoadedPlan; no IO.
+
+    ``active`` is the single status value where the operator has
+    explicitly locked the plan as ready for implementer dispatch and
+    expects the lock D-entry + status flip to be load-bearing — i.e.
+    they should NOT have to additionally run ``dontpanic approve <plan>
+    pre_impl`` to make dispatch proceed. Every other status value
+    (draft / ready_for_audit / in_audit / completed / abandoned /
+    blocked) returns False, preserving the existing manual approve/
+    resume contract.
+    """
+    status = getattr(loaded.plan, "status", None)
+    if status is None:
+        return False
+    # Status is a Pydantic enum from agent-conventions; the .value carries
+    # the canonical string. Tolerate either enum or plain string in case a
+    # future loader pathway delivers it as a literal.
+    value = status.value if hasattr(status, "value") else str(status)
+    return value in _IMPLICIT_PRE_IMPL_STATUSES
+
+
 def _frontmatter(path: Path) -> dict[str, Any]:
     text = path.read_text()
     if not text.startswith("---"):
