@@ -515,26 +515,38 @@ def _force_auditor_findings(
 
 
 class TestNoProgressWiring:
-    def test_environmental_no_progress_emits_classification(
+    def test_advisory_no_progress_emits_classification(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # Plan 2026-05-09-002 F003 — env-only findings now short-circuit
+        # via BreakerKind.ENVIRONMENTAL_BLOCKER BEFORE no_progress can
+        # fire, so the env path is no longer reachable through this
+        # wiring. This test now exercises a sibling advisory aggregate
+        # (scope_overreach: finding.feature_id != dispatched feature_id)
+        # that classify_terminal also marks blocking=False but that
+        # F003's short-circuit deliberately does NOT match (it's keyed
+        # exactly on environmental_reproduction_failure). The advisory-
+        # but-not-env path still reaches the no_progress classifier and
+        # the wiring this test pins must keep producing the sidecar +
+        # INBOX event with the correct non-env aggregate.
         _install_runtime(monkeypatch)
         _force_auditor_findings(
             monkeypatch,
             [
                 _finding(
-                    issue="Could not run Xcode UI tests in sandbox host",
+                    issue="Reorganizing CI workflow naming — separate plan",
                     severity="high",
-                    category="test_coverage",
+                    category="correctness",
+                    feature_id="F999",
                 )
             ],
         )
-        plan_dir = _make_plan(tmp_path, "2026-05-09-940-fix-no-progress-env")
+        plan_dir = _make_plan(tmp_path, "2026-05-09-940-fix-no-progress-advisory")
 
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=2)
 
         assert result.final_status == "stopped_no_progress"
-        assert "environmental_reproduction_failure" in result.reason
+        assert "scope_overreach" in result.reason
         assert "blocking=False" in result.reason
         # Sidecar JSON landed.
         sidecars = list((plan_dir / "audit").glob(
@@ -542,13 +554,13 @@ class TestNoProgressWiring:
         ))
         assert len(sidecars) == 1
         payload = json.loads(sidecars[0].read_text())
-        assert payload["aggregate"] == "environmental_reproduction_failure"
+        assert payload["aggregate"] == "scope_overreach"
         assert payload["blocking"] is False
         # INBOX classification event.
         events = inbox.read_events(plan_dir)
         cls_events = [e for e in events if e.event == "no_progress_classification"]
         assert len(cls_events) == 1
-        assert cls_events[0].headers["aggregate"] == "environmental_reproduction_failure"
+        assert cls_events[0].headers["aggregate"] == "scope_overreach"
         assert cls_events[0].headers["blocking"] == "false"
 
     def test_defect_no_progress_remains_blocking(

@@ -137,7 +137,59 @@
         "Run focused dispatch + auditor_taxonomy + circuit_breakers tests + full orchestrate sweep."
       ],
       "acceptance": "(1) New `BreakerKind.ENVIRONMENTAL_BLOCKER` value + `TERMINAL_STATUS` entry + `APPROVAL_BREAKERS` membership land in `circuit_breakers.py`. (2) Supervisor's volley path short-circuits on first env-only auditor round BEFORE another implementer round dispatches; final_status is `stopped_environmental_blocker`, NOT `stopped_no_progress`. (3) Mixed, defect-only, scope-overreach, evidence-shape, and unknown aggregates do NOT short-circuit — the existing iterate-until-cap behavior is preserved for everything except the narrow env-only case. (4) The SpinDine F001-i1 fixture, replayed as round-0 auditor input, terminates after 2 paid calls (one implementer, one auditor) instead of 4 — the documented regression is closed. (5) Operator can clear the breaker via the existing `dontpanic approve <plan> breaker:environmental_blocker` CLI (no new commands). (6) F003 does NOT auto-sign-off the feature; the breaker terminal stays non-success and `signoff.json` reflects that. (7) Six fixture cases pass + all `2026-05-08-003` F003 tests still pass + the broader breaker suite passes. (8) No agent-conventions schema bump.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-09T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/environmental-blocker-fixtures.log",
+          "captured_by": "claude",
+          "note": "16/16 tests pass in test_environmental_blocker_f003.py: 6 trigger-condition unit tests on classify_terminal (env-only env+advisory / mixed defect / defect-only / unknown-only / empty-findings / missing-findings-field), 4 breaker plumbing checks (kind enum value / TERMINAL_STATUS mapping / APPROVAL_BREAKERS membership / GLOBAL_CIRCUIT_BREAKER unchanged), 6 supervisor wiring end-to-end (round-0 env-only short-circuits with sidecar JSON + INBOX + 2 paid calls / round-0 mixed iterates / round-0 defect-only iterates / round-0 unknown iterates / SpinDine F001-i1 representative fixture exits in 2 paid calls / malformed envelope falls through to existing logic)."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/full-orchestrate-raw-pytest-f003.log",
+          "captured_by": "claude",
+          "note": "Full orchestrate sweep under raw pytest: 1588 passed, 7 skipped, 0 failed. Net +16 over the F002 baseline of 1572 — F003 added zero regressions. Two pre-existing tests touched by F003: (a) test_breaker_kind_enum_values_unchanged in test_timeout_with_work_classifier.py — snapshot test extended to include `environmental_blocker`; (b) test_environmental_no_progress_emits_classification in test_auditor_taxonomy_f003.py — env-only path through no_progress is now unreachable (F003 short-circuits earlier), so the test was repurposed as test_advisory_no_progress_emits_classification using a scope_overreach fixture (also non-blocking advisory, but does NOT match F003's exact env-only trigger) to keep the surviving no_progress + classification wiring covered."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/circuit_breakers.py",
+          "captured_by": "claude",
+          "note": "Adds `BreakerKind.ENVIRONMENTAL_BLOCKER = 'environmental_blocker'`, `TERMINAL_STATUS[ENVIRONMENTAL_BLOCKER] = 'stopped_environmental_blocker'`, and `APPROVAL_BREAKERS` membership so operator can clear via `dontpanic approve <plan> breaker:environmental_blocker` after running local verification. GLOBAL_CIRCUIT_BREAKER intentionally remains the only non-clearance breaker."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/signoff_writer.py",
+          "captured_by": "claude",
+          "note": "Adds `stopped_environmental_blocker` to the `_next_action_for` 'remediate' set (parity with stopped_no_progress / stopped_diminishing_returns / etc.). Operator runs verification locally, attaches evidence, and the breaker clears."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/supervisor.py",
+          "captured_by": "claude",
+          "note": "Wires the env-only short-circuit branch in dispatch_volley AFTER the verdict-mismatch check (F001) and the signed_off / blocked branches, but BEFORE the no_progress / diminishing_returns / convergence_collapse checks. Branch fires only when aud_status='needs_changes' AND classify_terminal aggregates to environmental_reproduction_failure with blocking=False. Writes the classification sidecar (parallel to the no_progress trip path) + INBOX `environmental_blocker_short_circuit` event, then `_trip_and_return(ENVIRONMENTAL_BLOCKER)` so the breaker history + signoff envelope record the env terminal explicitly."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py",
+          "captured_by": "claude",
+          "note": "New fixture-test module pinning all eight acceptance items across three classes (TestTriggerCondition / TestBreakerPlumbing / TestSupervisorWiring). The supervisor wiring tests use a `_NeedsChangesAuditorExecutor` pair plus a `_inject_audit_findings` post-process wrapper to overwrite the auditor envelope's structured findings list — the narrative verdict line (left as `**Verdict: needs_changes**`) stays consistent with the structured field so plan 2026-05-09-002 F001's verdict-mismatch detector does not fire on these fixtures."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py",
+          "captured_by": "claude",
+          "note": "Repurposes the previously env-only `test_environmental_no_progress_emits_classification` to `test_advisory_no_progress_emits_classification`. Now uses a scope_overreach finding (finding.feature_id='F999' != dispatched 'F001') so the case still reaches the no_progress classification wiring without triggering F003's env-only short-circuit. The sister test `test_defect_no_progress_remains_blocking` is untouched."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py",
+          "captured_by": "claude",
+          "note": "Extends `test_breaker_kind_enum_values_unchanged` snapshot to include the new `environmental_blocker` value. The pre-existing seven values stay frozen; the new value is included so the snapshot keeps locking the public BreakerKind surface."
+        }
+      ],
       "depends_on": ["F001"]
     }
   ]

@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 16 items
+
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_env_only_classifies_as_env_advisory PASSED [  6%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_mixed_env_plus_defect_blocks PASSED [ 12%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_defect_only_blocks PASSED [ 18%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_unknown_only_blocks PASSED [ 25%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_empty_findings_block PASSED [ 31%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestTriggerCondition::test_missing_findings_field_blocks PASSED [ 37%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestBreakerPlumbing::test_kind_enum_value PASSED [ 43%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestBreakerPlumbing::test_terminal_status_mapping PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestBreakerPlumbing::test_membership_in_approval_breakers PASSED [ 56%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestBreakerPlumbing::test_global_breaker_unchanged PASSED [ 62%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_round0_env_only_short_circuits PASSED [ 68%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_round0_mixed_does_not_short_circuit PASSED [ 75%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_round0_defect_only_does_not_short_circuit PASSED [ 81%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_round0_unknown_does_not_short_circuit PASSED [ 87%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_spindine_f001_i1_fixture_two_paid_calls PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py::TestSupervisorWiring::test_malformed_envelope_falls_through PASSED [100%]
+
+============================== 16 passed in 0.48s ==============================

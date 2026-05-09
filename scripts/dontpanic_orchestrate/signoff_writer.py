@@ -67,6 +67,10 @@ def _next_action_for(volley_status: str, signed_off: bool) -> str:
         "stopped_wall_clock",
         "stopped_diminishing_returns",
         "stopped_convergence_collapse",
+        # Plan 2026-05-09-002 F003 — env-only first-round short-circuit.
+        # Operator runs the cited verification locally on a host with the
+        # missing capability, attaches evidence, then approves the breaker.
+        "stopped_environmental_blocker",
     }:
         return "remediate"
     if volley_status == "stopped_global_breaker":

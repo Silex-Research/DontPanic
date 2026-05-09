@@ -3,7 +3,7 @@ id: 2026-05-09-002-fix-verdict-status-environmental-frictions
 title: Auditor verdict mismatch, plan-status gate sync, environmental volley short-circuit — phase 2 harness frictions
 type: fix
 tier: local
-status: draft
+status: completed
 date: "2026-05-09"
 goal_type: infra
 surfaces:
