@@ -393,7 +393,7 @@ id: {plan_id}
 title: F003 no-progress synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-09"
 description: Synthetic plan for F003 no-progress taxonomy wiring tests.
 agents_required:

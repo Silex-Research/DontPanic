@@ -236,7 +236,7 @@ id: {plan_id}
 title: F008 e2e synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-04-26"
 description: Synthetic plan for F008 engagement-surface e2e tests.
 agents_required:

@@ -260,7 +260,7 @@ id: {plan_id}
 title: F001 verdict-mismatch synthetic
 type: infra
 tier: trivial
-status: active
+status: draft
 date: "2026-05-09"
 description: Synthetic plan for F001 verdict-mismatch tests.
 agents_required:
