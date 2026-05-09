@@ -316,3 +316,6 @@ It makes AI coding agents safe enough to use on serious software.
   stakeholders, design consequences).
 - [`ROADMAP.md`](./ROADMAP.md) — the phased build plan that turns the
   current substrate into the global tool described here.
+- [`CONFIGURATION.md`](./CONFIGURATION.md) — every operator-facing knob
+  in one place: agents/models, notification sinks, quota caps, breakers,
+  per-project config, and agent-discovery surfaces.

@@ -36,6 +36,11 @@ The platform substrate that Phase A built on top of:
 | `2026-05-02-003-feat-nested-orchestration-v1` | Parent/child plans + depth/cycle/repeated-finding guards + child charter + parent pause/fan-in |
 | `2026-05-02-004-fix-diminishing-returns-signature-based` | Signature-based convergence detection (no false-positive count trips) |
 | `2026-05-03-001-feat-global-install-project-registry` | **Phase A.** Global install, project registry, per-project config, override precedence, `dontpanic doctor` / `jarvis doctor` compatibility |
+| `2026-05-08-002-feat-skill-applicability-v0` | Skill-applicability sidecar at lock time (advisory, surfaces[] enum, applies_to: matcher) |
+| `2026-05-08-003-fix-harness-volley-frictions` | Reliability v1: gate-state reconciliation, pre_impl auto-clear, auditor verdict taxonomy |
+| `2026-05-09-001-fix-conftest-global-config-isolation` | Test isolation: orchestrate sweep runs cleanly under raw pytest (no env-var hygiene) |
+| `2026-05-09-002-fix-verdict-status-environmental-frictions` | Reliability v2: verdict-mismatch detector, plan-status implicit pre_impl sync, env-only volley short-circuit (`BreakerKind.ENVIRONMENTAL_BLOCKER`) |
+| `2026-05-01-002-feat-discord-notification-sink` | Cross-machine observability: Discord webhook sink alongside terminal-notifier, compact `NotifyEvent` envelope, level matrix, 5 supervisor emit points |
 
 What works today:
 
@@ -50,6 +55,13 @@ What works today:
 - security baseline (sanitization scan, CI hardening, SECURITY.md)
 - **global install + multi-project registry + per-project config +
   override precedence + `dontpanic doctor`** (Phase A, just shipped)
+- **cross-machine observability** — Discord webhook sink alongside
+  terminal-notifier, with a compact event envelope so future sinks
+  (Slack, email, push) drop in without touching emit sites
+- **reliability hardening** — verdict-mismatch detection, env-only
+  volley short-circuit, plan-status gate sync, conftest isolation gap
+  closed; harness now battle-tested at 1676 tests under raw pytest
+  (see [`CONFIGURATION.md`](./CONFIGURATION.md) for every operator-facing knob)
 
 What is missing: **the agent-callable access surface** (Phase B —
 manifest + thin MCP) and **the intake pipeline** that turns
