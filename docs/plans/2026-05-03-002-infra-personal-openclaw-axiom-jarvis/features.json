@@ -57,14 +57,15 @@
       "id": "F004",
       "category": "functional",
       "phase": 4,
-      "description": "Retain Axiom's differentiated dashboard surfaces and repoint them at the personal DontPanic/OpenClaw setup. The dashboard should show Kanban tasks, projects, agent status, active supervisors, gates, signoff state, OpenClaw health, and security/approval events.",
+      "description": "Personal-axiom configuration of the team dashboard. The actual sync layer + Firebase repointing + Cloud Functions + drag-flip MCP wiring all live in plan 2026-05-09-004 (`feat-team-dashboard-sync`) \u2014 that's the adapter plan. THIS feature is the personal-axiom-specific configuration: confirm <firebase-project-id> is the right Firebase target, ensure the operator's local DontPanic project_id is registered, document which dashboard views the operator wants enabled (Mission Control kanban + Security Approval Queue likely; Financial Analysis archived since it was Axiom's other use case). No code in DontPanic; no code in axiom adapter. Just operator-side configuration choices that the adapter plan reads. Per the architectural critique on 2026-05-09 (D008), DontPanic core stays neutral; sync layer is the adapter's domain. Originally this feature included the full sync work; that scope is now in plan 2026-05-09-004.",
       "steps": [
-        "Map existing dashboard task fields to DontPanic plan ids, GitHub issue ids, branches, and Discord thread ids.",
-        "Add a DontPanic artifact reader for active supervisors, INBOX, gate-state, and signoff files under canonical DontPanic paths.",
-        "Add OpenClaw health/status summary ingestion.",
-        "Document multi-tenant Cloudflare runtime paths as archived rather than active."
+        "Confirm <firebase-project-id> Firebase project is the dashboard target (per memory: Storage + Firestore APIs already enabled).",
+        "Verify operator's DontPanic project_id is registered (`dontpanic projects list`).",
+        "Document which dashboard views are enabled for the personal-axiom stack \u2014 typically Mission Control kanban + Security Approval Queue; Financial Analysis archived.",
+        "Add references to plan 2026-05-09-003 (projection contract) and plan 2026-05-09-004 (adapter implementation) as the load-bearing dependencies.",
+        "Capture which seed Firestore docs are needed for the dashboard's initial render (an empty `projects/<id>/plans` is acceptable; sync daemon will populate)."
       ],
-      "acceptance": "(1) Dashboard shows Kanban tasks linked to DontPanic plan ids. (2) Dashboard shows active supervisors/gates/signoff state from DontPanic artifacts, preferring `~/.dontpanic` and `.dontpanic/dontpanic.json`. (3) Dashboard shows OpenClaw channel/runtime health. (4) Tenant provisioning and multi-tenant Cloudflare runtime paths are documented as archived.",
+      "acceptance": "(1) Operator-side configuration recorded \u2014 Firebase target, project_id, enabled dashboard views, archived views. (2) Plan 2026-05-09-003 (state projection) and plan 2026-05-09-004 (team-dashboard-sync) are listed as dependencies. (3) Zero DontPanic core code change in this feature. (4) Zero adapter code change in this feature (that's plan 2026-05-09-004). (5) Per architectural critique D008, this feature confirms scope split happened and references downstream.",
       "passes": false,
       "depends_on": [
         "F003"
