@@ -29,7 +29,8 @@ DontPanic has one shape; use cases pick which optional layers to attach.
 | **U3. Interactive IDE agent (Claude Code, Cursor, Codex CLI)** | + MCP server + agent-manifest | — | One MCP-aware IDE/CLI | Active IDE session | ~5 min |
 | **U4. Personal-axiom (operator + friends)** | + MCP server + NotifyEvent | + Discord webhook OFF | OpenClaw runtime + Discord/Telegram bots | Multi-channel chat (bidirectional) + dashboard (when adapter lands) | ~1-2 days |
 | **U5. Hosted-agent flow (Claude.ai managed agent)** | + MCP server | — | Anthropic-hosted agent runtime | Claude.ai chat + dashboard/email | varies (Anthropic-side) |
-| **U6. Team collaboration (multi-operator + shared dashboard)** | + MCP server + NotifyEvent + **state projection** | — | OpenClaw OR equivalent + Firebase adapter consuming the projection | Kanban dashboard + chat + terminal | adapter-driven |
+| **U6a. Bundled static dashboard (single-operator OR read-only-team, OSS-friendly)** | + state projection + bundled `DontPanic/dashboard/` static SPA | — | None — any static host (`python -m http.server`, GitHub Pages, nginx, Vercel, Firebase Hosting as a static-file CDN) | Static kanban / activity / approvals — read-only; mutations via terminal/MCP | ~5 min after projection ships |
+| **U6b. Firebase realtime team dashboard (multi-operator + bidirectional)** | + everything in U6a + Cloud Functions for mutations | — | Firebase project (`jarvis-a6ee1`) + Firebase Auth + Cloud Functions + sync daemon | Realtime kanban with drag-flip + multi-operator presence + shared approval queue | ~1 week (adapter plan) |
 | **U7. OSS contributor / forker** | core CLI + plan substrate | — (BYO agent CLIs) | — | Their own setup; DontPanic is a dep | ~10 min |
 | **U8. External orchestrator / DontPanic-as-callable-delivery-substrate** | manifest + MCP + **state projection** + explicit approval semantics | — | Any orchestrator (OpenClaw, Claude Code, Codex CLI, Cursor, Continue, custom MCP, hosted-agent runtime) | Whatever the runtime owns | runtime-driven |
 | **U9. CI / PR reviewer (validate, verify, gate — no dispatch)** | plan validator + completion gate + state projection (read-only) | — | CI runner (GitHub Actions, etc.) | PR comments, CI status checks | ~half-day |
@@ -95,6 +96,7 @@ signal to stop and re-scope.
 - MCP server + `~/.dontpanic/agent-manifest.json` discovery.
 - NotifyEvent envelope (channel-agnostic) + the direct Discord webhook (no-broker case only).
 - **State projection / export contract** (read-only by default; mutation gated by MCP approval semantics).
+- **Bundled static dashboard** (`DontPanic/dashboard/`) consuming the projection — local-first, no Firebase runtime dependency, works on any static host. Already exists; plan `2026-05-09-003` F007 wires it to the projection.
 - Adapter governance contract (read-only stable IDs, redaction rules, schema versioning).
 - Skill applicability / sufficiency hints (advisory).
 - Role / action policy primitives (operator / collaborator / reviewer / approver / auditor / observer — see role matrix below).
@@ -103,8 +105,12 @@ signal to stop and re-scope.
 
 | Concern | Belongs in |
 |---|---|
-| Dashboard UI | Adapter (e.g. axiom-dashboard against `jarvis-a6ee1` Firestore) |
-| Firestore-specific sync layer | Adapter — DontPanic emits the projection, the adapter writes Firestore |
+| Firestore schema | Adapter — DontPanic emits the projection, the adapter writes Firestore |
+| Firebase Auth integration | Adapter |
+| Cloud Functions for state-mutating actions | Adapter (plan `2026-05-09-004`) |
+| Realtime `onSnapshot` listeners | Adapter (the bundled static dashboard polls; realtime is opt-in) |
+| Project-specific Firebase IDs (e.g. `jarvis-a6ee1`) | Adapter (operator-side configuration) |
+| Multi-tenant Firestore shape | Adapter — single-tenant only; multi-tenant is rejected per `2026-05-03-002` D002 |
 | Telegram / WhatsApp / Slack integrations | Broker (OpenClaw, future) |
 | Multi-channel routing policy | Broker |
 | Mobile push notifications | Broker / hosted runtime |
@@ -112,11 +118,12 @@ signal to stop and re-scope.
 | Hosted control plane / SaaS UI | Architecturally rejected per PRODUCT.md |
 | Custom remote daemon (`dontpanic serve`) | Architecturally rejected per ROADMAP.md |
 | Plugin marketplace | Architecturally rejected |
-| Multi-tenant orchestration | Future plan if real demand emerges |
 | OpenClaw skills | OpenClaw workspace |
 | Printing Press CLIs | External SaaS adapter ecosystem (credited per ROADMAP.md) |
 | Channel identity handling (Discord user IDs, Telegram chat IDs) | Broker |
 | Chat bots (any direction) | Broker |
+
+**The dashboard distinction matters.** A static dashboard backed by exported JSON is OSS-friendly: every user gets a working board immediately by running `dontpanic state export-dashboard --out dashboard/state` and serving the directory. Firebase Hosting is one of many possible static hosts and adds zero runtime coupling. The Firebase **realtime** team dashboard — `onSnapshot` listeners + Cloud Functions for drag-flip mutations + multi-operator presence — is the optional adapter on top of the static base.
 
 ---
 

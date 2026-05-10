@@ -1,0 +1,91 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "OPTIONAL realtime layer on top of the bundled static dashboard at `DontPanic/dashboard/`. The static dashboard ships with DontPanic core (per plan 2026-05-09-003 F007) and works locally with no Firebase dependency. This adapter feature configures Firebase Hosting + Firestore as a multi-operator runtime: writes the projection into Firestore so multiple operators see live state through `onSnapshot`, configures Firebase Auth, and prepares for the Cloud Functions in F003 that handle drag-flip mutations. Firebase project target: `jarvis-a6ee1` (per plan 2026-05-03-002 D009). Single-tenant `projects/{project_id}/...` shape; multi-tenant archived per plan 2026-05-03-002 D002.",
+      "steps": [
+        "Confirm `DontPanic/dashboard/` static dashboard is functioning standalone (per plan 2026-05-09-003 F007) BEFORE wiring Firebase realtime \u2014 adapter must not regress the static fallback.",
+        "Create a parallel adapter dashboard config (e.g. `DontPanic/dashboard/config-firebase.js`) that LAYERS Firestore `onSnapshot` listeners on top of the static state loader. Adapter is opt-in; static dashboard's behavior unchanged when Firebase isn't configured.",
+        "Wire `firebaseConfig` block targeting `jarvis-a6ee1` (project_id, auth_domain, storage_bucket).",
+        "Migrate listeners from `tenants/{tenantId}/...` shape to single-tenant `projects/{project_id}/...`.",
+        "Smoke test against jarvis-a6ee1 with at least one mock plan in Firestore + verify static fallback still works without the Firebase config."
+      ],
+      "acceptance": "(1) `DontPanic/dashboard/` continues to work standalone (no Firebase config) per plan 2026-05-09-003 F007. (2) When Firebase config is provided, the dashboard adds realtime overlay layered on the static base \u2014 the static loader is still used as fallback for first paint and offline. (3) Firestore paths use `projects/{project_id}/...` (single-tenant) shape. (4) Adapter dashboard renders against jarvis-a6ee1 with seed Firestore state.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Sync daemon \u2014 the local-side bridge that converts the projection (`dontpanic state snapshot --json` from plan 2026-05-09-003) into Firestore docs. NOT in DontPanic core. Lives in this adapter's repo (e.g. `axiom/packages/sync/` or a new `DontPanic-firebase-adapter/` repo if cleanly separated). Polls projection every 5\u201315s; idempotent diff-upserts. Each stream maps to `projects/{pid}/<stream>`.",
+      "steps": [
+        "Create `axiom/packages/sync/dontpanic_sync.py` (or .ts) \u2014 polling daemon.",
+        "Implement diff-based upsert: compare incoming snapshot to last-written, only write changed docs.",
+        "Add a small CLI: `axiom-sync start [--interval 10] [--project-id <id>]`.",
+        "Tests cover the diff logic + idempotency + handling of `--include` projection responses.",
+        "Document running it as a launchd plist or systemd unit for persistent operation."
+      ],
+      "acceptance": "(1) Daemon runs continuously; latency from local plan change to Firestore write \u226430s. (2) Idempotent \u2014 re-running same snapshot produces zero writes. (3) `--include` filters honored to skip heavy streams when the dashboard doesn't need them. (4) Tests cover diff, upsert, and failure paths.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Cloud Functions for state-changing dashboard actions \u2014 required ONLY for the realtime adapter use case (multi-operator drag-flip / approve from a remote browser). Three callable endpoints: `kanbanMove(planId, newColumn)` \u2192 maps the dashboard's column to a plan-status flip via DontPanic MCP. `approveGate(planId, gateName)` \u2192 DontPanic MCP `approve_gate` with `confirm: true`. `triggerDispatch(planId, featureId)` \u2192 DontPanic MCP `dispatch` with `confirm: true`. Auth via Firebase Auth + DontPanic role/action matrix from USE_CASES.md (only Operator role can fire mutations from this surface; Observer reads-only). Network bridge from Cloud Function to operator-local MCP via Tailscale Funnel (recommended) / Cloudflare Tunnel / ngrok with auth \u2014 operator-side configuration documented but not enforced.",
+      "steps": [
+        "Define Cloud Function signatures + auth requirements.",
+        "Implement the three callable functions using the existing Cloud Functions infra (`axiom/packages/functions/` or equivalent).",
+        "Resolve the local-MCP-from-Cloud-Function bridge \u2014 Tailscale Funnel is the recommended path; operator-side configuration documented separately.",
+        "Smoke test: call each function from the dashboard against a fixture plan, verify MCP was actually called."
+      ],
+      "acceptance": "(1) Three Cloud Functions deployed and callable. (2) Each function calls DontPanic MCP \u2014 no direct Firestore mutation for state changes. (3) Auth required \u2014 unauthenticated calls rejected. (4) Smoke test passes end-to-end (dashboard click \u2192 Cloud Function \u2192 MCP \u2192 DontPanic state changes \u2192 sync daemon picks up \u2192 Firestore reflects \u2192 dashboard re-renders).",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "security",
+      "phase": 4,
+      "description": "Firestore security rules. Read access requires authenticated operator. State-changing writes (anything in plans/gates/activity collections) DENIED for client-side calls \u2014 only Cloud Functions can write (via privileged service account). The sync daemon writes via service-account credentials too. Public/Observer-level access is intentionally NOT enabled in v0.",
+      "steps": [
+        "Draft `firestore.rules` with auth-required read + service-account-only write.",
+        "Deploy rules and verify with the Firebase emulator.",
+        "Add a fixture test that asserts a client-side direct write is rejected."
+      ],
+      "acceptance": "(1) `firestore.rules` deployed to jarvis-a6ee1. (2) Authenticated reads work; client direct writes denied. (3) Fixture test enforces the deny.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "End-to-end smoke test + operator runbook. Two test paths: (a) STATIC FALLBACK \u2014 `dontpanic state export-dashboard --out DontPanic/dashboard/state`, then `python -m http.server` in dashboard/, verify board renders without ANY Firebase config. (b) FIREBASE REALTIME \u2014 sync daemon running, dashboard pointed at jarvis-a6ee1, run a synthetic plan through DontPanic, verify each stage (volley_start \u2192 gate_paused \u2192 approve via dashboard drag \u2192 signoff) renders within 30s and that Cloud Function mutations actually call DontPanic MCP. RUNBOOK documents both paths.",
+      "steps": [
+        "Author the synthetic plan + smoke-test script.",
+        "Run end-to-end against staging Firestore.",
+        "Capture screenshots / state snapshots as evidence.",
+        "Write `axiom/packages/dashboard/RUNBOOK.md` with the operator-side setup steps."
+      ],
+      "acceptance": "(1) Smoke test passes; latency budgets met. (2) RUNBOOK exists and a fresh operator can follow it from blank Firebase project to working dashboard. (3) Evidence captured.",
+      "passes": false,
+      "depends_on": [
+        "F003",
+        "F004"
+      ]
+    }
+  ]
+}
