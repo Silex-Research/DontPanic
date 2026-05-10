@@ -69,6 +69,17 @@ ambiguous requests into valid plans (Phase C). After those, DontPanic
 delivers on the ecosystem-position framing in
 [`ECOSYSTEM.md`](./ECOSYSTEM.md).
 
+**Next-up substrate work (locked plans, pre-feature):**
+
+| Plan | What it adds |
+|---|---|
+| `2026-05-09-003-feat-state-projection-v0` | Stable read-only state contract: `dontpanic state snapshot --json` + MCP `state_snapshot` / `state_stream` + agent-conventions schema + redaction policy + bundled static dashboard wiring (the existing `DontPanic/dashboard/` consumer + `dontpanic state export-dashboard` CLI). Required substrate for any external dashboard, CI runner, or hosted-agent broker. |
+| `2026-05-09-004-feat-firebase-dashboard-adapter-v0` | Optional Firebase realtime team adapter on TOP of the bundled static dashboard. Repoints axiom dashboard at `<firebase-project-id>`, sync daemon, Cloud Functions for drag-flip mutations. NOT in DontPanic core — adapter consumes the projection. |
+
+The split between these two — projection contract in core, Firebase
+specifics in adapter — is the canonical example of the
+build-vs-don't-build boundary documented in [`USE_CASES.md`](./USE_CASES.md).
+
 Planned external adapter work should credit the source ecosystem rather
 than present it as native DontPanic capability. In particular, the
 Printing Press adapter direction builds on
