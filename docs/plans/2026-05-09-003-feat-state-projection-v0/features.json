@@ -67,14 +67,15 @@
       "id": "F004",
       "category": "tooling",
       "phase": 4,
-      "description": "CLI surface: `dontpanic state snapshot [--json|--yaml] [--plan <id>] [--include <streams>] [--redact-level public|operator|full] [--out <path>]`. Default `--json` to stdout. `--out` writes to file. CLI default `--redact-level operator`. CLI is the canonical local entry; tests cover argv parsing + redact-level enforcement + empty-state behavior.",
+      "description": "CLI surface: `dontpanic state snapshot [--json|--yaml] [--plan <id>] [--include <streams>] [--redact-level public|operator|full] [--out <path>] [--compact] [--select <jsonpath>]`. Default `--json` to stdout (pretty-printed). `--compact` emits single-line JSON for piped consumers. `--select` applies a jsonpath filter server-side so agents can request just one stream or one nested field without parsing the whole envelope. `--out` writes to file. CLI default `--redact-level operator`. Flag vocabulary aligns with Printing Press agent-CLI conventions (`--json/--compact/--select/--dry-run` family) so PP-trained agents can drive `dontpanic state` without per-command relearning; D-entry documents the borrow.",
       "steps": [
         "Add `state` subcommand parser in `scripts/dontpanic_orchestrate/cli.py`.",
         "Wire `snapshot` action calling `state_projection.gather()`.",
         "Pretty-print JSON with stable key order (alphabetical within streams) so diffs across runs are minimal.",
-        "Tests: argv parsing, every flag combination, output round-trips through the F001 schema."
+        "Implement `--compact` (single-line JSON, no indent) and `--select <jsonpath>` (server-side filter via a vendored minimal jsonpath subset — `$.streams.plans[*].plan_id` style; reject anything that mutates).",
+        "Tests: argv parsing, every flag combination, `--compact` byte-stability, `--select` happy/sad paths (valid path → subset; invalid path → exit 2 with structured error)."
       ],
-      "acceptance": "(1) `dontpanic state snapshot --json` returns a valid F001-schema envelope. (2) Every documented flag works as specified. (3) Output is stable-ordered (deterministic across runs given same input).",
+      "acceptance": "(1) `dontpanic state snapshot --json` returns a valid F001-schema envelope. (2) Every documented flag works as specified, including `--compact` and `--select`. (3) Output is stable-ordered (deterministic across runs given same input). (4) `--select` is read-only — no jsonpath verb mutates the envelope; injection attempts exit non-zero with a structured error.",
       "passes": false,
       "depends_on": [
         "F002",
@@ -85,15 +86,15 @@
       "id": "F005",
       "category": "tooling",
       "phase": 5,
-      "description": "MCP tools. Add two read tools: `state_snapshot` (one-shot \u2014 same shape as F004 CLI but as an MCP response) and `state_stream` (v0 \u2014 accepts `since` cursor in RFC 3339, returns events newer than that, no streaming protocol yet, just polled-delta on the inbox stream). Annotate the existing mutation tools (`approve_gate`, `dispatch`, `resume`) with their approval-semantics metadata so MCP-aware hosts can surface the requirement before firing. The `confirm: true` invariant is unchanged.",
+      "description": "MCP tools. Add two read tools: `state_snapshot` (one-shot \u2014 same shape as F004 CLI but as an MCP response, accepts `select` for server-side jsonpath filter mirroring CLI `--select`, and `compact` for response-size control) and `state_stream` (v0 \u2014 accepts `since` cursor in RFC 3339, returns events newer than that, no streaming protocol yet, just polled-delta on the inbox stream). Annotate the existing mutation tools (`approve_gate`, `dispatch`, `resume`) with their approval-semantics metadata so MCP-aware hosts can surface the requirement before firing. The `confirm: true` invariant is unchanged. Tool schemas honor Anthropic MCP spec; transport remains stdio per D003 (no HTTP listener; Printing Press's http transport is intentionally NOT adopted because policy-bearing tools live in-process).",
       "steps": [
         "Locate the MCP tool registration site in `scripts/dontpanic_orchestrate/mcp_server.py`.",
-        "Add `state_snapshot` tool \u2014 wraps `state_projection.gather()` with `redact_level` capped at `operator`.",
+        "Add `state_snapshot` tool \u2014 wraps `state_projection.gather()` with `redact_level` capped at `operator`; accepts `select` (jsonpath, read-only) and `compact` (bool) params matching F004 CLI flags.",
         "Add `state_stream` tool \u2014 accepts `since` cursor + optional `plan_id`, returns inbox events newer than the cursor with stable IDs.",
         "Annotate mutation tools with `approval_required: true` metadata + `confirm` parameter expected.",
-        "Tests cover each new tool against a fixture state."
+        "Tests cover each new tool against a fixture state, including `select` parity test: same jsonpath filter via CLI `--select` and MCP `select` param yields bytewise-equal JSON output."
       ],
-      "acceptance": "(1) `state_snapshot` MCP tool returns the same envelope as F004 CLI (bytewise equivalent for matching args). (2) `state_stream` returns inbox-event delta correctly given `since` cursor. (3) Mutation tools carry approval metadata. (4) `state_snapshot` cannot return `redact_level=full` regardless of caller request. (5) MCP tool fixture tests pass.",
+      "acceptance": "(1) `state_snapshot` MCP tool returns the same envelope as F004 CLI (bytewise equivalent for matching args, including `select` + `compact`). (2) `state_stream` returns inbox-event delta correctly given `since` cursor. (3) Mutation tools carry approval metadata. (4) `state_snapshot` cannot return `redact_level=full` regardless of caller request. (5) Transport stays stdio-only; no HTTP listener exposed. (6) MCP tool fixture tests pass.",
       "passes": false,
       "depends_on": [
         "F002",
