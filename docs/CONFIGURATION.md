@@ -26,6 +26,96 @@ ships only the direct Discord webhook because it's the no-broker zero-config
 case. Telegram, WhatsApp, Slack, hosted-agent dashboards, and email are all
 intentionally **not** built into DontPanic — the broker absorbs that domain.
 
+### Dataflow per track (visual)
+
+```
+TRACK 1 — Solo dev, terminal only
+─────────────────────────────────
+   ┌──────────┐                        ┌─────────┐
+   │ DontPanic│ ──── INBOX.md ─────►   │Operator │
+   │  volley  │ ──── stderr   ─────►   │(at term)│
+   └──────────┘                        └─────────┘
+   • Operator reads stderr / INBOX during volley
+   • Approves via:  dontpanic approve <plan> <gate>
+
+
+TRACK 2 — Solo dev + Discord webhook (no broker)
+──────────────────────────────────────────────────
+   ┌──────────┐                  ┌──────────┐         ┌─────────┐
+   │ DontPanic│ ──webhook POST►  │ Discord  │ ──────► │Operator │
+   │  volley  │   (receive-only) │ channel  │         │(reads)  │
+   │          │                  └──────────┘         └─────────┘
+   │          │                                            │
+   │          │◄───────── dontpanic approve ───────────────┘
+   └──────────┘                  (operator runs command in terminal)
+   • DontPanic → Discord = outbound only
+   • Approvals = terminal-only (no inbound from Discord)
+
+
+TRACK 3a — OpenClaw broker (multi-channel, bidirectional)
+──────────────────────────────────────────────────────────
+   ┌──────────┐                  ┌──────────────┐
+   │ DontPanic│ ─event stream──► │ OpenClaw     │
+   │  volley  │  (INBOX.md       │ broker skill │
+   │          │   watcher OR     │              │
+   │          │   local webhook) │  routing     │
+   │          │                  │  policy      │
+   │          │                  └──────┬───────┘
+   │          │                         │
+   │          │                ┌────────┼────────┐
+   │          │                ▼        ▼        ▼
+   │          │             Discord  Telegram WhatsApp
+   │          │                ▲        ▲        ▲
+   │          │                │        │        │
+   │          │                └────────┴────────┘
+   │          │                         │
+   │          │                ┌────────┴────────┐
+   │          │◄── MCP call ── │ Operator-typed  │
+   │          │   (approve_gate│ command in any  │
+   │          │    / dispatch  │ channel         │
+   │          │    / status)   └─────────────────┘
+   └──────────┘
+   • Per-channel routing in OpenClaw policy (severity → channel set)
+   • Owner-only state changes gated to Telegram private DM
+
+
+TRACK 3b — Claude.ai managed-agent broker (hosted)
+────────────────────────────────────────────────────
+   ┌──────────┐                  ┌────────────────┐
+   │ DontPanic│ ─event stream──► │ Claude.ai      │
+   │  volley  │  (MCP polling    │ managed agent  │
+   │          │   OR file watch) │                │
+   │          │                  └───────┬────────┘
+   │          │                          │
+   │          │                  ┌───────▼────────┐
+   │          │                  │ Claude.ai chat │
+   │          │                  │ + dashboard +  │
+   │          │                  │ email surfaces │
+   │          │                  └───────┬────────┘
+   │          │                          ▲
+   │          │                          │
+   │          │◄── MCP call ── (operator approves via Claude.ai chat)
+   └──────────┘
+   • No Discord/Telegram/WhatsApp involved
+   • Anthropic owns the notification surface
+
+
+TRACK 3c — Interactive IDE/CLI (Claude Code, Cursor, Codex CLI)
+───────────────────────────────────────────────────────────────
+   ┌──────────┐                  ┌────────────────┐
+   │ DontPanic│ ◄── MCP ───────► │ IDE/CLI agent  │
+   │  volley  │   (live during   │ in operator's  │
+   │          │    session)      │ active session │
+   └──────────┘                  └────────────────┘
+   • No notifications — operator already at keyboard
+   • Agent reads state, surfaces via IDE/terminal UI
+```
+
+**Common shape:** DontPanic emits events through its single MCP/webhook
+surface; the broker (or interactive runtime) absorbs that surface and shapes it
+for the operator. DontPanic doesn't grow per-channel knowledge; brokers don't
+duplicate volley orchestration.
+
 ## What's available — at a glance
 
 | Surface | Default | Configurable | Reference |

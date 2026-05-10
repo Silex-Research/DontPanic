@@ -13,9 +13,13 @@ unreviewed work. The manifest is the first discovery surface:
 > tools below. DontPanic intentionally ships no Telegram/WhatsApp/Slack
 > sinks and no hosted-agent integrations — those are your runtime's
 > domain. The Discord direct sink in DontPanic is a no-broker solo-dev
-> convenience only. See plan `2026-05-03-002` F006 for an OpenClaw-specific
-> reference implementation; the same pattern applies to Claude dispatch
-> or any other MCP runtime.
+> convenience only.
+>
+> **Reference implementations + setup paths:**
+> - Plan [`2026-05-03-002-infra-personal-openclaw-axiom-jarvis`](../docs/plans/2026-05-03-002-infra-personal-openclaw-axiom-jarvis/) F006 — OpenClaw broker (multi-channel chat).
+> - [`ECOSYSTEM.md`](./ECOSYSTEM.md) — caller-pattern recipes + DontPanic's place in the agent ecosystem.
+> - [`GETTING_STARTED.md` § Setup tracks](./GETTING_STARTED.md#setup-tracks--pick-yours) — picks the right runtime track for the operator's deployment.
+> - [`CONFIGURATION.md`](./CONFIGURATION.md) — every operator-facing knob the broker may need to honor.
 
 ```bash
 dontpanic manifest show --json
