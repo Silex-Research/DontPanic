@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 21 items
+
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_schema_id_pinned PASSED [  4%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_schema_version_locked PASSED [  9%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_redact_level_enum_three_values PASSED [ 14%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_seven_streams_required PASSED [ 19%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_no_additional_properties_at_top_level PASSED [ 23%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_streams_no_additional_properties PASSED [ 28%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_plan_id_pattern_documented PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_feature_id_pattern_in_evidence PASSED [ 38%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaShape::test_decision_id_pattern PASSED [ 42%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestPydanticRoundTrip::test_empty_snapshot_round_trip PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestPydanticRoundTrip::test_populated_snapshot_round_trip PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestPydanticRoundTrip::test_json_output_has_no_extra_keys PASSED [ 57%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestPydanticRoundTrip::test_redact_level_serializes_as_string PASSED [ 61%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestPydanticRoundTrip::test_captured_at_is_rfc3339_utc PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_missing_streams PASSED [ 71%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_unknown_redact_level PASSED [ 76%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_extra_top_level_property PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_bad_feature_id_in_evidence PASSED [ 85%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_bad_decision_id PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestSchemaRejection::test_rejects_wrong_schema_version PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py::TestAgentConventionsPin::test_subtree_version_bumped PASSED [100%]
+
+============================== 21 passed in 0.12s ==============================
