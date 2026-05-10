@@ -216,11 +216,35 @@ until real usage informs it.
 - Human approval before any implementation dispatch.
 - The MCP `dontpanic.intake` tool from Phase B becomes the canonical
   caller surface for OpenClaw / Claude Code / Codex CLI agents.
-- **External SaaS evidence adapters (planned, credited).** Evaluate
-  Printing Press-generated or library-provided CLIs/MCP servers as
-  read-only intake/sufficiency inputs for services such as Linear, Sentry,
-  Slack, and Notion. Attribute this adapter pattern to CLI Printing Press;
-  DontPanic owns only the adapter governance and evidence normalization.
+- **External SaaS evidence adapters via Printing Press (planned).**
+  When an intake or sufficiency check needs read-only signal from an
+  external service that already speaks OpenAPI (Linear, Sentry,
+  Slack, Notion, GitHub Projects, Jira), DontPanic does NOT hand-roll
+  a wrapper. Instead it dispatches the [printing-press-adapter
+  skill](../claude/skills/printing-press-adapter/SKILL.md) (lands as a
+  separate plan), which:
+  (a) runs `/printing-press <service>` against the service's published
+  OpenAPI (or sniffed traffic) to emit a Go CLI + MCP server pair;
+  (b) wraps the emitted MCP server with a thin DontPanic adapter that
+  enforces redaction tiers, evidence-pointer-only output (no raw API
+  bodies in projections), and `approve_gate`-equivalent gates for any
+  mutating endpoint; (c) registers the adapter in `~/.dontpanic/
+  adapters.json` so `state_snapshot` can surface adapter availability
+  per plan. Caller-side: agents see a uniform `state_snapshot` /
+  `dispatch` surface; the PP-generated binary is an implementation
+  detail of the adapter. Boundary: DontPanic core owns the projection
+  contract (plan 2026-05-09-003) + adapter governance; Printing Press
+  owns the per-service CLI/MCP generation; the operator owns the
+  authorization (OAuth tokens, scoped API keys) per service in
+  `~/.dontpanic/adapters/<service>.json`.
+
+  This is the pattern DontPanic prescribes for **any** plan whose
+  surface includes wrapping an existing API — including third-party
+  plans built by operators on top of DontPanic. The hand-rolled
+  `dontpanic` CLI + MCP server (plan 2026-05-09-003 F004/F005) is the
+  one explicit exception: DontPanic itself is policy-bearing (redact
+  tiers, gate approvals, INBOX-first invariants, project-registry
+  safety) and is not a wrap-this-API surface.
 
 **Sufficiency criteria (what counts as "ready to plan"):**
 
