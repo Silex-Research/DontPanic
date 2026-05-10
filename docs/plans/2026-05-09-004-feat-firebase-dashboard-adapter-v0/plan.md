@@ -1,6 +1,6 @@
 ---
-id: 2026-05-09-004-feat-team-dashboard-sync
-title: Team dashboard sync — Firebase adapter consuming the state projection
+id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+title: Firebase dashboard adapter v0 — realtime/team adapter for the bundled static dashboard
 type: feat
 tier: local
 status: draft
@@ -32,8 +32,13 @@ links:
   evidence_dir: ./evidence/
 description: |
   Firebase/Firestore-side adapter that consumes the DontPanic state
-  projection (plan 2026-05-09-003) and powers the existing Axiom
-  dashboard at `axiom/packages/dashboard/`. Repoints the dashboard from
+  projection (plan 2026-05-09-003) and adds realtime + multi-operator
+  collaboration on TOP of the bundled static dashboard at
+  `DontPanic/dashboard/`. The static dashboard is OSS-friendly and
+  works without Firebase (plan 2026-05-09-003 F007). This adapter is
+  the OPTIONAL upgrade path for operators who want realtime team
+  features (live drag-and-drop column flow, multi-operator presence,
+  shared approval queue across machines). Repoints the dashboard from
   the deprecated multi-tenant `<axiom-firebase-project-id>` Firebase project
   to the personal-stack `<firebase-project-id>` project. Adds a sync layer that
   polls `dontpanic state snapshot --json` and mirrors into Firestore so
