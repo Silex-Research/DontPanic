@@ -1,0 +1,100 @@
+{
+  "task_id": "2026-05-09-003-feat-state-projection-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Define the state-snapshot JSON schema and bump agent-conventions to the next minor version (v1.x → v1.(x+1)). Schema names six top-level streams: `plans` (per-plan summary with status, features pass-rate, target, agents_required), `gates` (unmet gates per plan with kind/stage/reason), `inbox` (last N events newest-first across all plans), `supervisors` (active supervisor entries from `~/.dontpanic/active_supervisors.jsonl`), `quota` (current weekly usage per agent with cap + percent), `decisions` (recent D-entries across plans), `evidence_refs` (paths/URIs only — never contents). Top-level envelope: `schema_version`, `captured_at` (RFC 3339 UTC), `dontpanic_version`, `redact_level` (public/operator/full), `streams` (the six above).",
+      "steps": [
+        "Draft schema at `agent-conventions/schemas/v1.x/state-snapshot.schema.json`. Strict types (no additionalProperties). Each stream array element has its own sub-schema referenced by `$ref`.",
+        "Define stable-ID discipline in the schema docstring: plan_id format, feature_id format (F\\d{3}), agent_id format, gate_name format. No internal SHAs in the projection — those stay in audit envelopes.",
+        "Bump agent-conventions VERSION minor and tag.",
+        "Subtree-pull the new schema into DontPanic's `claude/shared/schemas/v1.x/`.",
+        "Add Pydantic model in `claude/shared/pydantic/state_snapshot.py` matching the schema."
+      ],
+      "acceptance": "(1) `state-snapshot.schema.json` exists in agent-conventions and is referenced by the validator. (2) agent-conventions VERSION bumped per semver minor (v1.4.0 if currently v1.3.x). (3) Pydantic model round-trips the schema via fixture tests. (4) Stable-ID discipline documented in schema $description fields.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Implement `state_projection` module that gathers the six streams from canonical DontPanic sources. Pure-read: walks `docs/plans/*/` for plan/gates/inbox/decisions, reads `~/.dontpanic/active_supervisors.jsonl` for supervisors, reads `~/.dontpanic/quota_state.json` for quota, scans recent audit envelopes for evidence_refs. NO mutation — gather is read-only. Returns a Pydantic model instance that round-trips through the F001 schema. Single entry point: `state_projection.gather(plan_dir_root, *, redact_level='operator', include=ALL_STREAMS, plan_id=None) -> StateSnapshot`.",
+      "steps": [
+        "Create `scripts/dontpanic_orchestrate/state_projection.py`.",
+        "Implement per-stream gatherers: `_gather_plans`, `_gather_gates`, `_gather_inbox`, `_gather_supervisors`, `_gather_quota`, `_gather_decisions`, `_gather_evidence_refs`. Each is a pure function.",
+        "Honor `--include` filter so callers requesting just `plans,gates` skip the heavier streams.",
+        "Honor `--plan` filter so callers can target one plan instead of the whole project registry.",
+        "Apply redaction policy at gather time per F003.",
+        "Tests cover every stream, empty-state, single-plan filter, multi-project registry traversal."
+      ],
+      "acceptance": "(1) `state_projection.gather()` returns a `StateSnapshot` validated by the F001 schema. (2) Empty registry returns an envelope with empty arrays, not an error. (3) `--include` and `--plan` filters honored. (4) No mutations to filesystem state during gather. (5) Tests cover all six streams + filters.",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "security",
+      "phase": 3,
+      "description": "Redaction policy. Three levels: `public` (for Observer role / unauth dashboards / CI status check — strips quota agent breakdown, supervisor PIDs, file paths beyond plan_id, operator email if any), `operator` (default — strips secrets and API keys but preserves operator-useful detail), `full` (only available to direct CLI invocations on the operator's machine — includes all fields). Implemented as a single `_redact(snapshot, level)` function that runs AFTER gather. Sanitization invariant: no AWS/GitHub/Anthropic/OpenAI/Slack/Discord-webhook/JWT secret-shape regex (per scripts/sanitization_check.py SECRET_REGEXES) ever appears in `public` or `operator` output. Verified by a fixture-injection test.",
+      "steps": [
+        "Define redaction-policy table in `state_projection.py`: per-stream, per-level field allowlist.",
+        "Implement `_redact(snapshot, level)` — pure function, returns new snapshot.",
+        "Add fixture test that injects synthetic secrets into plan/inbox/decisions and asserts they're absent from `public` and `operator` output.",
+        "Re-import `SECRET_REGEXES` from `sanitization_check.py` for the assertion (single source of truth)."
+      ],
+      "acceptance": "(1) Three redaction levels implemented and tested. (2) Sanitization fixture test passes — synthetic secrets in raw state are absent from `public` and `operator` output, present in `full`. (3) Redaction docstring documents per-stream policy table. (4) `full` level refuses to render when called from MCP (forced operator-or-public via tool annotation).",
+      "passes": false,
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 4,
+      "description": "CLI surface: `dontpanic state snapshot [--json|--yaml] [--plan <id>] [--include <streams>] [--redact-level public|operator|full] [--out <path>]`. Default `--json` to stdout. `--out` writes to file. CLI default `--redact-level operator`. CLI is the canonical local entry; tests cover argv parsing + redact-level enforcement + empty-state behavior.",
+      "steps": [
+        "Add `state` subcommand parser in `scripts/dontpanic_orchestrate/cli.py`.",
+        "Wire `snapshot` action calling `state_projection.gather()`.",
+        "Pretty-print JSON with stable key order (alphabetical within streams) so diffs across runs are minimal.",
+        "Tests: argv parsing, every flag combination, output round-trips through the F001 schema."
+      ],
+      "acceptance": "(1) `dontpanic state snapshot --json` returns a valid F001-schema envelope. (2) Every documented flag works as specified. (3) Output is stable-ordered (deterministic across runs given same input).",
+      "passes": false,
+      "depends_on": ["F002", "F003"]
+    },
+    {
+      "id": "F005",
+      "category": "tooling",
+      "phase": 5,
+      "description": "MCP tools. Add two read tools: `state_snapshot` (one-shot — same shape as F004 CLI but as an MCP response) and `state_stream` (v0 — accepts `since` cursor in RFC 3339, returns events newer than that, no streaming protocol yet, just polled-delta on the inbox stream). Annotate the existing mutation tools (`approve_gate`, `dispatch`, `resume`) with their approval-semantics metadata so MCP-aware hosts can surface the requirement before firing. The `confirm: true` invariant is unchanged.",
+      "steps": [
+        "Locate the MCP tool registration site in `scripts/dontpanic_orchestrate/mcp_server.py`.",
+        "Add `state_snapshot` tool — wraps `state_projection.gather()` with `redact_level` capped at `operator`.",
+        "Add `state_stream` tool — accepts `since` cursor + optional `plan_id`, returns inbox events newer than the cursor with stable IDs.",
+        "Annotate mutation tools with `approval_required: true` metadata + `confirm` parameter expected.",
+        "Tests cover each new tool against a fixture state."
+      ],
+      "acceptance": "(1) `state_snapshot` MCP tool returns the same envelope as F004 CLI (bytewise equivalent for matching args). (2) `state_stream` returns inbox-event delta correctly given `since` cursor. (3) Mutation tools carry approval metadata. (4) `state_snapshot` cannot return `redact_level=full` regardless of caller request. (5) MCP tool fixture tests pass.",
+      "passes": false,
+      "depends_on": ["F002", "F003", "F004"]
+    },
+    {
+      "id": "F006",
+      "category": "doc",
+      "phase": 6,
+      "description": "Adapter governance contract: documentation that says what shape adapters must follow when consuming the projection. Lives at `docs/STATE_PROJECTION.md`. Names: stable-ID discipline (don't fabricate or join on internal SHAs), schema-version pinning (adapters declare which schema version they're written against), redaction respect (adapters serving public surfaces must request `redact_level=public`), no-write-back (adapters never write back into DontPanic state directly — mutations go through MCP). Cross-references USE_CASES.md U6 + U8 + U9 + the role/action matrix.",
+      "steps": [
+        "Draft `docs/STATE_PROJECTION.md` covering the six streams + the four invariants above.",
+        "Add a worked example showing the dashboard-sync adapter consuming `state_snapshot` (will be implemented by sibling plan 2026-05-09-004).",
+        "Cross-link from USE_CASES.md, ECOSYSTEM.md, AGENT_QUICKSTART.md, CONFIGURATION.md.",
+        "Reference the contract from the agent-conventions schema $description so MCP-aware tooling surfaces it."
+      ],
+      "acceptance": "(1) `docs/STATE_PROJECTION.md` exists with the four invariants. (2) Cross-links present in the four named docs. (3) Worked example documents the adapter pattern.",
+      "passes": false,
+      "depends_on": ["F001", "F004", "F005"]
+    }
+  ]
+}
