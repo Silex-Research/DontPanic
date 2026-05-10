@@ -15,7 +15,16 @@
         "Add Pydantic model in `claude/shared/pydantic/state_snapshot.py` matching the schema."
       ],
       "acceptance": "(1) `state-snapshot.schema.json` exists in agent-conventions and is referenced by the validator. (2) agent-conventions VERSION bumped per semver minor (v1.4.0 if currently v1.3.x). (3) Pydantic model round-trips the schema via fixture tests. (4) Stable-ID discipline documented in schema $description fields.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-10T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F001-schema-tests.log", "note": "21 tests pass: schema shape (8) + Pydantic round-trip (5) + schema rejection (6) + VERSION pin (1)"},
+        {"type": "test_output", "uri": "evidence/F001-full-sweep.log", "note": "Full orchestrate sweep 1699 passed, 7 skipped, zero regressions"},
+        {"type": "file", "uri": "../../../claude/shared/schemas/v1.0/state-snapshot.schema.json", "note": "JSON Schema for state-snapshot envelope (7 streams, 3 redact levels, stable-ID patterns)"},
+        {"type": "file", "uri": "../../../claude/shared/schemas/v1.0/models/state_snapshot_model.py", "note": "Auto-generated Pydantic model — StateSnapshot root + 7 stream sub-classes"},
+        {"type": "commit", "uri": "agent-conventions@4cd47e0", "note": "agent-conventions v1.6.0 tag with state-snapshot schema + Pydantic model"}
+      ],
       "depends_on": []
     },
     {

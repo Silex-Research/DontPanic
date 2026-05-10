@@ -30,7 +30,7 @@ DontPanic has one shape; use cases pick which optional layers to attach.
 | **U4. Personal-axiom (operator + friends)** | + MCP server + NotifyEvent | + Discord webhook OFF | OpenClaw runtime + Discord/Telegram bots | Multi-channel chat (bidirectional) + dashboard (when adapter lands) | ~1-2 days |
 | **U5. Hosted-agent flow (Claude.ai managed agent)** | + MCP server | — | Anthropic-hosted agent runtime | Claude.ai chat + dashboard/email | varies (Anthropic-side) |
 | **U6a. Bundled static dashboard (single-operator OR read-only-team, OSS-friendly)** | + state projection + bundled `DontPanic/dashboard/` static SPA | — | None — any static host (`python -m http.server`, GitHub Pages, nginx, Vercel, Firebase Hosting as a static-file CDN) | Static kanban / activity / approvals — read-only; mutations via terminal/MCP | ~5 min after projection ships |
-| **U6b. Firebase realtime team dashboard (multi-operator + bidirectional)** | + everything in U6a + Cloud Functions for mutations | — | Firebase project (`jarvis-a6ee1`) + Firebase Auth + Cloud Functions + sync daemon | Realtime kanban with drag-flip + multi-operator presence + shared approval queue | ~1 week (adapter plan) |
+| **U6b. Firebase realtime team dashboard (multi-operator + bidirectional)** | + everything in U6a + Cloud Functions for mutations | — | Firebase project (`<your-firebase-project>`) + Firebase Auth + Cloud Functions + sync daemon | Realtime kanban with drag-flip + multi-operator presence + shared approval queue | ~1 week (adapter plan) |
 | **U7. OSS contributor / forker** | core CLI + plan substrate | — (BYO agent CLIs) | — | Their own setup; DontPanic is a dep | ~10 min |
 | **U8. External orchestrator / DontPanic-as-callable-delivery-substrate** | manifest + MCP + **state projection** + explicit approval semantics | — | Any orchestrator (OpenClaw, Claude Code, Codex CLI, Cursor, Continue, custom MCP, hosted-agent runtime) | Whatever the runtime owns | runtime-driven |
 | **U9. CI / PR reviewer (validate, verify, gate — no dispatch)** | plan validator + completion gate + state projection (read-only) | — | CI runner (GitHub Actions, etc.) | PR comments, CI status checks | ~half-day |
@@ -109,7 +109,7 @@ signal to stop and re-scope.
 | Firebase Auth integration | Adapter |
 | Cloud Functions for state-mutating actions | Adapter (plan `2026-05-09-004`) |
 | Realtime `onSnapshot` listeners | Adapter (the bundled static dashboard polls; realtime is opt-in) |
-| Project-specific Firebase IDs (e.g. `jarvis-a6ee1`) | Adapter (operator-side configuration) |
+| Project-specific Firebase IDs (e.g. `<your-firebase-project>`) | Adapter (operator-side configuration) |
 | Multi-tenant Firestore shape | Adapter — single-tenant only; multi-tenant is rejected per `2026-05-03-002` D002 |
 | Telegram / WhatsApp / Slack integrations | Broker (OpenClaw, future) |
 | Multi-channel routing policy | Broker |
@@ -241,7 +241,7 @@ wanting a kanban-style shared progress view.
 
 **Adds to U4:**
 - Axiom dashboard (currently in `axiom/packages/dashboard/`) repointed
-  at `jarvis-a6ee1` Firestore.
+  at `<your-firebase-project>` Firestore.
 - A sync layer (Cloud Function or background script) that mirrors local
   DontPanic state into Firestore:
   - Plan dirs → `plans` collection (one doc per plan, `status` =
@@ -263,7 +263,7 @@ drag-and-drop status flow + Decision Audit Log + Approval Queue.
 significantly under-scoped today. The dashboard already has the right
 *shape* (5 views, real-time Firestore subscriptions, kanban with DnD,
 modal detail). What's missing: **the sync layer + repointing from
-`axiom-workspace-5eebd` to `jarvis-a6ee1`.** This is high-leverage work
+`axiom-workspace-5eebd` to `<your-firebase-project>`.** This is high-leverage work
 because it transforms the human-engagement surface from
 "INBOX.md + chat" to "interactive board the whole team sees."
 
@@ -436,11 +436,11 @@ moves are worth considering:
 1. **Confirm F004 dashboard scope.** What's currently in F004 is "repoint
    dashboard at DontPanic plan dirs + OpenClaw health summary" — but
    the actual gap is the sync-layer work (file artifacts → Firestore at
-   `jarvis-a6ee1`). Either expand F004's acceptance, or split it into a
+   `<your-firebase-project>`). Either expand F004's acceptance, or split it into a
    separate plan focused on team-dashboard sync.
 
 2. **Confirm Firebase target.** The plan implicitly assumes
-   `jarvis-a6ee1` (now "DontPanic Firebase project" post-rename). The
+   `<your-firebase-project>` (now "DontPanic Firebase project" post-rename). The
    old `axiom-workspace-5eebd` should be archived per D002. Worth a
    D-entry to make this explicit.
 

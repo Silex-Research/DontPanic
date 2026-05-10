@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/state-snapshot.schema.json",
+  "title": "StateSnapshot",
+  "description": "Read-only state projection of a DontPanic operator's local plan/gate/inbox/supervisor/quota/decisions state. Emitted by `dontpanic state snapshot --json` and the MCP `state_snapshot` tool. Stable contract consumed by adapters (dashboards, brokers, CI runners, hosted-agent runtimes). Stable IDs across DontPanic refactors; redaction-aware; tz-aware UTC timestamps. Mutations are NEVER expressed via this schema — adapters call MCP tools (`approve_gate`, `dispatch`, `resume`, `read_evidence`) for state changes.",
+  "type": "object",
+  "required": ["schema_version", "captured_at", "redact_level", "streams"],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Locked at 1.0 for the v0 contract. Any breaking change to a stream shape requires a major schema bump and a deprecation window."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC timestamp at which the projection was gathered. Ends with `Z` for UTC."
+    },
+    "dontpanic_version": {
+      "type": "string",
+      "description": "Version of the DontPanic CLI that produced the snapshot. Adapters may use this for compatibility checks."
+    },
+    "redact_level": {
+      "enum": ["public", "operator", "full"],
+      "description": "public = Observer role / unauth dashboards / CI status checks (no quota agent breakdown, no supervisor PIDs/hosts, no operator email, no file paths beyond plan_id). operator = default for authenticated operator-side adapters (full state minus secrets per scripts/sanitization_check.py SECRET_REGEXES). full = local-CLI-only escape hatch (includes all fields). MCP `state_snapshot` caps redact_level at `operator` regardless of caller request."
+    },
+    "streams": {
+      "type": "object",
+      "required": ["plans", "gates", "inbox", "supervisors", "quota", "decisions", "evidence_refs"],
+      "properties": {
+        "plans": { "type": "array", "items": { "$ref": "#/$defs/plan_summary" } },
+        "gates": { "type": "array", "items": { "$ref": "#/$defs/gate_entry" } },
+        "inbox": { "type": "array", "items": { "$ref": "#/$defs/inbox_event" } },
+        "supervisors": { "type": "array", "items": { "$ref": "#/$defs/supervisor_entry" } },
+        "quota": { "type": "array", "items": { "$ref": "#/$defs/quota_entry" } },
+        "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision_entry" } },
+        "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/evidence_pointer" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "plan_summary": {
+      "type": "object",
+      "description": "One entry per plan dir under docs/plans/. Status reflects the plan.md frontmatter; features_summary aggregates features.json passes counts.",
+      "required": ["plan_id", "status", "title"],
+      "properties": {
+        "plan_id": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|infra|refactor|chore|docs|test)-[a-z0-9-]+$",
+          "description": "Stable ID. Format: YYYY-MM-DD-NNN-type-slug. Never a SHA or internal identifier."
+        },
+        "status": {
+          "enum": ["draft", "active", "ready_for_audit", "in_audit", "completed", "abandoned", "blocked"]
+        },
+        "title": { "type": "string" },
+        "type": { "enum": ["feat", "fix", "infra", "refactor", "chore", "docs", "test"] },
+        "tier": { "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"] },
+        "goal_type": {
+          "enum": ["mechanical", "infra", "refactor", "parity", "new_feature", "migration", "incident"]
+        },
+        "surfaces": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Per agent-conventions v1.5 — surfaces[] taxonomy (web, ios, android, backend, infra, ux, etc.)"
+        },
+        "features_summary": {
+          "type": "object",
+          "required": ["total", "passing"],
+          "properties": {
+            "total": { "type": "integer", "minimum": 0 },
+            "passing": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "target_env": { "type": "string", "description": "From plan Target section, e.g. dev / production / local" },
+        "target_project": { "type": ["string", "null"], "description": "Plan-declared project_id or null for host-local plans" },
+        "agents_required": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "date": { "type": "string", "description": "Plan creation date (YYYY-MM-DD)" }
+      },
+      "additionalProperties": false
+    },
+    "gate_entry": {
+      "type": "object",
+      "description": "One entry per unmet (paused) gate across all plans. Cleared gates are not emitted in v0; downstream consumers infer clearance from absence.",
+      "required": ["plan_id", "gate_name", "kind", "paused_at"],
+      "properties": {
+        "plan_id": { "type": "string" },
+        "gate_name": {
+          "type": "string",
+          "description": "Stable name. Examples: `pre_impl`, `pre_merge`, `breaker:no_progress`, `breaker:budget_ceiling`, `defer:quota_threshold`, plan-declared custom gates."
+        },
+        "kind": {
+          "enum": ["pre_impl", "pre_merge", "breaker", "defer", "custom"]
+        },
+        "stage": {
+          "type": ["string", "null"],
+          "description": "Lifecycle stage if kind is pre_impl or pre_merge; null otherwise."
+        },
+        "reason": { "type": "string", "description": "Human-readable reason the gate is paused. Redacted at `public` level." },
+        "paused_at": { "type": "string", "format": "date-time" },
+        "approval_required": { "type": "boolean" },
+        "feature_id": { "type": ["string", "null"], "pattern": "^F\\d{3}$|^null$" }
+      },
+      "additionalProperties": false
+    },
+    "inbox_event": {
+      "type": "object",
+      "description": "One entry per recent INBOX.md event across all plans. Newest-first; limit configurable per gather.",
+      "required": ["plan_id", "event", "event_id", "captured_at"],
+      "properties": {
+        "plan_id": { "type": "string" },
+        "event": {
+          "type": "string",
+          "description": "Event kind. Examples: volley_start, gate_paused, breaker_tripped, signoff, calibration_required, no_progress_classification, environmental_blocker_short_circuit, verdict_mismatch, pre_impl_status_synced."
+        },
+        "event_id": {
+          "type": "string",
+          "description": "Stable composite: `<plan_id>:<event>:<captured_at>:<feature_id-or-empty>`. Adapter-stable across DontPanic refactors."
+        },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "feature_id": { "type": ["string", "null"], "pattern": "^F\\d{3}$|^null$" },
+        "body": {
+          "type": "string",
+          "description": "Markdown event body. Truncated / redacted per redact_level. Reading the full body requires read_evidence on the underlying INBOX.md path (operator/full only)."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Key-value pairs from the INBOX header block (e.g. severity, gate_name, breaker_kind). Stable across DontPanic refactors of the INBOX writer."
+        }
+      },
+      "additionalProperties": false
+    },
+    "supervisor_entry": {
+      "type": "object",
+      "description": "One entry per active supervisor (from ~/.dontpanic/active_supervisors.jsonl).",
+      "required": ["supervisor_id", "plan_id", "started_at"],
+      "properties": {
+        "supervisor_id": {
+          "type": "string",
+          "description": "Stable composite `<pid>:<started_at>`. Stays stable for the supervisor's lifetime."
+        },
+        "plan_id": { "type": "string" },
+        "feature_id": { "type": ["string", "null"], "pattern": "^F\\d{3}$|^null$" },
+        "implementer_agent": { "type": ["string", "null"] },
+        "auditor_agent": { "type": ["string", "null"] },
+        "started_at": { "type": "string", "format": "date-time" },
+        "host": {
+          "type": ["string", "null"],
+          "description": "Operator hostname. Redacted (set to null) at `public` redact_level."
+        },
+        "pid": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Process ID. Only present at `full` redact_level; null at operator/public."
+        }
+      },
+      "additionalProperties": false
+    },
+    "quota_entry": {
+      "type": "object",
+      "description": "One entry per (vendor, window) pair from ~/.dontpanic/quota_state.json. Adapters render budget gauges and cap thresholds.",
+      "required": ["vendor", "window", "status"],
+      "properties": {
+        "vendor": {
+          "enum": ["claude", "codex", "gemini", "grok"],
+          "description": "Vendor name. `public` redact_level may aggregate to a single 'total' entry instead of per-vendor breakdown."
+        },
+        "window": { "enum": ["daily", "weekly", "monthly"] },
+        "percent_of_cap": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Observed percent of the per-window cap. Null when no signal yet (uncalibrated)."
+        },
+        "percent_threshold": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Soft-warn threshold (default 90)."
+        },
+        "status": {
+          "enum": ["ok", "warn", "exceeded", "calibration_required", "config_required", "unit_mismatch"]
+        },
+        "captured_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "decision_entry": {
+      "type": "object",
+      "description": "One entry per decision (D-entry) across plans. Recent-first; limit configurable per gather. Body is redacted at `public` to title only.",
+      "required": ["plan_id", "decision_id", "ts", "title"],
+      "properties": {
+        "plan_id": { "type": "string" },
+        "decision_id": {
+          "type": "string",
+          "pattern": "^D\\d{3}$",
+          "description": "D001, D002, ... — stable per plan."
+        },
+        "ts": { "type": "string", "format": "date-time" },
+        "by": { "type": "string", "description": "Decision author (operator / reviewer / agent name). May be redacted at `public`." },
+        "title": { "type": "string" },
+        "body": {
+          "type": ["string", "null"],
+          "description": "Decision body. Null at `public` redact_level (only title surfaces); full at operator/full levels."
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_pointer": {
+      "type": "object",
+      "description": "Pointers ONLY — never evidence file contents. Adapters use the URI to call MCP `read_evidence` if they need contents (which gates on operator role).",
+      "required": ["plan_id", "feature_id", "type", "uri"],
+      "properties": {
+        "plan_id": { "type": "string" },
+        "feature_id": { "type": "string", "pattern": "^F\\d{3}$" },
+        "type": {
+          "enum": ["screenshot", "log", "test_output", "diff", "audit_json", "commit", "url", "file"]
+        },
+        "uri": {
+          "type": "string",
+          "description": "Relative path under the plan dir, git SHA, or operator-readable URL. Never a Firebase Storage signed URL with secrets."
+        },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "captured_by": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
