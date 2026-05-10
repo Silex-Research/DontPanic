@@ -3,9 +3,9 @@ id: 2026-05-09-003-feat-state-projection-v0
 title: State projection v0 — DontPanic emits stable read-only state for adapters
 type: feat
 tier: local
-status: draft
+status: active
 date: "2026-05-09"
-goal_type: new_feature
+goal_type: infra
 surfaces:
   - infra
 agents_required:
