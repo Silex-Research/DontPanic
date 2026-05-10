@@ -9,6 +9,9 @@ Firebase project or any cloud account for the first smoke test.
 DontPanic has one **required** layer and several **optional** layers. The order
 is strict: each layer assumes the one above is already in place.
 
+> See [`USE_CASES.md`](./USE_CASES.md) for the full matrix mapping each track
+> to required core, optional core, external runtimes, and engagement surfaces.
+
 ```
 Required:
   1. DontPanic core (this doc)        ← install + register a project + doctor
