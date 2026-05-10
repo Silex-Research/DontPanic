@@ -122,6 +122,62 @@ That recipe is the **whole** OpenClaw integration. No SDK, no
 embedded library, no Gateway-side state. The same recipe shape works
 for any caller.
 
+## Concrete integration recipe (OpenClaw-as-broker, notify-while-away)
+
+The caller pattern above (interactive: user types in chat, skill calls
+DontPanic, surfaces output back to chat) handles the at-keyboard case.
+The broker pattern handles the **away-from-keyboard** case: a volley
+running on the operator's laptop emits events while the human is on
+their phone, and the human responds from chat.
+
+```text
+# In the OpenClaw workspace, a skill named e.g. "dontpanic-notification-router":
+#
+# Outbound (DontPanic → human):
+# 1. Skill subscribes to DontPanic NotifyEvents — either:
+#    (a) DontPanic webhook → local HTTP receiver in OpenClaw, OR
+#    (b) OpenClaw watches `<plan>/INBOX.md` for new events (pull-based,
+#        recommended — no port management, survives restarts).
+# 2. Skill applies a routing policy table:
+#      severity=info + kind in {volley_start, signoff} → Discord (project room)
+#      severity=action_required                       → Discord + Telegram
+#      severity=escalation                            → Telegram + WhatsApp mirror
+# 3. Skill renders per channel (Discord embed, Telegram MarkdownV2, etc.)
+#    and posts.
+#
+# Inbound (human → DontPanic):
+# 4. Skill listens for messages in subscribed channels.
+# 5. Author identity check against allowlist (Discord user-ID / Telegram
+#    user-ID). Non-allowlisted senders silently ignored.
+# 6. Parse intent: read-only commands (`/dp status`, `/dp inbox`,
+#    `/dp dispatch --dry-run`) allowed in all channels; owner-only state
+#    changes (`/dp approve`, `/dp resume`, `/dp dispatch --confirm`)
+#    routed only via Telegram private DM (per personal-axiom plan
+#    2026-05-03-002 D003+D004).
+# 7. Skill calls the corresponding DontPanic MCP tool (approve_gate /
+#    dispatch / status / read_evidence). Reply in the originating channel
+#    with the result summary.
+```
+
+That's the broker. DontPanic is unchanged — same MCP surface, same
+NotifyEvent emission. OpenClaw absorbs all per-channel knowledge
+(Discord webhooks, Telegram bot API, WhatsApp business API) and all
+routing policy. **The same broker pattern applies to Claude.ai managed
+agents** (read DontPanic state via MCP, surface in Anthropic's
+hosted-agent dashboards, approve via MCP) — different runtime, same
+data flow. The `personal-axiom` plan
+[`2026-05-03-002`](./plans/2026-05-03-002-infra-personal-openclaw-axiom-jarvis/)
+F006 is the OpenClaw-specific reference implementation.
+
+**When to use which recipe:**
+- Caller (interactive) — operator at keyboard, agent reads state during
+  active session. No notifications needed.
+- Broker (notify-while-away) — operator on phone or away from
+  workstation, runtime brokers event flow + commands over chat /
+  hosted-agent surface. Pick the broker host whose surface the operator
+  will actually check (chat for OpenClaw; dashboard/email for
+  Claude.ai managed agents).
+
 ## Pointers
 
 - [`PRODUCT.md`](./PRODUCT.md) — what DontPanic is in plain English
