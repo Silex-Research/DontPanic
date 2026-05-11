@@ -12,9 +12,9 @@
         "Create a parallel adapter dashboard config (e.g. `DontPanic/dashboard/config-firebase.js`) that LAYERS Firestore `onSnapshot` listeners on top of the static state loader. Adapter is opt-in; static dashboard's behavior unchanged when Firebase isn't configured.",
         "Wire `firebaseConfig` block targeting `jarvis-a6ee1` (project_id, auth_domain, storage_bucket).",
         "Migrate listeners from `tenants/{tenantId}/...` shape to single-tenant `projects/{project_id}/...`.",
-        "Smoke test against jarvis-a6ee1 with at least one mock plan in Firestore + verify static fallback still works without the Firebase config."
+        "Smoke test against a local fixture (Firebase emulator if available, else a static mock JSON file matching the Firestore document shape) \u2014 verify static fallback still works without the Firebase config. Real-jarvis-a6ee1 smoke test deferred to F005 per parent_acceptance_item credential gate (see plan D007)."
       ],
-      "acceptance": "(1) `DontPanic/dashboard/` continues to work standalone (no Firebase config) per plan 2026-05-09-003 F007. (2) When Firebase config is provided, the dashboard adds realtime overlay layered on the static base \u2014 the static loader is still used as fallback for first paint and offline. (3) Firestore paths use `projects/{project_id}/...` (single-tenant) shape. (4) Adapter dashboard renders against jarvis-a6ee1 with seed Firestore state.",
+      "acceptance": "(1) `dashboard/` continues to work standalone (no Firebase config) per plan 2026-05-09-003 F007. (2) When Firebase config is provided, the dashboard adds realtime overlay layered on the static base \u2014 the static loader is still used as fallback for first paint and offline. (3) Firestore paths use `projects/{project_id}/...` (single-tenant) shape. (4) Adapter dashboard renders against a local fixture (Firebase emulator or static mock JSON matching the Firestore document shape) \u2014 full smoke test against jarvis-a6ee1 deferred to F005 per parent_acceptance_item credential gate (see plan D007).",
       "passes": false,
       "depends_on": []
     },
@@ -22,15 +22,15 @@
       "id": "F002",
       "category": "infra",
       "phase": 2,
-      "description": "Sync daemon \u2014 the local-side bridge that converts the projection (`dontpanic state snapshot --json` from plan 2026-05-09-003) into Firestore docs. NOT in DontPanic core. Lives in this adapter's repo (e.g. `axiom/packages/sync/` or a new `DontPanic-firebase-adapter/` repo if cleanly separated). Polls projection every 5\u201315s; idempotent diff-upserts. Each stream maps to `projects/{pid}/<stream>`.",
+      "description": "Sync daemon \u2014 the local-side bridge that converts the projection (`dontpanic state snapshot --json` from plan 2026-05-09-003) into Firestore docs. Lives at `scripts/firebase_adapter/` \u2014 outside `scripts/dontpanic_orchestrate/` per D001 adapter boundary (adapter consumes the projection; never extends DontPanic core). Polls projection every 5-15s; idempotent diff-upserts. Each stream maps to `projects/{pid}/<stream>`. F002 ships the daemon code + tests against a local fixture (Firebase emulator or stubbed Firestore client); real Firestore writes to jarvis-a6ee1 deferred to F005 per parent_acceptance_item credential gate (see plan D007).",
       "steps": [
-        "Create `axiom/packages/sync/dontpanic_sync.py` (or .ts) \u2014 polling daemon.",
+        "Create `scripts/firebase_adapter/dontpanic_sync.py` \u2014 polling daemon.",
         "Implement diff-based upsert: compare incoming snapshot to last-written, only write changed docs.",
-        "Add a small CLI: `axiom-sync start [--interval 10] [--project-id <id>]`.",
-        "Tests cover the diff logic + idempotency + handling of `--include` projection responses.",
-        "Document running it as a launchd plist or systemd unit for persistent operation."
+        "Add a small CLI: `python -m firebase_adapter.dontpanic_sync start [--interval 10] [--project-id <id>]`.",
+        "Tests cover the diff logic + idempotency + handling of `--include` projection responses, using a stubbed Firestore client (no real network).",
+        "Document running it as a launchd plist or systemd unit for persistent operation \u2014 operator runs this themselves once credentials reactivate."
       ],
-      "acceptance": "(1) Daemon runs continuously; latency from local plan change to Firestore write \u226430s. (2) Idempotent \u2014 re-running same snapshot produces zero writes. (3) `--include` filters honored to skip heavy streams when the dashboard doesn't need them. (4) Tests cover diff, upsert, and failure paths.",
+      "acceptance": "(1) Daemon module exists at `scripts/firebase_adapter/dontpanic_sync.py` with a working CLI entry point. (2) Idempotent \u2014 re-running the same snapshot against the stubbed Firestore client produces zero writes (verified by test). (3) `--include` filters honored to skip heavy streams when the dashboard doesn't need them. (4) Tests cover diff, upsert, and failure paths against the stub. (5) Real-Firestore latency measurement (\u226430s end-to-end) deferred to F005 per parent_acceptance_item credential gate (see plan D007).",
       "passes": false,
       "depends_on": [
         "F001"
