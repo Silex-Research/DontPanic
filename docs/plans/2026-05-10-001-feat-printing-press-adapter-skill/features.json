@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Author the printing-press-adapter skill at claude/skills/printing-press-adapter/. Three files: (a) SKILL.md with valid frontmatter — name, description, applies_to: { surfaces: [external-api-wrap], goal_types: [new_feature, infra, parity] }, trigger_keywords, applicable_agents: [all], phase: pre-impl. Body covers: when to use (plan whose goal is wrapping an existing OpenAPI-shaped service with CLI + MCP for agent consumption), when NOT to use (in-process policy-bearing surfaces, < 5 endpoints where the OpenAPI shim costs more than just writing handlers, services without OpenAPI and where HAR/sniffed-traffic isn't feasible). (b) DECISION_TREE.md — 4 yes/no questions: (1) Is this an external API or in-process surface? in-process = skip. (2) Does the service publish OpenAPI or have stable HAR? no = skip. (3) Are you wrapping >= 5 endpoints? < 5 = skip (just write handlers). (4) Are any endpoints mutating? mutating = needs approval-gate templating; v0 of this skill is READ-ONLY; for mutations, file a v2 expansion. (c) ADAPTER_TEMPLATE.md — Python module skeleton showing how to: (i) launch PP-emitted MCP binary as subprocess, (ii) inject DontPanic redact_level middleware on every response, (iii) reject any tool call that would mutate without confirm:true, (iv) register the adapter in ~/.dontpanic/adapters.json and surface it through state_snapshot's evidence_refs stream once plan 003 F002 lands.",
+      "steps": [
+        "Inspect existing SKILL.md examples (cost-model, cost-guard, plan-artifacts) to mirror the shape.",
+        "Draft SKILL.md frontmatter + body. Cite mvanhorn/cli-printing-press repo + license (MIT) + version pinning policy (v1 = whatever PP version is current at lock time; document the PP version in the adapter's adapters.json entry).",
+        "Draft DECISION_TREE.md with the 4 yes/no filters and a worked example for each anti-case.",
+        "Draft ADAPTER_TEMPLATE.md with a Python skeleton that subprocess.Popen()s the PP binary, parses its stdio JSON-RPC, and decorates each tool response with redact + sanitization checks.",
+        "Cross-link from docs/STATE_PROJECTION.md (plan 003 F006) once that ships, and from docs/ROADMAP.md Phase C entry (already references the skill by path).",
+        "Tests: SKILL.md frontmatter validates against agent-conventions skill schema; DECISION_TREE.md decision examples render correctly; ADAPTER_TEMPLATE.md code block compiles as a syntactically valid Python module (no execution test in F001 — that's F003's job)."
+      ],
+      "acceptance": "(1) claude/skills/printing-press-adapter/SKILL.md exists with valid frontmatter, applies_to.surfaces = [external-api-wrap]. (2) DECISION_TREE.md documents 4 filters with examples. (3) ADAPTER_TEMPLATE.md compiles as a Python module (ast.parse passes). (4) Skill discoverable through the existing applies_to matcher (skill-applicability v0).",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Bump agent-conventions to v1.7.0 and add `external-api-wrap` to the surfaces[] enum at schemas/v1.0/plan.schema.json. Regenerate Pydantic models via datamodel-codegen. Update the schema $description to reference printing-press-adapter skill as the canonical pattern for plans declaring this surface. Tag v1.7.0 in agent-conventions repo; subtree-pull into DontPanic at claude/shared/; bump DontPanic's VERSION pin test to 1.7.0 (currently 1.6.0). Existing plans declaring `surfaces: [web|ios|android|backend|infra|security|data|ux|ml|docs]` are unaffected — the bump is purely additive.",
+      "steps": [
+        "Edit agent-conventions/schemas/v1.0/plan.schema.json — add `external-api-wrap` to surfaces[].items.enum. Update description: 'v1.7.0 — added external-api-wrap surface for plans whose goal is wrapping an existing OpenAPI-shaped service; consume via the printing-press-adapter skill (DontPanic claude/skills/).'",
+        "Regenerate plan_model.py via datamodel-codegen.",
+        "Bump agent-conventions VERSION 1.6.0 → 1.7.0; commit + tag v1.7.0.",
+        "Subtree-pull v1.7.0 into DontPanic/claude/shared/ (fallback to direct copy per local clone state memo if subtree pull blocks on missing commit 1db24649).",
+        "Update DontPanic test_plan_surfaces_field.py — bump VERSION pin to 1.7.0; add a test asserting external-api-wrap is in the surfaces enum.",
+        "Validate this very plan (which uses surfaces: [infra, docs]) doesn't break under v1.7.0."
+      ],
+      "acceptance": "(1) agent-conventions VERSION = 1.7.0, tag v1.7.0 exists. (2) surfaces enum includes external-api-wrap; existing 10 entries unchanged. (3) plan_model.py regenerated and round-trips. (4) DontPanic claude/shared/VERSION = 1.7.0. (5) Full orchestrate sweep green; new test asserting external-api-wrap presence passes.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 3,
+      "description": "Dogfood: pick ONE external service (operator-selected; criteria documented below) and walk the full skill-prescribed path end to end. Required artifacts: (a) `~/.dontpanic/adapters.json` operator config registering the adapter; (b) `~/.dontpanic/adapters/<service>.json` storing the adapter's per-service config including PP version pin, OpenAPI source URL, redact policy override (if any), OAuth/API-key field names (token VALUES never committed — example file in evidence/ uses placeholders); (c) PP-emitted binary at `~/.dontpanic/adapters/<service>/<service>-pp-mcp`; (d) thin Python wrapper at `scripts/dontpanic_orchestrate/adapters/<service>_adapter.py` injecting redact + approval middleware per ADAPTER_TEMPLATE.md. Selection criteria: must have public OpenAPI spec, operator must have an authenticated test account, all wrapped endpoints v0 must be READ-ONLY (mutating endpoints deferred to v2 per scope), v1 PP version is pinned at the version current as of plan lock and never changed within v1 of the adapter. One paid PP invocation per one-paid-call-dogfood discipline; second call requires explicit operator approval recorded in decisions.jsonl.",
+      "steps": [
+        "Operator picks the target service. Likely candidates: Linear (issue intake, public OpenAPI, read scopes available), Sentry (incident evidence, public OpenAPI, read scopes), GitHub Projects (cross-team status, public OpenAPI). Decision recorded as D-entry with rationale.",
+        "Operator provisions an authenticated test workspace + read-only token; stores in `~/.dontpanic/adapters/<service>.json` (gitignored).",
+        "Run `/printing-press <service>` exactly ONCE. Capture the emitted binary path + tool surface count. Record as D-entry (budget lock).",
+        "Author `scripts/dontpanic_orchestrate/adapters/<service>_adapter.py` per ADAPTER_TEMPLATE.md.",
+        "Register in `~/.dontpanic/adapters.json` (operator-edited JSON, schema documented in F001's SKILL.md).",
+        "Commit a redacted example at `evidence/adapters-example.json` (token fields replaced with `<paste-your-token>` placeholder).",
+        "Smoke test: invoke one read tool through the wrapper end-to-end. Capture the JSON-RPC trace + the post-redact response. Assert no API tokens leak.",
+        "Document any v1 → v2 friction points discovered as decisions.jsonl entries (these become the v2 plan's motivation)."
+      ],
+      "acceptance": "(1) One service dogfooded end-to-end. (2) PP binary executes; wrapper injects redact correctly. (3) Smoke-test trace in evidence/ shows post-redact response with no leaked tokens. (4) `evidence/adapters-example.json` committed with placeholder tokens. (5) sanitization_check.py passes (no real tokens in committed files). (6) D-entry locks the paid-call budget at exactly 1; if operator approves a second call, the approval is recorded explicitly before the call.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}
