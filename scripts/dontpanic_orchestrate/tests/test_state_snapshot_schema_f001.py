@@ -339,4 +339,4 @@ class TestSchemaRejection:
 class TestAgentConventionsPin:
     def test_subtree_version_bumped(self) -> None:
         version = (HERE.parents[3] / "claude" / "shared" / "VERSION").read_text().strip()
-        assert version == "1.6.0", f"expected 1.6.0, got {version}"
+        assert version == "1.7.0", f"expected 1.7.0, got {version}"

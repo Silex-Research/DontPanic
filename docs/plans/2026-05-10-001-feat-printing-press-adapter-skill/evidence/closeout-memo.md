@@ -1,57 +1,46 @@
-# Plan 2026-05-10-001 F001 — close-out memo (operator-resolved)
-
-## Return Condition
-
+---
 status: operator_resolved
-class: spec-clarification
-v3_candidate: false
+reason_class: environmental_reproduction_failure
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F002
+closed_at: 2026-05-11T21:05:03Z
+latest_audit_status: blocked
+---
 
-## Summary
+# Closeout memo — 2026-05-10-001-feat-printing-press-adapter-skill / F002
 
-Volley 1 dispatched implementer=claude + auditor=codex on F001 (author
-3 skill files under `claude/skills/printing-press-adapter/`).
-Terminated `stopped_no_progress` after 2 rounds: iteration 1 audit
-remained `needs_changes` but the v0 finding taxonomy could not place
-the iteration 1 finding (classifier returned `aggregate: unknown
-blocking: true`).
+## Operator decision
 
-Operator review (per parent plan 2026-05-11-001 F004 close-out path):
-the iteration 1 finding is a spec-ambiguity in F001 step #2, not a
-defect in the implementer's work. Plan 010 F001 step #2 reads
-"document the PP version in the adapter's adapters.json entry" —
-ambiguous between the central registry `~/.dontpanic/adapters.json`
-and the per-service config `~/.dontpanic/adapters/<service>.json`.
-Implementer chose per-service (config-as-data, isolated per
-integration); auditor expected central registry (literal reading).
-Both are defensible engineering. Per the volley-failure-taxonomy
-memo, this is `spec-clarification` — not `feature_defect`, not
-`interpretive_disagreement`.
+This feature was closed under class `environmental_reproduction_failure` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
-## Acceptance verification
+## Latest auditor envelope summary (lifted automatically)
 
-(1) `claude/skills/printing-press-adapter/SKILL.md` exists with
-    frontmatter `applies_to.surfaces: [external-api-wrap]`. ✓
-    Note: `external-api-wrap` is not yet in the agent-conventions
-    `surfaces[]` enum — that ships in plan 010 F002 (v1.7.0 bump).
-    SKILL.md anticipates the enum; F002 lands the schema change.
-(2) `DECISION_TREE.md` exists (103 lines); documents the four
-    anti-cases. ✓
-(3) `ADAPTER_TEMPLATE.md` exists (440 lines) with sanitization
-    logic (SanitizationFailed, _SECRET_PATTERNS, _scan_for_secrets,
-    sanitize_response, redact_and_sanitize). ✓
-    Note: acceptance #3 originally said "compiles as a Python
-    module (ast.parse passes)" but ADAPTER_TEMPLATE.md is markdown
-    not .py. The Python code blocks within it should be ast.parse-
-    checkable separately; not done in this volley. Treating this
-    as F002 work or spec refinement.
-(4) Skill discoverable via skill-applicability matcher — to be
-    verified post-F002 enum bump.
+## Target context
+- Repo: DontPanic
+- Env: dev
+- Project: (none)
+- Command: 5 (see structured target_context.commands_run)
 
-## Recommended next steps
+[F002] Repo: DontPanic
+Env: dev
+Project: (none)
 
-- Clear `breaker:no_progress` gate via
-  `python3 -m dontpanic_orchestrate approve 2026-05-10-001-feat-printing-press-adapter-skill breaker:no_progress`
-- Patch plan 010 F001 step #2 to explicitly say "per-service config
-  at `~/.dontpanic/adapters/<service>.json`" so future iterations
-  don't trip the same ambiguity (covered by parent D-entry).
-- Proceed to plan 010 F002 (agent-conventions v1.7.0 bump).
+Verdict: blocked on independent pytest verification due sandbox temp-dir failure; implementation checks otherwise look correct. No forbidden command shapes found in implementer `target_context.commands_run`; their Repo/Env/Project declaration matches `{DontPanic, dev, (none)}`.
+
+FINDING (advisory, test_coverage): Could not independently rerun pytest-based acceptance checks because Python reports no usable temporary directory in this read-only sandbox. Evidence: all pytest invocations failed before or during setup with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the narrow test and ...
+
+## Rationale (operator — fill in)
+
+<!--
+Explain in 2-4 sentences:
+  - Why the finding does not warrant a re-dispatch.
+  - What spec/doc/convention change (if any) should follow to
+    prevent the same friction next time.
+  - Any follow-up tickets, plan IDs, or D-entries to file.
+-->
+
+## Evidence references
+
+- `audit/signoff-2026-05-10-001-feat-printing-press-adapter-skill.json`
+- `(latest auditor envelope not located)`
+

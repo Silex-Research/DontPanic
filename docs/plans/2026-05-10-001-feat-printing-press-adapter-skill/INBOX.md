@@ -106,3 +106,58 @@ gate: breaker:no_progress
 Operator cleared gate 'breaker:no_progress' via 'approve'.
 
 ===
+---
+timestamp: 2026-05-11T20:21:25Z
+event: volley_start
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-11T20:21:25Z
+event: volley_start
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-11T20:29:21Z
+event: volley_terminal
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+final_status: blocked
+rounds: 1
+feature_id: F002
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json']
+reason: auditor blocked
+
+===
+---
+timestamp: 2026-05-11T21:05:03Z
+event: feature_operator_resolved
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F002
+reason_class: environmental_reproduction_failure
+---
+
+Operator closed feature F002 as operator_resolved (class=environmental_reproduction_failure).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-10-001-feat-printing-press-adapter-skill.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
