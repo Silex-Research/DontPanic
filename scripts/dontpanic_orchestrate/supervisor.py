@@ -2083,11 +2083,23 @@ def dispatch_volley(
                     )
                 except OSError as exc:
                     print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                # Plan 2026-05-11-002 v3 F004 — surface the recommended
+                # close command inline so operators see the next step
+                # without hunting through docs. The classification's
+                # aggregate class is the natural default for the
+                # ``--reason`` flag; operator may override.
+                from dontpanic_orchestrate import closeout
+
+                close_hint = closeout.format_no_progress_close_hint(
+                    plan_id=loaded.plan_id,
+                    feature_id=feature_id,
+                    recommended_class=classification.aggregate.value,
+                )
                 inbox.append_event(
                     loaded.plan_dir,
                     event="no_progress_classification",
                     plan_id=loaded.plan_id,
-                    body=auditor_taxonomy.format_inbox_body(classification),
+                    body=auditor_taxonomy.format_inbox_body(classification) + close_hint,
                     aggregate=classification.aggregate.value,
                     blocking=str(classification.blocking).lower(),
                     feature_id=feature_id,

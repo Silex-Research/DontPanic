@@ -122,3 +122,93 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   unstaged_dirty_state | block | docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl,docs/plans/2026-05-11-002-fix-harness-frictions-v3/INBOX.md,docs/plans/2026-05-11-002-fix-harness-frictions-v3/audit/transcript.md,docs/plans/2026-05-11-002-fix-harness-frictions-v3/decisions.jsonl,docs/plans/2026-05-11-002-fix-harness-frictions-v3/evidence/git-state-0-auditor.json,docs/plans/2026-05-11-002-fix-harness-frictions-v3/evidence/git-state-0-implementer.json,docs/plans/2026-05-11-002-fix-harness-frictions-v3/features.json,scripts/dontpanic_orchestrate/auditor_taxonomy.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl,docs/plans/2026-05-11-002-fix-harness-frictions-v3/INBOX.md,docs/plans/2026-05-11-002-fix-harness-frictions-v3/audit/transcript.md,docs/plans/2026-05-11-002-fix-harness-frictions-v3/decisions.jsonl,docs/plans/2026-05-11-002-fix-harness-frictions-v3/evidence/git-state-0-auditor.json,docs/plans/2026-05-11-002-fix-harness-frictions-v3/evidence/git-state-0-implementer.json,docs/plans/2026-05-11-002-fix-harness-frictions-v3/features.json,scripts/dontpanic_orchestrate/auditor_taxonomy.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
 
 ===
+---
+timestamp: 2026-05-11T18:15:18Z
+event: volley_start
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-11T18:15:18Z
+event: volley_start
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-11T18:25:19Z
+event: error
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-11T18:38:34Z
+event: no_progress_classification
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+aggregate: implementation_defect
+blocking: true
+feature_id: F004
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F004
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: The generated signoff envelope is schema-invalid. Evidence: [closeout.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/closeout.py:…
+  - [implementation_defect] severity=medium, category=correctness: Required F004 wiring remains unstaged. Evidence: `git status --short` shows ` M ../scripts/dontpanic_orchestrate/cli.py` and ` M ../scripts/dontpanic_orchestra…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+===
+---
+timestamp: 2026-05-11T18:38:34Z
+event: breaker_tripped
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+breaker_kind: no_progress
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-11-002-fix-harness-frictions-v3 breaker:no_progress` or `jarvis resume 2026-05-11-002-fix-harness-frictions-v3 --all`.
+
+===
+---
+timestamp: 2026-05-11T18:38:34Z
+event: volley_terminal
+plan_id: 2026-05-11-002-fix-harness-frictions-v3
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F004
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
