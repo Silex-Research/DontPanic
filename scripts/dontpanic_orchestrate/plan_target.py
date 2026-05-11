@@ -9,6 +9,7 @@ EC7 prod gate.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import yaml
 
@@ -87,7 +88,7 @@ def parse_target_section(plan_md_text: str) -> dict[str, str]:
 
 def validate_prod_gates(
     target_env: str,
-    human_gates: list[str] | None,
+    human_gates: list[str] | list[Any] | None,
     required_override: list[str] | None = None,
 ) -> None:
     """EC7 prod gate + Expansion B (requires_gates[] bridge from environments.json).
@@ -97,6 +98,13 @@ def validate_prod_gates(
     tier can declare its own required gates via environments.json). When
     required_override is None, the original behavior holds: only target_env=prod
     is gated, and the required set is the hardcoded PROD_REQUIRED_GATES.
+
+    Cross-repo dogfood (SpinDine v2 dispatch, 2026-05-11) revealed that callers
+    pass ``plan.human_gates`` directly — a ``list[HumanGate]`` per the Pydantic
+    model — even though the type hint says ``list[str]``. ``HumanGate`` is a
+    plain ``Enum`` (not ``StrEnum``), so ``"pre_impl" in {HumanGate.pre_impl}``
+    is always False and every required gate was reported missing. Coerce enum
+    members to their ``.value`` on the way in so both shapes work.
     """
     if required_override is not None:
         required = list(required_override)
@@ -104,7 +112,7 @@ def validate_prod_gates(
         required = list(PROD_REQUIRED_GATES)
     else:
         return
-    gates = set(human_gates or [])
+    gates = {(g.value if hasattr(g, "value") else g) for g in (human_gates or [])}
     missing = [g for g in required if g not in gates]
     if missing:
         source = (
