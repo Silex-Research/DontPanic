@@ -8,9 +8,17 @@
       "at": "2026-05-11T15:08:31Z",
       "actor": "supervisor",
       "reason": "child '2026-05-10-001-feat-printing-press-adapter-skill' dispatched"
+    },
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-11-002-fix-harness-frictions-v3",
+      "at": "2026-05-11T16:26:35Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-11-002-fix-harness-frictions-v3' dispatched"
     }
   ],
   "active_pre_resume_after_children": [
-    "pre_resume_after_child:2026-05-10-001-feat-printing-press-adapter-skill"
+    "pre_resume_after_child:2026-05-10-001-feat-printing-press-adapter-skill",
+    "pre_resume_after_child:2026-05-11-002-fix-harness-frictions-v3"
   ]
 }

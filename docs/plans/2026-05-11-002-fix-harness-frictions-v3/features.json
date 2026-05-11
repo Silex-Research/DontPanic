@@ -15,8 +15,17 @@
         "Bonus: emit a copy-paste config snippet for each missing pair so operator can resolve in one command."
       ],
       "acceptance": "(1) `dontpanic doctor` surfaces a WARN finding per missing (vendor, window) cap-entry pair. (2) Stale calibration (>7d) emits a separate WARN finding. (3) Fixture tests cover known-missing + present-cap cases. (4) Re-running doctor against current operator state surfaces the 3 known-missing pairs from parent plan dispatch (claude.max_20x.rolling_5h, codex.plus.rolling_7d, claude.rolling_7d calibration stale).",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": ["claude_impl", "codex_audit", "operator"],
+      "verified_at": "2026-05-11T16:42:00Z",
+      "evidence_refs": [
+        {"type": "file", "uri": "../../../scripts/dontpanic_doctor.py", "note": "quota_caps_check() added (+179 lines)"},
+        {"type": "file", "uri": "../../../scripts/jarvis_doctor.py", "note": "alias re-export for run_all_checks + check_quota_caps"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py", "note": "9 tests pass; covers missing-pairs + stale-calibration + alias parity"},
+        {"type": "audit_json", "uri": "audit/codex-auditor-F001-i1.json", "note": "iter1 signed_off; live doctor surfaces the 3 expected WARN findings + copy-paste config snippets"},
+        {"type": "log", "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-v3-f001-attempt1.log", "note": "dispatch terminal: paused_on_gate after 2 rounds (iter0 needs_changes → iter1 signed_off)"}
+      ]
     },
     {
       "id": "F002",
