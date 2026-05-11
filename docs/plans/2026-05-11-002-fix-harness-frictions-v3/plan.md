@@ -3,7 +3,7 @@ id: 2026-05-11-002-fix-harness-frictions-v3
 title: Harness frictions v3 — fixes from plan 2026-05-11-001 dogfood
 type: fix
 tier: local
-status: draft
+status: active
 date: "2026-05-11"
 goal_type: infra
 surfaces:
@@ -26,6 +26,30 @@ links:
   features: ./features.json
   decisions: ./decisions.jsonl
   evidence_dir: ./evidence/
+orchestration:
+  parent_plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+  spawn_reason: operator_manual
+  depth_limit: 3
+child_charter:
+  kind: implementation
+  parent_objective: "Fix four harness frictions clustered from parent plan dogfood so subsequent volleys (plan 010 F002, plan 004) run cheaper + cleaner."
+  parent_acceptance_item: "Parent F004 spawned this v3 plan once the cluster threshold tripped; F002 of this v3 plan reduces token cost for all subsequent dispatches."
+  allowed_paths:
+    - "scripts/dontpanic_orchestrate/**"
+    - "scripts/jarvis_doctor.py"
+    - "docs/plans/2026-05-11-002-fix-harness-frictions-v3/**"
+    - "claude/shared/schemas/v1.0/**"
+  forbidden_decisions:
+    - "Do not modify shipped plan-003 artifacts (state-projection contract)."
+    - "Do not change v0 6-class taxonomy classes — only ADD spec_ambiguity (F003)."
+    - "Do not regress any existing test in the 1808-test sweep."
+  return_condition_summary: "All 4 v3 features pass; full orchestrate sweep stays green; doctor surfaces the 3 known quota-cap gaps; subsequent docs-heavy dispatch <1.5M input tokens."
+  may_edit_product_code: true
+commit_policy:
+  mode: child_commit
+  requires:
+    - tests_pass
+    - evidence_packaged
 description: |
   Third round of harness frictions fixes. v1 shipped gate-state
   reconciliation + pre_impl auto-clear + verdict taxonomy. v2 shipped
