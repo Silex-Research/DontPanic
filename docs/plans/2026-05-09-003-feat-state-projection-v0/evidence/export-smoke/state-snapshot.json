@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-05-11T13:41:18.473662Z",
+  "dontpanic_version": null,
+  "redact_level": "operator",
+  "streams": {
+    "plans": [
+      {
+        "plan_id": "2026-05-10-001-feat-smoke",
+        "status": "active",
+        "title": "F007 smoke fixture",
+        "type": "feat",
+        "tier": "local",
+        "goal_type": "infra",
+        "surfaces": [
+          "infra"
+        ],
+        "features_summary": {
+          "total": 1,
+          "passing": 0
+        },
+        "target_env": "dev",
+        "target_project": null,
+        "agents_required": [
+          "claude"
+        ],
+        "date": "2026-05-10"
+      }
+    ],
+    "gates": [
+      {
+        "plan_id": "2026-05-10-001-feat-smoke",
+        "gate_name": "pre_impl",
+        "kind": "pre_impl",
+        "stage": "pre_impl",
+        "reason": "declared gate not cleared",
+        "paused_at": "2026-05-11T13:41:18.115004Z",
+        "approval_required": true,
+        "feature_id": null
+      }
+    ],
+    "inbox": [],
+    "supervisors": [],
+    "quota": [
+      {
+        "vendor": "claude",
+        "window": "weekly",
+        "percent_of_cap": null,
+        "percent_threshold": null,
+        "status": "ok",
+        "captured_at": "2026-05-11T13:41:18.473662Z"
+      },
+      {
+        "vendor": "claude",
+        "window": "daily",
+        "percent_of_cap": null,
+        "percent_threshold": null,
+        "status": "ok",
+        "captured_at": "2026-05-11T13:41:18.473662Z"
+      },
+      {
+        "vendor": "codex",
+        "window": "daily",
+        "percent_of_cap": null,
+        "percent_threshold": null,
+        "status": "ok",
+        "captured_at": "2026-05-11T13:41:18.473662Z"
+      },
+      {
+        "vendor": "codex",
+        "window": "weekly",
+        "percent_of_cap": null,
+        "percent_threshold": null,
+        "status": "ok",
+        "captured_at": "2026-05-11T13:41:18.473662Z"
+      }
+    ],
+    "decisions": [],
+    "evidence_refs": []
+  }
+}

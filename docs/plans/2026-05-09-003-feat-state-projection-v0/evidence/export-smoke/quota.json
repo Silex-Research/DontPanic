@@ -1,0 +1,34 @@
+[
+  {
+    "vendor": "claude",
+    "window": "weekly",
+    "percent_of_cap": null,
+    "percent_threshold": null,
+    "status": "ok",
+    "captured_at": "2026-05-11T13:41:18.473662Z"
+  },
+  {
+    "vendor": "claude",
+    "window": "daily",
+    "percent_of_cap": null,
+    "percent_threshold": null,
+    "status": "ok",
+    "captured_at": "2026-05-11T13:41:18.473662Z"
+  },
+  {
+    "vendor": "codex",
+    "window": "daily",
+    "percent_of_cap": null,
+    "percent_threshold": null,
+    "status": "ok",
+    "captured_at": "2026-05-11T13:41:18.473662Z"
+  },
+  {
+    "vendor": "codex",
+    "window": "weekly",
+    "percent_of_cap": null,
+    "percent_threshold": null,
+    "status": "ok",
+    "captured_at": "2026-05-11T13:41:18.473662Z"
+  }
+]

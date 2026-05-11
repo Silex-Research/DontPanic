@@ -1,0 +1,23 @@
+[
+  {
+    "plan_id": "2026-05-10-001-feat-smoke",
+    "status": "active",
+    "title": "F007 smoke fixture",
+    "type": "feat",
+    "tier": "local",
+    "goal_type": "infra",
+    "surfaces": [
+      "infra"
+    ],
+    "features_summary": {
+      "total": 1,
+      "passing": 0
+    },
+    "target_env": "dev",
+    "target_project": null,
+    "agents_required": [
+      "claude"
+    ],
+    "date": "2026-05-10"
+  }
+]
