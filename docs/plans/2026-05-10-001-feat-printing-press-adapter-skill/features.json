@@ -81,10 +81,56 @@
         "Validate this very plan (which uses surfaces: [infra, docs]) doesn't break under v1.7.0."
       ],
       "acceptance": "(1) agent-conventions VERSION = 1.7.0, tag v1.7.0 exists. (2) surfaces enum includes external-api-wrap; existing 10 entries unchanged. (3) plan_model.py regenerated and round-trips. (4) DontPanic claude/shared/VERSION = 1.7.0. (5) Full orchestrate sweep green; new test asserting external-api-wrap presence passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/VERSION",
+          "note": "1.6.0 -> 1.7.0"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/plan.schema.json",
+          "note": "external-api-wrap added to surfaces enum"
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/models/plan_model.py",
+          "note": "Pydantic regenerated (external_api_wrap = 'external-api-wrap')"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py",
+          "note": "VERSION pin 1.7.0 + new test_external_api_wrap_in_surfaces_enum"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i0.json",
+          "note": "implementer signed_off; 2.96M in / 16.5K out"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "auditor blocked on sandbox env (advisory finding only); 847K in / 13.2K out"
+        },
+        {
+          "type": "log",
+          "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-plan010-f002-attempt1.log",
+          "note": "dispatch terminal: blocked after 1 round (D022 \u2014 see parent ledger)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-11T21:05:03Z"
     },
     {
       "id": "F003",

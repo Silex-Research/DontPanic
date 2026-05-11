@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "audit_id": "2026-05-10-001-feat-printing-press-adapter-skill#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-11T20:26:17Z",
+  "completed_at": "2026-05-11T20:29:21Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-10-001-feat-printing-press-adapter-skill-48khg7c1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 100381 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 847019,
+    "tokens_out": 13196,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: blocked on independent pytest verification due sandbox temp-dir failure; implementation checks otherwise look correct. No forbidden command shapes found in implementer `target_context.commands_run`; their Repo/Env/Project declaration matches `{DontPanic, dev, (none)}`.\n\nFINDING (advisory, test_coverage): Could not independently rerun pytest-based acceptance checks because Python reports no usable temporary directory in this read-only sandbox. Evidence: all pytest invocations failed before or during setup with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the narrow test and full orchestrate sweep in a writable dev environment.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py::TestSurfacesField::test_external_api_wrap_in_surfaces_enum -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from pathlib import Path; from dontpanic_orchestrate import plan_loader; p = Path(\"docs/plans/2026-05-10-001-feat-printing-press-adapter-skill\"); loaded = plan_loader.load(p); print(loaded.plan_id); print(loaded.surfa",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py::TestSurfacesField::test_external_api_wrap_in_surfaces_enum -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from pathlib import Path; from dontpanic_orchestrate import plan_loader; p = Path(\"docs/plans/2026-05-10-001-feat-printing-press-adapter-skill\"); loaded = plan_loader.load(p); print(loaded.plan_id); print(loaded.surfaces)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/agent-conventions/schemas/v1.0/models python3 -c 'from plan_model import Plan; data={\"id\":\"2026-05-10-001-feat-roundtrip\",\"title\":\"Roundtrip external api wrap\",\"type\":\"feat\",\"tier\":\"local\",\"status\":\"active\",\"date\":\"2026-05-10\",\"description\":\"Validate generated model round trip.\",\"surfaces\":[\"external-api-wrap\",\"infra\"]}; m=Plan.model_validate(data); dumped=m.model_dump_json(); m2=Plan.model_validate_json(dumped); print([s.value for s in m2.surfaces])'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Could not independently rerun pytest-based acceptance checks because Python reports no usable temporary directory in this read-only sandbox. Evidence: all pytest invocations failed before or during setup with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the narrow test and full orchestrate sweep in a writable dev environment. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "blocked"
+}

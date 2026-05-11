@@ -7,7 +7,8 @@ Acceptance covered:
       exposes an empty list.
   (c) plan with an invalid surface value (not in the canonical enum) fails
       validation cleanly via Pydantic, NOT via a downstream KeyError.
-  (d) agent-conventions VERSION file is at v1.5.0 — schema bump landed.
+  (d) agent-conventions VERSION file is at v1.7.0 — schema bump landed
+      (additive: external-api-wrap surface for printing-press-adapter skill).
 
 Run: PYTHONPATH=scripts pytest \\
        scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py
@@ -125,7 +126,7 @@ class TestSurfacesField:
         with pytest.raises(ValidationError):
             plan_loader.load(plan_dir)
 
-    def test_agent_conventions_version_is_v1_6_0(self):
+    def test_agent_conventions_version_is_v1_7_0(self):
         version_file = (
             plan_loader.SCHEMAS_DIR.parent.parent / "VERSION"
         )
@@ -134,8 +135,37 @@ class TestSurfacesField:
             "schemas dir should sit one level under <root>/schemas/v1.0/"
         )
         version_text = version_file.read_text().strip()
-        assert version_text == "1.6.0", (
+        assert version_text == "1.7.0", (
             f"agent-conventions VERSION is {version_text!r}; "
-            "expected '1.6.0' per plan 2026-05-09-003 F001 "
-            "(state-snapshot schema added)"
+            "expected '1.7.0' per plan 2026-05-10-001 F002 "
+            "(external-api-wrap surface added)"
         )
+
+    def test_external_api_wrap_in_surfaces_enum(self):
+        schema_path = plan_loader.SCHEMAS_DIR / "plan.schema.json"
+        schema = json.loads(schema_path.read_text())
+        surfaces_enum = schema["properties"]["surfaces"]["items"]["enum"]
+        assert "external-api-wrap" in surfaces_enum, (
+            f"surfaces enum missing 'external-api-wrap'; got {surfaces_enum!r}. "
+            "Required by plan 2026-05-10-001 F002 (printing-press-adapter skill)."
+        )
+        # The other 10 canonical surfaces stay unchanged (additive bump).
+        expected_base = {
+            "web", "ios", "android", "backend", "infra",
+            "security", "data", "ux", "ml", "docs",
+        }
+        assert expected_base.issubset(set(surfaces_enum)), (
+            f"surfaces enum lost one of the base 10 entries; got {surfaces_enum!r}"
+        )
+
+    def test_plan_with_external_api_wrap_surface_validates(
+        self, tmp_path: Path
+    ):
+        surfaces_block = "surfaces:\n  - external-api-wrap\n  - backend\n"
+        plan_dir = _make_plan_dir(
+            tmp_path,
+            "2026-05-10-103-infra-surfaces-extapi",
+            surfaces_block=surfaces_block,
+        )
+        loaded = plan_loader.load(plan_dir)
+        assert loaded.surfaces == ["external-api-wrap", "backend"]
