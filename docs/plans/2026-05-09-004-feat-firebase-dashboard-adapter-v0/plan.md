@@ -3,7 +3,7 @@ id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
 title: Firebase dashboard adapter v0 — realtime/team adapter for the bundled static dashboard
 type: feat
 tier: local
-status: draft
+status: active
 date: "2026-05-09"
 goal_type: infra
 surfaces:
@@ -39,9 +39,8 @@ child_charter:
   parent_objective: "Ship Firebase realtime adapter on top of state-projection v0 so multiple operators can collaborate on a kanban dashboard with shared approval queue."
   parent_acceptance_item: "Parent F003: Plan 004 F001 and F002 closed via dispatch_volley with audit-envelope evidence; F003-F005 deferred until operator credentials in place."
   allowed_paths:
-    - "axiom/packages/dashboard/**"
-    - "axiom/packages/sync/**"
-    - "axiom/packages/functions/**"
+    - "dashboard/**"
+    - "scripts/firebase_adapter/**"
     - "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/**"
   forbidden_decisions:
     - "Do not modify scripts/dontpanic_orchestrate/** — adapter only, never DontPanic core."
@@ -137,22 +136,40 @@ Out of scope (explicit deferrals):
 
 ```yaml
 target_env: dev
-target_project: <firebase-project-id>
+target_project: none
 ```
+
+> **Rescope note (D007, 2026-05-11):** target_project lowered from `<firebase-project-id>`
+> to `none` for the F001+F002 scope. Per parent_acceptance_item, F003-F005 are
+> credential-deferred — without real Firebase access, F001+F002 cannot meaningfully
+> target `<firebase-project-id>`. They build the static-layered config + sync daemon
+> against local fixtures / Firebase emulator. F003+ will reactivate
+> `target_project: <firebase-project-id>` once the operator has SA key + seed state ready.
 
 ## Acceptance Summary
 
-- Dashboard at `axiom/packages/dashboard/` reads from `<firebase-project-id>`
-  Firestore (verified by inspecting `firebaseConfig` in `app.js`).
-- Sync daemon polls `dontpanic state snapshot --json --redact-level
-  operator` and mirrors all six streams into Firestore. Latency target:
-  ≤30s from local change to dashboard render.
-- Cloud Functions for kanban move + gate approve + dispatch trigger
-  exist and call DontPanic MCP (verified by smoke test).
-- Firestore rules deny direct state-changing writes from the client.
-- Smoke test: synthetic plan goes through volley_start → gate_paused →
-  approve via dashboard drag → resume → signoff. Every transition
-  visible in the kanban board within 30s.
-- No new code in the DontPanic repo. Adapter code lives in
-  `axiom/packages/dashboard/`, `axiom/packages/sync/`, or
-  equivalent — NOT in `scripts/dontpanic_orchestrate/`.
+F001+F002 (this session, no live credentials):
+
+- Dashboard at `dashboard/` (per plan 2026-05-09-003 F007) gains an
+  opt-in Firebase realtime layer — static fallback unchanged when no
+  Firebase config is present.
+- `firebaseConfig` block is plumbed but its values are placeholders /
+  example template; real `<firebase-project-id>` config lands when credentials
+  reactivate per F003+.
+- Sync daemon scaffold lives at `scripts/firebase_adapter/` (outside
+  `scripts/dontpanic_orchestrate/` per D001 adapter boundary). Diff
+  logic + idempotency verified against local-mock or Firebase emulator
+  rather than real Firestore.
+- Firestore paths use single-tenant `projects/{project_id}/...` shape.
+- No new code in `scripts/dontpanic_orchestrate/` — adapter only.
+
+F003-F005 (deferred, per parent_acceptance_item):
+
+- Cloud Functions for kanban move / gate approve / dispatch — need
+  real Firebase deploy.
+- Firestore rules — need real project deploy.
+- End-to-end smoke test against `<firebase-project-id>` with synthetic plan
+  drag-through.
+
+The deferred items reactivate when the operator has SA key + seed state
+ready for `<firebase-project-id>`. See D007 for the rescope rationale.
