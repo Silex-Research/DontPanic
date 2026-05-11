@@ -77,3 +77,11 @@ the user approves `confirm=true`.
   names, paths, or environment variable names.
 - Do not treat a single model's success message as signoff. Let DontPanic write
   audit, evidence, and gate artifacts.
+
+## Adapter contract
+
+If you're building anything that consumes DontPanic state — dashboards,
+brokers, CI runners, hosted agents, multi-operator sync — read the
+[State Projection adapter governance contract](./STATE_PROJECTION.md).
+Four invariants every adapter must follow: stable-ID discipline,
+schema-version pinning, redaction respect, no-write-back.

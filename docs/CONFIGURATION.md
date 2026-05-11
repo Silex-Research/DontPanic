@@ -444,3 +444,11 @@ resolvable, agent-conventions schemas present, secrets dir mode 0700.
 Everything that ships out-of-the-box has a sensible default and can be
 overridden without editing code. If you find yourself editing supervisor
 internals to change a knob, that's a bug — open an issue.
+
+## Adapter contract
+
+If you're building anything that consumes DontPanic state — dashboards,
+brokers, CI runners, hosted agents, multi-operator sync — read the
+[State Projection adapter governance contract](./STATE_PROJECTION.md).
+Four invariants every adapter must follow: stable-ID discipline,
+schema-version pinning, redaction respect, no-write-back.

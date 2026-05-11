@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 9 items
+
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestGovernanceDoc::test_doc_exists PASSED [ 11%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestGovernanceDoc::test_four_invariants_named PASSED [ 22%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestGovernanceDoc::test_three_consumer_surfaces_named PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestGovernanceDoc::test_three_redact_levels_documented PASSED [ 44%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestGovernanceDoc::test_worked_example_present PASSED [ 55%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestCrossLinks::test_use_cases_links_governance_doc PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestCrossLinks::test_ecosystem_links_governance_doc PASSED [ 77%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestCrossLinks::test_agent_quickstart_links_governance_doc PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py::TestCrossLinks::test_configuration_links_governance_doc PASSED [100%]
+
+============================== 9 passed in 0.04s ===============================

@@ -143,7 +143,13 @@
         "Reference the contract from the agent-conventions schema $description so MCP-aware tooling surfaces it."
       ],
       "acceptance": "(1) `docs/STATE_PROJECTION.md` exists with the four invariants. (2) Cross-links present in the four named docs. (3) Worked example documents the adapter pattern.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-11T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F006-doc-tests.log", "note": "9 pin tests: doc exists with 4 invariants + 3 consumer surfaces + 3 redact levels + worked example + 4 cross-link assertions"},
+        {"type": "file", "uri": "../../../docs/STATE_PROJECTION.md", "note": "Adapter governance contract — 4 invariants + worked example + cross-refs"}
+      ],
       "depends_on": [
         "F001",
         "F004",
