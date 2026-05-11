@@ -1,0 +1,88 @@
+{
+  "task_id": "2026-05-11-001-infra-state-projection-adapters-meta",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Wire up the nested-orchestration relationship: add `orchestration:` + `child_charter:` + `commit_policy:` frontmatter blocks to plan 2026-05-10-001/plan.md (already locked active) and plan 2026-05-09-004/plan.md (still draft) pointing at this parent. Plan 004 also changes goal_type:new_feature \u2192 infra (adapter wiring, not user-facing feature) so we can lock without authoring an objective_contract \u2014 D001 records the rationale. Both children's orchestration blocks declare spawn_reason:operator_manual + depth_limit:3 + allowed_paths globs scoped to the work each child owns. Validate via plan_loader.load() that both children parse cleanly with the new blocks.",
+      "steps": [
+        "Read plan 2026-05-02-003 v1 mechanics + nested_orchestration.py Pydantic models to confirm block shapes.",
+        "Edit plan 2026-05-10-001/plan.md: add orchestration block (parent_plan_id=2026-05-11-001-infra-..., spawn_reason=operator_manual), child_charter (kind=implementation, allowed_paths covering claude/skills/printing-press-adapter/** + claude/shared/schemas/v1.0/plan.schema.json + agent-conventions paths), commit_policy (mode=child_commit, requires=[tests_pass, evidence_packaged]).",
+        "Edit plan 2026-05-09-004/plan.md: flip goal_type new_feature \u2192 infra; add orchestration + child_charter + commit_policy blocks scoped to axiom/packages/dashboard/** + axiom/packages/sync/** + axiom/packages/functions/**. may_edit_product_code:true.",
+        "Run plan_loader.load() on both children + the parent \u2014 all three must validate clean.",
+        "Append D001 (goal_type flip rationale) + D002 (orchestration wiring) to this plan's decisions.jsonl.",
+        "Commit the orchestration wiring as a single change. No dispatch yet."
+      ],
+      "acceptance": "(1) Both children load via plan_loader.load() with the new blocks parsed correctly. (2) Plan 004 goal_type:infra; plan 010 goal_type:infra (already). (3) Parent + both children round-trip through agent-conventions v1.0 validation. (4) D001 + D002 record the scope decisions.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-11T00:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "meta-plan + child-orchestration-blocks (this commit)",
+          "note": "plan 010 + plan 004 child_charter + commit_policy + orchestration blocks wired; plan 004 goal_type new_feature -> infra. All three plans validate clean via plan_loader.load()."
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Dispatch plan 2026-05-10-001 F001 (PP skill files) and plan 2026-05-10-001 F002 (agent-conventions v1.7.0 bump) via `python -m dontpanic_orchestrate dispatch-from-plan 2026-05-10-001-feat-printing-press-adapter-skill --feature F001 --confirm`. Implementer = claude; auditor = codex. Operator (you) approves pre_impl + pre_merge gates per feature. Each volley_terminal classified per the v0 taxonomy. Findings appended to BOTH this plan's decisions.jsonl AND 2026-04-19-001/decisions.jsonl. F003 of plan 010 (live dogfood against external service) NOT dispatched here \u2014 operator picks target service + provisions OAuth as a separate workflow.",
+      "steps": [
+        "Dispatch plan 010 F001 via the legacy dispatch entry: `python -m dontpanic_orchestrate 2026-05-10-001-feat-printing-press-adapter-skill --feature F001 --volley --implementer claude --auditor codex`. Operator approves pre_impl when supervisor pauses.",
+        "Observe INBOX events + audit envelopes + signoff.json as the volley runs. Classify any non-success terminal per the failure-mode taxonomy.",
+        "Once F001 lands green, dispatch plan 010 F002 the same way.",
+        "If a volley terminates non-success: capture finding in decisions.jsonl (here) AND 2026-04-19-001 ledger AS THE SAME OPERATOR SESSION it surfaces; do not let findings batch up across days.",
+        "When plan 010 has F001 + F002 closed via real volley (passes:true with audit-envelope evidence), this feature is done."
+      ],
+      "acceptance": "(1) Plan 010 F001 and F002 closed via supervisor.dispatch_volley (not hand-coded). (2) Audit envelopes exist in plan 010 evidence/ as proof. (3) Findings cross-posted in same session they surface. (4) Pre-impl + pre-merge gates honored on each feature.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Dispatch plan 2026-05-09-004 F001 (dashboard config switch + realtime overlay) and F002 (sync daemon) via dispatch_volley. F003\u2013F005 of plan 004 NOT dispatched \u2014 they need Firebase deploy + Tailscale Funnel which require operator credential provisioning. After F001 + F002 land, plan 004 status stays active and the remaining features remain as a known-deferred set. NOTE: plan 004's implementation lives in axiom/ repo, not DontPanic \u2014 supervisor needs to run with the axiom checkout cwd, not the DontPanic cwd. Per F023 EC11 cwd discipline rules.",
+      "steps": [
+        "Verify axiom/ working directory is reachable + is a registered project in ~/.dontpanic/projects.json (operator action if not yet registered).",
+        "Dispatch plan 004 F001 \u2014 operator approves pre_impl + pre_merge gates. Implementer = claude (familiar with axiom layout); auditor = codex.",
+        "Observe volley; classify any non-success per taxonomy.",
+        "Dispatch plan 004 F002 same way once F001 closes green.",
+        "Append findings as they surface. Don't dispatch F003+ in this plan."
+      ],
+      "acceptance": "(1) Plan 004 F001 + F002 closed via dispatch_volley with audit-envelope evidence. (2) Plan 004 F003 / F004 / F005 explicitly deferred via D-entry citing deploy-credential dependency. (3) Findings cross-posted same-session.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "Findings consolidation + v3 frictions plan trigger. After F002 + F003 conclude, count clustered findings in this plan's decisions.jsonl. If \u22653 clustered (same failure-mode class), draft `2026-05-1X-XXX-fix-harness-frictions-v3` plan in docs/plans/ as a sibling to v1 + v2 \u2014 status:draft acceptable. Document the cluster, propose features. If <3 findings cluster, this feature passes with a D-entry recording 'threshold not tripped; no v3 needed yet' \u2014 that's also a legitimate outcome.",
+      "steps": [
+        "Read all decisions.jsonl entries this plan + cross-posted entries in 2026-04-19-001 since this plan's start.",
+        "Cluster by failure-mode class (6 classes per feedback_volley_failure_taxonomy memory).",
+        "If any class has \u22653 entries: draft v3 frictions plan with proposed fixes. Status:draft.",
+        "If no class has \u22653: append D-entry 'cluster threshold not tripped'; this plan's self-improvement loop yielded no v3 work."
+      ],
+      "acceptance": "(1) Cluster analysis appended to decisions.jsonl. (2) Either v3 plan drafted OR explicit 'threshold not tripped' D-entry. (3) Findings remain queryable via state_snapshot.streams.decisions for future analysis.",
+      "passes": false,
+      "depends_on": [
+        "F002",
+        "F003"
+      ]
+    }
+  ]
+}

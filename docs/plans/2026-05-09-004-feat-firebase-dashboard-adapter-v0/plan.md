@@ -5,7 +5,7 @@ type: feat
 tier: local
 status: draft
 date: "2026-05-09"
-goal_type: new_feature
+goal_type: infra
 surfaces:
   - infra
   - web
@@ -30,6 +30,30 @@ links:
   features: ./features.json
   decisions: ./decisions.jsonl
   evidence_dir: ./evidence/
+orchestration:
+  parent_plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+  spawn_reason: operator_manual
+  depth_limit: 3
+child_charter:
+  kind: implementation
+  parent_objective: "Ship Firebase realtime adapter on top of state-projection v0 so multiple operators can collaborate on a kanban dashboard with shared approval queue."
+  parent_acceptance_item: "Parent F003: Plan 004 F001 and F002 closed via dispatch_volley with audit-envelope evidence; F003-F005 deferred until operator credentials in place."
+  allowed_paths:
+    - "axiom/packages/dashboard/**"
+    - "axiom/packages/sync/**"
+    - "axiom/packages/functions/**"
+    - "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/**"
+  forbidden_decisions:
+    - "Do not modify scripts/dontpanic_orchestrate/** — adapter only, never DontPanic core."
+    - "Do not run firebase deploy or attempt to provision Cloud Functions / Firestore rules — F003+ are operator-deferred."
+    - "Do not bypass MCP for state mutations — never write state-changing data directly to Firestore from the client."
+  return_condition_summary: "Plan 004 F001 + F002 closed with passes:true; F003 + F004 + F005 explicitly deferred via D-entry citing deploy-credential dependency."
+  may_edit_product_code: true
+commit_policy:
+  mode: child_commit
+  requires:
+    - tests_pass
+    - evidence_packaged
 description: |
   Firebase/Firestore-side adapter that consumes the DontPanic state
   projection (plan 2026-05-09-003) and adds realtime + multi-operator

@@ -3,7 +3,7 @@ id: 2026-05-10-001-feat-printing-press-adapter-skill
 title: Printing Press adapter skill — DontPanic prescribes PP for external-API wrapping
 type: feat
 tier: local
-status: draft
+status: active
 date: "2026-05-10"
 goal_type: infra
 surfaces:
@@ -29,6 +29,31 @@ links:
   features: ./features.json
   decisions: ./decisions.jsonl
   evidence_dir: ./evidence/
+orchestration:
+  parent_plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+  spawn_reason: operator_manual
+  depth_limit: 3
+child_charter:
+  kind: implementation
+  parent_objective: "Ship printing-press-adapter skill so DontPanic prescribes PP when plans wrap external APIs; expand agent-conventions surfaces[] enum to v1.7.0."
+  parent_acceptance_item: "Parent F002: Plan 010 F001 and F002 closed via dispatch_volley with audit-envelope evidence."
+  allowed_paths:
+    - "claude/skills/printing-press-adapter/**"
+    - "claude/shared/schemas/v1.0/plan.schema.json"
+    - "claude/shared/schemas/v1.0/models/**"
+    - "claude/shared/VERSION"
+    - "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/**"
+    - "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py"
+  forbidden_decisions:
+    - "Do not modify plan 003 artifacts or the state-projection contract."
+    - "Do not run live Printing Press invocation (F003 dogfood is operator-deferred per D004)."
+  return_condition_summary: "F001 + F002 of plan 010 closed with passes:true; agent-conventions v1.7.0 published with external-api-wrap surface enum."
+  may_edit_product_code: true
+commit_policy:
+  mode: child_commit
+  requires:
+    - tests_pass
+    - evidence_packaged
 description: |
   Ship `printing-press-adapter` as a DontPanic platform skill so any
   plan whose surface is "wrap an existing API with MCP + CLI"
