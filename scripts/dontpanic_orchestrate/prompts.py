@@ -52,6 +52,22 @@ REQUIRED_FLAG_PATTERNS = [
 # finding-aggregation time, so vendors slow to internalize the rule still
 # produce correct severity. Update this constant when the narrow-downgrade
 # semantics change; ec5_classifier.classify_ec5_severity must agree.
+TEST_DISCIPLINE_NOTE = """
+## Test discipline (v3 F002 cost control)
+
+Prefer targeted tests over full sweeps. Each subsequent agent turn re-reads
+prior tool-call results from cache, so a 1800-line `pytest -q` output bloats
+every later turn's input. Default cadence:
+  - Iteration runs: run the targeted test file you added/changed (`pytest path/to/test_x.py -q`).
+  - Before claiming completion: one full sweep if and only if acceptance
+    explicitly requires it (e.g. "full orchestrate sweep stays green"). One
+    sweep at the END suffices — do not re-run.
+  - Never run `pytest -v` unless you need the per-test trace to debug a
+    specific failure.
+
+"""
+
+
 EC5_AUDITOR_RULE = """
 EC5 severity rule (target-context prelude — narrow downgrade, F003 / D005):
 
@@ -143,6 +159,7 @@ Steps:
         return (
             base
             + target_section
+            + TEST_DISCIPLINE_NOTE
             + (
                 "\nImplement the feature. Run any verification commands specified in steps.\n"
                 "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
@@ -154,6 +171,7 @@ Steps:
     return (
         base
         + target_section
+        + TEST_DISCIPLINE_NOTE
         + (
             f"\nPrior round's auditor produced findings (full JSON at {prior_auditor_path}):\n"
             f"{findings_block}\n"
@@ -239,6 +257,7 @@ __all__ = [
     "EC5_AUDITOR_RULE",
     "FORBIDDEN_COMMAND_PATTERNS",
     "REQUIRED_FLAG_PATTERNS",
+    "TEST_DISCIPLINE_NOTE",
     "auditor_prompt",
     "implementer_prompt",
 ]

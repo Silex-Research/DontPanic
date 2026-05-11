@@ -4,6 +4,14 @@ F005b: role-aware permission policy. When task.permission_policy is set,
 the executor prepends non-interactive permission flags so subprocess
 dispatch doesn't deadlock on permission prompts. None preserves legacy
 behavior (no flags) for synthetic-disagreement mocks and pre-F005b tests.
+
+v3 F002 (D007 follow-up): the dispatch passes
+`--exclude-dynamic-system-prompt-sections` so per-machine surfaces
+(cwd, env info, memory paths, git status) move from the cached system
+prompt into the first user message. This improves cross-dispatch prompt-
+cache reuse (less cache_creation_input_tokens; more cache_read hits at
+the discounted rate). Safe for OAuth + API-key auth; no behavioral
+change beyond cache amortization.
 """
 
 from __future__ import annotations
@@ -58,7 +66,13 @@ class ClaudeCLIExecutor(BaseExecutor):
         prompt = self._build_prompt(task)
         started = dt.datetime.now(dt.timezone.utc)
 
-        argv = [self.binary, "-p", "--output-format", "json"]
+        argv = [
+            self.binary,
+            "-p",
+            "--output-format",
+            "json",
+            "--exclude-dynamic-system-prompt-sections",
+        ]
         argv.extend(_permission_flags(task.permission_policy))
         # F005b — final pre-dispatch assertion that no bypass flag slipped in.
         check_forbidden_flags(argv)
