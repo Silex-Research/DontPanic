@@ -249,6 +249,31 @@ class ReadEvidenceInput(_StrictModel):
     file: str
 
 
+class StateSnapshotInput(_StrictModel):
+    """Plan 2026-05-09-003 F005 — state_snapshot MCP tool input.
+
+    All fields optional. `redact_level` is capped at `operator` server-side
+    regardless of caller request (full is local-CLI-only per F003).
+    """
+
+    plan: str | None = None
+    include: list[str] | None = None
+    redact_level: str = "operator"
+    select: str | None = None
+    compact: bool = False
+
+
+class StateStreamInput(_StrictModel):
+    """Plan 2026-05-09-003 F005 — state_stream MCP tool input.
+
+    Long-poll cursor on the inbox stream. v0 returns the polled-delta
+    (events with captured_at > since); no SSE / WebSocket protocol.
+    """
+
+    since: str | None = None
+    plan: str | None = None
+
+
 # ──────────────────────────────  tool handlers  ──────────────────────────────
 
 
@@ -504,7 +529,167 @@ def _build_tools() -> dict[str, ToolDef]:
                 input_model=ReadEvidenceInput,
                 handler=tool_read_evidence,
             ),
+            ToolDef(
+                name="state_snapshot",
+                description=(
+                    "Read-only. Return a state-snapshot envelope (F001 schema) "
+                    "aggregated across every registered project. redact_level "
+                    "is capped at `operator` server-side; `full` is silently "
+                    "downgraded (per F003 — full is local-CLI-only). Supports "
+                    "the same `select` / `include` / `plan` filters as the "
+                    "`dontpanic state snapshot` CLI."
+                ),
+                input_model=StateSnapshotInput,
+                handler=tool_state_snapshot,
+            ),
+            ToolDef(
+                name="state_stream",
+                description=(
+                    "Read-only. Long-poll cursor on the inbox stream. "
+                    "Returns events with captured_at > `since`. v0 is a "
+                    "polled-delta — no SSE/WebSocket. Adapters re-poll with "
+                    "the response's `captured_at` as the next cursor."
+                ),
+                input_model=StateStreamInput,
+                handler=tool_state_stream,
+            ),
         )
+    }
+
+
+def tool_state_snapshot(args: dict[str, Any]) -> dict[str, Any]:
+    """Plan 2026-05-09-003 F005 — read-only state projection.
+
+    Aggregates state from every registered project's plans_dir. Caps
+    `redact_level` at `operator`: `full` is a local-CLI-only escape
+    hatch and is silently downgraded to `operator` when requested
+    over MCP (this is the F003 acceptance #4 invariant).
+    """
+    from dontpanic_orchestrate import state_projection
+    from dontpanic_orchestrate.state_cli import _apply_select
+
+    inp = StateSnapshotInput.model_validate(args)
+
+    # F003 acceptance #4: MCP cap. Public stays public; everything else
+    # collapses to operator regardless of what the caller requested.
+    capped_level = "public" if inp.redact_level == "public" else "operator"
+
+    roots = _registered_plan_roots()
+    if not roots:
+        raise MCPError(
+            ERR_INVALID_PARAMS,
+            "no registered projects; run `dontpanic projects add` first",
+            {"reason": "no_registered_projects"},
+        )
+
+    include = state_projection.ALL_STREAMS
+    if inp.include is not None:
+        include = tuple(inp.include)
+
+    # Aggregate across every registered project.
+    merged_streams: dict[str, list[Any]] = {s: [] for s in state_projection.ALL_STREAMS}
+    captured_at = None
+    for root, _name in roots:
+        snap = state_projection.gather(
+            root,
+            redact_level=capped_level,
+            include=include,
+            plan_id=inp.plan,
+        )
+        if captured_at is None:
+            captured_at = snap.captured_at
+        for stream in state_projection.ALL_STREAMS:
+            merged_streams[stream].extend(getattr(snap.streams, stream))
+
+    # Build the merged envelope by hand-rolling a dict; the per-project
+    # snapshots were already Pydantic-validated so the merge cannot fail
+    # the F001 schema.
+    from state_snapshot_model import (
+        StateSnapshot as _Snap,
+        Streams as _Streams,
+        RedactLevel as _RL,
+    )
+    snap = _Snap(
+        schema_version="1.0",
+        captured_at=captured_at,
+        redact_level=_RL(capped_level),
+        streams=_Streams(**merged_streams),
+    )
+    envelope = snap.model_dump(mode="json")
+
+    if inp.select:
+        try:
+            result = _apply_select(envelope, inp.select)
+        except ValueError as exc:
+            raise MCPError(
+                ERR_INVALID_PARAMS,
+                f"invalid --select: {exc}",
+                {"reason": "select_rejected"},
+            ) from exc
+        # Wrap the select result so caller can still inspect schema_version
+        # + captured_at + redact_level metadata.
+        return {
+            "schema_version": envelope["schema_version"],
+            "captured_at": envelope["captured_at"],
+            "redact_level": envelope["redact_level"],
+            "select_expr": inp.select,
+            "select_result": result,
+        }
+    return envelope
+
+
+def tool_state_stream(args: dict[str, Any]) -> dict[str, Any]:
+    """Plan 2026-05-09-003 F005 — polled inbox delta.
+
+    Returns inbox events with captured_at > `since` cursor. No real
+    streaming protocol; adapters poll. Capped at the projection's
+    INBOX_DEFAULT_LIMIT.
+    """
+    import datetime as _dt
+    from dontpanic_orchestrate import state_projection
+
+    inp = StateStreamInput.model_validate(args)
+
+    roots = _registered_plan_roots()
+    if not roots:
+        raise MCPError(
+            ERR_INVALID_PARAMS,
+            "no registered projects; run `dontpanic projects add` first",
+            {"reason": "no_registered_projects"},
+        )
+
+    since_dt: _dt.datetime | None = None
+    if inp.since:
+        try:
+            s = inp.since
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            since_dt = _dt.datetime.fromisoformat(s)
+        except (ValueError, TypeError) as exc:
+            raise MCPError(
+                ERR_INVALID_PARAMS,
+                f"invalid since cursor {inp.since!r}: {exc}",
+                {"reason": "invalid_cursor"},
+            ) from exc
+
+    captured_at = _dt.datetime.now(_dt.timezone.utc)
+    events: list[dict[str, Any]] = []
+    for root, _name in roots:
+        snap = state_projection.gather(
+            root,
+            redact_level="operator",
+            include=("inbox",),
+            plan_id=inp.plan,
+        )
+        for e in snap.streams.inbox:
+            if since_dt is not None and e.captured_at <= since_dt:
+                continue
+            events.append(e.model_dump(mode="json"))
+
+    return {
+        "since": inp.since,
+        "captured_at": captured_at.isoformat(),
+        "events": events,
     }
 
 

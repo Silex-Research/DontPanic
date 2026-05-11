@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 13 items
+
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_tool_registered PASSED [  7%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_returns_valid_envelope PASSED [ 15%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_caps_redact_level_at_operator PASSED [ 23%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_accepts_public_redact_level PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_select_param PASSED [ 38%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_include_filter PASSED [ 46%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateSnapshotTool::test_plan_filter PASSED [ 53%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateStreamTool::test_tool_registered PASSED [ 61%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateStreamTool::test_returns_events_envelope PASSED [ 69%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestStateStreamTool::test_since_cursor_filters_old_events PASSED [ 76%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestApprovalMetadata::test_dispatch_tool_describes_confirm_requirement PASSED [ 84%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestApprovalMetadata::test_approve_gate_tool_describes_confirm_requirement PASSED [ 92%]
+scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py::TestToolSurface::test_state_tools_present PASSED [100%]
+
+============================== 13 passed in 0.19s ==============================

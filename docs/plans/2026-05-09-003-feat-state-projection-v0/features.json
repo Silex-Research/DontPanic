@@ -117,7 +117,14 @@
         "Tests cover each new tool against a fixture state, including `select` parity test: same jsonpath filter via CLI `--select` and MCP `select` param yields bytewise-equal JSON output."
       ],
       "acceptance": "(1) `state_snapshot` MCP tool returns the same envelope as F004 CLI (bytewise equivalent for matching args, including `select` + `compact`). (2) `state_stream` returns inbox-event delta correctly given `since` cursor. (3) Mutation tools carry approval metadata. (4) `state_snapshot` cannot return `redact_level=full` regardless of caller request. (5) Transport stays stdio-only; no HTTP listener exposed. (6) MCP tool fixture tests pass.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-11T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F005-mcp-tests.log", "note": "13 tests pass: state_snapshot × 7, state_stream × 3, approval metadata × 2, surface count × 1"},
+        {"type": "test_output", "uri": "evidence/F005-full-sweep.log", "note": "Full sweep 1788 passed, 7 skipped, zero regressions"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/mcp_server.py", "note": "state_snapshot + state_stream tools; tool surface grew 6→8; D002 amended"}
+      ],
       "depends_on": [
         "F002",
         "F003",
