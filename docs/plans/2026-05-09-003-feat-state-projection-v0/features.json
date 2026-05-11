@@ -91,7 +91,14 @@
         "Tests: argv parsing, every flag combination, `--compact` byte-stability, `--select` happy/sad paths (valid path → subset; invalid path → exit 2 with structured error)."
       ],
       "acceptance": "(1) `dontpanic state snapshot --json` returns a valid F001-schema envelope. (2) Every documented flag works as specified, including `--compact` and `--select`. (3) Output is stable-ordered (deterministic across runs given same input). (4) `--select` is read-only — no jsonpath verb mutates the envelope; injection attempts exit non-zero with a structured error.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-10T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F004-cli-tests.log", "note": "14 tests pass: happy paths × 6, --select × 3, invalid argv × 4, YAML output × 1"},
+        {"type": "test_output", "uri": "evidence/F004-full-sweep.log", "note": "Full sweep 1775 passed, 7 skipped, zero regressions"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/state_cli.py", "note": "state subcommand parser + snapshot action + minimal jsonpath subset for --select"}
+      ],
       "depends_on": [
         "F002",
         "F003"
