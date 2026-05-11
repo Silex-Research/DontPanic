@@ -66,7 +66,14 @@
         "Re-import `SECRET_REGEXES` from `sanitization_check.py` for the assertion (single source of truth)."
       ],
       "acceptance": "(1) Three redaction levels implemented and tested. (2) Sanitization fixture test passes \u2014 synthetic secrets in raw state are absent from `public` and `operator` output, present in `full`. (3) Redaction docstring documents per-stream policy table. (4) `full` level refuses to render when called from MCP (forced operator-or-public via tool annotation).",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-10T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F003-redaction-tests.log", "note": "39 tests pass: SECRET_REGEXES parametrized across 9 patterns \u00d7 3 levels + per-stream stripping + integration + invariants"},
+        {"type": "test_output", "uri": "evidence/F003-full-sweep.log", "note": "Full sweep 1761 passed, 7 skipped, zero regressions"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/state_projection.py", "note": "redact_to_level(snapshot, level) + per-stream redactors + _scrub_secrets using SECRET_REGEXES as single source of truth"}
+      ],
       "depends_on": [
         "F002"
       ]

@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- $HOME/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: $HOME/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 39 items
+
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[AKIAIOSFODNN7EXAMPLE] PASSED [  2%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA] PASSED [  5%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[ghs_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB] PASSED [  7%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[sk-ant-api03-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCAA] PASSED [ 10%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[sk-AAAAAAAAAAAAAAAAAAAAAT3BlbkFJBBBBBBBBBBBBBBBBBBBBB] PASSED [ 12%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[xoxb-abcdefghij1234567890] PASSED [ 15%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[-----BEGIN RSA PRIVATE KEY-----] PASSED [ 17%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[eyJAAAAAAAAAAA.BBBBBBBBBBB.CCCCCCCCCCC] PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestFullLevel::test_full_keeps_secrets[https://discord.com/api/webhooks/111111111111111111/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 23%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[AKIAIOSFODNN7EXAMPLE] PASSED [ 25%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA] PASSED [ 28%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[ghs_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB] PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[sk-ant-api03-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCAA] PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[sk-AAAAAAAAAAAAAAAAAAAAAT3BlbkFJBBBBBBBBBBBBBBBBBBBBB] PASSED [ 35%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[xoxb-abcdefghij1234567890] PASSED [ 38%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[-----BEGIN RSA PRIVATE KEY-----] PASSED [ 41%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[eyJAAAAAAAAAAA.BBBBBBBBBBB.CCCCCCCCCCC] PASSED [ 43%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_strips_each_secret_shape[https://discord.com/api/webhooks/111111111111111111/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 46%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestOperatorLevel::test_operator_keeps_non_secret_data PASSED [ 48%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[AKIAIOSFODNN7EXAMPLE] PASSED [ 51%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA] PASSED [ 53%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[ghs_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB] PASSED [ 56%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[sk-ant-api03-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCAA] PASSED [ 58%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[sk-AAAAAAAAAAAAAAAAAAAAAT3BlbkFJBBBBBBBBBBBBBBBBBBBBB] PASSED [ 61%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[xoxb-abcdefghij1234567890] PASSED [ 64%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[-----BEGIN RSA PRIVATE KEY-----] PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[eyJAAAAAAAAAAA.BBBBBBBBBBB.CCCCCCCCCCC] PASSED [ 69%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_each_secret_shape[https://discord.com/api/webhooks/111111111111111111/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 71%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_supervisor_pid_and_host PASSED [ 74%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_decision_body PASSED [ 76%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_inbox_body PASSED [ 79%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_strips_gate_reason PASSED [ 82%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_drops_quota_stream PASSED [ 84%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestPublicLevel::test_public_redact_level_metadata_set PASSED [ 87%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestGatherIntegration::test_gather_redact_level_threaded_to_redactor PASSED [ 89%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestGatherIntegration::test_gather_invalid_redact_level_raises PASSED [ 92%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestRedactionInvariants::test_redactor_invalid_level_raises PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestRedactionInvariants::test_redactor_is_pure PASSED [ 97%]
+scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py::TestRedactionInvariants::test_round_trip_at_each_level PASSED [100%]
+
+============================== 39 passed in 0.15s ==============================
