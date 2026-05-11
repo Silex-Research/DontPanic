@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 23 items
+
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGatherEnvelope::test_empty_plans_root_returns_valid_envelope PASSED [  4%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGatherEnvelope::test_captured_at_is_tz_aware_utc PASSED [  8%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGatherEnvelope::test_round_trip_through_json PASSED [ 13%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestPlansStream::test_single_plan_surfaces PASSED [ 17%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestPlansStream::test_multi_plan_aggregation PASSED [ 21%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestPlansStream::test_features_passing_count PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGatesStream::test_unmet_gates_surface PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGatesStream::test_cleared_gates_are_omitted PASSED [ 34%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestInboxStream::test_inbox_events_surface PASSED [ 39%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestInboxStream::test_inbox_event_id_is_composite PASSED [ 43%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestSupervisorsStream::test_active_supervisors_surface PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestSupervisorsStream::test_supervisor_host_populated PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestQuotaStream::test_quota_vendors_project_to_entries PASSED [ 56%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestQuotaStream::test_missing_quota_file_yields_empty_stream PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestDecisionsStream::test_decisions_aggregate_newest_first PASSED [ 65%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestEvidenceRefsStream::test_evidence_refs_extracted_from_features PASSED [ 69%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestIncludeFilter::test_include_only_plans_skips_other_streams PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestIncludeFilter::test_include_unknown_stream_raises PASSED [ 78%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestPlanIdFilter::test_plan_id_filter_scopes_aggregation PASSED [ 82%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestPureRead::test_gather_does_not_mutate_filesystem PASSED [ 86%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestRedactLevel::test_redact_level_threaded_into_snapshot PASSED [ 91%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestRedactLevel::test_redact_level_invalid_raises PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py::TestGracefulMissing::test_missing_inbox_does_not_raise PASSED [100%]
+
+============================== 23 passed in 0.18s ==============================
