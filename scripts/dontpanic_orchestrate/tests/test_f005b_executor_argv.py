@@ -147,8 +147,12 @@ def test_claude_executor_argv(monkeypatch, tmp_path, policy, expected_tail):
     argv = captured["argv"]
     # First three args are the legacy -p --output-format json shape.
     assert argv[1:4] == ["-p", "--output-format", "json"]
-    # Next 0 or 4 args are the role-derived permission flags.
-    assert tuple(argv[4 : 4 + len(expected_tail)]) == expected_tail
+    # v3 F002: --exclude-dynamic-system-prompt-sections follows for cache reuse
+    # (cwd/env/git/memory paths move from cached system prompt → first user
+    # message). Present on every dispatch regardless of permission policy.
+    assert argv[4] == "--exclude-dynamic-system-prompt-sections"
+    # Role-derived permission flags follow (0 args for None policy, 4 otherwise).
+    assert tuple(argv[5 : 5 + len(expected_tail)]) == expected_tail
     # Forbidden-flag guard cleared the produced argv.
     assert not any(f in argv for f in FORBIDDEN_FLAGS)
 

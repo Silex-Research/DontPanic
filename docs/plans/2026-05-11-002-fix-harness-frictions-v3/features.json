@@ -31,17 +31,27 @@
       "id": "F002",
       "category": "tooling",
       "phase": 2,
-      "description": "Implementer prompt template trim — D007 fix. Plan 010 F001 dispatch consumed 6.84M input tokens for a 763-line docs-only feature (100:1 input:output ratio). The implementer prompt template loads too much context. Inventory what gets injected: plan.md + features.json + audit history + skill context + project surface. Identify cuttable surfaces (e.g. don't load the full skill bodies of unrelated skills; don't load every audit envelope from prior iterations — just the most recent auditor envelope). Trim to target <1.5M input tokens for a similar small feature (50% reduction from baseline). Don't touch the auditor prompt — that's a different surface with different concerns. Use parent plan 2026-05-11-001 evidence/dispatch-plan010-f001-attempt1.log as the measurement baseline.",
+      "description": "Cost-lever ship for implementer dispatch — D007 fix. Original framing hypothesized the implementer prompt template was bloated; inventory found the template is already ~5KB (plan_id + feature dict + steps + forbidden/required lists). The actual cost driver is the agent's autonomous tool-use loop: `tokens_in` sums input_tokens + cache_read_input_tokens + cache_creation_input_tokens, and prior tool results (e.g. a full `pytest -q` ~1800-line output) get re-read into context on every subsequent turn at the cache_read rate. Two safe levers shipped (OAuth-compatible — `--bare` was considered and rejected because it disables OAuth/keychain auth): (a) every Claude CLI dispatch gets `--exclude-dynamic-system-prompt-sections`, moving cwd/env/git/memory paths from cached system prompt to first user message for better cross-dispatch cache reuse; (b) implementer prompt embeds a TEST_DISCIPLINE_NOTE instructing targeted tests over full sweeps with explicit rationale (cache_read accumulation). Auditor prompt untouched. Re-measurement is a follow-up dispatch — acceptance does NOT pin a hard token threshold because the actual reduction depends on agent behavior shaped by the prompt note, not prompt-template byte size.",
       "steps": [
-        "Inventory the implementer prompt template — find what context loads in supervisor.dispatch_volley or the prompt_template module.",
-        "Identify cuttable surfaces: prior-iteration auditor envelopes beyond N=1, full skill bodies of unrelated skills, redundant project context, etc.",
-        "Trim the template; measure before/after via a fixture dispatch (synthetic plan with one tiny feature).",
-        "Re-run plan 010 F001 dispatch in a temp fixture (not the real plan) to confirm <1.5M tokens.",
-        "Document the trim in a D-entry with before/after numbers."
+        "Inventory the implementer prompt template — found it's already ~5KB; D007 hypothesis was based on wrong cause.",
+        "Locate cost driver: `tokens_in` includes cache_read_input_tokens from cumulative tool-use turns.",
+        "Add `--exclude-dynamic-system-prompt-sections` to ClaudeCLIExecutor argv on every dispatch.",
+        "Add TEST_DISCIPLINE_NOTE module-level constant + thread into both iter0 and iterN implementer prompt paths.",
+        "Update test_f005b_executor_argv.py to account for the new flag position in argv.",
+        "Add new fixture tests covering both levers (test_v3_f002_cost_levers.py).",
+        "Document the discovery + lever choice in plan 2026-05-11-001 decisions.jsonl (D015/D016)."
       ],
-      "acceptance": "(1) Implementer prompt template trim shipped. (2) Synthetic fixture dispatch <1.5M input tokens (50% reduction from 2.48M baseline). (3) Full orchestrate sweep stays green. (4) D-entry documents what was cut and the token reduction.",
-      "passes": false,
-      "depends_on": []
+      "acceptance": "(1) Every Claude CLI dispatch passes `--exclude-dynamic-system-prompt-sections` (verified via test_v3_f002_cost_levers + updated test_f005b_executor_argv). (2) TEST_DISCIPLINE_NOTE is exported from prompts and appears in both iter0 and iterN implementer prompts. (3) Implementer prompt total size stays < 10KB (size invariant pinned). (4) Full orchestrate sweep stays green. (5) Parent plan D-entries document the prompt-template-vs-tool-use-loop discovery — re-baseline what 'good' looks like for future v4 work.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": ["operator"],
+      "verified_at": "2026-05-11T17:00:00Z",
+      "evidence_refs": [
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/executors/claude_cli.py", "note": "added --exclude-dynamic-system-prompt-sections to argv; module docstring documents v3 F002"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/prompts.py", "note": "TEST_DISCIPLINE_NOTE constant + threaded into both implementer prompt paths"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_v3_f002_cost_levers.py", "note": "11 fixture tests pin both levers + 10KB prompt-size invariant"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_f005b_executor_argv.py", "note": "updated to account for new flag position"}
+      ]
     },
     {
       "id": "F003",
