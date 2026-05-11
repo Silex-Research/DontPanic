@@ -2323,6 +2323,9 @@ def main(argv: list[str] | None = None) -> int:
         return _manifest_main(raw[1:])
     if raw and raw[0] == "mcp":
         return _mcp_main(raw[1:])
+    if raw and raw[0] == "state":
+        from dontpanic_orchestrate import state_cli
+        return state_cli.main(raw[1:])
     if raw and raw[0] == "plan":
         return _plan_main(raw[1:])
     if raw and raw[0] == "config":

@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 14 items
+
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_default_json_to_stdout PASSED [  7%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_compact_emits_single_line PASSED [ 14%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_redact_level_threaded PASSED [ 21%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_plan_filter PASSED [ 28%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_include_filter PASSED [ 35%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSnapshotHappy::test_out_writes_to_file PASSED [ 42%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSelectFilter::test_select_extracts_plan_ids PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSelectFilter::test_select_nested_field PASSED [ 57%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestSelectFilter::test_select_invalid_path_exits_nonzero PASSED [ 64%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestInvalidArgv::test_unknown_redact_level_rejected PASSED [ 71%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestInvalidArgv::test_unknown_include_stream_rejected PASSED [ 78%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestInvalidArgv::test_json_yaml_mutex PASSED [ 85%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestInvalidArgv::test_state_subcommand_required PASSED [ 92%]
+scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py::TestYamlOutput::test_yaml_output_parses_back PASSED [100%]
+
+============================== 14 passed in 0.21s ==============================
