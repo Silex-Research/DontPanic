@@ -32,6 +32,12 @@ Closed v0 taxonomy:
   - ``scope_overreach`` — finding lies outside the dispatched feature's
     declared scope (mismatched feature_id, or the finding text declares
     itself out-of-scope). Advisory; operator queues a follow-up.
+  - ``spec_ambiguity`` — Plan 2026-05-11-002 v3 F003 — low/medium
+    severity finding whose category is documentation, naming,
+    convention, or placement. The implementer's reading and the
+    auditor's reading both fit the spec, but the spec is silent on the
+    specific point — patch the spec then resume, or accept the
+    implementer's reading. Advisory; non-blocking.
   - ``unknown`` — anything the classifier cannot place. BLOCKING.
 """
 
@@ -238,6 +244,7 @@ class FindingClass(str, Enum):
     ENVIRONMENTAL_REPRODUCTION_FAILURE = "environmental_reproduction_failure"
     EVIDENCE_SHAPE_DISAGREEMENT = "evidence_shape_disagreement"
     SCOPE_OVERREACH = "scope_overreach"
+    SPEC_AMBIGUITY = "spec_ambiguity"
     UNKNOWN = "unknown"
 
 
@@ -261,6 +268,17 @@ _DEFECT_CATEGORIES: frozenset[str] = frozenset(
 # findings into ``implementation_defect`` rather than ``unknown`` when no
 # pattern matches — better to over-block on severity than under-block.
 _SUBSTANTIVE_SEVERITIES: frozenset[str] = frozenset({"critical", "high"})
+
+# Plan 2026-05-11-002 v3 F003 — spec_ambiguity gate. A finding flips to
+# spec_ambiguity when severity is low/medium AND category names a surface
+# where the spec/convention itself is the disputed thing — documentation
+# placement, naming, convention adherence, file placement. Anything
+# critical/high stays in the substantive-severity heuristic so we never
+# silently advisory-downgrade a real defect on category alone.
+_SPEC_AMBIGUITY_SEVERITIES: frozenset[str] = frozenset({"low", "medium"})
+_SPEC_AMBIGUITY_CATEGORIES: frozenset[str] = frozenset(
+    {"documentation", "naming", "convention", "placement"}
+)
 
 
 # ───────────────────────── pattern catalogues ─────────────────────────
@@ -461,8 +479,28 @@ def classify_finding(
             )
         # Shape-disagreement without saved evidence remains blocking — we
         # don't know whether equivalent evidence exists, so falling back
-        # to the substantive-severity heuristic preserves blocking
-        # behavior.
+        # to the substantive-severity heuristic (or spec_ambiguity for
+        # low/medium documentation findings) preserves blocking behavior
+        # only where severity warrants it.
+
+    if (
+        severity in _SPEC_AMBIGUITY_SEVERITIES
+        and category in _SPEC_AMBIGUITY_CATEGORIES
+    ):
+        return FindingClassification(
+            finding_index=finding_index,
+            classification=FindingClass.SPEC_AMBIGUITY,
+            severity=severity,
+            category=category,
+            issue_excerpt=_excerpt(issue),
+            rationale=(
+                f"severity={severity}, category={category} — finding sits "
+                "on a documentation/naming/convention/placement surface "
+                "where the spec is the disputed thing, not the code. "
+                "Patch the spec then resume, or accept the implementer's "
+                "reading."
+            ),
+        )
 
     if severity in _SUBSTANTIVE_SEVERITIES or category in _DEFECT_CATEGORIES:
         return FindingClassification(
@@ -689,6 +727,7 @@ def _aggregate(
         FindingClass.SCOPE_OVERREACH,
         FindingClass.ENVIRONMENTAL_REPRODUCTION_FAILURE,
         FindingClass.EVIDENCE_SHAPE_DISAGREEMENT,
+        FindingClass.SPEC_AMBIGUITY,
     ):
         if cls in classes:
             return cls, blocking
@@ -733,6 +772,17 @@ def _recommend(
             "Queue the cited concerns as a separate plan / feature; they "
             "lie outside this volley's scope and should not block "
             "close-out."
+        )
+    if aggregate == FindingClass.SPEC_AMBIGUITY:
+        return (
+            "Operator-review for spec gap; patch spec then resume or "
+            "accept implementer's reading. The finding sits on a "
+            "documentation/naming/convention/placement surface where "
+            "implementer + auditor both fit the spec but the spec is "
+            "silent on the disputed point. Two paths: (a) update the "
+            "spec/feature description to disambiguate and re-dispatch, "
+            "or (b) accept the implementer's interpretation and close "
+            "the volley operator-resolved."
         )
     return "Operator review required."
 
