@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS — Control Dashboard (Firebase realtime)</title>
+  <link rel="stylesheet" href="core.css">
+  <link rel="stylesheet" href="pages/command-center/command-center.css">
+  <link rel="stylesheet" href="pages/mission-control/mission-control.css">
+  <link rel="stylesheet" href="pages/financial/financial.css">
+  <link rel="stylesheet" href="pages/cloud-costs/cloud-costs.css">
+  <link rel="stylesheet" href="pages/security/security.css">
+  <link rel="stylesheet" href="pages/settings/settings.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+  <!--
+    OPT-IN: This entry point is identical to index.html EXCEPT it adds the
+    Firebase realtime adapter on top of the static state loader. The static
+    base (`core.js` + `state/*.json`) still serves first paint and offline
+    fallback per plan 2026-05-09-003 F007. Operator drops their Firebase
+    config into firebase-config.local.js (template: config-firebase.example.js).
+  -->
+  <script src="firebase-config.local.js" onerror="console.info('[Jarvis] firebase-config.local.js absent — static-only mode')"></script>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>JARVIS</h1>
+      <span class="subtitle">Personal Control Dashboard — Realtime</span>
+    </div>
+    <div class="header-right">
+      <span id="sync-status" class="status-badge idle">Checking...</span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <nav class="view-nav" id="view-nav"></nav>
+  <div id="page-container"></div>
+
+  <footer>
+    <span>JARVIS v1.0 — Silex Research</span>
+    <span id="last-sync">Last sync: --</span>
+  </footer>
+
+  <script type="module" src="core.js"></script>
+  <script type="module">
+    import { initFirebaseRealtime } from './config-firebase.js';
+    // Wait for the static loader's first paint to complete before attaching
+    // the Firestore overlay. core.js publishes `window.Jarvis.ready` as a
+    // promise that resolves after loadState() + initial render.
+    (async () => {
+      // Yield once so core.js's top-level imports have a chance to install
+      // window.Jarvis and assign Jarvis.ready.
+      await Promise.resolve();
+      const jarvis = window.Jarvis;
+      if (!jarvis) return;
+      if (jarvis.ready && typeof jarvis.ready.then === 'function') {
+        try { await jarvis.ready; } catch { /* static fallback already painted */ }
+      }
+      await initFirebaseRealtime({ jarvis });
+    })();
+  </script>
+</body>
+</html>

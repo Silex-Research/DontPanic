@@ -15,8 +15,71 @@
         "Smoke test against a local fixture (Firebase emulator if available, else a static mock JSON file matching the Firestore document shape) \u2014 verify static fallback still works without the Firebase config. Real-<firebase-project-id> smoke test deferred to F005 per parent_acceptance_item credential gate (see plan D007)."
       ],
       "acceptance": "(1) `dashboard/` continues to work standalone (no Firebase config) per plan 2026-05-09-003 F007. (2) When Firebase config is provided, the dashboard adds realtime overlay layered on the static base \u2014 the static loader is still used as fallback for first paint and offline. (3) Firestore paths use `projects/{project_id}/...` (single-tenant) shape. (4) Adapter dashboard renders against a local fixture (Firebase emulator or static mock JSON matching the Firestore document shape) \u2014 full smoke test against <firebase-project-id> deferred to F005 per parent_acceptance_item credential gate (see plan D007).",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "codex_audit",
+        "operator"
+      ],
+      "verified_at": "2026-05-11T22:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../dashboard/config-firebase.example.js",
+          "note": "NEW \u2014 operator-copyable Firebase config template"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/config-firebase.js",
+          "note": "NEW \u2014 opt-in Firebase realtime layer (initFirebaseRealtime, projection mapper, fallback handler)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/index-firebase.html",
+          "note": "NEW \u2014 opt-in entry point that loads config-firebase.js"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/core.js",
+          "note": "MOD \u2014 Jarvis.ready promise hook for adapter to await first paint"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/config-firebase.test.js",
+          "note": "NEW \u2014 30 unit tests"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/firebase-adapter.test.js",
+          "note": "NEW \u2014 7 integration tests against firestore-stub.js"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/helpers/firestore-stub.js",
+          "note": "NEW \u2014 local-fixture Firestore stub (no network)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/fixtures/firestore-mock.json",
+          "note": "NEW \u2014 mock plans/agents/inbox snapshot matching projection shape"
+        },
+        {
+          "type": "file",
+          "uri": "../../../.gitignore",
+          "note": "MOD \u2014 protect dashboard/firebase-config.local.js from accidental commit"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "note": "iter1 signed_off (only advisory style finding on cd command)"
+        },
+        {
+          "type": "log",
+          "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-plan004-f001-attempt1.log",
+          "note": "dispatch terminal: paused_on_gate after 2 rounds"
+        }
+      ]
     },
     {
       "id": "F002",

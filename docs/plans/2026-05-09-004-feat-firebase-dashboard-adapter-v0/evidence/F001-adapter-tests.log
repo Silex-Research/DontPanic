@@ -1,0 +1,56 @@
+
+ RUN  v3.2.4 $HOME/Documents/GitHub/DontPanic/dashboard
+
+stdout | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when no config is wired up — static fallback preserved
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stdout | tests/integration/firebase-adapter.test.js > static-first contract (acceptance 1, 2) > loads legacy state from JSON when no Firebase config is present
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stderr | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when sdkLoader rejects (offline / SDK fetch failed)
+[Jarvis] Firebase SDK load failed — falling back to static state. Error: offline
+    at [90m$HOME/Documents/GitHub/DontPanic/dashboard/[39mtests/unit/config-firebase.test.js:242:49
+    at [90mfile://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file://$HOME/Documents/GitHub/DontPanic/dashboard/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ ✓ tests/unit/config-firebase.test.js > STREAMS > lists the seven F001 state-projection streams 1ms
+ ✓ tests/unit/config-firebase.test.js > STREAMS > is frozen so adapters cannot mutate it 0ms
+ ✓ tests/unit/config-firebase.test.js > buildStreamPath > returns the single-tenant projects/{pid}/{stream} shape 0ms
+ ✓ tests/unit/config-firebase.test.js > buildStreamPath > rejects unknown streams 0ms
+ ✓ tests/unit/config-firebase.test.js > buildStreamPath > rejects empty projectId — no multi-tenant fallback 0ms
+ ✓ tests/unit/config-firebase.test.js > JARVIS_A6EE1_CONFIG_TEMPLATE > targets the <firebase-project-id> Firebase project (plan D009) 0ms
+ ✓ tests/unit/config-firebase.test.js > JARVIS_A6EE1_CONFIG_TEMPLATE > keeps credential fields as placeholders until F003+ reactivates 0ms
+ ✓ tests/unit/config-firebase.test.js > loadFirebaseConfig > returns null when no global config is set — static fallback path 0ms
+ ✓ tests/unit/config-firebase.test.js > loadFirebaseConfig > returns null when projectId is still a placeholder 0ms
+ ✓ tests/unit/config-firebase.test.js > loadFirebaseConfig > returns the config object when projectId is real 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > is a no-op when firestore is missing — static loader stays authoritative 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > is a no-op when projectId is missing 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > subscribes to all seven streams under projects/{pid}/... 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > hydrates jarvis.state from the initial Firestore snapshot 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > re-fires the active page onActivate when a stream updates 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > forwards stream-scoped updates after subscription 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > routes Firestore errors through onError and the sync-status badge 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > detach() unsubscribes every listener 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > honors a custom streams[] filter — heavy stream skipping per acceptance 0ms
+ ✓ tests/unit/config-firebase.test.js > attachFirestoreRealtime > rejects multi-tenant tenants/{tenantId}/... paths — archived per D002 0ms
+ ✓ tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when no config is wired up — static fallback preserved 1ms
+ ✓ tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when sdkLoader rejects (offline / SDK fetch failed) 4ms
+ ✓ tests/unit/config-firebase.test.js > initFirebaseRealtime > wires the adapter when a config + sdkLoader resolve to a Firestore client 0ms
+ ✓ tests/integration/firebase-adapter.test.js > static-first contract (acceptance 1, 2) > loads legacy state from JSON when no Firebase config is present 7ms
+ ✓ tests/integration/firebase-adapter.test.js > static-first contract (acceptance 1, 2) > layers Firestore onSnapshot on top of static loader without disturbing it 2ms
+ ✓ tests/integration/firebase-adapter.test.js > Firestore document shape (acceptance 3) > subscribes to projects/<firebase-project-id>/{stream} — never tenants/{tenantId}/... 2ms
+ ✓ tests/integration/firebase-adapter.test.js > local fixture rendering (acceptance 4) > hydrates the full F001 envelope from the local fixture 1ms
+ ✓ tests/integration/firebase-adapter.test.js > local fixture rendering (acceptance 4) > streams subsequent updates to active page on each emit 1ms
+
+ Test Files  2 passed (2)
+      Tests  28 passed (28)
+   Start at  16:57:06
+   Duration  492ms (transform 31ms, setup 0ms, collect 52ms, tests 23ms, environment 372ms, prepare 86ms)
+
