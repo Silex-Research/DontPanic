@@ -54,6 +54,7 @@ from dontpanic_orchestrate import (
     active_supervisors,
     agent_manifest,
     calibration_loader,
+    closeout,
     completion_gate,
     gate_pause,
     git_state,
@@ -716,6 +717,149 @@ def _claude_touch_main(argv: list[str]) -> int:
         f"[claude-touch] recorded human Claude request at {ts} "
         f"(backoff window {minutes:g} min). Autonomous Claude-heavy "
         "dispatches will defer until the window elapses."
+    )
+    return 0
+
+
+def _close_main(argv: list[str]) -> int:
+    """Plan 2026-05-11-002 v3 F004 — operator-resolved feature close-out.
+
+    Shape:
+      dontpanic close --operator-resolved <plan-id> <feature-id> --reason <class>
+
+    The ``--operator-resolved`` flag is required (the surface is reserved
+    for operator close-out of a ``stopped_no_progress`` terminal that the
+    operator judged non-defect). Other close shapes — plan-level
+    active → completed — live under ``dontpanic plan close``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic close",
+        description=(
+            "Operator-resolved feature close-out for a stopped_no_progress "
+            "terminal that the operator judged non-defect. Generates a "
+            "minimal closeout-memo template, clears breaker:no_progress, "
+            "writes a signoff envelope, and flips features.json passes:true "
+            "for the feature in one transaction."
+        ),
+    )
+    parser.add_argument(
+        "--operator-resolved",
+        action="store_true",
+        dest="operator_resolved",
+        required=False,
+        help=(
+            "REQUIRED. Affirms the operator is closing out the feature "
+            "without a re-dispatch. Reserved flag — the surface refuses to "
+            "run without it so accidental close-outs don't slip through."
+        ),
+    )
+    parser.add_argument(
+        "plan",
+        help="Plan ID (resolved against ./docs/plans/) or absolute dir path.",
+    )
+    parser.add_argument(
+        "feature",
+        help="Feature ID — e.g. F001 — that hit stopped_no_progress.",
+    )
+    parser.add_argument(
+        "--reason",
+        required=True,
+        dest="reason_class",
+        metavar="CLASS",
+        help=(
+            "Taxonomy class for the close-out (e.g. spec_ambiguity, "
+            "scope_overreach, environmental_reproduction_failure, "
+            "evidence_shape_disagreement, operator_judgment). Recorded in "
+            "the signoff envelope's signoff_reason and on the closeout-memo "
+            "header."
+        ),
+    )
+    parser.add_argument(
+        "--allow-missing-breaker",
+        action="store_true",
+        dest="allow_missing_breaker",
+        help=(
+            "Skip the safety check that refuses to close-out when "
+            "breaker:no_progress is not currently active. Use only when "
+            "operator has already cleared the breaker manually."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    if not args.operator_resolved:
+        print(
+            "[close] REFUSED: --operator-resolved flag is required. Use "
+            "`dontpanic plan close <plan>` for plan-level lifecycle close.",
+            file=sys.stderr,
+        )
+        return 2
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    loaded = plan_loader.load(plan_dir)
+
+    # Resolve tier + agents_in_panel from the loaded plan so the signoff
+    # envelope's schema validation matches the plan's actual declaration.
+    tier = (
+        loaded.plan.tier.value
+        if hasattr(loaded.plan.tier, "value")
+        else str(loaded.plan.tier)
+    )
+    agents = [
+        a.value if hasattr(a, "value") else str(a)
+        for a in (loaded.plan.agents_required or [])
+    ]
+    if not agents:
+        agents = ["claude", "codex"]
+
+    try:
+        result = closeout.run_close_out(
+            plan_dir=plan_dir,
+            plan_id=loaded.plan_id,
+            feature_id=args.feature,
+            reason_class=args.reason_class,
+            tier=tier,
+            agents_in_panel=agents,
+            require_active_breaker=not args.allow_missing_breaker,
+        )
+    except closeout.CloseoutError as exc:
+        print(f"[close] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    # INBOX trail so the operator's close-out is visible alongside the
+    # supervisor's existing event stream.
+    inbox.append_event(
+        plan_dir,
+        event="feature_operator_resolved",
+        plan_id=loaded.plan_id,
+        feature_id=args.feature,
+        reason_class=args.reason_class,
+        body=(
+            f"Operator closed feature {args.feature} as operator_resolved "
+            f"(class={args.reason_class}).\n\n"
+            f"Closeout memo: {result.memo_path.relative_to(plan_dir)}\n"
+            f"Signoff envelope: {result.signoff_path.relative_to(plan_dir)}\n"
+            f"breaker:no_progress cleared: {result.breaker_cleared}\n"
+            f"features.json passes flipped: {result.features_passes_flipped}\n\n"
+            f"Edit the closeout memo's `Rationale` section before merging."
+        ),
+    )
+
+    print(
+        f"[close] operator-resolved feature {args.feature} "
+        f"(class={args.reason_class})"
+    )
+    print(f"[close]   closeout memo: {result.memo_path}")
+    print(f"[close]   signoff envelope: {result.signoff_path}")
+    print(
+        f"[close]   breaker:no_progress cleared: {result.breaker_cleared}"
+    )
+    print(
+        f"[close]   features.json passes flipped: "
+        f"{result.features_passes_flipped} ({result.features_json_path})"
+    )
+    print(
+        "[close] NEXT: edit the closeout memo's `Rationale` section before "
+        "merging."
     )
     return 0
 
@@ -2280,6 +2424,7 @@ Private-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   doctor                         Run local readiness checks
   plan lock|audit|close          Goal-governed plan lifecycle gates
+  close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
   approve|resume|ps              Clear gates and inspect active supervisors
   quota-caps|calibrate-claude    Configure local quota guardrails
@@ -2318,6 +2463,8 @@ def main(argv: list[str] | None = None) -> int:
         return _resume_main(raw[1:])
     if raw and raw[0] == "claude-touch":
         return _claude_touch_main(raw[1:])
+    if raw and raw[0] == "close":
+        return _close_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":

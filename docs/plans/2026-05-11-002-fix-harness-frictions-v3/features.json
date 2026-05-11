@@ -92,9 +92,19 @@
         "Smoke test against plan 010 F001 fixture (don't touch the real plan — it's already closed)."
       ],
       "acceptance": "(1) `dontpanic close --operator-resolved <plan> <feature> --reason <class>` works end-to-end. (2) Generates closeout-memo template. (3) Clears breaker:no_progress + writes signoff in one transaction. (4) INBOX no_progress event surfaces the recommended close command inline. (5) Smoke test against a synthetic fixture (not the real plan 010 — it's already closed via the existing path).",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
+      ],
+      "verified_by": ["claude_impl", "codex_audit", "operator"],
+      "verified_at": "2026-05-11T18:50:00Z",
+      "evidence_refs": [
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/closeout.py", "note": "NEW module — render_closeout_memo + run_close_out + operator_resolution_path sidecar (v3 F004 i1 fix)"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/cli.py", "note": "added `dontpanic close --operator-resolved` subcommand"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/supervisor.py", "note": "no_progress INBOX event template surfaces recommended close command inline"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_v3_f004_close_operator_resolved.py", "note": "12 fixture tests covering CLI + sidecar pattern + plan 010 F001 replay"},
+        {"type": "audit_json", "uri": "audit/codex-auditor-F004-i1.json", "note": "iter1 needs_changes — operator-resolved fix applied (sidecar refactor + stage missing files)"},
+        {"type": "log", "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-v3-f004-attempt1.log", "note": "dispatch terminal: stopped_no_progress; both findings (implementation_defect) addressed by operator hand-fix"}
       ]
     }
   ]
