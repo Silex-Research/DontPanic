@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "audit_id": "2026-05-10-001-feat-printing-press-adapter-skill#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-11T15:20:53Z",
+  "completed_at": "2026-05-11T15:24:35Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-10-001-feat-printing-press-adapter-skill-xz_51ojd target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 210478 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1627296,
+    "tokens_out": 14080,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}`, and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (medium, documentation): PP version pinning is documented in the per-service config, not in the adapter’s `~/.dontpanic/adapters.json` entry as required. Evidence: F001 step requires documenting the PP version in the adapter’s `adapters.json` entry (`features.json:12`), but `SKILL.md:125-129` and `SKILL.md:171-174` put `pp_version` in `~/.dontpanic/adapters/<service>.json`, while the central registry template only records `\"version_pin_source\": \"per_service_config.pp_version\"` at `ADAPTER_TEMPLATE.md:126-133`. Recommendation: add/document a concrete `pp_version` field in the central `~/.dontpanic/adapters.json` adapter entry, or update the requirement if the intended source of truth is the per-service config.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-only HEAD~1\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<ADAPTER_TEMPLATE ast.parse>'\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<SKILL.md frontmatter + applies_to matcher smoke>'\n$ PYTHONDONTWRITEBYTECODE=1 python3 -c '<DECISION_TREE four-filter shape check>'\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<sanitizer structural check>'\n$ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<ADAPTER_TEMPLATE ast.parse>'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<SKILL.md frontmatter + applies_to matcher smoke>'",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c '<DECISION_TREE four-filter shape check>'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '<sanitizer structural check>'",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_skill_applicability.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "PP version pinning is documented in the per-service config, not in the adapter’s `~/.dontpanic/adapters.json` entry as required. Evidence: F001 step requires documenting the PP version in the adapter’s `adapters.json` entry (`features.json:12`), but `SKILL.md:125-129` and `SKILL.md:171-174` put `pp_version` in `~/.dontpanic/adapters/<service>.json`, while the central registry template only records `\"version_pin_source\": \"per_service_config.pp_version\"` at `ADAPTER_TEMPLATE.md:126-133`. Recommend",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

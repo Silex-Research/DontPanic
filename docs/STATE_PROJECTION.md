@@ -167,3 +167,10 @@ gate file change just as it does for a CLI `dontpanic approve` call.
 - ROADMAP.md — Phase C external-SaaS adapter pattern (Printing Press)
   uses this contract as the substrate for read-only evidence
   adapters (Linear, Sentry, Slack, Notion).
+- [../claude/skills/printing-press-adapter/SKILL.md](../claude/skills/printing-press-adapter/SKILL.md) —
+  the lock-time advisory skill that prescribes CLI Printing Press for
+  any plan declaring `surfaces: [external-api-wrap]`. The adapter
+  template in that skill enforces this projection's redaction and
+  sanitization invariants at the subprocess boundary; the decision
+  tree filters out the four anti-cases (in-process, no contract,
+  < 5 endpoints, mutating).

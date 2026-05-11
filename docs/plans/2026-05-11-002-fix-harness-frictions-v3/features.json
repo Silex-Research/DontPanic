@@ -1,0 +1,74 @@
+{
+  "task_id": "2026-05-11-002-fix-harness-frictions-v3",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "doctor quota-cap surface — D005 fix. `dontpanic doctor` currently emits 3 stderr warnings at dispatch time for missing cap entries in ~/.jarvis/quota_caps.json (claude.max_20x.rolling_5h, codex.plus.rolling_7d) and stale calibration (claude.rolling_7d). These should be doctor findings with copy-paste config snippets, not buried stderr at dispatch. Add a `quota_caps_check()` to jarvis_doctor that walks quota_state.json vendors × windows, cross-references quota_caps.json entries by (vendor, window), and emits one actionable WARN finding per missing pair. Stale calibration (>7d since last calibrate-claude run) emits a separate WARN finding. Doctor runs as part of pre-flight; warnings are non-blocking but visible.",
+      "steps": [
+        "Read current jarvis_doctor.py structure + the quota_state.json + quota_caps.json shapes.",
+        "Add quota_caps_check() that returns a list of (severity, message, remediation) tuples — one per missing or stale entry.",
+        "Wire into the existing doctor runner (jarvis_doctor.run_all_checks if it exists, or the modern dontpanic doctor entry).",
+        "Test fixture: synthetic quota_state + quota_caps with known-missing pairs; assert correct findings emitted.",
+        "Bonus: emit a copy-paste config snippet for each missing pair so operator can resolve in one command."
+      ],
+      "acceptance": "(1) `dontpanic doctor` surfaces a WARN finding per missing (vendor, window) cap-entry pair. (2) Stale calibration (>7d) emits a separate WARN finding. (3) Fixture tests cover known-missing + present-cap cases. (4) Re-running doctor against current operator state surfaces the 3 known-missing pairs from parent plan dispatch (claude.max_20x.rolling_5h, codex.plus.rolling_7d, claude.rolling_7d calibration stale).",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Implementer prompt template trim — D007 fix. Plan 010 F001 dispatch consumed 6.84M input tokens for a 763-line docs-only feature (100:1 input:output ratio). The implementer prompt template loads too much context. Inventory what gets injected: plan.md + features.json + audit history + skill context + project surface. Identify cuttable surfaces (e.g. don't load the full skill bodies of unrelated skills; don't load every audit envelope from prior iterations — just the most recent auditor envelope). Trim to target <1.5M input tokens for a similar small feature (50% reduction from baseline). Don't touch the auditor prompt — that's a different surface with different concerns. Use parent plan 2026-05-11-001 evidence/dispatch-plan010-f001-attempt1.log as the measurement baseline.",
+      "steps": [
+        "Inventory the implementer prompt template — find what context loads in supervisor.dispatch_volley or the prompt_template module.",
+        "Identify cuttable surfaces: prior-iteration auditor envelopes beyond N=1, full skill bodies of unrelated skills, redundant project context, etc.",
+        "Trim the template; measure before/after via a fixture dispatch (synthetic plan with one tiny feature).",
+        "Re-run plan 010 F001 dispatch in a temp fixture (not the real plan) to confirm <1.5M tokens.",
+        "Document the trim in a D-entry with before/after numbers."
+      ],
+      "acceptance": "(1) Implementer prompt template trim shipped. (2) Synthetic fixture dispatch <1.5M input tokens (50% reduction from 2.48M baseline). (3) Full orchestrate sweep stays green. (4) D-entry documents what was cut and the token reduction.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Add `spec_ambiguity` class to no_progress taxonomy — D008 fix. The v0 6-class taxonomy (feature_defect / regression / interpretive_disagreement / redundant / already-known / spec-clarification) has no class for the most common audit terminal-non-success seen in practice: a documentation/placement finding that's neither a defect nor a real disagreement, just a spec gap. Add `spec_ambiguity` as a 7th class with pattern-match rules: severity in {low, medium} AND category in {documentation, naming, convention, placement}. The classifier emits this class non-blocking with recommended_action 'Operator-review for spec gap; patch spec then resume or accept implementer's reading'. Existing 6 classes preserved.",
+      "steps": [
+        "Read scripts/dontpanic_orchestrate/auditor_taxonomy.py + the no_progress_classification path.",
+        "Add `spec_ambiguity` enum value + classification rule (severity ∈ {low,medium} ∧ category ∈ {documentation, naming, convention, placement}).",
+        "Update the recommended_action template for the new class.",
+        "Mark `spec_ambiguity` non-blocking (operator can resume without manual review). Open question for D-entry: should it be non-blocking or just lower-friction-blocking?",
+        "Fixture tests: documentation findings → spec_ambiguity; security/correctness findings still → existing classes; previously-`unknown` cases now classify correctly.",
+        "Reclassify the plan 010 F001 iteration 1 finding against the new taxonomy as evidence."
+      ],
+      "acceptance": "(1) `spec_ambiguity` class exists in auditor_taxonomy. (2) Plan 010 F001 iteration 1 finding reclassifies to spec_ambiguity (not unknown). (3) Fixture tests cover the new pattern + don't regress existing classifications. (4) Recommended_action template documents the operator-review-or-accept workflow.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 4,
+      "description": "Operator-resolved close-out workflow — D009 fix. When a volley terminates stopped_no_progress and operator review judges the audit finding as non-defect (e.g., spec_ambiguity from F003), there's no clean path to close the feature. Currently: operator must clear breaker:no_progress AND manually author a closeout-memo at a path the supervisor doesn't tell them about (evidence/closeout-memo.md) AND manually flip features.json. Add a `dontpanic close --operator-resolved <plan-id> <feature-id> --reason <class>` CLI that: (a) auto-generates a minimal closeout-memo template, (b) clears breaker:no_progress in gate-state.json, (c) writes a signoff envelope marking the feature operator_resolved with class. Document the path conventions in the INBOX event when stopped_no_progress fires so operator sees the recommended next command inline.",
+      "steps": [
+        "Read signoff_writer.py + the current close-out flow.",
+        "Add `dontpanic close --operator-resolved <plan-id> <feature-id> --reason <class>` to cli.py.",
+        "Template generates a minimal closeout-memo with status: operator_resolved, class, summary lifted from the latest auditor envelope.",
+        "Wire breaker:no_progress clear + signoff envelope write into one transaction.",
+        "Update the no_progress INBOX event template to include the recommended `dontpanic close --operator-resolved ...` command inline.",
+        "Smoke test against plan 010 F001 fixture (don't touch the real plan — it's already closed)."
+      ],
+      "acceptance": "(1) `dontpanic close --operator-resolved <plan> <feature> --reason <class>` works end-to-end. (2) Generates closeout-memo template. (3) Clears breaker:no_progress + writes signoff in one transaction. (4) INBOX no_progress event surfaces the recommended close command inline. (5) Smoke test against a synthetic fixture (not the real plan 010 — it's already closed via the existing path).",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    }
+  ]
+}
