@@ -1,0 +1,69 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "audit_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-11T21:57:21Z",
+  "completed_at": "2026-05-11T22:02:13Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-1dm7dk78 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 152071 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2543185,
+    "tokens_out": 19405,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 10 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target context is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`; structured `env=dev`, `project=null`), and I found no forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (high, correctness): The adapter hydrates the Firestore fixture but the dashboard does not render it. Evidence: `config-firebase.js` writes `plans/gates/inbox/supervisors/quota/decisions/evidence_refs`, while Mission Control still renders only `state.tasks`, `state.agents`, and `state.activity` at `dashboard/pages/mission-control/mission-control.js:500`; my render smoke with `firestore-mock.json` returned `{ total: '0', titleRendered: false }`. Recommendation: map the projection streams into the dashboard’s rendered state or update pages to consume the new streams, then add a DOM-level fixture smoke asserting the fixture appears.\n\nFINDING (medium, correctness): Placeholder Firebase config is treated as configured. Evidence: `loadFirebaseConfig` only rejects missing or placeholder `projectId` at `dashboard/config-firebase.js:46`; passing `JARVIS_A6EE1_CONFIG_TEMPLATE` returns the `REPLACE_*` apiKey/appId/sender values. Recommendation: reject any required Firebase field whose value is missing or starts with `REPLACE_`.\n\nFINDING (medium, correctness): Browser bootstrap does not guarantee static first paint before realtime attaches. Evidence: `index-firebase.html:51` waits one timeout, but `core.js",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic/docs status --short",
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic/docs diff HEAD~1 --stat",
+      "npm --prefix dashboard test -- --reporter=dot",
+      "node_modules/.bin/vitest run --configLoader runner --reporter=dot",
+      "node --check dashboard/config-firebase.js",
+      "node --check dashboard/tests/helpers/firestore-stub.js",
+      "node --check dashboard/tests/unit/config-firebase.test.js",
+      "node --check dashboard/tests/integration/firebase-adapter.test.js",
+      "node --check dashboard/config-firebase.example.js",
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic check-ignore -v dashboard/firebase-config.local.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "The adapter hydrates the Firestore fixture but the dashboard does not render it. Evidence: `config-firebase.js` writes `plans/gates/inbox/supervisors/quota/decisions/evidence_refs`, while Mission Control still renders only `state.tasks`, `state.agents`, and `state.activity` at `dashboard/pages/mission-control/mission-control.js:500`; my render smoke with `firestore-mock.json` returned `{ total: '0', titleRendered: false }`. Recommendation: map the projection streams into the dashboard’s rendered",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Placeholder Firebase config is treated as configured. Evidence: `loadFirebaseConfig` only rejects missing or placeholder `projectId` at `dashboard/config-firebase.js:46`; passing `JARVIS_A6EE1_CONFIG_TEMPLATE` returns the `REPLACE_*` apiKey/appId/sender values. Recommendation: reject any required Firebase field whose value is missing or starts with `REPLACE_`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Browser bootstrap does not guarantee static first paint before realtime attaches. Evidence: `index-firebase.html:51` waits one timeout, but `core.js:199` starts async page imports and calls `Jarvis.init()` later without exposing an awaitable ready signal. Recommendation: expose/await a `Jarvis.ready` promise or fire an initialized event after `loadState()` and initial render, then attach Firebase.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "security",
+      "feature_id": "F001",
+      "issue": "The documented local Firebase config file is not gitignored. Evidence: `config-firebase.example.js` tells operators to copy real config to `firebase-config.local.js`, but `git check-ignore -v dashboard/firebase-config.local.js` returned no match. Recommendation: add `dashboard/firebase-config.local.js` to `.gitignore`. Checks run: $ git -C /Users/bayesian/Documents/GitHub/DontPanic/docs status --short $ git -C /Users/bayesian/Documents/GitHub/DontPanic/docs diff HEAD~1 --stat $ npm --prefix dash",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

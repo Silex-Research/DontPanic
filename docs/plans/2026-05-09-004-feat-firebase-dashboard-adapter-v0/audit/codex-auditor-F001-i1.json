@@ -1,0 +1,49 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "audit_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-11T22:07:11Z",
+  "completed_at": "2026-05-11T22:11:28Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-1dm7dk78 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 155531 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1237184,
+    "tokens_out": 18067,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 11 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\nCommand: (none remaining)\n\nVerdict: signed_off.\n\nNo blocking findings. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly in both prose and structured `target_context` (`env=dev`, `project=null`). I found no listed forbidden command shapes in their `commands_run`. The adapter uses `projects/{project_id}/{stream}`, keeps Firebase opt-in, preserves static fallback behavior, rejects placeholder config, and the local fixture projection renders into the dashboard-shaped state.\n\nFINDING (advisory, style): Implementer command log includes `cd /Users/bayesian/Documents/GitHub/DontPanic/dashboard && npx vitest...`, which is not one of the forbidden command shapes but does violate the EC11 cwd-discipline guidance to avoid re-cd inside command strings. Evidence: `target_context.commands_run[1]`. Recommendation: run with the tool working directory set to `dashboard/` or use an explicit prefix form.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-only HEAD~1\n$ git diff HEAD~1 -- dashboard docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0\n$ ./node_modules/.bin/vitest run --reporter=dot\n$ ./node_modules/.bin/vitest run tests/unit/config-firebase.test.js tests/integration/firebase-adapter.test.js --reporter=dot --configLoader runner\n$ node --check config-firebase.js\n$ node --check tests/unit/config-firebase.test.js\n$ node --check tests/integration/firebase-adapter.test.js\n$ node --ch",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "git diff HEAD~1 -- dashboard docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "./node_modules/.bin/vitest run --reporter=dot",
+      "./node_modules/.bin/vitest run tests/unit/config-firebase.test.js tests/integration/firebase-adapter.test.js --reporter=dot --configLoader runner",
+      "node --check config-firebase.js",
+      "node --check tests/unit/config-firebase.test.js",
+      "node --check tests/integration/firebase-adapter.test.js",
+      "node --check core.js",
+      "git check-ignore -v dashboard/firebase-config.local.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "style",
+      "feature_id": "F001",
+      "issue": "Implementer command log includes `cd /Users/bayesian/Documents/GitHub/DontPanic/dashboard && npx vitest...`, which is not one of the forbidden command shapes but does violate the EC11 cwd-discipline guidance to avoid re-cd inside command strings. Evidence: `target_context.commands_run[1]`. Recommendation: run with the tool working directory set to `dashboard/` or use an explicit prefix form. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-only HEAD~1 $ git diff HEAD~1",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

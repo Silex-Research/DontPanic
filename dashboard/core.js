@@ -195,14 +195,12 @@ const pageModules = [
   'pages/settings/settings.js',
 ];
 
-// Load modules then init
-Promise.all(
+// Expose globally for page modules. The realtime adapter awaits Jarvis.ready
+// to ensure static first paint completes before Firestore listeners attach.
+window.Jarvis = Jarvis;
+
+Jarvis.ready = Promise.all(
   pageModules.map(src => import(`./${src}`).catch(err => {
     console.warn(`[Jarvis] Page module not found: ${src}`, err.message);
   }))
-).then(() => {
-  Jarvis.init();
-});
-
-// Expose globally for page modules
-window.Jarvis = Jarvis;
+).then(() => Jarvis.init());

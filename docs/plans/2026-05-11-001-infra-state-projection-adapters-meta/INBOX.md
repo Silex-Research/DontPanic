@@ -28,3 +28,16 @@ Child plan 2026-05-11-002-fix-harness-frictions-v3 is in flight (parent: 2026-05
 After authoring evidence/fan-in-from-2026-05-11-002-fix-harness-frictions-v3.md with `## Return Condition / status: satisfied`.
 
 ===
+---
+timestamp: 2026-05-11T21:52:22Z
+event: nested_child_pending
+plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+child_plan_id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+spawn_reason: operator_manual
+---
+
+Child plan 2026-05-09-004-feat-firebase-dashboard-adapter-v0 is in flight (parent: 2026-05-11-001-infra-state-projection-adapters-meta, spawn_reason: operator_manual). Parent re-entry is paused until operator runs:
+  jarvis-orchestrate approve 2026-05-11-001-infra-state-projection-adapters-meta pre_resume_after_child --child 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+After authoring evidence/fan-in-from-2026-05-09-004-feat-firebase-dashboard-adapter-v0.md with `## Return Condition / status: satisfied`.
+
+===

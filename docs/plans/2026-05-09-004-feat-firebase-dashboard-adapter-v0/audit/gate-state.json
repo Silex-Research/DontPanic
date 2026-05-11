@@ -1,0 +1,57 @@
+{
+  "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-11T21:52:22Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-11T21:52:22Z",
+      "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-11T22:11:28Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-11T22:17:50Z",
+      "actor": "operator"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-05-11T21:52:22Z",
+      "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-05-11T22:17:50Z",
+      "cleared_by": "operator"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl",
+    "pre_merge"
+  ]
+}

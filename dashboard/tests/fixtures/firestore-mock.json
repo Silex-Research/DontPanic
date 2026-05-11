@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "purpose": "Local fixture for the Firebase realtime adapter — mirrors the Firestore document shape for plan 2026-05-09-004 F001. Each top-level key maps to a `projects/{project_id}/{stream}` collection; each array element is one document in that collection. Real-jarvis-a6ee1 smoke test deferred to F005 per D007.",
+    "project_id": "jarvis-a6ee1",
+    "schema_version": "1.0"
+  },
+  "plans": [
+    {
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "status": "active",
+      "title": "Firebase dashboard adapter v0",
+      "type": "feat",
+      "tier": "local",
+      "goal_type": "infra",
+      "surfaces": ["infra", "web"],
+      "features_summary": { "total": 5, "passing": 0 },
+      "target_env": "dev",
+      "target_project": null,
+      "agents_required": ["claude", "codex"],
+      "date": "2026-05-09"
+    }
+  ],
+  "gates": [
+    {
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "gate_name": "pre_merge",
+      "kind": "pre_merge",
+      "stage": "pre_merge",
+      "reason": "awaiting auditor signoff",
+      "paused_at": "2026-05-11T20:00:00Z",
+      "approval_required": true,
+      "feature_id": "F001"
+    }
+  ],
+  "inbox": [
+    {
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "event": "volley_start",
+      "event_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0:volley_start:2026-05-11T21:52:22Z:F001",
+      "captured_at": "2026-05-11T21:52:22Z",
+      "feature_id": "F001",
+      "body": "Volley begins: claude (impl) + codex (aud), max_iterations=3",
+      "headers": { "impl": "claude", "aud": "codex" }
+    }
+  ],
+  "supervisors": [
+    {
+      "supervisor_id": "12345:2026-05-11T21:52:22Z",
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "feature_id": "F001",
+      "implementer_agent": "claude",
+      "auditor_agent": "codex",
+      "started_at": "2026-05-11T21:52:22Z",
+      "host": null,
+      "pid": null
+    }
+  ],
+  "quota": [
+    {
+      "vendor": "claude",
+      "window": "daily",
+      "percent_of_cap": 42.0,
+      "percent_threshold": 90.0,
+      "status": "ok",
+      "captured_at": "2026-05-11T21:52:22Z"
+    }
+  ],
+  "decisions": [
+    {
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "decision_id": "D007",
+      "ts": "2026-05-11T18:00:00Z",
+      "by": "operator",
+      "title": "Rescope F001+F002 to local fixture",
+      "body": "Credential gate: F003+ deferred until SA key + seed state ready."
+    }
+  ],
+  "evidence_refs": [
+    {
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "feature_id": "F001",
+      "type": "log",
+      "uri": "evidence/dispatch-plan004-f001-attempt1.log",
+      "captured_at": "2026-05-11T21:52:22Z",
+      "captured_by": "supervisor"
+    }
+  ]
+}
