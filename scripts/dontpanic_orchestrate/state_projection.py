@@ -89,6 +89,16 @@ from state_snapshot_model import (  # noqa: E402
     SupervisorEntry as SnapshotSupervisorEntry,
 )
 
+# Import secret-shape regexes from sanitization_check as the single
+# source of truth. F003 redactor matches operator-level scrubbing
+# coverage to what the OSS sanitization gate already enforces.
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+if str(_SCRIPTS_DIR) not in _sys.path:
+    _sys.path.insert(0, str(_SCRIPTS_DIR))
+from sanitization_check import SECRET_REGEXES as _SECRET_REGEXES  # noqa: E402
+
+_REDACT_PLACEHOLDER: Final[str] = "[REDACTED]"
+
 _LOG = logging.getLogger(__name__)
 
 ALL_STREAMS: Final[tuple[str, ...]] = (
@@ -207,11 +217,14 @@ def gather(
     if "quota" in include_set:
         quota_out = _gather_quota(quota_state_path, captured_at=captured_at)
 
-    return StateSnapshot(
+    snapshot = StateSnapshot(
         schema_version="1.0",
         captured_at=captured_at,
         dontpanic_version=dontpanic_version,
-        redact_level=RedactLevel(redact_level),
+        # Gather always builds at `full` internally; redact_to_level
+        # applies the requested policy as a pure post-pass so callers
+        # see exactly the level they asked for.
+        redact_level=RedactLevel.full,
         streams=Streams(
             plans=plans_out,
             gates=gates_out,
@@ -222,6 +235,7 @@ def gather(
             evidence_refs=evidence_out,
         ),
     )
+    return redact_to_level(snapshot, redact_level)
 
 
 # ─────────────────── plan discovery ───────────────────
@@ -527,9 +541,115 @@ def _parse_iso(s: str | None) -> dt.datetime | None:
         return None
 
 
+def _scrub_secrets(s: str | None) -> str | None:
+    """Replace every secret-shape match in `s` with `[REDACTED]`.
+
+    Single source-of-truth: SECRET_REGEXES from scripts/
+    sanitization_check.py. New patterns added there propagate here
+    automatically. Returns the input unchanged when no match.
+    """
+    if not s:
+        return s
+    out = s
+    for rx in _SECRET_REGEXES:
+        out = rx.sub(_REDACT_PLACEHOLDER, out)
+    return out
+
+
+def _redact_plan(p: PlanSummary) -> PlanSummary:
+    return p.model_copy(update={"title": _scrub_secrets(p.title)})
+
+
+def _redact_gate(g: GateEntry, *, level: str) -> GateEntry:
+    if level == "public":
+        return g.model_copy(update={"reason": None})
+    return g.model_copy(update={"reason": _scrub_secrets(g.reason)})
+
+
+def _redact_inbox(e: InboxEvent, *, level: str) -> InboxEvent:
+    if level == "public":
+        # Drop body + headers entirely; event/event_id/feature_id stay
+        # as stable surface IDs for adapters.
+        return e.model_copy(update={"body": None, "headers": None})
+    headers = e.headers or {}
+    scrubbed_headers = {k: _scrub_secrets(v) or "" for k, v in headers.items()}
+    return e.model_copy(
+        update={
+            "body": _scrub_secrets(e.body),
+            "headers": scrubbed_headers,
+        }
+    )
+
+
+def _redact_supervisor(s: SnapshotSupervisorEntry, *, level: str) -> SnapshotSupervisorEntry:
+    if level == "public":
+        return s.model_copy(update={"pid": None, "host": None})
+    return s
+
+
+def _redact_decision(d: DecisionEntry, *, level: str) -> DecisionEntry:
+    if level == "public":
+        return d.model_copy(update={"body": None, "title": _scrub_secrets(d.title)})
+    return d.model_copy(
+        update={
+            "title": _scrub_secrets(d.title),
+            "body": _scrub_secrets(d.body),
+        }
+    )
+
+
+def _redact_evidence(ev: EvidencePointer, *, level: str) -> EvidencePointer:
+    # URIs are relative paths / SHAs / public URLs by F006 contract —
+    # never tokens. Only the free-form `note` field can carry secrets.
+    return ev.model_copy(update={"note": _scrub_secrets(ev.note)})
+
+
+def redact_to_level(snapshot: StateSnapshot, level: str) -> StateSnapshot:
+    """Apply the per-level redaction policy and return a new snapshot.
+
+    Pure: never mutates the input.
+
+      - `full`     : returned as-is with redact_level metadata set
+      - `operator` : every string field scrubbed for secret shapes via
+                     SECRET_REGEXES; per-stream entries kept
+      - `public`   : operator scrubbing plus
+                     supervisor.pid/host → None,
+                     decision.body → None, inbox.body/headers → None,
+                     gate.reason → None,
+                     quota stream → []
+
+    Raises ValueError for any other level name.
+    """
+    if level not in _VALID_REDACT_LEVELS:
+        raise ValueError(
+            f"redact_level={level!r} not in {sorted(_VALID_REDACT_LEVELS)}"
+        )
+    if level == "full":
+        return snapshot.model_copy(update={"redact_level": RedactLevel.full})
+
+    s = snapshot.streams
+    new_streams = Streams(
+        plans=[_redact_plan(p) for p in s.plans],
+        gates=[_redact_gate(g, level=level) for g in s.gates],
+        inbox=[_redact_inbox(e, level=level) for e in s.inbox],
+        supervisors=[_redact_supervisor(sup, level=level) for sup in s.supervisors],
+        # F001 schema doc: "no quota agent breakdown" at public.
+        quota=[] if level == "public" else s.quota,
+        decisions=[_redact_decision(d, level=level) for d in s.decisions],
+        evidence_refs=[_redact_evidence(e, level=level) for e in s.evidence_refs],
+    )
+    return snapshot.model_copy(
+        update={
+            "redact_level": RedactLevel(level),
+            "streams": new_streams,
+        }
+    )
+
+
 __all__ = [
     "ALL_STREAMS",
     "INBOX_DEFAULT_LIMIT",
     "DECISIONS_DEFAULT_LIMIT",
     "gather",
+    "redact_to_level",
 ]
