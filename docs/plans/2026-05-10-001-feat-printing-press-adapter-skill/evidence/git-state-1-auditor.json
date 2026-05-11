@@ -1,0 +1,29 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/STATE_PROJECTION.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-04-19-001-infra-cross-agent-orchestration/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/decisions.jsonl",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "claude/skills/printing-press-adapter/",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/INBOX.md",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/evidence/"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

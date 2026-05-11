@@ -43,9 +43,30 @@
         "When plan 010 has F001 + F002 closed via real volley (passes:true with audit-envelope evidence), this feature is done."
       ],
       "acceptance": "(1) Plan 010 F001 and F002 closed via supervisor.dispatch_volley (not hand-coded). (2) Audit envelopes exist in plan 010 evidence/ as proof. (3) Findings cross-posted in same session they surface. (4) Pre-impl + pre-merge gates honored on each feature.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-11T16:05:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/dispatch-plan010-f001-attempt1.log",
+          "note": "full dispatch log: 2 iterations, 4 audit envelopes, terminated stopped_no_progress, operator-resolved"
+        },
+        {
+          "type": "audit_json",
+          "uri": "../2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F001-i1.json",
+          "note": "final iteration audit envelope (cross-vendor)"
+        },
+        {
+          "type": "commit",
+          "uri": "plan-010-skill-files-via-real-volley",
+          "note": "cross-vendor dispatch_volley delivered 763 lines of skill files including security-hardened ADAPTER_TEMPLATE.md sanitization logic"
+        }
       ]
     },
     {
@@ -78,10 +99,21 @@
         "If no class has \u22653: append D-entry 'cluster threshold not tripped'; this plan's self-improvement loop yielded no v3 work."
       ],
       "acceptance": "(1) Cluster analysis appended to decisions.jsonl. (2) Either v3 plan drafted OR explicit 'threshold not tripped' D-entry. (3) Findings remain queryable via state_snapshot.streams.decisions for future analysis.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002",
         "F003"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-11T16:05:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../2026-05-11-002-fix-harness-frictions-v3/plan.md",
+          "note": "v3 frictions plan drafted; 4 features (F001 doctor surface, F002 prompt trim, F003 spec_ambiguity class, F004 close-out CLI); status:draft pending parent F003 signal"
+        }
       ]
     }
   ]

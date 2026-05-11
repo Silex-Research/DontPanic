@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-11T15:24:35Z",
+  "feature_id": "F001",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "documentation",
+      "issue_excerpt": "PP version pinning is documented in the per-service config, not in the adapter’s `~/.dontpanic/adapters.json` entry as required. Evidence: F001 step requires d…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

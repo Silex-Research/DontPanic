@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "audit_id": "2026-05-10-001-feat-printing-press-adapter-skill#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-11T15:13:43Z",
+  "completed_at": "2026-05-11T15:17:04Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-10-001-feat-printing-press-adapter-skill-xz_51ojd target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 317706 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 832110,
+    "tokens_out": 12984,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is present and matches `{Repo: DontPanic, Env: dev, Project: (none)}`; their `commands_run` has no forbidden command shapes.\n\nFINDING (medium, security): `ADAPTER_TEMPLATE.md` does not implement the required sanitization checks on tool responses. Evidence: the response paths only call `apply_redact(...)` at `claude/skills/printing-press-adapter/ADAPTER_TEMPLATE.md:225-231`, and `rg` found no sanitize/sanitization hook. Recommendation: add an explicit sanitization/check function after redaction for all success/error response paths.\n\nFINDING (low, documentation): `docs/STATE_PROJECTION.md` does not directly cross-link the new skill path. Evidence: `docs/STATE_PROJECTION.md:167-169` only references ROADMAP/Printing Press generally, while ROADMAP already links `../claude/skills/printing-press-adapter/SKILL.md`. Recommendation: add the direct skill cross-reference there.\n\nFINDING (advisory, test_coverage): I could not validate against an “agent-conventions skill schema” because no skill schema exists in this checkout; the implementer validated against `AppliesToModel` instead. Recommendation: either add/reference the canonical skill schema or narrow the claim to matcher frontmatter validation.\n\nChecks run:\n$ git status --short\n$ git diff HEAD~1 --stat\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '... ADAPTER_TEMPLATE ast.parse ...'\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=sc",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '... ADAPTER_TEMPLATE ast.parse ...'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '... SKILL AppliesToModel validation ...'",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c '... DECISION_TREE four filters/examples ...'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '... skill_applicability matcher smoke ...'",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_skill_applicability.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "security",
+      "feature_id": "F001",
+      "issue": "`ADAPTER_TEMPLATE.md` does not implement the required sanitization checks on tool responses. Evidence: the response paths only call `apply_redact(...)` at `claude/skills/printing-press-adapter/ADAPTER_TEMPLATE.md:225-231`, and `rg` found no sanitize/sanitization hook. Recommendation: add an explicit sanitization/check function after redaction for all success/error response paths.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "`docs/STATE_PROJECTION.md` does not directly cross-link the new skill path. Evidence: `docs/STATE_PROJECTION.md:167-169` only references ROADMAP/Printing Press generally, while ROADMAP already links `../claude/skills/printing-press-adapter/SKILL.md`. Recommendation: add the direct skill cross-reference there.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "I could not validate against an “agent-conventions skill schema” because no skill schema exists in this checkout; the implementer validated against `AppliesToModel` instead. Recommendation: either add/reference the canonical skill schema or narrow the claim to matcher frontmatter validation. Checks run: $ git status --short $ git diff HEAD~1 --stat $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c '... ADAPTER_TEMPLATE ast.parse ...' $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
