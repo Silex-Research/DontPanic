@@ -41,7 +41,15 @@
         "Tests cover every stream, empty-state, single-plan filter, multi-project registry traversal."
       ],
       "acceptance": "(1) `state_projection.gather()` returns a `StateSnapshot` validated by the F001 schema. (2) Empty registry returns an envelope with empty arrays, not an error. (3) `--include` and `--plan` filters honored. (4) No mutations to filesystem state during gather. (5) Tests cover all six streams + filters.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["claude"],
+      "verified_at": "2026-05-10T00:00:00Z",
+      "evidence_refs": [
+        {"type": "test_output", "uri": "evidence/F002-projection-tests.log", "note": "23 tests pass covering all 7 streams + filters + pure-read invariant + round-trip"},
+        {"type": "test_output", "uri": "evidence/F002-full-sweep.log", "note": "Full sweep 1722 passed, 7 skipped, zero regressions"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/state_projection.py", "note": "Pure-read gather module with 7 per-stream gatherers + include/plan_id filters"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py", "note": "23-case fixture suite — envelope shape, per-stream contracts, filters, pure-read fingerprint check"}
+      ],
       "depends_on": [
         "F001"
       ]
