@@ -388,6 +388,184 @@ def check_sa_key_age() -> CheckResult:
     )
 
 
+# ── plan 2026-05-11-002 F001: quota cap-entry surface ─────────────────────
+
+
+def check_quota_caps(
+    *,
+    quota_state_path: Path | None = None,
+    caps_path: Path | None = None,
+    calibration_path: Path | None = None,
+) -> list[CheckResult]:
+    """Walk quota_state.json vendors × windows; emit one WARN per
+    (vendor, window) pair that has live signal but no matching cap entry in
+    quota_caps.json. Stale calibrations (>STALE_WARNING_DAYS old) emit a
+    separate WARN per (vendor, window).
+    Resolves the doctor friction surfaced by parent plan 2026-05-11-001
+    dispatch: dispatch-time stderr warnings buried under volley logs are
+    promoted to actionable doctor findings with copy-paste config snippets.
+    Honors JARVIS_QUOTA_STATE_PATH / JARVIS_QUOTA_CAPS_PATH for hermetic
+    test isolation (set by conftest.py). Calibration path defaults to
+    calibration_loader.CALIBRATION_FILE; pass explicitly in tests so the
+    operator's real ~/.jarvis/quota_calibration.json never bleeds in."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import calibration_loader, quota_admission, quota_caps_loader
+    finally:
+        sys.path.pop(0)
+
+    if quota_state_path is None:
+        quota_state_path = quota_admission._effective_quota_state_path()
+    if caps_path is None:
+        caps_path = quota_caps_loader.effective_caps_path()
+    if calibration_path is None:
+        calibration_path = calibration_loader.CALIBRATION_FILE
+
+    if not quota_state_path.is_file():
+        return [
+            _ok(
+                "quota-caps",
+                f"{quota_state_path} not present — run `python3 scripts/quota_check.py` to populate",
+            )
+        ]
+    try:
+        state = json.loads(quota_state_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return [
+            _bad(
+                "quota-caps",
+                f"{quota_state_path} unreadable: {exc}",
+                "regenerate via `python3 scripts/quota_check.py`",
+            )
+        ]
+
+    try:
+        caps = quota_caps_loader.load(caps_path)
+    except quota_caps_loader.QuotaCapsError as exc:
+        return [
+            _bad(
+                "quota-caps",
+                f"caps file invalid or missing at {caps_path}: {exc}",
+                "run: python -m dontpanic_orchestrate quota-caps init",
+            )
+        ]
+
+    vendors = state.get("vendors") or {}
+    if not isinstance(vendors, dict) or not vendors:
+        return [_ok("quota-caps", "no vendors{} block in quota_state.json — nothing to check")]
+
+    results: list[CheckResult] = []
+    covered_count = 0
+
+    for vendor in sorted(vendors):
+        vblock = vendors.get(vendor) or {}
+        if not isinstance(vblock, dict):
+            continue
+        tier = vblock.get("tier") or "unknown"
+        # Skip vendors that the operator has not installed at all — empty
+        # windows + absent tier means "no signal to cap".
+        if tier == "absent":
+            continue
+        windows = vblock.get("windows") or {}
+        if not isinstance(windows, dict):
+            continue
+        for wname in sorted(windows):
+            wblock = windows.get(wname) or {}
+            if not isinstance(wblock, dict):
+                continue
+            observed_native = wblock.get("observed_native")
+            observed_unit = wblock.get("observed_unit") or "<unknown>"
+            # Only flag windows with live signal — no-signal windows don't
+            # need caps, that's the same rule evaluate_window applies.
+            if not isinstance(observed_native, (int, float)) or observed_native <= 0:
+                continue
+            cap_block = quota_caps_loader.get(caps, vendor, tier, wname)
+            if cap_block is not None:
+                covered_count += 1
+                continue
+            results.append(
+                _warn(
+                    f"quota-caps:{vendor}.{tier}.{wname}",
+                    f"{vendor}.{tier}.{wname} has signal "
+                    f"({int(observed_native)} {observed_unit}) but no cap entry in {caps_path}",
+                    _missing_cap_snippet(vendor, tier, wname, observed_native, observed_unit),
+                )
+            )
+
+    # Stale calibration findings — separate from missing-cap findings because
+    # the remediation is different (calibrate-claude, not edit caps file).
+    calibration_data = calibration_loader.load(calibration_path)
+    if isinstance(calibration_data, dict):
+        for vendor in sorted(k for k in calibration_data if k != "schema_version"):
+            vblock = calibration_data.get(vendor)
+            if not isinstance(vblock, dict):
+                continue
+            for wname in sorted(vblock):
+                wblock = vblock.get(wname)
+                if not isinstance(wblock, dict):
+                    continue
+                if not calibration_loader.is_stale(wblock):
+                    continue
+                stamped = wblock.get("stamped_at") or "<unknown>"
+                results.append(
+                    _warn(
+                        f"quota-caps:calibration:{vendor}.{wname}",
+                        f"{vendor}.{wname} calibration is stale "
+                        f"(stamped {stamped}, >{calibration_loader.STALE_WARNING_DAYS}d old)",
+                        f"run: python -m dontpanic_orchestrate calibrate-claude "
+                        f"--window {wname} --dashboard-pct N "
+                        "(sample claude.ai/settings/usage first)",
+                    )
+                )
+
+    if not results:
+        results.append(
+            _ok(
+                "quota-caps",
+                f"{covered_count} (vendor, window) signal pair(s) covered in {caps_path}; "
+                "calibrations fresh",
+            )
+        )
+    return results
+
+
+def _missing_cap_snippet(
+    vendor: str, tier: str, window: str, observed_native: float, observed_unit: str
+) -> str:
+    """Build a copy-paste config snippet for the operator. Picks the
+    right cap.unit based on the observed unit; for Claude weighted tokens
+    surfaces calibrate-claude as the prereq."""
+    if vendor == "claude" and observed_unit == "weighted_tokens_local_proxy":
+        cap_unit = "percent_of_plan"
+        cap_value: int | str = 100
+        note = (
+            f"requires `calibrate-claude --window {window} --dashboard-pct N` "
+            "before this cap is meaningful"
+        )
+    elif observed_unit in {"tokens_local_proxy", "weighted_tokens_local_proxy"}:
+        cap_unit = observed_unit
+        cap_value = max(int(observed_native * 1.25), 1)
+        note = f"tuned to ~1.25x observed {window}; re-run `quota-caps init` to refresh"
+    elif observed_unit == "requests":
+        cap_unit = "requests"
+        cap_value = 1000
+        note = "vendor-published daily request cap (adjust to your plan)"
+    else:
+        cap_unit = observed_unit
+        cap_value = "<replace>"
+        note = "operator-determined"
+
+    snippet = (
+        f'add to ~/.jarvis/quota_caps.json under "{vendor}"."{tier}":\n'
+        f'        "{window}": {{\n'
+        f'          "cap": {cap_value},\n'
+        f'          "unit": "{cap_unit}",\n'
+        f'          "_note": "{note}"\n'
+        f'        }}'
+    )
+    return snippet
+
+
 # ── F003: global + per-project config preflight ────────────────────────────
 
 
@@ -675,6 +853,7 @@ def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> l
     results.append(check_schemas())
     results.append(check_pydantic_models())
     results.append(check_parent_plan_validates())
+    results.extend(check_quota_caps())
     if include_projects:
         results.append(check_global_config())
         results.append(check_projects_registry_status())

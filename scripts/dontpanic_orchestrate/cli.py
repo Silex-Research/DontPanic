@@ -1301,6 +1301,9 @@ def _doctor_main(argv: list[str]) -> int:
 
     # Lazy import: scripts/ may not be on sys.path when the console script
     # is installed via pipx. Add it before importing jarvis_doctor.
+    # ``jarvis_doctor`` is a thin alias that re-exports the canonical
+    # ``dontpanic_doctor`` API; tests pre-populate sys.modules['jarvis_doctor']
+    # to swap in stubbed run_all_checks, so we keep the import name as-is.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     try:
         import jarvis_doctor as jd  # type: ignore[import-not-found]

@@ -1,0 +1,31 @@
+[budget_ceiling] claude.rolling_7d calibration stale; applying ratio anyway. Re-run calibrate-claude when convenient.
+[budget_ceiling] claude.max_20x.rolling_5h has signal (12689079.8 weighted_tokens_local_proxy) but no cap entry in ~/.jarvis/quota_caps.json
+[budget_ceiling] codex.plus.rolling_7d has signal (573930557 tokens_local_proxy) but no cap entry in ~/.jarvis/quota_caps.json
+[dispatch-from-plan] pre-flight context
+  plan_path:      /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-11-002-fix-harness-frictions-v3
+  feature:        F001
+  tier:           local
+  target_env:     dev
+  target_project: (none)
+  implementer:    claude
+  auditor:        codex
+  human_gates:    pre_impl,pre_merge
+  max_iterations: 3
+  quota_readiness: ok
+    claude=13% / codex=13%
+[dispatch-from-plan] readiness=ok; dispatching 2026-05-11-002-fix-harness-frictions-v3 via supervisor.dispatch_volley
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=3
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-11-002-fix-harness-frictions-v3-ylyab_3y target_env=dev target_project=(none) source=plan cwd=(inherit)
+[quota] claude: 13.4% of rolling_7d cap (tier=max_20x, cap=100.0 percent_of_plan, confidence=manual)
+[quota] codex: 12.6% of rolling_5h cap (tier=plus, cap=1000000000.0 tokens_local_proxy, confidence=uncalibrated)
+[volley] iter=0 auditor verdict: needs_changes
+[quota] claude: 13.4% of rolling_7d cap (tier=max_20x, cap=100.0 percent_of_plan, confidence=manual)
+[quota] codex: 12.6% of rolling_5h cap (tier=plus, cap=1000000000.0 tokens_local_proxy, confidence=uncalibrated)
+[volley] iter=1 auditor verdict: signed_off
+[volley] PAUSED on pre_merge gates: ['pre_merge']
+
+[dispatch-from-plan] volley terminal: paused_on_gate after 2 round(s)
+[dispatch-from-plan] reason: unmet pre_merge gates: ['pre_merge']; clear via `jarvis approve 2026-05-11-002-fix-harness-frictions-v3 <gate>` or `jarvis resume 2026-05-11-002-fix-harness-frictions-v3 --all`
+[dispatch-from-plan] 4 audit JSONs written
