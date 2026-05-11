@@ -1,0 +1,24 @@
+{
+  "reclassified_at": "2026-05-11T00:00:00Z",
+  "source_envelope": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F001-i1.json",
+  "plan_id_source": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "feature_id_source": "F001",
+  "iteration_source": 1,
+  "taxonomy_version": "v3-F003 (spec_ambiguity added)",
+  "pre_v3_aggregate": "unknown",
+  "pre_v3_blocking": true,
+  "post_v3_aggregate": "spec_ambiguity",
+  "post_v3_blocking": false,
+  "recommended_action": "Operator-review for spec gap; patch spec then resume or accept implementer's reading. The finding sits on a documentation/naming/convention/placement surface where implementer + auditor both fit the spec but the spec is silent on the disputed point. Two paths: (a) update the spec/feature description to disambiguate and re-dispatch, or (b) accept the implementer's interpretation and close the volley operator-resolved.",
+  "findings": [
+    {
+      "finding_index": 0,
+      "pre_v3_classification": "unknown",
+      "post_v3_classification": "spec_ambiguity",
+      "severity": "medium",
+      "category": "documentation",
+      "issue_excerpt": "PP version pinning is documented in the per-service config, not in the adapter\u2019s `~/.dontpanic/adapters.json` entry as required. Evidence: F001 step requires d\u2026",
+      "rationale": "severity=medium, category=documentation \u2014 finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    }
+  ]
+}

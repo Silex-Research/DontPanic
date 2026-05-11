@@ -67,8 +67,16 @@
         "Reclassify the plan 010 F001 iteration 1 finding against the new taxonomy as evidence."
       ],
       "acceptance": "(1) `spec_ambiguity` class exists in auditor_taxonomy. (2) Plan 010 F001 iteration 1 finding reclassifies to spec_ambiguity (not unknown). (3) Fixture tests cover the new pattern + don't regress existing classifications. (4) Recommended_action template documents the operator-review-or-accept workflow.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": ["claude_impl"],
+      "verified_at": "2026-05-11T17:30:00Z",
+      "evidence_refs": [
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/auditor_taxonomy.py", "note": "FindingClass.SPEC_AMBIGUITY enum + classify_finding rule (severity ∈ {low,medium} ∧ category ∈ {documentation, naming, convention, placement}) + _aggregate priority + _recommend template"},
+        {"type": "file", "uri": "../../../scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_v3_f003.py", "note": "21 fixture tests pass; covers spec_ambiguity gate + plan 010 F001 iter1 reclassification + no-regression on existing classes"},
+        {"type": "file", "uri": "evidence/plan010-f001-iter1-reclassification.json", "note": "live reclassification of plan 010 F001 iter1 finding: pre-v3 unknown/blocking → post-v3 spec_ambiguity/non-blocking"},
+        {"type": "log", "uri": "evidence/plan010-f001-iter1-reclassification.json", "note": "AC #2 evidence — motivating case reclassifies"}
+      ]
     },
     {
       "id": "F004",

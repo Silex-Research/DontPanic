@@ -1,0 +1,33 @@
+{
+  "task_id": "2026-05-11-002-fix-harness-frictions-v3",
+  "audit_id": "2026-05-11-002-fix-harness-frictions-v3#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-11T17:49:20Z",
+  "completed_at": "2026-05-11T17:51:27Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-11-002-fix-harness-frictions-v3-58x7scnk target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 164256 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 595583,
+    "tokens_out": 8490,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: signed_off. No FINDINGs. The implementer correctly declared Repo/Env/Project, structured `target_context` is `env=dev`, `project=null`, and `commands_run` contains no forbidden command shapes. The diff adds `spec_ambiguity`, routes the plan 010 F001 iter1 documentation finding to it, keeps it non-blocking, updates the recommendation template, and adds regression fixtures. Pytest could not collect in this read-only runner because Python had no usable writable temp directory, but the direct import/classification check passed.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_v3_f003.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate import auditor_taxonomy as a; from dontpanic_orchestrate.auditor_taxonomy import FindingClass as F; f={'severity':'medium','category':'documentation','feature_id':'F001','issue':'PP version pinning is documented in the per-service config, not in the adapter adapters.json entry as required.'}; c=a.classify_terminal(feature_id='F001', final_audit_envelope={'audit_status':'needs_changes','findings':[f]}); assert c.aggregate==F.SPEC_AMBIGUITY and c.blocking is False; assert 'accept' in c.recommended_action.lower() and 'spec' in c.recommended_action.lo",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_v3_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate import auditor_taxonomy as a; from dontpanic_orchestrate.auditor_taxonomy import FindingClass as F; f={'severity':'medium','category':'documentation','feature_id':'F001','issue':'PP version pinning is documented in the per-service config, not in the adapter adapters.json entry as required.'}; c=a.classify_terminal(feature_id='F001', final_audit_envelope={'audit_status':'needs_changes','findings':[f]}); assert c.aggregate==F.SPEC_AMBIGUITY and c.blocking is False; assert 'accept' in c.recommended_action.lower() and 'spec' in c.recommended_action.lower(); print(c.aggregate.value, c.blocking)\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "needs_changes"
+}
