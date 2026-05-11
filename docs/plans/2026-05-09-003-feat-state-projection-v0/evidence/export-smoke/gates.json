@@ -1,0 +1,12 @@
+[
+  {
+    "plan_id": "2026-05-10-001-feat-smoke",
+    "gate_name": "pre_impl",
+    "kind": "pre_impl",
+    "stage": "pre_impl",
+    "reason": "declared gate not cleared",
+    "paused_at": "2026-05-11T13:41:18.115004Z",
+    "approval_required": true,
+    "feature_id": null
+  }
+]

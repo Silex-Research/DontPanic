@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-05-11T13:41:18.473662Z",
+  "redact_level": "operator",
+  "dontpanic_version": null,
+  "streams": [
+    {
+      "name": "plans",
+      "file": "plans.json",
+      "count": 1
+    },
+    {
+      "name": "gates",
+      "file": "gates.json",
+      "count": 1
+    },
+    {
+      "name": "inbox",
+      "file": "inbox.json",
+      "count": 0
+    },
+    {
+      "name": "supervisors",
+      "file": "supervisors.json",
+      "count": 0
+    },
+    {
+      "name": "quota",
+      "file": "quota.json",
+      "count": 4
+    },
+    {
+      "name": "decisions",
+      "file": "decisions.json",
+      "count": 0
+    },
+    {
+      "name": "evidence_refs",
+      "file": "evidence_refs.json",
+      "count": 0
+    }
+  ]
+}

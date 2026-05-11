@@ -69,14 +69,109 @@ def _usage() -> str:
 def main(argv: list[str]) -> int:
     if not argv:
         print(_usage(), file=sys.stderr)
-        print("  subcommands: snapshot", file=sys.stderr)
+        print("  subcommands: snapshot, export-dashboard", file=sys.stderr)
         return 2
     sub, rest = argv[0], argv[1:]
     if sub == "snapshot":
         return _snapshot_main(rest)
+    if sub == "export-dashboard":
+        return _export_dashboard_main(rest)
     print(f"unknown state subcommand: {sub!r}", file=sys.stderr)
     print(_usage(), file=sys.stderr)
     return 2
+
+
+def _export_dashboard_main(argv: list[str]) -> int:
+    """Plan 2026-05-09-003 F007 — write projection streams to per-stream
+    JSON files in <out_dir>. Each file holds one F001 stream's array; a
+    top-level state-snapshot.json holds the full envelope including
+    schema_version + captured_at + redact_level metadata.
+
+    Static-dashboard consumers point their loader at <out_dir>; any
+    static host (file://, python -m http.server, GitHub Pages, nginx,
+    Firebase Hosting) can serve the resulting directory.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic state export-dashboard",
+        description=(
+            "Write the state-projection envelope + per-stream files into "
+            "<out_dir> so a static dashboard can render the projection "
+            "without any server runtime."
+        ),
+    )
+    parser.add_argument("--out", required=True, dest="out_dir")
+    parser.add_argument(
+        "--plans-root",
+        default=None,
+        help="default: <cwd>/docs/plans",
+    )
+    parser.add_argument(
+        "--redact-level",
+        choices=_VALID_REDACT,
+        default="operator",
+    )
+    parser.add_argument("--plan", dest="plan_id", default=None)
+    args = parser.parse_args(argv)
+
+    out_dir = Path(args.out_dir)
+    plans_root = (
+        Path(args.plans_root) if args.plans_root else Path.cwd() / "docs" / "plans"
+    )
+
+    try:
+        snap = state_projection.gather(
+            plans_root,
+            redact_level=args.redact_level,
+            plan_id=args.plan_id,
+        )
+    except ValueError as e:
+        print(f"gather error: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:
+        print(f"gather failed: {e}", file=sys.stderr)
+        return 1
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    envelope = snap.model_dump(mode="json")
+
+    # Top-level envelope file — the canonical adapter input.
+    (out_dir / "state-snapshot.json").write_text(
+        json.dumps(envelope, indent=2, ensure_ascii=False)
+    )
+
+    # Per-stream files — each contains JUST that stream's array.
+    # Adapters with single-stream pages avoid loading the whole envelope.
+    streams = envelope["streams"]
+    for stream_name in state_projection.ALL_STREAMS:
+        (out_dir / f"{stream_name}.json").write_text(
+            json.dumps(streams[stream_name], indent=2, ensure_ascii=False)
+        )
+
+    # Manifest — lets a static loader discover what's in the directory
+    # without reading every file.
+    manifest = {
+        "schema_version": envelope["schema_version"],
+        "captured_at": envelope["captured_at"],
+        "redact_level": envelope["redact_level"],
+        "dontpanic_version": envelope.get("dontpanic_version"),
+        "streams": [
+            {
+                "name": s,
+                "file": f"{s}.json",
+                "count": len(streams[s]),
+            }
+            for s in state_projection.ALL_STREAMS
+        ],
+    }
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False)
+    )
+
+    print(
+        f"wrote {len(state_projection.ALL_STREAMS)+2} files to {out_dir}",
+        file=sys.stderr,
+    )
+    return 0
 
 
 def _snapshot_main(argv: list[str]) -> int:

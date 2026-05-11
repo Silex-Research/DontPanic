@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 11 items
+
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportHappy::test_writes_all_files PASSED [  9%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportHappy::test_snapshot_validates PASSED [ 18%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportHappy::test_per_stream_files_are_arrays PASSED [ 27%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportHappy::test_manifest_enumerates_streams PASSED [ 36%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportHappy::test_plans_json_has_fixture_plan PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportArgv::test_missing_out_flag_fails PASSED [ 54%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestExportArgv::test_bad_redact_level_fails PASSED [ 63%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestLocalFirstInvariant::test_existing_dashboard_core_js_unchanged PASSED [ 72%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestDashboardReadme::test_readme_exists PASSED [ 81%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestDashboardReadme::test_readme_documents_three_deployment_shapes PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py::TestDashboardReadme::test_readme_marks_firebase_optional PASSED [100%]
+
+============================== 11 passed in 0.20s ==============================
