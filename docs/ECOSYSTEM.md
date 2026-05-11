@@ -186,3 +186,11 @@ F006 is the OpenClaw-specific reference implementation.
 - [`DISCOVERABILITY.md`](./DISCOVERABILITY.md) — publish-readiness and MCP
   client checklist
 - [`PLATFORM.md`](./PLATFORM.md) — architectural thesis
+
+## Adapter contract
+
+If you're building anything that consumes DontPanic state — dashboards,
+brokers, CI runners, hosted agents, multi-operator sync — read the
+[State Projection adapter governance contract](./STATE_PROJECTION.md).
+Four invariants every adapter must follow: stable-ID discipline,
+schema-version pinning, redaction respect, no-write-back.
