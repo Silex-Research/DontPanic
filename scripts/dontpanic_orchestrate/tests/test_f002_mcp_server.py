@@ -146,7 +146,7 @@ def registered_repo(tmp_path, isolated_home):
 
 
 class TestToolSurface:
-    """The documented 6 tools — and nothing else (D002)."""
+    """The documented tool surface — 6 from D002 plus 2 added by F005 of plan 2026-05-09-003."""
 
     EXPECTED_TOOLS = (
         "list_projects",
@@ -155,13 +155,18 @@ class TestToolSurface:
         "status",
         "approve_gate",
         "read_evidence",
+        # Plan 2026-05-09-003 F005 — state projection MCP tools.
+        "state_snapshot",
+        "state_stream",
     )
 
-    def test_exactly_six_tools_registered(self):
+    def test_documented_tool_surface_registered(self):
         names = mcp_server.list_tool_names()
         assert tuple(names) == self.EXPECTED_TOOLS, (
             f"Tool surface drift: got {names}, expected {list(self.EXPECTED_TOOLS)}. "
-            "Adding tools beyond the documented 6 violates D002 — Phase C owns intake."
+            "Adding tools beyond the documented surface violates D002 — "
+            "Phase C still owns intake; F005 added the two state-projection "
+            "read tools per plan 2026-05-09-003."
         )
 
     @pytest.mark.parametrize("forbidden", ["intake", "submit_plan", "create_plan"])
