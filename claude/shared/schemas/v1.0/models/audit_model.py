@@ -68,6 +68,7 @@ class Category(Enum):
     redaction = 'redaction'
     test_coverage = 'test_coverage'
     documentation = 'documentation'
+    parsing = 'parsing'
 
 
 class Finding(BaseModel):

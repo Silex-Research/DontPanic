@@ -29,12 +29,20 @@
       "at": "2026-05-12T02:11:56Z",
       "actor": "supervisor",
       "reason": "child '2026-05-12-001-fix-harness-frictions-v4' dispatched"
+    },
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-12-002-fix-harness-frictions-v4-1",
+      "at": "2026-05-12T19:29:00Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-12-002-fix-harness-frictions-v4-1' dispatched"
     }
   ],
   "active_pre_resume_after_children": [
     "pre_resume_after_child:2026-05-10-001-feat-printing-press-adapter-skill",
     "pre_resume_after_child:2026-05-11-002-fix-harness-frictions-v3",
     "pre_resume_after_child:2026-05-09-004-feat-firebase-dashboard-adapter-v0",
-    "pre_resume_after_child:2026-05-12-001-fix-harness-frictions-v4"
+    "pre_resume_after_child:2026-05-12-001-fix-harness-frictions-v4",
+    "pre_resume_after_child:2026-05-12-002-fix-harness-frictions-v4-1"
   ]
 }

@@ -126,7 +126,7 @@ class TestSurfacesField:
         with pytest.raises(ValidationError):
             plan_loader.load(plan_dir)
 
-    def test_agent_conventions_version_is_v1_7_0(self):
+    def test_agent_conventions_version_is_v1_8_0(self):
         version_file = (
             plan_loader.SCHEMAS_DIR.parent.parent / "VERSION"
         )
@@ -135,10 +135,10 @@ class TestSurfacesField:
             "schemas dir should sit one level under <root>/schemas/v1.0/"
         )
         version_text = version_file.read_text().strip()
-        assert version_text == "1.7.0", (
+        assert version_text == "1.8.0", (
             f"agent-conventions VERSION is {version_text!r}; "
-            "expected '1.7.0' per plan 2026-05-10-001 F002 "
-            "(external-api-wrap surface added)"
+            "expected '1.8.0' per plan 2026-05-12-002 F001 "
+            "(audit category enum gains `parsing`)"
         )
 
     def test_external_api_wrap_in_surfaces_enum(self):
