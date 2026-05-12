@@ -3,7 +3,7 @@ id: 2026-05-12-001-fix-harness-frictions-v4
 title: Harness frictions v4 — fixes from plan 004 + plan 010 cross-repo dogfood
 type: fix
 tier: local
-status: draft
+status: active
 date: "2026-05-12"
 goal_type: infra
 surfaces:
