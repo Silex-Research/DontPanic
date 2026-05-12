@@ -1,0 +1,74 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Lock-time plan-doctor cross-checks — D024 fix. Plan 004 pre-lock review caught two inconsistencies that mid-dispatch discovery would have cost ~9M tokens to learn: (a) child_charter.allowed_paths still pointed at archived axiom/packages/** dirs (predated D006 rename to DontPanic/dashboard/); (b) F001 acceptance #4 demanded a smoke test against jarvis-a6ee1 with seed Firestore state, but parent_acceptance_item explicitly defers F003-F005 'until operator credentials in place' — an internally contradictory plan. Both shapes are deterministic to detect. Add validate_plan_cohesion() to dontpanic_doctor.py: for each feature with steps[], parse each step for file-path-shaped tokens and warn if they're outside the child_charter.allowed_paths globs; for each acceptance string, flag resource names (jarvis-a6ee1, axiom-workspace-*, specific project IDs) that also appear in parent_acceptance_item with deferral language ('deferred', 'until ... in place', 'credential-gated'). Lock-time advisory: WARN findings, doesn't block lock. Surfaces deltas before operator hits paid dispatch.",
+      "steps": [
+        "Read dontpanic_doctor.py current structure + the plan_loader's parsed Plan model shape.",
+        "Add validate_plan_cohesion(plan_dir) helper that loads plan.md frontmatter + features.json, walks features[].steps[] looking for path-shaped tokens (regex: `[\\w./-]+\\.\\w+` or backtick-quoted paths), cross-references against child_charter.allowed_paths globs via fnmatch.",
+        "Add acceptance-vs-deferred check: scan features[].acceptance strings for resource names that also appear in parent_acceptance_item with deferral markers; warn on hit.",
+        "Wire into the existing doctor runner (--include-projects path or a new --validate-plans flag).",
+        "Fixture tests covering the plan 004 reproducer (axiom/-only allowed_paths + jarvis-a6ee1-acceptance-vs-deferred), plus a clean-plan negative case.",
+        "Bonus: emit a copy-paste fix suggestion per finding (e.g. 'add dashboard/** to allowed_paths' or 'rescope acceptance #4 to local-fixture per D-entry')."
+      ],
+      "acceptance": "(1) `dontpanic doctor` (or new --validate-plans subcommand) walks all locked plans + surfaces WARN findings for allowed_paths-vs-feature-paths drift + acceptance-vs-deferred-resource conflicts. (2) Fixture tests reproduce both plan-004 pre-lock issues from D024. (3) Clean plans don't false-positive (negative-case test). (4) Per-finding remediation hint included.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Verdict-string vs finding-class reconciliation in supervisor — D022 fix. Plan 010 F002 codex auditor returned audit_status='blocked' because its read-only sandbox couldn't run pytest. Its only finding was severity=advisory, category=test_coverage (non-substantive — exactly what F003's v3 taxonomy classifies as advisory-only, non-blocking). But the supervisor terminated 'blocked after 1 round' because the verdict STRING was 'blocked' — the F003 ENVIRONMENTAL_BLOCKER short-circuit fires on a finding-class, not on the verdict string itself. Reconcile: when auditor returns verdict='blocked' AND ALL findings classify as advisory-only via the v3 taxonomy, promote terminal from blocked-after-N to paused_on_environmental (matching F003 ENVIRONMENTAL_BLOCKER semantics). Don't trust the verdict string alone — trust the findings. Operator currently has to use F004 close --operator-resolved --reason environmental_reproduction_failure manually; F002 makes this automatic.",
+      "steps": [
+        "Read supervisor.py's terminal-decision branch + circuit_breakers.py ENVIRONMENTAL_BLOCKER short-circuit.",
+        "Add helper: `is_advisory_only_findings_set(findings, taxonomy_classifier)` → True iff every finding classifies to environmental_reproduction_failure / evidence_shape_disagreement / spec_ambiguity / scope_overreach (i.e. the advisory v3 classes).",
+        "In supervisor's post-auditor decision: if verdict=blocked and is_advisory_only_findings_set is True, override terminal to paused_on_environmental + emit reconciliation INBOX event.",
+        "Preserve original behavior when findings include any substantive class (implementation_defect, regression, etc.) — substantive findings + verdict=blocked = real blocker.",
+        "Fixture test: replay the plan 010 F002 codex envelope + assert new terminal classification. Also test the negative case (verdict=blocked + implementation_defect finding still blocks)."
+      ],
+      "acceptance": "(1) Supervisor reconciles verdict=blocked against finding classification before terminating. (2) Plan 010 F002 codex envelope (advisory test_coverage finding) terminates as paused_on_environmental, not blocked. (3) Plan 004 F004 codex envelope (high correctness finding) still terminates as needs_changes (unchanged behavior on substantive findings). (4) Reconciliation INBOX event documents the override + classification.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Shlex-safe command-string handling — D025 root cause #1. Plan 004 F002 dispatch errored mid-run with 'No closing quotation' (shlex.split parse failure) after the implementer envelope was written but before the codex auditor was invoked. The implementer's prose is untrusted input — its `target_context.commands_run` strings get shlex-parsed somewhere in command_guard's post-hoc validation, and an unbalanced quote in the LLM's output raises ValueError that nothing catches. Audit every shlex.split() call in command_guard.py + prompts.py + supervisor.py + any post-hoc parsing of implementer output. Wrap each with try/except ValueError; on parse failure, emit a structured warning (not crash) into the audit envelope's findings list + skip the affected command. The supervisor must NEVER crash on bad LLM output — it must always reach a terminal.",
+      "steps": [
+        "Grep `shlex.split` across scripts/dontpanic_orchestrate/ + command_guard.py + prompts.py.",
+        "For each call site, identify the caller chain — if the parsed string comes from agent output (implementer summary, auditor findings, target_context.commands_run), wrap in try/except ValueError.",
+        "On parse failure: log structured warning, append a 'finding' to the agent's envelope with severity=advisory category=parsing 'shlex parse failed: <message>' + the raw command string (truncated), skip the offending command (don't include it in commands_run validation).",
+        "Fixture tests with crafted bad-input strings: (a) unbalanced single quote, (b) unbalanced double quote, (c) unescaped backslash at EOL. Each should produce a warning, not raise.",
+        "Add a regression test that replays the plan 004 F002 dispatch on a synthetic plan with the known-bad implementer commands_run and asserts the volley reaches a real terminal."
+      ],
+      "acceptance": "(1) Every shlex.split() in the agent-output-parsing pipeline is wrapped with try/except. (2) Bad-input shlex strings produce structured warnings, not unhandled exceptions. (3) Fixture tests cover all three classic shlex failure modes (unbalanced quotes, escape errors). (4) Plan 004 F002 reproducer test asserts the volley reaches a clean terminal even with the parse-breaking input.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "Supervisor iter-checkpoint artifacts — D025 root cause #2. Even with F003's shlex hardening, the supervisor's post-iter processing has many failure modes (env errors, missing schemas, OSError, etc.) that could leave dispatch in an orphaned state — implementer envelope on disk, no terminal record, operator left to reconstruct from logs (which may be empty due to tee buffering). Wrap each iter (implementer invocation + auditor invocation) in a try/except that, on any failure, writes a `terminal-state-iter{N}.json` artifact recording: exception class + message, what stage failed (implementer / auditor / post-iter validation), what evidence persisted (last-good envelope paths), recommended recovery command (e.g. `dontpanic close --operator-resolved`). Pairs with F003: when shlex catches bad input, the iter still produces a clean failure record.",
+      "steps": [
+        "Read supervisor.dispatch_volley() iter loop + identify exception boundaries.",
+        "Add helper `write_iter_checkpoint(plan_dir, iter_n, stage, exception, last_good_paths)` that JSON-serializes the failure context.",
+        "Wrap each iter's implementer block + auditor block with try/except Exception; on raise, write the checkpoint + re-raise OR transition to terminal-failed depending on whether the volley can recover.",
+        "Decision: re-raise (preserves stack trace for debugging) vs swallow + terminal-failed (cleaner for operator). Default: swallow + terminal-failed, write checkpoint, write transcript entry, exit gracefully.",
+        "Fixture test: force a synthetic crash inside the auditor wrapper and assert the terminal-state-iterN.json file is written + the dispatch returns cleanly.",
+        "Plan 004 F002 retrospective: replay the dispatch under the new error path and verify the checkpoint includes pointers to the orphaned implementer envelope + the shlex parse error context."
+      ],
+      "acceptance": "(1) Every iter wrapped with try/except + checkpoint write. (2) Synthetic-crash fixture produces a terminal-state-iter{N}.json with the expected shape. (3) Dispatch always returns a clean exit code (no unhandled exceptions). (4) Operator-recovery instructions embedded in the checkpoint payload.",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    }
+  ]
+}
