@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-12T18:19:13Z",
+  "completed_at": "2026-05-12T18:28:31Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-prki1bik target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3547 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 5190847,
+    "tokens_out": 48276,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F004] Side-effect commands invoked in this session:\n\n```\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py scripts/dontpanic_orchestrate/tests/test_volley_synthetic.py scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q --no-header\n```\n\n## Summary\n\nImplemented F004 per-iter checkpointing in `scripts/dontpanic_orchestrate/supervisor.py`: extended the existing F003 `_write_backstop_checkpoint` helper with `stage`, `plan_id`, `recommended_command`, and `recovery_notes` fields (recovery command now binds the real plan_id + feature_id so operators can copy-paste verbatim); added a named `_write_iter_checkpoint` entry point promoting `stage` to a required kwarg; tracked `current_stage` (`iter_setup` → `implementer` → `auditor` → `post_iter`) inside the iter loop; and paired the F003 `except ValueError` clause with a broader `except Exception` backstop that writes a stage-aware `terminal-state-iter{N}.json`, appends an INBOX `volley_crash_caught` event, writes a transcript terminal, and returns a clean `blocked` `VolleyResult`. The new clause",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_verdict_mismatch_f001.py scripts/dontpanic_orchestrate/tests/test_volley_synthetic.py scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q --no-header"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

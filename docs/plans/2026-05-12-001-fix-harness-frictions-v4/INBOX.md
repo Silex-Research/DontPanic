@@ -304,3 +304,54 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-12T18:19:13Z
+event: volley_start
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-12T18:19:13Z
+event: volley_start
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-12T18:31:44Z
+event: gate_hit
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F004
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-12-001-fix-harness-frictions-v4 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-12-001-fix-harness-frictions-v4 --all
+
+===
+---
+timestamp: 2026-05-12T18:34:03Z
+event: gate_cleared
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===

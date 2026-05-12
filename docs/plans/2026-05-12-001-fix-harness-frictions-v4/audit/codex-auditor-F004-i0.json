@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-12T18:28:31Z",
+  "completed_at": "2026-05-12T18:31:44Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-prki1bik target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 260969 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 555256,
+    "tokens_out": 7782,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: signed_off. The implementer correctly declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`; structured `target_context` has `env=dev`, `project=null`, and the recorded commands contain no forbidden command shapes. Source review confirms the F004 checkpoint helper, broad iter-loop crash handling, terminal `blocked` return, transcript/INBOX logging, auditor-stage synthetic fixture, and orphaned-envelope/shlex retrospective coverage are present.\n\nFINDING (advisory, test_coverage): I could not independently execute pytest in this read-only sandbox. Evidence: pytest failed before collection with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the F004 pytest command in a writable dev shell.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff HEAD~1 -- scripts/dontpanic_orchestrate/supervisor.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"import ast, pathlib; [ast.parse(pathlib.Path(p).read_text(), filename=p) for p in ['scripts/dontpanic_orchestrate/supervisor.py','scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py']]\"",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff HEAD~1 -- scripts/dontpanic_orchestrate/supervisor.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import ast, pathlib; [ast.parse(pathlib.Path(p).read_text(), filename=p) for p in ['scripts/dontpanic_orchestrate/supervisor.py','scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py']]\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "I could not independently execute pytest in this read-only sandbox. Evidence: pytest failed before collection with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the F004 pytest command in a writable dev shell. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff HEAD~1 -- scripts/dontpanic_orchestrate/supervisor.py $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py -q -",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}
