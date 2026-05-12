@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-12-002-fix-harness-frictions-v4-1",
+  "audit_id": "2026-05-12-002-fix-harness-frictions-v4-1#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-12T19:29:00Z",
+  "completed_at": "2026-05-12T19:33:09Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-002-fix-harness-frictions-v4-1-8n9o4ojn target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2525 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2592307,
+    "tokens_out": 13974,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] F001 implemented end-to-end. The audit schema gained `parsing` as a 10th category value (existing 9 unchanged), the Pydantic mirror `Category` enum was extended in tandem, `claude/shared/VERSION` bumped 1.7.0 → 1.8.0, and a new `claude/shared/CHANGELOG.md` documents the additive change with motivation pointing back at v4 F003 / D008. The two F003 shlex parse-warning emission sites in supervisor.py (the `ValueError` belt-and-braces branch and the `guard.parse_error` branch) now emit `category: \"parsing\"`, while the two high-severity env/project declaration findings remain `correctness` as specified. Test assertions in `test_shlex_safe_command_guard_f003.py:128` and `:535` were flipped to assert the new category, and two version-pin tests (`test_plan_surfaces_field.py`, `test_state_snapshot_schema_f001.py`) were updated to expect 1.8.0. Full sweep: 1928 passed / 7 skipped (meets the ≥1928 baseline); `python scripts/sanitization_check.py` passes (1201 files clean). No edits made to the upstream `agent-conventions` repo and no `git subtree push` invoked — that remains operator-handled per D003.\n\nSide-effect commands invoked:\n\n$ python -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q\n$ python scripts/sanitization_check.py\n$ python -m pytest scripts/dontpanic_orchestrate/tests/ -q",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q",
+      "python scripts/sanitization_check.py",
+      "python -m pytest scripts/dontpanic_orchestrate/tests/ -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

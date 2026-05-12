@@ -1,0 +1,34 @@
+{
+  "plan_id": "2026-05-12-002-fix-harness-frictions-v4-1",
+  "cleared_gates": [
+    "pre_impl"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-12T19:29:00Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-12T19:29:00Z",
+      "actor": "supervisor:plan_status_active"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-05-12T19:29:00Z",
+      "cleared_by": "supervisor:plan_status_active"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl"
+  ]
+}

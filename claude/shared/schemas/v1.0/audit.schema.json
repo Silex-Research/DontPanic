@@ -72,7 +72,7 @@
       "properties": {
         "severity": { "enum": ["critical", "high", "medium", "low", "advisory"] },
         "category": {
-          "enum": ["correctness", "security", "performance", "architecture", "style", "currency", "redaction", "test_coverage", "documentation"]
+          "enum": ["correctness", "security", "performance", "architecture", "style", "currency", "redaction", "test_coverage", "documentation", "parsing"]
         },
         "file": { "type": "string" },
         "line": { "type": "integer", "minimum": 1 },

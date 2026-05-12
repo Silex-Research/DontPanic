@@ -2649,7 +2649,7 @@ def _apply_target_accountability(
             new_findings.append(
                 {
                     "severity": "advisory",
-                    "category": "correctness",
+                    "category": "parsing",
                     "issue": f"shlex parse failed: {exc}",
                     "evidence": f"Could not parse commands_run entry: {str(cmd)[:200]!r}",
                     "recommendation": (
@@ -2667,7 +2667,7 @@ def _apply_target_accountability(
             new_findings.append(
                 {
                     "severity": "advisory",
-                    "category": "correctness",
+                    "category": "parsing",
                     "issue": guard.parse_error,
                     "evidence": f"Could not parse commands_run entry: {str(cmd)[:200]!r}",
                     "recommendation": (

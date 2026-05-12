@@ -125,7 +125,7 @@ def test_apply_target_accountability_emits_advisory_on_unparseable_command() -> 
     assert parsing_findings, f"expected a parsing advisory finding; got {audit['findings']}"
     pf = parsing_findings[0]
     assert pf["severity"] == "advisory", pf
-    assert pf["category"] == "correctness", pf
+    assert pf["category"] == "parsing", pf
     # Evidence references the offending command (truncated).
     assert "gcloud services list" in pf["evidence"], pf
     print("  ✓ unparseable command → advisory parsing finding, no crash, status preserved")
@@ -532,7 +532,7 @@ def test_plan_004_f002_replay_real_envelope_with_injected_bad_input_does_not_cra
     )
     for f in parsing_findings:
         assert f["severity"] == "advisory", f
-        assert f["category"] == "correctness", f
+        assert f["category"] == "parsing", f
         # Auditor i0 low#2: parse advisory must not be double-prefixed.
         assert not f["issue"].startswith("shlex parse failed: shlex parse failed"), (
             f"double-prefixed advisory regressed: {f['issue']!r}"
