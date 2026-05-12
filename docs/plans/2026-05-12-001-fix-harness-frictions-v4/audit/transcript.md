@@ -27,3 +27,5 @@ taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the tax
 **2026-05-12T17:25:43Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
+| 2026-05-12T18:28:31Z | F004 | i0 | claude / implementer | signed_off | 5,190,847 / 48,276 | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |
+| 2026-05-12T18:31:44Z | F004 | i0 | codex / auditor | signed_off | 555,256 / 7,782 | [codex-auditor-F004-i0.json](audit/codex-auditor-F004-i0.json) |

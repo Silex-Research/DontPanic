@@ -1567,9 +1567,21 @@ def dispatch_volley(
         # subprocess output parsers, anything we don't control) may still
         # raise ValueError on bad LLM output. Catching here guarantees the
         # volley reaches a clean terminal instead of orphaning the run.
+        #
+        # Plan 2026-05-12-001 v4 F004 (D025 root cause #2): pair the F003 catch
+        # with a broader ``Exception`` backstop so non-ValueError surprises
+        # (OSError on a missing schema, AttributeError on a malformed envelope,
+        # KeyError on an absent dict key, etc.) still produce a terminal-state
+        # checkpoint instead of orphaning the dispatch with an implementer
+        # envelope on disk and no record of what came next. ``current_stage``
+        # tracks which phase of the iter was active so the operator can
+        # distinguish "implementer never started" from "auditor crashed after
+        # implementer landed work" from "post-iter validation choked".
         iteration = -1
+        current_stage = "iter_setup"
         try:
             for iteration in range(cap + 1):
+                current_stage = "iter_setup"
                 # F006 wall-clock + budget breakers — checked at the top of each
                 # iteration so a long-running prior round has a chance to trip.
                 wc_tripped, wc_reason = circuit_breakers.check_wall_clock(
@@ -1680,6 +1692,7 @@ def dispatch_volley(
                             )
 
                 # Implementer round
+                current_stage = "implementer"
                 try:
                     impl_pct, impl_quota_line = _quota_gate(impl_name)
                 except QuotaExceeded as exc:
@@ -1752,6 +1765,7 @@ def dispatch_volley(
                     )
 
                 # Auditor round
+                current_stage = "auditor"
                 try:
                     aud_pct, aud_quota_line = _quota_gate(aud_name)
                 except QuotaExceeded as exc:
@@ -1801,6 +1815,7 @@ def dispatch_volley(
                 )
                 audit_paths.append(aud_audit_path)
 
+                current_stage = "post_iter"
                 # Read auditor's verdict
                 aud_data = json.loads(aud_audit_path.read_text())
                 aud_status = aud_data.get("audit_status", "inconclusive")
@@ -2325,6 +2340,15 @@ def dispatch_volley(
                 iteration=max(0, iteration),
                 exception=_backstop_exc,
                 audit_paths=audit_paths,
+                stage="iter_loop_backstop",
+                plan_id=loaded.plan_id,
+                recovery_notes=(
+                    "F003 ValueError backstop fired (likely shlex parse "
+                    "failure on agent prose outside our wrapped call sites). "
+                    "Inspect audit_paths for any orphaned implementer "
+                    "envelope; the operator-resolved close-out command above "
+                    "clears breaker:no_progress and flips features.json."
+                ),
             )
             transcript.append_terminal(
                 loaded.plan_dir,
@@ -2342,6 +2366,77 @@ def dispatch_volley(
             )
             return _emit_volley_terminal(
                 VolleyResult("blocked", rounds_done, backstop_reason, audit_paths),
+                loaded=loaded,
+                feature_id=feature_id,
+                agents_in_panel=[impl_name, aud_name],
+            )
+        except auditor_taxonomy.VerdictMismatchError:
+            # Designed-propagate contract violation (plan 2026-05-09-002 F001).
+            # The mismatch detector already wrote the canonical INBOX event +
+            # operator notification BEFORE raising — the supervisor's job here
+            # is to surface the failure to the caller, NOT to swallow it into
+            # a generic 'blocked' terminal. Re-raise verbatim.
+            raise
+        except Exception as _f004_exc:
+            # F004 (D025 root cause #2): broad-Exception backstop. The F003
+            # ValueError clause above handles shlex/dependency parse failures;
+            # this clause catches everything else the iter body might raise
+            # (OSError on a torn schema, AttributeError on a malformed
+            # envelope, KeyError, RuntimeError from a misbehaving executor,
+            # etc.). Each of these previously orphaned the dispatch with no
+            # terminal record; F004 guarantees a ``terminal-state-iter{N}.json``
+            # checkpoint + clean ``blocked`` terminal so the operator-resolved
+            # close-out CLI has a documented surface to recover from.
+            rounds_done = max(0, iteration + 1)
+            f004_reason = (
+                "supervisor caught unhandled exception in iter loop "
+                f"(iteration={iteration}, stage={current_stage}): "
+                f"{type(_f004_exc).__name__}: {_f004_exc}. "
+                "F004 backstop (D025 root cause #2). Operator: read "
+                f"audit/terminal-state-iter{max(0, iteration)}.json for the "
+                "stage + last-good envelope pointers, then use "
+                "`dontpanic close --operator-resolved` (F2 F004 CLI) to close "
+                "this feature without a re-dispatch when the failure is not a "
+                "real implementation defect."
+            )
+            _write_iter_checkpoint(
+                plan_dir=loaded.plan_dir,
+                feature_id=feature_id,
+                iteration=max(0, iteration),
+                stage=current_stage,
+                exception=_f004_exc,
+                last_good_paths=audit_paths,
+                plan_id=loaded.plan_id,
+                recovery_notes=(
+                    f"F004 broad-Exception backstop fired during stage="
+                    f"{current_stage!r}. The iter loop raised "
+                    f"{type(_f004_exc).__name__} after "
+                    f"{len(audit_paths)} audit envelope(s) landed; the "
+                    "last entry in ``audit_paths`` is the most recent "
+                    "successful write (e.g. the orphaned implementer "
+                    "envelope when stage==auditor). Use the recommended "
+                    "close-out command to clear breaker:no_progress and "
+                    "flip features.json."
+                ),
+            )
+            transcript.append_terminal(
+                loaded.plan_dir,
+                feature_id,
+                "blocked",
+                rounds_done,
+                reason=f004_reason,
+            )
+            inbox.append_event(
+                loaded.plan_dir,
+                event="volley_crash_caught",
+                plan_id=loaded.plan_id,
+                body=f004_reason,
+                feature_id=feature_id,
+                stage=current_stage,
+                exception_class=type(_f004_exc).__name__,
+            )
+            return _emit_volley_terminal(
+                VolleyResult("blocked", rounds_done, f004_reason, audit_paths),
                 loaded=loaded,
                 feature_id=feature_id,
                 agents_in_panel=[impl_name, aud_name],
@@ -2365,6 +2460,20 @@ def dispatch_volley(
         )
 
 
+def _format_recovery_command(
+    *, plan_id: str | None, feature_id: str, reason_class: str
+) -> str:
+    """Render the operator-facing close-out command. Uses the real plan_id
+    when supervisor-internal callers can provide it; falls back to ``<id>`` for
+    legacy callers (kept so F003 backstop tests stay green when they
+    instantiate the helper without a plan_id)."""
+    plan_token = plan_id or "<id>"
+    return (
+        f"dontpanic close --operator-resolved {plan_token} {feature_id} "
+        f"--reason {reason_class}"
+    )
+
+
 def _write_backstop_checkpoint(
     *,
     plan_dir: Path,
@@ -2372,39 +2481,94 @@ def _write_backstop_checkpoint(
     iteration: int,
     exception: BaseException,
     audit_paths: list[Path],
+    stage: str | None = None,
+    plan_id: str | None = None,
+    recommended_command: str | None = None,
+    recovery_notes: str | None = None,
 ) -> Path | None:
-    """Plan 2026-05-12-001 v4 F003 (D025): minimal checkpoint stub for the
-    dispatch_volley iter-loop backstop. Writes
-    ``<plan_dir>/audit/terminal-state-iter{N}.json`` recording the exception
-    class + message + the audit envelopes already on disk so the operator can
-    recover via the F2 F004 close CLI.
+    """Plan 2026-05-12-001 v4 F003 (D025) + F004: write
+    ``<plan_dir>/audit/terminal-state-iter{N}.json`` recording the failure
+    surface so the operator can recover via the F2 F004 close CLI without
+    grepping through (often tee-buffered, possibly empty) dispatch logs.
+
+    F003 introduced this as a minimal stub for the iter-loop ValueError
+    backstop. F004 extends it with:
+      * ``stage``  — which phase failed (``implementer`` / ``auditor`` /
+        ``post_iter`` / ``iter_loop_backstop``). Operator can read this to
+        know whether the implementer envelope on disk reflects landed work
+        (auditor/post_iter stage) or never started (implementer stage).
+      * ``plan_id`` — folded into the recommended-recovery command so the
+        operator can copy-paste the close-out string verbatim.
+      * ``recommended_command`` — explicit override; when omitted, derived
+        from ``plan_id`` + ``feature_id`` with reason class
+        ``environmental_reproduction_failure``.
+      * ``recovery_notes`` — free-text addendum (e.g. pointing at the
+        orphaned implementer envelope or recording the shlex parse-error
+        context).
 
     Best-effort: any OSError during write is swallowed because the caller's
-    next step (transcript + INBOX + signoff) MUST still execute. F004 will
-    extend this stub with richer recovery context (stage, last-good env,
-    recommended command).
+    next step (transcript + INBOX + signoff) MUST still execute. The on-disk
+    audit envelopes plus the INBOX trail remain the durable recovery surface
+    even when this artifact write fails (read-only mount, disk full, etc.).
     """
     try:
         target = plan_dir / "audit" / f"terminal-state-iter{iteration}.json"
         target.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
+        recovery_command = recommended_command or _format_recovery_command(
+            plan_id=plan_id,
+            feature_id=feature_id,
+            reason_class="environmental_reproduction_failure",
+        )
+        payload: dict[str, Any] = {
             "schema": "terminal-state.v0",
             "feature_id": feature_id,
             "iteration": iteration,
+            "stage": stage or "iter_loop_backstop",
             "exception_class": type(exception).__name__,
             "exception_message": str(exception)[:1000],
             "audit_paths": [str(p) for p in audit_paths],
-            "recommended_recovery": (
-                "dontpanic close --plan-id <id> --feature-id "
-                f"{feature_id} --operator-resolved --reason "
-                "environmental_reproduction_failure"
-            ),
+            "last_good_audit_path": str(audit_paths[-1]) if audit_paths else None,
+            "recommended_recovery": recovery_command,
+            "recommended_command": recovery_command,
             "written_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+        if plan_id is not None:
+            payload["plan_id"] = plan_id
+        if recovery_notes:
+            payload["recovery_notes"] = recovery_notes
         target.write_text(json.dumps(payload, indent=2, sort_keys=True))
         return target
     except OSError:
         return None
+
+
+def _write_iter_checkpoint(
+    *,
+    plan_dir: Path,
+    feature_id: str,
+    iteration: int,
+    stage: str,
+    exception: BaseException,
+    last_good_paths: list[Path],
+    plan_id: str | None = None,
+    recovery_notes: str | None = None,
+) -> Path | None:
+    """Plan 2026-05-12-001 v4 F004 — named entry point for per-iter
+    checkpointing. Thin wrapper over :func:`_write_backstop_checkpoint` with
+    ``stage`` promoted to a required positional-style kwarg so call sites
+    document which phase failed. ``last_good_paths`` is the audit-path slice
+    captured before the exception (e.g. the implementer envelope when
+    the auditor stage crashed)."""
+    return _write_backstop_checkpoint(
+        plan_dir=plan_dir,
+        feature_id=feature_id,
+        iteration=iteration,
+        exception=exception,
+        audit_paths=list(last_good_paths),
+        stage=stage,
+        plan_id=plan_id,
+        recovery_notes=recovery_notes,
+    )
 
 
 def _apply_target_accountability(
