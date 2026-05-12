@@ -190,3 +190,117 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-12T16:57:19Z
+event: volley_start
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-12T16:57:19Z
+event: volley_start
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-12T17:07:19Z
+event: error
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F003
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-12T17:25:43Z
+event: no_progress_classification
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+aggregate: unknown
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F003
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=medium, category=correctness: Parse-warning findings do not match the F003-required category. Evidence: F003 requires `severity=advisory category=parsing`, but [supervisor.py](/Users/bayesi…
+  - [unknown] severity=medium, category=test_coverage: The plan 004 F002 replay test still does not prove the volley reaches a terminal with the real parse-breaking input. Evidence: [test_shlex_safe_command_guard_f…
+
+Audit trail referenced existing evidence at: docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/claude-implementer-F002-i0.json
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-12-001-fix-harness-frictions-v4 F003 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-12T17:25:43Z
+event: breaker_tripped
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-12-001-fix-harness-frictions-v4 breaker:no_progress` or `jarvis resume 2026-05-12-001-fix-harness-frictions-v4 --all`.
+
+===
+---
+timestamp: 2026-05-12T17:25:44Z
+event: volley_terminal
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-12T17:53:30Z
+event: feature_operator_resolved
+plan_id: 2026-05-12-001-fix-harness-frictions-v4
+feature_id: F003
+reason_class: spec_ambiguity
+---
+
+Operator closed feature F003 as operator_resolved (class=spec_ambiguity).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-12-001-fix-harness-frictions-v4.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

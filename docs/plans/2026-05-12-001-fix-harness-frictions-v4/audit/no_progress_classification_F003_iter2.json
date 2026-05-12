@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-12T17:25:43Z",
+  "feature_id": "F003",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/claude-implementer-F002-i0.json"
+  ],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "Parse-warning findings do not match the F003-required category. Evidence: F003 requires `severity=advisory category=parsing`, but [supervisor.py](/Users/bayesi…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "The plan 004 F002 replay test still does not prove the volley reaches a terminal with the real parse-breaking input. Evidence: [test_shlex_safe_command_guard_f…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

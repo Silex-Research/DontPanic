@@ -10,11 +10,7 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/auditor_taxonomy.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/signoff_writer.py",
+      "path": "scripts/dontpanic_orchestrate/command_guard.py",
       "status": "M"
     },
     {
@@ -25,9 +21,9 @@
   "untracked": [
     "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/INBOX 2.md",
     "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events 2.jsonl",
-    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-v4-f002-attempt1.log",
-    "docs/plans/2026-05-12-001-fix-harness-frictions-v4/audit/claude-implementer-F002-i0.json",
-    "scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py"
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-v4-f003-attempt1.log",
+    "docs/plans/2026-05-12-001-fix-harness-frictions-v4/audit/claude-implementer-F003-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

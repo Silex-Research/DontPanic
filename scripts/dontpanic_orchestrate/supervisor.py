@@ -1561,466 +1561,681 @@ def dispatch_volley(
                 agents_in_panel=[impl_name, aud_name],
             )
 
-        for iteration in range(cap + 1):
-            # F006 wall-clock + budget breakers — checked at the top of each
-            # iteration so a long-running prior round has a chance to trip.
-            wc_tripped, wc_reason = circuit_breakers.check_wall_clock(
-                volley_start, wall_clock_hours
-            )
-            if wc_tripped:
-                return _trip_and_return(
-                    circuit_breakers.BreakerKind.WALL_CLOCK, wc_reason, iteration
+        # Plan 2026-05-12-001 v4 F003 (D025): top-level ValueError
+        # backstop. The agent-output pipeline's shlex.split calls are now
+        # wrapped in command_guard, but dependencies (Pydantic validators,
+        # subprocess output parsers, anything we don't control) may still
+        # raise ValueError on bad LLM output. Catching here guarantees the
+        # volley reaches a clean terminal instead of orphaning the run.
+        iteration = -1
+        try:
+            for iteration in range(cap + 1):
+                # F006 wall-clock + budget breakers — checked at the top of each
+                # iteration so a long-running prior round has a chance to trip.
+                wc_tripped, wc_reason = circuit_breakers.check_wall_clock(
+                    volley_start, wall_clock_hours
                 )
-            bd_result = circuit_breakers.check_budget_ceiling(audit_paths, per_agent_caps)
-            if bd_result.tripped:
-                # F006b fix#1: emit kind-specific INBOX event BEFORE the
-                # generic breaker_tripped event so operators see a clear
-                # action signal (calibration_required / unit_mismatch /
-                # config_required) alongside the gate-pause notification.
-                # All kinds still funnel through breaker:budget_ceiling for
-                # the F008 pause-and-resume contract.
-                _emit_budget_kind_specific_event(
-                    loaded.plan_dir,
-                    loaded.plan_id,
-                    bd_result,
-                    feature_id,
-                )
-                return _trip_and_return(
-                    circuit_breakers.BreakerKind.BUDGET_CEILING,
-                    bd_result.reason,
-                    iteration,
-                )
-
-            # Plan 2026-05-04-002 F001 — `pre_impl` staged check. Evaluated
-            # AFTER plan load + capability checks (executor resolution above
-            # already ran) and AFTER the upfront breaker/defer gate check, but
-            # BEFORE the implementer subprocess spawns. Idempotency contract
-            # (D006 audit-focus item 8): the stage is evaluated AT MOST ONCE
-            # per plan-lifetime — once `pre_impl` is in `completed_stages`,
-            # the supervisor skips evaluate_human_gates entirely, including
-            # across resume boundaries. Only fires on iteration 0; iteration
-            # 1+ within the same loop has by-construction already passed the
-            # check.
-            if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
-                # Plan 2026-05-08-003 F002 — narrow auto-clear carve-out
-                # for direct operator CLI dispatch in eligible dev/test
-                # contexts. On success, the helper records a normal
-                # gate_event + INBOX entry and the staged check below
-                # naturally observes pre_impl as cleared, falling through
-                # to the implementer round without a separate operator
-                # approve/resume.
-                auto_clear_reason = _maybe_auto_clear_pre_impl(
-                    loaded=loaded,
-                    declared_gates=declared_gates,
-                    direct_dispatch=direct_dispatch,
-                    effective_env=effective_env,
-                    effective_project=effective_project,
-                    feature_id=feature_id,
-                )
-                if auto_clear_reason is not None:
-                    print(f"[volley] pre_impl auto-cleared: {auto_clear_reason}")
-                else:
-                    pre_impl_info = gate_pause.evaluate_human_gates(
-                        loaded.plan_dir, declared_gates, stage="pre_impl"
+                if wc_tripped:
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.WALL_CLOCK, wc_reason, iteration
                     )
-                    if pre_impl_info.paused:
+                bd_result = circuit_breakers.check_budget_ceiling(audit_paths, per_agent_caps)
+                if bd_result.tripped:
+                    # F006b fix#1: emit kind-specific INBOX event BEFORE the
+                    # generic breaker_tripped event so operators see a clear
+                    # action signal (calibration_required / unit_mismatch /
+                    # config_required) alongside the gate-pause notification.
+                    # All kinds still funnel through breaker:budget_ceiling for
+                    # the F008 pause-and-resume contract.
+                    _emit_budget_kind_specific_event(
+                        loaded.plan_dir,
+                        loaded.plan_id,
+                        bd_result,
+                        feature_id,
+                    )
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.BUDGET_CEILING,
+                        bd_result.reason,
+                        iteration,
+                    )
+
+                # Plan 2026-05-04-002 F001 — `pre_impl` staged check. Evaluated
+                # AFTER plan load + capability checks (executor resolution above
+                # already ran) and AFTER the upfront breaker/defer gate check, but
+                # BEFORE the implementer subprocess spawns. Idempotency contract
+                # (D006 audit-focus item 8): the stage is evaluated AT MOST ONCE
+                # per plan-lifetime — once `pre_impl` is in `completed_stages`,
+                # the supervisor skips evaluate_human_gates entirely, including
+                # across resume boundaries. Only fires on iteration 0; iteration
+                # 1+ within the same loop has by-construction already passed the
+                # check.
+                if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
+                    # Plan 2026-05-08-003 F002 — narrow auto-clear carve-out
+                    # for direct operator CLI dispatch in eligible dev/test
+                    # contexts. On success, the helper records a normal
+                    # gate_event + INBOX entry and the staged check below
+                    # naturally observes pre_impl as cleared, falling through
+                    # to the implementer round without a separate operator
+                    # approve/resume.
+                    auto_clear_reason = _maybe_auto_clear_pre_impl(
+                        loaded=loaded,
+                        declared_gates=declared_gates,
+                        direct_dispatch=direct_dispatch,
+                        effective_env=effective_env,
+                        effective_project=effective_project,
+                        feature_id=feature_id,
+                    )
+                    if auto_clear_reason is not None:
+                        print(f"[volley] pre_impl auto-cleared: {auto_clear_reason}")
+                    else:
+                        pre_impl_info = gate_pause.evaluate_human_gates(
+                            loaded.plan_dir, declared_gates, stage="pre_impl"
+                        )
+                        if pre_impl_info.paused:
+                            gate_pause.record_pause(
+                                loaded.plan_dir,
+                                plan_id=loaded.plan_id,
+                                pause_gates=pre_impl_info.pending,
+                                stage="pre_impl",
+                            )
+                            inbox.append_event(
+                                loaded.plan_dir,
+                                event="gate_hit",
+                                plan_id=loaded.plan_id,
+                                body=(
+                                    "Supervisor paused at lifecycle stage 'pre_impl' "
+                                    "before iteration 0 implementer dispatch.\n\n"
+                                    f"Awaiting: {pre_impl_info.pending}\n\n"
+                                    f"Clear one (preferred): python -m dontpanic_orchestrate "
+                                    f"approve {loaded.plan_id} <gate>\n"
+                                    f"Clear all (explicit):  python -m dontpanic_orchestrate "
+                                    f"resume {loaded.plan_id} --all"
+                                ),
+                                unmet_gates=",".join(pre_impl_info.pending),
+                                stage="pre_impl",
+                                target_env=effective_env,
+                                target_project=effective_project or "(none)",
+                                feature_id=feature_id,
+                            )
+                            notify.notify(
+                                title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
+                                message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
+                                subtitle=feature_id,
+                            )
+                            _emit_gate_paused_discord(
+                                loaded.plan_dir,
+                                loaded.plan_id,
+                                feature_id,
+                                pending_gates=list(pre_impl_info.pending),
+                                stage="pre_impl",
+                            )
+                            print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
+                            return VolleyResult(
+                                "paused_on_gate",
+                                0,
+                                f"unmet pre_impl gates: {pre_impl_info.pending}; "
+                                f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
+                                f"`jarvis resume {loaded.plan_id} --all`",
+                                audit_paths,
+                            )
+
+                # Implementer round
+                try:
+                    impl_pct, impl_quota_line = _quota_gate(impl_name)
+                except QuotaExceeded as exc:
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="error",
+                        plan_id=loaded.plan_id,
+                        body=f"Quota hard-block (implementer): {exc}",
+                        agent=impl_name,
+                        feature_id=feature_id,
+                    )
+                    return _emit_volley_terminal(
+                        VolleyResult("stopped_quota", iteration, str(exc), audit_paths),
+                        loaded=loaded,
+                        feature_id=feature_id,
+                        agents_in_panel=[impl_name, aud_name],
+                    )
+                print(impl_quota_line)
+                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id)
+
+                impl_audit_path = _run_round(
+                    loaded=loaded,
+                    executor=impl_executor,
+                    agent_name=impl_name,
+                    role="implementer",
+                    iteration=iteration,
+                    feature=feature,
+                    prompt=prompts.implementer_prompt(
+                        plan_id=loaded.plan_id,
+                        plan_dir=loaded.plan_dir,
+                        feature=feature,
+                        iteration=iteration,
+                        prior_auditor_path=prior_aud_path,
+                        target_env=effective_env,
+                        target_project=effective_project,
+                    ),
+                    extra_validation=[
+                        *([nested_marker] if nested_marker else []),
+                        f"quota gate impl={impl_pct}",
+                        f"prior_auditor_path={prior_aud_path or '(none)'}",
+                        round_env_log,
+                    ],
+                    subprocess_env=round_subprocess_env,
+                    target_env=effective_env,
+                    target_project=effective_project,
+                    cwd=registry_repo_root,
+                )
+                audit_paths.append(impl_audit_path)
+
+                # Plan 2026-05-04-003 F003 — surface timeout-with-work classification
+                # in the transcript so operators see the signal without parsing
+                # envelope JSON. The auditor still runs next; this round is just
+                # excluded from no-progress / diminishing-returns counters.
+                impl_envelope: dict[str, Any] | None
+                try:
+                    impl_envelope = json.loads(impl_audit_path.read_text())
+                except (OSError, json.JSONDecodeError):
+                    impl_envelope = None
+                is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(impl_envelope)
+                if is_timeout_with_work:
+                    transcript.append_note(
+                        loaded.plan_dir,
+                        feature_id,
+                        iteration,
+                        (
+                            "envelope is blocked-with-worktree-changes; not counted "
+                            "toward no-progress / diminishing-returns; auditor still "
+                            "inspecting landed work"
+                        ),
+                    )
+
+                # Auditor round
+                try:
+                    aud_pct, aud_quota_line = _quota_gate(aud_name)
+                except QuotaExceeded as exc:
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="error",
+                        plan_id=loaded.plan_id,
+                        body=f"Quota hard-block (auditor): {exc}",
+                        agent=aud_name,
+                        feature_id=feature_id,
+                    )
+                    return _emit_volley_terminal(
+                        VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths),
+                        loaded=loaded,
+                        feature_id=feature_id,
+                        agents_in_panel=[impl_name, aud_name],
+                    )
+                print(aud_quota_line)
+                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id)
+
+                aud_audit_path = _run_round(
+                    loaded=loaded,
+                    executor=aud_executor,
+                    agent_name=aud_name,
+                    role="auditor",
+                    iteration=iteration,
+                    feature=feature,
+                    prompt=prompts.auditor_prompt(
+                        plan_id=loaded.plan_id,
+                        plan_dir=loaded.plan_dir,
+                        feature=feature,
+                        iteration=iteration,
+                        implementer_audit_path=impl_audit_path,
+                        target_env=effective_env,
+                        target_project=effective_project,
+                    ),
+                    extra_validation=[
+                        *([nested_marker] if nested_marker else []),
+                        f"quota gate aud={aud_pct}",
+                        f"reviewing implementer audit at {impl_audit_path.name}",
+                        round_env_log,
+                    ],
+                    subprocess_env=round_subprocess_env,
+                    target_env=effective_env,
+                    target_project=effective_project,
+                    cwd=registry_repo_root,
+                )
+                audit_paths.append(aud_audit_path)
+
+                # Read auditor's verdict
+                aud_data = json.loads(aud_audit_path.read_text())
+                aud_status = aud_data.get("audit_status", "inconclusive")
+
+                # Plan 2026-05-09-002 F001 — verdict-mismatch detection. The
+                # auditor can write a canonical narrative-verdict line in the
+                # summary that disagrees with the structured ``audit_status``
+                # field (the SpinDine vibe-plan-001 F001-i1 regression: summary
+                # said ``**Verdict: signed_off**`` while audit_status was
+                # ``needs_changes``). Reading only the structured field
+                # silently produces another paid iteration. Fail loud instead
+                # — INBOX classification + raise — mirroring the gate_pause
+                # GateStateReconciliationError discipline from plan 2026-05-08-
+                # 003 F001.
+                mismatch = auditor_taxonomy.detect_verdict_mismatch(
+                    plan_id=loaded.plan_id,
+                    feature_id=feature_id,
+                    iteration=iteration,
+                    audit_path=aud_audit_path,
+                    audit_envelope=aud_data,
+                )
+                if mismatch is not None:
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="verdict_mismatch",
+                        plan_id=loaded.plan_id,
+                        body=auditor_taxonomy.format_verdict_mismatch_inbox_body(mismatch),
+                        narrative_verdict=mismatch.narrative_verdict,
+                        structured_status=mismatch.structured_status,
+                        audit_path=str(mismatch.audit_path),
+                        feature_id=feature_id,
+                        iteration=str(iteration),
+                    )
+                    notify.notify(
+                        title=f"jarvis: verdict mismatch — {loaded.plan_id}",
+                        message=(
+                            f"narrative={mismatch.narrative_verdict} vs "
+                            f"structured={mismatch.structured_status}"
+                        ),
+                        subtitle=feature_id,
+                    )
+                    raise mismatch
+
+                print(f"[volley] iter={iteration} auditor verdict: {aud_status}")
+
+                if aud_status == "signed_off":
+                    # Plan 2026-05-04-002 F001 — `pre_merge` staged check fires
+                    # ONLY on the candidate-success path (D005). It runs after
+                    # the auditor's terminal `signed_off` verdict is observed
+                    # (no blocking findings — `audit_status == 'signed_off'`
+                    # already implies that) and immediately BEFORE
+                    # `signoff_writer.write_signoff(passes=True)` would persist
+                    # the success envelope (signoff_writer is invoked inside
+                    # _emit_volley_terminal). When pre_merge is uncleared, the
+                    # supervisor pauses with paused_on_gate WITHOUT writing a
+                    # success signoff; failure-path terminals (handled in the
+                    # branches below) NEVER consult pre_merge — failure evidence
+                    # is unconditionally durable per D005.
+                    # Idempotency: once `pre_merge` is in `completed_stages`,
+                    # skip evaluate_human_gates entirely (audit-focus item 8).
+                    pre_merge_info = (
+                        None
+                        if gate_pause.is_stage_completed(loaded.plan_dir, "pre_merge")
+                        else gate_pause.evaluate_human_gates(
+                            loaded.plan_dir, declared_gates, stage="pre_merge"
+                        )
+                    )
+                    if pre_merge_info is not None and pre_merge_info.paused:
                         gate_pause.record_pause(
                             loaded.plan_dir,
                             plan_id=loaded.plan_id,
-                            pause_gates=pre_impl_info.pending,
-                            stage="pre_impl",
+                            pause_gates=pre_merge_info.pending,
+                            stage="pre_merge",
                         )
                         inbox.append_event(
                             loaded.plan_dir,
                             event="gate_hit",
                             plan_id=loaded.plan_id,
                             body=(
-                                "Supervisor paused at lifecycle stage 'pre_impl' "
-                                "before iteration 0 implementer dispatch.\n\n"
-                                f"Awaiting: {pre_impl_info.pending}\n\n"
+                                "Supervisor paused at lifecycle stage 'pre_merge' "
+                                "after auditor signoff and before success-signoff write.\n\n"
+                                f"Awaiting: {pre_merge_info.pending}\n\n"
                                 f"Clear one (preferred): python -m dontpanic_orchestrate "
                                 f"approve {loaded.plan_id} <gate>\n"
                                 f"Clear all (explicit):  python -m dontpanic_orchestrate "
                                 f"resume {loaded.plan_id} --all"
                             ),
-                            unmet_gates=",".join(pre_impl_info.pending),
-                            stage="pre_impl",
+                            unmet_gates=",".join(pre_merge_info.pending),
+                            stage="pre_merge",
                             target_env=effective_env,
                             target_project=effective_project or "(none)",
                             feature_id=feature_id,
                         )
                         notify.notify(
-                            title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
-                            message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
+                            title=f"jarvis: pre_merge gate pause — {loaded.plan_id}",
+                            message=f"Awaiting: {', '.join(pre_merge_info.pending)}",
                             subtitle=feature_id,
                         )
                         _emit_gate_paused_discord(
                             loaded.plan_dir,
                             loaded.plan_id,
                             feature_id,
-                            pending_gates=list(pre_impl_info.pending),
-                            stage="pre_impl",
+                            pending_gates=list(pre_merge_info.pending),
+                            stage="pre_merge",
                         )
-                        print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
+                        print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
                         return VolleyResult(
                             "paused_on_gate",
-                            0,
-                            f"unmet pre_impl gates: {pre_impl_info.pending}; "
+                            iteration + 1,
+                            f"unmet pre_merge gates: {pre_merge_info.pending}; "
                             f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
                             f"`jarvis resume {loaded.plan_id} --all`",
                             audit_paths,
                         )
 
-            # Implementer round
-            try:
-                impl_pct, impl_quota_line = _quota_gate(impl_name)
-            except QuotaExceeded as exc:
-                inbox.append_event(
-                    loaded.plan_dir,
-                    event="error",
-                    plan_id=loaded.plan_id,
-                    body=f"Quota hard-block (implementer): {exc}",
-                    agent=impl_name,
-                    feature_id=feature_id,
-                )
-                return _emit_volley_terminal(
-                    VolleyResult("stopped_quota", iteration, str(exc), audit_paths),
-                    loaded=loaded,
-                    feature_id=feature_id,
-                    agents_in_panel=[impl_name, aud_name],
-                )
-            print(impl_quota_line)
-            _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id)
-
-            impl_audit_path = _run_round(
-                loaded=loaded,
-                executor=impl_executor,
-                agent_name=impl_name,
-                role="implementer",
-                iteration=iteration,
-                feature=feature,
-                prompt=prompts.implementer_prompt(
-                    plan_id=loaded.plan_id,
-                    plan_dir=loaded.plan_dir,
-                    feature=feature,
-                    iteration=iteration,
-                    prior_auditor_path=prior_aud_path,
-                    target_env=effective_env,
-                    target_project=effective_project,
-                ),
-                extra_validation=[
-                    *([nested_marker] if nested_marker else []),
-                    f"quota gate impl={impl_pct}",
-                    f"prior_auditor_path={prior_aud_path or '(none)'}",
-                    round_env_log,
-                ],
-                subprocess_env=round_subprocess_env,
-                target_env=effective_env,
-                target_project=effective_project,
-                cwd=registry_repo_root,
-            )
-            audit_paths.append(impl_audit_path)
-
-            # Plan 2026-05-04-003 F003 — surface timeout-with-work classification
-            # in the transcript so operators see the signal without parsing
-            # envelope JSON. The auditor still runs next; this round is just
-            # excluded from no-progress / diminishing-returns counters.
-            impl_envelope: dict[str, Any] | None
-            try:
-                impl_envelope = json.loads(impl_audit_path.read_text())
-            except (OSError, json.JSONDecodeError):
-                impl_envelope = None
-            is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(impl_envelope)
-            if is_timeout_with_work:
-                transcript.append_note(
-                    loaded.plan_dir,
-                    feature_id,
-                    iteration,
-                    (
-                        "envelope is blocked-with-worktree-changes; not counted "
-                        "toward no-progress / diminishing-returns; auditor still "
-                        "inspecting landed work"
-                    ),
-                )
-
-            # Auditor round
-            try:
-                aud_pct, aud_quota_line = _quota_gate(aud_name)
-            except QuotaExceeded as exc:
-                inbox.append_event(
-                    loaded.plan_dir,
-                    event="error",
-                    plan_id=loaded.plan_id,
-                    body=f"Quota hard-block (auditor): {exc}",
-                    agent=aud_name,
-                    feature_id=feature_id,
-                )
-                return _emit_volley_terminal(
-                    VolleyResult("stopped_quota", iteration + 1, str(exc), audit_paths),
-                    loaded=loaded,
-                    feature_id=feature_id,
-                    agents_in_panel=[impl_name, aud_name],
-                )
-            print(aud_quota_line)
-            _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id)
-
-            aud_audit_path = _run_round(
-                loaded=loaded,
-                executor=aud_executor,
-                agent_name=aud_name,
-                role="auditor",
-                iteration=iteration,
-                feature=feature,
-                prompt=prompts.auditor_prompt(
-                    plan_id=loaded.plan_id,
-                    plan_dir=loaded.plan_dir,
-                    feature=feature,
-                    iteration=iteration,
-                    implementer_audit_path=impl_audit_path,
-                    target_env=effective_env,
-                    target_project=effective_project,
-                ),
-                extra_validation=[
-                    *([nested_marker] if nested_marker else []),
-                    f"quota gate aud={aud_pct}",
-                    f"reviewing implementer audit at {impl_audit_path.name}",
-                    round_env_log,
-                ],
-                subprocess_env=round_subprocess_env,
-                target_env=effective_env,
-                target_project=effective_project,
-                cwd=registry_repo_root,
-            )
-            audit_paths.append(aud_audit_path)
-
-            # Read auditor's verdict
-            aud_data = json.loads(aud_audit_path.read_text())
-            aud_status = aud_data.get("audit_status", "inconclusive")
-
-            # Plan 2026-05-09-002 F001 — verdict-mismatch detection. The
-            # auditor can write a canonical narrative-verdict line in the
-            # summary that disagrees with the structured ``audit_status``
-            # field (the SpinDine vibe-plan-001 F001-i1 regression: summary
-            # said ``**Verdict: signed_off**`` while audit_status was
-            # ``needs_changes``). Reading only the structured field
-            # silently produces another paid iteration. Fail loud instead
-            # — INBOX classification + raise — mirroring the gate_pause
-            # GateStateReconciliationError discipline from plan 2026-05-08-
-            # 003 F001.
-            mismatch = auditor_taxonomy.detect_verdict_mismatch(
-                plan_id=loaded.plan_id,
-                feature_id=feature_id,
-                iteration=iteration,
-                audit_path=aud_audit_path,
-                audit_envelope=aud_data,
-            )
-            if mismatch is not None:
-                inbox.append_event(
-                    loaded.plan_dir,
-                    event="verdict_mismatch",
-                    plan_id=loaded.plan_id,
-                    body=auditor_taxonomy.format_verdict_mismatch_inbox_body(mismatch),
-                    narrative_verdict=mismatch.narrative_verdict,
-                    structured_status=mismatch.structured_status,
-                    audit_path=str(mismatch.audit_path),
-                    feature_id=feature_id,
-                    iteration=str(iteration),
-                )
-                notify.notify(
-                    title=f"jarvis: verdict mismatch — {loaded.plan_id}",
-                    message=(
-                        f"narrative={mismatch.narrative_verdict} vs "
-                        f"structured={mismatch.structured_status}"
-                    ),
-                    subtitle=feature_id,
-                )
-                raise mismatch
-
-            print(f"[volley] iter={iteration} auditor verdict: {aud_status}")
-
-            if aud_status == "signed_off":
-                # Plan 2026-05-04-002 F001 — `pre_merge` staged check fires
-                # ONLY on the candidate-success path (D005). It runs after
-                # the auditor's terminal `signed_off` verdict is observed
-                # (no blocking findings — `audit_status == 'signed_off'`
-                # already implies that) and immediately BEFORE
-                # `signoff_writer.write_signoff(passes=True)` would persist
-                # the success envelope (signoff_writer is invoked inside
-                # _emit_volley_terminal). When pre_merge is uncleared, the
-                # supervisor pauses with paused_on_gate WITHOUT writing a
-                # success signoff; failure-path terminals (handled in the
-                # branches below) NEVER consult pre_merge — failure evidence
-                # is unconditionally durable per D005.
-                # Idempotency: once `pre_merge` is in `completed_stages`,
-                # skip evaluate_human_gates entirely (audit-focus item 8).
-                pre_merge_info = (
-                    None
-                    if gate_pause.is_stage_completed(loaded.plan_dir, "pre_merge")
-                    else gate_pause.evaluate_human_gates(
-                        loaded.plan_dir, declared_gates, stage="pre_merge"
-                    )
-                )
-                if pre_merge_info is not None and pre_merge_info.paused:
-                    gate_pause.record_pause(
-                        loaded.plan_dir,
-                        plan_id=loaded.plan_id,
-                        pause_gates=pre_merge_info.pending,
-                        stage="pre_merge",
-                    )
-                    inbox.append_event(
-                        loaded.plan_dir,
-                        event="gate_hit",
-                        plan_id=loaded.plan_id,
-                        body=(
-                            "Supervisor paused at lifecycle stage 'pre_merge' "
-                            "after auditor signoff and before success-signoff write.\n\n"
-                            f"Awaiting: {pre_merge_info.pending}\n\n"
-                            f"Clear one (preferred): python -m dontpanic_orchestrate "
-                            f"approve {loaded.plan_id} <gate>\n"
-                            f"Clear all (explicit):  python -m dontpanic_orchestrate "
-                            f"resume {loaded.plan_id} --all"
-                        ),
-                        unmet_gates=",".join(pre_merge_info.pending),
-                        stage="pre_merge",
-                        target_env=effective_env,
-                        target_project=effective_project or "(none)",
-                        feature_id=feature_id,
-                    )
-                    notify.notify(
-                        title=f"jarvis: pre_merge gate pause — {loaded.plan_id}",
-                        message=f"Awaiting: {', '.join(pre_merge_info.pending)}",
-                        subtitle=feature_id,
-                    )
-                    _emit_gate_paused_discord(
-                        loaded.plan_dir,
-                        loaded.plan_id,
-                        feature_id,
-                        pending_gates=list(pre_merge_info.pending),
-                        stage="pre_merge",
-                    )
-                    print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
-                    return VolleyResult(
-                        "paused_on_gate",
-                        iteration + 1,
-                        f"unmet pre_merge gates: {pre_merge_info.pending}; "
-                        f"clear via `jarvis approve {loaded.plan_id} <gate>` or "
-                        f"`jarvis resume {loaded.plan_id} --all`",
-                        audit_paths,
-                    )
-
-                transcript.append_terminal(
-                    loaded.plan_dir,
-                    feature_id,
-                    aud_status,
-                    iteration + 1,
-                    reason="auditor signed off",
-                )
-                return _emit_volley_terminal(
-                    VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
-                    loaded=loaded,
-                    feature_id=feature_id,
-                    agents_in_panel=[impl_name, aud_name],
-                    # Plan 2026-05-01-004 F003: thread operator overrides only on
-                    # the signed_off path. Other terminals skip the gate per
-                    # _emit_volley_terminal's final_status check.
-                    allow_incomplete_patch_reason=allow_incomplete_patch_reason,
-                    unrelated_dirty_state_note=unrelated_dirty_state_note,
-                )
-
-            if aud_status == "blocked":
-                # Plan 2026-05-12-001 v4 F002 — reconcile verdict string
-                # against finding-class taxonomy before terminating. The
-                # auditor's structured ``audit_status`` is unreliable for
-                # advisory-class findings (D022: plan 010 F002 codex
-                # returned `blocked` because its sandbox couldn't run
-                # pytest, but the only finding was a test_coverage advisory
-                # — pre-fix the supervisor terminated `blocked after 1
-                # round` and the operator had to use F004 `close
-                # --operator-resolved --reason environmental_reproduction_failure`
-                # to clean up. Three reconciliation paths:
-                #   (a) empty findings → `blocked_no_findings` terminal +
-                #       INBOX event. NOT auto-promoted to environmental
-                #       because we have no evidence the blocker IS
-                #       environmental (could be network / format / refusal).
-                #   (b) all-advisory findings → promote to
-                #       `stopped_environmental_blocker` (F003 ENVIRONMENTAL_BLOCKER
-                #       semantics) + reconciliation INBOX event.
-                #   (c) any substantive finding (implementation_defect /
-                #       unknown) → preserve original `blocked` terminal.
-                blocked_envelope = (
-                    json.loads(aud_audit_path.read_text())
-                    if aud_audit_path.is_file()
-                    else dict(aud_data)
-                )
-                raw_findings = blocked_envelope.get("findings")
-                findings_list = raw_findings if isinstance(raw_findings, list) else []
-                prior_envelopes = _load_prior_envelopes_for_classification(
-                    audit_paths, exclude=aud_audit_path
-                )
-
-                if not findings_list:
-                    no_findings_reason = (
-                        f"verdict=blocked with empty findings on round "
-                        f"{iteration + 1} — auditor unable to produce "
-                        "findings; operator review required."
-                    )
-                    inbox.append_event(
-                        loaded.plan_dir,
-                        event="blocked_no_findings",
-                        plan_id=loaded.plan_id,
-                        body=(
-                            "Auditor terminated with `audit_status=blocked` "
-                            "but produced ZERO findings on this round.\n\n"
-                            "This is opaque: we have no evidence that the "
-                            "blocker is environmental (network, sandbox, "
-                            "missing tool), substantive (real implementation "
-                            "defect with unsaid context), or a tool/format "
-                            "failure (auditor refused to serialize, network "
-                            "outage on the auditor side). The supervisor "
-                            "intentionally does NOT auto-promote this to "
-                            "`stopped_environmental_blocker` because there "
-                            "is no advisory signal to justify the override.\n\n"
-                            f"Auditor envelope: {aud_audit_path}\n\n"
-                            "Operator action: read the envelope, then decide "
-                            "(a) re-dispatch, (b) `close --operator-resolved "
-                            "--reason environmental_reproduction_failure` if "
-                            "local verification confirms an env blocker, or "
-                            "(c) close as a real defect."
-                        ),
-                        feature_id=feature_id,
-                        iteration=str(iteration + 1),
-                        audit_path=str(aud_audit_path),
-                    )
                     transcript.append_terminal(
                         loaded.plan_dir,
                         feature_id,
-                        "blocked_no_findings",
+                        aud_status,
                         iteration + 1,
-                        reason=no_findings_reason,
+                        reason="auditor signed off",
                     )
                     return _emit_volley_terminal(
-                        VolleyResult(
+                        VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
+                        loaded=loaded,
+                        feature_id=feature_id,
+                        agents_in_panel=[impl_name, aud_name],
+                        # Plan 2026-05-01-004 F003: thread operator overrides only on
+                        # the signed_off path. Other terminals skip the gate per
+                        # _emit_volley_terminal's final_status check.
+                        allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+                        unrelated_dirty_state_note=unrelated_dirty_state_note,
+                    )
+
+                if aud_status == "blocked":
+                    # Plan 2026-05-12-001 v4 F002 — reconcile verdict string
+                    # against finding-class taxonomy before terminating. The
+                    # auditor's structured ``audit_status`` is unreliable for
+                    # advisory-class findings (D022: plan 010 F002 codex
+                    # returned `blocked` because its sandbox couldn't run
+                    # pytest, but the only finding was a test_coverage advisory
+                    # — pre-fix the supervisor terminated `blocked after 1
+                    # round` and the operator had to use F004 `close
+                    # --operator-resolved --reason environmental_reproduction_failure`
+                    # to clean up. Three reconciliation paths:
+                    #   (a) empty findings → `blocked_no_findings` terminal +
+                    #       INBOX event. NOT auto-promoted to environmental
+                    #       because we have no evidence the blocker IS
+                    #       environmental (could be network / format / refusal).
+                    #   (b) all-advisory findings → promote to
+                    #       `stopped_environmental_blocker` (F003 ENVIRONMENTAL_BLOCKER
+                    #       semantics) + reconciliation INBOX event.
+                    #   (c) any substantive finding (implementation_defect /
+                    #       unknown) → preserve original `blocked` terminal.
+                    blocked_envelope = (
+                        json.loads(aud_audit_path.read_text())
+                        if aud_audit_path.is_file()
+                        else dict(aud_data)
+                    )
+                    raw_findings = blocked_envelope.get("findings")
+                    findings_list = raw_findings if isinstance(raw_findings, list) else []
+                    prior_envelopes = _load_prior_envelopes_for_classification(
+                        audit_paths, exclude=aud_audit_path
+                    )
+
+                    if not findings_list:
+                        no_findings_reason = (
+                            f"verdict=blocked with empty findings on round "
+                            f"{iteration + 1} — auditor unable to produce "
+                            "findings; operator review required."
+                        )
+                        inbox.append_event(
+                            loaded.plan_dir,
+                            event="blocked_no_findings",
+                            plan_id=loaded.plan_id,
+                            body=(
+                                "Auditor terminated with `audit_status=blocked` "
+                                "but produced ZERO findings on this round.\n\n"
+                                "This is opaque: we have no evidence that the "
+                                "blocker is environmental (network, sandbox, "
+                                "missing tool), substantive (real implementation "
+                                "defect with unsaid context), or a tool/format "
+                                "failure (auditor refused to serialize, network "
+                                "outage on the auditor side). The supervisor "
+                                "intentionally does NOT auto-promote this to "
+                                "`stopped_environmental_blocker` because there "
+                                "is no advisory signal to justify the override.\n\n"
+                                f"Auditor envelope: {aud_audit_path}\n\n"
+                                "Operator action: read the envelope, then decide "
+                                "(a) re-dispatch, (b) `close --operator-resolved "
+                                "--reason environmental_reproduction_failure` if "
+                                "local verification confirms an env blocker, or "
+                                "(c) close as a real defect."
+                            ),
+                            feature_id=feature_id,
+                            iteration=str(iteration + 1),
+                            audit_path=str(aud_audit_path),
+                        )
+                        transcript.append_terminal(
+                            loaded.plan_dir,
+                            feature_id,
                             "blocked_no_findings",
                             iteration + 1,
-                            no_findings_reason,
-                            audit_paths,
-                        ),
+                            reason=no_findings_reason,
+                        )
+                        return _emit_volley_terminal(
+                            VolleyResult(
+                                "blocked_no_findings",
+                                iteration + 1,
+                                no_findings_reason,
+                                audit_paths,
+                            ),
+                            loaded=loaded,
+                            feature_id=feature_id,
+                            agents_in_panel=[impl_name, aud_name],
+                        )
+
+                    saved_paths = auditor_taxonomy.collect_saved_evidence_paths(
+                        [blocked_envelope, *prior_envelopes]
+                    )
+                    if auditor_taxonomy.is_advisory_only_findings_set(
+                        findings_list,
+                        feature_id=feature_id,
+                        saved_evidence_paths=saved_paths,
+                    ):
+                        classification = auditor_taxonomy.classify_terminal(
+                            feature_id=feature_id,
+                            final_audit_envelope=blocked_envelope,
+                            prior_envelopes=prior_envelopes,
+                        )
+                        try:
+                            auditor_taxonomy.write_classification_sidecar(
+                                plan_dir=loaded.plan_dir,
+                                feature_id=feature_id,
+                                iteration=iteration + 1,
+                                classification=classification,
+                            )
+                        except OSError as exc:
+                            print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                        reconcile_reason = (
+                            f"verdict=blocked reconciled to environmental_blocker "
+                            f"on round {iteration + 1}: every auditor finding "
+                            f"classified as advisory "
+                            f"(aggregate={classification.aggregate.value}); "
+                            f"promoted to stopped_environmental_blocker per F003 "
+                            f"ENVIRONMENTAL_BLOCKER semantics; recommended: "
+                            f"{classification.recommended_action}"
+                        )
+                        inbox.append_event(
+                            loaded.plan_dir,
+                            event="verdict_blocked_reconciled",
+                            plan_id=loaded.plan_id,
+                            body=(
+                                "Auditor returned `audit_status=blocked` but "
+                                "every finding classified as advisory-only "
+                                "via the v3 taxonomy. The supervisor refuses "
+                                "to trust the verdict string alone when the "
+                                "underlying findings are non-substantive.\n\n"
+                                f"Aggregate class: {classification.aggregate.value}\n"
+                                f"Blocking: {classification.blocking}\n"
+                                f"Recommended action: {classification.recommended_action}\n\n"
+                                "Terminal promoted from `blocked` to "
+                                "`stopped_environmental_blocker` (matches "
+                                "F003 ENVIRONMENTAL_BLOCKER semantics — "
+                                "operator clears via the normal "
+                                "`dontpanic approve <plan> "
+                                "breaker:environmental_blocker` flow rather "
+                                "than manual `close --operator-resolved`).\n\n"
+                                + auditor_taxonomy.format_inbox_body(classification)
+                            ),
+                            aggregate=classification.aggregate.value,
+                            blocking=str(classification.blocking).lower(),
+                            feature_id=feature_id,
+                            iteration=str(iteration + 1),
+                            original_verdict="blocked",
+                        )
+                        transcript.append_terminal(
+                            loaded.plan_dir,
+                            feature_id,
+                            circuit_breakers.TERMINAL_STATUS[
+                                circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                            ],
+                            iteration + 1,
+                            reason=reconcile_reason,
+                        )
+                        return _trip_and_return(
+                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
+                            reconcile_reason,
+                            iteration + 1,
+                        )
+
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        aud_status,
+                        iteration + 1,
+                        reason="auditor blocked",
+                    )
+                    return _emit_volley_terminal(
+                        VolleyResult("blocked", iteration + 1, "auditor blocked", audit_paths),
                         loaded=loaded,
                         feature_id=feature_id,
                         agents_in_panel=[impl_name, aud_name],
                     )
 
-                saved_paths = auditor_taxonomy.collect_saved_evidence_paths(
-                    [blocked_envelope, *prior_envelopes]
+                # Plan 2026-05-09-002 F003 — environmental volley short-circuit.
+                # Fires BEFORE the no_progress / diminishing_returns / convergence
+                # checks: when the auditor verdict is `needs_changes` AND every
+                # finding classifies as `environmental_reproduction_failure`
+                # (advisory aggregate, blocking=False), the volley terminates
+                # immediately with `stopped_environmental_blocker` so no second
+                # implementer round dispatches against an env the agent provably
+                # can't satisfy. Mixed (env + defect), defect-only, scope, and
+                # unknown aggregates all fall through to the existing iterate
+                # path. Malformed envelopes also fall through (classify_terminal
+                # collapses to unknown+blocking, which doesn't match here).
+                if aud_status == "needs_changes":
+                    env_envelope = (
+                        json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
+                    )
+                    env_classification = auditor_taxonomy.classify_terminal(
+                        feature_id=feature_id,
+                        final_audit_envelope=env_envelope,
+                        prior_envelopes=_load_prior_envelopes_for_classification(
+                            audit_paths, exclude=aud_audit_path
+                        ),
+                    )
+                    if (
+                        env_classification.aggregate
+                        == auditor_taxonomy.FindingClass.ENVIRONMENTAL_REPRODUCTION_FAILURE
+                        and not env_classification.blocking
+                    ):
+                        try:
+                            auditor_taxonomy.write_classification_sidecar(
+                                plan_dir=loaded.plan_dir,
+                                feature_id=feature_id,
+                                iteration=iteration + 1,
+                                classification=env_classification,
+                            )
+                        except OSError as exc:
+                            print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                        inbox.append_event(
+                            loaded.plan_dir,
+                            event="environmental_blocker_short_circuit",
+                            plan_id=loaded.plan_id,
+                            body=auditor_taxonomy.format_inbox_body(env_classification),
+                            aggregate=env_classification.aggregate.value,
+                            blocking=str(env_classification.blocking).lower(),
+                            feature_id=feature_id,
+                            iteration=str(iteration + 1),
+                        )
+                        env_reason = (
+                            f"environmental blocker — round {iteration + 1} auditor "
+                            f"findings classify as environmental_reproduction_failure "
+                            f"(advisory, non-blocking); recommended: "
+                            f"{env_classification.recommended_action}"
+                        )
+                        transcript.append_terminal(
+                            loaded.plan_dir,
+                            feature_id,
+                            circuit_breakers.TERMINAL_STATUS[
+                                circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                            ],
+                            iteration + 1,
+                            reason=env_reason,
+                        )
+                        return _trip_and_return(
+                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
+                            env_reason,
+                            iteration + 1,
+                        )
+
+                # F006 — diminishing returns + convergence collapse heuristics.
+                # Run before the no-progress check so they're surfaced explicitly
+                # when their pattern fits, even if no_progress would also fire.
+                dr_tripped, dr_reason = circuit_breakers.check_diminishing_returns(audit_paths)
+                if dr_tripped:
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        circuit_breakers.TERMINAL_STATUS[
+                            circuit_breakers.BreakerKind.DIMINISHING_RETURNS
+                        ],
+                        iteration + 1,
+                        reason=dr_reason,
+                    )
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.DIMINISHING_RETURNS,
+                        dr_reason,
+                        iteration + 1,
+                    )
+                cc_tripped, cc_reason = circuit_breakers.check_convergence_collapse(audit_paths)
+                if cc_tripped:
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        circuit_breakers.TERMINAL_STATUS[
+                            circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE
+                        ],
+                        iteration + 1,
+                        reason=cc_reason,
+                    )
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE,
+                        cc_reason,
+                        iteration + 1,
+                    )
+
+                # No-progress: auditor verdict identical to last round.
+                # Plan 2026-05-04-003 F003: pass the implementer envelope so the
+                # detector skips counting timeout-with-work iterations (D008 +
+                # audit-focus item 1).
+                np_tripped, np_reason = circuit_breakers.check_no_progress(
+                    prior_aud_status,
+                    aud_status,
+                    current_impl_envelope=impl_envelope,
                 )
-                if auditor_taxonomy.is_advisory_only_findings_set(
-                    findings_list,
-                    feature_id=feature_id,
-                    saved_evidence_paths=saved_paths,
-                ):
+                if np_tripped:
+                    # Plan 2026-05-08-003 F003 — taxonomy classification on the
+                    # stopped_no_progress terminal. Classification is advisory:
+                    # implementation_defect / mixed / unknown stay blocking, and
+                    # the supervisor never auto-signs-off based on a downgraded
+                    # class (D006). Output goes to (a) a sidecar JSON the F2
+                    # close gate can cite, (b) a classified INBOX event the
+                    # operator reads, and (c) the terminal reason string so
+                    # signoff_writer / volley_terminal events name the class.
+                    aud_envelope = (
+                        json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
+                    )
+                    prior_envelopes = _load_prior_envelopes_for_classification(
+                        audit_paths, exclude=aud_audit_path
+                    )
                     classification = auditor_taxonomy.classify_terminal(
                         feature_id=feature_id,
-                        final_audit_envelope=blocked_envelope,
+                        final_audit_envelope=aud_envelope,
                         prior_envelopes=prior_envelopes,
                     )
                     try:
@@ -2032,262 +2247,105 @@ def dispatch_volley(
                         )
                     except OSError as exc:
                         print(f"[volley] taxonomy sidecar write skipped: {exc}")
-                    reconcile_reason = (
-                        f"verdict=blocked reconciled to environmental_blocker "
-                        f"on round {iteration + 1}: every auditor finding "
-                        f"classified as advisory "
-                        f"(aggregate={classification.aggregate.value}); "
-                        f"promoted to stopped_environmental_blocker per F003 "
-                        f"ENVIRONMENTAL_BLOCKER semantics; recommended: "
-                        f"{classification.recommended_action}"
+                    # Plan 2026-05-11-002 v3 F004 — surface the recommended
+                    # close command inline so operators see the next step
+                    # without hunting through docs. The classification's
+                    # aggregate class is the natural default for the
+                    # ``--reason`` flag; operator may override.
+                    from dontpanic_orchestrate import closeout
+
+                    close_hint = closeout.format_no_progress_close_hint(
+                        plan_id=loaded.plan_id,
+                        feature_id=feature_id,
+                        recommended_class=classification.aggregate.value,
                     )
                     inbox.append_event(
                         loaded.plan_dir,
-                        event="verdict_blocked_reconciled",
+                        event="no_progress_classification",
                         plan_id=loaded.plan_id,
-                        body=(
-                            "Auditor returned `audit_status=blocked` but "
-                            "every finding classified as advisory-only "
-                            "via the v3 taxonomy. The supervisor refuses "
-                            "to trust the verdict string alone when the "
-                            "underlying findings are non-substantive.\n\n"
-                            f"Aggregate class: {classification.aggregate.value}\n"
-                            f"Blocking: {classification.blocking}\n"
-                            f"Recommended action: {classification.recommended_action}\n\n"
-                            "Terminal promoted from `blocked` to "
-                            "`stopped_environmental_blocker` (matches "
-                            "F003 ENVIRONMENTAL_BLOCKER semantics — "
-                            "operator clears via the normal "
-                            "`dontpanic approve <plan> "
-                            "breaker:environmental_blocker` flow rather "
-                            "than manual `close --operator-resolved`).\n\n"
-                            + auditor_taxonomy.format_inbox_body(classification)
-                        ),
+                        body=auditor_taxonomy.format_inbox_body(classification) + close_hint,
                         aggregate=classification.aggregate.value,
                         blocking=str(classification.blocking).lower(),
                         feature_id=feature_id,
-                        iteration=str(iteration + 1),
-                        original_verdict="blocked",
+                    )
+                    np_reason = (
+                        f"{np_reason}\n"
+                        f"taxonomy=[{classification.aggregate.value}] "
+                        f"blocking={classification.blocking}; "
+                        f"recommended: {classification.recommended_action}"
                     )
                     transcript.append_terminal(
                         loaded.plan_dir,
                         feature_id,
-                        circuit_breakers.TERMINAL_STATUS[
-                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
-                        ],
+                        "stopped_no_progress",
                         iteration + 1,
-                        reason=reconcile_reason,
+                        reason=np_reason,
                     )
                     return _trip_and_return(
-                        circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
-                        reconcile_reason,
+                        circuit_breakers.BreakerKind.NO_PROGRESS,
+                        np_reason,
                         iteration + 1,
                     )
 
-                transcript.append_terminal(
-                    loaded.plan_dir,
-                    feature_id,
-                    aud_status,
-                    iteration + 1,
-                    reason="auditor blocked",
-                )
-                return _emit_volley_terminal(
-                    VolleyResult("blocked", iteration + 1, "auditor blocked", audit_paths),
-                    loaded=loaded,
-                    feature_id=feature_id,
-                    agents_in_panel=[impl_name, aud_name],
-                )
+                prior_aud_path = aud_audit_path
+                # Plan 2026-05-04-003 F003 (audit-focus item 1): a skipped
+                # timeout-with-work round must NOT establish the no-progress
+                # baseline for the next round. Only countable rounds advance
+                # `prior_aud_status`. `prior_aud_path` still updates because the
+                # implementer prompt benefits from the freshest auditor context
+                # (orthogonal to counter accumulation).
+                if not is_timeout_with_work:
+                    prior_aud_status = aud_status
 
-            # Plan 2026-05-09-002 F003 — environmental volley short-circuit.
-            # Fires BEFORE the no_progress / diminishing_returns / convergence
-            # checks: when the auditor verdict is `needs_changes` AND every
-            # finding classifies as `environmental_reproduction_failure`
-            # (advisory aggregate, blocking=False), the volley terminates
-            # immediately with `stopped_environmental_blocker` so no second
-            # implementer round dispatches against an env the agent provably
-            # can't satisfy. Mixed (env + defect), defect-only, scope, and
-            # unknown aggregates all fall through to the existing iterate
-            # path. Malformed envelopes also fall through (classify_terminal
-            # collapses to unknown+blocking, which doesn't match here).
-            if aud_status == "needs_changes":
-                env_envelope = (
-                    json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
-                )
-                env_classification = auditor_taxonomy.classify_terminal(
-                    feature_id=feature_id,
-                    final_audit_envelope=env_envelope,
-                    prior_envelopes=_load_prior_envelopes_for_classification(
-                        audit_paths, exclude=aud_audit_path
-                    ),
-                )
-                if (
-                    env_classification.aggregate
-                    == auditor_taxonomy.FindingClass.ENVIRONMENTAL_REPRODUCTION_FAILURE
-                    and not env_classification.blocking
-                ):
-                    try:
-                        auditor_taxonomy.write_classification_sidecar(
-                            plan_dir=loaded.plan_dir,
-                            feature_id=feature_id,
-                            iteration=iteration + 1,
-                            classification=env_classification,
-                        )
-                    except OSError as exc:
-                        print(f"[volley] taxonomy sidecar write skipped: {exc}")
-                    inbox.append_event(
-                        loaded.plan_dir,
-                        event="environmental_blocker_short_circuit",
-                        plan_id=loaded.plan_id,
-                        body=auditor_taxonomy.format_inbox_body(env_classification),
-                        aggregate=env_classification.aggregate.value,
-                        blocking=str(env_classification.blocking).lower(),
-                        feature_id=feature_id,
-                        iteration=str(iteration + 1),
-                    )
-                    env_reason = (
-                        f"environmental blocker — round {iteration + 1} auditor "
-                        f"findings classify as environmental_reproduction_failure "
-                        f"(advisory, non-blocking); recommended: "
-                        f"{env_classification.recommended_action}"
-                    )
-                    transcript.append_terminal(
-                        loaded.plan_dir,
-                        feature_id,
-                        circuit_breakers.TERMINAL_STATUS[
-                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
-                        ],
-                        iteration + 1,
-                        reason=env_reason,
-                    )
-                    return _trip_and_return(
-                        circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
-                        env_reason,
-                        iteration + 1,
-                    )
+        except ValueError as _backstop_exc:
+            # F003 backstop catches ValueError for D025 root cause #1, but
+            # ``target_context_prelude.TargetContextError`` is also a
+            # ``ValueError`` subclass and signals an intentional F023 EC6
+            # validation failure that MUST propagate to the caller (audit
+            # rejected; no audit file should land). Re-raise it here so the
+            # F003 net doesn't swallow legitimate platform validation.
+            from dontpanic_orchestrate.target_context_prelude import TargetContextError
 
-            # F006 — diminishing returns + convergence collapse heuristics.
-            # Run before the no-progress check so they're surfaced explicitly
-            # when their pattern fits, even if no_progress would also fire.
-            dr_tripped, dr_reason = circuit_breakers.check_diminishing_returns(audit_paths)
-            if dr_tripped:
-                transcript.append_terminal(
-                    loaded.plan_dir,
-                    feature_id,
-                    circuit_breakers.TERMINAL_STATUS[
-                        circuit_breakers.BreakerKind.DIMINISHING_RETURNS
-                    ],
-                    iteration + 1,
-                    reason=dr_reason,
-                )
-                return _trip_and_return(
-                    circuit_breakers.BreakerKind.DIMINISHING_RETURNS,
-                    dr_reason,
-                    iteration + 1,
-                )
-            cc_tripped, cc_reason = circuit_breakers.check_convergence_collapse(audit_paths)
-            if cc_tripped:
-                transcript.append_terminal(
-                    loaded.plan_dir,
-                    feature_id,
-                    circuit_breakers.TERMINAL_STATUS[
-                        circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE
-                    ],
-                    iteration + 1,
-                    reason=cc_reason,
-                )
-                return _trip_and_return(
-                    circuit_breakers.BreakerKind.CONVERGENCE_COLLAPSE,
-                    cc_reason,
-                    iteration + 1,
-                )
-
-            # No-progress: auditor verdict identical to last round.
-            # Plan 2026-05-04-003 F003: pass the implementer envelope so the
-            # detector skips counting timeout-with-work iterations (D008 +
-            # audit-focus item 1).
-            np_tripped, np_reason = circuit_breakers.check_no_progress(
-                prior_aud_status,
-                aud_status,
-                current_impl_envelope=impl_envelope,
+            if isinstance(_backstop_exc, TargetContextError):
+                raise
+            rounds_done = max(0, iteration + 1)
+            backstop_reason = (
+                "supervisor caught ValueError in iter loop "
+                f"(iteration={iteration}): {_backstop_exc}. "
+                "F003 backstop (D025 root cause #1) — likely a shlex.split "
+                "failure on agent prose somewhere in the post-iter pipeline "
+                "outside our wrapped call sites (dependency, subprocess parser, "
+                "or Pydantic validator). Operator: inspect the last persisted "
+                "audit envelope and use `dontpanic close --operator-resolved` "
+                "(F2 F004 CLI) to close out manually if needed."
             )
-            if np_tripped:
-                # Plan 2026-05-08-003 F003 — taxonomy classification on the
-                # stopped_no_progress terminal. Classification is advisory:
-                # implementation_defect / mixed / unknown stay blocking, and
-                # the supervisor never auto-signs-off based on a downgraded
-                # class (D006). Output goes to (a) a sidecar JSON the F2
-                # close gate can cite, (b) a classified INBOX event the
-                # operator reads, and (c) the terminal reason string so
-                # signoff_writer / volley_terminal events name the class.
-                aud_envelope = (
-                    json.loads(aud_audit_path.read_text()) if aud_audit_path.is_file() else {}
-                )
-                prior_envelopes = _load_prior_envelopes_for_classification(
-                    audit_paths, exclude=aud_audit_path
-                )
-                classification = auditor_taxonomy.classify_terminal(
-                    feature_id=feature_id,
-                    final_audit_envelope=aud_envelope,
-                    prior_envelopes=prior_envelopes,
-                )
-                try:
-                    auditor_taxonomy.write_classification_sidecar(
-                        plan_dir=loaded.plan_dir,
-                        feature_id=feature_id,
-                        iteration=iteration + 1,
-                        classification=classification,
-                    )
-                except OSError as exc:
-                    print(f"[volley] taxonomy sidecar write skipped: {exc}")
-                # Plan 2026-05-11-002 v3 F004 — surface the recommended
-                # close command inline so operators see the next step
-                # without hunting through docs. The classification's
-                # aggregate class is the natural default for the
-                # ``--reason`` flag; operator may override.
-                from dontpanic_orchestrate import closeout
-
-                close_hint = closeout.format_no_progress_close_hint(
-                    plan_id=loaded.plan_id,
-                    feature_id=feature_id,
-                    recommended_class=classification.aggregate.value,
-                )
-                inbox.append_event(
-                    loaded.plan_dir,
-                    event="no_progress_classification",
-                    plan_id=loaded.plan_id,
-                    body=auditor_taxonomy.format_inbox_body(classification) + close_hint,
-                    aggregate=classification.aggregate.value,
-                    blocking=str(classification.blocking).lower(),
-                    feature_id=feature_id,
-                )
-                np_reason = (
-                    f"{np_reason}\n"
-                    f"taxonomy=[{classification.aggregate.value}] "
-                    f"blocking={classification.blocking}; "
-                    f"recommended: {classification.recommended_action}"
-                )
-                transcript.append_terminal(
-                    loaded.plan_dir,
-                    feature_id,
-                    "stopped_no_progress",
-                    iteration + 1,
-                    reason=np_reason,
-                )
-                return _trip_and_return(
-                    circuit_breakers.BreakerKind.NO_PROGRESS,
-                    np_reason,
-                    iteration + 1,
-                )
-
-            prior_aud_path = aud_audit_path
-            # Plan 2026-05-04-003 F003 (audit-focus item 1): a skipped
-            # timeout-with-work round must NOT establish the no-progress
-            # baseline for the next round. Only countable rounds advance
-            # `prior_aud_status`. `prior_aud_path` still updates because the
-            # implementer prompt benefits from the freshest auditor context
-            # (orthogonal to counter accumulation).
-            if not is_timeout_with_work:
-                prior_aud_status = aud_status
+            _write_backstop_checkpoint(
+                plan_dir=loaded.plan_dir,
+                feature_id=feature_id,
+                iteration=max(0, iteration),
+                exception=_backstop_exc,
+                audit_paths=audit_paths,
+            )
+            transcript.append_terminal(
+                loaded.plan_dir,
+                feature_id,
+                "blocked",
+                rounds_done,
+                reason=backstop_reason,
+            )
+            inbox.append_event(
+                loaded.plan_dir,
+                event="volley_crash_caught",
+                plan_id=loaded.plan_id,
+                body=backstop_reason,
+                feature_id=feature_id,
+            )
+            return _emit_volley_terminal(
+                VolleyResult("blocked", rounds_done, backstop_reason, audit_paths),
+                loaded=loaded,
+                feature_id=feature_id,
+                agents_in_panel=[impl_name, aud_name],
+            )
 
         # F006 — iteration cap. Triggers the breaker (counted toward the global
         # circuit breaker's 24h window) and writes a synthetic gate so next-run
@@ -2305,6 +2363,48 @@ def dispatch_volley(
             cap_reason,
             cap + 1,
         )
+
+
+def _write_backstop_checkpoint(
+    *,
+    plan_dir: Path,
+    feature_id: str,
+    iteration: int,
+    exception: BaseException,
+    audit_paths: list[Path],
+) -> Path | None:
+    """Plan 2026-05-12-001 v4 F003 (D025): minimal checkpoint stub for the
+    dispatch_volley iter-loop backstop. Writes
+    ``<plan_dir>/audit/terminal-state-iter{N}.json`` recording the exception
+    class + message + the audit envelopes already on disk so the operator can
+    recover via the F2 F004 close CLI.
+
+    Best-effort: any OSError during write is swallowed because the caller's
+    next step (transcript + INBOX + signoff) MUST still execute. F004 will
+    extend this stub with richer recovery context (stage, last-good env,
+    recommended command).
+    """
+    try:
+        target = plan_dir / "audit" / f"terminal-state-iter{iteration}.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema": "terminal-state.v0",
+            "feature_id": feature_id,
+            "iteration": iteration,
+            "exception_class": type(exception).__name__,
+            "exception_message": str(exception)[:1000],
+            "audit_paths": [str(p) for p in audit_paths],
+            "recommended_recovery": (
+                "dontpanic close --plan-id <id> --feature-id "
+                f"{feature_id} --operator-resolved --reason "
+                "environmental_reproduction_failure"
+            ),
+            "written_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        target.write_text(json.dumps(payload, indent=2, sort_keys=True))
+        return target
+    except OSError:
+        return None
 
 
 def _apply_target_accountability(
@@ -2374,7 +2474,45 @@ def _apply_target_accountability(
 
     target_ctx = audit.get("target_context") or {}
     for cmd in target_ctx.get("commands_run") or []:
-        guard = command_guard.check_command(cmd)
+        # Plan 2026-05-12-001 v4 F003 (D025 root cause #1): defend against
+        # untrusted agent prose. ``check_command`` no longer raises on
+        # malformed shlex input — it surfaces the parser message via
+        # ``GuardResult.parse_error`` so we can emit an advisory parsing
+        # warning and skip the entry instead of killing the volley.
+        try:
+            guard = command_guard.check_command(cmd)
+        except ValueError as exc:  # belt-and-braces: dependencies may still raise
+            new_findings.append(
+                {
+                    "severity": "advisory",
+                    "category": "correctness",
+                    "issue": f"shlex parse failed: {exc}",
+                    "evidence": f"Could not parse commands_run entry: {str(cmd)[:200]!r}",
+                    "recommendation": (
+                        "Quote/escape command strings consistently in summaries. "
+                        "Supervisor skipped command_guard checks on this entry."
+                    ),
+                }
+            )
+            continue
+        if guard.parse_error is not None:
+            # ``guard.parse_error`` already includes the "shlex parse failed:"
+            # prefix from command_guard._argv; re-prefixing here previously
+            # produced double-prefixed advisories ("shlex parse failed: shlex
+            # parse failed: ..."). Use it verbatim.
+            new_findings.append(
+                {
+                    "severity": "advisory",
+                    "category": "correctness",
+                    "issue": guard.parse_error,
+                    "evidence": f"Could not parse commands_run entry: {str(cmd)[:200]!r}",
+                    "recommendation": (
+                        "Quote/escape command strings consistently in summaries. "
+                        "Supervisor skipped command_guard checks on this entry."
+                    ),
+                }
+            )
+            continue
         if not guard.allowed:
             new_findings.append(
                 {
