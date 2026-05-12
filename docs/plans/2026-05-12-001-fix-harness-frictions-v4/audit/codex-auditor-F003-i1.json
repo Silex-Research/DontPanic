@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-12T17:20:23Z",
+  "completed_at": "2026-05-12T17:25:43Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-s3jwkk0s target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 367872 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1605458,
+    "tokens_out": 11600,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (medium, correctness): Parse-warning findings do not match the F003-required category. Evidence: F003 requires `severity=advisory category=parsing`, but [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:2487) and [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:2505) emit `category: \"correctness\"`. Recommendation: either add schema support for `parsing` and emit it, or update the plan/spec to explicitly use the schema-supported category.\n\nFINDING (medium, test_coverage): The plan 004 F002 replay test still does not prove the volley reaches a terminal with the real parse-breaking input. Evidence: [test_shlex_safe_command_guard_f003.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py:462) replays the real envelope through `_apply_target_accountability`, while [test_shlex_safe_command_guard_f003.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py:500) appends fabricated bad inputs and still only checks audit status, not full volley terminal behavior. Recommendation: add a replay that drives the post-iter/supervisor terminal path with the actual reproducer shape or explicitly document why the exact persisted envelope is no longer parse-breaking.\n\nEC5 dec",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "rg -n \"shlex\\\\.split\" scripts/dontpanic_orchestrate scripts/dontpanic_orchestrate/command_guard.py scripts/dontpanic_orchestrate/prompts.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from dontpanic_orchestrate import supervisor; bad=[\"gcloud services list --project=foo'\\''\",\"gcloud services list --project=\\\"foo\",\"gcloud services list --project=foo\\\\\\\\\"]; audit={\"audit_status\":\"signed_off\",\"agent_role\":\"implementer\",\"findings\":[],\"summary\":\"Repo: DontPanic\\nEnv: dev\\nProject: (none)\\nDone.\",\"target_context\":{\"env\":\"dev\",\"project\":None,\"commands_run\":bad}}; supervisor._apply_target_accountability(audit, role=\"implementer\", plan_target_env=\"dev\", plan_target_project=None); print(audit[\"audit_status\"]); print([(f[\"severity\"], f[\"category\"], f[\"issue\"]) for f in audit[\"findings\"]])'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Parse-warning findings do not match the F003-required category. Evidence: F003 requires `severity=advisory category=parsing`, but [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:2487) and [supervisor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:2505) emit `category: \"correctness\"`. Recommendation: either add schema support for `parsing` and emit it, or update the plan/spec to explicitly use the s",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The plan 004 F002 replay test still does not prove the volley reaches a terminal with the real parse-breaking input. Evidence: [test_shlex_safe_command_guard_f003.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py:462) replays the real envelope through `_apply_target_accountability`, while [test_shlex_safe_command_guard_f003.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_shlex_safe_comm",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

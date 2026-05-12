@@ -16,13 +16,25 @@ class CommandRejected(ValueError):
 class GuardResult:
     allowed: bool
     reason: str
+    # Plan 2026-05-12-001 v4 F003 (D025 root cause #1): shlex.split() on
+    # untrusted agent prose can raise ValueError ("No closing quotation",
+    # escape errors). _argv() now traps that and surfaces the message here so
+    # callers can emit an advisory parsing warning + skip the offending
+    # command instead of crashing the volley. None on the happy path.
+    parse_error: str | None = None
 
 
 def check_command(
     command: str | Sequence[str],
     env: Mapping[str, str] | None = None,
 ) -> GuardResult:
-    argv = _argv(command)
+    argv, parse_error = _argv(command)
+    if parse_error is not None:
+        # Unparseable command from agent output: surface the error to the
+        # caller (supervisor turns this into an advisory parsing finding) and
+        # report allowed=False so it never inadvertently passes a security
+        # check. The reason carries the shlex message verbatim.
+        return GuardResult(False, parse_error, parse_error=parse_error)
     if not argv:
         return GuardResult(True, "empty command")
 
@@ -193,7 +205,11 @@ _REQUIRED_FLAG_RULES: list[tuple[str, callable, list[tuple[str, callable]]]] = [
 def check_required_flags(command: str | Sequence[str]) -> str | None:
     """Return rejection reason if the command matches a positive-flag rule and
     misses a required flag; None when no rule applies or all flags present."""
-    argv = _argv(command)
+    argv, parse_error = _argv(command)
+    if parse_error is not None:
+        # Unparseable string — caller already handles the parse failure via
+        # check_command's GuardResult.parse_error. Don't double-report here.
+        return None
     if not argv:
         return None
     tool = Path(argv[0]).name
@@ -219,13 +235,29 @@ def assert_allowed(
 ) -> None:
     result = check_command(command, env=env)
     if not result.allowed:
+        # Plan 2026-05-12-001 v4 F003 (D025): parse failures (typed via
+        # result.parse_error) surface as CommandRejected here — preserves the
+        # loud-fail contract for code that asserts on commands WE constructed.
+        # Callers that consume untrusted agent output should use check_command
+        # directly and branch on GuardResult.parse_error.
         raise CommandRejected(result.reason)
 
 
-def _argv(command: str | Sequence[str]) -> list[str]:
+def _argv(command: str | Sequence[str]) -> tuple[list[str], str | None]:
+    """Tokenise ``command`` into argv. Returns ``(argv, parse_error)``.
+
+    Plan 2026-05-12-001 v4 F003 (D025): when ``command`` is a string,
+    ``shlex.split`` may raise ``ValueError`` on unbalanced quotes / bad
+    escape sequences in untrusted agent prose. We trap that here and return
+    ``([], "shlex parse failed: <msg>")`` so callers can emit an advisory
+    parsing warning + skip the entry instead of crashing the volley.
+    """
     if isinstance(command, str):
-        return shlex.split(command)
-    return [str(part) for part in command]
+        try:
+            return shlex.split(command), None
+        except ValueError as exc:
+            return [], f"shlex parse failed: {exc}"
+    return [str(part) for part in command], None
 
 
 def _matches(argv: Sequence[str], *prefix: str) -> bool:

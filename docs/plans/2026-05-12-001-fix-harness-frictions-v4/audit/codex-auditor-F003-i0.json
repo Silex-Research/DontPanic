@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-12T17:07:19Z",
+  "completed_at": "2026-05-12T17:14:58Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-s3jwkk0s target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 305130 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2210014,
+    "tokens_out": 17405,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer’s summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and `target_context.commands_run` is empty, so I found no forbidden command shapes there.\n\nFINDING (medium, test_coverage): The Plan 004 F002 replay test does not replay the exact implementer `commands_run` or prove a volley terminal. Evidence: `test_plan_004_f002_replay_volley_reaches_clean_terminal` uses fabricated `plan_004_f002_like_commands` and only calls `_apply_target_accountability`; the actual Plan 004 F002 implementer commands from `2026-05-09-004.../claude-implementer-F002-i0.json` replay as `signed_off 0 []`. Recommendation: load the real reproducer input and assert the post-iter/dispatch path reaches one of the accepted terminal states.\n\nFINDING (low, correctness): Parse advisory text is double-prefixed. Evidence: `supervisor.py:2493` builds `shlex parse failed: {guard.parse_error}`, while `guard.parse_error` already includes `shlex parse failed: ...`; the smoke check printed `shlex parse failed: shlex parse failed: No closing quotation`. Recommendation: store the raw `ValueError` message separately or avoid re-prefixing in supervisor.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-only HEAD~1\n$ rg -n \"shlex\\\\.split|import shlex\" scripts/dontpanic_orchestrate scripts/command_guard.py scripts/prompts.py command_guard.py prompts.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPT",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "rg -n \"shlex\\\\.split|import shlex\" scripts/dontpanic_orchestrate scripts/command_guard.py scripts/prompts.py command_guard.py prompts.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py -q",
+      "git diff --check -- scripts/dontpanic_orchestrate/command_guard.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The Plan 004 F002 replay test does not replay the exact implementer `commands_run` or prove a volley terminal. Evidence: `test_plan_004_f002_replay_volley_reaches_clean_terminal` uses fabricated `plan_004_f002_like_commands` and only calls `_apply_target_accountability`; the actual Plan 004 F002 implementer commands from `2026-05-09-004.../claude-implementer-F002-i0.json` replay as `signed_off 0 []`. Recommendation: load the real reproducer input and assert the post-iter/dispatch path reaches on",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Parse advisory text is double-prefixed. Evidence: `supervisor.py:2493` builds `shlex parse failed: {guard.parse_error}`, while `guard.parse_error` already includes `shlex parse failed: ...`; the smoke check printed `shlex parse failed: shlex parse failed: No closing quotation`. Recommendation: store the raw `ValueError` message separately or avoid re-prefixing in supervisor. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-only HEAD~1 $ rg -n \"shlex\\\\.split|import shle",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
