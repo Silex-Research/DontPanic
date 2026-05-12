@@ -1,0 +1,56 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-12T15:24:37Z",
+  "completed_at": "2026-05-12T15:30:34Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-ypcuhflp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 131246 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1924133,
+    "tokens_out": 12759,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct, and I saw no forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (high, correctness): Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`; evidence: `supervisor.py:2035-2085`, test expectation at `test_verdict_blocked_reconciliation_f002.py:507`, and `features.json:73-82` rewrites the acceptance to accept the alias. Recommendation: implement the required `paused_on_environmental` terminal or get the plan acceptance formally changed before asserting the alias.\n\nFINDING (medium, test_coverage): The Plan 004 F004 fixture does not assert the required `needs_changes` terminal; evidence: `test_verdict_blocked_reconciliation_f002.py:544-586` explicitly allows variable terminals and only asserts the result is not blocked/environmental. Recommendation: add a fixture that pins the real F004 envelope to exact `needs_changes` behavior.\n\nFINDING (medium, test_coverage): The Plan 010 F002 fixture is reconstructed from a hand-coded finding rather than replaying the actual codex envelope; evidence: `test_verdict_blocked_reconciliation_f002.py:51-65` and `500-507`. Recommendation: load/replay `plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F002-i0.json`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider script",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate import circuit_breakers; print(circuit_breakers.TERMINAL_STATUS[circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER])\"",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m py_compile scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/auditor_taxonomy.py scripts/dontpanic_orchestrate/signoff_writer.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c \"import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ['scripts/dontpanic_orchestrate/supervisor.py','scripts/dontpanic_orchestrate/auditor_taxonomy.py','scripts/dontpanic_orchestrate/signoff_writer.py']]; print('ast parse ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`; evidence: `supervisor.py:2035-2085`, test expectation at `test_verdict_blocked_reconciliation_f002.py:507`, and `features.json:73-82` rewrites the acceptance to accept the alias. Recommendation: implement the required `paused_on_environmental` terminal or get the plan acceptance formally changed before asserting the alias.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The Plan 004 F004 fixture does not assert the required `needs_changes` terminal; evidence: `test_verdict_blocked_reconciliation_f002.py:544-586` explicitly allows variable terminals and only asserts the result is not blocked/environmental. Recommendation: add a fixture that pins the real F004 envelope to exact `needs_changes` behavior.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The Plan 010 F002 fixture is reconstructed from a hand-coded finding rather than replaying the actual codex envelope; evidence: `test_verdict_blocked_reconciliation_f002.py:51-65` and `500-507`. Recommendation: load/replay `plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F002-i0.json`. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py $ PYTH",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

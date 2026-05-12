@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-12T15:30:35Z",
+  "feature_id": "F002",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`; evidence: `supervisor.py:2035-2085`, tes…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "The Plan 004 F004 fixture does not assert the required `needs_changes` terminal; evidence: `test_verdict_blocked_reconciliation_f002.py:544-586` explicitly all…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    },
+    {
+      "finding_index": 2,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "The Plan 010 F002 fixture is reconstructed from a hand-coded finding rather than replaying the actual codex envelope; evidence: `test_verdict_blocked_reconcili…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

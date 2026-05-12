@@ -49,7 +49,12 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+# Plan 2026-05-12-001 v4 F002 — injection seam for the verdict-vs-finding
+# reconciliation gate. Defaults to :func:`classify_finding`; tests inject
+# stubs to exercise edge cases without re-deriving the v3 heuristics.
+ClassifierCallback = Callable[..., "FindingClassification"]
 
 
 CLASSIFICATION_SIDECAR_PREFIX = "no_progress_classification"
@@ -252,6 +257,22 @@ class FindingClass(str, Enum):
 # containing a blocking class) and ``unknown`` collapse onto these.
 _BLOCKING_CLASSES: frozenset[FindingClass] = frozenset(
     {FindingClass.IMPLEMENTATION_DEFECT, FindingClass.UNKNOWN}
+)
+
+# Plan 2026-05-12-001 v4 F002 — advisory-only finding classes used by the
+# verdict-vs-finding reconciliation. When the auditor returns
+# ``audit_status=blocked`` but every finding classifies into this set, the
+# supervisor promotes the terminal from ``blocked-after-N`` to
+# ``stopped_environmental_blocker`` (matching the F003 ENVIRONMENTAL_BLOCKER
+# semantics) rather than trusting the verdict string. Empty findings is
+# NOT vacuously advisory — see ``is_advisory_only_findings_set``.
+_ADVISORY_CLASSES: frozenset[FindingClass] = frozenset(
+    {
+        FindingClass.ENVIRONMENTAL_REPRODUCTION_FAILURE,
+        FindingClass.EVIDENCE_SHAPE_DISAGREEMENT,
+        FindingClass.SPEC_AMBIGUITY,
+        FindingClass.SCOPE_OVERREACH,
+    }
 )
 
 # Substantive categories that default to ``implementation_defect`` when no
@@ -529,6 +550,54 @@ def classify_finding(
     )
 
 
+def is_advisory_only_findings_set(
+    findings: list[dict[str, Any]] | None,
+    *,
+    feature_id: str | None = None,
+    saved_evidence_paths: tuple[str, ...] = (),
+    taxonomy_classifier: "ClassifierCallback | None" = None,
+) -> bool:
+    """Plan 2026-05-12-001 v4 F002 — verdict-vs-finding reconciliation gate.
+
+    Returns True iff ``findings`` is NON-EMPTY AND every finding classifies
+    to one of the advisory v3 classes (``environmental_reproduction_failure``
+    / ``evidence_shape_disagreement`` / ``spec_ambiguity`` /
+    ``scope_overreach``). Empty findings is NOT vacuously advisory — when
+    the auditor returns ``audit_status=blocked`` with no findings we have
+    no evidence that the blocker is environmental and the supervisor must
+    surface the missing-findings case via the separate ``blocked_no_findings``
+    terminal rather than auto-promoting.
+
+    ``taxonomy_classifier`` is an injection seam (per F002 spec). It must
+    accept ``(finding, *, finding_index, feature_id, saved_evidence_paths)``
+    and return a :class:`FindingClassification`. Defaults to
+    :func:`classify_finding`. Tests inject a stub to exercise corner cases
+    without re-deriving the v3 taxonomy heuristics.
+
+    Used by ``supervisor.dispatch_volley`` to override a verdict=blocked
+    terminal to ``stopped_environmental_blocker`` (matching F003
+    ENVIRONMENTAL_BLOCKER semantics) when every finding is advisory-only.
+    Mixed sets containing any substantive class (``implementation_defect``,
+    ``unknown``) keep the original ``blocked`` terminal — substantive
+    findings + verdict=blocked = real blocker.
+    """
+    if not findings:
+        return False
+    classifier = taxonomy_classifier or classify_finding
+    for idx, finding in enumerate(findings):
+        if not isinstance(finding, dict):
+            return False
+        c = classifier(
+            finding,
+            finding_index=idx,
+            feature_id=feature_id,
+            saved_evidence_paths=saved_evidence_paths,
+        )
+        if c.classification not in _ADVISORY_CLASSES:
+            return False
+    return True
+
+
 def collect_saved_evidence_paths(envelopes: list[dict[str, Any]]) -> tuple[str, ...]:
     """Pure — scan envelope summaries / validation_performed entries /
     finding evidence text for paths matching the saved-evidence pattern.
@@ -789,6 +858,7 @@ def _recommend(
 
 __all__ = [
     "CLASSIFICATION_SIDECAR_PREFIX",
+    "ClassifierCallback",
     "FindingClass",
     "FindingClassification",
     "TerminalClassification",
@@ -799,6 +869,7 @@ __all__ = [
     "detect_verdict_mismatch",
     "format_inbox_body",
     "format_verdict_mismatch_inbox_body",
+    "is_advisory_only_findings_set",
     "parse_narrative_verdict",
     "write_classification_sidecar",
 ]

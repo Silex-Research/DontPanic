@@ -18,6 +18,19 @@
       "gate": "pre_impl",
       "at": "2026-05-12T02:11:56Z",
       "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-12T15:30:35Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-12T16:06:55Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [

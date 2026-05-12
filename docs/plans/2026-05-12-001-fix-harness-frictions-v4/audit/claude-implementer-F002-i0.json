@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-12T15:02:52Z",
+  "completed_at": "2026-05-12T15:10:43Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-ypcuhflp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3261 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 7259490,
+    "tokens_out": 32681,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Full orchestrate sweep: 1895 passed, 7 skipped, 0 failures.\n\nRepo: DontPanic\nEnv: dev\nProject: (none)\nCommands invoked (no side-effect mutations, only test runs):\n\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/ -q\n\n## Summary\n\nImplemented F002 verdict-vs-finding reconciliation in three places: (1) added `auditor_taxonomy.is_advisory_only_findings_set(findings, *, feature_id, saved_evidence_paths)` that returns True iff findings is non-empty AND every finding classifies to one of the four advisory v3 classes (env_reproduction_failure / evidence_shape_disagreement / spec_ambiguity / scope_overreach), with empty findings explicitly NOT vacuously advisory per D005; (2) rewrote `supervisor.dispatch_volley`'s `if aud_status == \"blocked\":` branch to take three paths — empty findings emit a new `blocked_no_findings` terminal + INBOX event (no auto-promotion since there's no advisory signal), all-advisory findings trip the existing `BreakerKind.ENVIRONMENTAL_BLOCKER` so the terminal becomes `stopped_environmental_blocker` plus a `verdict_blocked_reconciled` INBOX event documenting the override + classification, and substantive/mixed findings preserve the origin",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_environmental_blocker_f003.py scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/ -q"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

@@ -1928,6 +1928,162 @@ def dispatch_volley(
                 )
 
             if aud_status == "blocked":
+                # Plan 2026-05-12-001 v4 F002 — reconcile verdict string
+                # against finding-class taxonomy before terminating. The
+                # auditor's structured ``audit_status`` is unreliable for
+                # advisory-class findings (D022: plan 010 F002 codex
+                # returned `blocked` because its sandbox couldn't run
+                # pytest, but the only finding was a test_coverage advisory
+                # — pre-fix the supervisor terminated `blocked after 1
+                # round` and the operator had to use F004 `close
+                # --operator-resolved --reason environmental_reproduction_failure`
+                # to clean up. Three reconciliation paths:
+                #   (a) empty findings → `blocked_no_findings` terminal +
+                #       INBOX event. NOT auto-promoted to environmental
+                #       because we have no evidence the blocker IS
+                #       environmental (could be network / format / refusal).
+                #   (b) all-advisory findings → promote to
+                #       `stopped_environmental_blocker` (F003 ENVIRONMENTAL_BLOCKER
+                #       semantics) + reconciliation INBOX event.
+                #   (c) any substantive finding (implementation_defect /
+                #       unknown) → preserve original `blocked` terminal.
+                blocked_envelope = (
+                    json.loads(aud_audit_path.read_text())
+                    if aud_audit_path.is_file()
+                    else dict(aud_data)
+                )
+                raw_findings = blocked_envelope.get("findings")
+                findings_list = raw_findings if isinstance(raw_findings, list) else []
+                prior_envelopes = _load_prior_envelopes_for_classification(
+                    audit_paths, exclude=aud_audit_path
+                )
+
+                if not findings_list:
+                    no_findings_reason = (
+                        f"verdict=blocked with empty findings on round "
+                        f"{iteration + 1} — auditor unable to produce "
+                        "findings; operator review required."
+                    )
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="blocked_no_findings",
+                        plan_id=loaded.plan_id,
+                        body=(
+                            "Auditor terminated with `audit_status=blocked` "
+                            "but produced ZERO findings on this round.\n\n"
+                            "This is opaque: we have no evidence that the "
+                            "blocker is environmental (network, sandbox, "
+                            "missing tool), substantive (real implementation "
+                            "defect with unsaid context), or a tool/format "
+                            "failure (auditor refused to serialize, network "
+                            "outage on the auditor side). The supervisor "
+                            "intentionally does NOT auto-promote this to "
+                            "`stopped_environmental_blocker` because there "
+                            "is no advisory signal to justify the override.\n\n"
+                            f"Auditor envelope: {aud_audit_path}\n\n"
+                            "Operator action: read the envelope, then decide "
+                            "(a) re-dispatch, (b) `close --operator-resolved "
+                            "--reason environmental_reproduction_failure` if "
+                            "local verification confirms an env blocker, or "
+                            "(c) close as a real defect."
+                        ),
+                        feature_id=feature_id,
+                        iteration=str(iteration + 1),
+                        audit_path=str(aud_audit_path),
+                    )
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        "blocked_no_findings",
+                        iteration + 1,
+                        reason=no_findings_reason,
+                    )
+                    return _emit_volley_terminal(
+                        VolleyResult(
+                            "blocked_no_findings",
+                            iteration + 1,
+                            no_findings_reason,
+                            audit_paths,
+                        ),
+                        loaded=loaded,
+                        feature_id=feature_id,
+                        agents_in_panel=[impl_name, aud_name],
+                    )
+
+                saved_paths = auditor_taxonomy.collect_saved_evidence_paths(
+                    [blocked_envelope, *prior_envelopes]
+                )
+                if auditor_taxonomy.is_advisory_only_findings_set(
+                    findings_list,
+                    feature_id=feature_id,
+                    saved_evidence_paths=saved_paths,
+                ):
+                    classification = auditor_taxonomy.classify_terminal(
+                        feature_id=feature_id,
+                        final_audit_envelope=blocked_envelope,
+                        prior_envelopes=prior_envelopes,
+                    )
+                    try:
+                        auditor_taxonomy.write_classification_sidecar(
+                            plan_dir=loaded.plan_dir,
+                            feature_id=feature_id,
+                            iteration=iteration + 1,
+                            classification=classification,
+                        )
+                    except OSError as exc:
+                        print(f"[volley] taxonomy sidecar write skipped: {exc}")
+                    reconcile_reason = (
+                        f"verdict=blocked reconciled to environmental_blocker "
+                        f"on round {iteration + 1}: every auditor finding "
+                        f"classified as advisory "
+                        f"(aggregate={classification.aggregate.value}); "
+                        f"promoted to stopped_environmental_blocker per F003 "
+                        f"ENVIRONMENTAL_BLOCKER semantics; recommended: "
+                        f"{classification.recommended_action}"
+                    )
+                    inbox.append_event(
+                        loaded.plan_dir,
+                        event="verdict_blocked_reconciled",
+                        plan_id=loaded.plan_id,
+                        body=(
+                            "Auditor returned `audit_status=blocked` but "
+                            "every finding classified as advisory-only "
+                            "via the v3 taxonomy. The supervisor refuses "
+                            "to trust the verdict string alone when the "
+                            "underlying findings are non-substantive.\n\n"
+                            f"Aggregate class: {classification.aggregate.value}\n"
+                            f"Blocking: {classification.blocking}\n"
+                            f"Recommended action: {classification.recommended_action}\n\n"
+                            "Terminal promoted from `blocked` to "
+                            "`stopped_environmental_blocker` (matches "
+                            "F003 ENVIRONMENTAL_BLOCKER semantics — "
+                            "operator clears via the normal "
+                            "`dontpanic approve <plan> "
+                            "breaker:environmental_blocker` flow rather "
+                            "than manual `close --operator-resolved`).\n\n"
+                            + auditor_taxonomy.format_inbox_body(classification)
+                        ),
+                        aggregate=classification.aggregate.value,
+                        blocking=str(classification.blocking).lower(),
+                        feature_id=feature_id,
+                        iteration=str(iteration + 1),
+                        original_verdict="blocked",
+                    )
+                    transcript.append_terminal(
+                        loaded.plan_dir,
+                        feature_id,
+                        circuit_breakers.TERMINAL_STATUS[
+                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                        ],
+                        iteration + 1,
+                        reason=reconcile_reason,
+                    )
+                    return _trip_and_return(
+                        circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER,
+                        reconcile_reason,
+                        iteration + 1,
+                    )
+
                 transcript.append_terminal(
                     loaded.plan_dir,
                     feature_id,
