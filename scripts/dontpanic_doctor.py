@@ -42,15 +42,22 @@ Exit codes (--strict-codes — F003 mode used by `dontpanic doctor`):
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import importlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    import yaml  # noqa: F401  # optional — only used by plan-cohesion validator
+except ImportError:  # pragma: no cover — surfaced by check_python_deps
+    yaml = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SECRETS_DIR = REPO_ROOT / ".secrets"
@@ -59,6 +66,7 @@ ENV_EXAMPLE = REPO_ROOT / "environments.json.example"
 SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
 MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
+PLANS_ROOT = REPO_ROOT / "docs" / "plans"
 
 # F001: SA-key age check looks under the resolved DontPanic home by default.
 # DONTPANIC_SECRETS_DIR is preferred; JARVIS_SECRETS_DIR remains a legacy
@@ -822,10 +830,377 @@ def check_registered_projects() -> list[CheckResult]:
     return out
 
 
+# ── plan 2026-05-12-001 F001: lock-time plan-cohesion validator ───────────
+#
+# D024 motivated this surface. Plan 004's pre-lock manual review caught two
+# deterministic inconsistencies that would have cost ~9M tokens to discover
+# mid-dispatch:
+#   (a) child_charter.allowed_paths still pointed at archived axiom/ dirs
+#       after the D006 rename to dashboard/, so feature steps named paths
+#       outside the declared scope.
+#   (b) F001 acceptance #4 demanded a smoke test against `<your-project-id>`
+#       (a credentialed Firebase project), but parent_acceptance_item
+#       explicitly deferred F003-F005 "until operator credentials in place".
+#
+# Both shapes are deterministic — a quick scan over the plan's own
+# frontmatter + features.json would have surfaced them at lock time, before
+# the operator paid for a dispatch. This validator is WARN-only and never
+# blocks lock; it just surfaces drift via the doctor's existing CheckResult
+# pipeline with copy-paste remediation hints.
+
+# Path-shaped token detection. Two patterns:
+#   1. Backtick-quoted strings (often used in step text for filenames).
+#   2. Bare path-shaped tokens — contain a `/` and end in a known code
+#      extension, OR are a bare filename ending in a known extension.
+# Known extensions keep false-positives down (avoids matching "e.g." /
+# "i.e." / version strings like "1.0.0" while still catching files like
+# `dashboard/app.tsx` or `jarvis_doctor.py`).
+_KNOWN_CODE_EXTS: frozenset[str] = frozenset(
+    {
+        ".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+        ".json", ".yaml", ".yml", ".toml", ".md", ".sh",
+        ".rs", ".go", ".rb", ".swift", ".kt", ".java",
+        ".html", ".css", ".scss", ".sql", ".jsonl",
+    }
+)
+# Backtick-quoted segment (multi-line / inline).
+_BACKTICK_RE = re.compile(r"`([^`\n]+)`")
+# Path-shaped: optional dir parts, then filename.ext. The leading boundary
+# avoids matching inside identifiers like `dontpanic_doctor` (which has
+# no extension), and the trailing boundary stops before whitespace/punct.
+_PATH_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_/])([A-Za-z0-9_./\-]+\.[A-Za-z]{1,6})(?![A-Za-z0-9])")
+
+# Deferral language detection in parent_acceptance_item. Case-insensitive.
+# Matches any of: "deferred", "defer", "until ... in place / available /
+# provided / set up", "credential-gated", "pending credentials".
+_DEFERRAL_RE = re.compile(
+    r"\b("
+    r"deferred?|"
+    r"defer\b|"
+    r"until\s+[^.]{1,80}?\b(in\s+place|available|provided|set\s+up|land[s]?|ready)\b|"
+    r"credential[\s\-]?gated|"
+    r"pending\s+credentials"
+    r")",
+    re.IGNORECASE,
+)
+
+# Resource-token detection in feature acceptance text. The signal we want
+# is a Firebase-style / kebab-case identifier whose suffix carries a digit
+# (`<your-project-id>`, `axiom-workspace-prod1`) — that pattern is what flags a
+# real cloud resource as opposed to a method or option name. Plan-ID-shaped
+# tokens (`2026-05-12-001-foo`) are filtered out separately so they don't
+# false-positive on plan-internal references.
+_RESOURCE_TOKEN_RE = re.compile(
+    r"(?<![A-Za-z0-9])([a-z][a-z0-9]*-[a-z0-9-]*\d[a-z0-9-]*)(?![A-Za-z0-9])"
+)
+_PLAN_ID_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-\d{3}\b")
+
+# A plan is "locked" once `dontpanic plan lock` flips its frontmatter
+# ``status`` from ``draft`` to ``active``; subsequent lifecycle states
+# (``ready_for_audit``, ``in_audit``, ``completed``, ``abandoned``,
+# ``blocked``) are also post-lock. ``draft`` is the only pre-lock state
+# and is explicitly excluded — drift in a draft plan is expected, since
+# the operator is still editing it. Missing status is treated as
+# pre-lock for safety.
+_LOCKED_PLAN_STATUSES: frozenset[str] = frozenset(
+    {"active", "ready_for_audit", "in_audit", "completed", "abandoned", "blocked"}
+)
+
+
+def _is_locked_plan(fm: dict | None) -> bool:
+    """Predicate: plan frontmatter indicates the plan is post-lock."""
+    if not isinstance(fm, dict):
+        return False
+    status = fm.get("status")
+    return isinstance(status, str) and status in _LOCKED_PLAN_STATUSES
+
+
+def _read_plan_frontmatter(plan_md: Path) -> dict | None:
+    """Cheap frontmatter parse without importing the full plan_loader.
+
+    plan_loader imports models from agent-conventions which may not be on
+    sys.path when the doctor runs from arbitrary cwds. Read the YAML
+    frontmatter ourselves and return the dict; return None on any parse
+    failure (caller skips the plan with a soft signal).
+    """
+    if yaml is None:
+        return None
+    try:
+        text = plan_md.read_text()
+    except OSError:
+        return None
+    if not text.startswith("---"):
+        return None
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return None
+    try:
+        loaded = yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _extract_path_tokens(text: str) -> list[str]:
+    """Return path-shaped tokens from ``text`` (steps / acceptance strings).
+
+    Combines backtick-quoted segments with bare path-shaped tokens, then
+    filters to entries whose extension is in ``_KNOWN_CODE_EXTS``. De-duped
+    while preserving first-seen order so remediation hints stay stable.
+    """
+    seen: dict[str, None] = {}
+    for raw in _BACKTICK_RE.findall(text):
+        candidate = raw.strip()
+        # Backticked segments may be globs (`dashboard/**`) or non-paths
+        # (`is_advisory_only_findings_set(...)`). Accept globs explicitly
+        # and otherwise require a known extension.
+        if "**" in candidate or "*" in candidate:
+            if "/" in candidate or candidate.endswith(tuple(_KNOWN_CODE_EXTS)):
+                seen.setdefault(candidate, None)
+            continue
+        ext = Path(candidate).suffix.lower()
+        if ext in _KNOWN_CODE_EXTS:
+            seen.setdefault(candidate, None)
+    for match in _PATH_TOKEN_RE.findall(text):
+        ext = Path(match).suffix.lower()
+        if ext not in _KNOWN_CODE_EXTS:
+            continue
+        seen.setdefault(match, None)
+    return list(seen.keys())
+
+
+def _path_matches_globs(path: str, globs: list[str]) -> bool:
+    """fnmatch ``path`` against each glob. Treats trailing ``/**`` as
+    "anything under this dir" so ``scripts/foo.py`` matches ``scripts/**``."""
+    if not globs:
+        return False
+    for glob in globs:
+        if fnmatch.fnmatch(path, glob):
+            return True
+        # Recursive glob convenience: ``scripts/**`` should match
+        # ``scripts/foo.py`` AND ``scripts/sub/foo.py``. fnmatch alone
+        # treats ** as one segment, so add the prefix-match shortcut.
+        if glob.endswith("/**"):
+            prefix = glob[:-3]
+            if path == prefix or path.startswith(prefix + "/"):
+                return True
+        if glob.endswith("/*"):
+            prefix = glob[:-2]
+            if path.startswith(prefix + "/") and "/" not in path[len(prefix) + 1 :]:
+                return True
+    return False
+
+
+def _extract_resource_tokens(text: str) -> list[str]:
+    """Find kebab-case resource-shaped tokens that look like cloud project
+    IDs (require a digit in the suffix). Excludes plan-ID prefixes."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for match in _RESOURCE_TOKEN_RE.findall(text):
+        if match in seen:
+            continue
+        if _PLAN_ID_PREFIX_RE.match(match):
+            continue
+        seen.add(match)
+        out.append(match)
+    return out
+
+
+def validate_plan_cohesion(plan_dir: Path) -> list[CheckResult]:
+    """Lock-time plan-cohesion checks for a single plan directory.
+
+    Returns a list of CheckResult — empty when the plan is internally
+    consistent. Every finding is a WARN (ok=True, warn=True); the
+    validator is deliberately advisory so it never blocks lock.
+
+    Two finding shapes (plan 2026-05-12-001 F001 D024):
+
+      1. allowed_paths drift: a step references a file path whose shape
+         is outside every glob in ``child_charter.allowed_paths``.
+      2. acceptance-vs-deferred conflict: ``parent_acceptance_item``
+         contains deferral language AND a feature's acceptance string
+         names a credentialed-resource-shaped token (e.g. ``<your-project-id>``).
+
+    Plans without ``child_charter`` (top-level plans) skip both checks —
+    there is no declared scope to cross-check against.
+    """
+    plan_md = plan_dir / "plan.md"
+    features_json = plan_dir / "features.json"
+    if not plan_md.is_file() or not features_json.is_file():
+        return []
+
+    fm = _read_plan_frontmatter(plan_md)
+    if fm is None:
+        return []
+    charter = fm.get("child_charter")
+    if not isinstance(charter, dict):
+        return []  # top-level plan — no charter to cross-check
+    allowed_paths = charter.get("allowed_paths") or []
+    if not isinstance(allowed_paths, list):
+        allowed_paths = []
+    parent_acceptance = charter.get("parent_acceptance_item") or ""
+    if not isinstance(parent_acceptance, str):
+        parent_acceptance = ""
+
+    try:
+        features_blob = json.loads(features_json.read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+    features = features_blob.get("features") or []
+    if not isinstance(features, list):
+        return []
+
+    plan_id = fm.get("id") or plan_dir.name
+    results: list[CheckResult] = []
+    has_deferral = bool(_DEFERRAL_RE.search(parent_acceptance))
+
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        fid = feature.get("id") or "?"
+        # ── (1) allowed_paths-vs-step-paths drift ──
+        if allowed_paths:
+            steps = feature.get("steps") or []
+            if isinstance(steps, list):
+                drifted: list[str] = []
+                for step in steps:
+                    if not isinstance(step, str):
+                        continue
+                    for token in _extract_path_tokens(step):
+                        if _path_matches_globs(token, allowed_paths):
+                            continue
+                        # Suppress bare filenames with no directory part —
+                        # the doctor cannot tell whether ``foo.py`` is
+                        # repo-root foo.py or some-subdir/foo.py without
+                        # touching the filesystem. Globs that include the
+                        # filename will match; the rest are intentionally
+                        # below-the-bar to keep false-positives down.
+                        if "/" not in token:
+                            continue
+                        drifted.append(token)
+                if drifted:
+                    deduped = sorted(set(drifted))
+                    suggestion = _suggest_allowed_paths_fix(deduped, allowed_paths)
+                    results.append(
+                        _warn(
+                            f"plan-cohesion:{plan_id}:{fid}:allowed-paths",
+                            (
+                                f"feature {fid} steps reference paths outside "
+                                f"child_charter.allowed_paths: {deduped} "
+                                f"(allowed={list(allowed_paths)})"
+                            ),
+                            suggestion,
+                        )
+                    )
+
+        # ── (2) acceptance-vs-deferred-resource conflict ──
+        # Per the F001 spec: flag resource names that appear in the
+        # feature's acceptance string AND in parent_acceptance_item,
+        # when the parent contains deferral language. The intersection
+        # requirement keeps the check tight — a parent that merely uses
+        # the word "deferred" should not condemn every credentialed
+        # resource a feature happens to mention.
+        if has_deferral:
+            acceptance = feature.get("acceptance") or ""
+            acc_text = acceptance if isinstance(acceptance, str) else ""
+            acc_tokens = set(_extract_resource_tokens(acc_text))
+            if acc_tokens:
+                parent_tokens = set(_extract_resource_tokens(parent_acceptance))
+                shared = sorted(acc_tokens & parent_tokens)
+                if shared:
+                    results.append(
+                        _warn(
+                            f"plan-cohesion:{plan_id}:{fid}:acceptance-deferred",
+                            (
+                                f"feature {fid} acceptance names credentialed "
+                                f"resource(s) {shared} that also appear in "
+                                "parent_acceptance_item alongside deferral "
+                                "language — credentialed resources may not be "
+                                "available at dispatch time"
+                            ),
+                            _suggest_acceptance_fix(fid, shared),
+                        )
+                    )
+
+    return results
+
+
+def _suggest_allowed_paths_fix(drifted: list[str], allowed: list[str]) -> str:
+    """Copy-paste hint for the allowed-paths-drift finding. Picks the
+    deepest common dir prefix from ``drifted`` and proposes adding it as a
+    `<prefix>/**` glob — operator can refine downward from there."""
+    prefixes = sorted({p.split("/", 1)[0] for p in drifted if "/" in p})
+    if not prefixes:
+        return f"add the file or its parent dir to child_charter.allowed_paths (current: {list(allowed)})"
+    sample = prefixes[0]
+    suggested = f"{sample}/**"
+    return (
+        "add the parent dir glob to child_charter.allowed_paths "
+        f"(e.g. \"{suggested}\"), or remove the out-of-scope step. "
+        f"Detected prefixes: {prefixes}"
+    )
+
+
+def _suggest_acceptance_fix(feature_id: str, tokens: list[str]) -> str:
+    sample = tokens[0]
+    return (
+        f"rescope feature {feature_id} acceptance to a local fixture (no {sample!r}), "
+        "or move the credentialed step to a follow-up plan, or update "
+        "parent_acceptance_item to remove the deferral marker if the credentials "
+        "are now in place"
+    )
+
+
+def check_plan_cohesion(plans_root: Path | None = None) -> list[CheckResult]:
+    """Walk locked plans under ``plans_root`` and aggregate cohesion findings.
+
+    ``plans_root`` defaults to ``<repo>/docs/plans``. Each subdirectory
+    that has a ``plan.md`` is treated as a candidate plan; only those
+    whose frontmatter ``status`` is post-lock (see
+    :data:`_LOCKED_PLAN_STATUSES`) are validated — drafts are still
+    being edited and drift there is expected. Returns an empty list
+    when no findings are surfaced (caller renders a single PASS in that
+    case). Plans without ``child_charter`` are skipped silently — they
+    have no declared scope to cross-check against.
+    """
+    root = plans_root if plans_root is not None else PLANS_ROOT
+    if not root.is_dir():
+        return [
+            _ok(
+                "plan-cohesion",
+                f"{root} not present (no plans to validate)",
+            )
+        ]
+    findings: list[CheckResult] = []
+    plan_dirs = sorted(p for p in root.iterdir() if p.is_dir())
+    walked = 0
+    for plan_dir in plan_dirs:
+        plan_md = plan_dir / "plan.md"
+        if not plan_md.is_file():
+            continue
+        if not _is_locked_plan(_read_plan_frontmatter(plan_md)):
+            continue  # draft / unparseable / non-lifecycle plan
+        walked += 1
+        findings.extend(validate_plan_cohesion(plan_dir))
+    if not findings:
+        return [
+            _ok(
+                "plan-cohesion",
+                f"{walked} locked plan(s) under {root.relative_to(REPO_ROOT) if root.is_relative_to(REPO_ROOT) else root} "
+                "internally consistent (allowed_paths + acceptance vs parent deferrals)",
+            )
+        ]
+    return findings
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
-def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> list[CheckResult]:
+def run_all_checks(
+    skip_auth: bool = False,
+    include_projects: bool = False,
+    validate_plans: bool = False,
+) -> list[CheckResult]:
     """Execute the full check battery.
 
     skip_auth=True omits the gcloud-auth + firebase-auth probes. That mode
@@ -838,6 +1213,12 @@ def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> l
     compat (existing `python3 scripts/jarvis_doctor.py` invocation
     behavior is unchanged); the new ``dontpanic doctor`` subcommand passes
     ``include_projects=True``.
+
+    Plan 2026-05-12-001 F001: ``validate_plans=True`` additionally walks
+    every plan under ``docs/plans/`` and surfaces WARN findings for
+    ``child_charter.allowed_paths`` vs feature-step path drift and
+    acceptance-vs-deferred-resource conflicts (D024). Advisory only — it
+    never fails the doctor.
     """
     results: list[CheckResult] = []
     results.append(check_python_version())
@@ -858,6 +1239,8 @@ def run_all_checks(skip_auth: bool = False, include_projects: bool = False) -> l
         results.append(check_global_config())
         results.append(check_projects_registry_status())
         results.extend(check_registered_projects())
+    if validate_plans:
+        results.extend(check_plan_cohesion())
     return results
 
 
@@ -948,9 +1331,23 @@ def main(argv: list[str] | None = None) -> int:
             "1=any-fail). The `dontpanic doctor` subcommand passes this implicitly."
         ),
     )
+    parser.add_argument(
+        "--validate-plans",
+        action="store_true",
+        help=(
+            "Plan 2026-05-12-001 F001 (D024): walk every plan under "
+            "docs/plans/ and surface WARN findings for child_charter."
+            "allowed_paths vs feature-step path drift and acceptance-"
+            "vs-deferred-resource conflicts. Advisory only."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    results = run_all_checks(skip_auth=args.skip_auth, include_projects=args.include_projects)
+    results = run_all_checks(
+        skip_auth=args.skip_auth,
+        include_projects=args.include_projects,
+        validate_plans=args.validate_plans,
+    )
     print(render_json(results) if args.json else render_text(results))
     if args.strict_codes:
         return compute_strict_exit(results)

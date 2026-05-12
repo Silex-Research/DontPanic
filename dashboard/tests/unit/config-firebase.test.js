@@ -83,13 +83,17 @@ describe('buildStreamPath', () => {
 });
 
 describe('JARVIS_A6EE1_CONFIG_TEMPLATE', () => {
-  it('targets the <firebase-project-id> Firebase project (plan D009)', () => {
-    expect(JARVIS_A6EE1_CONFIG_TEMPLATE.projectId).toBe('<firebase-project-id>');
+  it('ships placeholder values; operator overrides via local config', () => {
+    // OSS-safety: production template uses <your-project-id> placeholders
+    // so forks don't pick up the maintainer's project ID hardcoded.
+    // Operator overrides via dashboard/firebase-config.local.js (gitignored)
+    // per the F001 design. Tests assert the placeholder shape.
+    expect(JARVIS_A6EE1_CONFIG_TEMPLATE.projectId).toBe('<your-project-id>');
     expect(JARVIS_A6EE1_CONFIG_TEMPLATE.authDomain).toBe(
-      '<firebase-project-id>.firebaseapp.com',
+      '<your-project-id>.firebaseapp.com',
     );
     expect(JARVIS_A6EE1_CONFIG_TEMPLATE.storageBucket).toBe(
-      '<firebase-project-id>.appspot.com',
+      '<your-project-id>.appspot.com',
     );
   });
 

@@ -210,7 +210,7 @@ def test_render_json_is_valid(doctor) -> None:
 def test_main_exits_nonzero_when_checks_fail(doctor, monkeypatch) -> None:
     """Force a check to fail and verify main() returns 1."""
 
-    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False, **kw) -> list:
         return [doctor.CheckResult(name="forced", ok=False, message="x", remediation="y")]
 
     monkeypatch.setattr(doctor, "run_all_checks", fake_run_all)
@@ -219,7 +219,7 @@ def test_main_exits_nonzero_when_checks_fail(doctor, monkeypatch) -> None:
 
 
 def test_main_returns_zero_when_all_green(doctor, monkeypatch) -> None:
-    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False, **kw) -> list:
         return [doctor.CheckResult(name="forced", ok=True, message="x")]
 
     monkeypatch.setattr(doctor, "run_all_checks", fake_run_all)
@@ -257,7 +257,7 @@ def test_skip_auth_propagates_through_main(doctor, monkeypatch) -> None:
     skip_auth=True. Captured via monkeypatch."""
     captured: dict[str, bool] = {}
 
-    def fake_run_all(skip_auth: bool = False, include_projects: bool = False) -> list:
+    def fake_run_all(skip_auth: bool = False, include_projects: bool = False, **kw) -> list:
         captured["skip_auth"] = skip_auth
         return [doctor.CheckResult("forced-ok", True, "x")]
 

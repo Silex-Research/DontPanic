@@ -5,7 +5,7 @@ state projection (`dontpanic state snapshot --json`) into Firestore so
 the opt-in realtime dashboard (F001) sees live state.
 
 This document covers running the daemon persistently. The real
-`<firebase-project-id>` deploy + the Cloud Functions mutation path are deferred
+`<your-project-id>` deploy + the Cloud Functions mutation path are deferred
 to F003-F005 per parent_acceptance_item (plan D007).
 
 ## Adapter boundary (D001)
@@ -53,7 +53,7 @@ CLI flags:
 ## Credentials (F005 deferred)
 
 The default Firestore client is initialized with Application Default
-Credentials. Real `<firebase-project-id>` writes are deferred to F005; until the
+Credentials. Real `<your-project-id>` writes are deferred to F005; until the
 SA key is provisioned, run with `--dry-run`.
 
 ## launchd (macOS — recommended)

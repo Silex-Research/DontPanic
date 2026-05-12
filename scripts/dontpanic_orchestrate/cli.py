@@ -1441,6 +1441,16 @@ def _doctor_main(argv: list[str]) -> int:
         action="store_true",
         help="Omit gcloud-auth + firebase-auth probes (CI / fresh-clone mode).",
     )
+    parser.add_argument(
+        "--validate-plans",
+        action="store_true",
+        help=(
+            "Plan 2026-05-12-001 F001 (D024): cross-check every plan's "
+            "child_charter.allowed_paths against feature-step paths and "
+            "flag acceptance items that name credentialed resources when "
+            "parent_acceptance_item defers them. Advisory WARN findings."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1454,7 +1464,11 @@ def _doctor_main(argv: list[str]) -> int:
     finally:
         sys.path.pop(0)
 
-    results = jd.run_all_checks(skip_auth=args.skip_auth, include_projects=True)
+    results = jd.run_all_checks(
+        skip_auth=args.skip_auth,
+        include_projects=True,
+        validate_plans=args.validate_plans,
+    )
     print(jd.render_json(results) if args.json else jd.render_text(results))
     return jd.compute_strict_exit(results)
 

@@ -31,12 +31,14 @@ try:
     from dontpanic_doctor import *  # noqa: F401,F403  # legacy alias re-export
     from dontpanic_doctor import (  # noqa: F401  # explicit re-export for tooling
         CheckResult,
+        check_plan_cohesion,
         check_quota_caps,
         compute_strict_exit,
         main,
         render_json,
         render_text,
         run_all_checks,
+        validate_plan_cohesion,
     )
 finally:
     if _added_path:

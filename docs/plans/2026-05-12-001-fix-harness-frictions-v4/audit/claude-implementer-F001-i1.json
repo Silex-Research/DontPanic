@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-12T02:23:58Z",
+  "completed_at": "2026-05-12T02:32:58Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-12-001-fix-harness-frictions-v4/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-mk9cg041 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2934 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1548860,
+    "tokens_out": 20923,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F001] Side-effect commands invoked:\n\n$ python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py -q\n\n**Findings addressed:**\n\n- **medium/correctness — walker doesn't filter to locked plans** (auditor finding 1): Added `_LOCKED_PLAN_STATUSES = {\"active\", \"ready_for_audit\", \"in_audit\", \"completed\", \"abandoned\", \"blocked\"}` and an `_is_locked_plan()` predicate at `scripts/dontpanic_doctor.py:899`. The walker at `check_plan_cohesion()` now parses each candidate's frontmatter and skips anything that isn't post-lock — drafts are pre-lock by definition and drift there is expected. The PASS message now reads \"N locked plan(s) ... internally consistent\". Added `test_check_plan_cohesion_skips_draft_plans` which writes one drift-shaped plan in `status: draft` and another in `status: active` under the same root; only the locked one surfaces a finding, proving the filter is per-plan rather than blanket-suppressing.\n\n- **medium/correctness — acceptance-vs-deferred didn't require token in parent_acceptance_item** (auditor finding 2): Tightened the check at `validate_plan_cohesion()` so it extracts resource tokens from BOTH the feature acceptance string AND `parent_acceptance_item`, then only warns on the intersection (when the parent also contains deferral language). Updated `_suggest_acceptance_fix`/finding-message accordingly. Updated the (b) plan-004 reproducer fixture to mention `<firebase-project-id>` in the parent text so it aligns with the spec's intersection requirement. Add",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}
