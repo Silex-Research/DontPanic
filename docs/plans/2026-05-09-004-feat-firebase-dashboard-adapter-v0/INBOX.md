@@ -72,3 +72,43 @@ gate: pre_merge
 Operator cleared gate 'pre_merge' via 'approve'.
 
 ===
+---
+timestamp: 2026-05-12T01:01:08Z
+event: volley_start
+plan_id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-12T01:01:08Z
+event: volley_start
+plan_id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-12T01:59:23Z
+event: feature_operator_resolved
+plan_id: 2026-05-09-004-feat-firebase-dashboard-adapter-v0
+feature_id: F002
+reason_class: environmental_reproduction_failure
+---
+
+Operator closed feature F002 as operator_resolved (class=environmental_reproduction_failure).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-09-004-feat-firebase-dashboard-adapter-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

@@ -8,3 +8,4 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 | 2026-05-11T22:02:13Z | F001 | i0 | codex / auditor | needs_changes | 2,543,185 / 19,405 | [codex-auditor-F001-i0.json](audit/codex-auditor-F001-i0.json) |
 | 2026-05-11T22:07:11Z | F001 | i1 | claude / implementer | signed_off | 3,190,793 / 25,733 | [claude-implementer-F001-i1.json](audit/claude-implementer-F001-i1.json) |
 | 2026-05-11T22:11:28Z | F001 | i1 | codex / auditor | signed_off | 1,237,184 / 18,067 | [codex-auditor-F001-i1.json](audit/codex-auditor-F001-i1.json) |
+| 2026-05-12T01:07:23Z | F002 | i0 | claude / implementer | signed_off | 3,847,286 / 32,913 | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |

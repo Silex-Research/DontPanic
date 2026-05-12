@@ -94,9 +94,76 @@
         "Document running it as a launchd plist or systemd unit for persistent operation \u2014 operator runs this themselves once credentials reactivate."
       ],
       "acceptance": "(1) Daemon module exists at `scripts/firebase_adapter/dontpanic_sync.py` with a working CLI entry point. (2) Idempotent \u2014 re-running the same snapshot against the stubbed Firestore client produces zero writes (verified by test). (3) `--include` filters honored to skip heavy streams when the dashboard doesn't need them. (4) Tests cover diff, upsert, and failure paths against the stub. (5) Real-Firestore latency measurement (\u226430s end-to-end) deferred to F005 per parent_acceptance_item credential gate (see plan D007).",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "operator"
+      ],
+      "verified_at": "2026-05-12T01:05:53Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/dontpanic_sync.py",
+          "note": "NEW \u2014 polling daemon: SyncEngine diff/upsert, run_daemon loop, fetch_snapshot_via_cli, CLI main"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/firestore_stub.py",
+          "note": "NEW \u2014 InMemoryFirestore stub used by tests and --dry-run"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/__init__.py",
+          "note": "NEW \u2014 package marker + adapter-boundary docstring"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/tests/test_dontpanic_sync.py",
+          "note": "NEW \u2014 20 tests: first-sync, diff, delete, idempotency, --include filtering (no cross-stream wipe), failure paths (failed set retried, malformed item skipped), doc-id determinism, daemon loop, CLI dry-run"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/RUNBOOK.md",
+          "note": "NEW \u2014 operator runbook: CLI flags, launchd plist, systemd unit, ops notes"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/dontpanic_sync.py",
+          "note": "NEW \u2014 sync daemon (~500 LOC); polling, diff-based upsert, idempotent re-runs, --include filter, --dry-run, --once, stubbed Firestore client"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/firestore_stub.py",
+          "note": "NEW \u2014 in-process Firestore stub for local-fixture testing (no network)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/RUNBOOK.md",
+          "note": "NEW \u2014 operator runbook for running the daemon (launchd plist + systemd unit examples)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/firebase_adapter/tests/test_dontpanic_sync.py",
+          "note": "NEW \u2014 20 tests covering diff, upsert, idempotency, --include, failure paths"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i0.json",
+          "note": "implementer signed_off; 3.85M in / 32.9K out"
+        },
+        {
+          "type": "log",
+          "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-plan004-f002-attempt1.log",
+          "note": "dispatch errored mid-run: shlex 'No closing quotation' during codex invocation; iter0 implementer envelope persisted; auditor envelope never written. Locally verified: 20/20 tests pass, daemon CLI runs cleanly. Closed via F004 CLI as environmental_reproduction_failure."
+        }
       ]
     },
     {

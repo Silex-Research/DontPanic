@@ -1,0 +1,20 @@
+[dispatch-from-plan] ERROR: No closing quotation
+[dispatch-from-plan] pre-flight context
+  plan_path:      /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0
+  feature:        F002
+  tier:           local
+  target_env:     dev
+  target_project: (none)
+  implementer:    claude
+  auditor:        codex
+  human_gates:    pre_impl,pre_merge
+  max_iterations: 3
+  quota_readiness: ok
+    claude=13% / codex=13%
+[dispatch-from-plan] readiness=ok; dispatching 2026-05-09-004-feat-firebase-dashboard-adapter-v0 via supervisor.dispatch_volley
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F002 impl=claude aud=codex cap=3
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-izlj9813 target_env=dev target_project=(none) source=plan cwd=(inherit)
+[quota] claude: 13.4% of rolling_7d cap (tier=max_20x, cap=100.0 percent_of_plan, confidence=manual)
+[quota] codex: 12.6% of rolling_5h cap (tier=plus, cap=1000000000.0 tokens_local_proxy, confidence=uncalibrated)
