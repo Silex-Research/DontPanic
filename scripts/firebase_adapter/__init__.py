@@ -7,6 +7,6 @@ it into Firestore under the single-tenant `projects/{project_id}/...`
 shape (D002).
 
 F002 (this file's tree) ships the local-side sync daemon. F003-F005 —
-Cloud Functions, Firestore rules, real `jarvis-a6ee1` smoke test — are
+Cloud Functions, Firestore rules, real `<your-project-id>` smoke test — are
 operator-deferred per parent_acceptance_item / D007 (credential gate).
 """

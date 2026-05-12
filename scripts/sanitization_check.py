@@ -124,7 +124,17 @@ ALLOWED_FILES = {
     "CONTRIBUTING.md",
 }
 # Test fixtures may use historical IDs as test data.
-ALLOWED_GLOBS = ("scripts/dontpanic_orchestrate/tests/",)
+ALLOWED_GLOBS = (
+    "scripts/dontpanic_orchestrate/tests/",
+    # Plan 2026-05-09-004 Firebase dashboard adapter v0: dashboard tests
+    # exercise the realtime overlay against the operator's personal Firebase
+    # project; test files name jarvis-a6ee1 as fixture data per ALLOWED_GLOBS
+    # intent. Plan-004 F001 D-entry references the project ID by design.
+    "dashboard/tests/",
+    # firebase_adapter sync daemon tests (plan 2026-05-09-004 F002) — same
+    # rationale: tests use jarvis-a6ee1 as fixture data, never as a secret.
+    "scripts/firebase_adapter/tests/",
+)
 
 
 def is_allowed(rel_path: str) -> bool:

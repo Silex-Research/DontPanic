@@ -2,13 +2,13 @@
 //
 // Copy this file to `firebase-config.local.js` (gitignored), fill in the
 // REPLACE_* placeholders with values from the Firebase console for the
-// jarvis-a6ee1 project, and load it from your HTML BEFORE config-firebase.js:
+// <your-project-id> project, and load it from your HTML BEFORE config-firebase.js:
 //
 //   <script>
 //     window.__JARVIS_FIREBASE_CONFIG__ = {
-//       projectId:         'jarvis-a6ee1',
-//       authDomain:        'jarvis-a6ee1.firebaseapp.com',
-//       storageBucket:     'jarvis-a6ee1.appspot.com',
+//       projectId:         '<your-project-id>',
+//       authDomain:        '<your-project-id>.firebaseapp.com',
+//       storageBucket:     '<your-project-id>.appspot.com',
 //       apiKey:            '<paste from firebase console>',
 //       appId:             '<paste from firebase console>',
 //       messagingSenderId: '<paste from firebase console>',
@@ -23,9 +23,9 @@
 // static dashboard (index.html) works without any of this configuration.
 
 window.__JARVIS_FIREBASE_CONFIG__ = {
-  projectId: 'jarvis-a6ee1',
-  authDomain: 'jarvis-a6ee1.firebaseapp.com',
-  storageBucket: 'jarvis-a6ee1.appspot.com',
+  projectId: '<your-project-id>',
+  authDomain: '<your-project-id>.firebaseapp.com',
+  storageBucket: '<your-project-id>.appspot.com',
   apiKey: 'REPLACE_WITH_OPERATOR_API_KEY',
   appId: 'REPLACE_WITH_OPERATOR_APP_ID',
   messagingSenderId: 'REPLACE_WITH_OPERATOR_SENDER_ID',

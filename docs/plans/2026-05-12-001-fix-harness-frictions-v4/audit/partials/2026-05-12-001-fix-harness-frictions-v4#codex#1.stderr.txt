@@ -1,0 +1,3 @@
+Reading additional input from stdin...
+2026-05-12T02:33:28.031059Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: invalid peer certificate: UnknownIssuer, url: wss://chatgpt.com/backend-api/codex/responses
+2026-05-12T02:34:11.679944Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open

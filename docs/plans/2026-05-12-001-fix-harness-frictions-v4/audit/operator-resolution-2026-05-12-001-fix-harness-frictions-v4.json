@@ -1,0 +1,8 @@
+{
+  "plan_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "feature_id": "F001",
+  "class": "environmental_reproduction_failure",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-05-12T04:15:49Z"
+}

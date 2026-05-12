@@ -1,0 +1,47 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-12T02:18:07Z",
+  "completed_at": "2026-05-12T02:23:57Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-mk9cg041 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 501208 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1629326,
+    "tokens_out": 11561,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \n\nOverall verdict: needs_changes. Implementer target declaration is present and matches `{Repo: DontPanic, Env: dev, Project: (none)}`; `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (medium, correctness): `check_plan_cohesion()` walks every plan directory, not just locked plans. Evidence: [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1125) iterates all child dirs with `plan.md` and calls `validate_plan_cohesion()` without checking plan status/lock state. Recommendation: filter to the repo’s locked-plan predicate/status before validating.\n\nFINDING (medium, correctness): acceptance-vs-deferred ignores the required “resource names that also appear in parent_acceptance_item” condition. Evidence: [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1036) only checks for any deferral marker in the parent, then [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1081) warns on resource tokens extracted solely from feature acceptance. The fixture at [test_plan_cohesion_f001.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py:141) also omits `jarvis-a6ee1` from the parent text, so this spec condition is untested. Recommendation: extract parent resource tokens and warn on an intersection, or explicitly codify/test a generic “cr",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --validate-plans --skip-auth --json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`check_plan_cohesion()` walks every plan directory, not just locked plans. Evidence: [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1125) iterates all child dirs with `plan.md` and calls `validate_plan_cohesion()` without checking plan status/lock state. Recommendation: filter to the repo’s locked-plan predicate/status before validating.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "acceptance-vs-deferred ignores the required “resource names that also appear in parent_acceptance_item” condition. Evidence: [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1036) only checks for any deferral marker in the parent, then [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1081) warns on resource tokens extracted solely from feature acceptance. The fixture at [test_plan_cohesion_f001.py](/Users/bay",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -16,8 +16,55 @@
         "Bonus: emit a copy-paste fix suggestion per finding (e.g. 'add dashboard/** to allowed_paths' or 'rescope acceptance #4 to local-fixture per D-entry')."
       ],
       "acceptance": "(1) `dontpanic doctor` (or new --validate-plans subcommand) walks all locked plans + surfaces WARN findings for allowed_paths-vs-feature-paths drift + acceptance-vs-deferred-resource conflicts. (2) Fixture tests reproduce both plan-004 pre-lock issues from D024. (3) Clean plans don't false-positive (negative-case test). (4) Per-finding remediation hint included.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "operator"
+      ],
+      "verified_at": "2026-05-12T03:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_doctor.py",
+          "note": "added _LOCKED_PLAN_STATUSES + _is_locked_plan + validate_plan_cohesion() + check_plan_cohesion() walker (~250 LOC)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "wired --validate-plans subcommand"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/jarvis_doctor.py",
+          "note": "re-exports new helpers via alias surface"
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py",
+          "note": "10 fixture tests covering both plan-004 reproducers + clean-plan negative + draft-skip"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "note": "iter0 needs_changes — 2 medium findings (walker filter + acceptance-vs-deferred intersection); both addressed in iter1"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "note": "iter1 codex subprocess timeout (600s); supervisor wrote synthetic envelope + captured 288KB partials cleanly. Treated as environmental_reproduction_failure"
+        },
+        {
+          "type": "log",
+          "uri": "../../2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-v4-f001-attempt1.log",
+          "note": "dispatch terminal: blocked after 2 rounds (codex timeout iter1); implementer work locally verified 10/10 + full sweep"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ]
     },
     {
       "id": "F002",

@@ -25,13 +25,13 @@ export const STREAMS = Object.freeze([
   'evidence_refs',
 ]);
 
-// Placeholder firebaseConfig targeting jarvis-a6ee1 (per plan 2026-05-03-002 D009).
+// Placeholder firebaseConfig targeting <your-project-id> (per plan 2026-05-03-002 D009).
 // Real apiKey/appId/messagingSenderId land when credentials reactivate
 // per plan 2026-05-09-004 D007 — F003+ credential gate.
 export const JARVIS_A6EE1_CONFIG_TEMPLATE = Object.freeze({
-  projectId: 'jarvis-a6ee1',
-  authDomain: 'jarvis-a6ee1.firebaseapp.com',
-  storageBucket: 'jarvis-a6ee1.appspot.com',
+  projectId: '<your-project-id>',
+  authDomain: '<your-project-id>.firebaseapp.com',
+  storageBucket: '<your-project-id>.appspot.com',
   apiKey: 'REPLACE_WITH_OPERATOR_API_KEY',
   appId: 'REPLACE_WITH_OPERATOR_APP_ID',
   messagingSenderId: 'REPLACE_WITH_OPERATOR_SENDER_ID',
