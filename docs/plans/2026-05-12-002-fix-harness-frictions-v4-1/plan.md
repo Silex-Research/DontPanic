@@ -118,19 +118,21 @@ no new primitives.
 
 In scope:
 
-- **F001** (v4 D008 close): in `agent-conventions/schemas/v1.0/audit.schema.json`,
-  add `parsing` to the category enum (now 10 values, was 9). Bump
-  `agent-conventions/VERSION` 1.7.0 → 1.8.0 and update the
-  CHANGELOG.md with the additive enum change. Regenerate / update
-  the Pydantic model in `agent-conventions/schemas/v1.0/models/`
-  if needed (model uses `Literal[...]` over the same set). Subtree-
-  pull v1.8.0 into DontPanic at `claude/shared/`. Flip the two
-  F003 shlex parse-warning emission sites in
-  `scripts/dontpanic_orchestrate/supervisor.py` (lines 2488 +
-  2506) from `category: "correctness"` to `category: "parsing"`,
-  matching the F003 features.json step 3 spec text literally.
-  Update the unit tests in `test_shlex_safe_command_guard_f003.py`
-  (lines 128 + 535) to assert `category == "parsing"`.
+- **F001** (v4 D008 close — DontPanic subtree mirror only, per D003):
+  in `claude/shared/schemas/v1.0/audit.schema.json`, add `parsing`
+  to the category enum (now 10 values, was 9). Bump
+  `claude/shared/VERSION` 1.7.0 → 1.8.0 and append a
+  `claude/shared/CHANGELOG.md` entry citing v4 F003 D008.
+  Update the Pydantic mirror at `claude/shared/models/` if it
+  pins the set. Flip the two F003 shlex parse-warning emission
+  sites in `scripts/dontpanic_orchestrate/supervisor.py` (lines
+  2488 + 2506) from `category: "correctness"` to
+  `category: "parsing"`, matching the F003 features.json step 3
+  spec text literally. Update the unit tests in
+  `test_shlex_safe_command_guard_f003.py` (lines 128 + 535) to
+  assert `category == "parsing"`. Operator handles the upstream
+  push to agent-conventions (cherry-pick + tag + push) out-of-band
+  after F001 closes — not in implementer scope (D003).
 - **F002** (v4 D009 + recurring D007 close): tighten test_coverage
   rigor at three concrete fixture sites flagged across v3 F002 +
   v4 F002 + v4 F003 auditor envelopes:
