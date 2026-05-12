@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-05-12-001-fix-harness-frictions-v4",
+  "audit_id": "2026-05-12-001-fix-harness-frictions-v4#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-12T15:10:43Z",
+  "completed_at": "2026-05-12T15:17:56Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-12-001-fix-harness-frictions-v4-ypcuhflp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 952435 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2050008,
+    "tokens_out": 16436,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. No EC5 finding: implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, structured `target_context` is `env=dev`, `project=null`, and logged commands are pytest only with no forbidden shapes.\n\nFINDING (high, correctness): Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`. Evidence: F002 requires `paused_on_environmental` in `features.json:78` and `features.json:82`, but `supervisor.py:2040`/`:2057-2058` and the test at `test_verdict_blocked_reconciliation_f002.py:383` lock in `stopped_environmental_blocker`. Recommendation: return the required terminal name or explicitly update the plan/spec if `stopped_environmental_blocker` is the intended canonical alias.\n\nFINDING (medium, test_coverage): The Plan 004 F004 fixture test does not replay the real codex envelope and asserts the wrong terminal for the named acceptance case. Evidence: F002 requires Plan 004 F004 high-correctness envelope to remain `needs_changes`; the real envelope has `audit_status: needs_changes`, but the new test forcibly rewrites auditor status to `blocked` and asserts `blocked`. Recommendation: add a fixture using the real Plan 004 F004 codex envelope and assert `needs_changes` remains unchanged.\n\nFINDING (low, architecture): The helper signature does not match the required injectable classifier shape. Evidence: spec asks for `is_advisory_only_findi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from dontpanic_orchestrate import auditor_taxonomy as t; adv={\"severity\":\"advisory\",\"category\":\"test_coverage\",\"feature_id\":\"F002\",\"issue\":\"Could not independently rerun pytest-based acceptance checks because Python reports no usable temporary directory in this read-only sandbox. Evidence: all pytest invocations failed before or during setup with `FileNotFoundError: No usable temporary directory found`.\",\"evidence\":\"harness blocker — sandbox refused pytest temp dir.\"}; sub={\"severity\":\"high\",\"category\":\"correctness\",\"feature_id\":\"F002\",\"issue\":\"Implementer diff drops the null guard, regressing behavior.\",\"evidence\":\"diff line 42 removes guard.\"}; print(t.classify_finding(adv, finding_index=0, feature_id=\"F002\").classification.value); print(t.is_advisory_only_findings_set([adv], feature_id=\"F002\")); print(t.is_advisory_only_findings_set([adv, sub], feature_id=\"F002\"))'",
+      "git diff --check -- scripts/dontpanic_orchestrate/auditor_taxonomy.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/signoff_writer.py scripts/dontpanic_orchestrate/tests/test_verdict_blocked_reconciliation_f002.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`. Evidence: F002 requires `paused_on_environmental` in `features.json:78` and `features.json:82`, but `supervisor.py:2040`/`:2057-2058` and the test at `test_verdict_blocked_reconciliation_f002.py:383` lock in `stopped_environmental_blocker`. Recommendation: return the required terminal name or explicitly update the plan/spec if `stopped_environmental_blocker` is the intended cano",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The Plan 004 F004 fixture test does not replay the real codex envelope and asserts the wrong terminal for the named acceptance case. Evidence: F002 requires Plan 004 F004 high-correctness envelope to remain `needs_changes`; the real envelope has `audit_status: needs_changes`, but the new test forcibly rewrites auditor status to `blocked` and asserts `blocked`. Recommendation: add a fixture using the real Plan 004 F004 codex envelope and assert `needs_changes` remains unchanged.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "architecture",
+      "feature_id": "F002",
+      "issue": "The helper signature does not match the required injectable classifier shape. Evidence: spec asks for `is_advisory_only_findings_set(findings, taxonomy_classifier)`, but `auditor_taxonomy.py` hard-codes `classify_finding` and exposes only `feature_id` / `saved_evidence_paths`. Recommendation: accept a classifier callback or update the spec to make the hard-coded taxonomy dependency explicit. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scrip",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

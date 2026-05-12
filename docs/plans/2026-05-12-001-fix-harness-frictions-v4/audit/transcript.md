@@ -11,3 +11,11 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 
 **2026-05-12T03:58:46Z** — feature **F001** terminal: `blocked` after 2 round(s) — auditor blocked
 
+| 2026-05-12T15:10:43Z | F002 | i0 | claude / implementer | signed_off | 7,259,490 / 32,681 | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-05-12T15:17:56Z | F002 | i0 | codex / auditor | needs_changes | 2,050,008 / 16,436 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+| 2026-05-12T15:24:37Z | F002 | i1 | claude / implementer | signed_off | 3,935,952 / 29,416 | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |
+| 2026-05-12T15:30:35Z | F002 | i1 | codex / auditor | needs_changes | 1,924,133 / 12,759 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
+
+**2026-05-12T15:30:35Z** — feature **F002** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+

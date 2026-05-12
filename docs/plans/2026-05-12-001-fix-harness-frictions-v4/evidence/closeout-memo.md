@@ -1,17 +1,17 @@
 ---
 status: operator_resolved
-reason_class: environmental_reproduction_failure
+reason_class: spec_ambiguity
 plan_id: 2026-05-12-001-fix-harness-frictions-v4
-feature_id: F001
-closed_at: 2026-05-12T04:15:49Z
-latest_audit_status: blocked
+feature_id: F002
+closed_at: 2026-05-12T16:06:55Z
+latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-12-001-fix-harness-frictions-v4 / F001
+# Closeout memo — 2026-05-12-001-fix-harness-frictions-v4 / F002
 
 ## Operator decision
 
-This feature was closed under class `environmental_reproduction_failure` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `spec_ambiguity` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,13 +19,15 @@ This feature was closed under class `environmental_reproduction_failure` after o
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 0 (see structured target_context.commands_run)
+- Command: 4 (see structured target_context.commands_run)
 
-[F001] DISPATCH TIMED OUT after 600s
-  captured stdout: 288261 bytes
-  captured stderr: 422 bytes
-  worktree changed: unknown
-  grace period used: true
+[F002] Repo: DontPanic  
+Env: dev  
+Project: (none)
+
+Overall verdict: needs_changes. Implementer target declaration is correct, and I saw no forbidden command shapes in their `target_context.commands_run`.
+
+FINDING (high, correctness): Advisory `verdict=blocked` is promoted to `stopped_environmental_blocker`, not the required `paused_on_environmental`; evidence: `supervisor.py:2035-2085`, test expectation at `test_verdict_blocked_reconciliation_f002.py:507`, and `features.json:73-82` rewrites the acceptance to accept the alias. Recommendation: implement the required `paused_on_environmental` terminal or get the plan acceptance formally changed before asserting the ...
 
 ## Rationale (operator — fill in)
 

@@ -55,6 +55,11 @@ def _next_action_for(volley_status: str, signed_off: bool) -> str:
         return "blocked_awaiting_human"
     if volley_status == "paused_on_gate":
         return "blocked_awaiting_human"
+    # Plan 2026-05-12-001 v4 F002 — auditor returned verdict=blocked with
+    # an empty findings list. Operator must inspect manually; we don't
+    # auto-promote to environmental because there's no advisory signal.
+    if volley_status == "blocked_no_findings":
+        return "blocked_awaiting_human"
     # supervisor.dispatch_volley emits "stopped_cap" when iteration cap is
     # reached; the legacy "stopped_max_iterations" alias is kept for callers
     # that may emit it directly.
