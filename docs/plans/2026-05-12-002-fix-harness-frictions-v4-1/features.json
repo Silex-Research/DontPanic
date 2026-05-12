@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-05-12-002-fix-harness-frictions-v4-1",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "parsing-category enum addition — v4 D008 close. v4 F003 spec text said findings should be `severity=advisory category=parsing`, but `claude/shared/schemas/v1.0/audit.schema.json` v1.0 category enum only allowed {correctness, security, performance, architecture, style, currency, redaction, test_coverage, documentation} — 9 values, no `parsing`. The v4 F003 implementer chose `correctness` (the only schema-valid option matching repo convention at audit_writer.py:313, supervisor.py:2438/2460), v4 D008 documented the deviation as spec_ambiguity, and the close-out deferred the enum bump to v4.1. F001 makes the spec change real: add `parsing` as a 10th category, bump agent-conventions VERSION 1.7.0 → 1.8.0, subtree-pull into DontPanic at claude/shared/, and flip the two F003 shlex parse-warning emission sites in supervisor.py (and their unit-test assertions) from `correctness` to `parsing`. Additive enum change — strictly backward-compatible.",
+      "steps": [
+        "Inspect agent-conventions/schemas/v1.0/audit.schema.json category enum (line 75 in DontPanic mirror). Confirm current 9 values + whether the upstream Pydantic model (agent-conventions/schemas/v1.0/models/) uses a Literal[...] or an enum class.",
+        "Add `parsing` as a 10th value to the category enum in audit.schema.json. Update the Pydantic model in tandem if needed (same set).",
+        "Bump agent-conventions/VERSION 1.7.0 → 1.8.0. Append a CHANGELOG.md entry describing the additive enum change + linking back to DontPanic v4 F003 D008 as the motivating signal.",
+        "Commit the agent-conventions changes upstream (no push expected in dispatch — operator pushes manually per session pattern).",
+        "Subtree-pull v1.8.0 into DontPanic at claude/shared/. Verify claude/shared/VERSION reads 1.8.0 + the new category enum value lands at claude/shared/schemas/v1.0/audit.schema.json.",
+        "Flip supervisor.py:2488 + 2506 from `category: \"correctness\"` to `category: \"parsing\"` for the F003 shlex parse-warning emissions. Leave sites 2438 + 2460 (high-severity env/project declaration findings) untouched — they remain `correctness`.",
+        "Update test_shlex_safe_command_guard_f003.py:128 + 535 to assert `category == \"parsing\"` matching the new emission.",
+        "Run full sweep (≥1928 baseline) + sanitization check. Confirm parsing-category emission is exercised by the existing 3 failure-mode tests."
+      ],
+      "acceptance": "(1) audit.schema.json category enum contains `parsing` as a 10th value; existing 9 values unchanged. (2) agent-conventions VERSION = 1.8.0 with CHANGELOG entry. (3) DontPanic claude/shared/VERSION mirrors 1.8.0 via clean subtree pull. (4) supervisor.py shlex parse-warning sites emit `category: \"parsing\"`; high-severity correctness sites unchanged. (5) Unit tests in test_shlex_safe_command_guard_f003.py assert the new category. (6) Full sweep ≥1928 green. (7) sanitization_check passes.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "test_coverage rigor bundle — v4 D009 + recurring D007 pattern close. Three concrete fixture-rigor findings banked across the v3/v4 closeouts; the codex auditor flagged them consistently, the implementer addressed each one's narrow scope, but each finding's deeper integration shape was deferred to v4.1. (a) v3/v4 D007: test_verdict_blocked_reconciliation_f002.py:540-586 uses permissive `audit_status not in {blocked, blocked_no_findings, stopped_environmental_blocker}` — auditor wants strict `== needs_changes`. (b) v3 F002 D007 #2: Plan 010 F002 fixture is hand-coded synthetic data rather than replaying the actual saved codex envelope. (c) v4 F003 D009: Plan 004 F002 reproducer exercises _apply_target_accountability + per-command shlex wrapper but not the full dispatch_volley terminal path with parse-breaking input. Each is a quality-of-tests upgrade, not a correctness defect. Recurrence across 3 features in a row = worth one batched discharge rather than letting it cluster again.",
+      "steps": [
+        "Locate the v4 F002 fixture at test_verdict_blocked_reconciliation_f002.py:540-586. Replace the permissive `not in {blocked, blocked_no_findings, stopped_environmental_blocker}` assertion with strict `assert result.terminal_status == \"needs_changes\"`. Adjust the fixture setup if the strict assertion uncovers no-progress / diminishing-returns paths that demand a richer fixture (in which case widen the fixture, not the assertion).",
+        "Identify the Plan 010 F002 hand-coded fixture in test_verdict_blocked_reconciliation_f002.py. Replace the hand-coded findings list with a json.load() of the on-disk envelope at docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F002-i0.json — same way v4 F003 iter1 replaced fabricated commands with the real envelope.",
+        "In test_shlex_safe_command_guard_f003.py, add a new test (`test_plan_004_f002_replay_full_dispatch_volley_reaches_clean_terminal`) that calls supervisor.dispatch_volley with mocked executors that return the Plan 004 F002 reproducer envelope (parse-breaking input), and asserts the function returns a VolleyResult with terminal_status in the accepted-terminal set ({signed_off, needs_changes, blocked, blocked_no_findings}) rather than raising or hanging. Mock both implementer + auditor executors to avoid live API calls.",
+        "Run the three targeted fixture modules (test_verdict_blocked_reconciliation_f002.py + test_shlex_safe_command_guard_f003.py) + full orchestrate sweep. Sweep must stay ≥1928 green; the three modules above should add at least 2-3 net new test functions."
+      ],
+      "acceptance": "(1) v4 F002 fixture uses strict `== needs_changes` terminal assertion (or a wider fixture making the strict assertion sound). (2) Plan 010 F002 fixture replays the on-disk codex envelope rather than hand-coded data. (3) New full-dispatch_volley replay test for Plan 004 F002 reproducer asserts a clean terminal status without hanging or raising. (4) Full sweep ≥1928 green. (5) New tests added are not bypass-marked (skip / xfail).",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}
