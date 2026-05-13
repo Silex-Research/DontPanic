@@ -3,7 +3,7 @@ id: 2026-05-12-002-fix-harness-frictions-v4-1
 title: Harness frictions v4.1 — parsing-category enum + test_coverage rigor
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-12"
 goal_type: infra
 surfaces:

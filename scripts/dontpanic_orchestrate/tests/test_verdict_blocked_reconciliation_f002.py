@@ -63,19 +63,34 @@ def _iso_now() -> str:
 # ───────────────────────── canonical finding shapes ─────────────────────────
 
 # Plan 010 F002 codex envelope's actual finding shape (sandbox can't run pytest).
-PLAN_010_F002_ADVISORY_FINDING: dict[str, Any] = {
-    "severity": "advisory",
-    "category": "test_coverage",
-    "feature_id": "F002",
-    "issue": (
-        "Could not independently rerun pytest-based acceptance checks "
-        "because Python reports no usable temporary directory in this "
-        "read-only sandbox. Evidence: all pytest invocations failed "
-        "before or during setup with `FileNotFoundError: No usable "
-        "temporary directory found`."
-    ),
-    "evidence": "harness blocker — sandbox refused pytest temp dir.",
-}
+# v4.1 F002 D007 #2: the supervisor-replay test below loads the on-disk
+# envelope's findings verbatim via ``PLAN_010_F002_REAL_FINDINGS`` so the test
+# exercises the real saved audit JSON rather than a synthetic-only dict. The
+# helper unit tests in :class:`TestIsAdvisoryOnlyFindingsSet` reuse the same
+# loaded list — keeping one fixture rooted in the real envelope avoids the
+# v3/v4 D007 split between "unit tests use hand-coded shape" and "supervisor
+# test only existence-checks the file path".
+PLAN_010_F002_ENVELOPE_PATH = (
+    HERE.parents[3]
+    / "docs"
+    / "plans"
+    / "2026-05-10-001-feat-printing-press-adapter-skill"
+    / "audit"
+    / "codex-auditor-F002-i0.json"
+)
+assert PLAN_010_F002_ENVELOPE_PATH.is_file(), (
+    f"Plan 010 F002 codex envelope missing: {PLAN_010_F002_ENVELOPE_PATH}"
+)
+_PLAN_010_F002_ENVELOPE: dict[str, Any] = json.loads(
+    PLAN_010_F002_ENVELOPE_PATH.read_text()
+)
+PLAN_010_F002_REAL_FINDINGS: list[dict[str, Any]] = list(
+    _PLAN_010_F002_ENVELOPE.get("findings") or []
+)
+assert PLAN_010_F002_REAL_FINDINGS, (
+    f"on-disk envelope must carry findings to replay: {PLAN_010_F002_ENVELOPE_PATH}"
+)
+PLAN_010_F002_ADVISORY_FINDING: dict[str, Any] = PLAN_010_F002_REAL_FINDINGS[0]
 
 # Plan 004 F004 representative shape — high-severity correctness finding.
 PLAN_004_F004_HIGH_FINDING: dict[str, Any] = {
@@ -496,9 +511,18 @@ class TestVerdictBlockedReconciliation:
     ) -> None:
         """Acceptance (2): plan 010 F002 codex envelope (single advisory
         test_coverage finding) terminates as stopped_environmental_blocker,
-        not blocked. Reconciliation INBOX event documents the override."""
+        not blocked. Reconciliation INBOX event documents the override.
+
+        v4.1 F002 D007 #2: injects the on-disk envelope's findings verbatim
+        (loaded via ``PLAN_010_F002_REAL_FINDINGS``) so the supervisor sees
+        the real saved auditor finding shape rather than a synthetic stand-
+        in. Pre-fix, the test injected a hand-coded dict whose ``evidence``
+        carried a "harness blocker" marker the env_repro classifier keyed
+        on — the on-disk envelope's prose ("Could not independently rerun
+        pytest …no usable temporary directory") routes through the
+        v4.1-extended verb + tempdir env_repro patterns instead."""
         impl, aud = _install_runtime(monkeypatch)
-        _inject_blocked_audit(monkeypatch, [[PLAN_010_F002_ADVISORY_FINDING]])
+        _inject_blocked_audit(monkeypatch, [list(PLAN_010_F002_REAL_FINDINGS)])
         plan_id = "2026-05-12-880-fix-f002-advisory-promote"
         plan_dir = _make_plan(tmp_path, plan_id)
 
@@ -541,16 +565,19 @@ class TestVerdictBlockedReconciliation:
         so reconciliation never applies and the auditor's substantive
         finding routes through the normal needs_changes flow.
 
-        The exact terminal depends on no-progress / diminishing-returns
-        thresholds (the replayed envelope is identical across rounds,
-        so no-progress fires once the threshold is met), but the
-        assertion that pins acceptance (3) is: (a) NO
-        ``verdict_blocked_reconciled`` event was ever emitted, (b) NO
-        ``blocked_no_findings`` event was ever emitted, (c) the final
-        terminal status is NOT ``blocked`` / ``stopped_environmental_blocker``
-        / ``blocked_no_findings`` — substantive needs_changes findings
-        never auto-promote, never reach the blocked-reconciliation gate.
-        """
+        v4.1 F002 D007 #1 strict pin: the prior `not in {blocked,
+        blocked_no_findings, stopped_environmental_blocker}` assertion was
+        permissive (matched many irrelevant terminals); the v4.1 attempt to
+        tighten it to ``stopped_no_progress`` pinned an incidental no-
+        progress mechanic rather than the test's true purpose (the real
+        envelope's ``needs_changes`` verdict is preserved unchanged on
+        disk). The fix is a widened fixture: round 0 replays the real
+        envelope (audit_status=needs_changes, high-correctness finding),
+        round 1 replays a synthetic signoff envelope so the volley
+        terminates cleanly at ``signed_off``. The strict
+        ``audit_status == "needs_changes"`` assertion is then made
+        directly on round 0's on-disk audit envelope — the data-shape
+        check the prior rounds drifted off of."""
         real_envelope = _load_real_envelope(PLAN_004_F004_REAL_ENVELOPE_PATH)
         # Sanity: the recorded envelope must encode the acceptance-named
         # shape (audit_status=needs_changes, high-severity correctness).
@@ -559,9 +586,28 @@ class TestVerdictBlockedReconciliation:
             f.get("severity") == "high" and f.get("category") == "correctness"
             for f in real_envelope.get("findings") or []
         ), "real envelope must carry the high-correctness finding F002 spec cites"
+        # Round-1 signoff envelope: lets the volley terminate at a clean
+        # ``signed_off`` instead of converging via no_progress on identical
+        # replayed envelopes. The auditor "accepted" after round 0's
+        # needs_changes — the round-0 audit envelope on disk is still the
+        # real needs_changes envelope, which the strict assertion below
+        # pins directly.
+        signoff_envelope: dict[str, Any] = {
+            "audit_status": "signed_off",
+            "summary": (
+                "Repo: synthetic\nEnv: dev\nProject: (none)\n\n"
+                "## Target context\nRepo: synthetic\nEnv: dev\nProject: (none)\n\n"
+                "**Verdict: signed_off**\n\n"
+                "Round-1 synthetic signoff (test fixture)."
+            ),
+            "findings": [],
+            "validation_performed": ["v4.1 F002 D007 #1 round-1 signoff stub"],
+            "target_context": {"env": "dev", "project": None, "commands_run": []},
+            "quota_consumed": {"tokens_in": 1, "tokens_out": 1, "api_calls": 0},
+        }
 
         impl, aud = _install_runtime(monkeypatch)
-        _inject_replay_audit(monkeypatch, [real_envelope, real_envelope])
+        _inject_replay_audit(monkeypatch, [real_envelope, signoff_envelope])
         plan_id = "2026-05-12-881-fix-f004-real-envelope-preserves"
         plan_dir = _make_plan(tmp_path, plan_id, feature_id="F004")
 
@@ -575,21 +621,25 @@ class TestVerdictBlockedReconciliation:
             e.event == "verdict_blocked_reconciled" for e in events
         ), [e.event for e in events]
         assert not any(e.event == "blocked_no_findings" for e in events)
-        # And no environmental_blocker sidecar should land for this case
-        # via the verdict-blocked path (the needs_changes short-circuit
-        # path is a different code path; the substantive finding here
-        # blocks that too).
-        assert result.final_status not in {
-            "blocked",
-            "blocked_no_findings",
-            "stopped_environmental_blocker",
-        }, result
-        # The audit envelope's audit_status on disk remains needs_changes
-        # across every round — pin acceptance (3)'s "unchanged behavior"
-        # at the data-shape level.
-        for audit_path in (plan_dir / "audit").glob("codex-auditor-F004-i*.json"):
-            data = json.loads(audit_path.read_text())
-            assert data["audit_status"] == "needs_changes", audit_path
+        # v4.1 F002 D007 #1 strict pin: round 0's on-disk audit envelope is
+        # the unmodified real envelope, with strict
+        # ``audit_status == "needs_changes"``. This is the assertion the
+        # auditor i0 finding requested — the data-shape pin on the
+        # auditor's recorded verdict, not the supervisor's incidental
+        # no-progress mechanics.
+        iter0_audit = plan_dir / "audit" / "codex-auditor-F004-i0.json"
+        assert iter0_audit.is_file(), iter0_audit
+        iter0_data = json.loads(iter0_audit.read_text())
+        assert iter0_data["audit_status"] == "needs_changes", iter0_data
+        # Volley terminates at the round-1 signoff. Concrete terminal pin
+        # (catches future drift into blocked / environmental variants
+        # without coupling to no_progress threshold mechanics).
+        assert result.final_status == "signed_off", result
+        # Round-1 signoff envelope landed on disk as well.
+        iter1_audit = plan_dir / "audit" / "codex-auditor-F004-i1.json"
+        assert iter1_audit.is_file(), iter1_audit
+        iter1_data = json.loads(iter1_audit.read_text())
+        assert iter1_data["audit_status"] == "signed_off", iter1_data
 
     def test_synthetic_substantive_blocked_preserves_blocked(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

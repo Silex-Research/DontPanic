@@ -43,8 +43,19 @@
         "Run the three targeted fixture modules (test_verdict_blocked_reconciliation_f002.py + test_shlex_safe_command_guard_f003.py) + full orchestrate sweep. Sweep must stay ≥1928 green; the three modules above should add at least 2-3 net new test functions."
       ],
       "acceptance": "(1) v4 F002 fixture uses strict `== needs_changes` terminal assertion (or a wider fixture making the strict assertion sound). (2) Plan 010 F002 fixture replays the on-disk codex envelope rather than hand-coded data. (3) New full-dispatch_volley replay test for Plan 004 F002 reproducer asserts a clean terminal status without hanging or raising. (4) Full sweep ≥1928 green. (5) New tests added are not bypass-marked (skip / xfail).",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=spec_ambiguity)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-12T23:04:25Z"
     }
   ]
 }
