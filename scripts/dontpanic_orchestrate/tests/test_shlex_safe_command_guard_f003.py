@@ -20,6 +20,7 @@ Run:
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import shlex
 import sys
@@ -31,7 +32,13 @@ import pytest
 HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
-from dontpanic_orchestrate import command_guard, supervisor  # noqa: E402
+from dontpanic_orchestrate import command_guard, notify, supervisor  # noqa: E402
+from dontpanic_orchestrate.executors import AGENT_REGISTRY  # noqa: E402
+from dontpanic_orchestrate.executors.base import (  # noqa: E402
+    BaseExecutor,
+    DispatchResult,
+    DispatchTask,
+)
 
 
 # ──────────────────────────────  command_guard.shlex hardening  ──────────────────────────────
@@ -582,3 +589,180 @@ def test_parse_advisory_is_not_double_prefixed() -> None:
     )
     assert not issue.startswith("shlex parse failed: shlex parse failed"), issue
     print(f"  ✓ single-prefix advisory: {issue!r}")
+
+
+# ──────────────────────────────  full dispatch_volley replay  ──────────────────────────────
+#
+# Plan 2026-05-12-002 v4.1 F002 D009 close: the prior F003 coverage tested
+# `_apply_target_accountability` (the unit where D025 root cause #1 lived) and
+# the per-command shlex wrapper, but stopped short of asserting that the FULL
+# dispatch_volley terminal path with the Plan 004 F002 reproducer input
+# reaches a clean accepted-terminal status. This test threads parse-breaking
+# commands_run all the way through a real volley iter (implementer + auditor
+# + post-iter pipeline) using mocked executors so no live API calls fire.
+
+
+def _iso_now() -> str:
+    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class _ParseBreakingExecutor(BaseExecutor):
+    """Implementer + auditor pair that emits the Plan 004 F002 reproducer's
+    parse-breaking commands_run (`gcloud services list --project=foo'` —
+    unbalanced single quote) in the implementer summary. The auditor signs
+    off cleanly. ``audit_writer.extract_commands_run`` lifts the `$ <cmd>`
+    lines into ``target_context.commands_run`` so the post-iter
+    ``_apply_target_accountability`` pipeline sees the parse-breaking
+    string verbatim (mirrors what Plan 004 F002 actually wrote to disk)."""
+
+    def __init__(self, agent: str, role: str) -> None:
+        super().__init__()
+        self.agent_name = agent
+        self.cli_binary = None
+        self.role = role
+        self.calls = 0
+
+    def is_available(self) -> bool:
+        return True
+
+    def dispatch(self, task: DispatchTask) -> DispatchResult:
+        self.calls += 1
+        if self.role == "implementer":
+            # Implementer prose mirrors the Plan 004 F002 reproducer: the
+            # first `$ <cmd>` line has the unbalanced single quote that
+            # crashed `shlex.split` pre-F003; the second is well-formed and
+            # exercises the happy path so we know the iter genuinely
+            # routed through every command, not just short-circuited on
+            # the first parse error.
+            summary = (
+                "Repo: DontPanic\nEnv: dev\nProject: (none)\n\n"
+                "## Target context\n"
+                "Repo: DontPanic\nEnv: dev\nProject: (none)\n\n"
+                "**Verdict: signed off**\n\n"
+                "$ gcloud services list --project=foo'\n"
+                "$ firebase deploy --project foo --only hosting\n"
+            )
+        else:  # auditor
+            summary = (
+                "Repo: DontPanic\nEnv: dev\nProject: (none)\n\n"
+                "## Target context\n"
+                "Repo: DontPanic\nEnv: dev\nProject: (none)\n\n"
+                "**Verdict: signed off**\n\n"
+                "Auditor confirms implementer landed clean.\n"
+            )
+        return DispatchResult(
+            agent=self.agent_name,
+            agent_role=task.agent_role,
+            iteration=task.iteration,
+            started_at=_iso_now(),
+            completed_at=_iso_now(),
+            success=True,
+            summary=summary,
+            raw_response=summary,
+            error=None,
+            quota_consumed={"tokens_in": 1, "tokens_out": 1},
+        )
+
+
+def _install_volley_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[_ParseBreakingExecutor, _ParseBreakingExecutor]:
+    """Wire mocked executors + bypass quota / wall-clock / budget / admission
+    so dispatch_volley reaches the iter body without external dependencies."""
+    impl = _ParseBreakingExecutor("claude", "implementer")
+    aud = _ParseBreakingExecutor("codex", "auditor")
+    monkeypatch.setenv(notify.DISABLE_ENV, "1")
+    monkeypatch.setitem(AGENT_REGISTRY, "claude", lambda: impl)
+    monkeypatch.setitem(AGENT_REGISTRY, "codex", lambda: aud)
+    monkeypatch.setattr(
+        supervisor, "_quota_gate", lambda agent: (None, f"[quota] {agent}: bypassed")
+    )
+    monkeypatch.setattr(
+        supervisor.circuit_breakers,
+        "evaluate_global",
+        lambda: supervisor.circuit_breakers.GlobalBreakerState(False, 0),
+    )
+    monkeypatch.setattr(
+        supervisor.circuit_breakers,
+        "check_wall_clock",
+        lambda *args, **kwargs: (False, ""),
+    )
+    monkeypatch.setattr(
+        supervisor.circuit_breakers,
+        "check_budget_ceiling",
+        lambda *args, **kwargs: supervisor.circuit_breakers.BudgetCeilingResult(
+            supervisor.circuit_breakers.BudgetCeilingKind.OK, False, ""
+        ),
+    )
+    monkeypatch.setattr(
+        supervisor.quota_admission,
+        "evaluate",
+        lambda *args, **kwargs: supervisor.quota_admission.AdmissionCheck(
+            supervisor.quota_admission.DispatchClass.AUTONOMOUS,
+            supervisor.quota_admission.QuotaCheck(False, None, None, 90.0),
+            supervisor.quota_admission.InteractiveCheck(False, None),
+            frozenset(),
+        ),
+    )
+    return impl, aud
+
+
+def test_plan_004_f002_replay_full_dispatch_volley_reaches_clean_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """v4.1 F002 D009 close — drive the full ``dispatch_volley`` terminal
+    path with the Plan 004 F002 reproducer's parse-breaking input. The
+    prior coverage exercised only ``_apply_target_accountability`` + the
+    per-command shlex wrapper; this test threads the same parse-breaking
+    ``commands_run`` end-to-end (implementer → auditor → post-iter →
+    terminal) using mocked executors so no live API calls fire. The
+    volley must return a ``VolleyResult`` whose ``final_status`` is in
+    the accepted-terminal set (no hang, no raise), and the implementer
+    envelope must carry an advisory parsing finding citing the unbalanced
+    quote (proves the post-iter pipeline ran, not just that the iter
+    returned)."""
+    print(
+        "\n[test] plan_004_f002_replay_full_dispatch_volley_reaches_clean_terminal ..."
+    )
+    plan_dir = _make_backstop_plan(tmp_path)
+    impl, aud = _install_volley_runtime(monkeypatch)
+
+    result = supervisor.dispatch_volley(
+        plan_dir=plan_dir, feature_id="F001", max_iterations=1
+    )
+
+    # Acceptance #3: volley returns a clean terminal — no hang, no raise.
+    assert result.final_status in _ACCEPTED_TERMINAL_STATUSES, result
+    # Both executors got called — confirms the iter wasn't short-circuited
+    # by quota / breaker mocks before the implementer / auditor ran.
+    assert impl.calls >= 1, f"implementer never dispatched: {impl.calls}"
+    assert aud.calls >= 1, f"auditor never dispatched: {aud.calls}"
+
+    # The parse-breaking command surfaced as an advisory parsing finding
+    # in the implementer envelope — proves _apply_target_accountability
+    # ran on the post-iter pipeline (not just that dispatch_volley exited
+    # cleanly because it never reached the post-iter stage).
+    impl_envelopes = sorted(
+        (plan_dir / "audit").glob("claude-implementer-F001-i*.json")
+    )
+    assert impl_envelopes, list((plan_dir / "audit").glob("*.json"))
+    parse_findings: list[dict] = []
+    for env_path in impl_envelopes:
+        data = json.loads(env_path.read_text())
+        for f in data.get("findings") or []:
+            if "shlex parse failed" in f.get("issue", ""):
+                parse_findings.append(f)
+    assert parse_findings, (
+        "expected at least one advisory parsing finding in implementer envelope; "
+        f"found findings: {[json.loads(p.read_text()).get('findings') for p in impl_envelopes]}"
+    )
+    for f in parse_findings:
+        assert f["severity"] == "advisory", f
+        assert f["category"] == "parsing", f
+        # The unbalanced-quote command surfaces as the offending evidence
+        # (truncated by command_guard's advisory builder).
+        assert "gcloud services list" in f.get("evidence", ""), f
+    print(
+        f"  ✓ full volley replay: final_status={result.final_status!r}, "
+        f"{len(parse_findings)} advisory parsing finding(s), no crash"
+    )
