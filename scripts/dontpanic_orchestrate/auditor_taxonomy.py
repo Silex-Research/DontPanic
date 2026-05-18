@@ -312,10 +312,21 @@ _ENV_REPRO_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
         r"\bsandbox\b.*\b(cannot|can't|unable|not allowed|forbidden|denied)\b",
-        r"\b(cannot|can't|unable|could not|couldn't)\s+(run|execute|invoke|launch)\b",
+        # Plan 2026-05-12-002 v4.1 F002 D007 #2: allow 0-2 adverbs between the
+        # auxiliary and the verb (e.g. "could not independently rerun"), and
+        # accept "re"-prefixed + "reproduce"/"verify" variants so real auditor
+        # prose maps to env_repro instead of falling through to UNKNOWN.
+        r"\b(cannot|can't|unable|could not|couldn't)(?:\s+\w+){0,2}\s+"
+        r"(run|rerun|re-run|execute|invoke|launch|reproduce|verify)\b",
         r"\b(permission|access)\s+denied\b",
         r"\bnetwork\s+(unavailable|disabled|offline|forbidden)\b",
         r"\bno\s+(internet|network|connectivity)\b",
+        # Python tempfile-module failure marker — fires when the auditor
+        # sandbox refused a writable temp directory (pytest, importlib, and
+        # most stdlib setup-paths fail before they start). Real prose
+        # observed: "Python reports no usable temporary directory" /
+        # "FileNotFoundError: No usable temporary directory found".
+        r"\bno\s+usable\s+temp(?:orary)?\s+(?:dir|directory)\b",
         r"\b(xcode|jest|gradle|cargo|swift\s+test|npm\s+test|pytest|gcloud|firebase)\b.*"
         r"\b(unavailable|missing|not\s+(found|installed)|denied|cannot\s+run|"
         r"unable\s+to\s+run|could\s+not\s+run)\b",
