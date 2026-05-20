@@ -53,6 +53,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:
     import yaml  # noqa: F401  # optional — only used by plan-cohesion validator
@@ -67,6 +68,14 @@ SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
 MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
 PLANS_ROOT = REPO_ROOT / "docs" / "plans"
+ARCHITECTURE_JSON_PATH = REPO_ROOT / "docs" / "architecture" / "architecture.json"
+# Plan 2026-05-19-004 F003: threshold for stale_minor vs stale_major.
+# <5% changed → stale_minor (advisory), ≥5% → stale_major (blocker in --strict).
+ARCHITECTURE_DRIFT_MAJOR_THRESHOLD = 0.05
+# Cap the per-state changed_files list emitted in JSON output. Keeps the
+# doctor payload bounded on large source-tree diffs while still giving the
+# operator an actionable sample.
+ARCHITECTURE_DRIFT_CHANGED_FILES_CAP = 20
 
 # F001: SA-key age check looks under the resolved DontPanic home by default.
 # DONTPANIC_SECRETS_DIR is preferred; JARVIS_SECRETS_DIR remains a legacy
@@ -1443,6 +1452,357 @@ def validate_plans_strict(
     return [summary, *findings]
 
 
+# ── plan 2026-05-19-004 F003: architecture-drift probe ────────────────────
+#
+# Reuses F001's Crawler.fingerprint() to compute the current source-tree
+# hash, compares against the per-file map stored in
+# ``docs/architecture/architecture.json``, and classifies the result:
+#
+#   fresh         — file_hashes_root matches → no action
+#   stale_minor   — <5% of files (added + removed + modified) differ → WARN,
+#                   advisory in both default and --strict modes
+#   stale_major   — ≥5% of files differ → WARN in default mode, FAIL in
+#                   --strict mode
+#   absent        — architecture.json missing entirely → WARN in default
+#                   mode, FAIL in --strict mode
+#
+# The probe attaches a structured ``details`` payload on the CheckResult so
+# JSON consumers see state + truncated changed_files lists + recommendation.
+
+
+# Required source-tree prefixes. If the stored fingerprint had ≥1 file under
+# any of these and the current tree has zero, an entire subsystem has vanished
+# — that's structural drift, not "a few files moved", so it must promote to
+# stale_major regardless of the ratio. Without this guard, deleting all of
+# docs/plans/ on a small repo could still classify as stale_minor when removed
+# files are <5% of the union.
+ARCHITECTURE_DRIFT_REQUIRED_PREFIXES: tuple[str, ...] = (
+    "scripts/dontpanic_orchestrate/",
+    "claude/shared/schemas/",
+    "docs/plans/",
+)
+ARCHITECTURE_DRIFT_REQUIRED_FILES: tuple[str, ...] = ("claude/shared/VERSION",)
+
+
+def _missing_required_surfaces(
+    *,
+    stored_map: dict[str, str],
+    current_map: dict[str, str],
+) -> list[str]:
+    """Return the list of required prefixes/files that the stored snapshot
+    covered but that have disappeared from the current tree.
+
+    Empty list = no structural loss. Any non-empty list forces stale_major
+    in :func:`_classify_architecture_drift` so a missing module surface or
+    plans directory can't masquerade as minor drift.
+    """
+    missing: list[str] = []
+    for prefix in ARCHITECTURE_DRIFT_REQUIRED_PREFIXES:
+        had = any(path.startswith(prefix) for path in stored_map)
+        has = any(path.startswith(prefix) for path in current_map)
+        if had and not has:
+            missing.append(prefix)
+    for fname in ARCHITECTURE_DRIFT_REQUIRED_FILES:
+        if fname in stored_map and fname not in current_map:
+            missing.append(fname)
+    return missing
+
+
+def _classify_architecture_drift(
+    *,
+    stored_map: dict[str, str] | None,
+    current_map: dict[str, str],
+) -> tuple[str, dict[str, list[str]], int, int, list[str]]:
+    """Diff the stored per-file hash map against the current one.
+
+    Returns ``(state, changes, unchanged_count, total_count, missing_required)``
+    where:
+      * ``state`` ∈ {``fresh``, ``stale_minor``, ``stale_major``}
+      * ``changes`` has keys ``added`` / ``removed`` / ``modified``
+      * ``unchanged_count`` is the number of files whose hash didn't move
+      * ``total_count`` is the union cardinality used to derive the ratio
+      * ``missing_required`` lists required surfaces (modules/schemas/plans/
+        VERSION) that the stored snapshot covered but the current tree
+        no longer does — any non-empty value forces ``stale_major``.
+
+    A missing stored map cannot be diffed at file level; callers handle
+    that branch (ABSENT) before invoking this helper.
+    """
+    stored = stored_map or {}
+    stored_keys = set(stored.keys())
+    current_keys = set(current_map.keys())
+    added = sorted(current_keys - stored_keys)
+    removed = sorted(stored_keys - current_keys)
+    modified = sorted(
+        path for path in current_keys & stored_keys if current_map[path] != stored[path]
+    )
+    union = stored_keys | current_keys
+    total = len(union) or 1
+    changed = len(added) + len(removed) + len(modified)
+    unchanged = total - changed
+    missing_required = _missing_required_surfaces(
+        stored_map=stored, current_map=current_map
+    )
+    if missing_required:
+        # Structural loss always trumps the ratio classifier: a vanished
+        # subsystem is major drift regardless of how few files differ.
+        state = "stale_major"
+    elif changed == 0:
+        state = "fresh"
+    elif changed / total < ARCHITECTURE_DRIFT_MAJOR_THRESHOLD:
+        state = "stale_minor"
+    else:
+        state = "stale_major"
+    return (
+        state,
+        {"added": added, "removed": removed, "modified": modified},
+        unchanged,
+        total,
+        missing_required,
+    )
+
+
+def _truncate_changed_files(
+    changes: dict[str, list[str]],
+    *,
+    cap: int = ARCHITECTURE_DRIFT_CHANGED_FILES_CAP,
+) -> dict[str, list[str]]:
+    """Bound each change list to ``cap`` entries for the JSON payload.
+
+    Operators see "<list[:cap]> + N more" rather than a 1000-line dump
+    when a refactor touches a large fraction of the tree. Doesn't mutate
+    the input map.
+    """
+    out: dict[str, list[str]] = {}
+    for kind, paths in changes.items():
+        if len(paths) <= cap:
+            out[kind] = list(paths)
+        else:
+            out[kind] = [*paths[:cap], f"… +{len(paths) - cap} more"]
+    return out
+
+
+def _flatten_changed_files(changes: dict[str, list[str]]) -> list[str]:
+    """Collapse the categorized ``{added, removed, modified}`` map into a
+    single flat list with ``<kind>: <path>`` entries.
+
+    The top-level ``architecture_drift`` JSON section consumes this so
+    machine readers see the per-file changes as a stable list (acceptance
+    step #3), while the categorized form stays available under
+    ``checks[].details[].changed_files`` for richer triage.
+    """
+    out: list[str] = []
+    for kind in ("added", "removed", "modified"):
+        for path in changes.get(kind, []):
+            out.append(f"{kind}: {path}")
+    return out
+
+
+def _architecture_drift_recommendation(state: str) -> str:
+    if state == "fresh":
+        return "no action — architecture.json fingerprint matches current source tree"
+    if state == "stale_minor":
+        return (
+            "minor drift (<5% files changed). Consider running "
+            "`python -m dontpanic_orchestrate architecture regen` at your next "
+            "convenience to refresh docs/architecture/architecture.json."
+        )
+    if state == "stale_major":
+        return (
+            "major drift (≥5% files changed). Run "
+            "`python -m dontpanic_orchestrate architecture regen` before "
+            "downstream consumers (Plan 4.5 `dontpanic new`, F004 supervisor "
+            "regen hook) read a stale snapshot."
+        )
+    # absent
+    return (
+        "docs/architecture/architecture.json is missing. Run "
+        "`python -m dontpanic_orchestrate architecture regen` to create the "
+        "snapshot — downstream consumers degrade gracefully but lose context."
+    )
+
+
+def check_architecture_drift(
+    *,
+    repo_root: Path | None = None,
+    architecture_path: Path | None = None,
+    strict: bool = False,
+) -> CheckResult:
+    """Plan 2026-05-19-004 F003 — architecture-drift probe.
+
+    Reads the stored fingerprint from ``architecture.json`` and compares
+    it against the live source tree (via F001's :class:`Crawler`). Emits
+    a single :class:`CheckResult` whose ``details`` payload carries the
+    structured drift report so JSON consumers see state + change lists +
+    recommendation alongside the human-facing message.
+
+    ``strict`` controls severity for ``stale_major`` and ``absent``: in
+    advisory mode (default) both surface as WARN; in strict mode both
+    promote to FAIL so the strict-codes exit matrix returns exit 2.
+    ``stale_minor`` is always advisory — minor drift is expected during
+    normal development and shouldn't block a doctor sweep.
+    """
+    repo_root = (repo_root or REPO_ROOT).resolve()
+    arch_path = (architecture_path or (repo_root / "docs" / "architecture" / "architecture.json")).resolve()
+
+    # Lazy import — keep the doctor importable without dragging in the
+    # crawler module at module-load time.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import architecture as arch
+    finally:
+        sys.path.pop(0)
+
+    name = "architecture-drift"
+    remediation_cmd = "python -m dontpanic_orchestrate architecture regen"
+
+    # ── ABSENT ────────────────────────────────────────────────────────
+    if not arch_path.is_file():
+        details = {
+            "state": "absent",
+            "architecture_path": str(arch_path),
+            "changed_files": {"added": [], "removed": [], "modified": []},
+            "changed_files_list": [],
+            "unchanged_files": 0,
+            "recommendation": _architecture_drift_recommendation("absent"),
+        }
+        message = f"architecture.json missing at {arch_path.relative_to(repo_root) if arch_path.is_relative_to(repo_root) else arch_path}"
+        if strict:
+            result = _bad(name, message, remediation_cmd)
+        else:
+            result = _warn(name, message, remediation_cmd)
+        result.details = [details]
+        return result
+
+    # ── compute current fingerprint + diff ────────────────────────────
+    try:
+        crawler = arch.Crawler(repo_root)
+        current_fp = crawler.fingerprint()
+    except Exception as exc:  # noqa: BLE001 — surface any crawler failure
+        result = _bad(
+            name,
+            f"failed to compute current fingerprint: {exc.__class__.__name__}: {exc}",
+            "investigate scripts/dontpanic_orchestrate/architecture.py — crawler raised",
+        )
+        result.details = [{"state": "error", "error": str(exc)}]
+        return result
+
+    try:
+        prior = json.loads(arch_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        message = f"architecture.json unreadable at {arch_path}: {exc}"
+        if strict:
+            result = _bad(name, message, remediation_cmd)
+        else:
+            result = _warn(name, message, remediation_cmd)
+        result.details = [{"state": "absent", "error": str(exc)}]
+        return result
+
+    prior_fp = prior.get("source_fingerprint") or {}
+    stored_root = prior_fp.get("file_hashes_root")
+    stored_map = prior_fp.get("file_hashes") if isinstance(prior_fp.get("file_hashes"), dict) else None
+
+    current_map: dict[str, str] = current_fp["file_hashes"]
+    current_root = current_fp["file_hashes_root"]
+
+    # Fast path: root hashes match → definitely fresh, no diff needed.
+    if stored_root == current_root:
+        details = {
+            "state": "fresh",
+            "architecture_path": str(arch_path),
+            "stored_fingerprint": stored_root,
+            "current_fingerprint": current_root,
+            "changed_files": {"added": [], "removed": [], "modified": []},
+            "changed_files_list": [],
+            "unchanged_files": current_fp["files_count"],
+            "files_count_current": current_fp["files_count"],
+            "files_count_stored": prior_fp.get("files_count"),
+            "recommendation": _architecture_drift_recommendation("fresh"),
+        }
+        result = _ok(name, f"fresh — {current_fp['files_count']} tracked files match stored fingerprint")
+        result.details = [details]
+        return result
+
+    # Roots disagree but no per-file map (legacy snapshot). Treat as
+    # stale_major: we can't compute the change ratio, and the operator
+    # needs to regen to repopulate the per-file map anyway.
+    if stored_map is None:
+        details = {
+            "state": "stale_major",
+            "architecture_path": str(arch_path),
+            "stored_fingerprint": stored_root,
+            "current_fingerprint": current_root,
+            "changed_files": {"added": [], "removed": [], "modified": []},
+            "changed_files_list": [],
+            "unchanged_files": 0,
+            "files_count_current": current_fp["files_count"],
+            "files_count_stored": prior_fp.get("files_count"),
+            "detail_available": False,
+            "recommendation": _architecture_drift_recommendation("stale_major"),
+        }
+        message = (
+            "stale (no per-file detail available — legacy snapshot). "
+            f"Regen to repopulate file_hashes map at {arch_path}."
+        )
+        if strict:
+            result = _bad(name, message, remediation_cmd)
+        else:
+            result = _warn(name, message, remediation_cmd)
+        result.details = [details]
+        return result
+
+    state, changes, unchanged_count, total, missing_required = _classify_architecture_drift(
+        stored_map=stored_map,
+        current_map=current_map,
+    )
+    changed_count = total - unchanged_count
+    pct = (changed_count / total) * 100 if total else 0.0
+    truncated = _truncate_changed_files(changes)
+
+    details = {
+        "state": state,
+        "architecture_path": str(arch_path),
+        "stored_fingerprint": stored_root,
+        "current_fingerprint": current_root,
+        "changed_files": truncated,
+        "changed_files_list": _flatten_changed_files(truncated),
+        "changed_files_total": changed_count,
+        "unchanged_files": unchanged_count,
+        "files_count_current": current_fp["files_count"],
+        "files_count_stored": prior_fp.get("files_count"),
+        "drift_pct": round(pct, 2),
+        "missing_required": missing_required,
+        "recommendation": _architecture_drift_recommendation(state),
+    }
+
+    if state == "fresh":
+        result = _ok(name, "fresh — fingerprint matches after diff")
+        result.details = [details]
+        return result
+
+    missing_suffix = (
+        f"; missing required surface(s): {', '.join(missing_required)}"
+        if missing_required
+        else ""
+    )
+    message = (
+        f"{state} — {changed_count}/{total} files differ ({pct:.1f}%): "
+        f"added={len(changes['added'])} removed={len(changes['removed'])} "
+        f"modified={len(changes['modified'])}"
+        f"{missing_suffix}"
+    )
+
+    # stale_minor stays advisory in both modes per acceptance step 4.
+    if state == "stale_minor":
+        result = _warn(name, message, remediation_cmd)
+    elif strict:
+        result = _bad(name, message, remediation_cmd)
+    else:
+        result = _warn(name, message, remediation_cmd)
+    result.details = [details]
+    return result
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -1451,6 +1811,7 @@ def run_all_checks(
     include_projects: bool = False,
     validate_plans: bool = False,
     validate_plans_strict_mode: bool | None = None,
+    architecture_drift_strict_mode: bool | None = None,
 ) -> list[CheckResult]:
     """Execute the full check battery.
 
@@ -1477,6 +1838,15 @@ def run_all_checks(
     controls severity: ``None`` (the default) and ``False`` keep failures
     as advisory WARN entries; ``True`` (set by ``--validate-plans-strict``)
     promotes failures to FAIL so the strict-codes matrix returns exit 2.
+
+    Plan 2026-05-19-004 F003: the architecture-drift probe
+    (``check_architecture_drift``) always runs and reads the stored
+    source_fingerprint in docs/architecture/architecture.json.
+    ``architecture_drift_strict_mode`` controls severity for ``stale_major``
+    and ``absent``: ``None`` / ``False`` keep both as advisory WARN
+    (legacy 0/1 exit stays 0); ``True`` (``--architecture-drift-strict``)
+    promotes both to FAIL so the strict-codes matrix returns exit 2.
+    ``stale_minor`` is always advisory.
     """
     results: list[CheckResult] = []
     results.append(check_python_version())
@@ -1500,6 +1870,7 @@ def run_all_checks(
     if validate_plans:
         results.extend(check_plan_cohesion())
     results.extend(validate_plans_strict(strict=bool(validate_plans_strict_mode)))
+    results.append(check_architecture_drift(strict=bool(architecture_drift_strict_mode)))
     return results
 
 
@@ -1543,6 +1914,39 @@ def render_text(results: list[CheckResult]) -> str:
     return "\n".join(lines)
 
 
+def _architecture_drift_section(results: list[CheckResult]) -> dict | None:
+    """Plan 2026-05-19-004 F003: build the top-level ``architecture_drift``
+    JSON section.
+
+    Surfaces the drift probe at a stable, named location so JSON consumers
+    (Plan 4.5 ``dontpanic new`` context gatherer, F004 supervisor regen
+    hook, audit pipelines) don't have to scan ``checks[]`` and string-match
+    on the probe name. Mirrors the probe's structured details payload but
+    flattens ``changed_files`` to a list per the acceptance contract.
+
+    Returns ``None`` if the probe didn't run (defensive — the doctor always
+    runs it, but ``render_json`` may receive a subset for testing).
+    """
+    for r in results:
+        if r.name != "architecture-drift" or not r.details:
+            continue
+        detail = r.details[0]
+        return {
+            "state": detail.get("state"),
+            "changed_files": detail.get("changed_files_list", []),
+            "changed_files_categorized": detail.get(
+                "changed_files", {"added": [], "removed": [], "modified": []}
+            ),
+            "changed_files_total": detail.get("changed_files_total", 0),
+            "unchanged_files": detail.get("unchanged_files", 0),
+            "missing_required": detail.get("missing_required", []),
+            "recommendation": detail.get("recommendation"),
+            "ok": r.ok,
+            "warn": r.warn,
+        }
+    return None
+
+
 def render_json(results: list[CheckResult]) -> str:
     def _check_dict(r: CheckResult) -> dict:
         d = {
@@ -1556,15 +1960,16 @@ def render_json(results: list[CheckResult]) -> str:
             d["details"] = r.details
         return d
 
-    return json.dumps(
-        {
-            "checks": [_check_dict(r) for r in results],
-            "passed": sum(1 for r in results if r.ok),
-            "failed": sum(1 for r in results if not r.ok),
-            "warnings": sum(1 for r in results if r.ok and r.warn),
-        },
-        indent=2,
-    )
+    payload: dict[str, Any] = {
+        "checks": [_check_dict(r) for r in results],
+        "passed": sum(1 for r in results if r.ok),
+        "failed": sum(1 for r in results if not r.ok),
+        "warnings": sum(1 for r in results if r.ok and r.warn),
+    }
+    drift_section = _architecture_drift_section(results)
+    if drift_section is not None:
+        payload["architecture_drift"] = drift_section
+    return json.dumps(payload, indent=2)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1614,6 +2019,17 @@ def main(argv: list[str] | None = None) -> int:
             "docs/plans/ and validates against the v1.9 plan schema."
         ),
     )
+    parser.add_argument(
+        "--architecture-drift-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-004 F003: promote the architecture-drift "
+            "probe from advisory (the default — stale_major and absent "
+            "emit WARN) to blocker (stale_major and absent emit FAIL; "
+            "exit 2 under --strict-codes). stale_minor remains advisory "
+            "in both modes."
+        ),
+    )
     args = parser.parse_args(argv)
 
     results = run_all_checks(
@@ -1621,14 +2037,16 @@ def main(argv: list[str] | None = None) -> int:
         include_projects=args.include_projects,
         validate_plans=args.validate_plans,
         validate_plans_strict_mode=args.validate_plans_strict,
+        architecture_drift_strict_mode=args.architecture_drift_strict,
     )
     print(render_json(results) if args.json else render_text(results))
-    # The --validate-plans-strict flag implicitly opts into the strict-codes
-    # exit matrix: per the F003 acceptance, a strict-mode failure must
-    # produce exit 2. Operators who pass --strict-codes explicitly still
-    # get the same semantics; operators who pass neither stick with the
-    # legacy 0/1 contract.
-    if args.strict_codes or args.validate_plans_strict:
+    # The --validate-plans-strict and --architecture-drift-strict flags
+    # implicitly opt into the strict-codes exit matrix: per the F003
+    # acceptance contracts, a strict-mode failure must produce exit 2.
+    # Operators who pass --strict-codes explicitly still get the same
+    # semantics; operators who pass none of these stick with the legacy
+    # 0/1 contract.
+    if args.strict_codes or args.validate_plans_strict or args.architecture_drift_strict:
         return compute_strict_exit(results)
     return 0 if all(r.ok for r in results) else 1
 

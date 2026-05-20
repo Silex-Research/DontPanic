@@ -1461,6 +1461,16 @@ def _doctor_main(argv: list[str]) -> int:
             "v1.9 plan schema produces exit 2 under the strict-codes matrix."
         ),
     )
+    parser.add_argument(
+        "--architecture-drift-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-004 F003: promote the architecture-drift "
+            "probe from advisory (WARN) to blocker (FAIL). When set, a "
+            "stale_major drift or absent architecture.json produces exit "
+            "2 under the strict-codes matrix. stale_minor stays advisory."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1479,22 +1489,24 @@ def _doctor_main(argv: list[str]) -> int:
         include_projects=True,
         validate_plans=args.validate_plans,
         validate_plans_strict_mode=args.validate_plans_strict,
+        architecture_drift_strict_mode=args.architecture_drift_strict,
     )
     print(jd.render_json(results) if args.json else jd.render_text(results))
     # Plan 4 F003 / Plan 3 F003 acceptance: in advisory mode the
-    # validate-plans-strict probe emits WARN findings but those must NOT
-    # escalate the canonical exit code (acceptance says advisory → exit 0
-    # when no other probe fails). Strict mode keeps WARN→1/FAIL→2 behavior
-    # so a malformed plan still blocks. Probe-specific override per
-    # codex-auditor Plan 3 F003 i1 high/correctness finding.
+    # validate-plans-strict and architecture-drift probes emit WARN findings
+    # but those must NOT escalate the canonical exit code (acceptance says
+    # advisory → exit 0 when no other probe fails). Strict mode keeps
+    # WARN→1/FAIL→2 behavior so a malformed plan / major drift still blocks.
+    # Probe-specific override per codex-auditor Plan 3 F003 i1 finding.
+    exit_inputs = list(results)
     if not args.validate_plans_strict:
         exit_inputs = [
-            r for r in results
+            r for r in exit_inputs
             if r.name != "validate-plans-strict"
             and not r.name.startswith("validate-plans-strict:")
         ]
-    else:
-        exit_inputs = results
+    if not args.architecture_drift_strict:
+        exit_inputs = [r for r in exit_inputs if r.name != "architecture-drift"]
     return jd.compute_strict_exit(exit_inputs)
 
 

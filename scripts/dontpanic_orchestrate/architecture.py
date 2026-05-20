@@ -647,6 +647,7 @@ Subcommands:
   regen   Crawl source + plans → docs/architecture/architecture.json (default).
   status  Print drift state (fresh/stale/absent) without regenerating.
   diff    Emit machine-readable JSON diff vs. the stored snapshot.
+  hook    Install / uninstall / inspect the opt-in pre-commit hook (F005).
 
 The JSON is the agent-facing contract; HTML (F002) is a separate command.
 """
@@ -693,6 +694,36 @@ def _build_parser() -> argparse.ArgumentParser:
     p_diff = sub.add_parser("diff", help="Machine-readable diff vs. stored snapshot")
     p_diff.add_argument("--repo-root", type=Path, default=None)
     p_diff.add_argument("--output", type=Path, default=None)
+
+    p_hook = sub.add_parser(
+        "hook",
+        help="Install / uninstall / inspect the opt-in pre-commit hook (F005)",
+    )
+    p_hook.add_argument("--repo-root", type=Path, default=None)
+    hook_action = p_hook.add_mutually_exclusive_group(required=True)
+    hook_action.add_argument(
+        "--install",
+        action="store_true",
+        help="Install .git/hooks/pre-commit (warn-only default; "
+        "--auto-regen opts in to regen+stage on commit).",
+    )
+    hook_action.add_argument(
+        "--uninstall",
+        action="store_true",
+        help="Remove the DontPanic hook and restore any backed-up prior hook.",
+    )
+    hook_action.add_argument(
+        "--status",
+        dest="hook_status",
+        action="store_true",
+        help="Print whether the hook is installed and what mode it is in.",
+    )
+    p_hook.add_argument(
+        "--auto-regen",
+        action="store_true",
+        help="With --install: opt in to regen+stage mode (default is warn-only).",
+    )
+    p_hook.add_argument("--json", action="store_true", help="Emit JSON instead of text")
     return parser
 
 
@@ -747,6 +778,28 @@ def cli_main(argv: list[str] | None = None) -> int:
     if sub == "diff":
         result = diff(repo_root, output_path=output)
         print(json.dumps(result, sort_keys=True, indent=2))
+        return 0
+    if sub == "hook":
+        from dontpanic_orchestrate import architecture_hook  # local import
+
+        json_out = bool(getattr(args, "json", False))
+        try:
+            if getattr(args, "install", False):
+                result = architecture_hook.install(
+                    repo_root, auto_regen=bool(getattr(args, "auto_regen", False))
+                )
+            elif getattr(args, "uninstall", False):
+                result = architecture_hook.uninstall(repo_root)
+            else:  # --status
+                result = architecture_hook.status(repo_root)
+        except (FileNotFoundError, FileExistsError, RuntimeError) as exc:
+            print(f"[architecture] hook: {exc}", file=__import__("sys").stderr)
+            return 1
+        if json_out:
+            print(json.dumps(result, sort_keys=True, indent=2))
+        else:
+            for key, value in sorted(result.items()):
+                print(f"[architecture] hook {key}={value}")
         return 0
     parser.print_help()
     return 2
