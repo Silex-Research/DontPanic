@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T15:36:08Z",
+  "completed_at": "2026-05-20T15:40:29Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-dfv0skii target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 294046 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2823888,
+    "tokens_out": 17179,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. No EC5 target-context finding: implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so no forbidden command shapes. Baseline checked: `architecture_html.render_html(snapshot: dict[str, Any]) -> str`; CSS vars are `--bg`, `--bg-panel`, `--fg`, `--fg-muted`, `--accent`, `--accent-2`, `--good`, `--warn`, `--bad`, `--border`.\n\nFINDING (high, security): `fix_url` allows active `javascript:` href injection despite the “no injection” acceptance. Evidence: `report_html.py:467-468` and `:520-521` escape the string but still render `href=\"javascript:alert(3)\"`; my direct renderer probe printed that exact href. Recommendation: validate/sanitize URL schemes before rendering links, e.g. allow only `http`, `https`, or render unsafe URLs as inert escaped text, and add a regression test for `javascript:`.\n\nFINDING (medium, correctness): `_validate_smoke_payload` does not type-check the F003 smoke envelope fields that drive report semantics. Evidence: `report_html.py:181-208` only requires `schema_version`, `supervisor_surfaces`, surface `name`, and `status`; `_compute_verdict` reads unvalidated `smoke.exit_code` at `:288`, and a smoke payload with `\"exit_code\": \"2\"` rendered a `verdict-ready` chip instead of rejecting the malformed payload or blocking. Recommendation: validate F003 schema-required fields, especially `exit_code` int `0|1|2`, top-level `el",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_install_report_html_f004.py -q -p no:cacheprovider && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q -p no:cacheprovider && PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_install_report_html_f004.py -q -p no:cacheprovider -s -k 'not test_9_write_install_report_writes_file'",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate.init.report_html import render_install_report, InstallReportError; ...'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate.init import report_html; ...'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate.init.report_html import render_install_report; ...'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F004",
+      "issue": "`fix_url` allows active `javascript:` href injection despite the “no injection” acceptance. Evidence: `report_html.py:467-468` and `:520-521` escape the string but still render `href=\"javascript:alert(3)\"`; my direct renderer probe printed that exact href. Recommendation: validate/sanitize URL schemes before rendering links, e.g. allow only `http`, `https`, or render unsafe URLs as inert escaped text, and add a regression test for `javascript:`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "`_validate_smoke_payload` does not type-check the F003 smoke envelope fields that drive report semantics. Evidence: `report_html.py:181-208` only requires `schema_version`, `supervisor_surfaces`, surface `name`, and `status`; `_compute_verdict` reads unvalidated `smoke.exit_code` at `:288`, and a smoke payload with `\"exit_code\": \"2\"` rendered a `verdict-ready` chip instead of rejecting the malformed payload or blocking. Recommendation: validate F003 schema-required fields, especially `exit_code`",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

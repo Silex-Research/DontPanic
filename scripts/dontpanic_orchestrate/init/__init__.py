@@ -535,6 +535,25 @@ def _build_parser() -> argparse.ArgumentParser:
             "final step after all probes pass (Plan 2 F003 step 9)."
         ),
     )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-002 F004: also write docs/install-report.html "
+            "after the walk (and smoke, when smoke ran). The report mirrors "
+            "the doctor + smoke JSON envelopes into a single-page HTML "
+            "artifact. Output is gitignored."
+        ),
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=None,
+        help=(
+            "Override the install-report output path. Default = "
+            "<repo>/docs/install-report.html. Only honored with --report."
+        ),
+    )
     return parser
 
 
@@ -610,6 +629,23 @@ def init_main(argv: list[str] | None = None) -> int:
         if smoke_result is not None:
             from dontpanic_orchestrate import smoke as _smoke
             print(_smoke.render_smoke_text(smoke_result))
+
+    # Plan 2026-05-19-002 F004: emit the install-report HTML when
+    # --report is set. The doctor envelope used here is built from the
+    # walker's FINAL sweep (post-fix) so the report reflects the state
+    # the operator is actually leaving the install in.
+    if args.report:
+        from dontpanic_orchestrate.init.report_html import write_install_report
+        doctor_envelope = pr.envelope_for_sweep(
+            result.final if not result.non_interactive else result.initial
+        )
+        smoke_envelope = (
+            json.loads(smoke_result.to_json()) if smoke_result is not None else None
+        )
+        repo_root = Path(__file__).resolve().parents[3]
+        out_path = args.report_path or (repo_root / "docs" / "install-report.html")
+        written = write_install_report(doctor_envelope, smoke_envelope, out_path)
+        print(f"[report] wrote {written}", file=sys.stderr)
 
     # Exit-code resolution.
     if smoke_result is None:

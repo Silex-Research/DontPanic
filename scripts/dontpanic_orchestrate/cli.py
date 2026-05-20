@@ -1493,6 +1493,46 @@ def _doctor_main(argv: list[str]) -> int:
             "external snapshot."
         ),
     )
+    # Plan 2026-05-19-002 F004-i1 fix: --profile + --profile-strict + --report
+    # + --report-path must be available on the console-script entry too,
+    # not just on the bare scripts/dontpanic_doctor.py. Both surfaces share
+    # the same flag namespace.
+    parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        choices=("core", "discord", "firebase-dashboard", "openclaw", "ci"),
+        help=(
+            "Plan 2026-05-19-002 F001: run the profile-aware prereq probe "
+            "sweep. When omitted, doctor runs the legacy CheckResult "
+            "pipeline unchanged."
+        ),
+    )
+    parser.add_argument(
+        "--profile-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-002 F001: promote WARN -> FAIL under the "
+            "selected --profile."
+        ),
+    )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-002 F004: render docs/install-report.html "
+            "(self-contained HTML5; mobile-responsive). Requires --profile."
+        ),
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=None,
+        help=(
+            "Plan 2026-05-19-002 F004: override the install-report output "
+            "path. Default = <repo>/docs/install-report.html."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1505,6 +1545,13 @@ def _doctor_main(argv: list[str]) -> int:
         import jarvis_doctor as jd  # type: ignore[import-not-found]
     finally:
         sys.path.pop(0)
+
+    # F001 + F004 path: --profile (with optional --report) delegates to
+    # the canonical jd.main() driver. This keeps the profile-aware
+    # render_text/render_json + report wiring in one place rather than
+    # forking the logic between cli.py and dontpanic_doctor.py.
+    if args.profile is not None or args.report:
+        return jd.main(argv)
 
     results = jd.run_all_checks(
         skip_auth=args.skip_auth,

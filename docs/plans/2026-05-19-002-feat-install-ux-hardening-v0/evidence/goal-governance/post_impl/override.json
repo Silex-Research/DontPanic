@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "14-finding cluster classified as child_plan — completion findings are roadmap-level expansions (maintainer profile, --auto-fix-safe-all batch flag, Windows support, real-CLI --mode=live) explicitly deferred in non_goals + Roadmap Plan 5/7. v0 ships the four-feature install UX core (probes + init walker + smoke harness + HTML report) per D001; expansions belong to follow-on plans, not in-scope for v0 close.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-05-20T16:03:24Z",
+  "plan_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "cluster infra/new-user-runs-doctor-on-fresh-clone (14 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:3ac63033435cad2d7e64e38cd5a249d6825df73b4e528b662ff503aaf3f526c8",
+  "objective_contract_hash": "sha256:04781910a15f76406f5993628f70c70da1d794ea51f56b780bc3cde92571a510",
+  "completion_findings_hash": "sha256:66722986a2d257a1f8a2e93a8a43aaef7f7bc0d7d1a65592c5d3bc08874f0077",
+  "evidence_manifest_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
