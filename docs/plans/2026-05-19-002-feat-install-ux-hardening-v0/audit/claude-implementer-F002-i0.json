@@ -1,0 +1,47 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-20T12:26:39Z",
+  "completed_at": "2026-05-20T12:36:28Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-cjsproob target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3567 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 7007147,
+    "tokens_out": 30631,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F002] Everything is wired correctly. Let me list every side-effect command I invoked for the audit:\n\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py::test_a_install_uninstall_roundtrip_preserves_prior_hook -q\n$ python scripts/sanitization_check.py\n$ PYTHONPATH=scripts python -m dontpanic_orchestrate init --non-interactive --json\n$ PYTHONPATH=scripts python -m dontpanic_orchestrate init --help\n\n## Summary\n\nImplemented F002 `dontpanic init` as a new subpackage at `scripts/dontpanic_orchestrate/init/__init__.py`, exposing `init_main(argv)` plus the `Walker` class with dependency-injected `prompt_fn`/`output_fn`/`subprocess_runner`/`probe_runner` so tests can pin behavior cleanly. Default profile is `core`; the walker prompts per-probe only for FAIL+WARN items (advisory never prompts), executes auto-fixes via `subprocess.run(argv: list[str], shell=False",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py::test_a_install_uninstall_roundtrip_preserves_prior_hook -q",
+      "python scripts/sanitization_check.py",
+      "PYTHONPATH=scripts python -m dontpanic_orchestrate init --non-interactive --json",
+      "PYTHONPATH=scripts python -m dontpanic_orchestrate init --help"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

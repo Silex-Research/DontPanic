@@ -1,0 +1,57 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T12:36:28Z",
+  "completed_at": "2026-05-20T12:40:18Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-cjsproob target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 248783 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2096797,
+    "tokens_out": 13412,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): Interactive `dontpanic init` returns exit code `2` for remaining failed probes, but F002 defines `2` as blocked and `1` as remaining fixes. Evidence: `WalkResult.exit_code()` delegates to `self.final.exit_code()` in [__init__.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/init/__init__.py:129), and a synthetic interactive fail returned `2`. Recommendation: map any remaining fail/warn after the walk to `EXIT_REMAINING = 1`; reserve `EXIT_BLOCKED = 2` for invalid registry/unrecoverable startup errors.\n\nFINDING (medium, correctness): Advisory probes do not surface as info in interactive output. Evidence: `Walker.run()` skips all non-fail/warn results at [__init__.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/init/__init__.py:262), and `render_walk_text()` only renders fail/warn, so an advisory-only sweep prints “all probes green.” Recommendation: render advisory items as informational output while keeping them non-prompting and non-blocking.\n\nFINDING (medium, test_coverage): `test_init_cli_integration.py` does not meet the required synthetic fixture/exit-code coverage. Evidence: the test docstring claims a synthetic fixture, but `_spawn_init_cli()` runs the real host registry and accepts return code `0` or `1` at [test_init_cli_integration.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/t",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate init --non-interactive --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate init --help",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Interactive `dontpanic init` returns exit code `2` for remaining failed probes, but F002 defines `2` as blocked and `1` as remaining fixes. Evidence: `WalkResult.exit_code()` delegates to `self.final.exit_code()` in [__init__.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/init/__init__.py:129), and a synthetic interactive fail returned `2`. Recommendation: map any remaining fail/warn after the walk to `EXIT_REMAINING = 1`; reserve `EXIT_BLOCKED = 2` for invalid regi",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Advisory probes do not surface as info in interactive output. Evidence: `Walker.run()` skips all non-fail/warn results at [__init__.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/init/__init__.py:262), and `render_walk_text()` only renders fail/warn, so an advisory-only sweep prints “all probes green.” Recommendation: render advisory items as informational output while keeping them non-prompting and non-blocking.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "`test_init_cli_integration.py` does not meet the required synthetic fixture/exit-code coverage. Evidence: the test docstring claims a synthetic fixture, but `_spawn_init_cli()` runs the real host registry and accepts return code `0` or `1` at [test_init_cli_integration.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py:73), so it does not assert the required non-interactive fail+warn exit `1`. Recommendation: add an actual synthetic fi",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

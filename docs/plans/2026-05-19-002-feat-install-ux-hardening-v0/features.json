@@ -58,10 +58,21 @@
         "Run full orchestrator sweep + sanitization check."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/init/__init__.py exposes init_main(argv) entry point. (2) `dontpanic init` defaults to --profile=core (NOT undefined). (3) Walker prompts per-probe operator confirmation for fail+warn items; advisory items NEVER prompt. (4) Auto-fix execution uses subprocess.run(argv: list[str], shell=False) — strict argv allowlist, NEVER shell strings; validator rejects shell-string fix_command at startup. (5) NO `--auto-fix-safe-all` batch flag in v0. (6) Package-manager installs OFF by default; opt-in per probe via auto_install_safe=true. (7) `--non-interactive` flag exits 1 with structured JSON listing fail+warn probes. (8) Idempotent re-runs work without a state file. (9) NEVER auto-creates GitHub PATs, NEVER auto-generates Firebase SA keys, NEVER runs sudo or system-Python modifications. (10) New test modules: test_init_walker_f002.py (>=10 cases) + test_init_cli_integration.py (CLI surface + strict-argv invariant). (11) Full sweep at or above lock-time baseline; sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T13:15:43Z"
     },
     {
       "id": "F003",

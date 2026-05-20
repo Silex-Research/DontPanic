@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md",
+        "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/gate-state.json",
+        "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md,docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/gate-state.json,docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/gate-state.json",
+    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl"
+  ]
+}
