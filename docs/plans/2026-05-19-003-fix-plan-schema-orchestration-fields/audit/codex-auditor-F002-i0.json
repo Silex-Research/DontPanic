@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T21:23:23Z",
+  "completed_at": "2026-05-20T21:26:01Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-9n6nci8v target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 62370 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 595401,
+    "tokens_out": 10055,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. The implementer’s summary correctly declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): F002 was signed off even though its own acceptance remains unmet. Evidence: `features.json` still has `F002 passes=False`, no `evidence_refs`, and no `verified_by`; the implementer audit says “Awaiting operator action” but still records `audit_status: signed_off`. Recommendation: mark this audit as not signed off until operator close-out actually flips F002 with a recorded reason.\n\nFINDING (high, correctness): `agent-conventions` has not been synchronized or released as v1.9.0. Evidence: `$HOME/Documents/GitHub/agent-conventions/VERSION` is `1.8.0`, `git tag --list 'v1.9.0'` returned nothing, `git remote` returned nothing, `git ls-remote --tags origin 'refs/tags/v1.9.0'` failed because `origin` does not exist, and `diff -qr` shows drift from `DontPanic/claude/shared`. Recommendation: replay the `claude/shared` mirror into `agent-conventions`, bump VERSION/CHANGELOG, commit, tag `v1.9.0`, add/push the remote, then close F002 via the CLI.\n\nChecks run:\n$ git status --short --branch\n$ git diff --stat HEAD~1..HEAD\n$ git show --name-only --oneline --no-renames HEAD\n$ git status --short --branch && git remote -v && git tag --list 'v1.9.0' && printf 'VERSION=' && tr -d '\\n' < VERSION && printf '\\n'\n$ git",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short --branch",
+      "git diff --stat HEAD~1..HEAD",
+      "git show --name-only --oneline --no-renames HEAD",
+      "git status --short --branch && git remote -v && git tag --list 'v1.9.0' && printf 'VERSION=' && tr -d '\\n' < VERSION && printf '\\n'",
+      "git ls-remote --tags origin 'refs/tags/v1.9.0'",
+      "diff -qr --exclude='.git' --exclude='.pytest_cache' $HOME/Documents/GitHub/DontPanic/claude/shared $HOME/Documents/GitHub/agent-conventions",
+      "python3 -m json.tool docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F002-i0.json",
+      "python3 -m json.tool docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "F002 was signed off even though its own acceptance remains unmet. Evidence: `features.json` still has `F002 passes=False`, no `evidence_refs`, and no `verified_by`; the implementer audit says “Awaiting operator action” but still records `audit_status: signed_off`. Recommendation: mark this audit as not signed off until operator close-out actually flips F002 with a recorded reason.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`agent-conventions` has not been synchronized or released as v1.9.0. Evidence: `$HOME/Documents/GitHub/agent-conventions/VERSION` is `1.8.0`, `git tag --list 'v1.9.0'` returned nothing, `git remote` returned nothing, `git ls-remote --tags origin 'refs/tags/v1.9.0'` failed because `origin` does not exist, and `diff -qr` shows drift from `DontPanic/claude/shared`. Recommendation: replay the `claude/shared` mirror into `agent-conventions`, bump VERSION/CHANGELOG, commit, tag `v1.9.0`, add",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

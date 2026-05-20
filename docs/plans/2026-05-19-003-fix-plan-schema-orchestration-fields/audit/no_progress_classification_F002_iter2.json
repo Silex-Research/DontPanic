@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T21:29:45Z",
+  "feature_id": "F002",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "critical",
+      "category": "correctness",
+      "issue_excerpt": "F002 acceptance is not satisfied. Evidence: `features.json` still has `F002 passes:false` with no `evidence_refs`, `verified_by`, or `verified_at`; `agent-conv…",
+      "rationale": "severity=critical, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "The implementer audit status is `signed_off` despite its own summary saying the correct disposition is `needs_changes`. Evidence: `.audit_status` is `\"signed_o…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "advisory",
+      "category": "correctness",
+      "issue_excerpt": "The implementer audit contains a spurious EC5 advisory claiming `Env: dev` was missing. Evidence: the summary visibly includes `- Env: dev`. Recommendation: re…",
+      "rationale": "severity=advisory, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

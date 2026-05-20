@@ -252,3 +252,85 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T21:23:13Z
+event: volley_start
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T21:23:13Z
+event: volley_start
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T21:29:45Z
+event: no_progress_classification
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+aggregate: implementation_defect
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F002
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=critical, category=correctness: F002 acceptance is not satisfied. Evidence: `features.json` still has `F002 passes:false` with no `evidence_refs`, `verified_by`, or `verified_at`; `agent-conv…
+  - [implementation_defect] severity=high, category=correctness: The implementer audit status is `signed_off` despite its own summary saying the correct disposition is `needs_changes`. Evidence: `.audit_status` is `"signed_o…
+  - [implementation_defect] severity=advisory, category=correctness: The implementer audit contains a spurious EC5 advisory claiming `Env: dev` was missing. Evidence: the summary visibly includes `- Env: dev`. Recommendation: re…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-003-fix-plan-schema-orchestration-fields F002 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T21:29:45Z
+event: breaker_tripped
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-19-003-fix-plan-schema-orchestration-fields breaker:no_progress` or `jarvis resume 2026-05-19-003-fix-plan-schema-orchestration-fields --all`.
+
+===
+---
+timestamp: 2026-05-20T21:29:45Z
+event: volley_terminal
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
