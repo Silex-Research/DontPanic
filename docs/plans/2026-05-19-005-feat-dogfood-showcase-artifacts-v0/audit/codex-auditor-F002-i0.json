@@ -1,0 +1,56 @@
+{
+  "task_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+  "audit_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T05:33:15Z",
+  "completed_at": "2026-05-20T05:36:17Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-005-feat-dogfood-showcase-artifacts-v0-h07a6dp_ target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1951497 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 998143,
+    "tokens_out": 10557,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target context is valid: summary declares Repo/Env/Project correctly, structured `target_context.env=dev`, `project=null`, and no forbidden command shapes were recorded.\n\nFINDING (high, correctness): `docs/showcase/README.md` omits the required `agent-conventions` validate-plans artifact entry. Evidence: F002 steps require `agent-conventions (architecture + validate-plans)`, but the README lists architecture only and says there are no plan dirs; no `agent-conventions-validate-plans.json` is present. Recommendation: either generate/link the artifact or formally reconcile the locked acceptance if agent-conventions is intentionally architecture-only.\n\nFINDING (medium, test_coverage): `test_showcase_docs_f002.py` would not catch the missing `agent-conventions` validate-plans requirement. Evidence: `COMMITTED_ARTIFACTS` hardcodes only `agent-conventions-architecture.{html,json}`. Recommendation: add an assertion for the required per-target artifact matrix, not just currently committed filenames.\n\nFINDING (advisory, test_coverage): I could not independently rerun pytest in this read-only sandbox because Python reports no usable writable temp directory. Sanitization did run clean.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpa",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py -q -s -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q -s -p no:cacheprovider"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`docs/showcase/README.md` omits the required `agent-conventions` validate-plans artifact entry. Evidence: F002 steps require `agent-conventions (architecture + validate-plans)`, but the README lists architecture only and says there are no plan dirs; no `agent-conventions-validate-plans.json` is present. Recommendation: either generate/link the artifact or formally reconcile the locked acceptance if agent-conventions is intentionally architecture-only.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "`test_showcase_docs_f002.py` would not catch the missing `agent-conventions` validate-plans requirement. Evidence: `COMMITTED_ARTIFACTS` hardcodes only `agent-conventions-architecture.{html,json}`. Recommendation: add an assertion for the required per-target artifact matrix, not just currently committed filenames.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "I could not independently rerun pytest in this read-only sandbox because Python reports no usable writable temp directory. Sanitization did run clean. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py -q -p no:cacheprovider $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py -q -s -p no:cacheprovider $ PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitizati",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

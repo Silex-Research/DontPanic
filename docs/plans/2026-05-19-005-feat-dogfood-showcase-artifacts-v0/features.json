@@ -53,10 +53,21 @@
         "Run full orchestrator sweep + sanitization check."
       ],
       "acceptance": "(1) docs/showcase/README.md exists with: intro, per-target artifact entries (label + description + link + regen command), 'Coming soon' section referencing Plan 2 F004 + Plan 003 + Plan 4.5 by plan IDs, 'Local integration — deferred' section codifying the 3 triggers (committed architecture.json in target / target-repo CI drift checks / non-DontPanic contributors needing in-repo map). (2) Repo-root README.md has 'See DontPanic on real repos' section linking to docs/showcase/README.md. (3) scripts/showcase.sh exists, is executable, invokes `python -m dontpanic_orchestrate showcase regen --all` with arg-passthrough. (4) Makefile has `showcase` target. (5) New test module test_showcase_docs_f002.py with >=7 cases covering docs presence + content + wrapper executability. (6) Full sweep at or above lock-time baseline; sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "signed_off iter1; only carrying advisory test_coverage finding (auditor read-only sandbox tmpdir; locally re-verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T06:30:00Z"
     }
   ]
 }

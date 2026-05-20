@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "11-finding cluster all classified as child_plan (operator-deferred per D001 three triggers: target-repo committed architecture.json, target-repo CI drift, non-DontPanic contributors); showcase-only is the locked scope for v0 — no integration regressions in scope",
+  "approved_by": "bayesian",
+  "approved_at": "2026-05-20T11:35:58Z",
+  "plan_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "cluster docs/new-user-sees-platform-on-real-repos (11 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:2a5e5566b2b509f5dcba52efff0497242f6650b9891b43edc798fe55c192fc62",
+  "objective_contract_hash": "sha256:26aa4128fd391c90c571f86daa7f4e01a32a09150faae003cecb19d9ad79c261",
+  "completion_findings_hash": "sha256:9a22791fef557ebfd82b9e79fe63e4ae5d0255f2768bdfeffd4635d229099ffe",
+  "evidence_manifest_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
