@@ -234,3 +234,132 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T14:46:08Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T14:46:08Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T14:56:08Z
+event: error
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F003
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-20T15:08:43Z
+event: error
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+agent: claude
+role: implementer
+iteration: 1
+feature_id: F003
+---
+
+Executor claude (implementer) iteration 1 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-20T15:11:00Z
+event: no_progress_classification
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: `dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failur…
+  - [implementation_defect] severity=high, category=test_coverage: The required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` module is missing. Evidence: `test -f scripts/dontpanic_orchestrate/tests/test_sm…
+  - [implementation_defect] severity=medium, category=correctness: `dontpanic init` skips the required final smoke run in non-interactive mode. Evidence: `scripts/dontpanic_orchestrate/init/__init__.py:575` gates smoke on `not…
+  - [implementation_defect] severity=medium, category=correctness: The synthetic fixture does not expose the required `SyntheticPlanFixture` surface and uses a different synthetic plan id than acceptance names. Evidence: the i…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-002-feat-install-ux-hardening-v0 F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T15:11:00Z
+event: breaker_tripped
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-19-002-feat-install-ux-hardening-v0 breaker:no_progress` or `jarvis resume 2026-05-19-002-feat-install-ux-hardening-v0 --all`.
+
+===
+---
+timestamp: 2026-05-20T15:11:00Z
+event: volley_terminal
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-20T15:20:05Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F003
+reason_class: implementation_defect
+---
+
+Operator closed feature F003 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-002-feat-install-ux-hardening-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

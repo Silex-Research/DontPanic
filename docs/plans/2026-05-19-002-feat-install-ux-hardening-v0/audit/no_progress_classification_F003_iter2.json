@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T15:11:00Z",
+  "feature_id": "F003",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "`dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failur…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "The required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` module is missing. Evidence: `test -f scripts/dontpanic_orchestrate/tests/test_sm…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "`dontpanic init` skips the required final smoke run in non-interactive mode. Evidence: `scripts/dontpanic_orchestrate/init/__init__.py:575` gates smoke on `not…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 3,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "The synthetic fixture does not expose the required `SyntheticPlanFixture` surface and uses a different synthetic plan id than acceptance names. Evidence: the i…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T15:08:43Z",
+  "completed_at": "2026-05-20T15:11:00Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-e_94gob7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 157989 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 665955,
+    "tokens_out": 8759,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. The implementer audit summary declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; `target_context.commands_run` was empty, so I found no forbidden command shapes there.\n\nFINDING (high, correctness): `dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failure, then calls `tempfile.gettempdir()` again while formatting the error at `scripts/dontpanic_orchestrate/smoke/__init__.py:611-614`, producing an uncaught `FileNotFoundError`. Recommendation: avoid re-calling `gettempdir()` in the exception path; preserve the candidate/temp root string safely and return the stable env-blocker `SmokeResult`.\n\nFINDING (high, test_coverage): The required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` module is missing. Evidence: `test -f scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` returned `1`, and `rg --files` showed no such file. Recommendation: add the requested >=8-case fixture test module, including the no-real-CLI invariant and stable JSON schema assertion.\n\nFINDING (medium, correctness): `dontpanic init` skips the required final smoke run in non-interactive mode. Evidence: `scripts/dontpanic_orchestrate/init/__init__.py:575` gates smoke on `not args.non_interactive`, but acceptance requires init to automatically run smoke after probes pass. Recommendation: ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli smoke --mode=mocked --json",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failure, then calls `tempfile.gettempdir()` again while formatting the error at `scripts/dontpanic_orchestrate/smoke/__init__.py:611-614`, producing an uncaught `FileNotFoundError`. Recommendation: avoid re-calling `gettempdir()` in the exception path; preserve the candidate/temp root string safely and return the stable env-blocker `SmokeResult`",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` module is missing. Evidence: `test -f scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` returned `1`, and `rg --files` showed no such file. Recommendation: add the requested >=8-case fixture test module, including the no-real-CLI invariant and stable JSON schema assertion.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`dontpanic init` skips the required final smoke run in non-interactive mode. Evidence: `scripts/dontpanic_orchestrate/init/__init__.py:575` gates smoke on `not args.non_interactive`, but acceptance requires init to automatically run smoke after probes pass. Recommendation: run smoke whenever probes are all-green unless explicitly skipped, and keep JSON output compatible with non-interactive mode.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The synthetic fixture does not expose the required `SyntheticPlanFixture` surface and uses a different synthetic plan id than acceptance names. Evidence: the implementation provides `synthetic_plan_fixture()` but no `SyntheticPlanFixture`, and `SYNTHETIC_PLAN_ID` is `2026-05-19-901-feat-smoke-synthetic` at `smoke/__init__.py:64`, not the specified `2026-05-19-901-smoke-feat-synthetic` prefix. Recommendation: expose the named fixture API expected by the plan/tests and resolve the ID requirement e",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

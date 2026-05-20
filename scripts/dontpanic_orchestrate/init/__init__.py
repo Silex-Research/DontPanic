@@ -526,6 +526,15 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Machine-readable JSON output in any mode.",
     )
+    parser.add_argument(
+        "--skip-smoke",
+        action="store_true",
+        help=(
+            "Skip the post-walk supervisor-plumbing smoke test. By default "
+            "`dontpanic init` runs `dontpanic smoke --mode=mocked` as the "
+            "final step after all probes pass (Plan 2 F003 step 9)."
+        ),
+    )
     return parser
 
 
@@ -546,15 +555,73 @@ def init_main(argv: list[str] | None = None) -> int:
         return EXIT_BLOCKED
 
     result = walker.run()
+    walk_exit = result.exit_code()
 
-    # Non-interactive mode: ALWAYS emit JSON (per acceptance #7 — the
-    # structured envelope is the whole point of agent-installer mode).
+    # Plan 2 F003 acceptance #6: `dontpanic init` automatically runs smoke
+    # as final step after probes pass. Auditor F003-i1 finding #3 caught
+    # an earlier gate that skipped smoke under --non-interactive; that
+    # broke the acceptance contract. Smoke runs whenever the walk is
+    # all-green AND the operator did not opt out via --skip-smoke —
+    # interactive vs non-interactive is irrelevant to whether smoke runs.
+    # JSON consumers get smoke embedded as a top-level ``smoke`` field on
+    # the walk envelope (single parseable document) instead of two JSON
+    # blocks back-to-back.
+    smoke_result = None
+    if walk_exit == EXIT_READY and not args.skip_smoke:
+        import contextlib
+        import io as _io
+        from dontpanic_orchestrate import smoke as _smoke
+
+        # When the operator wants structured output (--json or
+        # --non-interactive), suppress supervisor.dispatch_volley's
+        # prose logs so the only stdout is the combined JSON envelope.
+        # In interactive text mode, let the supervisor logs through —
+        # they're the visible progress signal during a walk.
+        wants_json = args.json or args.non_interactive
+        log_buffer = _io.StringIO() if wants_json else None
+        ctx = (
+            contextlib.redirect_stdout(log_buffer)
+            if log_buffer is not None
+            else contextlib.nullcontext()
+        )
+        try:
+            with ctx:
+                smoke_result = _smoke.run_smoke(mode="mocked")
+        except _smoke.SmokeEnvBlockerError as exc:
+            # run_smoke can raise before returning a SmokeResult when the
+            # env can't host a smoke run (tmpdir unwritable, Python too
+            # old). Surface as exit 1 (EXIT_REMAINING) so init re-enters
+            # the doctor fix loop — the install is broken, not the
+            # supervisor.
+            smoke_result = _smoke._env_blocker_result(
+                mode="mocked", message=str(exc)
+            )
+
+    # Emit output. Non-interactive AND --json paths emit a single JSON
+    # envelope with embedded smoke; interactive text mode prints walk
+    # then smoke as separate sections.
     if args.non_interactive or args.json:
-        print(render_walk_json(result))
+        walk_envelope = json.loads(render_walk_json(result))
+        if smoke_result is not None:
+            walk_envelope["smoke"] = json.loads(smoke_result.to_json())
+        print(json.dumps(walk_envelope, indent=2))
     else:
         print(render_walk_text(result))
+        if smoke_result is not None:
+            from dontpanic_orchestrate import smoke as _smoke
+            print(_smoke.render_smoke_text(smoke_result))
 
-    return result.exit_code()
+    # Exit-code resolution.
+    if smoke_result is None:
+        return walk_exit
+    from dontpanic_orchestrate import smoke as _smoke
+    if smoke_result.exit_code == _smoke.EXIT_PASS:
+        return EXIT_READY
+    if smoke_result.exit_code == _smoke.EXIT_ENV_BLOCKER:
+        # Operator-actionable — doctor profile probes own the diag.
+        return EXIT_REMAINING
+    # EXIT_SUPERVISOR_DEFECT — escalate, not a doctor issue.
+    return EXIT_BLOCKED
 
 
 if __name__ == "__main__":

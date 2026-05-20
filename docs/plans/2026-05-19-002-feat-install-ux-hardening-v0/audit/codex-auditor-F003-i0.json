@@ -1,0 +1,75 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T14:56:09Z",
+  "completed_at": "2026-05-20T14:58:42Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-e_94gob7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 488649 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 917218,
+    "tokens_out": 10256,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. The implementer’s audit declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}` and `target_context.commands_run` is empty, so I found no forbidden command shapes there.\n\nFINDING (high, correctness): Implementer audit did not actually claim successful completion. Evidence: `claude-implementer-F003-i0.json` has `audit_status: blocked` and summary says `DISPATCH TIMED OUT after 600s`. Recommendation: rerun/complete implementation and persist a real completion audit.\n\nFINDING (high, test_coverage): Required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` is missing. Evidence: `test -f` returned absent and pytest cannot collect it. Recommendation: add the required >=8-case F003 smoke harness test module.\n\nFINDING (high, correctness): env-blocker temp-dir failures do not map to exit 2 JSON/doctor guidance. Evidence: `run_smoke()` calls `tempfile.mkdtemp()` at `smoke/__init__.py:599-600` outside a `SmokeEnvBlockerError` wrapper, and `dontpanic smoke --json` produced an uncaught traceback when temp dirs were unavailable. Recommendation: catch `OSError/FileNotFoundError` for all temp/state fixture setup and return exit 2 with stable JSON plus `dontpanic doctor --profile=core`.\n\nFINDING (high, correctness): `dontpanic init` does not safely re-enter the fix loop on smoke env blockers. Evidence: `init/__init__.py:578` calls `_smoke.run_smoke()` directly, but `run_smoke()` can raise `Smo",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py -q",
+      "PYTHONPATH=scripts python -m dontpanic_orchestrate smoke --mode=mocked --json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Implementer audit did not actually claim successful completion. Evidence: `claude-implementer-F003-i0.json` has `audit_status: blocked` and summary says `DISPATCH TIMED OUT after 600s`. Recommendation: rerun/complete implementation and persist a real completion audit.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "Required `scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py` is missing. Evidence: `test -f` returned absent and pytest cannot collect it. Recommendation: add the required >=8-case F003 smoke harness test module.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "env-blocker temp-dir failures do not map to exit 2 JSON/doctor guidance. Evidence: `run_smoke()` calls `tempfile.mkdtemp()` at `smoke/__init__.py:599-600` outside a `SmokeEnvBlockerError` wrapper, and `dontpanic smoke --json` produced an uncaught traceback when temp dirs were unavailable. Recommendation: catch `OSError/FileNotFoundError` for all temp/state fixture setup and return exit 2 with stable JSON plus `dontpanic doctor --profile=core`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`dontpanic init` does not safely re-enter the fix loop on smoke env blockers. Evidence: `init/__init__.py:578` calls `_smoke.run_smoke()` directly, but `run_smoke()` can raise `SmokeEnvBlockerError` before returning a `SmokeResult`. Recommendation: wrap `run_smoke()` in init and map env blockers to `EXIT_REMAINING`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Synthetic fixture does not match required plan contract. Evidence: `SYNTHETIC_PLAN_ID` is `2026-05-19-901-infra-smoke-synthetic` at `smoke/__init__.py:57`, not the required `2026-05-19-901-smoke-feat-synthetic` prefix, and `plan.md` frontmatter lacks `goal_type: mechanical` at `smoke/__init__.py:151-171`. Recommendation: align the fixture with the acceptance text or update the plan decision log if the schema forced a different ID shape.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F003",
+      "issue": "Required mock executor seam is not exposed as module-level classes. Evidence: `MockClaudeExecutor` and `MockCodexExecutor` are nested inside `_mock_executor_classes()` at `smoke/__init__.py:263-340`, while acceptance asks for named subclasses in the smoke subpackage. Recommendation: define/importable module-level mock executor classes so tests and downstream smoke consumers can assert the no-real-CLI invariant directly. Checks run: $ PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
