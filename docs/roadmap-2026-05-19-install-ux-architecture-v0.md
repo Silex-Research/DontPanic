@@ -1,14 +1,22 @@
-# Roadmap — Install UX + Architecture Map v0 (revised v1)
+# Roadmap — Install UX + Architecture Map + Intake Primitive v0 (revised v1.1)
 
-**Date drafted:** 2026-05-19 (v0); revised same day per operator review (v1)
+**Date drafted:** 2026-05-19 (v0); operator-revised same day (v1); intake primitive added (v1.1)
 **Status:** draft — for operator approval
-**Motivation:** First real user hit install friction (missing GitHub token, wrong Python version, no codex CLI). v4.1 closed the harness frictions; v5 candidates are speculative; the only item with *real user pain* attached is install UX.
+**Motivation:** First real user hit install friction (missing GitHub token, wrong Python version, no codex CLI). v4.1 closed the harness frictions; v5 candidates are speculative; the only item with *real user pain* attached is install UX. Operator review then identified the missing intake primitive between "installed" and "dispatching" — added as Plan 4.5.
 
 ---
 
-## Revisions from v0
+## Revisions from v1 (operator decisions 2026-05-19)
 
-Operator review caught six sequencing + scope issues plus two use-case gaps:
+1. **New Plan 4.5 — `dontpanic new` intake primitive** added between Plan 4 (architecture map) and Plan 6 (credentials). Bridges the install→dispatch gap; without it, every plan still needs hand-authoring.
+2. **`--surface` flag dropped from v0.** Humans describe intent; DontPanic infers surface from repo context + architecture map + file paths + package manifests. Override via future `--assume-surface` only after we discover inference is bad.
+3. **architecture.json is preferred, not required.** `dontpanic new` degrades gracefully: present + fresh → use it; missing → gather bounded context directly + record assumption; stale → warn + use with lower confidence or ignore stale sections; never block unless repo context is unreadable.
+4. **F004/F005 split adjusted.** File-writing + idempotency concerns moved into F004 acceptance (the dangerous feature). F005 is CLI wiring only.
+5. **Deterministic-first requirement.** `dontpanic new --from brief.md --draft-only` must NOT require a paid agent call when the brief is already sufficient. Templates first, agent refinement optional. Trust + cost discipline.
+
+## Revisions from v0 (earlier operator review)
+
+Six sequencing + scope issues plus two use-case gaps:
 
 1. **Plan 5 (agent-conventions remote) moved ahead of Plan 3 (schema fix)** — Plan 3 bumps the schema; needs a remote to ship it.
 2. **Plan 3 (schema fix) moved ahead of Plan 2 (install UX)** — Plan 2 expands doctor into a first-touch authority. Don't widen the doctor on top of a known false-fail.
@@ -26,17 +34,18 @@ Operator review caught six sequencing + scope issues plus two use-case gaps:
 
 | Order | Plan ID | Title | Status | Cost | Why this slot |
 |---|---|---|---|---|---|
-| 1 | Plan 1 | Housekeeping + tiny Hermes vocab cite | not-locked | 0 paid | Free; clears noise |
-| 2 | Plan 5 | agent-conventions GitHub remote | not-locked | 0 paid (~1 hr operator) | Prerequisite for Plan 3 |
+| 1 | Plan 1 | Housekeeping + tiny Hermes vocab cite | DONE @ `1827118` | 0 paid | Free; clears noise |
+| 2 | Plan 5 | agent-conventions remote + public-readiness audit | not-locked | 0 paid (~2 hr operator) | Prerequisite for Plan 3 |
 | 3 | Plan 3 | Plan schema mismatch fix | not-locked | ~5-8M | Quiet timebomb; pairs with v1.9.0 schema release |
 | 4 | Plan 2 F001 | Doctor widening (declarative probes + JSON + profiles) | not-locked | ~5-8M | Ship-fast; materially fixes first-user pain alone |
 | 5 | Plan 2 F002-F004 | `init`, smoke test, HTML report | not-locked | ~10-15M | Polish layer on top of F001 |
 | 6 | Plan 4 | Architecture map with drift detection | not-locked | ~10-15M | Validates HTML pattern + adds drift surface |
-| **— parallel —** | Plan 6 | Credential setup [operator] | operator-only | ~30-60 min operator | Runs alongside #2-#6 |
-| 7 | Plan 7 | Plan 004 F003-F005 + Plan 010 F003 | locked, gated | ~40-60M | Unlocks once credentials land |
-| 8 | Plan 8 | v5 candidates | deferred | — | Wait for cluster trigger |
+| 7 | **Plan 4.5** | **`dontpanic new` intake primitive v0** | **not-locked** | **~15-25M** | **Bridges install→dispatch gap; first consumer of architecture.json** |
+| **— parallel —** | Plan 6 | Credential setup [operator] | operator-only | ~30-60 min operator | Runs alongside #2-#7 |
+| 8 | Plan 7 | Plan 004 F003-F005 + Plan 010 F003 | locked, gated | ~40-60M | Unlocks once credentials land |
+| 9 | Plan 8 | v5 candidates | deferred | — | Wait for cluster trigger |
 
-**Total paid LLM cost for #1-#6 ≈ ~30-45M tokens** (one v4.1-sized session). Plus #7 ≈ ~40-60M when credentials land.
+**Total paid LLM cost for #1-#7 ≈ ~45-70M tokens** (~1.5x v4.1 session). Plus #8 ≈ ~40-60M when credentials land.
 
 ---
 
@@ -318,9 +327,109 @@ This turns "static snapshot" into "self-healing surface with explicit commit gat
 
 ---
 
+## Plan 4.5 — `dontpanic new` intake primitive v0  ★ NEW ★
+
+**Plan ID candidate:** `2026-05-19-006-feat-dontpanic-new-intake-primitive-v0`
+**Executes:** 7th (after Plan 4)
+**Status:** not-locked
+**Type:** feat
+**Dependencies:** Plan 4 F001+F002 (preferred, not required — `architecture.json` is consumed when available, fallback otherwise); Plan 2 F001 (soft — assumes installed env)
+**Estimated cost:** 2-3 paid volleys, ~15-25M tokens total
+
+> **Plan 4.5 is the first consumer of `architecture.json` but degrades gracefully without it.** This preserves Plan 4's value without making it a blocker to adoption.
+
+### Motivation
+
+Today's user journey is `install → ??? → hand-write features.json → dispatch`. The gap between green doctor and a lockable plan is the single largest cliff in the product. `dontpanic new` is the missing primitive — turning rough intent into a structured WorkRequest, then a draft plan, with the minimum useful follow-up.
+
+Without this, every plan after install still needs hand-authoring through the very period we should be improving the product loop.
+
+### Design principles
+
+- **Ask humans for intent, taste, constraints, and judgment. Ask the repo for facts. Ask agents to fill in implementation detail. Ask follow-up questions only when wrong assumptions would be costly.**
+- Progressive disclosure, not long-form intake.
+- Bounded reads (explicit list, not "read the whole repo").
+- Risk-aware question budgets (default cap = 3; risk-touching requests get more).
+- Deterministic-first: no paid agent call required when the brief is already sufficient and templates can fill the gap. Agent refinement is optional polish.
+- Repo-aware vs greenfield modes (different question banks).
+- Every assumption gets recorded in the draft plan's `decisions.jsonl` so downstream audits can route disagreements as `spec_ambiguity` rather than implementation defects.
+
+### Core requirements
+
+- **R1 — `WorkRequest` schema.** Structured intent capture with fields for intent, outcome criteria, scope (repo/surfaces inferred), constraints, evidence expectations, risk class, and assumptions. Versioned + validated against agent-conventions schema. The output of normalization, the input to sufficiency.
+
+- **R2 — Context gatherer with bounded reads.** Explicit list of files/dirs the gatherer is allowed to read:
+  - `README.md`, `GETTING_STARTED.md`, top-level docs
+  - Package manifests (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`)
+  - App structure (one level deep below `src/` or equivalent)
+  - Existing plans (`docs/plans/`) — IDs + titles only, not full contents
+  - Architecture docs if present
+  - Tests directory (file list only, not contents)
+  - Design system / frontend conventions if UI surface inferred
+  - `.dontpanic/dontpanic.json` project config
+  - `docs/architecture/architecture.json` if present and fresh
+  
+  Total read budget capped (e.g., ≤50KB total, ≤30 files). Exceeds → degraded mode with explicit "context truncated" assumption.
+
+- **R3 — Sufficiency checker with 6-category rubric.** Deterministic scorer for: intent, outcome, scope, constraints, evidence, risk. Each category 0-N points. Threshold sums to "proceed / ask / block." User sees the breakdown — not just yes/no. Auditable.
+
+- **R4 — Risk classifier.** Single function that returns `risk_class: low|medium|high` and a list of triggered axes from: `auth`, `money`, `data`, `security`, `deploy`, `ui`. Touching any axis → escalate question budget by 1 + flag in the draft plan as `risk_class: <class>` + `risk_axes: [...]`. Machine-readable signal for downstream gates.
+
+- **R5 — Plan drafter (the dangerous feature).** Emits draft plan directory at `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `plan.md` (status: `draft`), `features.json` (schema_version: 1.0, at least one feature with placeholder acceptance), `decisions.jsonl` (D001 entry: "drafted by dontpanic new with assumptions: [...]"). **Idempotent** — re-running with the same `WorkRequest` updates in place rather than creating dupes. Plan ID generation uses the existing date-based slot pattern. Never writes outside `docs/plans/<id>/` for v0.
+
+- **R6 — CLI subcommand `dontpanic new`** with flags:
+  - `--from <brief.md>` — load brief from file instead of stdin
+  - `--no-repo` — switch to greenfield product-shaping mode
+  - `--questions <N>` — cap follow-up questions (default 3, max 5)
+  - `--draft-only` — emit draft files, do not lock or dispatch
+  - `--non-interactive` — error if follow-up needed instead of prompting (for agent installers)
+  
+  No `--surface` flag in v0. Surface is inferred; visible in the generated WorkRequest for the operator to override by editing.
+
+- **R7 — Deterministic-first, agent-optional.** `dontpanic new --from brief.md --draft-only` with a brief that scores "proceed" on the sufficiency rubric MUST produce a valid draft plan without any paid agent call. Templates fill the gaps. Agent refinement is an opt-in polish pass (`--refine-with claude` or similar) for higher-quality drafts.
+
+- **R8 — Architecture.json: preferred, fallback graceful.**
+  - Present + fresh (per Plan 4 drift detection): use it as primary context source
+  - Missing: gather bounded context directly + record `architecture_json_absent: true` assumption
+  - Stale: warn, use it with lower confidence weight or ignore stale sections (drift detection tells us which)
+  - Unreadable: error with actionable message
+  - **Never blocks** unless repo context is fundamentally unreadable
+
+- **R9 — Repo-mode vs greenfield-mode question banks.** Greenfield asks app kind, target users, core workflows, platform, initial scope, design/quality expectations, stack/auth/data/budget constraints. Repo-mode skips most of these — it can read them.
+
+### Feature outline (revised F004/F005 split per operator review)
+
+- **F001 — `WorkRequest` schema + request normalizer.** Independently shippable (a structured type is useful outside `new`). Defines schema in agent-conventions (or DontPanic-local first, promote later). Normalizer turns rough text + `--from` file inputs into validated `WorkRequest` objects.
+- **F002 — Context gatherer with bounded reads + architecture.json consumer.** Implements the bounded-read budget (R2). Detects architecture.json freshness via Plan 4 fingerprint, consumes when fresh, falls back otherwise. Records what it read + what it skipped as assumptions.
+- **F003 — Sufficiency checker + risk classifier.** Pure functions over `WorkRequest`. Deterministic 6-category rubric + risk classifier. Returns structured score + recommended action (proceed/ask/block) + recommended question list when "ask."
+- **F004 — Plan drafter (file-writing + idempotency).** ★ The dangerous feature ★. Creates `docs/plans/<id>/` directory with plan.md + features.json + decisions.jsonl. Idempotent re-runs. Never writes outside `docs/plans/<id>/`. Validates emitted files against schemas before write. Test coverage must include: re-run produces same files, partial existing dirs are detected + updated cleanly, invalid `WorkRequest` errors before any file write.
+- **F005 — CLI subcommand `dontpanic new` (wiring only, no file ops).** Argument parsing, flag handling, prompt UI for follow-up questions, deterministic-first orchestration, calls F004 to emit files, prints next-step guidance. **No file-writing logic lives in F005** — that's all in F004.
+
+### Acceptance principles
+
+- F001 alone: a developer can construct a `WorkRequest` programmatically + validate it. Schema lives in agent-conventions (or DontPanic-local with promote-later note).
+- F002 alone: `dontpanic new --gather-context-only` (debug flag) returns the bounded read budget + assumptions list. Works with and without architecture.json present.
+- F003 alone: feeding a known-good brief returns "proceed"; a known-vague brief returns "ask" with specific question list; a known-risky brief returns elevated risk_class + risk_axes.
+- F004 alone: given a valid `WorkRequest` + sufficiency=proceed, emits a clean plan directory that passes existing doctor checks (validate-plans-strict from Plan 3).
+- F005 (full integration): a new user with a brief in `brief.md` runs `dontpanic new --from brief.md --draft-only` and gets a complete draft plan with no paid API call when the brief is sufficient. Risky or vague briefs get ≤3 follow-up questions before draft emission.
+- Idempotency: running `dontpanic new` twice with the same `WorkRequest` produces no-diff results.
+- Risk-aware: a brief that touches `auth` and `money` axes gets `risk_class: high` + 1-2 mandatory follow-up questions even if the rubric would otherwise say "proceed."
+
+### Out of scope
+
+- `--surface` CLI flag (v1 candidate as `--assume-surface` override after we see how inference performs)
+- Multi-turn dialogue (v0 is one follow-up batch ≤ `--questions` cap, then commit-or-block)
+- Auto-locking the draft plan (operator reviews + runs `dontpanic` lock command explicitly)
+- Auto-dispatching after lock (operator reviews + runs dispatch explicitly)
+- Cross-repo plan drafting (single-repo for v0)
+- Plan-template library / "scaffolds" for common request shapes — v1 candidate
+- Agent refinement pass (`--refine-with`) — flag is reserved for v1, not built in v0
+
+---
+
 ## Plan 6 — Credential setup [operator parallel track]
 
-**Status:** operator-only, not a coding plan; runs in parallel with Plans 2-4
+**Status:** operator-only, not a coding plan; runs in parallel with Plans 2-4.5
 **Dependencies:** none
 **Estimated cost:** ~30-60 min operator time
 
@@ -413,16 +522,23 @@ v0 scopes to architecture only. Future plans lift the pattern.
 
 ## Next actions
 
-If this roadmap looks right:
-1. Operator approves
-2. I knock out Plan 1 (housekeeping + tiny Hermes vocab table) in this session — ~10 min
-3. Operator handles Plan 5 (agent-conventions remote) — ~1 hr operator time, can happen anytime
-4. I draft + lock Plan 3 (schema fix) and dispatch — ~5-8M tokens
-5. I draft + lock Plan 2 F001 (doctor widening) and dispatch — ~5-8M tokens
-6. **Operator pause point:** assess Plan 2 F001 delta before authorizing F002-F004
-7. If F001 delivered material delta, I dispatch F002-F004 sequentially — ~10-15M tokens
-8. I draft + lock Plan 4 (architecture map) and dispatch — ~10-15M tokens
-9. Operator's Plan 6 credentials run in parallel anywhere from step 3 onward
+Plan 1 is DONE at commit `1827118` (Finder dupes + Hermes vocab table + sanitizer allowlist + roadmap v1 landed).
+
+Remaining sequence:
+1. ✓ Plan 1 (housekeeping + tiny Hermes vocab table) — DONE
+2. Operator handles Plan 5 (agent-conventions remote + public-readiness audit) — ~2 hr operator time, can happen anytime
+3. I draft + lock Plan 3 (schema fix) and dispatch — ~5-8M tokens
+4. I draft + lock Plan 2 F001 (doctor widening + profiles + JSON) and dispatch — ~5-8M tokens
+5. **Operator pause point:** assess Plan 2 F001 delta before authorizing F002-F004
+6. If F001 delivered material delta, I dispatch Plan 2 F002-F004 sequentially — ~10-15M tokens
+7. I draft + lock Plan 4 (architecture map with drift detection) and dispatch — ~10-15M tokens
+8. I draft + lock Plan 4.5 (`dontpanic new` intake primitive) and dispatch — ~15-25M tokens. Architecture.json from Plan 4 is consumed when present + fresh; fallback otherwise.
+9. Operator's Plan 6 credentials run in parallel anywhere from step 2 onward
 10. Plan 7 dispatches once credentials are real
+
+**Operator pause points (paid-LLM discipline):**
+- After Plan 2 F001 — assess install-UX delta before F002-F004
+- After Plan 4 F002 — confirm architecture.json schema feels right before Plan 4.5 consumes it
+- After Plan 4.5 F004 — file-writing feature is the highest-risk; verify idempotency + no-spurious-files before F005 dispatches
 
 If the roadmap needs more revision, mark + iterate.
