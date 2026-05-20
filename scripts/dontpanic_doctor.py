@@ -85,6 +85,11 @@ class CheckResult:
     message: str
     remediation: str = ""
     warn: bool = False
+    # Optional structured probe details. Used by validate-plans-strict to
+    # carry the per-plan detail array (plan_id + status + errors for every
+    # walked plan) so JSON consumers get the full picture even when the
+    # pretty text output folds clean plans into a summary line.
+    details: list[dict] | None = None
 
 
 def _ok(name: str, msg: str) -> CheckResult:
@@ -1193,6 +1198,251 @@ def check_plan_cohesion(plans_root: Path | None = None) -> list[CheckResult]:
     return findings
 
 
+# ── plan 2026-05-19-003 F003: strict jsonschema validation probe ─────────
+#
+# F001 closed the schema-vs-runtime gap by declaring orchestration /
+# child_charter / commit_policy on plan.schema.json. F003 is the regression
+# net: a doctor probe that walks every locked plan under docs/plans/ and
+# runs `jsonschema.validate` against the v1.9 schema. Two modes:
+#   - advisory (default)   — failures emit WARN, exit code stays 0 (or 1
+#                            under --strict-codes, since WARN ⇒ 1).
+#   - strict (--validate-plans-strict) — failures emit FAIL (ok=False),
+#                            promoting the doctor to exit 2 under the
+#                            strict-codes matrix.
+# Both modes produce one CheckResult per locked plan (status: clean / fail)
+# plus a summary CheckResult. `--json` renders the per-plan detail array
+# inline via the existing CheckResult dump.
+
+
+def _read_plan_frontmatter_for_validation(plan_md: Path) -> tuple[dict | None, str | None]:
+    """Parse plan.md frontmatter for strict validation. Returns
+    ``(frontmatter_dict, error)`` — exactly one is non-None. YAML parses
+    ISO dates into ``date`` objects; the JSON schema's ``format: date``
+    expects a string, so the date is coerced before returning to keep the
+    contract aligned with what dispatch sees post-loader."""
+    if yaml is None:
+        return None, "pyyaml not importable"
+    try:
+        text = plan_md.read_text()
+    except OSError as exc:
+        return None, f"read failed: {exc}"
+    if not text.startswith("---"):
+        return None, "no YAML frontmatter (missing leading ---)"
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return None, "unterminated YAML frontmatter (missing closing ---)"
+    try:
+        fm = yaml.safe_load(parts[1])
+    except yaml.YAMLError as exc:
+        return None, f"YAML parse error: {exc}"
+    if not isinstance(fm, dict):
+        return None, "frontmatter is not a mapping"
+    if hasattr(fm.get("date"), "isoformat"):
+        fm["date"] = fm["date"].isoformat()
+    return fm, None
+
+
+def validate_plans_strict(
+    plans_root: Path | None = None,
+    schema_path: Path | None = None,
+    strict: bool = False,
+) -> list[CheckResult]:
+    """Walk locked plans under ``plans_root`` and validate each plan.md
+    frontmatter against ``plan.schema.json`` (the v1.9 schema after the
+    F001 fix).
+
+    ``plans_root`` defaults to ``<repo>/docs/plans``. ``schema_path``
+    defaults to ``<repo>/claude/shared/schemas/v1.0/plan.schema.json``.
+    Locked status set matches :data:`_LOCKED_PLAN_STATUSES` — drafts are
+    skipped (operator is still editing them; strict-validate drift there
+    is expected).
+
+    ``strict`` controls finding severity:
+      - ``False`` (advisory): failures emit WARN (ok=True, warn=True).
+        Exit code stays 0 under legacy, 1 under --strict-codes.
+      - ``True`` (--validate-plans-strict): failures emit FAIL
+        (ok=False). Exit code becomes 2 under --strict-codes.
+
+    Returns a list of :class:`CheckResult` — one summary entry first,
+    followed by one entry per plan-with-an-issue. Clean plans are folded
+    into the summary count for the pretty text output, but the full
+    per-plan detail array (including clean plans) is attached to the
+    summary's ``details`` field so JSON consumers can recover the
+    ``{plan_id, path, status, errors}`` shape for every walked plan.
+
+    The check name prefix is ``validate-plans-strict``; JSON consumers
+    can grep that prefix to extract per-plan failure entries, or read
+    ``details`` on the summary entry to enumerate every walked plan.
+    """
+    if plans_root is None:
+        plans_root = PLANS_ROOT
+    if schema_path is None:
+        schema_path = SCHEMAS_DIR / "plan.schema.json"
+
+    if not plans_root.is_dir():
+        summary = _ok(
+            "validate-plans-strict",
+            f"{plans_root} not present (no plans to validate)",
+        )
+        summary.details = []
+        return [summary]
+    if not schema_path.is_file():
+        return [
+            _bad(
+                "validate-plans-strict",
+                f"plan schema missing at {schema_path}",
+                "subtree pull agent-conventions",
+            )
+        ]
+    try:
+        import jsonschema  # noqa: PLC0415  # deferred until probe runs
+    except ImportError:
+        return [
+            _bad(
+                "validate-plans-strict",
+                "jsonschema not importable — cannot run strict plan validation",
+                "pip install jsonschema",
+            )
+        ]
+    try:
+        schema = json.loads(schema_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return [
+            _bad(
+                "validate-plans-strict",
+                f"plan schema unreadable at {schema_path}: {exc}",
+                "verify claude/shared/ subtree integrity",
+            )
+        ]
+
+    findings: list[CheckResult] = []
+    walked = 0
+    clean_count = 0
+    fail_count = 0
+    parse_error_count = 0
+    # Per-plan detail array. Includes every walked plan (clean + failing
+    # + parse-error) so the JSON summary carries the full plan_id/status
+    # detail array the F003 acceptance pins.
+    details: list[dict] = []
+
+    def _path_str(p: Path) -> str:
+        if p.is_relative_to(plans_root.parent):
+            return str(p.relative_to(plans_root.parent))
+        return str(p)
+
+    for plan_dir in sorted(p for p in plans_root.iterdir() if p.is_dir()):
+        plan_md = plan_dir / "plan.md"
+        if not plan_md.is_file():
+            continue
+        fm, parse_err = _read_plan_frontmatter_for_validation(plan_md)
+        if fm is None:
+            # Plan 3 F003 i1 auditor finding (medium/correctness): the
+            # loop is already scoped to ``docs/plans/<dir>/plan.md`` —
+            # the file IS the plan, not a sibling. Treat missing
+            # frontmatter as a parse_error like every other malformed
+            # case so strict mode catches false-greens.
+            plan_id = plan_dir.name
+            check_name = f"validate-plans-strict:{plan_id}"
+            walked += 1
+            parse_error_count += 1
+            fail_count += 1
+            message = f"{plan_id} frontmatter unreadable: {parse_err}"
+            remediation = (
+                f"fix YAML frontmatter in {_path_str(plan_md)} "
+                "(must start with --- and parse as a mapping)"
+            )
+            findings.append(
+                _bad(check_name, message, remediation) if strict
+                else _warn(check_name, message, remediation)
+            )
+            details.append({
+                "plan_id": plan_id,
+                "path": _path_str(plan_md),
+                "status": "parse_error",
+                "error": parse_err,
+            })
+            continue
+        if not _is_locked_plan(fm):
+            continue
+        walked += 1
+        plan_id = fm.get("id") or plan_dir.name
+        check_name = f"validate-plans-strict:{plan_id}"
+
+        validator = jsonschema.Draft202012Validator(schema)
+        errors = list(validator.iter_errors(fm))
+        if not errors:
+            clean_count += 1
+            details.append({
+                "plan_id": plan_id,
+                "path": _path_str(plan_md),
+                "status": "clean",
+            })
+            continue
+        fail_count += 1
+        # Surface the first 3 errors per plan so the operator gets a usable
+        # signal without drowning the doctor output. Each error reports the
+        # absolute_path so multi-issue plans don't read as a single blob.
+        detail_lines = []
+        error_records: list[dict] = []
+        for err in errors:
+            loc = ".".join(str(p) for p in err.absolute_path) or "<root>"
+            error_records.append({"field": loc, "message": err.message})
+        for err_record in error_records[:3]:
+            detail_lines.append(f"{err_record['field']}: {err_record['message'][:200]}")
+        more = "" if len(errors) <= 3 else f" (+{len(errors) - 3} more)"
+        message = f"{plan_id} failed strict schema validation: " + "; ".join(detail_lines) + more
+        remediation = (
+            f"edit {_path_str(plan_md)}, "
+            "OR if the schema is too tight, widen it via an additive bump in claude/shared/schemas/v1.0/plan.schema.json "
+            "(strict-mode failures often indicate schema drift, not authoring error)."
+        )
+        status_label = "fail" if strict else "warn"
+        if strict:
+            findings.append(_bad(check_name, message, remediation))
+        else:
+            findings.append(_warn(check_name, message, remediation))
+        details.append({
+            "plan_id": plan_id,
+            "path": _path_str(plan_md),
+            "status": status_label,
+            "errors": error_records,
+        })
+
+    # Summary always first so the rendered output reads "summary, then
+    # details". When everything is green this is the only entry; the
+    # per-plan detail array still rides along on summary.details so JSON
+    # consumers see every walked plan.
+    if fail_count == 0:
+        summary = _ok(
+            "validate-plans-strict",
+            f"{walked} locked plan(s) under {plans_root.relative_to(REPO_ROOT) if plans_root.is_relative_to(REPO_ROOT) else plans_root} "
+            f"validate clean against {schema_path.name}",
+        )
+        summary.details = details
+        return [summary]
+    summary_msg = (
+        f"{walked} locked plan(s) walked: {clean_count} clean, {fail_count} failing strict validation "
+        f"(mode={'strict' if strict else 'advisory'})"
+    )
+    if parse_error_count:
+        summary_msg += f" — {parse_error_count} plan(s) had unparseable frontmatter"
+    if strict:
+        summary = _bad(
+            "validate-plans-strict",
+            summary_msg,
+            "re-run after fixing per-plan failures listed below, or widen the schema additively if drift caused this",
+        )
+    else:
+        summary = _warn(
+            "validate-plans-strict",
+            summary_msg,
+            "re-run with --validate-plans-strict to promote failures to blockers; "
+            "or widen the schema additively if drift caused this",
+        )
+    summary.details = details
+    return [summary, *findings]
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -1200,6 +1450,7 @@ def run_all_checks(
     skip_auth: bool = False,
     include_projects: bool = False,
     validate_plans: bool = False,
+    validate_plans_strict_mode: bool | None = None,
 ) -> list[CheckResult]:
     """Execute the full check battery.
 
@@ -1219,6 +1470,13 @@ def run_all_checks(
     ``child_charter.allowed_paths`` vs feature-step path drift and
     acceptance-vs-deferred-resource conflicts (D024). Advisory only — it
     never fails the doctor.
+
+    Plan 2026-05-19-003 F003: the strict plan-schema validation probe
+    (``validate_plans_strict``) always runs — it's the regression net
+    that makes future schema drift visible. ``validate_plans_strict_mode``
+    controls severity: ``None`` (the default) and ``False`` keep failures
+    as advisory WARN entries; ``True`` (set by ``--validate-plans-strict``)
+    promotes failures to FAIL so the strict-codes matrix returns exit 2.
     """
     results: list[CheckResult] = []
     results.append(check_python_version())
@@ -1241,6 +1499,7 @@ def run_all_checks(
         results.extend(check_registered_projects())
     if validate_plans:
         results.extend(check_plan_cohesion())
+    results.extend(validate_plans_strict(strict=bool(validate_plans_strict_mode)))
     return results
 
 
@@ -1285,18 +1544,21 @@ def render_text(results: list[CheckResult]) -> str:
 
 
 def render_json(results: list[CheckResult]) -> str:
+    def _check_dict(r: CheckResult) -> dict:
+        d = {
+            "name": r.name,
+            "ok": r.ok,
+            "message": r.message,
+            "remediation": r.remediation,
+            "warn": r.warn,
+        }
+        if r.details is not None:
+            d["details"] = r.details
+        return d
+
     return json.dumps(
         {
-            "checks": [
-                {
-                    "name": r.name,
-                    "ok": r.ok,
-                    "message": r.message,
-                    "remediation": r.remediation,
-                    "warn": r.warn,
-                }
-                for r in results
-            ],
+            "checks": [_check_dict(r) for r in results],
             "passed": sum(1 for r in results if r.ok),
             "failed": sum(1 for r in results if not r.ok),
             "warnings": sum(1 for r in results if r.ok and r.warn),
@@ -1341,15 +1603,32 @@ def main(argv: list[str] | None = None) -> int:
             "vs-deferred-resource conflicts. Advisory only."
         ),
     )
+    parser.add_argument(
+        "--validate-plans-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-003 F003: promote the strict jsonschema "
+            "plan-validation probe from advisory (the default — failures "
+            "emit WARN) to blocker (failures emit FAIL; exit 2 under "
+            "--strict-codes). The probe walks every locked plan under "
+            "docs/plans/ and validates against the v1.9 plan schema."
+        ),
+    )
     args = parser.parse_args(argv)
 
     results = run_all_checks(
         skip_auth=args.skip_auth,
         include_projects=args.include_projects,
         validate_plans=args.validate_plans,
+        validate_plans_strict_mode=args.validate_plans_strict,
     )
     print(render_json(results) if args.json else render_text(results))
-    if args.strict_codes:
+    # The --validate-plans-strict flag implicitly opts into the strict-codes
+    # exit matrix: per the F003 acceptance, a strict-mode failure must
+    # produce exit 2. Operators who pass --strict-codes explicitly still
+    # get the same semantics; operators who pass neither stick with the
+    # legacy 0/1 contract.
+    if args.strict_codes or args.validate_plans_strict:
         return compute_strict_exit(results)
     return 0 if all(r.ok for r in results) else 1
 

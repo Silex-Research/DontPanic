@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-20T02:21:43Z",
+  "completed_at": "2026-05-20T02:31:23Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-qbbrln34 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2988 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 6860777,
+    "tokens_out": 33546,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] ## Side-effect commands invoked\n\n$ python3 scripts/dontpanic_doctor.py --skip-auth --validate-plans-strict --json\n$ python3 scripts/dontpanic_doctor.py --skip-auth --validate-plans-strict --strict-codes\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/ -q\n\n## Summary\n\nShipped F003: a `validate_plans_strict()` probe in `scripts/dontpanic_doctor.py` that walks every locked plan under `docs/plans/`, runs `jsonschema` validation against `plan.schema.json`, and emits per-plan + summary `CheckResult` entries surfaced in both text and `--json` output. The new `--validate-plans-strict` CLI flag promotes failures to FAIL (exit 2 via the strict-codes matrix); default mode keeps them as advisory WARN with exit 0. Added 5 fixture tests at `test_doctor_validate_plans_strict_f003.py` covering live-plan-clean, malformed-frontmatter strict-fail, exit-code 2 path, advisory exit-0 path, and JSON detail-array shape. Surfaced one pre-existing schema-vs-runtime tightness during probe development: `plan.schema.json` capped `title` at 120 chars but one locked plan carried a 137-char title — fixed additi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 scripts/dontpanic_doctor.py --skip-auth --validate-plans-strict --json",
+      "python3 scripts/dontpanic_doctor.py --skip-auth --validate-plans-strict --strict-codes",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py scripts/dontpanic_orchestrate/tests/test_f022_jarvis_doctor.py scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/ -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

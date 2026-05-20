@@ -1451,6 +1451,16 @@ def _doctor_main(argv: list[str]) -> int:
             "parent_acceptance_item defers them. Advisory WARN findings."
         ),
     )
+    parser.add_argument(
+        "--validate-plans-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-003 F003: promote the strict jsonschema "
+            "plan-validation probe from advisory (WARN) to blocker (FAIL). "
+            "When set, any locked plan that fails to validate against the "
+            "v1.9 plan schema produces exit 2 under the strict-codes matrix."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1468,9 +1478,24 @@ def _doctor_main(argv: list[str]) -> int:
         skip_auth=args.skip_auth,
         include_projects=True,
         validate_plans=args.validate_plans,
+        validate_plans_strict_mode=args.validate_plans_strict,
     )
     print(jd.render_json(results) if args.json else jd.render_text(results))
-    return jd.compute_strict_exit(results)
+    # Plan 4 F003 / Plan 3 F003 acceptance: in advisory mode the
+    # validate-plans-strict probe emits WARN findings but those must NOT
+    # escalate the canonical exit code (acceptance says advisory → exit 0
+    # when no other probe fails). Strict mode keeps WARN→1/FAIL→2 behavior
+    # so a malformed plan still blocks. Probe-specific override per
+    # codex-auditor Plan 3 F003 i1 high/correctness finding.
+    if not args.validate_plans_strict:
+        exit_inputs = [
+            r for r in results
+            if r.name != "validate-plans-strict"
+            and not r.name.startswith("validate-plans-strict:")
+        ]
+    else:
+        exit_inputs = results
+    return jd.compute_strict_exit(exit_inputs)
 
 
 # ──────────────────────────  dispatch-from-plan (F002)  ──────────────────────────

@@ -263,7 +263,7 @@ class Plan(BaseModel):
     id: constr(
         pattern=r"^\d{4}-\d{2}-\d{2}-\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$"
     ) = Field(..., description="YYYY-MM-DD-NNN-<type>-<kebab-name>")
-    title: constr(min_length=1, max_length=120)
+    title: constr(min_length=1, max_length=200)
     type: Type
     tier: Tier
     status: Status

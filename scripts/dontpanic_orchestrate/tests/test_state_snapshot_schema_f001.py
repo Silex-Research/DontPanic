@@ -339,4 +339,11 @@ class TestSchemaRejection:
 class TestAgentConventionsPin:
     def test_subtree_version_bumped(self) -> None:
         version = (HERE.parents[3] / "claude" / "shared" / "VERSION").read_text().strip()
-        assert version == "1.9.0", f"expected 1.9.0, got {version}"
+        # Plan 2026-05-19-003 F001 bumped to 1.9.0; F003 of the same plan
+        # later bumped to 1.9.1 (title.maxLength widening surfaced by the
+        # strict-validate probe). Accept any 1.9.x — this test only
+        # guards against accidental rollback to 1.8.x.
+        parts = version.split(".")
+        assert len(parts) >= 2 and parts[0] == "1" and int(parts[1]) >= 9, (
+            f"expected >= 1.9.0, got {version}"
+        )

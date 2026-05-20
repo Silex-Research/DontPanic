@@ -25,6 +25,33 @@
       "at": "2026-05-20T02:11:08Z",
       "actor": "supervisor",
       "reason": "verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-20T02:20:50Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:environmental_blocker"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-05-20T02:21:26Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-20T02:45:30Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-20T02:53:15Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
@@ -37,8 +64,5 @@
   ],
   "completed_stages": [
     "pre_impl"
-  ],
-  "active_breakers": [
-    "breaker:environmental_blocker"
   ]
 }

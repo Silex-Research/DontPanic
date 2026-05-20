@@ -1,0 +1,58 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T02:31:23Z",
+  "completed_at": "2026-05-20T02:34:34Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-qbbrln34 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 368462 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1079116,
+    "tokens_out": 10367,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \nCommand: audit completed; no side-effect commands invoked\n\nVerdict: needs_changes. No EC5 finding: implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, structured `target_context` matches, and `commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): The required `dontpanic doctor --validate-plans-strict` CLI surface is not wired. Evidence: `scripts/dontpanic_orchestrate/cli.py:1434-1453` only accepts `--json`, `--skip-auth`, and `--validate-plans`; running the canonical command exits argparse code 2 with `unrecognized arguments: --validate-plans-strict`. Recommendation: add the flag to `_doctor_main`, pass `validate_plans_strict_mode=args.validate_plans_strict` into `run_all_checks`, and add a subprocess regression test for `python3 -m dontpanic_orchestrate doctor --skip-auth --validate-plans-strict --json`.\n\nFINDING (high, correctness): JSON output does not include the required per-plan detail array with `plan_id` and status for each plan. Evidence: `render_json()` at `scripts/dontpanic_doctor.py:1487-1505` emits only flat `checks[]`; `validate_plans_strict()` explicitly folds clean plans into a summary at `scripts/dontpanic_doctor.py:1261-1268` and returns only one summary on green at `1360-1366`. Recommendation: add structured probe details, e.g. a `details`/`plans` array containing every walked plan with `plan_id`, `status`, and `error`, and assert that shape in tests.\n\nFIND",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "git diff HEAD~1 -- ../scripts/dontpanic_doctor.py ../scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py ../claude/shared/schemas/v1.0/plan.schema.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/dontpanic_doctor.py --skip-auth --validate-plans-strict --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m dontpanic_orchestrate doctor --skip-auth --validate-plans-strict --json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The required `dontpanic doctor --validate-plans-strict` CLI surface is not wired. Evidence: `scripts/dontpanic_orchestrate/cli.py:1434-1453` only accepts `--json`, `--skip-auth`, and `--validate-plans`; running the canonical command exits argparse code 2 with `unrecognized arguments: --validate-plans-strict`. Recommendation: add the flag to `_doctor_main`, pass `validate_plans_strict_mode=args.validate_plans_strict` into `run_all_checks`, and add a subprocess regression test for `python3 -m dont",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "JSON output does not include the required per-plan detail array with `plan_id` and status for each plan. Evidence: `render_json()` at `scripts/dontpanic_doctor.py:1487-1505` emits only flat `checks[]`; `validate_plans_strict()` explicitly folds clean plans into a summary at `scripts/dontpanic_doctor.py:1261-1268` and returns only one summary on green at `1360-1366`. Recommendation: add structured probe details, e.g. a `details`/`plans` array containing every walked plan with `plan_id`, `status`,",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The “malformed frontmatter” fixture does not test malformed frontmatter, and the implementation silently skips parse failures. Evidence: `scripts/dontpanic_doctor.py:1320-1326` continues when `_read_plan_frontmatter_for_validation()` returns `fm is None`; the fixture at `test_doctor_validate_plans_strict_f003.py:97-138` uses valid YAML with an invalid schema field instead. Recommendation: add a fixture with invalid/unterminated/non-mapping YAML and treat parse/read/frontmatter errors as WARN/FAI",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

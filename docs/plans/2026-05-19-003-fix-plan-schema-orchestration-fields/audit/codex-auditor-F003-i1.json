@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T02:41:21Z",
+  "completed_at": "2026-05-20T02:45:30Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-qbbrln34 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 128229 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1261474,
+    "tokens_out": 16039,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): Advisory plan-validation failures return exit `1` through the canonical `dontpanic_orchestrate doctor` path, not the required exit `0`. Evidence: [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:1484) always returns `jd.compute_strict_exit(results)`, which maps WARN to `1`; a stubbed advisory `validate-plans-strict:*` WARN returned `1`. The fixture only asserts exit `0` against standalone `doctor.main()`, not the canonical subcommand. Recommendation: make non-strict plan-validation advisories non-blocking for the canonical CLI, or add a probe-specific exit override; add a regression test for `dontpanic_orchestrate doctor` advisory failure returning `0`.\n\nFINDING (medium, correctness): A `plan.md` with missing leading YAML frontmatter is silently skipped. Evidence: [dontpanic_doctor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1346) `continue`s on `\"no YAML frontmatter (missing leading ---)\"` even though the loop is already scoped to `docs/plans/*/plan.md`; this can produce a false-green strict validation result. Recommendation: treat missing frontmatter in `plan.md` as `parse_error` WARN/FAIL like the other malformed frontmatter cases, and add a fixture for it.\n\nChecks run:\n$ git status --short  \n$ git diff --stat HEAD~1  \n$ git diff HEAD~1 -- scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff HEAD~1 -- scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 pytest scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py -q -o cache_dir=/tmp/dontpanic-pytest-cache",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"<live validate_plans_strict strict=True summary/json check>\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --skip-auth --validate-plans-strict --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"<stub canonical CLI advisory WARN exit check>\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Advisory plan-validation failures return exit `1` through the canonical `dontpanic_orchestrate doctor` path, not the required exit `0`. Evidence: [cli.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:1484) always returns `jd.compute_strict_exit(results)`, which maps WARN to `1`; a stubbed advisory `validate-plans-strict:*` WARN returned `1`. The fixture only asserts exit `0` against standalone `doctor.main()`, not the canonical subcommand. Recommendation: make ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "A `plan.md` with missing leading YAML frontmatter is silently skipped. Evidence: [dontpanic_doctor.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:1346) `continue`s on `\"no YAML frontmatter (missing leading ---)\"` even though the loop is already scoped to `docs/plans/*/plan.md`; this can produce a false-green strict validation result. Recommendation: treat missing frontmatter in `plan.md` as `parse_error` WARN/FAIL like the other malformed frontmatter cases, and add a ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

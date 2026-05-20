@@ -11,3 +11,11 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 
 **2026-05-20T02:11:08Z** — feature **F001** terminal: `stopped_environmental_blocker` after 2 round(s) — verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
 
+| 2026-05-20T02:31:23Z | F003 | i0 | claude / implementer | signed_off | 6,860,777 / 33,546 | [claude-implementer-F003-i0.json](audit/claude-implementer-F003-i0.json) |
+| 2026-05-20T02:34:34Z | F003 | i0 | codex / auditor | needs_changes | 1,079,116 / 10,367 | [codex-auditor-F003-i0.json](audit/codex-auditor-F003-i0.json) |
+| 2026-05-20T02:41:21Z | F003 | i1 | claude / implementer | signed_off | 2,420,304 / 26,238 | [claude-implementer-F003-i1.json](audit/claude-implementer-F003-i1.json) |
+| 2026-05-20T02:45:30Z | F003 | i1 | codex / auditor | needs_changes | 1,261,474 / 16,039 | [codex-auditor-F003-i1.json](audit/codex-auditor-F003-i1.json) |
+
+**2026-05-20T02:45:30Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
