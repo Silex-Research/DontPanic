@@ -5,6 +5,21 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.9.1 — 2026-05-19
+
+### Changed
+- `plan.schema.json`: `title.maxLength` 120 → 200. Surfaced by Roadmap Plan 3
+  F003's `dontpanic doctor --validate-plans-strict` probe walking every locked
+  plan: one locked plan (`2026-05-09-001-fix-conftest-global-config-isolation`)
+  carried a 137-char title that violated the v1.8.0-era cap. Loosening the cap
+  is strictly additive (existing titles still validate) and completes F001's
+  invariant that "every existing locked plan validates after the change."
+- `models/plan_model.py`: matching `constr(max_length=200)` bump on the
+  `Plan.title` field to keep the Pydantic mirror in lockstep.
+
+### Notes
+- Strictly additive: every plan that validated under v1.9.0 still validates.
+
 ## 1.9.0 — 2026-05-19
 
 ### Added

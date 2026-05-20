@@ -18,11 +18,7 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/gate-state.json",
+      "path": "docs/architecture/architecture.json",
       "status": "M"
     },
     {
@@ -30,7 +26,31 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_doctor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/architecture.py",
       "status": "M"
     },
     {
@@ -43,11 +63,14 @@
     }
   ],
   "untracked": [
-    "claude/shared/schemas/v1.0/architecture-snapshot.schema.json",
-    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/",
-    "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/",
-    "scripts/dontpanic_orchestrate/architecture.py",
-    "scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py"
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/dispatch-f003.log",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/f003-implementation-notes.md",
+    "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/evidence/dispatch-f002.log",
+    "scripts/dontpanic_orchestrate/architecture_html.py",
+    "scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py",
+    "scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

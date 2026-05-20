@@ -123,3 +123,132 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T02:20:50Z
+event: gate_hit
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+unmet_gates: breaker:environmental_blocker
+target_env: dev
+target_project: (none)
+feature_id: F003
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:environmental_blocker']
+Cleared gates : ['pre_impl']
+Awaiting      : ['breaker:environmental_blocker']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-19-003-fix-plan-schema-orchestration-fields <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-19-003-fix-plan-schema-orchestration-fields --all
+
+===
+---
+timestamp: 2026-05-20T02:21:26Z
+event: gate_cleared
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+gate: breaker:environmental_blocker
+---
+
+Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
+
+===
+---
+timestamp: 2026-05-20T02:21:43Z
+event: volley_start
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T02:21:43Z
+event: volley_start
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T02:45:30Z
+event: no_progress_classification
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Advisory plan-validation failures return exit `1` through the canonical `dontpanic_orchestrate doctor` path, not the required exit `0`. Evidence: [cli.py](/Use…
+  - [implementation_defect] severity=medium, category=correctness: A `plan.md` with missing leading YAML frontmatter is silently skipped. Evidence: [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontp…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-003-fix-plan-schema-orchestration-fields F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T02:45:30Z
+event: breaker_tripped
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-19-003-fix-plan-schema-orchestration-fields breaker:no_progress` or `jarvis resume 2026-05-19-003-fix-plan-schema-orchestration-fields --all`.
+
+===
+---
+timestamp: 2026-05-20T02:45:30Z
+event: volley_terminal
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-20T02:53:15Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F003
+reason_class: implementation_defect
+---
+
+Operator closed feature F003 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-003-fix-plan-schema-orchestration-fields.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

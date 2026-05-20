@@ -11,7 +11,7 @@
       "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$",
       "description": "YYYY-MM-DD-NNN-<type>-<kebab-name>"
     },
-    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
     "type": { "enum": ["feat", "fix", "refactor", "migration", "infra"] },
     "tier": { "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"] },
     "status": { "enum": ["draft", "active", "ready_for_audit", "in_audit", "completed", "abandoned", "blocked"] },

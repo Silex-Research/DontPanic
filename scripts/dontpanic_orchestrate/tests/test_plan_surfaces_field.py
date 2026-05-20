@@ -126,7 +126,7 @@ class TestSurfacesField:
         with pytest.raises(ValidationError):
             plan_loader.load(plan_dir)
 
-    def test_agent_conventions_version_is_v1_9_0(self):
+    def test_agent_conventions_version_is_at_least_v1_9_0(self):
         version_file = (
             plan_loader.SCHEMAS_DIR.parent.parent / "VERSION"
         )
@@ -135,10 +135,15 @@ class TestSurfacesField:
             "schemas dir should sit one level under <root>/schemas/v1.0/"
         )
         version_text = version_file.read_text().strip()
-        assert version_text == "1.9.0", (
+        # Plan 2026-05-19-003 F001 shipped 1.9.0 (orchestration/child_charter/
+        # commit_policy on the plan schema); F003 of the same plan shipped
+        # 1.9.1 (title.maxLength 120→200, surfaced by the strict-validate
+        # probe walking every locked plan). Pin to the 1.9.x line: accept
+        # forward-compatible patch bumps, reject accidental rollback.
+        parts = version_text.split(".")
+        assert len(parts) >= 2 and parts[0] == "1" and int(parts[1]) >= 9, (
             f"agent-conventions VERSION is {version_text!r}; "
-            "expected '1.9.0' per plan 2026-05-19-003 F001 "
-            "(plan schema gains orchestration/child_charter/commit_policy)"
+            "expected >= '1.9.0' per plan 2026-05-19-003"
         )
 
     def test_external_api_wrap_in_surfaces_enum(self):
