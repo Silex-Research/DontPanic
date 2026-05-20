@@ -3,7 +3,7 @@ id: 2026-05-10-001-feat-printing-press-adapter-skill
 title: Printing Press adapter skill — DontPanic prescribes PP for external-API wrapping
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-10"
 goal_type: infra
 surfaces:

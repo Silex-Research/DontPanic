@@ -148,10 +148,46 @@
         "Document any v1 \u2192 v2 friction points discovered as decisions.jsonl entries (these become the v2 plan's motivation)."
       ],
       "acceptance": "(1) One service dogfooded end-to-end. (2) PP binary executes; wrapper injects redact correctly. (3) Smoke-test trace in evidence/ shows post-redact response with no leaked tokens. (4) `evidence/adapters-example.json` committed with placeholder tokens. (5) sanitization_check.py passes (no real tokens in committed files). (6) D-entry locks the paid-call budget at exactly 1; if operator approves a second call, the approval is recorded explicitly before the call.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T23:58:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/linear-pp-paid-run-closeout.md",
+          "note": "Operator close-out for the single paid `/printing-press linear codex` invocation: generated CLI/MCP paths, 8/8 gates, verify 46/46 PASS, caveats, and outcome."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/linear-pp-paid-run-trace.jsonl",
+          "note": "Actual PP-emitted `linear-pp-mcp` invoked through LinearPPAdapter; response carries redact/sanitize markers and no leaked token values."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/adapters-example.json",
+          "note": "Redacted top-level adapters registry example with placeholder paths and no token values."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/linear-config-example.json",
+          "note": "Redacted per-service Linear adapter config example updated with Printing Press 4.9.0 and GraphQL SDL source metadata."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/integrations/linear_pp_adapter.py",
+          "note": "Canonical DontPanic adapter boundary: subprocess MCP wrapper, redact/sanitize composition, mutation rejection, explicit register_adapter helper."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/adapters/linear_adapter.py",
+          "note": "Skill-prescribed adapter import path re-exporting the canonical LinearPPAdapter surface."
+        }
       ]
     }
   ]
