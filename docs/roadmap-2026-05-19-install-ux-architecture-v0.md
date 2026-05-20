@@ -6,6 +6,20 @@
 
 ---
 
+## Revisions from v1.1 (operator policy 2026-05-19 — distribution model)
+
+Critical policy decision: **DontPanic is self-contained for OSS users.**
+
+- DontPanic vendors the schemas under `claude/shared/`. Users never need to clone agent-conventions, OpenClaw, Axiom, or any other repo to use the core build system.
+- `pipx install dontpanic` (or source install) includes everything needed for core use: CLI, supervisor/dispatch, doctor/init/new, vendored schemas, validators, MCP server, state projection, static dashboard/export, docs/templates/examples.
+- Other repos are referenced as **optional ecosystem integrations**, never prerequisites. Chat/mobile/broker users can pick either the Hermes pattern (conceptual — Saboo's `/goal` cheat sheet, shared vocabulary) or OpenClaw (runtime — actual multi-channel agent UI); both interop with DontPanic, neither is required. Other optional integrations: Firebase/Axiom adapter (team dashboard), agent-conventions (external schema authors), Printing Press (external service evidence).
+
+Concrete consequences for this roadmap:
+
+1. **Plan 5 → DEFERRED (not blocking, not deleted).** The agent-conventions GitHub remote + public-readiness audit was prep'd locally (commit `496f112` in agent-conventions: LICENSE, README, CI, sanitization). That work stays committed. Goes public when an external tool author asks. No critical path impact today.
+2. **Plan 3 F002 → maintainer-deferred.** Schema bump lands in DontPanic's vendored `claude/shared/` mirror (users get it via DontPanic). Upstream agent-conventions sync stays operator-handled, indefinitely deferred. F002 closes as `not_needed_until_external_author` when Plan 3 F001 + F003 ship.
+3. **Plan 2 F001 doctor profiles → add `maintainer` profile.** Existing profiles (`core`, `discord`, `firebase-dashboard`, `openclaw`, `ci`) stay focused on what a *user* needs. New `maintainer` profile is where checks for agent-conventions clone/remote, gitleaks, schema-evolution tooling live. **`dontpanic doctor --profile=core` must never tell a user to clone agent-conventions.**
+
 ## Revisions from v1 (operator decisions 2026-05-19)
 
 1. **New Plan 4.5 — `dontpanic new` intake primitive** added between Plan 4 (architecture map) and Plan 6 (credentials). Bridges the install→dispatch gap; without it, every plan still needs hand-authoring.
@@ -35,8 +49,8 @@ Six sequencing + scope issues plus two use-case gaps:
 | Order | Plan ID | Title | Status | Cost | Why this slot |
 |---|---|---|---|---|---|
 | 1 | Plan 1 | Housekeeping + tiny Hermes vocab cite | DONE @ `1827118` | 0 paid | Free; clears noise |
-| 2 | Plan 5 | agent-conventions remote + public-readiness audit | not-locked | 0 paid (~2 hr operator) | Prerequisite for Plan 3 |
-| 3 | Plan 3 | Plan schema mismatch fix | not-locked | ~5-8M | Quiet timebomb; pairs with v1.9.0 schema release |
+| 2 | ~~Plan 5~~ | ~~agent-conventions remote + public-readiness audit~~ DEFERRED (prep landed at agent-conventions `496f112`); not a user-facing prerequisite per v1.2 policy | DEFERRED | 0 paid | Goes public when external author asks |
+| 3 | Plan 3 | Plan schema mismatch fix (lands in vendored mirror; F002 maintainer-deferred) | dispatching | ~5-8M | Quiet timebomb; ships v1.9.0 to users via DontPanic vendored copy |
 | 4 | Plan 2 F001 | Doctor widening (declarative probes + JSON + profiles) | not-locked | ~5-8M | Ship-fast; materially fixes first-user pain alone |
 | 5 | Plan 2 F002-F004 | `init`, smoke test, HTML report | not-locked | ~10-15M | Polish layer on top of F001 |
 | 6 | Plan 4 | Architecture map with drift detection | not-locked | ~10-15M | Validates HTML pattern + adds drift surface |

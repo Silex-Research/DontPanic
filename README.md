@@ -13,6 +13,34 @@ and `<repo>/.dontpanic/dontpanic.json`. Legacy `jarvis`,
 `dontpanic_orchestrate`, `~/.jarvis`, and `<repo>/.jarvis/jarvis.json`
 remain compatibility aliases while the migration happens in stages.
 
+## DontPanic is self-contained
+
+Install DontPanic. It works by itself. The schemas it validates against
+are vendored under `claude/shared/`; no separate schema repo is required
+to install or run. The upstream `agent-conventions` repo exists for
+schema evolution and external tool authors — it is not a prerequisite
+for using DontPanic.
+
+**Optional ecosystem integrations** (only if you want them):
+
+| Integration | Kind | What it adds | When you need it |
+|---|---|---|---|
+| Hermes `/goal` pattern | Conceptual | Vocabulary + workflow primitives for orchestrator → builder → reviewer dispatches | You want a shared mental model with other agent-driven teams; cited in the Vocabulary section below |
+| OpenClaw | Runtime | Multi-channel agent UI (Telegram, Discord, Slack, WhatsApp, web chat) | Multi-channel agent UIs in front of DontPanic-orchestrated work |
+| Firebase / Axiom dashboard adapter | Runtime | Realtime team kanban | Multi-operator collaboration |
+| Printing Press adapters | Runtime | External service evidence providers | OpenAPI-shaped service wrapping |
+| agent-conventions (upstream) | Maintainer | Schema authoring + external validators | You're building tools that validate DontPanic artifacts outside DontPanic |
+
+Hermes and OpenClaw both interoperate with DontPanic but serve different
+needs: Hermes is a pattern (you read it, you adopt the vocabulary); OpenClaw
+is a runtime (you install it, it talks to your users). Use either, both, or
+neither — DontPanic stands on its own.
+
+Each integration is opt-in. None is installed automatically. The core
+`dontpanic` install includes the CLI, supervisor/dispatch, doctor/init/new,
+vendored schemas, validators, MCP server, state projection, static
+dashboard/export, and docs/templates/examples.
+
 **Status:** private alpha. The repo is ready to share with a small trusted
 group that is comfortable with source installs, local agent CLIs, and
 plan-driven workflows. See [`docs/PRODUCT.md`](./docs/PRODUCT.md) for the
