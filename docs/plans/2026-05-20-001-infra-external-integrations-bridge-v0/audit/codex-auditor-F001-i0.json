@@ -1,0 +1,62 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "audit_id": "2026-05-20-001-infra-external-integrations-bridge-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T20:03:13Z",
+  "completed_at": "2026-05-20T20:07:28Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-20-001-infra-external-integrations-bridge-v0-zad86537 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1344816 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1814477,
+    "tokens_out": 16576,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command-shape finding.\n\nFINDING (high, correctness): Required implementation/evidence files are not committed or tracked. Evidence: `git diff HEAD~1` from `docs/` only shows `plan.md`; `git ls-files` returns nothing for the new integration/test/evidence paths; `git status --untracked-files=all` shows the new modules, tests, and evidence as untracked. Recommendation: stage/commit the F001 files and rerun patch completeness.\n\nFINDING (high, correctness): `linear_pm_tool.py` does not wire to the P10 F003 Linear MCP adapter/binary. Evidence: repo search found no Linear adapter artifact beyond `linear_pm_tool.py`; the wrapper only accepts an injected `mcp_call` callable and does not compose the Printing Press adapter template’s subprocess/redaction/sanitization boundary. Recommendation: add/use the P10 Linear MCP adapter, or mark F001 blocked until it exists.\n\nFINDING (medium, architecture): Generic contract modules still contain Linear-specific references despite acceptance item 6. Evidence: `rg` found Linear/Jira/Monday/GitHub examples in `pm_tool_models.py` and `pm_tool_mapping.py`. Recommendation: keep service examples in `linear_pm_tool.py`, mapping JSON, or evidence docs only.\n\nFINDING (medium, test_coverage): Full sweep evidence is absent and the imp",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"<import/read_issue/dry-run smoke>\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Required implementation/evidence files are not committed or tracked. Evidence: `git diff HEAD~1` from `docs/` only shows `plan.md`; `git ls-files` returns nothing for the new integration/test/evidence paths; `git status --untracked-files=all` shows the new modules, tests, and evidence as untracked. Recommendation: stage/commit the F001 files and rerun patch completeness.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`linear_pm_tool.py` does not wire to the P10 F003 Linear MCP adapter/binary. Evidence: repo search found no Linear adapter artifact beyond `linear_pm_tool.py`; the wrapper only accepts an injected `mcp_call` callable and does not compose the Printing Press adapter template’s subprocess/redaction/sanitization boundary. Recommendation: add/use the P10 Linear MCP adapter, or mark F001 blocked until it exists.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F001",
+      "issue": "Generic contract modules still contain Linear-specific references despite acceptance item 6. Evidence: `rg` found Linear/Jira/Monday/GitHub examples in `pm_tool_models.py` and `pm_tool_mapping.py`. Recommendation: keep service examples in `linear_pm_tool.py`, mapping JSON, or evidence docs only.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "Full sweep evidence is absent and the implementer audit timed out. Evidence: implementer audit says `DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `commands_run: []`; my local pytest attempt could not start because the sandbox has no writable temp directory. Recommendation: rerun targeted tests plus full sweep in a writable dev environment and attach output. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

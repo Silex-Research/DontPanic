@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T20:22:10Z",
+  "feature_id": "F001",
+  "aggregate": "environmental_reproduction_failure",
+  "blocking": false,
+  "recommended_action": "Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "spec_ambiguity",
+      "severity": "medium",
+      "category": "documentation",
+      "issue_excerpt": "The extension docs claim the canonical Linear PM wrapper is ≤100 lines, but the committed module is 127 lines. Evidence: `pm-tool-extension-guide.md:121` and `…",
+      "rationale": "severity=medium, category=documentation — finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    },
+    {
+      "finding_index": 1,
+      "classification": "environmental_reproduction_failure",
+      "severity": "advisory",
+      "category": "test_coverage",
+      "issue_excerpt": "I could not independently rerun pytest in this read-only sandbox. Evidence: pytest failed before/at setup with `FileNotFoundError: No usable temporary director…",
+      "rationale": "auditor reports a sandbox/host/auth blocker preventing reproduction; operator can run the verification locally."
+    }
+  ]
+}

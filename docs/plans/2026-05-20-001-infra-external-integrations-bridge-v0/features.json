@@ -18,7 +18,57 @@
         "Run full orchestrator sweep + sanitization check."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/integrations/pm_tool_{models,mapping,sync}.py exist + are Pydantic-validated. (2) linear_pm_tool.py implements read_issue + push_status against the Linear MCP adapter from P10 F003. (3) evidence/linear-mapping-example.json committed with placeholder tokens; sanitization clean. (4) test_pm_tool_contract_f001.py has >=10 cases including read_issue mock + push_status dry-run. (5) evidence/pm-tool-extension-guide.md explains how to add a second PM tool with mapping-only changes + per-service wrapper module ≤100 lines. (6) NO Linear-specific code in pm_tool_models.py / pm_tool_mapping.py / pm_tool_sync.py — Linear lives only in linear_pm_tool.py + the mapping JSON. (7) Full sweep at or above lock-time baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-05-20T20:27:50Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "e14c01f",
+          "captured_by": "claude",
+          "note": "F001 implementation commit: PM-tool category contract, Linear PP adapter bridge, Linear PM wrapper, evidence guide, and tests."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "captured_by": "claude",
+          "note": "Final implementer audit summary for the committed F001 implementation."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "captured_by": "codex",
+          "note": "Final auditor envelope. It found the wrapper line-count mismatch and sandbox-local pytest reproduction blocker."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F001_iter2.json",
+          "captured_by": "supervisor",
+          "note": "Supervisor classification of the stopped-environmental-blocker terminal."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/f001-operator-closeout.md",
+          "captured_by": "operator",
+          "note": "Operator close-out memo documenting the line-count remediation, breaker clearance, and local verification."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/integrations/linear_pm_tool.py",
+          "captured_by": "operator",
+          "note": "Linear PM-tool reference wrapper remediated to 98 lines while preserving behavior."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py",
+          "captured_by": "claude",
+          "note": "F001 contract test suite. Operator rerun passed: 22 passed."
+        }
+      ],
       "depends_on": []
     },
     {
