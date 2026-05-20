@@ -3,7 +3,7 @@ id: 2026-05-11-001-infra-state-projection-adapters-meta
 title: State-projection adapters meta — orchestrate plans 010 + 004 via DontPanic itself
 type: infra
 tier: local
-status: active
+status: completed
 date: "2026-05-11"
 goal_type: infra
 surfaces:
