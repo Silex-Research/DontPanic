@@ -82,9 +82,20 @@
         "Append findings as they surface. Don't dispatch F003+ in this plan."
       ],
       "acceptance": "(1) Plan 004 F001 + F002 closed via dispatch_volley with audit-envelope evidence. (2) Plan 004 F003 / F004 / F005 explicitly deferred via D-entry citing deploy-credential dependency. (3) Findings cross-posted same-session.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T10:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "external_plan",
+          "uri": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/features.json",
+          "note": "P9-004 F001+F002 passes:true — meta-orchestration work satisfied; remaining F003-F005 explicitly deferred per spec for operator-credential gating"
+        }
       ]
     },
     {
