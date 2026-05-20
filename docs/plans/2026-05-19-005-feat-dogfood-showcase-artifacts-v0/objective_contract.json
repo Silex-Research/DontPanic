@@ -1,0 +1,86 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator pivot post-Plan 4 (architecture surface shipped at commit 5e27286) + post-Plan 3 (strict-plan-validate probe shipped at commit c104c22). Captured in this plan's D001-D002. Dogfood as product demonstration — run platform capabilities FROM DontPanic against our own repos and publish artifacts under docs/showcase/. Local integration deferred until concrete triggers fire.",
+  "user_journeys": [
+    {
+      "name": "new-user-sees-platform-on-real-repos",
+      "description": "A new user lands on DontPanic's README, scrolls to 'See DontPanic on real repos', clicks into docs/showcase/README.md, and sees architecture HTML for DontPanic + agent-conventions + axiom + (SpinDine OR Glam) plus strict-plan-validation summaries + DontPanic's own drift status. They get the 'I can see what this does' moment in <60s without running any commands.",
+      "surfaces": ["docs"],
+      "states": ["readme_landed", "showcase_link_clicked", "artifact_browsed", "regen_command_visible"],
+      "acceptance_signals": [
+        "Repo README.md has a 'See DontPanic on real repos' section linking to docs/showcase/README.md",
+        "docs/showcase/README.md lists ≥4 target repos with artifact links",
+        "Each artifact entry includes its exact regen command (copy-pasteable)",
+        "agent-conventions specifically shows schema repo legibility (modules + schemas + validators + downstream consumers)",
+        "No leaked absolute paths visible in browsed HTML/JSON content"
+      ]
+    },
+    {
+      "name": "operator-regenerates-showcase",
+      "description": "An operator runs `make showcase` (or `scripts/showcase.sh`) from the DontPanic checkout. The wrapper invokes `python -m dontpanic_orchestrate showcase regen --all`. For each configured target with an existing repo_root, the generator produces the artifact matrix (architecture always; validate-plans-strict for has_dontpanic_plans=True targets; drift for has_committed_architecture_json=True targets). Missing checkouts degrade gracefully. Redactor strips absolute paths BEFORE write. Sanitization scan blocks any leak.",
+      "surfaces": ["infra"],
+      "states": ["wrapper_invoked", "config_read", "per_target_artifacts_generated", "redactor_passed", "sanitization_clean", "artifacts_written"],
+      "acceptance_signals": [
+        "`make showcase` and `scripts/showcase.sh` both work as one-line operator entry",
+        "Missing target_repo_root → 'target not found at <path>; skipping' + continue",
+        "Per-target supported_artifacts honored (no false-positive errors when validate-plans-strict isn't applicable)",
+        "Redactor raises RedactorError if `/Users/` substring survives in any artifact post-redaction",
+        "sanitization_check.py scans docs/showcase/ + passes on every committed artifact",
+        "No DontPanic runtime code copied into any target repo"
+      ]
+    },
+    {
+      "name": "agent-conventions-becomes-legible",
+      "description": "A new user opens docs/showcase/agent-conventions-architecture.html and immediately understands the schema repo's shape — schemas + validators + Pydantic models + downstream consumers (DontPanic, Jarvis, Glam, SpinDine) all visible in one mobile-responsive page. The page renders cleanly in Chrome/Safari/Firefox on macOS + Linux. No absolute paths visible. The schema repo stops feeling abstract.",
+      "surfaces": ["docs"],
+      "states": ["agent_conventions_html_opened", "module_graph_visible", "schema_inventory_visible", "downstream_consumers_visible", "page_renders_cleanly"],
+      "acceptance_signals": [
+        "agent-conventions-architecture.html exists under docs/showcase/",
+        "Module graph SVG renders (architecture HTML inherits Plan 4 F002 visuals)",
+        "Schema list visible (schemas + Pydantic models from agent-conventions/schemas/v1.0/)",
+        "Mobile-responsive (single column <800px)",
+        "No `/Users/` absolute paths visible in rendered content"
+      ]
+    },
+    {
+      "name": "team-knows-when-to-promote-to-local-integration",
+      "description": "A team member reads docs/showcase/README.md's 'Local integration — deferred' section. The section codifies three concrete triggers for promoting a repo from showcase-only to local integration: (a) target repo wants committed architecture.json for offline / contributor consumption; (b) target repo wants drift checks wired into its OWN CI; (c) target repo has active non-DontPanic contributors who need the map in-repo. The team member can evaluate whether any of those triggers has fired for their repo without re-litigating the decision.",
+      "surfaces": ["docs"],
+      "states": ["showcase_readme_opened", "deferral_section_read", "triggers_understood", "evaluation_doable_without_re_litigation"],
+      "acceptance_signals": [
+        "docs/showcase/README.md has 'Local integration — deferred' section",
+        "Section explicitly lists the 3 concrete triggers from this plan's forbidden_decisions",
+        "Section explains why showcase-only is the v0 default (high blast radius of distributed runtime integration)",
+        "Section provides a path for proposing local integration when a trigger fires (link a follow-on plan template or operator-contact pattern)"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "showcase-regen-end-to-end-4-targets.log",
+    "redactor-no-absolute-paths-in-committed-artifacts.log",
+    "sanitization-clean-on-docs-showcase.log",
+    "no-runtime-code-copied-into-target-repos.log",
+    "missing-target-graceful-skip.log",
+    "per-target-supported-artifacts-honored.log",
+    "agent-conventions-architecture-html-renders-cleanly.log",
+    "deferral-triggers-documented-in-showcase-readme.log",
+    "full-sweep-no-regressions-vs-lock-baseline.log",
+    "operator-wrapper-make-showcase-works.log"
+  ],
+  "non_goals": [
+    "No subtree / vendor / copy of DontPanic runtime code into target repos in v0",
+    "No auto-regen in supervisor, pre-commit hooks, or CI — operator-explicit invocation only",
+    "No install report sample artifact (depends on Plan 2 F004)",
+    "No state projection sample artifact (depends on Plan 003 close-out + export)",
+    "No work-request / intake demo artifact (depends on Plan 4.5)",
+    "No targeting every owned repo simultaneously — v0 picks exactly 4 (DontPanic + agent-conventions + axiom + one of {SpinDine, Glam})",
+    "No agent-conventions remote dependency (Plan 5 — separate; showcase uses local checkout)",
+    "No embedding of showcase index page in any live external site (operator-controlled deployment)",
+    "No validate-plans-strict for repos that don't follow DontPanic-style plan dirs (config flags this via has_dontpanic_plans=False)",
+    "No drift artifact for repos without committed architecture.json (v0 = DontPanic only)",
+    "No local integration (committed architecture.json, target-repo CI drift, target-repo pre-commit hooks) until one of three triggers fires: (a) repo wants committed architecture.json for offline/contributor consumption, (b) repo wants drift checks in its OWN CI, (c) repo has active non-DontPanic contributors who need the map in-repo",
+    "No wall-clock-bounded sweep for showcase regen — operator-explicit, untimed (full architecture regen across 4 repos may take minutes; not a sweep budget item)",
+    "No leaked absolute paths or secrets in committed artifacts — sanitization scan blocks merges"
+  ],
+  "completion_test": "A new user lands on the DontPanic README, follows 'See DontPanic on real repos' into docs/showcase/README.md, and sees architecture HTML + JSON for DontPanic + agent-conventions + axiom + (SpinDine OR Glam) plus strict-plan-validation summaries (for the targets with plan dirs) plus DontPanic's own drift status — all with exact regen commands, no leaked absolute paths or secrets, and a clearly-codified 'Local integration — deferred' section listing the three concrete triggers that would justify a follow-on plan to subtree the architecture module into a target repo."
+}
