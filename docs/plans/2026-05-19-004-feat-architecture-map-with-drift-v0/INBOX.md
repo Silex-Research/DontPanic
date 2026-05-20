@@ -120,3 +120,103 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T02:21:04Z
+event: volley_start
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T02:21:04Z
+event: volley_start
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T02:40:34Z
+event: no_progress_classification
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F002
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Schema-invalid `architecture.json` can still render instead of failing clearly. Evidence: `architecture_html.py` does not validate against `architecture-snapsh…
+  - [implementation_defect] severity=medium, category=security: Malformed snapshot fields can inject raw HTML into the generated page. Evidence: `source_fingerprint.files_count="<script>x</script>"` rendered raw `<script>x<…
+  - [environmental_reproduction_failure] severity=high, category=test_coverage: Required full sweep `>=1929` green is not verifiably established in the i1 audit artifact. Evidence: the audit summary is truncated before the full-sweep resul…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-004-feat-architecture-map-with-drift-v0 F002 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T02:40:34Z
+event: breaker_tripped
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-19-004-feat-architecture-map-with-drift-v0 breaker:no_progress` or `jarvis resume 2026-05-19-004-feat-architecture-map-with-drift-v0 --all`.
+
+===
+---
+timestamp: 2026-05-20T02:40:35Z
+event: volley_terminal
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-20T02:53:19Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F002
+reason_class: implementation_defect
+---
+
+Operator closed feature F002 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-004-feat-architecture-map-with-drift-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

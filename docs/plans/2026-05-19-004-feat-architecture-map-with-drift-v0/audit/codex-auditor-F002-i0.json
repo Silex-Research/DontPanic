@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+  "audit_id": "2026-05-19-004-feat-architecture-map-with-drift-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T02:29:42Z",
+  "completed_at": "2026-05-20T02:33:15Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-004-feat-architecture-map-with-drift-v0-lzawy5ja target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1120081 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1269507,
+    "tokens_out": 13749,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): Invalid `architecture.json` element shapes do not error clearly. Evidence: [architecture_html.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/architecture_html.py:103) validates only top-level keys/list types; a snapshot with `modules: [\"bad-module-entry\"]` raises raw `AttributeError 'str' object has no attribute 'get'`, not `ArchitectureRenderError` with the regen pointer. Recommendation: validate module/schema/plan entries are objects, or normalize defensively and raise `ArchitectureRenderError` for schema-invalid snapshots.\n\nFINDING (high, test_coverage): Required full sweep green is not established. Evidence: implementer audit says the sweep had `1976 passed / 7 skipped` with 2 failures, which is not green; my pytest attempts could not collect because this sandbox has no writable temp directory. Recommendation: fix or formally exempt the failing tests, then rerun `PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q` in a writable dev shell and record a green result.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py scripts/dontpanic_orchestr",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py -q",
+      "python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import architecture_html as h; s={'schema_version':'1.0','generated_at':'x','source_fingerprint':{'files_count':0,'file_hashes_root':'abc'},'modules':[{'name':'dontpanic_orchestrate.a','path':'a.py','imports':['dontpanic_orchestrate.b'],'public_symbols':[]},{'name':'dontpanic_orchestrate.b','path':'b.py','imports':[],'public_symbols':[]}],'schemas':[],'plans':[{'id':'p','title':'P','status':'active','features_count':1}]}; out=h.render_html(s); print(out.count('<svg'), 'module-graph' in out, 'plan-lifecycle' in out, 'supervisor-state' in out, '@media (min-width: 800px)' in out, '<nav class=\\\"top\\\">' in out)\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import architecture_html as h; import pathlib; p=pathlib.Path('/definitely/missing/architecture.json'); exec('try:\\n h.render(p)\\nexcept Exception as e:\\n print(type(e).__name__, str(e))')\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import architecture as a; p=a._build_parser(); args=p.parse_args(['regen','--json-only']); print(args.with_html); args=p.parse_args(['regen']); print(args.with_html); args=p.parse_args(['regen','--with-html']); print(args.with_html)\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cacheprovider\" PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q",
+      "git check-ignore -v architecture/architecture.html"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Invalid `architecture.json` element shapes do not error clearly. Evidence: [architecture_html.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/architecture_html.py:103) validates only top-level keys/list types; a snapshot with `modules: [\"bad-module-entry\"]` raises raw `AttributeError 'str' object has no attribute 'get'`, not `ArchitectureRenderError` with the regen pointer. Recommendation: validate module/schema/plan entries are objects, or normalize defensively and ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Required full sweep green is not established. Evidence: implementer audit says the sweep had `1976 passed / 7 skipped` with 2 failures, which is not green; my pytest attempts could not collect because this sandbox has no writable temp directory. Recommendation: fix or formally exempt the failing tests, then rerun `PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q` in a writable dev shell and record a green result. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=\"-p no:cach",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

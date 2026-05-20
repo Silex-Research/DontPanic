@@ -2,12 +2,12 @@
 status: operator_resolved
 reason_class: implementation_defect
 plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
-feature_id: F001
-closed_at: 2026-05-20T02:18:13Z
+feature_id: F002
+closed_at: 2026-05-20T02:53:19Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F001
+# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F002
 
 ## Operator decision
 
@@ -19,16 +19,15 @@ This feature was closed under class `implementation_defect` after operator revie
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 6 (see structured target_context.commands_run)
+- Command: 8 (see structured target_context.commands_run)
 
-[F001] Repo: DontPanic
+[F002] Repo: DontPanic
 Env: dev
 Project: (none)
-Command: audit verification only; no cloud project commands
 
-Overall verdict: needs_changes. The implementer’s audit target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and I found no forbidden command shapes in `target_context.commands_run`.
+Verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains no forbidden command shapes.
 
-FINDING (high, correctness): `source_fingerprint` does not include `claude/shared/VERSION` even though snapshot output reads it for every schema entry. Evidence: `crawl_schemas()` reads `self.roots.version_file`, but `_fingerprint_files()` only includes `scripts/dontpanic_orchestrate`, `claude/shared/schemas/v1.0`, and selected plan files; my check ...
+FINDING (high, correctness): Schema-invalid `architecture.json` can still render instead of failing clearly. Evidence: `architecture_html.py` does not validate against `architecture-snapshot.schema.json`; it intentionally excludes required `schema_version`, and my smoke check rendered a snapshot missing `schema_version`. Recommendation: validate the snapshot against the schema, or mirror all required fields/types, and raise `Arch...
 
 ## Rationale (operator — fill in)
 

@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+  "audit_id": "2026-05-19-004-feat-architecture-map-with-drift-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T02:35:47Z",
+  "completed_at": "2026-05-20T02:40:34Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-004-feat-architecture-map-with-drift-v0-lzawy5ja target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 139326 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2446318,
+    "tokens_out": 17557,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): Schema-invalid `architecture.json` can still render instead of failing clearly. Evidence: `architecture_html.py` does not validate against `architecture-snapshot.schema.json`; it intentionally excludes required `schema_version`, and my smoke check rendered a snapshot missing `schema_version`. Recommendation: validate the snapshot against the schema, or mirror all required fields/types, and raise `ArchitectureRenderError` with the regen pointer.\n\nFINDING (medium, security): Malformed snapshot fields can inject raw HTML into the generated page. Evidence: `source_fingerprint.files_count=\"<script>x</script>\"` rendered raw `<script>x</script> files tracked`. Recommendation: schema-validate `files_count` as an integer and escape all fallback interpolations.\n\nFINDING (high, test_coverage): Required full sweep `>=1929` green is not verifiably established in the i1 audit artifact. Evidence: the audit summary is truncated before the full-sweep result, transcript/evidence contain no pass-count output, and I could not rerun pytest here because Python has no writable temp directory. Recommendation: rerun the full sweep in a writable dev shell and record the exact green pass/skip count.\n\nChecks run:\n$ git status --short\n$ git diff -",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "git check-ignore -v architecture/architecture.html",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest ../scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c 'from dontpanic_orchestrate.tests.test_architecture_html_f002 import _build_snapshot; from dontpanic_orchestrate import architecture_html as h; out=h.render_html(_build_snapshot()); print(out.count(\"<svg\"), \"module-graph\" in out, \"plan-lifecycle\" in out, \"supervisor-state\" in out, \"@media (min-width: 800px)\" in out, \"<nav\" in out)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c 'from dontpanic_orchestrate import architecture as a; p=a._build_parser(); print(p.parse_args([\"regen\"]).with_html, p.parse_args([\"regen\",\"--json-only\"]).with_html, p.parse_args([\"regen\",\"--with-html\"]).with_html)'",
+      "python3 ../scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Schema-invalid `architecture.json` can still render instead of failing clearly. Evidence: `architecture_html.py` does not validate against `architecture-snapshot.schema.json`; it intentionally excludes required `schema_version`, and my smoke check rendered a snapshot missing `schema_version`. Recommendation: validate the snapshot against the schema, or mirror all required fields/types, and raise `ArchitectureRenderError` with the regen pointer.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "security",
+      "feature_id": "F002",
+      "issue": "Malformed snapshot fields can inject raw HTML into the generated page. Evidence: `source_fingerprint.files_count=\"<script>x</script>\"` rendered raw `<script>x</script> files tracked`. Recommendation: schema-validate `files_count` as an integer and escape all fallback interpolations.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Required full sweep `>=1929` green is not verifiably established in the i1 audit artifact. Evidence: the audit summary is truncated before the full-sweep result, transcript/evidence contain no pass-count output, and I could not rerun pytest here because Python has no writable temp directory. Recommendation: rerun the full sweep in a writable dev shell and record the exact green pass/skip count. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-only HEAD~1 $ git check-ig",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

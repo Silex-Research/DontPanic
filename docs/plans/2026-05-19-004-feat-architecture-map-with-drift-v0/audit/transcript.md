@@ -12,3 +12,11 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 **2026-05-20T02:09:25Z** — feature **F001** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-05-20T02:29:42Z | F002 | i0 | claude / implementer | signed_off | 4,420,686 / 31,387 | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-05-20T02:33:16Z | F002 | i0 | codex / auditor | needs_changes | 1,269,507 / 13,749 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+| 2026-05-20T02:35:47Z | F002 | i1 | claude / implementer | signed_off | 1,010,648 / 5,536 | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |
+| 2026-05-20T02:40:34Z | F002 | i1 | codex / auditor | needs_changes | 2,446,318 / 17,557 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
+
+**2026-05-20T02:40:34Z** — feature **F002** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

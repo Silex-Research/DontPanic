@@ -497,8 +497,15 @@ def regen(
     output_path: Path | None = None,
     size_cap_bytes: int = DEFAULT_SIZE_CAP_BYTES,
     now: str | None = None,
+    with_html: bool = False,
+    html_path: Path | None = None,
 ) -> Path:
-    """Crawl + write the architecture snapshot. Returns the output path."""
+    """Crawl + write the architecture snapshot. Returns the JSON output path.
+
+    When ``with_html`` is true, also writes the F002 HTML companion next to
+    the JSON (or to ``html_path`` when given). HTML rendering is best-effort
+    in this entry point — failures bubble up so the CLI can surface them.
+    """
     repo_root = Path(repo_root).resolve()
     out = output_path or (repo_root / DEFAULT_OUTPUT_REL)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -507,6 +514,11 @@ def regen(
     prior = _load_existing(out)
     snap = _preserve_timestamps(snap, prior)
     out.write_text(render_snapshot(snap), encoding="utf-8")
+    if with_html:
+        from dontpanic_orchestrate import architecture_html  # local import: avoid cycles
+
+        target = html_path or out.with_suffix(".html")
+        architecture_html.render(out, target)
     return out
 
 
@@ -650,6 +662,28 @@ def _build_parser() -> argparse.ArgumentParser:
     p_regen = sub.add_parser("regen", help="Regenerate the architecture snapshot")
     p_regen.add_argument("--repo-root", type=Path, default=None)
     p_regen.add_argument("--output", type=Path, default=None)
+    p_regen.add_argument(
+        "--html-output",
+        type=Path,
+        default=None,
+        help="Override the HTML output path (defaults to alongside the JSON).",
+    )
+    # HTML rendering is on by default (F002). --json-only opts out for callers
+    # that want the machine-readable artifact only (CI, hooks, etc.).
+    html_group = p_regen.add_mutually_exclusive_group()
+    html_group.add_argument(
+        "--with-html",
+        dest="with_html",
+        action="store_true",
+        default=True,
+        help="Also render docs/architecture/architecture.html (default).",
+    )
+    html_group.add_argument(
+        "--json-only",
+        dest="with_html",
+        action="store_false",
+        help="Skip the HTML companion; emit JSON only.",
+    )
 
     p_status = sub.add_parser("status", help="Print drift state without regenerating")
     p_status.add_argument("--repo-root", type=Path, default=None)
@@ -682,8 +716,22 @@ def cli_main(argv: list[str] | None = None) -> int:
     output = getattr(args, "output", None)
 
     if sub == "regen":
-        out = regen(repo_root, output_path=output)
+        with_html = bool(getattr(args, "with_html", True))
+        html_path = getattr(args, "html_output", None)
+        try:
+            out = regen(
+                repo_root,
+                output_path=output,
+                with_html=with_html,
+                html_path=html_path,
+            )
+        except Exception as exc:  # noqa: BLE001 — surface any render failure
+            print(f"[architecture] regen failed: {exc}")
+            return 1
         print(f"[architecture] wrote {out}")
+        if with_html:
+            html_target = html_path or out.with_suffix(".html")
+            print(f"[architecture] wrote {html_target}")
         return 0
     if sub == "status":
         result = status(repo_root, output_path=output)

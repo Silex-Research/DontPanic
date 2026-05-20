@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-20T02:05:06Z",
+  "generated_at": "2026-05-20T02:53:23Z",
   "modules": [
     {
       "imports": [],
@@ -73,6 +73,7 @@
         "ast",
         "dataclasses",
         "datetime",
+        "dontpanic_orchestrate",
         "hashlib",
         "json",
         "pathlib",
@@ -94,6 +95,26 @@
         "status"
       ],
       "summary": "dontpanic architecture — crawler + CLI for a stable architecture snapshot."
+    },
+    {
+      "imports": [
+        "__future__",
+        "html",
+        "json",
+        "math",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.architecture_html",
+      "path": "scripts/dontpanic_orchestrate/architecture_html.py",
+      "public_symbols": [
+        "ArchitectureRenderError",
+        "DEFAULT_HTML_REL",
+        "iter_required_top_keys",
+        "render",
+        "render_html"
+      ],
+      "summary": "dontpanic architecture HTML renderer."
     },
     {
       "imports": [
@@ -1909,55 +1930,56 @@
       "name": "architecture-snapshot.schema",
       "path": "claude/shared/schemas/v1.0/architecture-snapshot.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "audit.schema",
       "path": "claude/shared/schemas/v1.0/audit.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "environments.schema",
       "path": "claude/shared/schemas/v1.0/environments.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "features.schema",
       "path": "claude/shared/schemas/v1.0/features.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "objective_contract.schema",
       "path": "claude/shared/schemas/v1.0/objective_contract.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "plan.schema",
       "path": "claude/shared/schemas/v1.0/plan.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "signoff.schema",
       "path": "claude/shared/schemas/v1.0/signoff.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "name": "state-snapshot.schema",
       "path": "claude/shared/schemas/v1.0/state-snapshot.schema.json",
       "validator_present": true,
-      "version": "1.9.0"
+      "version": "1.9.1"
     }
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-20T02:05:06Z",
+    "computed_at": "2026-05-20T02:53:23Z",
     "file_hashes": {
+      "claude/shared/VERSION": "0ab4fa190ca1b1d1f630ac87cf34672bfbaf1395d0148c7568d38e58335b8d68",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
       "claude/shared/schemas/v1.0/audit.schema.json": "d3462cce08e4f731ab216410492e93d11ab14a4115caae0b77762edba5ed0abe",
       "claude/shared/schemas/v1.0/environments.schema.json": "1e93c4a621dea5cffd3dd7e653baeb69efade7b5532ee0c6fb7673db3ce2460f",
@@ -1966,11 +1988,11 @@
       "claude/shared/schemas/v1.0/models/environments_model.py": "7fa1a98bd0e90673ad7be3cd3953441db12c65be1930b5920be0d05289434bb9",
       "claude/shared/schemas/v1.0/models/features_model.py": "7a327754893ab679a23ae52ca40491f0786a2a364a53f37de4f94cb7613ef745",
       "claude/shared/schemas/v1.0/models/objective_contract_model.py": "50221e85c4be0e86d1ea5c6a59be2843557d2a13fd9fbcd6f126601515139a8f",
-      "claude/shared/schemas/v1.0/models/plan_model.py": "3418e58b996beea32eae84be9933c281b4891adefca252464c1713871549fe76",
+      "claude/shared/schemas/v1.0/models/plan_model.py": "1bd0789899f9bac9715d47a733dfcaf44c16fc2f081637178b872407ab27de9b",
       "claude/shared/schemas/v1.0/models/signoff_model.py": "3fdeb3a0bad28c3127325902348012bbccd021e09dad1539b2461ceeafabf98c",
       "claude/shared/schemas/v1.0/models/state_snapshot_model.py": "0fed1a040bfffe24bb7caafe345e176165f68262f31a9f21bb95ad0bd9864f33",
       "claude/shared/schemas/v1.0/objective_contract.schema.json": "9d382fa2ffc5c0b12f42e61168c6af92b5b704d1a62bf815e838e373569557b6",
-      "claude/shared/schemas/v1.0/plan.schema.json": "325b3a0b3d39b1f5aa7ea9b241985cabecd74f6f3f9383a0a3260ee659f1377c",
+      "claude/shared/schemas/v1.0/plan.schema.json": "43501d35962f1e731841fb46758dc672f88f6ea978e7f3dad13137d638c3f45c",
       "claude/shared/schemas/v1.0/signoff.schema.json": "9110be52b08682341bf0aa34d850f5211f974231423bf5c5d7fa920548b6604a",
       "claude/shared/schemas/v1.0/state-snapshot.schema.json": "ba83815739e8aaee0c0f72e3a07c22084cc923754cc34c367fc9fd6e4e5a7e91",
       "claude/shared/schemas/v1.0/validate.py": "4f7b4ffce9fb20eba8547944a6907b99e3d95ebe76a20ba29ce45e9e928b02db",
@@ -2066,20 +2088,21 @@
       "docs/plans/2026-05-12-001-fix-harness-frictions-v4/plan.md": "67f4591231c4b5647e881117a4dcd86d819fd5a198b00550b6d4691c3b909c5b",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/features.json": "75a8448d89b7c5313f41200b1a4c1af976b988aacfd6833e6f7095cfa7cbde33",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md": "8ec5179ed3d18eb018be9c244a54532f69819d1fc4c5b5924c462e9d379f6b03",
-      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "93f677abeae54fdab3025b3ed002687bdc29a469caf95e9046e14c95886a87c9",
+      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "6523a79523f8538d5ba8e3db0f81af09b691b50b8cd18a437543dcc8d9d155ed",
       "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md": "60b89d82a76a55e3bdb5037f1a188f91c09850df546dde04d9034e960974359a",
-      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "6891afb0161596971e79b5719477c8cc5c2513e00074fe9ff6c01fd85af689a7",
+      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "74340b29100edd11a59ccc0652cced290e797d021c9ed3b28f67a8c33e93265a",
       "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md": "344e84b174b1e35a48dc43a305bf338a460a9c949cc3957c4127869cc0c02aae",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
       "scripts/dontpanic_orchestrate/active_supervisors.py": "4e0a75b8435e0e0a99e5f5259dd75578f2c85a889474f101ed48262132fe5408",
       "scripts/dontpanic_orchestrate/agent_manifest.py": "247cfefd2a5bc21c4904a24c6acb584b19e5d0096a2d989149fb3e0dd09bce8c",
-      "scripts/dontpanic_orchestrate/architecture.py": "489ea4e63c91f4a3e1b0922ba403a0c17dcb83a8aad092204dd346e8ad91bfb6",
+      "scripts/dontpanic_orchestrate/architecture.py": "b41d25cb9d9b36e212df473f268db35d723a48eb8d27977715cdbba5e058633d",
+      "scripts/dontpanic_orchestrate/architecture_html.py": "c00b3cd5dfd21ae7da189ba5c10058c03566eb7dcf6144cb1e20b411e00f8172",
       "scripts/dontpanic_orchestrate/audit_writer.py": "5d1c762c312e8ae4a58ffc605fec79314922cb3775d184338f6bd4a5d6597480",
       "scripts/dontpanic_orchestrate/auditor_taxonomy.py": "91b2981203a0cd125dfed077d6e0dcc37137058b2e895c91e427c4d18df9a15a",
       "scripts/dontpanic_orchestrate/calibration_loader.py": "31b0cc76eb596bdde4ab9a189c543d78ace6bad8c1bcd76f60410d3385d00a96",
       "scripts/dontpanic_orchestrate/circuit_breakers.py": "20b51629a021346516c349f44469509498d6d2cd21838407ede6efebd68369b3",
-      "scripts/dontpanic_orchestrate/cli.py": "cb2aea955a69a0bfe717fdb60e7743ccb04a5e2526dfde977963513b26630011",
+      "scripts/dontpanic_orchestrate/cli.py": "bd00aaf779c94c0d82ed140ec1e8f8950505b8a15cf3c6ed1c33549d9cfd9d48",
       "scripts/dontpanic_orchestrate/closeout.py": "e0b4a65d5b05a1b6b1c2339add1b833366d98a0a8a5570a8c02fbf390a346752",
       "scripts/dontpanic_orchestrate/command_guard.py": "53ed08234b3c4472b12d4c468291151ffd0542b78f06405baa11482cdc0cb1d6",
       "scripts/dontpanic_orchestrate/completion_auditor.py": "5eaf04e6e95f9b222617bfb773ae58f3908db79db06acf5b234cebdb154cbe15",
@@ -2161,6 +2184,7 @@
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-dom.html": "33d47ae50455893d7fbd6330d5bf3f2611f760d88df076509ce35b86bfe6b3a9",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-network.json": "ca5e712169f666b43010ec6062e3f811fe2a1269b20f7f18aca8a3c4c2a7f96c",
       "scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py": "be7dec5376363e7775ceb735af3d384464d2e0a097a361253a3d0301f322218e",
+      "scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py": "98492a10450039b4db118eb89e92165c86e245c8cf75832d0f489214cb495423",
       "scripts/dontpanic_orchestrate/tests/test_audit_envelope_timeout_evidence.py": "a4ece01031dbe0d28b8fc1c2fbefcb4d25e2f6f9c4b4a320c98378fc16e593f5",
       "scripts/dontpanic_orchestrate/tests/test_audit_filename_feature_id.py": "09b37753438d206b7d87726003239088c7118d5160ba2019de2b73027305788f",
       "scripts/dontpanic_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py": "85be1fe00641655ada08cc4bcf8c929299fae7f270f248d75d85be92599c8e83",
@@ -2176,6 +2200,7 @@
       "scripts/dontpanic_orchestrate/tests/test_conftest_global_config_isolation.py": "5b1477de9c43b4a25c4b5bc2faf056ac5e56d30007726fb1b60a9be9331745a0",
       "scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py": "144b68be1f0e0ba73bb71989a1f0985b7c9e186c65cd56ec0774e4855ca41ae5",
       "scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py": "ff2e9c88e3cb1c482d8d71aa18c528d63bd0551fe130aab1ae476a4b348b735a",
+      "scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py": "868665e296a910708dfff14072025a69569c94dee725d69916ddb066831af2d3",
       "scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py": "5dbf3de7086b637891b3b26b5810e678940c8f86d2a11bcfe31096cd63aebdae",
       "scripts/dontpanic_orchestrate/tests/test_ec12_vendor_matrix.py": "f3a637c166da0a784788f914625572b9fa81f196be43551111acd12a9b4f5542",
       "scripts/dontpanic_orchestrate/tests/test_ec13_active_supervisors.py": "a4c055d486839c730778328f116cb694a025340c3c27aabee50813f783ee70f5",
@@ -2215,7 +2240,7 @@
       "scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py": "244db378e4bb9b7464e033c39fff786930076c641ce8d37bf52455187847dbee",
       "scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py": "31066c01b119dd8c2267e57c4ff58ec1b97479a122a0c556433cf2edceac676f",
       "scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py": "9662aa4405ff12af18ebd87e0a0ffc8dc2794ab9e5baa4c4a89e683196df20da",
-      "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py": "7c2526284466bdb4de53258cd260996c0b87edfdce097b8b422d6ab880797e99",
+      "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py": "8b4ea5a2b304dbe55c165dd9f9ecbdab5bd96ea0611597755f88a3af0eecfb1c",
       "scripts/dontpanic_orchestrate/tests/test_plan_target.py": "92680f1a90bda6448f0499934ef18f7eed3035941b34a2f1f84829a839f05f57",
       "scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py": "600b81146cbad1050655db8bff859a0bff5b9b0b8a1c8f789e5070336f3d2671",
       "scripts/dontpanic_orchestrate/tests/test_pyproject_security_carve_out.py": "9d8d60fdd7d455f3fedef2f5f80b98dda5ebfebbf39d7b8f8b59c9e83c1cb9d4",
@@ -2234,7 +2259,7 @@
       "scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py": "d51cf0c391469d57ac1bd126047ca0ef6c546a26d627fd2495224515b83fef8a",
       "scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py": "8cce0d5ecf548467e454e8e3c508cf58b5513c145d1487303961b8a15907fb40",
       "scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py": "d36ac25cca07451e9d6ee17823fa9aff60e74097a2251bc982c64c971e3e1285",
-      "scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py": "cfbaf323c0d5141711f0c539ae49c3bca50036bb80c58a0b1064b77edbb6d04c",
+      "scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py": "d1fbcc8be18d55d1c45d84590986cb2b4755768feb6e59a6d9a704c226c83827",
       "scripts/dontpanic_orchestrate/tests/test_subprocess_runner.py": "3dae761152bcded13096302f600460b0b7e5be113974328305881932686727a8",
       "scripts/dontpanic_orchestrate/tests/test_sufficiency_auditor.py": "7f1f8b66a42711040c1f491d5bafaeacadd97ffccf2a59df9b9f631af91ddacc",
       "scripts/dontpanic_orchestrate/tests/test_sufficiency_gate.py": "791789081a9db31d0ea24e7350d3cb328e20263b830d8e24aa27936a5f27db82",
@@ -2250,7 +2275,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "8c396fb0ff8971036b10479bea06cb7e6b8957eca490f3acc279d78d6ae560cb",
-    "files_count": 291
+    "file_hashes_root": "c3242aa51ac53e06d052db84f86747f536768c55e608cc5cd489863a4b2c58e2",
+    "files_count": 295
   }
 }
