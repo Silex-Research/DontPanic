@@ -1,27 +1,32 @@
 {
   "goal_type": "new_feature",
-  "source_of_truth": "Roadmap doc docs/roadmap-2026-05-19-install-ux-architecture-v0.md v1.2 §Plan 2 + operator review constraints captured in this plan's child_charter.forbidden_decisions + D001. First-touch authority for a new user — the doctor is the surface that catches the three first-user blockers (GitHub PAT, Python version, codex CLI) before a paid volley fails.",
+  "source_of_truth": "Roadmap doc docs/roadmap-2026-05-19-install-ux-architecture-v0.md v1.2 §Plan 2 + operator review constraints captured in this plan's child_charter.forbidden_decisions + D001-D002. First-touch authority for a new user — the doctor is the surface that catches first-user blockers (Python version + workflow-conditional GitHub auth + workflow-conditional codex CLI) before a paid volley fails. NOT a dependency consumer of Plan 4 architecture.json — install UX is independent of the architecture map.",
   "user_journeys": [
     {
       "name": "new-user-runs-doctor-on-fresh-clone",
-      "description": "A new user clones DontPanic and runs `dontpanic doctor --profile=core --json`. The doctor surfaces the three first-user blockers (GitHub auth missing, Python <3.10, codex CLI not installed) with copy-paste fix commands, in <=10s wall clock. No Firebase or agent-conventions probes appear under --profile=core.",
+      "description": "A new user clones DontPanic and runs `dontpanic doctor --profile=core --json`. The doctor surfaces Python <3.10 as a hard blocker; surfaces missing claude CLI as a hard blocker (default executor); surfaces missing GitHub auth as a warning only when a github remote is configured for the clone; surfaces missing codex CLI as advisory (warn) unless activation_condition `auditor_codex_selected` is true. No Firebase or agent-conventions probes appear under --profile=core. `dontpanic doctor` with NO flags keeps its legacy behavior unchanged (existing CheckResult pipeline, existing exit-code matrix).",
       "surfaces": ["infra", "docs"],
-      "states": ["fresh_clone_zero_setup", "doctor_invoked_core_profile", "blockers_surfaced", "fix_commands_emitted"],
+      "states": ["fresh_clone_zero_setup", "doctor_invoked_core_profile", "blockers_surfaced_per_severity", "fix_commands_emitted"],
       "acceptance_signals": [
-        "All three first-user blockers appear in --profile=core output",
-        "Each blocker has a fix_url AND a fix_command",
-        "Firebase/gcloud/agent-conventions probes are absent from --profile=core",
-        "Full sweep wall clock <=10s",
-        "JSON output schema is stable"
+        "Python <3.10 → red/fail in --profile=core",
+        "Missing claude CLI → red/fail in --profile=core (default executor)",
+        "Missing gh auth → warn (not fail) when github remote exists; absent from output when no github remote",
+        "Missing codex CLI → warn (not fail) unless activation_condition.auditor_codex_selected resolves true",
+        "Firebase/gcloud/agent-conventions probes absent from --profile=core output",
+        "`dontpanic doctor` with no flags keeps legacy CheckResult pipeline + 0/1/2 exit codes unchanged",
+        "Full sweep wall clock <=10s under --profile=core",
+        "JSON output carries explicit schema_version"
       ]
     },
     {
       "name": "agent-installer-uses-json-mode",
-      "description": "An agent installer (e.g. a wrapper script or CI provisioner) runs `dontpanic doctor --json --profile=ci` and parses the structured output to decide what to install. The JSON schema is stable and version-pinned. Exit code 0=ready, 1=warnings, 2=blockers — the agent can branch on the code without parsing text.",
+      "description": "An agent installer (CI provisioner, ops script) runs `dontpanic doctor --profile=ci --json` and parses the structured output. The JSON envelope carries schema_version so the consumer can branch on format changes. Exit code matrix: 0=ready, 1=warnings, 2=blockers. The contract is documented locally in this plan's evidence (formal agent-conventions schema bump deferred to a future plan).",
       "surfaces": ["infra"],
-      "states": ["agent_invokes_doctor_json", "structured_output_parsed", "exit_code_branched"],
+      "states": ["agent_invokes_doctor_json", "structured_output_parsed", "schema_version_pinned", "exit_code_branched"],
       "acceptance_signals": [
-        "JSON schema is documented + snapshot-tested for stability",
+        "JSON envelope carries top-level schema_version field (string)",
+        "Local schema doc lives in this plan's evidence (formal agent-conventions schema bump explicitly deferred to a future plan)",
+        "Snapshot test pins JSON shape for stability",
         "Exit codes match the 0/1/2 matrix on every probe outcome",
         "--profile=<unknown> errors with the valid profile list",
         "No interactive prompts in --json path"
@@ -29,52 +34,62 @@
     },
     {
       "name": "first-touch-init-walkthrough",
-      "description": "A new user runs `dontpanic init` after `dontpanic doctor` flagged red items. Init walks the checklist: for each red probe, it shows why_needed + fix_command and (where auto_install_safe=True) offers to run the fix. The user resolves blockers in order without leaving the terminal. After all probes pass, init runs `dontpanic smoke` to confirm dispatch_volley actually works.",
+      "description": "A new user runs `dontpanic init` (defaults to --profile=core) after `dontpanic doctor --profile=core` flagged red items. Init walks the checklist: for each red probe, it shows why_needed + fix_command. Auto-fix execution uses a strict argv allowlist (list[str], never shell strings) and requires per-probe `auto_install_safe=true` AND operator confirmation (no blanket --auto-fix-safe execution in v0 default). Package-manager installs (brew, pip) are explicitly opt-in per probe and OFF by default.",
       "surfaces": ["infra"],
-      "states": ["doctor_red_items_detected", "init_walks_checklist", "safe_auto_fix_offered", "unsafe_fix_copy_paste_prompted", "smoke_runs_after_all_green"],
+      "states": ["doctor_red_items_detected", "init_walks_checklist", "safe_auto_fix_allowlist_only", "operator_confirms_per_probe", "smoke_runs_after_all_green"],
       "acceptance_signals": [
+        "`dontpanic init` defaults to --profile=core (matches doctor profile-aware path)",
         "init is idempotent (re-runnable mid-install without state file)",
-        "--non-interactive mode exits 1 with JSON listing red probes",
-        "--auto-fix-safe executes only auto_install_safe=True probes; falls through for unsafe",
-        "Smoke runs automatically as init's final step when all probes pass",
+        "--non-interactive mode exits 1 with JSON listing red probes; never prompts",
+        "Auto-fix execution uses subprocess.run(argv, shell=False) — strict argv list, never shell strings",
+        "Each auto-fix prompts operator per-probe by default; --auto-fix-safe-all flag opts into batch execution",
+        "Package-manager installs (brew/pip) opt-in via per-probe auto_install_safe=true; OFF by default in v0",
+        "Smoke runs as init's final step when all probes pass",
         "Smoke env-blocker exit re-enters the fix loop"
       ]
     },
     {
-      "name": "smoke-catches-blockers-without-paid-call",
-      "description": "A new user (or CI) runs `dontpanic smoke` after install. The synthetic plan + mocked executors exercise supervisor.dispatch_volley end-to-end without any paid API calls. Missing claude CLI or missing codex CLI short-circuits with exit code 2 + the prereq fix_url. Real supervisor defects exit code 1. Bounded <=30s wall clock.",
+      "name": "smoke-validates-supervisor-plumbing-with-mocks",
+      "description": "A new user (or CI) runs `dontpanic smoke --mode=mocked`. Synthetic plan + mocked executors exercise the supervisor plumbing without paid API calls AND without requiring real claude/codex CLIs on host. Real-CLI presence is validated separately by doctor profile probes — smoke and prereq probes have distinct scopes.",
       "surfaces": ["infra"],
-      "states": ["smoke_invoked", "synthetic_plan_dispatched", "mocked_executors_signed_off", "supervisor_branches_exercised", "tmpdir_cleaned_up"],
+      "states": ["smoke_mocked_invoked", "synthetic_plan_dispatched", "mocked_executor_envelopes_written", "named_supervisor_surfaces_exercised", "tmpdir_cleaned_up"],
       "acceptance_signals": [
-        "No paid API calls (no anthropic / openrouter network)",
+        "No paid API calls (no anthropic / openrouter network) in --mode=mocked",
+        "No real claude/codex CLI required on host in --mode=mocked",
         "Wall clock <=30s",
         "tmpdir cleaned up on success AND on exception",
-        "Exit codes: 0=pass, 1=real defect, 2=env blocker",
-        "Every supervisor branch a real run hits is exercised by the mock path"
+        "Exit codes: 0=mocked-supervisor-plumbing-pass, 1=supervisor plumbing defect, 2=env blocker (e.g. tmp not writable)",
+        "Smoke exercises NAMED surfaces: plan load, gate evaluation, mocked executor envelope write, audit JSON persist, signoff envelope write, INBOX append, tmpdir cleanup (acceptance lists exact set; does NOT claim every supervisor branch)",
+        "Real-CLI validation lives in doctor profile probes, not in smoke"
       ]
     },
     {
       "name": "operator-shares-install-report",
-      "description": "An operator helping a community user runs `dontpanic init --report` and shares the resulting docs/install-report.html. The report opens cleanly in Chrome/Safari/Firefox on macOS + Linux, shows per-probe status badges, the highest-priority red item with a copy-paste fix, and footer links to README + Hermes cheat sheet. The HTML is gitignored — no noisy diffs in PR review.",
+      "description": "An operator helping a community user runs `dontpanic init --report` and shares docs/install-report.html. The report opens cleanly in Chrome/Safari/Firefox on macOS + Linux, shows per-probe status badges (red/warn/green/advisory), the highest-priority red item with a copy-paste fix, and footer links to README + Hermes cheat sheet. The HTML is gitignored — no noisy diffs in PR review.",
       "surfaces": ["infra", "docs"],
       "states": ["report_requested", "html_rendered_self_contained", "browser_renders_cleanly", "html_gitignored"],
       "acceptance_signals": [
         "HTML is single-page, no JS framework, no external CSS, no external fonts",
         "Mobile-responsive (single column <800px, two-column wider)",
-        "All operator-facing output is html.escape'd (no injection)",
+        "All operator-facing output is html.escape'd at every interpolation seam (no injection)",
         "docs/install-report.html in .gitignore",
         "Generated HTML is well-formed HTML5"
       ]
     }
   ],
   "required_evidence": [
-    "prereq-registry-five-profiles.log",
+    "prereq-registry-five-profiles-pure-sets.log",
+    "doctor-no-flag-legacy-behavior-preserved.log",
     "doctor-profile-core-no-firebase-red-flags.log",
-    "network-probes-parallel-under-10s.log",
-    "init-interactive-and-noninteractive-modes.log",
-    "smoke-mocked-executors-no-paid-call.log",
+    "activation-conditions-not-pseudo-profiles.log",
+    "github-auth-conditional-on-remote-presence.log",
+    "codex-cli-warn-unless-auditor-selected.log",
+    "init-strict-argv-allowlist-no-shell-strings.log",
+    "smoke-mocked-mode-no-real-cli-required.log",
+    "smoke-named-surfaces-exercised.log",
+    "json-envelope-schema-version-pinned.log",
     "install-report-html-injection-escape.log",
-    "full-sweep-2036-green-baseline.log",
+    "full-sweep-no-regressions-vs-lock-baseline.log",
     "sanitization-clean.log"
   ],
   "non_goals": [
@@ -85,12 +100,13 @@
     "No Windows support in v0 (macOS + Linux only; document the gap, don't probe)",
     "No reusable profile authoring UX (operator-defined custom profiles deferred to v1)",
     "No README rewrite for first-time visitor (Roadmap defers to after F001 delta assessment)",
-    "No installing dependencies outside safe scopes (no sudo, no system-Python, no pipx --force, no global brew without per-probe auto_install_safe=true)"
+    "No installing dependencies outside safe scopes (no sudo, no system-Python, no pipx --force, no global brew without per-probe auto_install_safe=true)",
+    "No dependency on Plan 4 architecture.json — smoke fixtures are self-contained synthetic plans, not consumers of the architecture map",
+    "No package-manager installs as F002 v0 default — auto-fixes ship behind strict per-probe auto_install_safe=true AND per-probe operator confirmation (no blanket --auto-fix-safe-all in default flow)",
+    "No conditional-pseudo-profiles (`core-when-auditor-codex` etc.) — profiles are pure sets; conditional severity lives on per-probe activation_condition field",
+    "No `--strict` flag clash with Plan 3 F003's existing `--strict-codes`/`--validate-plans-strict` — new doctor flag for profile-aware blocker mode uses `--profile-strict` namespace",
+    "No claim of exercising every supervisor branch in smoke — acceptance names exact surface set",
+    "No formal agent-conventions schema bump for `dontpanic doctor --json` envelope in v0 — local schema doc in this plan's evidence; formal promotion deferred to a future plan"
   ],
-  "out_of_scope_for_v0": [
-    "Reusable profile authoring UX (v1 candidate)",
-    "Maintainer profile + agent-conventions remote probes (Roadmap Plan 5/7)",
-    "Windows installer support",
-    "Auto-PAT / auto-SA-key flows"
-  ]
+  "completion_test": "A new user on a fresh macOS or Linux clone runs `dontpanic doctor --profile=core` and gets Python <3.10 + missing claude CLI as the only hard fails; gh auth as warn-only when a github remote exists; codex CLI as advisory unless activation_condition resolves true; no Firebase / agent-conventions prompts. They then run `dontpanic init --profile=core`, fix flagged items via strict argv-allowlist auto-fixes (operator-confirmed per probe), reach all-green, and `dontpanic smoke --mode=mocked` exits 0 in <=30s exercising the named supervisor surfaces (plan load, gate eval, mocked executor envelope write, audit persist, signoff, INBOX, cleanup) without any real CLI or paid API call."
 }
