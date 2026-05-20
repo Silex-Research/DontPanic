@@ -6,15 +6,18 @@
       "id": "F001",
       "category": "infra",
       "phase": 1,
-      "description": "Dashboard ship — closes P9-004 F003 (Cloud Functions: kanbanMove + approve), F004 (Firestore security rules: auth-required read + service-account-only write), F005 (end-to-end smoke runbook). The Cloud Functions live in axiom/ repo (the dashboard's home per F023 EC11 cwd discipline); security rules + smoke ship there too. Operator provisions the Firebase project + Tailscale Funnel as out-of-band sub-task (D-entry records the credential set + cwd); LLM dispatches against the axiom/ checkout with that credential context. v0 ships read-only dashboard projection + the two state-flip Cloud Functions; multi-operator sync deferred. Acceptance verification = operator opens the Firebase-rendered dashboard, drags a plan card (kanbanMove fires), approves a gate (approve fires), confirms DontPanic state actually flipped.",
+      "description": "PM-tool category contract + Linear reference mapping. DontPanic owns a PM-tool category contract: abstract PMIssue / PMProject / PMStatus / PMComment Pydantic models + per-service mapping config schema + sync hook points (read by lock, write by close). Each PM tool supplies (a) a PP-generated MCP adapter (from P10 F001/F003 — already exists for Linear) AND (b) a small semantic mapping config at `~/.dontpanic/adapters/<service>.json` that translates the service's field names + status enum to the abstract contract. No DontPanic core code is added per service unless the category contract itself expands. Linear from P10 F003 becomes the reference implementation wired to the contract. v0 deliberately defines the minimum surface that ALL PM tools share — issue+project+status+comment. Service-specific concepts (Linear cycles, Jira epics, Monday boards) are NOT in the abstraction; they ship via the raw MCP adapter only and surface as opaque pass-throughs.",
       "steps": [
-        "Operator provisions Firebase project + Tailscale Funnel (out-of-band; D-entry records credential set, project id, cwd path).",
-        "Dispatch P9-004 F003 (Cloud Functions) from axiom/ cwd with operator-credential context.",
-        "Dispatch P9-004 F004 (Firestore security rules) from axiom/ cwd. Can run in parallel with F003 — disjoint file scope.",
-        "Dispatch P9-004 F005 (smoke runbook) once F003 + F004 land. Sequential.",
-        "Smoke test: operator manually drags a kanban card + approves a gate; confirm DontPanic state flipped + audit trail wrote correctly."
+        "Read P10 F001's SKILL.md + ADAPTER_TEMPLATE.md + the Linear adapter (when P10 F003 lands). Map exactly where the category contract attaches to the existing PP wrapper pattern.",
+        "Define abstract Pydantic models in scripts/dontpanic_orchestrate/integrations/pm_tool_models.py: PMIssue, PMProject, PMStatus (enum: backlog|active|in_progress|done|cancelled), PMComment. Frozen dataclass-style. v0 minimum field set only — do not include service-specific fields.",
+        "Define mapping config Pydantic model in scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py: field_name_map (PMIssue.title -> linear_issue.title), status_enum_map (Linear 'In Progress' -> PMStatus.active), priority_map (optional). Validator rejects mappings with missing status enum values + duplicates.",
+        "Define sync hook interface scripts/dontpanic_orchestrate/integrations/pm_tool_sync.py: read_issue(uri) -> PMIssue, push_status(uri, new_status, dry_run=False) -> ExternalSyncRecord. Pure stdlib + Pydantic; per-service adapter implements these by composing the raw MCP adapter from P10.",
+        "Wire Linear adapter (from P10 F003) to the contract: create scripts/dontpanic_orchestrate/integrations/linear_pm_tool.py that implements read_issue + push_status on top of the Linear MCP binary. Status enum map authored at ~/.dontpanic/adapters/linear.json (operator-provided; example placeholder committed to evidence/linear-mapping-example.json with placeholder tokens).",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py: PMIssue round-trip; mapping config validation (happy + missing status + duplicate enum); read_issue happy path with mocked Linear MCP; push_status dry-run produces ExternalSyncRecord with status=pending + no real write. >=10 cases.",
+        "Document the category extension pattern in evidence/pm-tool-extension-guide.md: how to add Jira / Aha / Monday / GitHub Projects (PP-generate the MCP binary; author mapping JSON; create a thin wrapper module per the Linear example).",
+        "Run full orchestrator sweep + sanitization check."
       ],
-      "acceptance": "(1) P9-004 F003/F004/F005 all features.json passes:true with audit-envelope evidence. (2) Operator-side smoke test confirms dashboard kanbanMove + approve flip DontPanic state correctly. (3) Tailscale Funnel URL committed to operator-private config (not repo). (4) D-entry records the credential set + axiom/ cwd dispatch.",
+      "acceptance": "(1) scripts/dontpanic_orchestrate/integrations/pm_tool_{models,mapping,sync}.py exist + are Pydantic-validated. (2) linear_pm_tool.py implements read_issue + push_status against the Linear MCP adapter from P10 F003. (3) evidence/linear-mapping-example.json committed with placeholder tokens; sanitization clean. (4) test_pm_tool_contract_f001.py has >=10 cases including read_issue mock + push_status dry-run. (5) evidence/pm-tool-extension-guide.md explains how to add a second PM tool with mapping-only changes + per-service wrapper module ≤100 lines. (6) NO Linear-specific code in pm_tool_models.py / pm_tool_mapping.py / pm_tool_sync.py — Linear lives only in linear_pm_tool.py + the mapping JSON. (7) Full sweep at or above lock-time baseline.",
       "passes": false,
       "depends_on": []
     },
@@ -22,16 +25,19 @@
       "id": "F002",
       "category": "infra",
       "phase": 2,
-      "description": "PM-tool category abstraction. Defines abstract Issue + Project + Status + Comment models that all PM tools (Linear, Aha, Jira, Monday, GitHub Projects) can map to. Per-service mapping config schema in `~/.dontpanic/adapters/<service>.json` documents: PM-tool field names → abstract model fields, status enum mapping (active → 'In Progress', completed → 'Done'), priority/severity mapping. Linear reference adapter wired to the abstraction as the canonical example. NO Linear-specific code in the abstraction layer — all Linear specifics live in `~/.dontpanic/adapters/linear.json` mapping config + the Linear-wrapper Python from P10 F003. New PM tool = author one mapping JSON, no Python.",
+      "description": "Plan external_refs + one-way sync layer with durable evidence. New plan.md frontmatter array field `external_refs[]` with elements `{kind: pm_issue, uri: linear://issue/ABC-123, sync: none|push_status}`. `dontpanic plan lock` validates each ref points at a real upstream entity via the category adapter (one read per ref; cached). `dontpanic plan close` walks refs with `sync: push_status` and pushes DontPanic status flip via the category adapter's push_status hook. EVERY push attempt — success, failure, or skipped — produces a durable evidence record at `evidence/external_sync.json` with `{ref_uri, kind, attempted_at, status: pending|pushed|failed|skipped, response, error}`. Failures NEVER block plan close, BUT they MUST produce a `status: failed` evidence record — silent warning is a defect. Adds `dontpanic plan resync <plan-id>` for retrying failed pushes. `--dry-run` flag on plan close shows the intended external write payload without executing.",
       "steps": [
-        "Define PMTool* dataclasses (PMIssue, PMProject, PMStatus, PMComment) in scripts/dontpanic_orchestrate/integrations/pm_tool_models.py.",
-        "Define mapping config schema (Pydantic model) in scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py. Schema covers field-name mapping, status enum mapping, priority mapping.",
-        "Author Linear mapping config at ~/.dontpanic/adapters/linear.json (operator-provided; example placeholder committed to evidence/).",
-        "Wire Linear adapter (from P10 F003) to category abstraction — Linear adapter now exposes both raw Linear MCP tools AND category-level methods (pm_tool.get_issue, pm_tool.update_issue_status, etc.).",
-        "Add fixture tests in test_pm_tool_category_f002.py: mapping config validation, abstract model round-trip, Linear adapter category bindings.",
-        "Document the category extension pattern in evidence/pm-tool-category-extension.md — how to add Jira / Aha / Monday / GitHub Projects (just author mapping config, no code)."
+        "Bump plan.schema.json (agent-conventions) to add optional external_refs array field. Subtree pull into DontPanic claude/shared/. Bump VERSION accordingly.",
+        "Add Pydantic model ExternalRef + ExternalSyncRecord to plan_loader. Validate kind enum, uri format, sync enum at parse time.",
+        "Wire `dontpanic plan lock` to validate each external_ref via category adapter read_issue. Cache per-uri for re-locks (TTL: session-scoped). Lock fails loud if a ref's uri is unreachable AND sync=push_status (push targets must exist); refs with sync=none can be unreachable without blocking.",
+        "Wire `dontpanic plan close` to walk external_refs with sync=push_status, call push_status(uri, mapped_status, dry_run=args.dry_run), write evidence/external_sync.json record per attempt. Multiple refs: write multi-element array; partial failures produce mixed array but DO NOT block plan close.",
+        "Add `dontpanic plan resync <plan-id>` CLI: re-reads evidence/external_sync.json, retries any `status: failed|pending` entries via the category adapter. Idempotent (already-pushed entries skipped).",
+        "Add `--dry-run` flag to `dontpanic plan close`. Prints intended push payloads + writes evidence/external_sync.json with status=pending; does NOT call the category adapter's real push_status.",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py: schema validation (valid + missing kind + bad uri + bad sync enum); lock validates ref reachable; lock allows unreachable ref when sync=none; close pushes status + writes pushed evidence; close handles push failure with failed evidence + DOES NOT block; dry-run mode + resync mode. >=12 cases.",
+        "Document the external_refs contract in evidence/external-refs-contract.md including the sync state machine + retry semantics.",
+        "Run full orchestrator sweep + sanitization check."
       ],
-      "acceptance": "(1) PMTool* abstract models exist + are Pydantic-validated. (2) Mapping config schema documented + has fixture tests. (3) Linear adapter exposes category-level methods on top of raw MCP tools. (4) Documentation explains how to add a second PM tool config-only. (5) Sanitization clean (no Linear API tokens leak; no service-specific code in the abstraction layer).",
+      "acceptance": "(1) plan.schema.json vX.X bumped with optional external_refs array; subtree pulled into DontPanic. (2) ExternalRef + ExternalSyncRecord Pydantic models in plan_loader; parse-time validation rejects malformed entries. (3) `dontpanic plan lock` validates push-target refs are reachable; lock fails loud if a sync=push_status ref's uri returns 404. (4) `dontpanic plan close` writes evidence/external_sync.json for EVERY ref attempt (status ∈ {pushed, failed, skipped, pending}). PM-tool unreachable produces failed evidence + DOES NOT block close. (5) `dontpanic plan close --dry-run` writes status=pending evidence without calling push_status. (6) `dontpanic plan resync` retries failed entries idempotently. (7) test_external_refs_sync_f002.py has >=12 cases including failure paths. (8) evidence/external-refs-contract.md documents the sync state machine. (9) Full sweep at or above lock-time baseline.",
       "passes": false,
       "depends_on": [
         "F001"
@@ -41,38 +47,19 @@
       "id": "F003",
       "category": "infra",
       "phase": 3,
-      "description": "Plan ↔ PM-tool sync layer. New plan.md frontmatter field `linked_issue_id: <pm-tool-id>` (e.g. linear://issue/ABC-123). `dontpanic plan lock` validates the link points to a real issue via the category adapter (read). `dontpanic plan close` writes status back via the category adapter (write). One-way DontPanic → PM tool only — pull (PM tool issue → `dontpanic plan new` scaffolding) deferred to v1. The dashboard surfaces linked_issue_id status alongside DontPanic plan status (operator sees both views in one card).",
+      "description": "Dashboard linked-status chip — dashboard plan cards surface the linked PM-tool issue status alongside DontPanic execution state. DontPanic side: the state projection that feeds the dashboard (P9-004 F001 sync daemon) reads external_refs from each plan's frontmatter, joins to the most recent evidence/external_sync.json record (no live PM-tool calls from dashboard render path — only cached state). Dashboard side (axiom/): plan card HTML/template renders a `linked` chip per external_ref with kind=pm_issue: badge color from sync record status (pushed=green, failed=red, pending=amber, skipped=grey), hover shows uri + last attempt timestamp. Strict no-live-call boundary: the dashboard NEVER calls Linear (or any PM tool) directly — all enrichment goes through DontPanic's projection layer. THIS FEATURE DEPENDS ON P9-004 BEING COMPLETED — F003 cannot dispatch until P9-004 F003+F004+F005 land.",
       "steps": [
-        "Bump plan.schema.json (agent-conventions) to allow optional linked_issue_id field. Subtree pull into DontPanic claude/shared/.",
-        "Wire `dontpanic plan lock` to validate linked_issue_id exists in target PM tool (one paid read call per lock; cached for re-locks).",
-        "Wire `dontpanic plan close` to push status flip to linked PM-tool issue. Failure modes: PM tool unreachable → log warning, don't block close-out; status mapping unknown → block with operator-actionable error.",
-        "Dashboard projection (in axiom/): each plan card includes a 'linked' chip with the PM-tool issue status when linked_issue_id is set.",
-        "Fixture tests: link validation (happy path + unreachable), status push (happy + remote 404), dashboard rendering with + without link.",
-        "Document the linked_issue_id contract in evidence/plan-link-contract.md."
+        "Verify P9-004 status before dispatch: F003+F004+F005 of P9-004 must be passes:true. If not, this feature stays passes:false + cannot dispatch (the dependency is hard).",
+        "Update the state projection (in axiom/ — P9-004 F001 sync daemon territory) to include external_refs + the most recent external_sync.json record per plan. Bounded: this is read-only enrichment, no live PM-tool calls from the daemon either (the daemon reads DontPanic-owned evidence files, NOT external APIs).",
+        "Update dashboard plan card template (axiom/ — dashboard repo): render a `linked` chip per pm_issue ref. Badge color rule documented inline. Hover/expand state shows uri + last_attempted_at + error if failed.",
+        "Add fixture tests (in axiom/'s test suite — this is dashboard work): card renders chip when external_refs present + sync record exists; card renders no chip when no external_refs; card renders red chip for failed sync; card renders amber chip for pending; chip click/hover surfaces the uri + timestamp.",
+        "Operator smoke test (manual, NOT automated): create a synthetic plan with a Linear external_ref, lock + close it, observe the dashboard card shows the pushed (green) chip; force a Linear unreachable scenario, observe red chip + uri surfaced.",
+        "Run full orchestrator sweep + sanitization check; verify dashboard smoke test path documented in evidence/dashboard-chip-smoke.md."
       ],
-      "acceptance": "(1) plan.schema.json bumped (vX.X) with linked_issue_id optional field. (2) lock + close hooks fire on linked plans with documented failure modes. (3) Dashboard renders linked status chip. (4) Operator can lock + close a plan with a Linear link end-to-end without manual Linear UI interaction. (5) PM-tool-unreachable does not block plan close — warning only.",
+      "acceptance": "(1) P9-004 verified completed before dispatch — feature MUST NOT dispatch otherwise. (2) State projection includes external_refs + external_sync.json data per plan; no live PM-tool calls from dashboard or sync daemon. (3) Dashboard plan card renders a `linked` chip per pm_issue external_ref with status-derived badge color. (4) Hover/expand surfaces uri + last_attempted_at; failed chip surfaces error. (5) Test coverage in axiom/ for chip render across all sync states (pushed/failed/pending/skipped/no-ref). (6) Operator smoke test documented in evidence/dashboard-chip-smoke.md (manual; not automated). (7) Strict no-live-call boundary asserted by test — mocked Linear client should never be called from the dashboard render path.",
       "passes": false,
       "depends_on": [
         "F001",
-        "F002"
-      ]
-    },
-    {
-      "id": "F004",
-      "category": "infra",
-      "phase": 4,
-      "description": "`dontpanic adapter` CLI subcommand family. Operator-facing one-command UX for adapter lifecycle: `add <service>` (with optional `--category=pm-tool` preset that runs the category-aware setup flow), `list`, `remove <service>`, `update <service>` (re-runs PP against current pinned version + diffs the wrapper surface), `status`. The add command wraps the 4 manual steps (token prompt → PP invocation → wrapper authoring from template → adapters.json registration). Operator never edits ~/.dontpanic/adapters.json by hand. Friction-reducing safety: token entry via stdin (never argv); paid-call budget warning before PP invocation; --dry-run mode for validating the flow without spending.",
-      "steps": [
-        "Design CLI surface (argparse subparsers): adapter add | list | remove | update | status.",
-        "Implement adapter add flow: prompt for service slug + category + token (stdin), invoke /printing-press (subprocess to claude with operator approval), scaffold wrapper from ADAPTER_TEMPLATE.md, register in adapters.json atomically.",
-        "Implement adapter list (read adapters.json + per-service mapping config), remove (with confirmation + cleanup), update (PP re-invoke against pinned version), status (validate each adapter's wrapper + mapping config still works).",
-        "Wire --category=pm-tool preset: after standard add flow, prompts operator for PM-tool mapping config fields (field names, status enum mapping) and writes ~/.dontpanic/adapters/<service>.json.",
-        "Fixture tests: each subcommand happy path + key error paths (token missing, PP unavailable, duplicate adapter, missing service).",
-        "Document the operator UX in evidence/adapter-cli-runbook.md — adding Linear, adding a non-category service, removing, updating."
-      ],
-      "acceptance": "(1) `dontpanic adapter add linear --category=pm-tool` walks the full flow including PP invocation + mapping config prompts and produces a working linked adapter. (2) `dontpanic adapter list/remove/update/status` all work on the seeded Linear adapter. (3) Operator never edits ~/.dontpanic/adapters.json by hand to complete any of these flows. (4) PP paid-call budget warning fires before the actual paid invocation; --dry-run path skips it.",
-      "passes": false,
-      "depends_on": [
         "F002"
       ]
     }
