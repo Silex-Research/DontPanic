@@ -13,6 +13,13 @@
 // (approve_gate, dispatch, resume) via Cloud Functions (see plan 2026-05-09-004 F003).
 // The Firestore documents this adapter reads are written by the sync daemon
 // in scripts/firebase_adapter/ (plan 2026-05-09-004 F002).
+//
+// The realtime-actions module wires `httpsCallable` invocations into
+// `Jarvis.realtimeActions.{kanbanMove, approveGate, triggerDispatch}` so
+// mission-control / security pages can fire mutations without importing
+// the Firebase SDK directly (plan F003 audit-i1).
+
+import { createRealtimeActions } from './lib/realtime-actions.js';
 
 // The seven F001 state-projection streams (see claude/shared/schemas/v1.0/state-snapshot.schema.json).
 export const STREAMS = Object.freeze([
@@ -233,6 +240,10 @@ export async function initFirebaseRealtime({
     return null;
   }
 
+  if (firestore && typeof firestore.callableFactory === 'function') {
+    attachRealtimeActions({ jarvis, callableFactory: firestore.callableFactory });
+  }
+
   return attachFirestoreRealtime({
     firestore,
     jarvis,
@@ -243,6 +254,9 @@ export async function initFirebaseRealtime({
 // Default CDN loader — uses Firebase v10 modular ESM bundles from gstatic.
 // Operators can override via `sdkLoader` (e.g. point at the Firebase emulator
 // or a self-hosted SDK copy).
+//
+// The loader returns BOTH a Firestore adapter and a callable factory so
+// initFirebaseRealtime can plumb mutations into `Jarvis.realtimeActions`.
 async function defaultSdkLoader(config) {
   const appMod = await import(
     'https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js'
@@ -250,8 +264,12 @@ async function defaultSdkLoader(config) {
   const fsMod = await import(
     'https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js'
   );
+  const fnMod = await import(
+    'https://www.gstatic.com/firebasejs/10.14.0/firebase-functions.js'
+  );
   const app = appMod.initializeApp(config);
   const db = fsMod.getFirestore(app);
+  const functions = fnMod.getFunctions(app, config.functionsRegion || 'us-central1');
   return {
     collection(path) {
       const colRef = fsMod.collection(db, path);
@@ -261,5 +279,21 @@ async function defaultSdkLoader(config) {
         },
       };
     },
+    callableFactory(name) {
+      const callable = fnMod.httpsCallable(functions, name);
+      return async (data) => callable(data);
+    },
   };
+}
+
+// Attach `Jarvis.realtimeActions` so mission-control's drag handlers /
+// modal buttons (and the security page's approve button) can fire MCP
+// mutations through Cloud Functions. Safe to call multiple times — the
+// last attach wins. Exposed separately from initFirebaseRealtime so the
+// integration tests can stub the callable factory.
+export function attachRealtimeActions({ jarvis, callableFactory }) {
+  if (!jarvis || typeof callableFactory !== 'function') return null;
+  const actions = createRealtimeActions({ callableFactory });
+  jarvis.realtimeActions = actions;
+  return actions;
 }

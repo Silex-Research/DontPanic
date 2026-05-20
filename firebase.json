@@ -36,5 +36,17 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-  }
+  },
+  "functions": [
+    {
+      "source": "dashboard/functions",
+      "codebase": "dashboard-mutations",
+      "runtime": "nodejs20",
+      "ignore": [
+        "node_modules",
+        "tests",
+        "RUNBOOK.md"
+      ]
+    }
+  ]
 }

@@ -1,0 +1,63 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "audit_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T21:32:22Z",
+  "completed_at": "2026-05-20T21:35:25Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-2s4s2wmu target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 408872 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1399432,
+    "tokens_out": 9571,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (critical, architecture): Cloud Function → MCP bridge is not actually resolved. Evidence: new bridge POSTs HTTP JSON-RPC to a tunnel, but current `dontpanic mcp serve` is stdio-only and explicitly rejects `--bind`; RUNBOOK’s suggested `dontpanic mcp serve --bind ... --require-bearer ...` cannot work. Recommendation: implement/document an operator-side HTTP-to-stdio MCP bridge or add a supported MCP HTTP transport before signing off.\n\nFINDING (critical, correctness): `kanbanMoveCallable` calls unknown MCP tool `set_plan_status`. Evidence: `dashboard/functions/lib/column-mapping.js` emits `tool: 'set_plan_status'`, while `scripts/dontpanic_orchestrate/mcp_server.py` registers `dispatch`, `approve_gate`, `status`, etc., but no `set_plan_status`. Recommendation: add the MCP tool with tests or map kanban moves only to existing supported DontPanic MCP operations.\n\nFINDING (high, correctness): Dashboard actions are not wired to the new Cloud Functions, so the required dashboard click path is absent. Evidence: `rg` finds no `httpsCallable`, `getFunctions`, or callable names outside `dashboard/functions`; mission-control cards only open modals. Recommendation: add dashboard client mutation calls for drag/approve/dispatch and cover them ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "node_modules/.bin/vitest run functions/tests/",
+      "npm run lint",
+      "node_modules/.bin/vitest --help | sed -n '1,180p'",
+      "node_modules/.bin/vitest run functions/tests/ --configLoader runner"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "critical",
+      "category": "architecture",
+      "feature_id": "F003",
+      "issue": "Cloud Function → MCP bridge is not actually resolved. Evidence: new bridge POSTs HTTP JSON-RPC to a tunnel, but current `dontpanic mcp serve` is stdio-only and explicitly rejects `--bind`; RUNBOOK’s suggested `dontpanic mcp serve --bind ... --require-bearer ...` cannot work. Recommendation: implement/document an operator-side HTTP-to-stdio MCP bridge or add a supported MCP HTTP transport before signing off.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "critical",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`kanbanMoveCallable` calls unknown MCP tool `set_plan_status`. Evidence: `dashboard/functions/lib/column-mapping.js` emits `tool: 'set_plan_status'`, while `scripts/dontpanic_orchestrate/mcp_server.py` registers `dispatch`, `approve_gate`, `status`, etc., but no `set_plan_status`. Recommendation: add the MCP tool with tests or map kanban moves only to existing supported DontPanic MCP operations.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Dashboard actions are not wired to the new Cloud Functions, so the required dashboard click path is absent. Evidence: `rg` finds no `httpsCallable`, `getFunctions`, or callable names outside `dashboard/functions`; mission-control cards only open modals. Recommendation: add dashboard client mutation calls for drag/approve/dispatch and cover them with integration tests.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "Claimed end-to-end smoke is only a fake-bridge unit harness. Evidence: `callables.test.js` verifies handler → fake bridge calls, but no dashboard click, Cloud Function deployment/emulator, real MCP state change, sync daemon, Firestore reflection, or re-render is exercised. Recommendation: add at least an emulator/local-fixture smoke that covers the full chain or mark the feature incomplete. Checks run: $ node_modules/.bin/vitest run functions/tests/ $ npm run lint $ node_modules/.bin/vitest --he",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

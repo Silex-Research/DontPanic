@@ -1,0 +1,19 @@
+{
+  "name": "dontpanic-dashboard-functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plan 2026-05-09-004 F003 — Cloud Functions wrapping DontPanic MCP for dashboard mutations.",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "test": "vitest run --config ../vitest.config.js --dir tests",
+    "lint": "node --check index.js && node --check lib/mcp-bridge.js && node --check lib/auth.js && node --check lib/callables.js && node --check lib/column-mapping.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.0.0"
+  }
+}

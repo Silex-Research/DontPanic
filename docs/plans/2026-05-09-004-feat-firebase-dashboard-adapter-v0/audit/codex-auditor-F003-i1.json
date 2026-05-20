@@ -1,0 +1,81 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "audit_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T21:45:25Z",
+  "completed_at": "2026-05-20T21:48:48Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-2s4s2wmu target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 273010 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1371194,
+    "tokens_out": 13113,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 15 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), structured `target_context` is valid (`env=dev`, `project=null`), and `commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (high, correctness): Iteration 1 is not actually complete. Evidence: `claude-implementer-F003-i1.json` says `DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `target_context.commands_run: []`. Recommendation: rerun the implementer iteration and persist a real completion envelope.\n\nFINDING (high, correctness): The requested deployed/callable acceptance is not satisfied. Evidence: [RUNBOOK.md]($HOME/Documents/GitHub/DontPanic/dashboard/functions/RUNBOOK.md:9) explicitly says deploy is deferred, and no deploy command/evidence exists. Recommendation: either deploy the three functions to the intended dev Firebase project with explicit `--project`, or keep F003 incomplete under this acceptance.\n\nFINDING (high, test_coverage): The required end-to-end smoke path was not proven. Evidence: [F003-impl-notes.md]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/F003-impl-notes.md:42) describes fake-bridge callable tests, while [RUNBOOK.md]($HOME/Documents/GitHub/DontPanic/dashboard/functions/RUNBOOK.md:154) defers the full dashboard → function → MCP → sync → Firestore → rerender path",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git -C $HOME/Documents/GitHub/DontPanic/docs status --short",
+      "git -C $HOME/Documents/GitHub/DontPanic/docs diff --stat HEAD~1..HEAD",
+      "git -C $HOME/Documents/GitHub/DontPanic/docs diff --name-only HEAD~1..HEAD",
+      "npm --prefix dashboard test -- functions/tests/",
+      "node --check dashboard/functions/index.js",
+      "node --check dashboard/functions/lib/mcp-bridge.js",
+      "node --check dashboard/functions/lib/auth.js",
+      "node --check dashboard/functions/lib/callables.js",
+      "node --check dashboard/functions/lib/column-mapping.js",
+      "node --check dashboard/lib/realtime-actions.js",
+      "node --check dashboard/config-firebase.js",
+      "node --check dashboard/lib/mission-control-logic.js",
+      "node --check dashboard/pages/mission-control/mission-control.js",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider scripts/firebase_adapter/tests/test_mcp_http_bridge.py",
+      "npm --prefix dashboard exec -- vitest run functions/tests/ --configLoader runner"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Iteration 1 is not actually complete. Evidence: `claude-implementer-F003-i1.json` says `DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `target_context.commands_run: []`. Recommendation: rerun the implementer iteration and persist a real completion envelope.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The requested deployed/callable acceptance is not satisfied. Evidence: [RUNBOOK.md]($HOME/Documents/GitHub/DontPanic/dashboard/functions/RUNBOOK.md:9) explicitly says deploy is deferred, and no deploy command/evidence exists. Recommendation: either deploy the three functions to the intended dev Firebase project with explicit `--project`, or keep F003 incomplete under this acceptance.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The required end-to-end smoke path was not proven. Evidence: [F003-impl-notes.md]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/F003-impl-notes.md:42) describes fake-bridge callable tests, while [RUNBOOK.md]($HOME/Documents/GitHub/DontPanic/dashboard/functions/RUNBOOK.md:154) defers the full dashboard → function → MCP → sync → Firestore → rerender path. Recommendation: add/run an emulator or local fixture smoke that exe",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "security",
+      "feature_id": "F003",
+      "issue": "The callable wrapper builds MCP dependencies before auth and outside the error translation block. Evidence: [index.js]($HOME/Documents/GitHub/DontPanic/dashboard/functions/index.js:89) calls `buildDeps()` before invoking handlers, and `buildDeps()` reads tunnel config/secret at [index.js]($HOME/Documents/GitHub/DontPanic/dashboard/functions/index.js:45). Recommendation: perform auth preflight before constructing the bridge, and wrap dependency construction errors in `HttpsErr",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F003",
+      "issue": "Operator smoke instructions and evidence are stale/inconsistent with the current kanban mapping. Evidence: [RUNBOOK.md]($HOME/Documents/GitHub/DontPanic/dashboard/functions/RUNBOOK.md:134) says drag `in_progress` → `review`, but [column-mapping.js]($HOME/Documents/GitHub/DontPanic/dashboard/functions/lib/column-mapping.js:42) only supports `todo` → `in_progress`; [index.js]($HOME/Documents/GitHub/DontPanic/dashboard/functions/index.js:3) still mentions `set_plan_sta",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
