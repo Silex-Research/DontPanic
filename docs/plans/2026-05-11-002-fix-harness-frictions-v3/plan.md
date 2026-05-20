@@ -3,7 +3,7 @@ id: 2026-05-11-002-fix-harness-frictions-v3
 title: Harness frictions v3 — fixes from plan 2026-05-11-001 dogfood
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-11"
 goal_type: infra
 surfaces:

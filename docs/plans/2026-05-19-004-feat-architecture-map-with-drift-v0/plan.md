@@ -3,7 +3,7 @@ id: 2026-05-19-004-feat-architecture-map-with-drift-v0
 title: Architecture map with drift detection v0
 type: feat
 tier: local
-status: active
+status: completed
 date: "2026-05-19"
 goal_type: infra
 surfaces:
