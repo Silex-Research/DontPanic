@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T01:56:19Z",
+  "completed_at": "2026-05-20T01:59:07Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-7lrzbvp9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 248778 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 866660,
+    "tokens_out": 11755,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Target declaration is correct in the implementer summary, and `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): `plan.schema.json` implements different enum contracts than the locked acceptance text. Evidence: schema has `spawn_reason=[\"operator_manual\",\"auditor_finding\"]`, `kind=[\"implementation\"]`, `mode=[\"child_commit\",\"evidence_only\"]`, and `requires.items.enum`, but the plan required `operator_manual|auto|test`, `implementation|investigation|migration`, `child_commit|parent_commit|manual`, and `requires` as strings. Recommendation: change the JSON schema to the accepted literals and plain string `requires` items.\n\nFINDING (high, correctness): the Pydantic mirror repeats the same mismatched contract. Evidence: `SpawnReason` includes `auditor_finding`, `ChildCharterKind` only includes `implementation`, `CommitPolicyMode` includes `evidence_only`, and `requires` is `list[RequiresItem]`. Recommendation: align the Pydantic sub-models exactly with the JSON schema required by the plan.\n\nFINDING (medium, test_coverage): the new test module does not protect the required enum contract and actually asserts `auto` is invalid. Evidence: `test_unknown_spawn_reason_rejected_by_jsonschema` sets `spawn_reason = \"auto\"` and expects validation failure. Recommendation: add tests proving the accepted `auto`, `test`, `investigation`, `migration`, `parent_commit`, and `",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"import json; s=json.load(open('claude/shared/schemas/v1.0/plan.schema.json')); p=s['properties']; print('schema.spawn_reason=', p['orchestration']['properties']['spawn_reason']['enum']); print('schema.child_kind=', p['child_charter']['properties']['kind']['enum']); print('schema.commit_mode=', p['commit_policy']['properties']['mode']['enum']); print('schema.requires_items=', p['commit_policy']['properties']['requires']['items'])\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"import json, sys, yaml, jsonschema; from pathlib import Path; sys.path.insert(0, 'claude/shared/schemas/v1.0'); from models.plan_model import Plan; schema=json.load(open('claude/shared/schemas/v1.0/plan.schema.json')); text=Path('docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md').read_text(); fm=yaml.safe_load(text.split('---',2)[1]); fm['date']=fm['date'].isoformat() if hasattr(fm.get('date'),'isoformat') else fm.get('date'); jsonschema.validate(fm, schema); Plan.model_validate(fm); print('real_v4_1_jsonschema_and_pydantic_ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`plan.schema.json` implements different enum contracts than the locked acceptance text. Evidence: schema has `spawn_reason=[\"operator_manual\",\"auditor_finding\"]`, `kind=[\"implementation\"]`, `mode=[\"child_commit\",\"evidence_only\"]`, and `requires.items.enum`, but the plan required `operator_manual|auto|test`, `implementation|investigation|migration`, `child_commit|parent_commit|manual`, and `requires` as strings. Recommendation: change the JSON schema to the accepted literals and plain string `req",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "the Pydantic mirror repeats the same mismatched contract. Evidence: `SpawnReason` includes `auditor_finding`, `ChildCharterKind` only includes `implementation`, `CommitPolicyMode` includes `evidence_only`, and `requires` is `list[RequiresItem]`. Recommendation: align the Pydantic sub-models exactly with the JSON schema required by the plan.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "the new test module does not protect the required enum contract and actually asserts `auto` is invalid. Evidence: `test_unknown_spawn_reason_rejected_by_jsonschema` sets `spawn_reason = \"auto\"` and expects validation failure. Recommendation: add tests proving the accepted `auto`, `test`, `investigation`, `migration`, `parent_commit`, and `manual` values validate.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "full sweep could not be independently verified here, and the implementer audit has no recorded commands despite claiming `1935 passed, 7 skipped`. Evidence: `target_context.commands_run=[]`; local pytest attempts failed before collection because this read-only sandbox has no usable temp directory. Recommendation: rerun the full sweep in a writable-temp environment and record the command/output. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -145,6 +145,117 @@ class Storage(BaseModel):
     prefix: str | None = None
 
 
+# ──────────────────────────────  v1.9.0 nested-orchestration mirror  ──────────────────────────────
+#
+# Static mirror of the v1.9.0 plan.schema.json additive blocks (orchestration,
+# child_charter, commit_policy). These sub-models match the JSON schema's
+# enum + property contract literal-for-literal so `jsonschema.validate` and
+# `Plan.model_validate` accept the same plan.md frontmatter shapes. The
+# runtime nested-orchestration models in
+# `scripts/dontpanic_orchestrate/nested_orchestration.py` may narrow further
+# (e.g. tighter `requires` enum, cross-field invariants); this mirror is the
+# outer perimeter the schema declares.
+
+
+class SpawnReason(Enum):
+    operator_manual = "operator_manual"
+    auto = "auto"
+    test = "test"
+
+
+class Orchestration(BaseModel):
+    """Child-plan nested-orchestration block (v1.9.0)."""
+
+    parent_plan_id: str = Field(..., description="Plan ID of the parent plan.")
+    spawn_reason: SpawnReason = Field(
+        ...,
+        description=(
+            "'operator_manual' = operator-authored; 'auto' = automated spawn; "
+            "'test' = synthetic fixture plan."
+        ),
+    )
+    depth_limit: conint(ge=1) | None = Field(
+        None,
+        description=(
+            "Per-plan depth cap (>=1). Frontmatter cannot raise the platform "
+            "default; operator lifts at dispatch via --allow-depth."
+        ),
+    )
+
+
+class ChildCharterKind(Enum):
+    implementation = "implementation"
+    investigation = "investigation"
+    migration = "migration"
+
+
+class ChildCharter(BaseModel):
+    """Child-plan charter (v1.9.0)."""
+
+    kind: ChildCharterKind = Field(
+        ...,
+        description=(
+            "'implementation' ships code; 'investigation' produces evidence "
+            "without shipping; 'migration' is a bounded schema/data migration."
+        ),
+    )
+    parent_objective: constr(min_length=1, max_length=500) = Field(
+        ..., description="What the parent needed when it spawned this child."
+    )
+    parent_acceptance_item: constr(min_length=1) = Field(
+        ..., description="The parent acceptance clause this child unblocks."
+    )
+    allowed_paths: list[str] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "fnmatch-style globs. Under commit_policy.mode='child_commit', "
+            "the runtime requires every modified file to match at least one."
+        ),
+    )
+    forbidden_decisions: list[str] = Field(
+        default_factory=list,
+        description="Free-form decisions the child must not take (informational).",
+    )
+    return_condition_summary: constr(min_length=1) = Field(
+        ..., description="Observable signal text rendered into the close-out memo."
+    )
+    may_edit_product_code: bool = Field(
+        ...,
+        description=(
+            "Whether the child may modify product code. NO default — operator "
+            "must declare intent explicitly. Cross-field invariant with "
+            "commit_policy.mode enforced by the runtime."
+        ),
+    )
+
+
+class CommitPolicyMode(Enum):
+    child_commit = "child_commit"
+    parent_commit = "parent_commit"
+    manual = "manual"
+
+
+class CommitPolicy(BaseModel):
+    """Commit authority for a child plan (v1.9.0)."""
+
+    mode: CommitPolicyMode | None = Field(
+        None,
+        description=(
+            "'child_commit' = child commits within allowed_paths; "
+            "'parent_commit' = parent plan lands the commit on the child's "
+            "evidence; 'manual' = operator commits outside the supervisor."
+        ),
+    )
+    requires: list[str] | None = Field(
+        None,
+        description=(
+            "Compliance checks evaluated at close-out. Plain strings so the "
+            "runtime can extend the vocabulary without a schema bump."
+        ),
+    )
+
+
 class Plan(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -183,4 +294,28 @@ class Plan(BaseModel):
     links: Links | None = None
     storage: Storage | None = Field(
         None, description="External storage backend for evidence > 100KB"
+    )
+    orchestration: Orchestration | None = Field(
+        None,
+        description=(
+            "v1.9.0 — child-plan nested-orchestration metadata. Absent on top-"
+            "level plans; populated on child plans spawned by a parent."
+        ),
+    )
+    child_charter: ChildCharter | None = Field(
+        None,
+        description=(
+            "v1.9.0 — child-plan charter declaring bounded work, parent "
+            "objective, allowed paths, and return condition. Only valid when "
+            "orchestration.parent_plan_id is set."
+        ),
+    )
+    commit_policy: CommitPolicy | None = Field(
+        None,
+        description=(
+            "v1.9.0 — commit authority for a child plan. Mode is "
+            "'child_commit', 'parent_commit', or 'manual' (see "
+            "CommitPolicy.mode); absent commit_policy = supervisor falls "
+            "through to default behavior (operator-explicit commit)."
+        ),
     )

@@ -1,0 +1,73 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Extend plan.schema.json + Pydantic mirror with orchestration / child_charter / commit_policy as documented additive properties. Bump agent-conventions VERSION 1.8.0 → 1.9.0 in DontPanic subtree mirror. Append CHANGELOG.md entry. The schema currently has `additionalProperties: false` at the root and these three properties aren't declared, causing every locked plan since v3 to fail strict `jsonschema.validate` even though the runtime accepts them via direct attribute access in plan_loader. Strictly additive — no new required fields, existing plans must validate after the change. Each new property gets a `description` field with example shape so future plan authors don't guess. The Pydantic mirror at claude/shared/schemas/v1.0/models/plan_model.py is updated in tandem to declare matching Optional fields with documented types (orchestration is an Object with parent_plan_id/spawn_reason/depth_limit; child_charter is an Object with kind/parent_objective/parent_acceptance_item/allowed_paths/forbidden_decisions/return_condition_summary/may_edit_product_code; commit_policy is an Object with mode + requires).",
+      "steps": [
+        "Read claude/shared/schemas/v1.0/plan.schema.json. Confirm `additionalProperties: false` at root + absence of orchestration/child_charter/commit_policy. Document the current property set.",
+        "Add three new properties to plan.schema.json with full internal structure: orchestration (parent_plan_id string, spawn_reason enum operator_manual|auto|test, depth_limit integer minimum 1), child_charter (kind enum implementation|investigation|migration, parent_objective string, parent_acceptance_item string, allowed_paths array of strings, forbidden_decisions array of strings, return_condition_summary string, may_edit_product_code boolean), commit_policy (mode enum child_commit|parent_commit|manual, requires array of strings).",
+        "For each new property, include a `description` field with concrete example values lifted from a real locked plan (e.g., v4.1 plan 2026-05-12-002).",
+        "Update claude/shared/schemas/v1.0/models/plan_model.py: add Optional[Orchestration], Optional[ChildCharter], Optional[CommitPolicy] fields to the Plan model. Define the sub-models (Orchestration, ChildCharter, CommitPolicy) with matching Pydantic field types + documentation strings. Pydantic mirror MUST validate the same plans the JSON schema validates.",
+        "Bump claude/shared/VERSION 1.8.0 → 1.9.0.",
+        "Append claude/shared/CHANGELOG.md entry: ## 1.9.0 — 2026-05-19 / ### Added / - orchestration, child_charter, commit_policy properties to plan schema (additive; motivated by Roadmap Plan 3 — every locked plan since v3 declared these implicitly).",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py covering: (a) v4.1 plan.md frontmatter validates clean against v1.9 schema, (b) Pydantic Plan model accepts the same frontmatter dict, (c) old plan without these fields (e.g., a synthetic minimal plan) still validates (backward compat), (d) malformed orchestration block (wrong type) fails validation with helpful error.",
+        "Run full orchestrator sweep + sanitization check. Confirm parsing-category emission (from v4.1) is unaffected."
+      ],
+      "acceptance": "(1) claude/shared/schemas/v1.0/plan.schema.json declares orchestration, child_charter, commit_policy as documented additive properties; existing root properties unchanged. (2) claude/shared/schemas/v1.0/models/plan_model.py Pydantic mirror adds matching Optional sub-models with field-level docstrings. (3) claude/shared/VERSION = 1.9.0. (4) claude/shared/CHANGELOG.md has 1.9.0 entry citing the roadmap. (5) New test module at test_plan_schema_v19_additive_orchestration_fields.py with ≥4 cases (real v4.1 plan validates clean; Pydantic accepts same dict; minimal plan validates clean; malformed orchestration fails with helpful error). (6) Full sweep ≥1929 green. (7) sanitization_check passes.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T02:18:13Z"
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "F002 is operator-handled out-of-band per v4.1 D003 pattern: the implementer's F001 work lands in DontPanic's claude/shared/ subtree mirror; the operator handles the upstream push to agent-conventions (cherry-pick + tag v1.9.0 + push) after Plan 5 (agent-conventions GitHub remote) is in place. No implementer work in F002 — this feature exists in the plan to mark the upstream sync as a tracked deliverable, with passes:true flipped via operator close-out CLI once the upstream push lands. v0 of this plan can ship F001 + F003 without F002 — F002 represents the cross-repo delivery acceptance, not new code.",
+      "steps": [
+        "(operator) Once Plan 5 lands (agent-conventions has a remote), cherry-pick or replay F001's claude/shared/ changes into $HOME/Documents/GitHub/agent-conventions/.",
+        "(operator) Bump agent-conventions VERSION + CHANGELOG to match the DontPanic subtree mirror.",
+        "(operator) Commit + tag v1.9.0 in agent-conventions.",
+        "(operator) Push origin master + tags to the remote.",
+        "(operator) Close F002 via dontpanic close --operator-resolved --reason cross_repo_handoff (or equivalent) once the upstream tag is visible on the remote."
+      ],
+      "acceptance": "(1) agent-conventions HEAD matches DontPanic's claude/shared/ mirror byte-for-byte (no drift). (2) agent-conventions VERSION = 1.9.0. (3) v1.9.0 tag exists in agent-conventions and is pushed to the remote (Plan 5's outcome). (4) Operator close-out via CLI flips F002 passes:true with reason recorded.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Add a doctor probe that runs full strict jsonschema validation against every locked plan in docs/plans/. Walks plan dirs, parses plan.md frontmatter, validates against the v1.9 schema (now consistent with the runtime). Two modes: default = advisory (emits warnings with per-plan results); --strict = blocker exit code on any failure. After F001 lands, every existing locked plan validates clean under both modes. This becomes the doctor probe that Plan 2's widening can confidently rely on (no false-fails because the schema and runtime are now in sync).",
+      "steps": [
+        "Read scripts/dontpanic_doctor.py. Find the existing probe registration pattern.",
+        "Add validate_plans_strict() helper that walks docs/plans/, loads each plan.md frontmatter via yaml.safe_load, runs jsonschema.validate against claude/shared/schemas/v1.0/plan.schema.json. Returns list[ValidationResult] with per-plan status (clean / warn / fail) + plan_id + error message if any.",
+        "Add the probe to the doctor's probe registry. Default mode = advisory (emits warnings, exit 0). New CLI flag --validate-plans-strict makes failures blockers (exit 2).",
+        "Wire output: pretty terminal output groups results by status; JSON output (existing --json flag) includes the new probe with per-plan detail array.",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py: (a) all current locked plans validate clean post-F001 fix; (b) a synthetic plan with malformed frontmatter fails strict mode with helpful per-field error; (c) --strict exit code path returns 2 on failure; (d) advisory mode returns 0 even with failures + emits warning lines.",
+        "Run doctor against the live locked-plan set; confirm zero blockers across all current plans (this is the post-fix regression net)."
+      ],
+      "acceptance": "(1) dontpanic_doctor.py has validate_plans_strict() probe registered. (2) Default mode emits per-plan advisory output; --validate-plans-strict makes failures blocker (exit code 2). (3) JSON output (--json) includes the new probe with per-plan detail array. (4) Fixture tests at test_doctor_validate_plans_strict_f003.py cover ≥4 cases. (5) Running `dontpanic doctor --validate-plans-strict` against the live locked-plan set returns zero failures. (6) Full sweep ≥1929 green.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    }
+  ]
+}

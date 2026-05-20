@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T02:06:33Z",
+  "completed_at": "2026-05-20T02:11:08Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-7lrzbvp9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1291132 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1327711,
+    "tokens_out": 16506,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: blocked.\n\nFINDING (low, documentation): `Plan.commit_policy` has a stale field description saying the default mode is `evidence_only`. Evidence: [plan_model.py]($HOME/Documents/GitHub/DontPanic/claude/shared/schemas/v1.0/models/plan_model.py:313) says default mode `evidence_only`, but [plan.schema.json]($HOME/Documents/GitHub/DontPanic/claude/shared/schemas/v1.0/plan.schema.json:183) allows only `child_commit|parent_commit|manual`, and the Pydantic field default is `None`. Recommendation: update the description to match the schema and actual default.\n\nFINDING (medium, test_coverage): I could not independently verify the required full sweep in this sandbox. Evidence: targeted and full pytest invocations fail before test bodies with `FileNotFoundError: No usable temporary directory found`; direct schema/model validation passed and sanitization passed, but acceptance item 6 remains unverified here. Recommendation: rerun the full sweep in a writable dev environment and attach the `>=1929` green output.\n\nImplementer target declaration was correct: `Repo: DontPanic`, `Env: dev`, `Project: (none)`. Their `target_context.commands_run` contains no forbidden command shapes.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts p",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"<direct schema/model validation script>\"",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "low",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "`Plan.commit_policy` has a stale field description saying the default mode is `evidence_only`. Evidence: [plan_model.py]($HOME/Documents/GitHub/DontPanic/claude/shared/schemas/v1.0/models/plan_model.py:313) says default mode `evidence_only`, but [plan.schema.json]($HOME/Documents/GitHub/DontPanic/claude/shared/schemas/v1.0/plan.schema.json:183) allows only `child_commit|parent_commit|manual`, and the Pydantic field default is `None`. Recommendation: update the description to ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "I could not independently verify the required full sweep in this sandbox. Evidence: targeted and full pytest invocations fail before test bodies with `FileNotFoundError: No usable temporary directory found`; direct schema/model validation passed and sanitization passed, but acceptance item 6 remains unverified here. Recommendation: rerun the full sweep in a writable dev environment and attach the `>=1929` green output. Implementer target declaration was correct: `Repo: DontPanic`, `Env: dev`, `P",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "blocked"
+}
