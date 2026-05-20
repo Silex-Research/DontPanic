@@ -24,8 +24,19 @@
         "Run full orchestrator sweep + sanitization check. Confirm no regressions vs lock-time baseline."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/showcase/__init__.py + config.py expose showcase_main(argv) entry + TargetSpec dataclass + DEFAULT_SHOWCASE_CONFIG with 4+ targets. (2) Generator handles per-target supported_artifacts: architecture (all targets), validate_plans_strict (targets with has_dontpanic_plans=True), drift (targets with has_committed_architecture_json=True). (3) NEW `--plans-root` CLI flag wire-through on doctor's validate-plans-strict probe (default behavior unchanged). (4) NEW `--architecture-json` CLI flag wire-through on doctor's architecture-drift probe (default behavior unchanged). (5) Redactor scrubs absolute paths to repo-relative form BEFORE write; raises RedactorError if `/Users/` survives. (6) scripts/sanitization_check.py ALLOWED_PREFIXES includes 'docs/showcase/'; secret-shape scan applies. (7) Missing target_repo_root → 'skipping' + continue (test fixture covers). (8) v0 commits ≥4 target artifact sets: dontpanic (architecture+validate+drift), agent-conventions (architecture + validate if plans), axiom (architecture only), one of {spindine, glam} (architecture + validate if plans — operator picks). (9) New test modules: test_showcase_generator_f001.py (>=10 cases) + test_showcase_cli_integration.py (CLI surface). (10) Full sweep at or above lock-time baseline; sanitization clean (NO leaked absolute paths or secrets in committed showcase artifacts).",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T05:25:10Z"
     },
     {
       "id": "F002",

@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+  "audit_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T05:16:21Z",
+  "completed_at": "2026-05-20T05:20:02Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-005-feat-dogfood-showcase-artifacts-v0-4f8w55xp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 323182 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2395114,
+    "tokens_out": 15204,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, structured `target_context` matches, and I found no forbidden command shapes.\n\nFINDING (high, security): `docs/showcase/` is exempted from the actual sanitization scan, so secret-shape scanning does not apply there. Evidence: `scripts/sanitization_check.py` adds `docs/showcase/` to `ALLOWED_PREFIXES`, and `main()` skips allowed paths before calling `scan_line`; a probe showed a fake AWS-key-shaped line under `docs/showcase/leaky.json` would be skipped even though `scan_line` detects it. Recommendation: split campaign-ID allowlisting from secret-shape scanning so `docs/showcase/` can allow campaign IDs while still scanning secrets.\n\nFINDING (medium, test_coverage): the required “all 4 targets present generates expected artifact set” fixture is not implemented. Evidence: collected tests cover one synthetic target, missing target, filtering, and live committed artifacts, but no test constructs four present targets and asserts the full artifact matrix. Recommendation: add a hermetic four-target generator test with architecture for all, validate only for plans targets, and drift only for committed-architecture targets.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts pytest -q scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py scripts/dontpanic_orchestrate/te",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts pytest -q scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py scripts/dontpanic_orchestrate/tests/test_showcase_cli_integration.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts pytest --collect-only -q -s scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py scripts/dontpanic_orchestrate/tests/test_showcase_cli_integration.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate showcase --help",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate doctor --help",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --help"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F001",
+      "issue": "`docs/showcase/` is exempted from the actual sanitization scan, so secret-shape scanning does not apply there. Evidence: `scripts/sanitization_check.py` adds `docs/showcase/` to `ALLOWED_PREFIXES`, and `main()` skips allowed paths before calling `scan_line`; a probe showed a fake AWS-key-shaped line under `docs/showcase/leaky.json` would be skipped even though `scan_line` detects it. Recommendation: split campaign-ID allowlisting from secret-shape scanning so `docs/showcase/` can allow campaign ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "the required “all 4 targets present generates expected artifact set” fixture is not implemented. Evidence: collected tests cover one synthetic target, missing target, filtering, and live committed artifacts, but no test constructs four present targets and asserts the full artifact matrix. Recommendation: add a hermetic four-target generator test with architecture for all, validate only for plans targets, and drift only for committed-architecture targets. Checks run: $ PYTHONDONTWRITEBYTECODE=1 P",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
