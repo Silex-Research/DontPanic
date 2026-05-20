@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "audit_id": "2026-05-20-001-infra-external-integrations-bridge-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T20:53:09Z",
+  "completed_at": "2026-05-20T20:55:00Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-20-001-infra-external-integrations-bridge-v0-vo8pupic target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 169190 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 746919,
+    "tokens_out": 6992,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): `dontpanic plan close` does not actually write `evidence/external_sync.json` for declared refs. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2430) calls `ers.run_close_push(loaded.external_refs, ...)`, but `loaded` is not defined in `_run_external_refs_at_close`; the caller catches all exceptions and lets close succeed, so the sync hook silently fails. Recommendation: pass the parsed `refs` variable into `run_close_push`, and add a CLI-level regression test for close and close `--dry-run`.\n\nFINDING (medium, test_coverage): the new F002 tests cover `external_refs_sync.run_close_push()` directly but miss the CLI integration path where the bug lives. Evidence: `test_external_refs_sync_f002.py` asserts direct `run_close_push(...)` behavior, while no test exercises `_run_external_refs_at_close` or `_plan_close_main`. Recommendation: add tests that monkeypatch `completion_gate.close_plan` and `_RESOLVER_FACTORY`, then assert `plan close`, `plan close --dry-run`, and mixed-failure close write expected evidence.\n\nTarget-context check: implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; structured `target_context` has `env=dev`, `project=null`, and empty `commands_run`, so no forbidden command shapes were present.\n\nChecks run:\n$ git status --short  \n$ git diff HEAD~1 --stat  \n$ git diff HE",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "git diff HEAD~1 --name-only",
+      "rg -n \"loaded\\\\.external_refs|def _run_external_refs_at_close|run_close_push\\\\(\" scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`dontpanic plan close` does not actually write `evidence/external_sync.json` for declared refs. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2430) calls `ers.run_close_push(loaded.external_refs, ...)`, but `loaded` is not defined in `_run_external_refs_at_close`; the caller catches all exceptions and lets close succeed, so the sync hook silently fails. Recommendation: pass the parsed `refs` variable into `run_close_push`, and add a CLI-level ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the new F002 tests cover `external_refs_sync.run_close_push()` directly but miss the CLI integration path where the bug lives. Evidence: `test_external_refs_sync_f002.py` asserts direct `run_close_push(...)` behavior, while no test exercises `_run_external_refs_at_close` or `_plan_close_main`. Recommendation: add tests that monkeypatch `completion_gate.close_plan` and `_RESOLVER_FACTORY`, then assert `plan close`, `plan close --dry-run`, and mixed-failure close write expected evidence. Target-co",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

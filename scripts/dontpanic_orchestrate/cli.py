@@ -219,8 +219,7 @@ def _reconcile_gate_state_for_cli(
             cli=cli_label,
         )
         print(
-            f"[{cli_label}] REFUSED gate-state reconciliation [{exc.kind}] "
-            f"for {plan_id}.",
+            f"[{cli_label}] REFUSED gate-state reconciliation [{exc.kind}] for {plan_id}.",
             file=sys.stderr,
         )
         print(gate_pause.format_reconciliation_inbox_body(exc), file=sys.stderr)
@@ -799,14 +798,9 @@ def _close_main(argv: list[str]) -> int:
 
     # Resolve tier + agents_in_panel from the loaded plan so the signoff
     # envelope's schema validation matches the plan's actual declaration.
-    tier = (
-        loaded.plan.tier.value
-        if hasattr(loaded.plan.tier, "value")
-        else str(loaded.plan.tier)
-    )
+    tier = loaded.plan.tier.value if hasattr(loaded.plan.tier, "value") else str(loaded.plan.tier)
     agents = [
-        a.value if hasattr(a, "value") else str(a)
-        for a in (loaded.plan.agents_required or [])
+        a.value if hasattr(a, "value") else str(a) for a in (loaded.plan.agents_required or [])
     ]
     if not agents:
         agents = ["claude", "codex"]
@@ -844,23 +838,15 @@ def _close_main(argv: list[str]) -> int:
         ),
     )
 
-    print(
-        f"[close] operator-resolved feature {args.feature} "
-        f"(class={args.reason_class})"
-    )
+    print(f"[close] operator-resolved feature {args.feature} (class={args.reason_class})")
     print(f"[close]   closeout memo: {result.memo_path}")
     print(f"[close]   signoff envelope: {result.signoff_path}")
-    print(
-        f"[close]   breaker:no_progress cleared: {result.breaker_cleared}"
-    )
+    print(f"[close]   breaker:no_progress cleared: {result.breaker_cleared}")
     print(
         f"[close]   features.json passes flipped: "
         f"{result.features_passes_flipped} ({result.features_json_path})"
     )
-    print(
-        "[close] NEXT: edit the closeout memo's `Rationale` section before "
-        "merging."
-    )
+    print("[close] NEXT: edit the closeout memo's `Rationale` section before merging.")
     return 0
 
 
@@ -1511,10 +1497,7 @@ def _doctor_main(argv: list[str]) -> int:
     parser.add_argument(
         "--profile-strict",
         action="store_true",
-        help=(
-            "Plan 2026-05-19-002 F001: promote WARN -> FAIL under the "
-            "selected --profile."
-        ),
+        help=("Plan 2026-05-19-002 F001: promote WARN -> FAIL under the selected --profile."),
     )
     parser.add_argument(
         "--report",
@@ -1572,9 +1555,9 @@ def _doctor_main(argv: list[str]) -> int:
     exit_inputs = list(results)
     if not args.validate_plans_strict:
         exit_inputs = [
-            r for r in exit_inputs
-            if r.name != "validate-plans-strict"
-            and not r.name.startswith("validate-plans-strict:")
+            r
+            for r in exit_inputs
+            if r.name != "validate-plans-strict" and not r.name.startswith("validate-plans-strict:")
         ]
     if not args.architecture_drift_strict:
         exit_inputs = [r for r in exit_inputs if r.name != "architecture-drift"]
@@ -2003,7 +1986,11 @@ def _plan_main(argv: list[str]) -> int:
             "      Run the post-impl gate and flip plan.md status from active\n"
             "      → completed. Refuses on blocking decision unless --ignore-\n"
             "      completion-findings <reason> is supplied (operator override\n"
-            "      is recorded to evidence/goal-governance/post_impl/override.json).",
+            "      is recorded to evidence/goal-governance/post_impl/override.json).\n"
+            "  resync <plan-dir>\n"
+            "      Retry any failed/pending entries in evidence/external_sync.json\n"
+            "      via the registered category adapters. Idempotent — already-\n"
+            "      pushed entries are skipped. Plan 2026-05-20-001 F002.",
             file=sys.stderr,
         )
         return 2
@@ -2015,6 +2002,8 @@ def _plan_main(argv: list[str]) -> int:
         return _plan_audit_main(rest)
     if sub == "close":
         return _plan_close_main(rest)
+    if sub == "resync":
+        return _plan_resync_main(rest)
     print(f"dontpanic plan: unknown subcommand {sub!r}", file=sys.stderr)
     return 2
 
@@ -2055,6 +2044,15 @@ def _plan_lock_main(argv: list[str]) -> int:
     plan_dir = _resolve_plan_dir(args.plan)
     print(f"[plan lock] plan_dir={plan_dir}")
 
+    # Plan 2026-05-20-001 F002 — pre-flight external_refs reachability.
+    # Runs BEFORE the status flip so a sync=push_status ref pointing at a
+    # 404 blocks lock loud. sync=none refs tolerate unreachable URIs.
+    try:
+        _validate_external_refs_at_lock(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — surfaced as REFUSED
+        print(f"[plan lock] REFUSED (external_refs): {exc}", file=sys.stderr)
+        return 3
+
     try:
         plan_md = sufficiency_gate.lock_plan(
             plan_dir,
@@ -2085,10 +2083,7 @@ def _plan_lock_main(argv: list[str]) -> int:
                 f"{sidecar.relative_to(plan_dir)}"
             )
         else:
-            print(
-                "[applicable-skills] skipped — no claude/skills dir found "
-                "above plan_dir"
-            )
+            print("[applicable-skills] skipped — no claude/skills dir found above plan_dir")
     except Exception as exc:  # noqa: BLE001 — advisory matcher must never block
         print(
             f"[applicable-skills] WARN: matcher failed ({exc!r}); "
@@ -2321,6 +2316,156 @@ def _plan_close_main(argv: list[str]) -> int:
         print(f"[plan close] override recorded at {completion_gate._override_path(plan_dir)}")
     if result.status_flipped:
         print(f"[plan close] status flipped: active → completed in {result.plan_md}")
+
+    # Plan 2026-05-20-001 F002 — push external_refs status outbound.
+    # NEVER blocks close: failures land as evidence records, not raised
+    # exceptions. dry_run=True writes status=pending and prints the
+    # intended payload instead of calling the vendor.
+    try:
+        _run_external_refs_at_close(plan_dir, dry_run=args.dry_run)
+    except Exception as exc:  # noqa: BLE001 — defensive; should not happen
+        print(
+            f"[plan close] external_refs hook crashed: "
+            f"{type(exc).__name__}: {exc} (close still succeeded)",
+            file=sys.stderr,
+        )
+    return 0
+
+
+# ─────────────────────────  plan resync (F002)  ─────────────────────────
+
+
+def _resolver_for_external_refs():
+    """Lazy bootstrap of the adapter resolver. Kept tiny so plans with no
+    external_refs never pay the import cost. Tests monkeypatch this seam
+    via :data:`_RESOLVER_FACTORY`."""
+
+    factory = _RESOLVER_FACTORY
+    if factory is not None:
+        return factory()
+    from dontpanic_orchestrate.integrations.adapter_registry import default_resolver
+
+    return default_resolver()
+
+
+# Test-injectable override. ``None`` falls through to ``default_resolver``.
+_RESOLVER_FACTORY = None
+
+
+def _read_external_refs_from_frontmatter(plan_dir: Path) -> list:
+    """Narrow reader: parse only `external_refs[]` from plan.md frontmatter
+    and validate each entry against :class:`ExternalRef`. Does NOT invoke
+    the full :func:`plan_loader.load` validator so the lock-time hook
+    survives plans whose features.json is structurally valid against the
+    sufficiency gate but missing top-level task_id/schema_version (which
+    the F004 sufficiency-gate fixtures intentionally omit). When the
+    plan declares no refs, returns an empty list — caller skips."""
+
+    import yaml
+    from models.plan_model import ExternalRef  # noqa: E402
+
+    plan_md = plan_dir / "plan.md"
+    if not plan_md.is_file():
+        return []
+    text = plan_md.read_text()
+    if not text.startswith("---"):
+        return []
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return []
+    fm = yaml.safe_load(parts[1]) or {}
+    raw_refs = fm.get("external_refs") or []
+    if not raw_refs:
+        return []
+    return [ExternalRef.model_validate(r) for r in raw_refs]
+
+
+def _validate_external_refs_at_lock(plan_dir: Path) -> None:
+    """Pre-lock validation hook. Reads `external_refs[]` directly from
+    plan.md (no full plan_loader.load — see
+    :func:`_read_external_refs_from_frontmatter` for the rationale) and
+    calls into :func:`external_refs_sync.validate_refs_for_lock`. Plans
+    with no refs return immediately."""
+
+    from dontpanic_orchestrate import external_refs_sync as ers
+
+    refs = _read_external_refs_from_frontmatter(plan_dir)
+    if not refs:
+        return
+    resolver = _resolver_for_external_refs()
+    ers.validate_refs_for_lock(refs, resolver)
+
+
+def _run_external_refs_at_close(plan_dir: Path, *, dry_run: bool) -> None:
+    """Close-time hook. Skips when plan declares no refs."""
+
+    from dontpanic_orchestrate import external_refs_sync as ers
+
+    refs = _read_external_refs_from_frontmatter(plan_dir)
+    if not refs:
+        return
+    resolver = _resolver_for_external_refs()
+    result = ers.run_close_push(
+        refs,
+        resolver,
+        plan_dir,
+        dry_run=dry_run,
+    )
+    if dry_run:
+        for line in ers.format_dry_run_preview(result):
+            print(line)
+    else:
+        print(
+            f"[plan close] external_sync: {result.pushed_count} pushed, "
+            f"{result.failed_count} failed (evidence: {result.evidence_path})"
+        )
+
+
+def _plan_resync_main(argv: list[str]) -> int:
+    """``dontpanic plan resync`` — retry failed/pending entries in
+    ``evidence/external_sync.json``. Idempotent: already-pushed entries
+    are skipped. Plan 2026-05-20-001 F002.
+
+    Exit-code matrix:
+      0 — resync complete (any combination of pushed/failed/skipped)
+      2 — usage error / no evidence file present
+    """
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan resync",
+        description=(
+            "Retry any failed/pending entries in evidence/external_sync.json "
+            "via the registered category adapters. Idempotent."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    print(f"[plan resync] plan_dir={plan_dir}")
+
+    from dontpanic_orchestrate import external_refs_sync as ers
+
+    if not (plan_dir / ers.EVIDENCE_RELPATH).is_file():
+        print(
+            f"[plan resync] no evidence file at {plan_dir / ers.EVIDENCE_RELPATH} "
+            f"— nothing to retry. Run `dontpanic plan close` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    resolver = _resolver_for_external_refs()
+    try:
+        result = ers.run_resync(plan_dir, resolver)
+    except ers.ExternalRefsSyncError as exc:
+        print(f"[plan resync] ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    print(
+        f"[plan resync] {result.pushed_count} pushed, "
+        f"{result.failed_count} failed "
+        f"({len(result.records)} total in {result.evidence_path})"
+    )
     return 0
 
 
@@ -2601,6 +2746,7 @@ def main(argv: list[str] | None = None) -> int:
         return _mcp_main(raw[1:])
     if raw and raw[0] == "state":
         from dontpanic_orchestrate import state_cli
+
         return state_cli.main(raw[1:])
     if raw and raw[0] == "plan":
         return _plan_main(raw[1:])
@@ -2618,15 +2764,19 @@ def main(argv: list[str] | None = None) -> int:
         return _doctor_main(raw[1:])
     if raw and raw[0] == "init":
         from dontpanic_orchestrate.init import init_main as _init_main
+
         return _init_main(raw[1:])
     if raw and raw[0] == "smoke":
         from dontpanic_orchestrate.smoke import smoke_main as _smoke_main
+
         return _smoke_main(raw[1:])
     if raw and raw[0] == "architecture":
         from dontpanic_orchestrate import architecture as _arch
+
         return _arch.cli_main(raw[1:])
     if raw and raw[0] == "showcase":
         from dontpanic_orchestrate.showcase import showcase_main
+
         return showcase_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)

@@ -190,6 +190,30 @@
           "description": "Compliance checks evaluated at close-out. Plain strings so the runtime can extend the vocabulary without a schema bump. Example: ['tests_pass', 'evidence_packaged']."
         }
       }
+    },
+    "external_refs": {
+      "type": "array",
+      "description": "v1.10.0 — opt-in pointers to external entities the plan tracks (PM-tool issues, etc.). DontPanic plan lifecycle hooks (lock validates reachability, close pushes status) consult these via the category-adapter layer (scripts/dontpanic_orchestrate/integrations/). Strictly additive — absent or empty array = no external sync. Example: [{kind: 'pm_issue', uri: 'linear://issue/ABC-123', sync: 'push_status'}].",
+      "items": {
+        "type": "object",
+        "required": ["kind", "uri", "sync"],
+        "properties": {
+          "kind": {
+            "enum": ["pm_issue"],
+            "description": "Category tag. v0 ships 'pm_issue' only (PM-tool category contract from plan 2026-05-20-001 F001). New kinds require expanding the category contract."
+          },
+          "uri": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*://[a-z_]+/[A-Za-z0-9._-]+$",
+            "description": "Canonical reference URI: <scheme>://<entity_type>/<id>. Scheme matches a category-adapter wrapper's uri_scheme (e.g. 'linear://issue/ABC-123', 'linear://project/TEAM-7'). The pattern is permissive on the id segment — vendor-native identifiers vary widely."
+          },
+          "sync": {
+            "enum": ["none", "push_status"],
+            "description": "Outbound sync opt-in. 'none' (default at semantic level) = ref is informational only; lock-time reachability failures DO NOT block lock. 'push_status' = plan close pushes DontPanic status flip to the external entity; lock-time reachability failures block lock loud."
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

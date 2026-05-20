@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "audit_id": "2026-05-20-001-infra-external-integrations-bridge-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T20:43:44Z",
+  "completed_at": "2026-05-20T20:46:31Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-20-001-infra-external-integrations-bridge-v0-vo8pupic target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1245743 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1230952,
+    "tokens_out": 11265,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is present and matches `{Repo: DontPanic, Env: dev, Project: (none)}`; `target_context.commands_run` is empty, so no forbidden command shapes.\n\nFINDING (high, correctness): `plan close --dry-run` still calls the category adapter `push_status`. Evidence: `external_refs_sync.py:274-282` resolves the adapter and calls `hook.push_status(..., dry_run=True)`, and the test at `test_external_refs_sync_f002.py:346-348` explicitly asserts that call occurred. Recommendation: construct pending dry-run evidence without invoking `push_status`.\n\nFINDING (medium, correctness): `ExternalSyncRecord` is not exposed from `plan_loader` as required. Evidence: `plan_loader.py` imports only `ExternalRef, Plan`, and my import check printed `hasattr(pl, 'ExternalSyncRecord') == False`; the model lives in `integrations/pm_tool_sync.py` instead. Recommendation: re-export or define the accepted Pydantic record shape at the plan-loader boundary.\n\nFINDING (medium, documentation): `evidence/external-refs-contract.md` is missing. Evidence: `find`/`rg` found only the acceptance text, not the required contract document. Recommendation: add the state machine and retry semantics document under the plan evidence directory.\n\nFINDING (medium, test_coverage): The implementer audit artifact does not prove completion or the required full sweep. Evidence: `claude-implementer-F002-i0.json` says `DISPATCH TIMED OUT af",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -o cacheprovider_disabled=true scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts pytest -q -s --collect-only -o cacheprovider_disabled=true scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"import dontpanic_orchestrate.external_refs_sync as ers; import dontpanic_orchestrate.plan_loader as pl; print('imports ok', ers.EVIDENCE_RELPATH, hasattr(pl, 'ExternalRef'), hasattr(pl, 'ExternalSyncRecord'))\"",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py",
+      "git diff --check HEAD~1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`plan close --dry-run` still calls the category adapter `push_status`. Evidence: `external_refs_sync.py:274-282` resolves the adapter and calls `hook.push_status(..., dry_run=True)`, and the test at `test_external_refs_sync_f002.py:346-348` explicitly asserts that call occurred. Recommendation: construct pending dry-run evidence without invoking `push_status`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`ExternalSyncRecord` is not exposed from `plan_loader` as required. Evidence: `plan_loader.py` imports only `ExternalRef, Plan`, and my import check printed `hasattr(pl, 'ExternalSyncRecord') == False`; the model lives in `integrations/pm_tool_sync.py` instead. Recommendation: re-export or define the accepted Pydantic record shape at the plan-loader boundary.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F002",
+      "issue": "`evidence/external-refs-contract.md` is missing. Evidence: `find`/`rg` found only the acceptance text, not the required contract document. Recommendation: add the state machine and retry semantics document under the plan evidence directory.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The implementer audit artifact does not prove completion or the required full sweep. Evidence: `claude-implementer-F002-i0.json` says `DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `commands_run: []`. Recommendation: rerun implementation validation and capture the full orchestrator sweep plus sanitizer evidence. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -o cacheprovider_disabled=true scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py $ P",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
