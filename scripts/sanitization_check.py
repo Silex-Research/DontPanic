@@ -106,6 +106,7 @@ SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
 # may use them as realistic data; vendored upstream code is out of scope.
 ALLOWED_PREFIXES = (
     "docs/plans/",
+    "docs/roadmap-",  # operator planning docs by definition reference operator's project IDs
     "dashboard/state/",
     ".git/",
     "claude/projects/",

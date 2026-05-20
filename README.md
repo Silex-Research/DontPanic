@@ -51,6 +51,25 @@ redaction, normalized evidence, and signoff boundary around any adapter it uses.
 
 ---
 
+## Vocabulary (Hermes `/goal` mapping)
+
+DontPanic implements the [Hermes `/goal` pattern](https://x.com/Saboo_Shubham_)
+— one orchestrator, one builder, one reviewer, one verifier loop. If you already
+know that pattern, this table maps the terminology directly:
+
+| Hermes term          | DontPanic term                                        |
+|----------------------|-------------------------------------------------------|
+| HERMES orchestrator  | `supervisor.dispatch_volley`                          |
+| `/goal` primitive    | Locked plan + `features.json` acceptance              |
+| CODEX builder        | Implementer role (typically Claude)                   |
+| CLAUDE CODE reviewer | Auditor role (typically Codex)                        |
+| Verifier checklist   | Audit envelope schema + finding taxonomy              |
+| "Done" criteria      | `features.json` acceptance + shell-verifiable commands |
+
+DontPanic is one implementation of this pattern, not a rebrand of Hermes.
+
+---
+
 ## Prerequisites
 
 Required:
