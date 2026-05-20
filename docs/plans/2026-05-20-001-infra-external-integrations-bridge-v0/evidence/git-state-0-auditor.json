@@ -1,17 +1,45 @@
 {
-  "staged": [
+  "staged": [],
+  "unstaged_modified": [
     {
-      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/plan.md",
+      "path": "claude/shared/VERSION",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/schemas/v1.0/models/plan_model.py",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/schemas/v1.0/plan.schema.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/plan_loader.py",
       "status": "M"
     }
   ],
-  "unstaged_modified": [],
   "untracked": [
-    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/INBOX.md",
-    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/audit/",
-    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/",
-    "scripts/dontpanic_orchestrate/integrations/",
-    "scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py"
+    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/audit/codex-auditor-F002-i0.json",
+    "scripts/dontpanic_orchestrate/external_refs_sync.py",
+    "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+    "scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

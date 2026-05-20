@@ -256,6 +256,63 @@ class CommitPolicy(BaseModel):
     )
 
 
+# ──────────────────────────────  v1.10.0 external_refs[]  ──────────────────────────────
+#
+# Optional pointers to external entities the plan tracks. Plan 2026-05-20-001
+# F002 wires `dontpanic plan lock` to validate every ref via the category-
+# adapter layer (one read per ref; cached) and `dontpanic plan close` to push
+# DontPanic status to refs with `sync: push_status`. Strictly additive —
+# every locked plan that validated under v1.9.x continues to validate.
+
+
+class ExternalRefKind(Enum):
+    pm_issue = "pm_issue"
+
+
+class ExternalRefSync(Enum):
+    none = "none"
+    push_status = "push_status"
+
+
+_EXTERNAL_REF_URI_PATTERN = (
+    r"^[a-z][a-z0-9_-]*://[a-z_]+/[A-Za-z0-9._-]+$"
+)
+
+
+class ExternalRef(BaseModel):
+    """v1.10.0 — one pointer at an external entity the plan tracks.
+
+    The URI carries scheme + entity-type + vendor-native id; the scheme
+    selects the category-adapter wrapper at runtime (e.g. 'linear://issue/
+    ABC-123' routes to the Linear PM-tool wrapper). ``sync`` opts the
+    plan into outbound writes — ``push_status`` makes ``dontpanic plan
+    lock`` validate the ref is reachable (failure blocks lock) and
+    ``dontpanic plan close`` push the DontPanic status flip; ``none``
+    keeps the ref informational and tolerates unreachable URIs.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ExternalRefKind = Field(
+        ..., description="Category tag; v0 ships 'pm_issue' only."
+    )
+    uri: constr(pattern=_EXTERNAL_REF_URI_PATTERN) = Field(
+        ...,
+        description=(
+            "<scheme>://<entity_type>/<id>. Scheme matches a category-adapter "
+            "wrapper's uri_scheme (e.g. 'linear://issue/ABC-123')."
+        ),
+    )
+    sync: ExternalRefSync = Field(
+        ...,
+        description=(
+            "'none' = ref is informational; unreachable URIs do not block "
+            "lock. 'push_status' = plan close pushes DontPanic status flip; "
+            "lock blocks loud if the URI is unreachable."
+        ),
+    )
+
+
 class Plan(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -317,5 +374,13 @@ class Plan(BaseModel):
             "'child_commit', 'parent_commit', or 'manual' (see "
             "CommitPolicy.mode); absent commit_policy = supervisor falls "
             "through to default behavior (operator-explicit commit)."
+        ),
+    )
+    external_refs: list[ExternalRef] | None = Field(
+        None,
+        description=(
+            "v1.10.0 — opt-in pointers to external entities the plan "
+            "tracks. Lock validates reachability via the category-adapter "
+            "layer; close pushes status to refs with sync='push_status'."
         ),
     )

@@ -8,10 +8,10 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F001-i0.json",
-    "audit/codex-auditor-F001-i0.json",
-    "audit/claude-implementer-F001-i1.json",
-    "audit/codex-auditor-F001-i1.json"
+    "audit/claude-implementer-F002-i0.json",
+    "audit/codex-auditor-F002-i0.json",
+    "audit/claude-implementer-F002-i1.json",
+    "audit/codex-auditor-F002-i1.json"
   ],
   "vote_summary": {
     "signed_off_count": 1,
@@ -20,7 +20,7 @@
     "inconclusive_count": 0
   },
   "signoff": false,
-  "signoff_reason": "environmental blocker — round 2 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
   "next_action": "remediate",
-  "decided_at": "2026-05-20T20:22:14Z"
+  "decided_at": "2026-05-20T20:55:00Z"
 }

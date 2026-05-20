@@ -120,3 +120,99 @@ gate: breaker:environmental_blocker
 Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
 
 ===
+---
+timestamp: 2026-05-20T20:33:43Z
+event: volley_start
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T20:33:43Z
+event: volley_start
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T20:43:44Z
+event: error
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-20T20:55:00Z
+event: no_progress_classification
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+aggregate: unknown
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F002
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: `dontpanic plan close` does not actually write `evidence/external_sync.json` for declared refs. Evidence: [cli.py]($HOME/Documents/GitHub/DontPanic/s…
+  - [unknown] severity=medium, category=test_coverage: the new F002 tests cover `external_refs_sync.run_close_push()` directly but miss the CLI integration path where the bug lives. Evidence: `test_external_refs_sy…
+
+Audit trail referenced existing evidence at: evidence/external_sync.json, evidence/external-refs-contract.md, docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/external-refs-contract.md
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-20-001-infra-external-integrations-bridge-v0 F002 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T20:55:00Z
+event: breaker_tripped
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-20-001-infra-external-integrations-bridge-v0 breaker:no_progress` or `jarvis resume 2026-05-20-001-infra-external-integrations-bridge-v0 --all`.
+
+===
+---
+timestamp: 2026-05-20T20:55:00Z
+event: volley_terminal
+plan_id: 2026-05-20-001-infra-external-integrations-bridge-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===

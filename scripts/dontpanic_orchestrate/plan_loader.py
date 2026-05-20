@@ -31,8 +31,12 @@ def _find_schemas_dir() -> Path:
 
 SCHEMAS_DIR = _find_schemas_dir()
 from models.features_model import Features  # noqa: E402
-from models.plan_model import Plan  # noqa: E402
+from models.plan_model import ExternalRef, Plan  # noqa: E402
 
+from dontpanic_orchestrate.integrations.pm_tool_sync import (  # noqa: E402
+    ExternalSyncRecord,
+    ExternalSyncStatus,
+)
 from dontpanic_orchestrate.nested_orchestration import (  # noqa: E402
     ChildCharter,
     CommitPolicy,
@@ -44,6 +48,16 @@ from dontpanic_orchestrate.plan_target import (  # noqa: E402
     parse_target_section,
     validate_prod_gates,
 )
+
+__all__ = [
+    "ExternalRef",
+    "ExternalSyncRecord",
+    "ExternalSyncStatus",
+    "Features",
+    "LoadedPlan",
+    "Plan",
+    "load",
+]
 
 
 def _registry_required_gates(plan_dir: Path, target_env: str) -> list[str] | None:
@@ -98,6 +112,11 @@ class LoadedPlan:
     # `CommitPolicy(mode='evidence_only', requires=[])` per D003.
     child_charter: ChildCharter | None = None
     commit_policy: CommitPolicy | None = None
+    # Plan 2026-05-20-001 F002: optional `external_refs[]` — opt-in
+    # pointers to external entities (PM-tool issues, etc.) that the plan
+    # lifecycle hooks consult. Empty list when absent so consumers can
+    # iterate without None-checking.
+    external_refs: list[ExternalRef] = field(default_factory=list)
 
     def feature(self, feature_id: str) -> dict[str, Any]:
         for f in self.features.features:
@@ -246,9 +265,7 @@ def load(plan_dir: Path) -> LoadedPlan:
         required_override=required_override,
     )
 
-    surfaces_list: list[str] = (
-        [s.value for s in plan.surfaces] if plan.surfaces else []
-    )
+    surfaces_list: list[str] = [s.value for s in plan.surfaces] if plan.surfaces else []
 
     return LoadedPlan(
         plan_dir=plan_dir,
@@ -262,4 +279,5 @@ def load(plan_dir: Path) -> LoadedPlan:
         orchestration=orchestration,
         child_charter=child_charter,
         commit_policy=commit_policy,
+        external_refs=list(plan.external_refs or []),
     )
