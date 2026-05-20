@@ -1471,6 +1471,28 @@ def _doctor_main(argv: list[str]) -> int:
             "2 under the strict-codes matrix. stale_minor stays advisory."
         ),
     )
+    parser.add_argument(
+        "--plans-root",
+        type=Path,
+        default=None,
+        help=(
+            "Plan 2026-05-19-005 F001: override the plans root walked by "
+            "validate-plans-strict. Default = <repo>/docs/plans. Enables "
+            "the showcase generator (and operators) to validate plan "
+            "inventories in external checkouts without copying runtime code."
+        ),
+    )
+    parser.add_argument(
+        "--architecture-json",
+        type=Path,
+        default=None,
+        help=(
+            "Plan 2026-05-19-005 F001: override the architecture.json path "
+            "the drift probe reads. Default = <repo>/docs/architecture/"
+            "architecture.json. Enables drift evaluation against an "
+            "external snapshot."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1490,6 +1512,8 @@ def _doctor_main(argv: list[str]) -> int:
         validate_plans=args.validate_plans,
         validate_plans_strict_mode=args.validate_plans_strict,
         architecture_drift_strict_mode=args.architecture_drift_strict,
+        plans_root=args.plans_root,
+        architecture_json=args.architecture_json,
     )
     print(jd.render_json(results) if args.json else jd.render_text(results))
     # Plan 4 F003 / Plan 3 F003 acceptance: in advisory mode the
@@ -2475,6 +2499,7 @@ Private-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   doctor                         Run local readiness checks
   architecture regen|status|diff Codebase + plan snapshot + drift surface
+  showcase regen                 Generate showcase artifacts for external repos
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
@@ -2545,6 +2570,9 @@ def main(argv: list[str] | None = None) -> int:
     if raw and raw[0] == "architecture":
         from dontpanic_orchestrate import architecture as _arch
         return _arch.cli_main(raw[1:])
+    if raw and raw[0] == "showcase":
+        from dontpanic_orchestrate.showcase import showcase_main
+        return showcase_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

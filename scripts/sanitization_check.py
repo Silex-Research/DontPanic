@@ -108,6 +108,9 @@ ALLOWED_PREFIXES = (
     "docs/plans/",
     "docs/roadmap-",  # operator planning docs by definition reference operator's project IDs
     "docs/architecture/",  # generated map that inventories docs/plans/ plan titles (already allowlisted)
+    # Plan 2026-05-19-005 F001: showcase artifacts. Redactor strips absolute
+    # paths pre-write; secret-shape regexes still apply to every line.
+    "docs/showcase/",
     "dashboard/state/",
     ".git/",
     "claude/projects/",

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DontPanic Architecture</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --bg-panel: #1e293b;
+  --fg: #e2e8f0;
+  --fg-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-2: #f472b6;
+  --good: #22c55e;
+  --warn: #facc15;
+  --bad: #ef4444;
+  --border: #334155;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5; }
+header.top { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+header.top h1 { margin: 0 0 0.25rem; font-size: 1.5rem; letter-spacing: -0.01em; }
+header.top .meta { color: var(--fg-muted); font-size: 0.875rem; }
+header.top .meta code { background: rgba(56,189,248,0.1); padding: 0.1rem 0.4rem;
+  border-radius: 3px; color: var(--accent); font-size: 0.8rem; }
+header.top .warning { color: var(--warn); margin-top: 0.5rem; font-size: 0.875rem; }
+nav.top { position: sticky; top: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem; z-index: 10; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+nav.top a { color: var(--fg); text-decoration: none; padding: 0.4rem 0.75rem;
+  border-radius: 4px; font-size: 0.9rem; }
+nav.top a:hover { background: rgba(56,189,248,0.15); color: var(--accent); }
+main.container { padding: 1rem; max-width: 1400px; margin: 0 auto; }
+section { margin-bottom: 2.5rem; }
+section h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem; margin: 0 0 1rem; color: var(--accent); }
+section .lede { color: var(--fg-muted); font-size: 0.9rem; margin: -0.5rem 0 1rem; }
+.diagram { background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; }
+.diagram svg { width: 100%; height: auto; display: block; }
+.cards { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+.card { background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 6px; padding: 0.75rem 1rem; }
+.card h3 { margin: 0 0 0.25rem; font-size: 1rem; font-family:
+  ui-monospace, "SF Mono", Menlo, monospace; color: var(--accent); }
+.card .path { color: var(--fg-muted); font-size: 0.8rem; font-family:
+  ui-monospace, "SF Mono", Menlo, monospace; word-break: break-all; }
+.card .summary { margin: 0.5rem 0 0; color: var(--fg); font-size: 0.9rem; }
+.card .meta { font-size: 0.8rem; color: var(--fg-muted); margin-top: 0.5rem; }
+.tag { display: inline-block; background: rgba(56,189,248,0.1); color: var(--accent);
+  padding: 0.1rem 0.5rem; border-radius: 3px; margin: 0.15rem 0.25rem 0 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.75rem; }
+.tag.import { background: rgba(244,114,182,0.1); color: var(--accent-2); }
+.tag.status-active { background: rgba(34,197,94,0.15); color: var(--good); }
+.tag.status-completed { background: rgba(56,189,248,0.15); color: var(--accent); }
+.tag.status-draft { background: rgba(148,163,184,0.15); color: var(--fg-muted); }
+.tag.status-blocked, .tag.status-abandoned { background: rgba(239,68,68,0.15); color: var(--bad); }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+table th, table td { text-align: left; padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border); }
+table th { color: var(--fg-muted); font-weight: 600; }
+footer.bottom { padding: 1rem; color: var(--fg-muted); font-size: 0.8rem;
+  text-align: center; border-top: 1px solid var(--border); }
+@media (min-width: 800px) {
+  .cards { grid-template-columns: 1fr 1fr; }
+  header.top { padding: 2rem; }
+  header.top h1 { font-size: 2rem; }
+  main.container { padding: 2rem; }
+}
+@media (min-width: 1200px) {
+  .cards.modules-cards { grid-template-columns: 1fr 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+<h1>DontPanic Architecture</h1>
+<div class="meta">
+schema v1.0 · generated 2026-05-20T05:14:59Z · fingerprint <code>e3b0c44298fc</code> · 0 files tracked
+</div>
+</header>
+<nav class="top"><a href="#modules">Modules</a><a href="#schemas">Schemas</a><a href="#plans">Plans</a><a href="#lifecycle">Lifecycle</a></nav>
+<main class="container">
+<section id="modules"><h2>Modules (0)</h2><p class="lede">Python modules discovered under <code>scripts/dontpanic_orchestrate/</code>. Edges in the graph are intra-package imports.</p><div class="diagram"><svg id="module-graph" role="img" aria-label="No modules to graph." viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg"><title>No modules to graph.</title><text x="200" y="44" fill="#94a3b8" font-size="14" text-anchor="middle">No modules to graph.</text></svg></div><div class="cards modules-cards"><p>No modules.</p></div></section>
+<section id="schemas"><h2>Schemas (0)</h2><p class="lede">JSON schemas mirrored from <code>claude/shared/schemas/</code>. <em>validator_present</em> indicates a matching Pydantic mirror under <code>validate.py</code>.</p><table><thead><tr><th>Name</th><th>Path</th><th>Version</th><th>Validator</th></tr></thead><tbody><tr><td colspan="4">No schemas.</td></tr></tbody></table></section>
+<section id="plans"><h2>Plans (0)</h2><p class="lede">Plan inventory derived from <code>docs/plans/*/plan.md</code> frontmatter + features.json. Counts show the plan lifecycle distribution.</p><div class="diagram"><svg id="plan-lifecycle" role="img" aria-label="Plan lifecycle" viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg"><title>Plan lifecycle</title><defs><marker id="arrow-plan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/></marker></defs><line x1="112.0" y1="110.0" x2="208.0" y2="110.0" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-plan)"/><line x1="272.0" y1="110.0" x2="368.0" y2="110.0" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-plan)"/><line x1="272.0" y1="110.0" x2="528.0" y2="110.0" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-plan)"/><line x1="272.0" y1="110.0" x2="688.0" y2="110.0" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-plan)"/><circle cx="80.0" cy="110.0" r="28" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/><text x="80.0" y="108.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">draft</text><text x="80.0" y="122.0" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">0</text><circle cx="240.0" cy="110.0" r="28" fill="#86efac" stroke="#0f172a" stroke-width="2"/><text x="240.0" y="108.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">active</text><text x="240.0" y="122.0" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">0</text><circle cx="400.0" cy="110.0" r="28" fill="#7dd3fc" stroke="#0f172a" stroke-width="2"/><text x="400.0" y="108.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">completed</text><text x="400.0" y="122.0" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">0</text><circle cx="560.0" cy="110.0" r="28" fill="#fca5a5" stroke="#0f172a" stroke-width="2"/><text x="560.0" y="108.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">abandoned</text><text x="560.0" y="122.0" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">0</text><circle cx="720.0" cy="110.0" r="28" fill="#fca5a5" stroke="#0f172a" stroke-width="2"/><text x="720.0" y="108.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">blocked</text><text x="720.0" y="122.0" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">0</text></svg></div><table><thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Features</th></tr></thead><tbody><tr><td colspan="4">No plans.</td></tr></tbody></table></section>
+<section id="lifecycle"><h2>Supervisor state machine</h2><p class="lede">Terminal + transition states reported by <code>dispatch_volley</code>. Sourced from the F003 v3 taxonomy and circuit_breakers module; gated states (paused_*) require operator clearance via <code>dontpanic approve</code>.</p><div class="diagram"><svg id="supervisor-state" role="img" aria-label="Supervisor state machine" viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg"><title>Supervisor state machine</title><defs><marker id="arrow-sv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker></defs><path d="M 300.0 95.0 Q 200.0 77.0 100.0 95.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 300.0 95.0 Q 500.0 77.0 700.0 95.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 300.0 95.0 Q 400.0 77.0 500.0 95.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 500.0 95.0 Q 500.0 172.0 500.0 285.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 500.0 95.0 Q 300.0 172.0 100.0 285.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 300.0 285.0 Q 500.0 267.0 700.0 285.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 500.0 285.0 Q 300.0 172.0 100.0 95.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><path d="M 700.0 285.0 Q 400.0 172.0 100.0 95.0" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7" marker-end="url(#arrow-sv)"/><rect x="25.0" y="73.0" width="150" height="44" rx="8" fill="#86efac" stroke="#0f172a" stroke-width="2"/><text x="100.0" y="99.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">signed_off</text><rect x="225.0" y="73.0" width="150" height="44" rx="8" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/><text x="300.0" y="99.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">needs_changes</text><rect x="425.0" y="73.0" width="150" height="44" rx="8" fill="#fdba74" stroke="#0f172a" stroke-width="2"/><text x="500.0" y="99.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">blocked</text><rect x="625.0" y="73.0" width="150" height="44" rx="8" fill="#fca5a5" stroke="#0f172a" stroke-width="2"/><text x="700.0" y="99.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">stopped_no_progress</text><rect x="25.0" y="263.0" width="150" height="44" rx="8" fill="#fca5a5" stroke="#0f172a" stroke-width="2"/><text x="100.0" y="289.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">stopped_environmental_blocker</text><rect x="225.0" y="263.0" width="150" height="44" rx="8" fill="#fdba74" stroke="#0f172a" stroke-width="2"/><text x="300.0" y="289.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">blocked_no_findings</text><rect x="425.0" y="263.0" width="150" height="44" rx="8" fill="#fde68a" stroke="#0f172a" stroke-width="2"/><text x="500.0" y="289.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">paused_on_gate</text><rect x="625.0" y="263.0" width="150" height="44" rx="8" fill="#fde68a" stroke="#0f172a" stroke-width="2"/><text x="700.0" y="289.0" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="ui-monospace,monospace">paused_on_environmental</text></svg></div></section>
+</main>
+<footer class="bottom">Generated by <code>dontpanic architecture regen</code>. Fingerprint <code>e3b0c44298fc</code>. This file is gitignored — regen locally on demand.</footer>
+</body></html>

@@ -1,0 +1,249 @@
+{
+  "findings": [],
+  "label": "DontPanic",
+  "per_plan": [
+    {
+      "path": "plans/2026-04-25-001-infra-jarvis-firebase-bootstrap/plan.md",
+      "plan_id": "2026-04-25-001-infra-jarvis-firebase-bootstrap",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-25-002-infra-trivial-orchestration-test/plan.md",
+      "plan_id": "2026-04-25-002-infra-trivial-orchestration-test",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-26-006-infra-f023-ec5-evidence/plan.md",
+      "plan_id": "2026-04-26-006-infra-f023-ec5-evidence",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-28-001-infra-financial-observability/plan.md",
+      "plan_id": "2026-04-28-001-infra-financial-observability",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-29-002-feat-agent-permission-wiring/plan.md",
+      "plan_id": "2026-04-29-002-feat-agent-permission-wiring",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-29-003-fix-f008-phased-gates/plan.md",
+      "plan_id": "2026-04-29-003-fix-f008-phased-gates",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-29-004-fix-f006-budget-semantics/plan.md",
+      "plan_id": "2026-04-29-004-fix-f006-budget-semantics",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-04-30-001-fix-quota-tracker-vendor-native/plan.md",
+      "plan_id": "2026-04-30-001-fix-quota-tracker-vendor-native",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-01-001-feat-onboarding-ux/plan.md",
+      "plan_id": "2026-05-01-001-feat-onboarding-ux",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-01-002-feat-discord-notification-sink/plan.md",
+      "plan_id": "2026-05-01-002-feat-discord-notification-sink",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-01-003-feat-security-baseline/plan.md",
+      "plan_id": "2026-05-01-003-feat-security-baseline",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-01-004-feat-patch-completeness-gate/plan.md",
+      "plan_id": "2026-05-01-004-feat-patch-completeness-gate",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-01-005-feat-target-context-platform-fix/plan.md",
+      "plan_id": "2026-05-01-005-feat-target-context-platform-fix",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-02-001-feat-resume-gate-discipline/plan.md",
+      "plan_id": "2026-05-02-001-feat-resume-gate-discipline",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-02-002-fix-audit-envelope-filename/plan.md",
+      "plan_id": "2026-05-02-002-fix-audit-envelope-filename",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-02-003-feat-nested-orchestration-v1/plan.md",
+      "plan_id": "2026-05-02-003-feat-nested-orchestration-v1",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-02-004-fix-diminishing-returns-signature-based/plan.md",
+      "plan_id": "2026-05-02-004-fix-diminishing-returns-signature-based",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-03-001-feat-global-install-project-registry/plan.md",
+      "plan_id": "2026-05-03-001-feat-global-install-project-registry",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-03-002-infra-personal-openclaw-axiom-jarvis/plan.md",
+      "plan_id": "2026-05-03-002-infra-personal-openclaw-axiom-jarvis",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-03-003-feat-agent-access-manifest-thin-mcp/plan.md",
+      "plan_id": "2026-05-03-003-feat-agent-access-manifest-thin-mcp",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-04-001-refactor-canonical-dontpanic-module/plan.md",
+      "plan_id": "2026-05-04-001-refactor-canonical-dontpanic-module",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-04-002-fix-supervisor-lifecycle-staged-gates/plan.md",
+      "plan_id": "2026-05-04-002-fix-supervisor-lifecycle-staged-gates",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-04-003-fix-subprocess-timeout-envelope-durability/plan.md",
+      "plan_id": "2026-05-04-003-fix-subprocess-timeout-envelope-durability",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-04-004-fix-ec5-classifier-purity/plan.md",
+      "plan_id": "2026-05-04-004-fix-ec5-classifier-purity",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-05-001-fix-plan-validator-audit-auxiliary-json/plan.md",
+      "plan_id": "2026-05-05-001-fix-plan-validator-audit-auxiliary-json",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-05-002-feat-goal-governance-nested-orchestration-config/plan.md",
+      "plan_id": "2026-05-05-002-feat-goal-governance-nested-orchestration-config",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-05-003-feat-objective-contract-and-sufficiency-audit/plan.md",
+      "plan_id": "2026-05-05-003-feat-objective-contract-and-sufficiency-audit",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-06-001-infra-runtime-evidence-harness/plan.md",
+      "plan_id": "2026-05-06-001-infra-runtime-evidence-harness",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-06-002-feat-post-impl-completion-audit/plan.md",
+      "plan_id": "2026-05-06-002-feat-post-impl-completion-audit",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-06-003-fix-live-cross-vendor-goal-audit-dogfood/plan.md",
+      "plan_id": "2026-05-06-003-fix-live-cross-vendor-goal-audit-dogfood",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-07-001-fix-completion-dispatch-codex-stream-parser/plan.md",
+      "plan_id": "2026-05-07-001-fix-completion-dispatch-codex-stream-parser",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-07-002-fix-cross-vendor-dogfood-fixture-runtime-artifacts/plan.md",
+      "plan_id": "2026-05-07-002-fix-cross-vendor-dogfood-fixture-runtime-artifacts",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-08-001-feat-ruff-s-remediation/plan.md",
+      "plan_id": "2026-05-08-001-feat-ruff-s-remediation",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-08-002-feat-skill-applicability-v0/plan.md",
+      "plan_id": "2026-05-08-002-feat-skill-applicability-v0",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-08-003-fix-harness-volley-frictions/plan.md",
+      "plan_id": "2026-05-08-003-fix-harness-volley-frictions",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-09-001-fix-conftest-global-config-isolation/plan.md",
+      "plan_id": "2026-05-09-001-fix-conftest-global-config-isolation",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-09-002-fix-verdict-status-environmental-frictions/plan.md",
+      "plan_id": "2026-05-09-002-fix-verdict-status-environmental-frictions",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-09-003-feat-state-projection-v0/plan.md",
+      "plan_id": "2026-05-09-003-feat-state-projection-v0",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/plan.md",
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-10-001-feat-printing-press-adapter-skill/plan.md",
+      "plan_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-11-001-infra-state-projection-adapters-meta/plan.md",
+      "plan_id": "2026-05-11-001-infra-state-projection-adapters-meta",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-11-002-fix-harness-frictions-v3/plan.md",
+      "plan_id": "2026-05-11-002-fix-harness-frictions-v3",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-12-001-fix-harness-frictions-v4/plan.md",
+      "plan_id": "2026-05-12-001-fix-harness-frictions-v4",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md",
+      "plan_id": "2026-05-12-002-fix-harness-frictions-v4-1",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md",
+      "plan_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md",
+      "plan_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+      "status": "clean"
+    },
+    {
+      "path": "plans/2026-05-19-005-feat-dogfood-showcase-artifacts-v0/plan.md",
+      "plan_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+      "status": "clean"
+    }
+  ],
+  "plans_root": "./docs/plans",
+  "repo_key": "dontpanic",
+  "summary": {
+    "message": "47 locked plan(s) under docs/plans validate clean against plan.schema.json",
+    "name": "validate-plans-strict",
+    "ok": true,
+    "warn": false
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-05-20T05:14:59Z",
+  "modules": [],
+  "plans": [],
+  "schema_version": "1.0",
+  "schemas": [],
+  "source_fingerprint": {
+    "algo": "sha256",
+    "computed_at": "2026-05-20T05:14:59Z",
+    "file_hashes": {},
+    "file_hashes_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "files_count": 0
+  }
+}
