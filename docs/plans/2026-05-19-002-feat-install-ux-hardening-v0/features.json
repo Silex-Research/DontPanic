@@ -24,8 +24,19 @@
         "Run full orchestrator sweep + sanitization check. Confirm no regressions vs lock-time baseline (do NOT hardcode the count)."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/prereq_registry.py declares PrereqProbe dataclass with required_for_profiles + activation_condition + severity_when_inactive fields. (2) ProfileRegistry with 5 PURE-SET profiles (core, discord, firebase-dashboard, openclaw, ci) — no conditional pseudo-profiles, no `maintainer`. (3) ~10 initial probes registered; codex CLI is advisory under --profile=core unless auditor_codex_selected, FAIL under ci+openclaw; gh-auth is warn under --profile=core when github_remote_present, omit when none, FAIL under ci; python<3.10 + missing claude CLI are unconditional fails under core. Each probe has fix_url AND fix_command as list[str] (NO shell strings). (4) scripts/dontpanic_doctor.py exposes NEW --profile=<name> flag (NO default) + NEW --profile-strict flag (does NOT clash with existing --strict-codes / --validate-plans-strict / --architecture-drift-strict). (5) `dontpanic doctor` (no flags) keeps legacy CheckResult pipeline + existing probe set + 0/1/2 exit-code matrix UNCHANGED. (6) `dontpanic doctor --profile=<name> --json` envelope carries top-level schema_version='1.0.0'. (7) Network probes run in ThreadPoolExecutor with per-probe 2s timeout; full sweep <=10s wall clock. (8) `--profile=core` does NOT red-flag Firebase, agent-conventions, or other maintainer-only deps. (9) New test_prereq_registry_f001.py (>=13 cases) + test_doctor_profile_integration.py (>=5 cases) covering each profile + backwards-compat snapshot. (10) Local schema doc at evidence/doctor-json-envelope-schema-v1.md. (11) Full sweep at or above lock-time baseline (no regressions); sanitization clean.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T11:52:18Z"
     },
     {
       "id": "F002",

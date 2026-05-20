@@ -1984,6 +1984,53 @@ def render_json(results: list[CheckResult]) -> str:
     return json.dumps(payload, indent=2)
 
 
+def _load_prereq_registry():
+    """Import prereq_registry lazily so the legacy no-flag path stays
+    independent of the new module. Returns the module object."""
+    import importlib
+
+    return importlib.import_module("dontpanic_orchestrate.prereq_registry")
+
+
+def _run_profile_aware(
+    profile: str,
+    profile_strict: bool,
+    as_json: bool,
+    repo_root: Path,
+    legacy_results: list[CheckResult],
+) -> tuple[int, str]:
+    """Plan 2026-05-19-002 F001 — new profile-aware path.
+
+    Returns ``(exit_code, rendered_output)``. The exit code is the strict
+    0/1/2 matrix applied to the PROBE sweep specifically. The legacy
+    check set runs alongside but does NOT change the profile-aware exit
+    code (callers can layer the legacy verdict separately if they want).
+    """
+    pr = _load_prereq_registry()
+    activation_context = pr.build_activation_context(repo_root)
+    sweep = pr.run_sweep(
+        profile=profile,
+        activation_context=activation_context,
+        profile_strict=profile_strict,
+    )
+    exit_code = sweep.exit_code()
+    if as_json:
+        envelope = pr.envelope_for_sweep(
+            sweep,
+            legacy_checks=[
+                {
+                    "name": r.name,
+                    "ok": r.ok,
+                    "warn": r.warn,
+                    "message": r.message,
+                }
+                for r in legacy_results
+            ],
+        )
+        return exit_code, json.dumps(envelope, indent=2)
+    return exit_code, pr.render_sweep_text(sweep)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--json", action="store_true", help="machine-readable output")
@@ -2065,6 +2112,31 @@ def main(argv: list[str] | None = None) -> int:
             "evaluation against an external snapshot."
         ),
     )
+    # Plan 2026-05-19-002 F001 — profile-aware prereq probes.
+    # IMPORTANT: NO default. The legacy no-flag path is preserved
+    # byte-identical when --profile is absent.
+    parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        choices=("core", "discord", "firebase-dashboard", "openclaw", "ci"),
+        help=(
+            "Plan 2026-05-19-002 F001: run the NEW profile-aware prereq "
+            "probe sweep. When omitted, doctor runs the legacy CheckResult "
+            "pipeline unchanged. Valid profiles: core, discord, "
+            "firebase-dashboard, openclaw, ci."
+        ),
+    )
+    parser.add_argument(
+        "--profile-strict",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-002 F001: promote WARN -> FAIL under the "
+            "selected --profile. Avoids namespace clash with existing "
+            "--strict-codes / --validate-plans-strict / "
+            "--architecture-drift-strict flags."
+        ),
+    )
     args = parser.parse_args(argv)
 
     results = run_all_checks(
@@ -2076,6 +2148,20 @@ def main(argv: list[str] | None = None) -> int:
         plans_root=args.plans_root,
         architecture_json=args.architecture_json,
     )
+    # Plan 2026-05-19-002 F001 — profile-aware path activates ONLY when
+    # --profile is supplied. With no --profile, the legacy
+    # render_text/render_json + 0/1/2 exit code matrix is preserved
+    # byte-identical (backwards-compat invariant).
+    if args.profile is not None:
+        exit_code, rendered = _run_profile_aware(
+            profile=args.profile,
+            profile_strict=args.profile_strict,
+            as_json=args.json,
+            repo_root=REPO_ROOT,
+            legacy_results=results,
+        )
+        print(rendered)
+        return exit_code
     print(render_json(results) if args.json else render_text(results))
     # The --validate-plans-strict and --architecture-drift-strict flags
     # implicitly opt into the strict-codes exit matrix: per the F003

@@ -1,0 +1,8 @@
+{
+  "plan_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "feature_id": "F001",
+  "class": "implementation_defect",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-05-20T11:52:18Z"
+}
