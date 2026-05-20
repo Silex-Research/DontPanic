@@ -1,0 +1,118 @@
+{
+  "task_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Build the `dontpanic architecture` CLI + crawler that emits a stable, version-stamped, fingerprinted architecture.json describing the DontPanic codebase + plan inventory. Independently shippable foundation: future features (F002 HTML, F003 drift probe, F004 supervisor regen, F005 pre-commit hook) all consume what F001 produces. The JSON is the agent-facing contract — first downstream consumer is Plan 4.5's dontpanic new context gatherer (which degrades gracefully when this file is missing or stale). Crawler walks: scripts/dontpanic_orchestrate/ (module map: imports + public symbols + per-module summary), claude/shared/ (schema set + Pydantic mirror inventory + VERSION), docs/plans/ (plan inventory: id/title/status/features count, no full plan contents). Source fingerprint: sha256 over the normalized source tree (sorted file list + per-file sha256 of content), stored in JSON header. CLI subcommands: regen (default), status (drift state), diff (compare current source hash to stored fingerprint without regenerating). Output path: docs/architecture/architecture.json. Idempotent (same source → byte-identical output: stable key order, deterministic any-derived values).",
+      "steps": [
+        "Create scripts/dontpanic_orchestrate/architecture.py module with a Crawler class that walks configurable roots and produces a structured dict.",
+        "Design + document a stable JSON schema: schema_version: 1.0 string, generated_at ISO timestamp, source_fingerprint: {algo: sha256, files_count, file_hashes_root, computed_at}, modules: [{path, name, public_symbols, imports, summary}], schemas: [{path, name, version, validator_present}], plans: [{id, title, status, features_count}]. Add the schema to claude/shared/schemas/v1.0/architecture-snapshot.schema.json (or DontPanic-local first, promote-later note).",
+        "Implement the crawler: walk scripts/dontpanic_orchestrate/ (Python AST parse for public symbols + import list per module), claude/shared/ (file enumeration + VERSION read), docs/plans/ (plan.md frontmatter + features.json counts only). Cap total output at ~200KB; emit truncation marker if exceeded.",
+        "Implement source fingerprint: list files in stable order, hash each file content, concatenate file_path:hash pairs, sha256 the concatenation. Store as source_fingerprint in JSON header.",
+        "Implement CLI subcommands: `dontpanic architecture regen` (full regen → docs/architecture/architecture.json), `dontpanic architecture status` (print drift state derived from fingerprint comparison without regenerating), `dontpanic architecture diff` (machine-readable JSON diff of current vs stored fingerprint).",
+        "Add the architecture subcommand to dontpanic_orchestrate's argparse entry point. Wire help text.",
+        "Ensure idempotency: stable key order (sort all lists; sort dict keys at serialization time), no embedded timestamps inside the modules/schemas/plans sections (only the top-level generated_at), no random IDs.",
+        "Create docs/architecture/ directory + add architecture.html to .gitignore (HTML lands in F002; gitignore here so F001 commits don't accidentally track an empty placeholder).",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py: (a) regen produces a valid JSON validating against the schema, (b) regen is idempotent (same source → same bytes), (c) fingerprint changes when any file content changes, (d) fingerprint stable when no files change (no false drift from timestamps), (e) plan inventory captures expected plans, (f) status/diff subcommands work without paid LLM calls.",
+        "Run full sweep + sanitization check."
+      ],
+      "acceptance": "(1) scripts/dontpanic_orchestrate/architecture.py exposes a Crawler class + CLI subcommand registration. (2) `dontpanic architecture regen` produces docs/architecture/architecture.json in ≤5s on this codebase. (3) Output validates against claude/shared/schemas/v1.0/architecture-snapshot.schema.json. (4) Idempotent regen: re-running with no source changes produces byte-identical JSON. (5) Source fingerprint changes when any tracked file content changes; stable otherwise. (6) `dontpanic architecture status` and `dontpanic architecture diff` work as documented. (7) docs/architecture/architecture.html is in .gitignore. (8) Fixture tests cover ≥6 cases. (9) Full sweep ≥1929 green. (10) sanitization_check passes.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T02:18:13Z"
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "HTML renderer that consumes architecture.json and emits a joyful single-page architecture.html per Thariq's HTML-effectiveness pattern. Mobile-responsive, navigable (tabs/anchors for modules / schemas / plans / lifecycle), SVG diagrams (module dependency graph, plan lifecycle state diagram, supervisor state machine), syntax-highlighted Python snippets where helpful. HTML is gitignored (regenerate locally on demand). Renderer is a pure transform of architecture.json — no second pass over source code; if architecture.json is missing or stale, F002 errors with actionable message pointing to `dontpanic architecture regen`.",
+      "steps": [
+        "Add scripts/dontpanic_orchestrate/architecture_html.py that consumes architecture.json + emits architecture.html. Pure transform; no source-tree reads.",
+        "Wire `dontpanic architecture regen --with-html` flag (default) and `--json-only` (skip HTML) into F001's CLI.",
+        "Implement the HTML structure: top nav (Modules / Schemas / Plans / Lifecycle), per-section anchors, SVG diagrams generated from the JSON's modules/imports + plans/status fields, mobile-responsive CSS, no JS dependencies (or vanilla JS only — no frameworks).",
+        "Implement SVG diagrams: (a) module dependency graph (nodes = modules, edges = imports), (b) plan lifecycle state machine (draft → active → completed/abandoned/blocked), (c) supervisor state machine (signed_off / needs_changes / blocked / stopped_no_progress / stopped_environmental_blocker / blocked_no_findings / paused_on_gate / paused_on_environmental).",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py: (a) HTML renders without error from a valid JSON, (b) errors clearly when JSON is missing or doesn't validate, (c) generated HTML parses as valid HTML5 (use html5lib or equivalent if available; else assert basic structural invariants), (d) SVG elements are present.",
+        "Verify HTML output renders in Chrome/Safari/Firefox (manual smoke; test outputs a fixture HTML the operator can open to verify).",
+        "Run full sweep + sanitization check."
+      ],
+      "acceptance": "(1) scripts/dontpanic_orchestrate/architecture_html.py emits docs/architecture/architecture.html from architecture.json. (2) HTML is gitignored (verified in .gitignore). (3) HTML contains all 3 SVG diagrams (module graph, plan lifecycle, supervisor state). (4) HTML is mobile-responsive (single-column on narrow viewports, multi-column on wide). (5) Errors clearly when architecture.json is missing or invalid. (6) Fixture tests cover ≥4 cases. (7) `dontpanic architecture regen` produces both files by default; `--json-only` skips HTML. (8) Full sweep ≥1929 green.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Add an architecture_drift probe to the doctor. Reads docs/architecture/architecture.json's stored source_fingerprint, computes the current source-tree hash, and classifies as fresh / stale_minor / stale_major. Thresholds: stale_minor = <5% of tracked files changed since fingerprint; stale_major = ≥5%. Default mode = advisory (prints status, exit 0). --strict mode = blocker on stale_major (exit 2). Doctor's existing --json output includes the new probe with detailed file-change list. Probe is fast (<2s on this codebase) because it reuses F001's fingerprint logic.",
+      "steps": [
+        "Read scripts/dontpanic_doctor.py probe registration pattern. Add architecture_drift probe entry.",
+        "Implement architecture_drift_check() that reads docs/architecture/architecture.json (or warns + returns ABSENT if missing), computes current source fingerprint via F001's crawler logic, compares.",
+        "Classify state: fresh = exact fingerprint match. stale_minor = <5% changed files (based on file-level hash diff). stale_major = ≥5% changed files OR missing required modules/plans. ABSENT = json file missing entirely.",
+        "Default mode: advisory (warn, exit 0). --strict mode escalates stale_major + ABSENT to blocker (exit 2). stale_minor stays advisory in both modes (manual regen recommendation only).",
+        "Doctor JSON output includes architecture_drift section with: state, changed_files list (truncated to ~20), unchanged_files count, recommendation string.",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_doctor_architecture_drift_f003.py: (a) fresh state when fingerprint matches, (b) stale_minor when 1 file changed in a 50-file tree, (c) stale_major when 5+ files changed, (d) ABSENT when JSON file missing, (e) --strict blocker for stale_major.",
+        "Run full sweep + sanitization."
+      ],
+      "acceptance": "(1) dontpanic_doctor.py has architecture_drift probe registered. (2) Default mode emits advisory output; --strict mode blocks on stale_major or ABSENT. (3) JSON output includes architecture_drift section with state + changed_files + recommendation. (4) Fixture tests cover ≥5 cases including fresh, stale_minor, stale_major, ABSENT, and --strict blocker. (5) Probe runs in <2s on this codebase. (6) Full sweep ≥1929 green.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "Supervisor regen-to-working-tree hook. After `dispatch_volley` commits (commit_policy.mode == child_commit), inspect the just-committed diff against architecture-relevant globs (scripts/dontpanic_orchestrate/**, claude/shared/**, docs/plans/**/plan.md, docs/plans/**/features.json). If any file matches, run `dontpanic architecture regen` into the working tree. Emit INBOX architecture_regenerated event with summary (state transition, files added/removed/modified count). **Do NOT commit the regenerated map.** The supervisor never auto-commits architecture.json — operator sees the changed file in `git status` and decides whether to amend, commit separately, or discard. F004 is purely a regen + notify hook; it's safe + reversible.",
+      "steps": [
+        "Read supervisor.dispatch_volley to find the post-commit step (after F004 v4 stage-aware backstop; before terminal return).",
+        "Define ARCHITECTURE_RELEVANT_GLOBS = ['scripts/dontpanic_orchestrate/**', 'claude/shared/**', 'docs/plans/**/plan.md', 'docs/plans/**/features.json']. Match against committed file paths via fnmatch.",
+        "After commit (when commit_policy.mode == child_commit), git diff --name-only HEAD~1..HEAD to get committed files. If any match the globs, trigger architecture regen.",
+        "Run regen via importing F001's Crawler directly (NOT subprocess) — avoids quoting issues, keeps the regen in-process. Wrap with try/except to log + skip on regen failure (don't crash the volley terminal).",
+        "Emit INBOX architecture_regenerated event with: prior_fingerprint (from architecture.json before regen, if present), new_fingerprint, files_added, files_removed, files_modified, total_modules, total_plans.",
+        "CRITICAL: do not git add the regenerated architecture.json. Do not commit. Leave it in the working tree only. Verify via test that `git diff --staged` after F004 fires shows zero new entries.",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_supervisor_architecture_regen_f004.py: (a) regen fires when an architecture-relevant file is committed, (b) regen does NOT fire when only docs/ (non-plan) files commit, (c) regen does NOT auto-commit (assert git diff --staged is empty after the volley), (d) INBOX architecture_regenerated event is emitted with expected fields, (e) regen failure is logged + does not crash the volley terminal.",
+        "Run full sweep + sanitization."
+      ],
+      "acceptance": "(1) supervisor.dispatch_volley has a post-commit architecture-regen hook that fires only when committed files match the ARCHITECTURE_RELEVANT_GLOBS pattern. (2) Regen lands in the working tree (docs/architecture/architecture.json changed). (3) **CRITICAL**: supervisor does NOT auto-commit the regenerated map. Test asserts `git diff --staged` is empty after regen. (4) INBOX architecture_regenerated event emitted with prior/new fingerprint, file delta counts, module/plan counts. (5) Regen failure is logged but does not crash the volley terminal. (6) Fixture tests cover ≥5 cases including the no-auto-commit invariant. (7) Full sweep ≥1929 green.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "infra",
+      "phase": 5,
+      "description": "Opt-in pre-commit git hook with safe-default behavior. When staged files match architecture-relevant globs, the hook checks the stored fingerprint against current source tree. Default behavior: print warning + exact regen command (`dontpanic architecture regen`); does NOT block the commit; does NOT mutate staged files. Opt-in `--auto-regen` mode (set during `dontpanic init` if/when init lands, or via `dontpanic architecture hook --install --auto-regen`): regenerates + stages architecture.json before commit + prints what changed. Both modes are explicit operator choices; default mutation-free behavior matches the F004 design discipline.",
+      "steps": [
+        "Add `dontpanic architecture hook` subcommand to F001's CLI with --install / --uninstall / --status options. Installs to .git/hooks/pre-commit (preserving any existing hook with backup).",
+        "Implement the pre-commit hook script (~30 lines, bash or python): on commit, check staged files. If any match architecture-relevant globs, run `dontpanic architecture status` and check drift state. If stale, print warning + regen command. Default mode does NOT mutate; --auto-regen mode does regen + git add docs/architecture/architecture.json.",
+        "Preserve any existing pre-commit hook by chaining: if .git/hooks/pre-commit already exists and isn't a DontPanic hook, back it up + create a wrapper that runs both.",
+        "Add `dontpanic architecture hook --uninstall` that removes the DontPanic hook + restores any backed-up prior hook.",
+        "Add fixture tests in scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py: (a) hook install/uninstall round-trip preserves prior hook, (b) hook default mode warns but doesn't mutate or block, (c) --auto-regen mode regenerates + stages the JSON, (d) hook does not block commit on regen failure (warns + continues), (e) hook is fast (<1s on this codebase).",
+        "Run full sweep + sanitization."
+      ],
+      "acceptance": "(1) `dontpanic architecture hook --install` installs a .git/hooks/pre-commit that defaults to warn-only behavior. (2) Default mode prints warning + regen command when stale; does NOT block the commit; does NOT mutate staged files. (3) `--auto-regen` mode regenerates + stages architecture.json before commit. (4) `--install` preserves any existing pre-commit hook via backup + wrapper. (5) `--uninstall` removes the DontPanic hook + restores backup. (6) Hook completes in <1s on this codebase. (7) Fixture tests cover ≥5 cases. (8) Full sweep ≥1929 green.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    }
+  ]
+}

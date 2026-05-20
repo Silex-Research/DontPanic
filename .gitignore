@@ -79,3 +79,7 @@ dashboard/firebase-config.local.js
 # Maintainer-private convenience scripts (campaign-specific billing queries,
 # personal cron wrappers, etc.) — clearly out of the OSS surface.
 /scripts/maintainer/
+
+# Architecture map HTML — regenerated locally on demand (plan
+# 2026-05-19-004 F002). architecture.json IS tracked; the HTML is not.
+docs/architecture/architecture.html
