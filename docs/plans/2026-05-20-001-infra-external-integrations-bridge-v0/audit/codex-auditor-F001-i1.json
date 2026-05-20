@@ -1,0 +1,54 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "audit_id": "2026-05-20-001-infra-external-integrations-bridge-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T20:17:16Z",
+  "completed_at": "2026-05-20T20:22:10Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-20-001-infra-external-integrations-bridge-v0-zad86537 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 662793 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3485117,
+    "tokens_out": 18484,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 9 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct, structured `target_context` has `env=dev`, `project=null`, and their recorded `git add` / `git commit` commands are not forbidden shapes.\n\nFINDING (medium, documentation): The extension docs claim the canonical Linear PM wrapper is ≤100 lines, but the committed module is 127 lines. Evidence: `pm-tool-extension-guide.md:121` and `integrations/__init__.py:23` call `linear_pm_tool.py` the canonical ≤100-line wrapper; `nl` shows `linear_pm_tool.py` ends at line 127, and even nonblank/non-comment count was 108. Recommendation: trim the wrapper/docs so the reference pattern actually satisfies the ≤100-line constraint, or explicitly revise the acceptance language.\n\nFINDING (advisory, test_coverage): I could not independently rerun pytest in this read-only sandbox. Evidence: pytest failed before/at setup with `FileNotFoundError: No usable temporary directory found`; committed evidence says `22 passed` targeted and `2183 passed, 7 skipped` sweep. Recommendation: rerun pytest in a writable dev shell if supervisor requires live re-verification.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1..HEAD\n$ git diff --name-status HEAD~1..HEAD\n$ env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py\n$ env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scrip",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1..HEAD",
+      "git diff --name-status HEAD~1..HEAD",
+      "env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py",
+      "env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py",
+      "env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py",
+      "env PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"<pm_tool model/mapping smoke>\"",
+      "env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"<duplicate status target smoke>\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "The extension docs claim the canonical Linear PM wrapper is ≤100 lines, but the committed module is 127 lines. Evidence: `pm-tool-extension-guide.md:121` and `integrations/__init__.py:23` call `linear_pm_tool.py` the canonical ≤100-line wrapper; `nl` shows `linear_pm_tool.py` ends at line 127, and even nonblank/non-comment count was 108. Recommendation: trim the wrapper/docs so the reference pattern actually satisfies the ≤100-line constraint, or explicitly revise the acceptance language.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "I could not independently rerun pytest in this read-only sandbox. Evidence: pytest failed before/at setup with `FileNotFoundError: No usable temporary directory found`; committed evidence says `22 passed` targeted and `2183 passed, 7 skipped` sweep. Recommendation: rerun pytest in a writable dev shell if supervisor requires live re-verification. Checks run: $ git status --short $ git diff --stat HEAD~1..HEAD $ git diff --name-status HEAD~1..HEAD $ env PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

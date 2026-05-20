@@ -1,43 +1,22 @@
-"""Linear reference wrapper for the PM-tool category contract (F001).
-
-Canonical ≤100-line example: a per-service wrapper composes
-``LinearPPAdapter`` (the PP-template-shaped subprocess + redact +
-sanitize boundary from P10 F001's printing-press-adapter skill) with
-``PMToolMappingConfig`` (operator-authored JSON) and produces the two
-hooks F002 consumes: ``read_issue`` + ``push_status``.
-
-Copy this module to ``<service>_pm_tool.py`` for new PM tools; the
-copy should stay ≤100 lines. If it grows beyond that, the category
-contract is leaking and the right move is a v1 plan, not a longer
-wrapper. The PP adapter is constructor-injected so unit tests can
-swap in a stub without ever spawning the real subprocess.
-"""
+"""Linear PM-tool wrapper: mapping config owns shape; PP adapter owns IO safety."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
+from dontpanic_orchestrate.integrations import pm_tool_sync as sync
 from dontpanic_orchestrate.integrations.linear_pp_adapter import LinearPPAdapter
 from dontpanic_orchestrate.integrations.pm_tool_mapping import (
     PMToolMappingConfig,
     load_mapping_config,
 )
 from dontpanic_orchestrate.integrations.pm_tool_models import PMIssue, PMStatus
-from dontpanic_orchestrate.integrations.pm_tool_sync import (
-    ExternalSyncRecord,
-    make_failed_record,
-    make_pending_record,
-    make_pushed_record,
-)
-
 
 DEFAULT_CONFIG_PATH: Path = Path.home() / ".dontpanic" / "adapters" / "linear.json"
 
 
 class LinearPMTool:
-    """Linear-shaped wrapper around the PM-tool category contract."""
-
     service_name: str = "linear"
     uri_scheme: str = "linear"
 
@@ -52,10 +31,8 @@ class LinearPMTool:
 
     @classmethod
     def from_config_path(
-        cls,
-        pp_adapter: LinearPPAdapter,
-        config_path: Path | None = None,
-    ) -> "LinearPMTool":
+        cls, pp_adapter: LinearPPAdapter, config_path: Path | None = None
+    ) -> LinearPMTool:
         path = config_path or DEFAULT_CONFIG_PATH
         payload = json.loads(path.read_text(encoding="utf-8"))
         return cls(mapping=load_mapping_config(payload), pp_adapter=pp_adapter)
@@ -66,16 +43,13 @@ class LinearPMTool:
         return self._translate_issue(raw, uri=uri)
 
     def push_status(
-        self,
-        uri: str,
-        new_status: PMStatus,
-        dry_run: bool = False,
-    ) -> ExternalSyncRecord:
+        self, uri: str, new_status: PMStatus, dry_run: bool = False
+    ) -> sync.ExternalSyncRecord:
         issue_id = self._issue_id_from_uri(uri)
         vendor_label = self.mapping.reverse_translate_status(new_status)
         payload = {"issue_id": issue_id, "status": vendor_label}
         if dry_run:
-            return make_pending_record(
+            return sync.make_pending_record(
                 ref_uri=uri,
                 kind="pm_issue",
                 intended_status=new_status,
@@ -84,13 +58,13 @@ class LinearPMTool:
         try:
             response = self._pp.push_status(self.mapping.push_status_tool, payload)
         except Exception as exc:
-            return make_failed_record(
+            return sync.make_failed_record(
                 ref_uri=uri,
                 kind="pm_issue",
                 intended_status=new_status,
                 error=f"{type(exc).__name__}: {exc}",
             )
-        return make_pushed_record(
+        return sync.make_pushed_record(
             ref_uri=uri,
             kind="pm_issue",
             intended_status=new_status,
@@ -101,7 +75,7 @@ class LinearPMTool:
         prefix = f"{self.mapping.uri_scheme}://issue/"
         if not uri.startswith(prefix):
             raise ValueError(f"URI {uri!r} does not match expected scheme {prefix!r}.")
-        return uri[len(prefix):]
+        return uri[len(prefix) :]
 
     def _translate_issue(self, raw: dict, uri: str) -> PMIssue:
         vendor_status = self._resolve(raw, self.mapping.field_name_map["PMIssue.status"])
@@ -122,6 +96,3 @@ class LinearPMTool:
                 continue
             raise KeyError(f"Vendor field path {dotted_path!r} not present in MCP response.")
         return cursor
-
-
-__all__ = ("LinearPMTool", "DEFAULT_CONFIG_PATH")

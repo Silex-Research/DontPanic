@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "audit_id": "2026-05-20-001-infra-external-integrations-bridge-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-20T20:07:28Z",
+  "completed_at": "2026-05-20T20:17:16Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-20-001-infra-external-integrations-bridge-v0-zad86537 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3752 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 8382381,
+    "tokens_out": 34631,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F001] All four findings addressed. Side-effect commands invoked:\n\n$ git add scripts/dontpanic_orchestrate/integrations scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence\n$ git commit -m \"feat(plan-2026-05-20-001 F001 i1): ...\"\n\n## Findings remediation summary\n\n**Finding #1 [high, correctness — untracked files]**: Staged and committed in `e14c01f` — `scripts/dontpanic_orchestrate/integrations/{__init__,pm_tool_models,pm_tool_mapping,pm_tool_sync,linear_pm_tool,linear_pp_adapter}.py`, the F001 test, and all `evidence/` artifacts including the new persisted `pytest-targeted-f001-i1.log`, `pytest-sweep-f001-i1.log`, and `sanitization-f001-i1.log`. `git status` post-commit shows only the meta-supervisor's untracked INBOX.md / audit/ artifacts.\n\n**Finding #2 [high, correctness — PP adapter boundary not wired]**: Introduced `scripts/dontpanic_orchestrate/integrations/linear_pp_adapter.py` which mirrors P10 F001's `claude/skills/printing-press-adapter/ADAPTER_TEMPLATE.md`: `subprocess.Popen([binary], shell=False)` lifecycle owned by `LinearPPAdapter`, the two-stage `redact_and_sanitize` boundary (`apply_redact` + `sanitize_response` with `SanitizationFailed` failing closed on surviving secret patterns), `MUTATING_TOOLS` (incl. `issueUpdate`) hard-rejected on the generic `call_tool` proxy, registry-write via `register_adapter`. `linear_pm_tool.py` now constructor-injects `LinearPPAdapter` instead of a ba",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git add scripts/dontpanic_orchestrate/integrations scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence",
+      "git commit -m \"feat(plan-2026-05-20-001 F001 i1): ...\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

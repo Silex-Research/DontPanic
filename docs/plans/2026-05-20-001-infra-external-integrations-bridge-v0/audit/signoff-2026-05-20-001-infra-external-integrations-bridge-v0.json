@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "signoff_id": "2026-05-20-001-infra-external-integrations-bridge-v0#signoff#1",
+  "iteration": 1,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F001-i0.json",
+    "audit/codex-auditor-F001-i0.json",
+    "audit/claude-implementer-F001-i1.json",
+    "audit/codex-auditor-F001-i1.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 1,
+    "needs_changes_count": 2,
+    "blocked_count": 1,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "environmental blocker — round 2 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "next_action": "remediate",
+  "decided_at": "2026-05-20T20:22:14Z"
+}
