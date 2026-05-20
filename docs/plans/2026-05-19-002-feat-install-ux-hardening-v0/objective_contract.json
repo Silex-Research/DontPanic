@@ -42,7 +42,7 @@
         "init is idempotent (re-runnable mid-install without state file)",
         "--non-interactive mode exits 1 with JSON listing red probes; never prompts",
         "Auto-fix execution uses subprocess.run(argv, shell=False) — strict argv list, never shell strings",
-        "Each auto-fix prompts operator per-probe by default; --auto-fix-safe-all flag opts into batch execution",
+        "Each auto-fix prompts operator per-probe by default; no --auto-fix-safe-all batch execution in v0",
         "Package-manager installs (brew/pip) opt-in via per-probe auto_install_safe=true; OFF by default in v0",
         "Smoke runs as init's final step when all probes pass",
         "Smoke env-blocker exit re-enters the fix loop"
