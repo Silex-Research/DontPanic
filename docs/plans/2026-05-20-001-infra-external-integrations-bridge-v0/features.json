@@ -88,7 +88,63 @@
         "Run full orchestrator sweep + sanitization check."
       ],
       "acceptance": "(1) plan.schema.json vX.X bumped with optional external_refs array; subtree pulled into DontPanic. (2) ExternalRef + ExternalSyncRecord Pydantic models in plan_loader; parse-time validation rejects malformed entries. (3) `dontpanic plan lock` validates push-target refs are reachable; lock fails loud if a sync=push_status ref's uri returns 404. (4) `dontpanic plan close` writes evidence/external_sync.json for EVERY ref attempt (status ∈ {pushed, failed, skipped, pending}). PM-tool unreachable produces failed evidence + DOES NOT block close. (5) `dontpanic plan close --dry-run` writes status=pending evidence without calling push_status. (6) `dontpanic plan resync` retries failed entries idempotently. (7) test_external_refs_sync_f002.py has >=12 cases including failure paths. (8) evidence/external-refs-contract.md documents the sync state machine. (9) Full sweep at or above lock-time baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-05-20T20:59:50Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "de5b966",
+          "captured_by": "operator",
+          "note": "F002 implementation and remediation commit: external_refs schema, sync hooks, CLI integration, adapter registry, contract doc, tests, and dispatch artifacts."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i1.json",
+          "captured_by": "claude",
+          "note": "Final implementer audit summary after the first round findings were addressed."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "captured_by": "codex",
+          "note": "Final auditor envelope that found the real CLI close-path bug and missing CLI integration tests."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F002_iter2.json",
+          "captured_by": "supervisor",
+          "note": "Supervisor classification of the stopped-no-progress terminal."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/f002-operator-closeout.md",
+          "captured_by": "operator",
+          "note": "Operator close-out memo documenting the CLI-path remediation and verification."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/pytest-sweep-f002-i1.log",
+          "captured_by": "claude",
+          "note": "Implementer-captured full sweep evidence: 2202 passed, 7 skipped, 1 warning before the operator's three CLI regression tests."
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/sanitization-f002-i1.log",
+          "captured_by": "claude",
+          "note": "Implementer-captured sanitization evidence."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py",
+          "captured_by": "operator",
+          "note": "F002 test suite including operator-added CLI close-path regressions. Operator rerun passed: 22 passed."
+        }
+      ],
       "depends_on": [
         "F001"
       ]
