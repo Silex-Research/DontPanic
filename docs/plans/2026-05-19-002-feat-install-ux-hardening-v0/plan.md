@@ -3,7 +3,7 @@ id: 2026-05-19-002-feat-install-ux-hardening-v0
 title: Install UX hardening v0 — doctor profiles + init + smoke test + HTML report
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-19"
 goal_type: new_feature
 surfaces:
