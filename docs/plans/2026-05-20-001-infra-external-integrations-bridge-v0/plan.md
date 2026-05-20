@@ -12,7 +12,7 @@ description: |
   push only with durable evidence for every external write.
 type: infra
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-20"
 goal_type: infra
 surfaces:
@@ -90,6 +90,15 @@ Per operator review: every external write (PM-tool status push on plan close) MU
 - **Durable evidence**: every push attempt writes `evidence/external_sync.json` with `{ref_uri, kind, attempted_at, status: pending|pushed|failed|skipped, response, error}`.
 - **No silent failures**: PM-tool unreachable does NOT block plan close, but it MUST produce an evidence record with `status: failed`. Operator can rerun the push later via `dontpanic plan resync`.
 
+## Target
+
+```yaml
+target_env: dev
+target_project: null
+```
+
+DontPanic-internal infra plan; no external Firebase / Cloud project. F003's dashboard chip work happens in the axiom/ repo (Plan 004's home), but the LLM-dispatchable surface for THIS plan lives entirely in `scripts/dontpanic_orchestrate/integrations/`.
+
 ## Status
 
-`draft` — pending operator review. Lock writes `pre_impl` sufficiency-findings.json + flips to `active`.
+`active` (locked 2026-05-20). goal_type=infra is exempt from the pre_impl sufficiency gate; status flipped via `dontpanic plan lock`. F001 ready to dispatch.
