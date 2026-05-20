@@ -2,15 +2,11 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "claude/shared/VERSION",
+      "path": "dashboard/vitest.config.js",
       "status": "M"
     },
     {
-      "path": "claude/shared/schemas/v1.0/models/plan_model.py",
-      "status": "M"
-    },
-    {
-      "path": "claude/shared/schemas/v1.0/plan.schema.json",
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/INBOX.md",
       "status": "M"
     },
     {
@@ -18,21 +14,60 @@
       "status": "M"
     },
     {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/features.json",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py",
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/INBOX.md",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py",
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-1-implementer.json",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-plan010-f002-attempt1.log"
+    "dashboard/functions/",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/adapters-example.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/linear-config-example.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/smoke-trace-linear.jsonl",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/codex-auditor-F002-i1.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/no_progress_classification_F002_iter2.json",
+    "scripts/dontpanic_orchestrate/adapters/",
+    "scripts/dontpanic_orchestrate/tests/fake_cli/fake-pp-linear",
+    "scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

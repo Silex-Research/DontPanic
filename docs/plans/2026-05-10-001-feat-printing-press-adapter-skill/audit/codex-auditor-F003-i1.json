@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "audit_id": "2026-05-10-001-feat-printing-press-adapter-skill#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T21:38:41Z",
+  "completed_at": "2026-05-20T21:41:53Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-10-001-feat-printing-press-adapter-skill-ajrvlwii target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 198522 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 750854,
+    "tokens_out": 12907,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: blocked. The implementer’s `{Repo, Env: dev, Project: (none)}` declaration is present and matches structured `target_context`; no forbidden command shapes found in `target_context.commands_run`.\n\nFINDING (high, correctness): F003 still has not been dogfooded end-to-end with the actual PP-emitted binary. Evidence: [decisions.jsonl]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/decisions.jsonl:7) says `/printing-press linear` was not spent and a fixture binary was used; [features.json] marks F003 passed anyway. Recommendation: after operator approval/provisioning, run `/printing-press linear` exactly once, record emitted binary path + tool surface count as a D-entry, smoke test the real binary, then mark F003 passed.\n\nFINDING (low, documentation): The adapter example still documents import-time registry insertion, but the code now requires explicit `register_adapter()`. Evidence: [adapters-example.json]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/adapters-example.json:2) says first import inserts the entry, while [linear_adapter.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/adapters/linear_adapter.py:79) says import must not mutate config. Recommendation: update the evidence comment/operator instructions to say registration is an explicit setup action.\n\nFINDING (advi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'exec(\"manual fixture subprocess smoke: issue clean, leaky raises SanitizationFailed, issueUpdate raises MutationRejected\")'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "F003 still has not been dogfooded end-to-end with the actual PP-emitted binary. Evidence: [decisions.jsonl]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/decisions.jsonl:7) says `/printing-press linear` was not spent and a fixture binary was used; [features.json] marks F003 passed anyway. Recommendation: after operator approval/provisioning, run `/printing-press linear` exactly once, record emitted binary path + tool surface count as a D-e",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "documentation",
+      "feature_id": "F003",
+      "issue": "The adapter example still documents import-time registry insertion, but the code now requires explicit `register_adapter()`. Evidence: [adapters-example.json]($HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/adapters-example.json:2) says first import inserts the entry, while [linear_adapter.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/adapters/linear_adapter.py:79) says import must not mutate config. R",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "I could not independently rerun the pytest smoke file in this read-only session because pytest failed before collection with `FileNotFoundError: No usable temporary directory found`. Recommendation: rerun the pytest check in a writable dev shell; I did verify the same fixture subprocess path manually. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 scripts/sanitization_check.py $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -q -p no:cacheprovider scripts/dont",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

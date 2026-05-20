@@ -18,14 +18,14 @@ DontPanic and the PP-emitted Linear MCP binary:
         ``push_status`` codepath that lives in this module so the v0
         read-only invariant on the generic ``call_tool`` proxy still
         holds),
-  (v)   registers itself in ``~/.dontpanic/adapters.json`` on first
-        import.
+  (v)   exposes an explicit ``register_adapter()`` helper for writing
+        ``$DONTPANIC_HOME/adapters.json`` without import-time mutation.
 
-The PP binary itself is delivered by P10 F003 dogfood (still pre-pass
-at F001-dispatch time). Until F003 lands, the binary path is treated
-as opaque: ``LinearPPAdapter`` accepts a constructor-injected
-``subprocess_factory`` so unit tests fake the binary without ever
-touching the real disk path.
+The PP binary itself is delivered by the P10 F003 dogfood and remains
+operator-gated until the single paid ``/printing-press linear`` invocation
+runs. Until then, ``LinearPPAdapter`` accepts a constructor-injected
+``subprocess_factory`` so fixture tests exercise the same stdio boundary
+without touching the real disk path or the operator's paid-call budget.
 """
 
 from __future__ import annotations
@@ -39,14 +39,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from dontpanic_orchestrate.global_config import dontpanic_home
+
 
 # ────────────────────────────  template-required constants  ────────────────────────────
 
 SERVICE_NAME: str = "linear"
-
-PP_BINARY_PATH: Path = (
-    Path.home() / ".dontpanic" / "adapters" / SERVICE_NAME / f"{SERVICE_NAME}-pp-mcp"
-)
 
 REDACT_LEVEL: str = "internal"
 
@@ -58,23 +56,43 @@ REDACT_LEVEL: str = "internal"
 MUTATING_TOOLS: frozenset[str] = frozenset({"issueUpdate"})
 
 
-ADAPTERS_REGISTRY: Path = Path.home() / ".dontpanic" / "adapters.json"
-PER_SERVICE_CONFIG: Path = (
-    Path.home() / ".dontpanic" / "adapters" / f"{SERVICE_NAME}.json"
-)
+def _pp_binary_path() -> Path:
+    return dontpanic_home() / "adapters" / SERVICE_NAME / f"{SERVICE_NAME}-pp-mcp"
+
+
+def _adapters_registry_path() -> Path:
+    return dontpanic_home() / "adapters.json"
+
+
+def _per_service_config_path() -> Path:
+    return dontpanic_home() / "adapters" / f"{SERVICE_NAME}.json"
+
+
+# Resolved lazily via ``dontpanic_home()`` so tests that set
+# ``$DONTPANIC_HOME`` (the per-test isolated dir from conftest) don't
+# touch operator-real paths. Module-level names retained for the
+# template's public surface; the callable form is what writers use.
+PP_BINARY_PATH: Path = _pp_binary_path()
+ADAPTERS_REGISTRY: Path = _adapters_registry_path()
+PER_SERVICE_CONFIG: Path = _per_service_config_path()
 
 
 def register_adapter() -> None:
-    """Idempotently add this adapter to ``~/.dontpanic/adapters.json``.
+    """Idempotently add this adapter to ``$DONTPANIC_HOME/adapters.json``.
 
     Mirrors the template's ``register_adapter``. Never overwrites a
     pre-existing entry — operator owns the final shape of the registry.
+
+    Path resolution honors ``dontpanic_home()`` (env-var aware), so
+    test runs with ``DONTPANIC_HOME`` pointed at a per-test tmp dir
+    never touch the operator's real ``~/.dontpanic`` state. Plan D011.
     """
 
-    ADAPTERS_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
-    if ADAPTERS_REGISTRY.exists():
+    registry_path = _adapters_registry_path()
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    if registry_path.exists():
         try:
-            registry = json.loads(ADAPTERS_REGISTRY.read_text())
+            registry = json.loads(registry_path.read_text())
         except json.JSONDecodeError:
             registry = {}
     else:
@@ -86,13 +104,13 @@ def register_adapter() -> None:
 
     adapters[SERVICE_NAME] = {
         "module": f"dontpanic_orchestrate.integrations.{SERVICE_NAME}_pp_adapter",
-        "config_path": str(PER_SERVICE_CONFIG),
-        "binary_path": str(PP_BINARY_PATH),
+        "config_path": str(_per_service_config_path()),
+        "binary_path": str(_pp_binary_path()),
         "redact_level": REDACT_LEVEL,
         "mutating_tools": sorted(MUTATING_TOOLS),
         "version_pin_source": "per_service_config.pp_version",
     }
-    ADAPTERS_REGISTRY.write_text(
+    registry_path.write_text(
         json.dumps(registry, indent=2, sort_keys=True) + "\n"
     )
 

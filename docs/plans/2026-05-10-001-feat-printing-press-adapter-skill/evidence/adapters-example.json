@@ -1,0 +1,15 @@
+{
+  "_comment": "Redacted shape of ~/.dontpanic/adapters.json after running the printing-press-adapter F003 dogfood for Linear. Operator copies this to ~/.dontpanic/adapters.json (gitignored) and replaces <paste-your-token> placeholders in the per-service config (see linear-config-example.json) with real credentials. The wrapper module's register_adapter() will idempotently insert the 'linear' entry below on first import; pre-existing operator entries are preserved.",
+  "adapters": {
+    "linear": {
+      "module": "dontpanic_orchestrate.integrations.linear_pp_adapter",
+      "config_path": "/Users/<operator>/.dontpanic/adapters/linear.json",
+      "binary_path": "/Users/<operator>/.dontpanic/adapters/linear/linear-pp-mcp",
+      "redact_level": "internal",
+      "mutating_tools": [
+        "issueUpdate"
+      ],
+      "version_pin_source": "per_service_config.pp_version"
+    }
+  }
+}

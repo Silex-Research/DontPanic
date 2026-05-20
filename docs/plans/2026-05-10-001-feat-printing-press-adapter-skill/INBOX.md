@@ -161,3 +161,86 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T21:23:13Z
+event: volley_start
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T21:23:13Z
+event: volley_start
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T21:41:53Z
+event: no_progress_classification
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: F003 still has not been dogfooded end-to-end with the actual PP-emitted binary. Evidence: [decisions.jsonl]($HOME/Documents/GitHub/DontPanic/docs/pla…
+  - [spec_ambiguity] severity=low, category=documentation: The adapter example still documents import-time registry insertion, but the code now requires explicit `register_adapter()`. Evidence: [adapters-example.json](…
+  - [environmental_reproduction_failure] severity=advisory, category=test_coverage: I could not independently rerun the pytest smoke file in this read-only session because pytest failed before collection with `FileNotFoundError: No usable temp…
+
+Audit trail referenced existing evidence at: evidence/adapters-example.json, evidence/linear-config-example.json
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-10-001-feat-printing-press-adapter-skill F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T21:41:53Z
+event: breaker_tripped
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-10-001-feat-printing-press-adapter-skill breaker:no_progress` or `jarvis resume 2026-05-10-001-feat-printing-press-adapter-skill --all`.
+
+===
+---
+timestamp: 2026-05-20T21:41:53Z
+event: volley_terminal
+plan_id: 2026-05-10-001-feat-printing-press-adapter-skill
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===

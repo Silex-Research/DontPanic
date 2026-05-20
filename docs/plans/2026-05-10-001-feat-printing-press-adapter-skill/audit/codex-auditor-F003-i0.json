@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-10-001-feat-printing-press-adapter-skill",
+  "audit_id": "2026-05-10-001-feat-printing-press-adapter-skill#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T21:29:54Z",
+  "completed_at": "2026-05-20T21:32:27Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-10-001-feat-printing-press-adapter-skill-ajrvlwii target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 138882 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1064795,
+    "tokens_out": 10420,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; structured `target_context` is valid and `commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): F003 was not dogfooded end-to-end with the actual PP binary. Evidence: `decisions.jsonl` D007/D008 explicitly says `/printing-press linear` was not run and a fixture binary was used; no D-entry records emitted binary path or tool surface count. Recommendation: run `/printing-press linear` exactly once after operator provisioning, record binary path + tool count, then smoke test the emitted binary.\n\nFINDING (high, correctness): Required F003 artifacts are not committed/tracked. Evidence: `git status` shows `evidence/adapters-example.json`, `evidence/smoke-trace-linear.jsonl`, `scripts/dontpanic_orchestrate/adapters/linear_adapter.py`, the smoke test, and fixture as untracked; `git ls-files` returned no entries for them. Recommendation: stage/commit the required artifacts or do not mark F003 passed.\n\nFINDING (high, security): `scripts/sanitization_check.py` does not pass in the current repo state. Evidence: it fails on `dashboard/functions/RUNBOOK.md:11` for `<firebase-project-id>`. Recommendation: replace with a placeholder or move/allowlist appropriately, then rerun the sanitizer.\n\nFINDING (medium, architecture): Importing the adapter mutates operator config. Evidence: `linear_adapter.py` calls ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "F003 was not dogfooded end-to-end with the actual PP binary. Evidence: `decisions.jsonl` D007/D008 explicitly says `/printing-press linear` was not run and a fixture binary was used; no D-entry records emitted binary path or tool surface count. Recommendation: run `/printing-press linear` exactly once after operator provisioning, record binary path + tool count, then smoke test the emitted binary.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Required F003 artifacts are not committed/tracked. Evidence: `git status` shows `evidence/adapters-example.json`, `evidence/smoke-trace-linear.jsonl`, `scripts/dontpanic_orchestrate/adapters/linear_adapter.py`, the smoke test, and fixture as untracked; `git ls-files` returned no entries for them. Recommendation: stage/commit the required artifacts or do not mark F003 passed.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F003",
+      "issue": "`scripts/sanitization_check.py` does not pass in the current repo state. Evidence: it fails on `dashboard/functions/RUNBOOK.md:11` for `<firebase-project-id>`. Recommendation: replace with a placeholder or move/allowlist appropriately, then rerun the sanitizer.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F003",
+      "issue": "Importing the adapter mutates operator config. Evidence: `linear_adapter.py` calls `register_adapter()` at import, and the canonical registry path uses `Path.home() / \".dontpanic\" / \"adapters.json\"` rather than the test-isolated `DONTPANIC_HOME`. Recommendation: make registry registration an explicit setup action or honor the repo’s configured home helper. Checks run: $ PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py Result: blocked befor",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
