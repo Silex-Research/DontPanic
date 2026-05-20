@@ -1,0 +1,45 @@
+{
+  "task_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+  "audit_id": "2026-05-19-004-feat-architecture-map-with-drift-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-20T02:02:17Z",
+  "completed_at": "2026-05-20T02:06:23Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-004-feat-architecture-map-with-drift-v0-tle6b75r target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3602 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1593164,
+    "tokens_out": 15110,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F001] All three findings addressed; full orchestrate sweep is 1956 passed / 7 skipped (over the ≥1929 acceptance floor).\n\n**Finding #1 (high, correctness — stale status post-regen):** Restricted `_fingerprint_files()` under `docs/plans/` to only `plan.md` + `features.json` per plan dir (new `_plan_fingerprint_files()` + `_PLAN_FINGERPRINT_FILES` constant in `architecture.py:50-53,142-155,158-169`). Audit, evidence, INBOX, events, decisions, and gate-state artifacts that churn during normal volley operation no longer feed the fingerprint. Verified live against the real repo: `status` now reports `state=fresh` immediately after `regen` (file count dropped 869 → 291).\n\n**Finding #2 (medium, correctness — diff is a no-op):** Added a per-file hash map to `source_fingerprint.file_hashes` (`architecture.py:172-194`); updated the schema (`architecture-snapshot.schema.json:42-49`) to require it. `diff()` (`architecture.py:528-590`) now computes exact `added`/`removed`/`modified` via set ops over current vs stored maps, with a graceful `detail_available: false` fallback if a pre-fix snapshot lacks the map.\n\n**Finding #3 (medium, test_coverage — soft diff assertions):** Tightened `test_f` to assert `modified == [target_rel]` exactly with empty added/removed; added `test_g_diff_added_and_removed_files` (add + delete cases assert exact set membership); added `test_h_audit_and_evidence_artifacts_do_not_cause_drift` as a regression lock for finding #1 (creates audit/, evidence/, INBOX.md, events.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate architecture regen",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate architecture status --json",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate architecture diff",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/ -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

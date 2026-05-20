@@ -2437,6 +2437,7 @@ Private-alpha command surface:
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
   doctor                         Run local readiness checks
+  architecture regen|status|diff Codebase + plan snapshot + drift surface
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
@@ -2504,6 +2505,9 @@ def main(argv: list[str] | None = None) -> int:
         return _dispatch_from_plan_main(raw[1:])
     if raw and raw[0] == "doctor":
         return _doctor_main(raw[1:])
+    if raw and raw[0] == "architecture":
+        from dontpanic_orchestrate import architecture as _arch
+        return _arch.cli_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
