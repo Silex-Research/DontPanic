@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T02:11:08Z",
+  "feature_id": "F001",
+  "aggregate": "environmental_reproduction_failure",
+  "blocking": false,
+  "recommended_action": "Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "spec_ambiguity",
+      "severity": "low",
+      "category": "documentation",
+      "issue_excerpt": "`Plan.commit_policy` has a stale field description saying the default mode is `evidence_only`. Evidence: [plan_model.py](/Users/bayesian/Documents/GitHub/DontP…",
+      "rationale": "severity=low, category=documentation — finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    },
+    {
+      "finding_index": 1,
+      "classification": "environmental_reproduction_failure",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "I could not independently verify the required full sweep in this sandbox. Evidence: targeted and full pytest invocations fail before test bodies with `FileNotF…",
+      "rationale": "auditor reports a sandbox/host/auth blocker preventing reproduction; operator can run the verification locally."
+    }
+  ]
+}

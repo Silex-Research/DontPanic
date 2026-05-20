@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "audit_id": "2026-05-19-003-fix-plan-schema-orchestration-fields#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-20T01:59:07Z",
+  "completed_at": "2026-05-20T02:06:33Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-003-fix-plan-schema-orchestration-fields-7lrzbvp9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4345 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3473700,
+    "tokens_out": 28954,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] Side-effect commands run:\n\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q\n$ python scripts/sanitization_check.py\n\n## Findings addressed\n\n**Finding #1 (high, correctness — schema enum contract mismatch):** Rewrote the three v1.9.0 blocks in `claude/shared/schemas/v1.0/plan.schema.json` to the literal acceptance contract — `orchestration.spawn_reason ∈ {operator_manual, auto, test}`, `child_charter.kind ∈ {implementation, investigation, migration}`, `commit_policy.mode ∈ {child_commit, parent_commit, manual}`, and `commit_policy.requires` as a plain `array of strings` (no enum). Removed the out-of-spec `spawn_finding` and `may_spawn_children` declarations (not in the plan's property list and unused by any existing plan); also dropped the no-longer-applicable `additionalProperties:false` on the sub-objects so the runtime can extend without a future schema bump. The depth_limit `maximum:3` ceiling came from runtime defaults rather than the plan acceptance, so it was removed (plan says only `minimum 1`).\n\n**Finding #2 (high, correctness — Pydantic mirror mismatch):** Realigned the static mirror at `claude/shared/schemas/v1.0/models/plan_model.py` literal-for-literal with the new schema — `SpawnReason` now `{operator_manual, auto, test}`, `ChildCharterKind` now `{implementation, investigation, migration}`, `CommitPolicyMode",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests -q",
+      "python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

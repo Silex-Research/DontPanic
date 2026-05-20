@@ -106,6 +106,90 @@
         "bucket": { "type": "string" },
         "prefix": { "type": "string" }
       }
+    },
+    "orchestration": {
+      "type": "object",
+      "description": "v1.9.0 — child-plan nested-orchestration metadata. Absent on top-level plans; populated on child plans spawned by a parent. Example (from v4.1 plan 2026-05-12-002): {parent_plan_id: '2026-05-11-001-infra-state-projection-adapters-meta', spawn_reason: 'operator_manual', depth_limit: 3}.",
+      "required": ["parent_plan_id", "spawn_reason"],
+      "properties": {
+        "parent_plan_id": {
+          "type": "string",
+          "description": "Plan ID of the parent plan that spawned this child. Example: '2026-05-11-001-infra-state-projection-adapters-meta'."
+        },
+        "spawn_reason": {
+          "enum": ["operator_manual", "auto", "test"],
+          "description": "Why this child plan exists. 'operator_manual' = operator-authored child plan (the v4.1 + v4 + dashboard-adapter pattern). 'auto' = automated spawn (e.g., supervisor / triage classifier). 'test' = synthetic plan used by fixtures + integration tests."
+        },
+        "depth_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Per-plan depth cap. Frontmatter may declare a LOWER value than the platform default; higher values are rejected by the runtime. Example: 3 (the v4.1 default)."
+        }
+      }
+    },
+    "child_charter": {
+      "type": "object",
+      "description": "v1.9.0 — child-plan charter declaring bounded work, parent objective, allowed paths, and return condition. Only valid when orchestration.parent_plan_id is set. Example (from v4.1 plan 2026-05-12-002): {kind: 'implementation', parent_objective: 'Discharge v4.1 carry items…', parent_acceptance_item: 'v4 D008 + D009…', allowed_paths: ['scripts/dontpanic_orchestrate/**', 'claude/shared/**'], forbidden_decisions: ['Do not break the audit.schema.json contract…'], return_condition_summary: 'F001 + F002 pass; sweep ≥1928 green…', may_edit_product_code: true}.",
+      "required": [
+        "kind",
+        "parent_objective",
+        "parent_acceptance_item",
+        "allowed_paths",
+        "return_condition_summary",
+        "may_edit_product_code"
+      ],
+      "properties": {
+        "kind": {
+          "enum": ["implementation", "investigation", "migration"],
+          "description": "Child plan classification. 'implementation' = ship product/runtime code (the v4.1 default). 'investigation' = scoped probe that produces evidence/notes but does not ship code. 'migration' = bounded schema/data/dependency migration."
+        },
+        "parent_objective": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "What the parent needed when it spawned this child (≤500 chars). Example: 'Discharge v4.1 carry items banked during the v4 plan close-out…'."
+        },
+        "parent_acceptance_item": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The parent acceptance clause this child unblocks. Example: 'v4 D008 (parsing-category schema mismatch), v4 D009…'."
+        },
+        "allowed_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "fnmatch-style glob patterns. When commit_policy.mode='child_commit', the runtime requires every modified file to match at least one glob. Example: ['scripts/dontpanic_orchestrate/**', 'claude/shared/**']."
+        },
+        "forbidden_decisions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form decisions the child must not take (informational; not machine-enforced). Example: ['Do not break the audit.schema.json contract for existing fields…']."
+        },
+        "return_condition_summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One short text describing the observable signal used to render the `## Return Condition` section template in the close-out memo. Example: 'F001 + F002 pass; sweep ≥1928 green…'."
+        },
+        "may_edit_product_code": {
+          "type": "boolean",
+          "description": "Whether the child is allowed to modify product code. NO default — operator must declare intent explicitly. Cross-field invariant with commit_policy.mode enforced by the runtime. Example: true."
+        }
+      }
+    },
+    "commit_policy": {
+      "type": "object",
+      "description": "v1.9.0 — commit authority for a child plan. Example (from v4.1 plan 2026-05-12-002): {mode: 'child_commit', requires: ['tests_pass', 'evidence_packaged']}.",
+      "properties": {
+        "mode": {
+          "enum": ["child_commit", "parent_commit", "manual"],
+          "description": "'child_commit' = child writes its own commits within allowed_paths (the v4.1 default). 'parent_commit' = child produces evidence and the parent plan lands the commit. 'manual' = operator commits by hand outside the supervisor."
+        },
+        "requires": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Compliance checks evaluated at close-out. Plain strings so the runtime can extend the vocabulary without a schema bump. Example: ['tests_pass', 'evidence_packaged']."
+        }
+      }
     }
   },
   "additionalProperties": false
