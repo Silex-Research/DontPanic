@@ -49,10 +49,21 @@
         "Run full sweep + sanitization check."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/architecture_html.py emits docs/architecture/architecture.html from architecture.json. (2) HTML is gitignored (verified in .gitignore). (3) HTML contains all 3 SVG diagrams (module graph, plan lifecycle, supervisor state). (4) HTML is mobile-responsive (single-column on narrow viewports, multi-column on wide). (5) Errors clearly when architecture.json is missing or invalid. (6) Fixture tests cover ≥4 cases. (7) `dontpanic architecture regen` produces both files by default; `--json-only` skips HTML. (8) Full sweep ≥1929 green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T02:53:19Z"
     },
     {
       "id": "F003",
