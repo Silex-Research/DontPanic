@@ -1,0 +1,33 @@
+{
+  "_comment": "Redacted shape of ~/.dontpanic/adapters/linear.json — the per-service config the PP-emitted Linear MCP binary reads at spawn. Operator copies to the real path (gitignored), replaces <paste-your-token> with a Linear read-scope personal API key, and never commits the populated copy. Token values exist only at the operator's home dir.",
+  "service": "linear",
+  "pp_version": "v0.4.2",
+  "openapi_source_url": "https://raw.githubusercontent.com/linear/linear/master/packages/sdk/openapi.json",
+  "redact_policy_override": null,
+  "auth": {
+    "scheme": "bearer",
+    "header_name": "Authorization",
+    "header_value_template": "Bearer ${LINEAR_API_KEY}",
+    "env_var_for_token": "LINEAR_API_KEY",
+    "example_token": "<paste-your-token>"
+  },
+  "scopes": [
+    "read"
+  ],
+  "tool_surface": {
+    "read_tools": [
+      "issue",
+      "issues",
+      "project",
+      "projects",
+      "team",
+      "teams",
+      "comment",
+      "comments"
+    ],
+    "mutating_tools": [
+      "issueUpdate"
+    ]
+  },
+  "notes": "v1 pin is the cli-printing-press version current as of plan lock (2026-05-10). Bumping pp_version requires a v2 expansion plan per SKILL.md § Reference."
+}
