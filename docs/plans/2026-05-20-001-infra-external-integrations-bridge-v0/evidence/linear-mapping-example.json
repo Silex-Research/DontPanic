@@ -1,0 +1,32 @@
+{
+  "service_name": "linear",
+  "uri_scheme": "linear",
+  "pp_version": "<pin-at-plan-lock>",
+  "api_key_env": "<paste-your-env-var-name>",
+  "api_key_value": "<paste-your-token>",
+  "field_name_map": {
+    "PMIssue.id": "id",
+    "PMIssue.project_id": "team.id",
+    "PMIssue.title": "title",
+    "PMIssue.status": "state.name",
+    "PMIssue.uri": "url"
+  },
+  "status_enum_map": {
+    "Triage": "backlog",
+    "Backlog": "backlog",
+    "Todo": "active",
+    "In Progress": "in_progress",
+    "In Review": "in_progress",
+    "Done": "done",
+    "Cancelled": "cancelled"
+  },
+  "priority_map": {
+    "No priority": 0,
+    "Urgent": 1,
+    "High": 2,
+    "Medium": 3,
+    "Low": 4
+  },
+  "push_status_tool": "issueUpdate",
+  "read_issue_tool": "issue"
+}

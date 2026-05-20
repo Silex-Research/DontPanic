@@ -94,7 +94,7 @@ Per operator review: every external write (PM-tool status push on plan close) MU
 
 ```yaml
 target_env: dev
-target_project: null
+target_project: none
 ```
 
 DontPanic-internal infra plan; no external Firebase / Cloud project. F003's dashboard chip work happens in the axiom/ repo (Plan 004's home), but the LLM-dispatchable surface for THIS plan lives entirely in `scripts/dontpanic_orchestrate/integrations/`.
