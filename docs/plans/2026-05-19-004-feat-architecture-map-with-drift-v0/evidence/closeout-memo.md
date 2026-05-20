@@ -1,17 +1,17 @@
 ---
 status: operator_resolved
-reason_class: spec_ambiguity
+reason_class: implementation_defect
 plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
-feature_id: F003
-closed_at: 2026-05-20T03:48:03Z
-latest_audit_status: needs_changes
+feature_id: F004
+closed_at: 2026-05-20T04:16:15Z
+latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F003
+# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F004
 
 ## Operator decision
 
-This feature was closed under class `spec_ambiguity` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `implementation_defect` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,15 +19,15 @@ This feature was closed under class `spec_ambiguity` after operator review of a 
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 7 (see structured target_context.commands_run)
+- Command: 3 (see structured target_context.commands_run)
 
-[F003] Repo: DontPanic  
-Env: dev  
+[F004] Repo: DontPanic
+Env: dev
 Project: (none)
 
-Overall verdict: needs_changes. Implementer summary declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and recorded commands contain no forbidden shapes.
+Verdict: signed_off. Implementer target declaration is correct: summary says `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` has `env=dev`, `project=null`. Recorded commands contain no forbidden shapes. Code inspection matches F004: hook is wired before `signed_off` return, uses `git diff --name-only HEAD~1..HEAD`, regenerates through in-process `architecture.regen()`/`Crawler`, emits `architecture_regenerated`, and does not stage/commit `architecture.json`.
 
-FINDING (medium, correctness): The required `--strict` mode is not wired for architecture drift. Evidence: `features.json:77-82` requires `--strict` to block on `stale_major`/`ABSENT`, but `scripts/dontpanic_doctor.py:1992-2040` only wires `--strict-codes` and `--architecture-drift-strict`; `scripts/dontpanic_orchestrate/cli.py:1464-1492` also only exposes `--architecture-drift-strict`. Running `--strict` on the script is accepted as an argpar...
+FINDING (advisory, test_coverage): I could not independently rerun pytest in this read-only sandbox. Evidence: both targeted a...
 
 ## Rationale (operator — fill in)
 
@@ -47,4 +47,4 @@ Explain in 2-4 sentences:
 
 ## Return Condition
 
-F003 (doctor architecture_drift probe) + F005 (opt-in pre-commit hook) shipped together in this commit. F005 signed_off on iter0 (1 round) with one advisory (perf-test rename — patched). F003 stopped_no_progress on flag-naming spec_ambiguity (implementer's `--architecture-drift-strict` chosen over spec's `--strict` to avoid argparse abbreviation collision with existing `--strict-codes`; mirrors `--validate-plans-strict` pattern from Plan 3 F003). No hand-patch required for F003. Full sweep 2036 passed / 7 skipped; sanitization clean (1288 files). See D005 (F005) + D006 (F003).
+F004 supervisor regen-to-working-tree hook shipped clean: signed_off iter1, no hand-patch required. Hook regenerates architecture.json into working tree after child_commit dispatches, emits INBOX architecture_regenerated event, honors no-auto-commit forbidden_decision. One advisory/test_coverage finding was environmental (auditor's sandbox couldn't write tmp dir); operator verified locally with 2045 passed / 7 skipped (+9 new F004 tests). Plan 4 is now F001+F002+F003+F004+F005 all passes:true. See D007.
