@@ -3,7 +3,7 @@ id: 2026-05-19-005-feat-dogfood-showcase-artifacts-v0
 title: Dogfood showcase artifacts v0 — visual architecture maps + plan validation + drift on our own repos
 type: feat
 tier: local
-status: draft
+status: active
 date: "2026-05-19"
 goal_type: new_feature
 surfaces:
