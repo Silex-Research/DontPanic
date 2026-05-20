@@ -67,3 +67,29 @@ Child plan 2026-05-12-002-fix-harness-frictions-v4-1 is in flight (parent: 2026-
 After authoring evidence/fan-in-from-2026-05-12-002-fix-harness-frictions-v4-1.md with `## Return Condition / status: satisfied`.
 
 ===
+---
+timestamp: 2026-05-20T01:49:06Z
+event: nested_child_pending
+plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+child_plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+spawn_reason: operator_manual
+---
+
+Child plan 2026-05-19-003-fix-plan-schema-orchestration-fields is in flight (parent: 2026-05-11-001-infra-state-projection-adapters-meta, spawn_reason: operator_manual). Parent re-entry is paused until operator runs:
+  jarvis-orchestrate approve 2026-05-11-001-infra-state-projection-adapters-meta pre_resume_after_child --child 2026-05-19-003-fix-plan-schema-orchestration-fields
+After authoring evidence/fan-in-from-2026-05-19-003-fix-plan-schema-orchestration-fields.md with `## Return Condition / status: satisfied`.
+
+===
+---
+timestamp: 2026-05-20T01:52:12Z
+event: nested_child_pending
+plan_id: 2026-05-11-001-infra-state-projection-adapters-meta
+child_plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+spawn_reason: operator_manual
+---
+
+Child plan 2026-05-19-004-feat-architecture-map-with-drift-v0 is in flight (parent: 2026-05-11-001-infra-state-projection-adapters-meta, spawn_reason: operator_manual). Parent re-entry is paused until operator runs:
+  jarvis-orchestrate approve 2026-05-11-001-infra-state-projection-adapters-meta pre_resume_after_child --child 2026-05-19-004-feat-architecture-map-with-drift-v0
+After authoring evidence/fan-in-from-2026-05-19-004-feat-architecture-map-with-drift-v0.md with `## Return Condition / status: satisfied`.
+
+===
