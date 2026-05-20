@@ -1,0 +1,80 @@
+{
+  "task_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Dashboard ship — closes P9-004 F003 (Cloud Functions: kanbanMove + approve), F004 (Firestore security rules: auth-required read + service-account-only write), F005 (end-to-end smoke runbook). The Cloud Functions live in axiom/ repo (the dashboard's home per F023 EC11 cwd discipline); security rules + smoke ship there too. Operator provisions the Firebase project + Tailscale Funnel as out-of-band sub-task (D-entry records the credential set + cwd); LLM dispatches against the axiom/ checkout with that credential context. v0 ships read-only dashboard projection + the two state-flip Cloud Functions; multi-operator sync deferred. Acceptance verification = operator opens the Firebase-rendered dashboard, drags a plan card (kanbanMove fires), approves a gate (approve fires), confirms DontPanic state actually flipped.",
+      "steps": [
+        "Operator provisions Firebase project + Tailscale Funnel (out-of-band; D-entry records credential set, project id, cwd path).",
+        "Dispatch P9-004 F003 (Cloud Functions) from axiom/ cwd with operator-credential context.",
+        "Dispatch P9-004 F004 (Firestore security rules) from axiom/ cwd. Can run in parallel with F003 — disjoint file scope.",
+        "Dispatch P9-004 F005 (smoke runbook) once F003 + F004 land. Sequential.",
+        "Smoke test: operator manually drags a kanban card + approves a gate; confirm DontPanic state flipped + audit trail wrote correctly."
+      ],
+      "acceptance": "(1) P9-004 F003/F004/F005 all features.json passes:true with audit-envelope evidence. (2) Operator-side smoke test confirms dashboard kanbanMove + approve flip DontPanic state correctly. (3) Tailscale Funnel URL committed to operator-private config (not repo). (4) D-entry records the credential set + axiom/ cwd dispatch.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "PM-tool category abstraction. Defines abstract Issue + Project + Status + Comment models that all PM tools (Linear, Aha, Jira, Monday, GitHub Projects) can map to. Per-service mapping config schema in `~/.dontpanic/adapters/<service>.json` documents: PM-tool field names → abstract model fields, status enum mapping (active → 'In Progress', completed → 'Done'), priority/severity mapping. Linear reference adapter wired to the abstraction as the canonical example. NO Linear-specific code in the abstraction layer — all Linear specifics live in `~/.dontpanic/adapters/linear.json` mapping config + the Linear-wrapper Python from P10 F003. New PM tool = author one mapping JSON, no Python.",
+      "steps": [
+        "Define PMTool* dataclasses (PMIssue, PMProject, PMStatus, PMComment) in scripts/dontpanic_orchestrate/integrations/pm_tool_models.py.",
+        "Define mapping config schema (Pydantic model) in scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py. Schema covers field-name mapping, status enum mapping, priority mapping.",
+        "Author Linear mapping config at ~/.dontpanic/adapters/linear.json (operator-provided; example placeholder committed to evidence/).",
+        "Wire Linear adapter (from P10 F003) to category abstraction — Linear adapter now exposes both raw Linear MCP tools AND category-level methods (pm_tool.get_issue, pm_tool.update_issue_status, etc.).",
+        "Add fixture tests in test_pm_tool_category_f002.py: mapping config validation, abstract model round-trip, Linear adapter category bindings.",
+        "Document the category extension pattern in evidence/pm-tool-category-extension.md — how to add Jira / Aha / Monday / GitHub Projects (just author mapping config, no code)."
+      ],
+      "acceptance": "(1) PMTool* abstract models exist + are Pydantic-validated. (2) Mapping config schema documented + has fixture tests. (3) Linear adapter exposes category-level methods on top of raw MCP tools. (4) Documentation explains how to add a second PM tool config-only. (5) Sanitization clean (no Linear API tokens leak; no service-specific code in the abstraction layer).",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Plan ↔ PM-tool sync layer. New plan.md frontmatter field `linked_issue_id: <pm-tool-id>` (e.g. linear://issue/ABC-123). `dontpanic plan lock` validates the link points to a real issue via the category adapter (read). `dontpanic plan close` writes status back via the category adapter (write). One-way DontPanic → PM tool only — pull (PM tool issue → `dontpanic plan new` scaffolding) deferred to v1. The dashboard surfaces linked_issue_id status alongside DontPanic plan status (operator sees both views in one card).",
+      "steps": [
+        "Bump plan.schema.json (agent-conventions) to allow optional linked_issue_id field. Subtree pull into DontPanic claude/shared/.",
+        "Wire `dontpanic plan lock` to validate linked_issue_id exists in target PM tool (one paid read call per lock; cached for re-locks).",
+        "Wire `dontpanic plan close` to push status flip to linked PM-tool issue. Failure modes: PM tool unreachable → log warning, don't block close-out; status mapping unknown → block with operator-actionable error.",
+        "Dashboard projection (in axiom/): each plan card includes a 'linked' chip with the PM-tool issue status when linked_issue_id is set.",
+        "Fixture tests: link validation (happy path + unreachable), status push (happy + remote 404), dashboard rendering with + without link.",
+        "Document the linked_issue_id contract in evidence/plan-link-contract.md."
+      ],
+      "acceptance": "(1) plan.schema.json bumped (vX.X) with linked_issue_id optional field. (2) lock + close hooks fire on linked plans with documented failure modes. (3) Dashboard renders linked status chip. (4) Operator can lock + close a plan with a Linear link end-to-end without manual Linear UI interaction. (5) PM-tool-unreachable does not block plan close — warning only.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "`dontpanic adapter` CLI subcommand family. Operator-facing one-command UX for adapter lifecycle: `add <service>` (with optional `--category=pm-tool` preset that runs the category-aware setup flow), `list`, `remove <service>`, `update <service>` (re-runs PP against current pinned version + diffs the wrapper surface), `status`. The add command wraps the 4 manual steps (token prompt → PP invocation → wrapper authoring from template → adapters.json registration). Operator never edits ~/.dontpanic/adapters.json by hand. Friction-reducing safety: token entry via stdin (never argv); paid-call budget warning before PP invocation; --dry-run mode for validating the flow without spending.",
+      "steps": [
+        "Design CLI surface (argparse subparsers): adapter add | list | remove | update | status.",
+        "Implement adapter add flow: prompt for service slug + category + token (stdin), invoke /printing-press (subprocess to claude with operator approval), scaffold wrapper from ADAPTER_TEMPLATE.md, register in adapters.json atomically.",
+        "Implement adapter list (read adapters.json + per-service mapping config), remove (with confirmation + cleanup), update (PP re-invoke against pinned version), status (validate each adapter's wrapper + mapping config still works).",
+        "Wire --category=pm-tool preset: after standard add flow, prompts operator for PM-tool mapping config fields (field names, status enum mapping) and writes ~/.dontpanic/adapters/<service>.json.",
+        "Fixture tests: each subcommand happy path + key error paths (token missing, PP unavailable, duplicate adapter, missing service).",
+        "Document the operator UX in evidence/adapter-cli-runbook.md — adding Linear, adding a non-category service, removing, updating."
+      ],
+      "acceptance": "(1) `dontpanic adapter add linear --category=pm-tool` walks the full flow including PP invocation + mapping config prompts and produces a working linked adapter. (2) `dontpanic adapter list/remove/update/status` all work on the seeded Linear adapter. (3) Operator never edits ~/.dontpanic/adapters.json by hand to complete any of these flows. (4) PP paid-call budget warning fires before the actual paid invocation; --dry-run path skips it.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    }
+  ]
+}
