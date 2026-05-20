@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-20T03:48:13Z",
+  "generated_at": "2026-05-20T04:16:23Z",
   "modules": [
     {
       "imports": [],
@@ -141,6 +141,24 @@
         "render_html"
       ],
       "summary": "dontpanic architecture HTML renderer."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dontpanic_orchestrate",
+        "fnmatch",
+        "json",
+        "pathlib",
+        "subprocess",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.architecture_regen_hook",
+      "path": "scripts/dontpanic_orchestrate/architecture_regen_hook.py",
+      "public_symbols": [
+        "matches_relevant_glob",
+        "maybe_regen_after_commit"
+      ],
+      "summary": "Plan 2026-05-19-004 F004 — supervisor post-commit architecture regen hook."
     },
     {
       "imports": [
@@ -1938,6 +1956,12 @@
       "title": "Harness frictions v4.1 — parsing-category enum + test_coverage rigor"
     },
     {
+      "features_count": 4,
+      "id": "2026-05-19-002-feat-install-ux-hardening-v0",
+      "status": "draft",
+      "title": "Install UX hardening v0 — doctor profiles + init + smoke test + HTML report"
+    },
+    {
       "features_count": 3,
       "id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
       "status": "active",
@@ -2003,7 +2027,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-20T03:48:13Z",
+    "computed_at": "2026-05-20T04:16:23Z",
     "file_hashes": {
       "claude/shared/VERSION": "0ab4fa190ca1b1d1f630ac87cf34672bfbaf1395d0148c7568d38e58335b8d68",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -2114,9 +2138,11 @@
       "docs/plans/2026-05-12-001-fix-harness-frictions-v4/plan.md": "67f4591231c4b5647e881117a4dcd86d819fd5a198b00550b6d4691c3b909c5b",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/features.json": "75a8448d89b7c5313f41200b1a4c1af976b988aacfd6833e6f7095cfa7cbde33",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md": "8ec5179ed3d18eb018be9c244a54532f69819d1fc4c5b5924c462e9d379f6b03",
+      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/features.json": "ee5cab01d9d968f6a96f030ee2d227cbe25c16c02b36897dbaf4a893ff2270c8",
+      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/plan.md": "e0d49538d063292f5b444655195fb24abb1fc5c8eec9f94e98a3332285f29f28",
       "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "6523a79523f8538d5ba8e3db0f81af09b691b50b8cd18a437543dcc8d9d155ed",
       "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md": "60b89d82a76a55e3bdb5037f1a188f91c09850df546dde04d9034e960974359a",
-      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "728b2eb73b6576689d286bc05aa16cde6b94a1705747f709ceec77a77d24dbfe",
+      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "e6a6501307422a300b522df9b0d2fd441653f8df9617db928ef375ac5088da87",
       "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md": "344e84b174b1e35a48dc43a305bf338a460a9c949cc3957c4127869cc0c02aae",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
@@ -2125,6 +2151,7 @@
       "scripts/dontpanic_orchestrate/architecture.py": "f1d1d68742d38c360ee60afcf831216133fbee83ad4a77961efbf3a2338564c1",
       "scripts/dontpanic_orchestrate/architecture_hook.py": "25b3818a324444f5610ec7539ab560ce6ed47686a24ddf55f3167779fe763313",
       "scripts/dontpanic_orchestrate/architecture_html.py": "c00b3cd5dfd21ae7da189ba5c10058c03566eb7dcf6144cb1e20b411e00f8172",
+      "scripts/dontpanic_orchestrate/architecture_regen_hook.py": "dd8d0fee7668209239004f5ff2df84b8cf251222098b90519d12787ad28452de",
       "scripts/dontpanic_orchestrate/audit_writer.py": "5d1c762c312e8ae4a58ffc605fec79314922cb3775d184338f6bd4a5d6597480",
       "scripts/dontpanic_orchestrate/auditor_taxonomy.py": "91b2981203a0cd125dfed077d6e0dcc37137058b2e895c91e427c4d18df9a15a",
       "scripts/dontpanic_orchestrate/calibration_loader.py": "31b0cc76eb596bdde4ab9a189c543d78ace6bad8c1bcd76f60410d3385d00a96",
@@ -2186,7 +2213,7 @@
       "scripts/dontpanic_orchestrate/subprocess_runner.py": "e37041d20ba2eed3514b2ad80d0da255ef6c7330bc190916f68bdb3d75cc6e60",
       "scripts/dontpanic_orchestrate/sufficiency_auditor.py": "e23dd476571ec458d3e4c898b9c6614ce629b4524e0c4a2352dc4a3e0240e3fc",
       "scripts/dontpanic_orchestrate/sufficiency_gate.py": "3b82b8e0292989f28bdaddee44b97aeeee4b46b8dd02d88ad4c526c63f08cb25",
-      "scripts/dontpanic_orchestrate/supervisor.py": "291de9b9e13cc323fffa9c778306f75cac238582564ff66fa9f21dbaf7550917",
+      "scripts/dontpanic_orchestrate/supervisor.py": "c64d59e32db64d81c634dacfb243dd6bace7159dc404b9aa734724af432e8ed6",
       "scripts/dontpanic_orchestrate/target_context_prelude.py": "e4f6e4133eec93866d9499101b9421e5157508e4abe0ff4c8b2bbe8a5a763df6",
       "scripts/dontpanic_orchestrate/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scripts/dontpanic_orchestrate/tests/conftest.py": "97dd647ed31d8330793e2ed948e967d0a4b2811ea60eabacae00f4545f263b56",
@@ -2292,6 +2319,7 @@
       "scripts/dontpanic_orchestrate/tests/test_subprocess_runner.py": "3dae761152bcded13096302f600460b0b7e5be113974328305881932686727a8",
       "scripts/dontpanic_orchestrate/tests/test_sufficiency_auditor.py": "7f1f8b66a42711040c1f491d5bafaeacadd97ffccf2a59df9b9f631af91ddacc",
       "scripts/dontpanic_orchestrate/tests/test_sufficiency_gate.py": "791789081a9db31d0ea24e7350d3cb328e20263b830d8e24aa27936a5f27db82",
+      "scripts/dontpanic_orchestrate/tests/test_supervisor_architecture_regen_f004.py": "8e2f6ace157d0d8394e1eb94140eddbcadf51db806b3e2c214feb48eabe2fda0",
       "scripts/dontpanic_orchestrate/tests/test_target_context.py": "fd7a8213b51660f5205b727643631dfc68099d54fdc26d827e73744b342da878",
       "scripts/dontpanic_orchestrate/tests/test_target_context_prelude.py": "c4605cbf1f1585f15446bdf5f1691efa0643574b4ec7be28f73d847fff887f15",
       "scripts/dontpanic_orchestrate/tests/test_timeout_with_work_classifier.py": "7804e7bcbb12fcd790c5be157d19fee4e6839b1702eb71dfff6c60c32a2170a9",
@@ -2304,7 +2332,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "277701a51e7e20151eae6b2bf0e92a0170286c8c97e743b13399cc7415f4b255",
-    "files_count": 298
+    "file_hashes_root": "9fbe3361f6943fd4ebec3519cd2f714b4bf6e6bbac26640fe55976566d49c016",
+    "files_count": 302
   }
 }

@@ -1938,6 +1938,32 @@ def dispatch_volley(
                         iteration + 1,
                         reason="auditor signed off",
                     )
+                    # Plan 2026-05-19-004 F004 — post-commit architecture regen
+                    # hook. Fires only when commit_policy.mode == 'child_commit'
+                    # (the implementer just landed a commit on this volley) AND
+                    # the just-committed diff touches an architecture-relevant
+                    # path. NEVER auto-commits the regenerated map; the operator
+                    # sees architecture.json in `git status` and decides.
+                    # Wrapped so any failure inside the hook (or in the hook
+                    # module import) leaves the volley terminal unaffected.
+                    try:
+                        from dontpanic_orchestrate import (
+                            architecture_regen_hook as _arch_regen_hook,
+                        )
+
+                        _arch_regen_hook.maybe_regen_after_commit(
+                            plan_dir=loaded.plan_dir,
+                            plan_id=loaded.plan_id,
+                            feature_id=feature_id,
+                            commit_policy_mode=(
+                                loaded.commit_policy.mode
+                                if loaded.commit_policy is not None
+                                else None
+                            ),
+                            repo_root=registry_repo_root,
+                        )
+                    except Exception as _arch_exc:  # noqa: BLE001 — never crash terminal
+                        print(f"[volley] architecture regen hook skipped: {_arch_exc}")
                     return _emit_volley_terminal(
                         VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
                         loaded=loaded,

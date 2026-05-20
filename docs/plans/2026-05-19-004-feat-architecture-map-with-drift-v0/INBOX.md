@@ -421,3 +421,62 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T03:49:33Z
+event: volley_start
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T03:49:33Z
+event: volley_start
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T04:10:24Z
+event: gate_hit
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F004
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-19-004-feat-architecture-map-with-drift-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-19-004-feat-architecture-map-with-drift-v0 --all
+
+===
+---
+timestamp: 2026-05-20T04:16:15Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
+feature_id: F004
+reason_class: implementation_defect
+---
+
+Operator closed feature F004 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-004-feat-architecture-map-with-drift-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
