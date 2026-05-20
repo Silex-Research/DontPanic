@@ -93,11 +93,22 @@
         "Run full orchestrator sweep + sanitization check."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/smoke/__init__.py exposes smoke_main(argv) entry point with SyntheticPlanFixture + MockClaudeExecutor + MockCodexExecutor + run_smoke() implementation. (2) `dontpanic smoke --mode=mocked` runs synthetic plan through `supervisor.dispatch_volley` with mocked executors in <=30s wall clock — NO real CLI required, NO paid API, NO network. (3) Exit codes: 0=mocked-pass, 1=supervisor plumbing defect, 2=env blocker (install issue — points at doctor). (4) JSON output (--json) is stable schema covering the NAMED supervisor surfaces (plan load, gate eval, mocked executor envelope write, audit persist, signoff, INBOX, cleanup). (5) Acceptance does NOT claim every supervisor branch — surfaces enumerated explicitly. (6) `dontpanic init` automatically runs smoke as final step after probes pass; env-blocker exit re-enters fix loop. (7) v0 ships --mode=mocked only; --mode=live deferred (documented in non_goals). (8) New test module test_smoke_harness_f003.py with >=8 cases including the no-real-CLI invariant. (9) Full sweep at or above lock-time baseline; sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T15:20:05Z"
     },
     {
       "id": "F004",

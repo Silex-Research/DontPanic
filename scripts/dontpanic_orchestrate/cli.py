@@ -2499,6 +2499,7 @@ Private-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   doctor                         Run local readiness checks
   init                           Interactive installer (default --profile=core)
+  smoke                          Mocked supervisor-plumbing smoke test (no real CLI)
   architecture regen|status|diff Codebase + plan snapshot + drift surface
   showcase regen                 Generate showcase artifacts for external repos
   plan lock|audit|close          Goal-governed plan lifecycle gates
@@ -2571,6 +2572,9 @@ def main(argv: list[str] | None = None) -> int:
     if raw and raw[0] == "init":
         from dontpanic_orchestrate.init import init_main as _init_main
         return _init_main(raw[1:])
+    if raw and raw[0] == "smoke":
+        from dontpanic_orchestrate.smoke import smoke_main as _smoke_main
+        return _smoke_main(raw[1:])
     if raw and raw[0] == "architecture":
         from dontpanic_orchestrate import architecture as _arch
         return _arch.cli_main(raw[1:])

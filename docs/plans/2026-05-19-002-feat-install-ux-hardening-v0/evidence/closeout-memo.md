@@ -2,12 +2,12 @@
 status: operator_resolved
 reason_class: implementation_defect
 plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
-feature_id: F002
-closed_at: 2026-05-20T13:15:43Z
+feature_id: F003
+closed_at: 2026-05-20T15:20:05Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-19-002-feat-install-ux-hardening-v0 / F002
+# Closeout memo — 2026-05-19-002-feat-install-ux-hardening-v0 / F003
 
 ## Operator decision
 
@@ -19,17 +19,15 @@ This feature was closed under class `implementation_defect` after operator revie
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 4 (see structured target_context.commands_run)
+- Command: 2 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic
+[F003] Repo: DontPanic
 Env: dev
 Project: (none)
 
-Overall verdict: needs_changes.
+Overall verdict: needs_changes. The implementer audit summary declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; `target_context.commands_run` was empty, so I found no forbidden command shapes there.
 
-FINDING (medium, correctness): Walker does not re-run each probe immediately after operator action. Evidence: `Walker.run()` iterates over `initial.probes`, calls `_handle_probe()`, then only performs one final `_run_sweep()` after the whole loop at `scripts/dontpanic_orchestrate/init/__init__.py:263` and `:291`. Recommendation: after each fail/warn operator action, re-run that probe or a fresh sweep before continuing, and add a test that pins the per-probe recheck behavior.
-
-FINDING (medium, test_coverage): The CLI integration test does not spawn `python -m dontpanic_orchestrate init...
+FINDING (high, correctness): `dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failure, then calls `tempfile.gettempdir()` again while formatting the error at `scripts/dontpanic_orchestrate/smoke/__init__.py:611-614`, producing an uncaught `FileNotFoundError`. Recommendation: avoid re-calling `get...
 
 ## Rationale (operator — fill in)
 
