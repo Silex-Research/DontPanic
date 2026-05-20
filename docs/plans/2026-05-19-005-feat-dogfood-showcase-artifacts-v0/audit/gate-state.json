@@ -1,7 +1,8 @@
 {
   "plan_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
   "cleared_gates": [
-    "pre_impl"
+    "pre_impl",
+    "pre_merge"
   ],
   "history": [
     {
@@ -31,6 +32,21 @@
       "gate": "breaker:no_progress",
       "at": "2026-05-20T05:25:10Z",
       "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-20T05:44:40Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-20T11:31:22Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
@@ -39,9 +55,16 @@
       "stage": "pre_impl",
       "cleared_at": "2026-05-20T04:52:09Z",
       "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-05-20T11:31:22Z",
+      "cleared_by": "operator"
     }
   ],
   "completed_stages": [
-    "pre_impl"
+    "pre_impl",
+    "pre_merge"
   ]
 }

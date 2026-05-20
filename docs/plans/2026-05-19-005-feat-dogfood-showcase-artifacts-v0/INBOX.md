@@ -134,3 +134,54 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T05:28:27Z
+event: volley_start
+plan_id: 2026-05-19-005-feat-dogfood-showcase-artifacts-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T05:28:27Z
+event: volley_start
+plan_id: 2026-05-19-005-feat-dogfood-showcase-artifacts-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T05:44:40Z
+event: gate_hit
+plan_id: 2026-05-19-005-feat-dogfood-showcase-artifacts-v0
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-19-005-feat-dogfood-showcase-artifacts-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-19-005-feat-dogfood-showcase-artifacts-v0 --all
+
+===
+---
+timestamp: 2026-05-20T11:31:22Z
+event: gate_cleared
+plan_id: 2026-05-19-005-feat-dogfood-showcase-artifacts-v0
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===
