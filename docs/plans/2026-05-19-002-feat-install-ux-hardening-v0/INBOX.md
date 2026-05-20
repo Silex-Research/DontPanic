@@ -1,0 +1,137 @@
+# INBOX — 2026-05-19-002-feat-install-ux-hardening-v0
+
+Operator-facing event log written by the supervisor.
+
+---
+timestamp: 2026-05-20T05:28:17Z
+event: pre_impl_status_synced
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+status: active
+feature_id: F001
+---
+
+Supervisor implicitly cleared the `pre_impl` lifecycle gate because plan.md status is `active`.
+
+Plan: 2026-05-19-002-feat-install-ux-hardening-v0
+Status: active
+Feature: F001
+
+An operator who flips status to `active` (with a lock D-entry in decisions.jsonl) is signaling that the plan is ready for implementer dispatch. The supervisor treats the status flip as the authorizing action — no separate `dontpanic approve <plan> pre_impl` is required.
+
+Manual approve/resume semantics for every other gate (`pre_merge`, `on_escalation`, `breaker:*`, `defer:*`) are unchanged. Only `pre_impl` is in scope for this implicit clearance, and only when status is exactly `active`.
+
+===
+---
+timestamp: 2026-05-20T05:28:17Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F001
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T05:28:17Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F001
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T05:38:17Z
+event: error
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F001
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-20T05:53:10Z
+event: no_progress_classification
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+aggregate: unknown
+blocking: true
+feature_id: F001
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F001
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=test_coverage: The required byte-identical backwards-compat snapshot for `dontpanic doctor` no-flags is missing. Evidence: [test_doctor_profile_integration.py](/Users/bayesia…
+  - [unknown] severity=medium, category=test_coverage: The 10s “all five profiles combined” sweep budget is not tested. Evidence: [test_prereq_registry_f001.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/do…
+  - [spec_ambiguity] severity=medium, category=documentation: The schema doc’s `exit_code` semantics disagree with the implementation for advisory-only sweeps. Evidence: the schema says `1 = at least one WARN (or ADVISORY…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-002-feat-install-ux-hardening-v0 F001 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T05:53:10Z
+event: breaker_tripped
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+breaker_kind: no_progress
+feature_id: F001
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-19-002-feat-install-ux-hardening-v0 breaker:no_progress` or `jarvis resume 2026-05-19-002-feat-install-ux-hardening-v0 --all`.
+
+===
+---
+timestamp: 2026-05-20T05:53:11Z
+event: volley_terminal
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F001
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json', 'claude-implementer-F001-i1.json', 'codex-auditor-F001-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-20T11:52:18Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F001
+reason_class: implementation_defect
+---
+
+Operator closed feature F001 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-002-feat-install-ux-hardening-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

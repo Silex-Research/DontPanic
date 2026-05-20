@@ -1,0 +1,58 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T05:49:35Z",
+  "completed_at": "2026-05-20T05:53:10Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-fhz7t3b9 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 206766 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 900049,
+    "tokens_out": 14694,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration matched `{Repo: DontPanic, Env: dev, Project: (none)}` and I saw no forbidden command shapes in `target_context.commands_run`. The profile seam is at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2142): legacy `run_all_checks()` still runs first, `--profile` branches into `_run_profile_aware()`, and no-profile still uses legacy `render_text` / `render_json` plus the old exit matrix.\n\nFINDING (high, test_coverage): The required byte-identical backwards-compat snapshot for `dontpanic doctor` no-flags is missing. Evidence: [test_doctor_profile_integration.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py:72) explicitly says it does not assert byte identity and only checks that the profile header is absent. Recommendation: add a deterministic pre-F001 snapshot test for no-flag text output and legacy exit behavior, using mocked legacy checks if host state is too variable.\n\nFINDING (medium, test_coverage): The 10s “all five profiles combined” sweep budget is not tested. Evidence: [test_prereq_registry_f001.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py:181) starts the timer inside the per-profile loop, so five profiles could take nearly 50s and still pass. Recommendation: add an aggregate timer around all five",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --profile=core --json --skip-auth",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --json --skip-auth",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --profile=firebase-dashboard --json --skip-auth",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import sys; sys.path.insert(0, 'scripts'); from dontpanic_orchestrate import prereq_registry as pr; sweep=pr.SweepResult(profile='core', probes=[pr.ProbeResult(name='codex-cli', status=pr.ProbeStatus.ADVISORY, severity_reason='x', version_found=None, fix_url='https://example.com', fix_command=['echo','fix'], required_for_profiles=['ci','openclaw'], activation_condition='auditor_codex_selected', activation_resolved=False, elapsed_s=0.0)]); print(sweep.exit_code())\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "The required byte-identical backwards-compat snapshot for `dontpanic doctor` no-flags is missing. Evidence: [test_doctor_profile_integration.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py:72) explicitly says it does not assert byte identity and only checks that the profile header is absent. Recommendation: add a deterministic pre-F001 snapshot test for no-flag text output and legacy exit behavior, using mocked legacy checks i",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "The 10s “all five profiles combined” sweep budget is not tested. Evidence: [test_prereq_registry_f001.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py:181) starts the timer inside the per-profile loop, so five profiles could take nearly 50s and still pass. Recommendation: add an aggregate timer around all five sweeps, ideally with synthetic slow network probes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "The schema doc’s `exit_code` semantics disagree with the implementation for advisory-only sweeps. Evidence: the schema says `1 = at least one WARN (or ADVISORY)` at `doctor-json-envelope-schema-v1.md:27`, but `SweepResult.exit_code()` only returns `1` for `WARN` and returns `0` for advisory-only results at [prereq_registry.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/prereq_registry.py:655); my direct snippet printed `0` for an advisory-only sweep. Recommendation:",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
