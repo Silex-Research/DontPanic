@@ -277,6 +277,114 @@ def test_generator_with_synthetic_target_produces_architecture_artifacts(
     assert "/Users/" not in body
 
 
+def test_generator_with_four_targets_produces_expected_artifact_matrix(
+    isolated_showcase_home, tmp_path
+):
+    """P5 F001 i1 auditor finding (medium/test_coverage): the required
+    'all 4 targets present generates expected artifact set' fixture was
+    missing. This test mirrors the v0 acceptance matrix:
+
+    | Target           | architecture | validate_plans_strict | drift |
+    |------------------|--------------|-----------------------|-------|
+    | dontpanic-syn    | yes          | yes                   | yes   |
+    | conventions-syn  | yes          | yes (has plans)       | no    |
+    | axiom-syn        | yes          | no (no plans)         | no    |
+    | glam-syn         | yes          | yes (has plans)       | no    |
+
+    All 4 must succeed; per-target supported_artifacts must be honored
+    without false-positive errors; outputs must be redacted (no
+    /Users/ in any artifact)."""
+    targets = []
+    # dontpanic-syn — full matrix
+    dp_root = _build_synthetic_target_repo(
+        tmp_path / "dontpanic-syn", repo_key="dontpanic-syn", with_plans=True
+    )
+    # Plant a committed architecture.json so drift artifact has a snapshot to read
+    arch_dir = dp_root / "docs" / "architecture"
+    arch_dir.mkdir(parents=True, exist_ok=True)
+    (arch_dir / "architecture.json").write_text(
+        '{"schema_version": "1.0", "modules": [], "schemas": [], "plans": [], '
+        '"source_fingerprint": {"files_count": 0, "file_hashes_root": "0"*64}}\n',
+        encoding="utf-8",
+    )
+    targets.append(TargetSpec(
+        repo_key="dontpanic-syn", label="DontPanic (syn)", repo_root=dp_root,
+        description="full matrix",
+        supported_artifacts=frozenset({"architecture", "validate_plans_strict", "drift"}),
+        has_dontpanic_plans=True, has_committed_architecture_json=True,
+    ))
+    # conventions-syn — architecture + validate (has plans), no drift
+    conv_root = _build_synthetic_target_repo(
+        tmp_path / "conventions-syn", repo_key="conventions-syn", with_plans=True
+    )
+    targets.append(TargetSpec(
+        repo_key="conventions-syn", label="agent-conventions (syn)", repo_root=conv_root,
+        description="schemas + plans",
+        supported_artifacts=frozenset({"architecture", "validate_plans_strict"}),
+        has_dontpanic_plans=True, has_committed_architecture_json=False,
+    ))
+    # axiom-syn — architecture only, no plans, no drift
+    axiom_root = _build_synthetic_target_repo(
+        tmp_path / "axiom-syn", repo_key="axiom-syn", with_plans=False
+    )
+    targets.append(TargetSpec(
+        repo_key="axiom-syn", label="axiom (syn)", repo_root=axiom_root,
+        description="monorepo",
+        supported_artifacts=frozenset({"architecture"}),
+        has_dontpanic_plans=False, has_committed_architecture_json=False,
+    ))
+    # glam-syn — architecture + validate (has plans), no drift
+    glam_root = _build_synthetic_target_repo(
+        tmp_path / "glam-syn", repo_key="glam-syn", with_plans=True
+    )
+    targets.append(TargetSpec(
+        repo_key="glam-syn", label="Glam (syn)", repo_root=glam_root,
+        description="iOS app",
+        supported_artifacts=frozenset({"architecture", "validate_plans_strict"}),
+        has_dontpanic_plans=True, has_committed_architecture_json=False,
+    ))
+
+    run = generate(targets=targets)
+    assert run.overall_exit == 0, f"expected all 4 targets to succeed; got {run}"
+    assert len(run.targets) == 4
+    by_key = {t.repo_key: t for t in run.targets}
+
+    # Per-target expected artifact set
+    expected = {
+        "dontpanic-syn": {"architecture", "validate_plans_strict", "drift"},
+        "conventions-syn": {"architecture", "validate_plans_strict"},
+        "axiom-syn": {"architecture"},
+        "glam-syn": {"architecture", "validate_plans_strict"},
+    }
+    for key, kinds in expected.items():
+        actual = {a.artifact for a in by_key[key].artifacts}
+        assert actual == kinds, (
+            f"target {key} artifact set mismatch: expected {kinds}, got {actual}"
+        )
+
+    # All committed artifact files exist + redacted
+    showcase_dir = isolated_showcase_home / "docs" / "showcase"
+    for key in expected:
+        assert (showcase_dir / f"{key}-architecture.json").is_file()
+        assert (showcase_dir / f"{key}-architecture.html").is_file()
+    assert (showcase_dir / "dontpanic-syn-validate-plans.json").is_file()
+    assert (showcase_dir / "conventions-syn-validate-plans.json").is_file()
+    assert (showcase_dir / "glam-syn-validate-plans.json").is_file()
+    assert (showcase_dir / "dontpanic-syn-drift.json").is_file()
+    # axiom + non-drift targets must NOT have drift artifact
+    assert not (showcase_dir / "axiom-syn-drift.json").exists()
+    assert not (showcase_dir / "conventions-syn-drift.json").exists()
+    assert not (showcase_dir / "glam-syn-drift.json").exists()
+    # axiom + dontpanic-syn alone in architecture-only / full sets — confirm
+    # validate-plans absent for axiom (no plans).
+    assert not (showcase_dir / "axiom-syn-validate-plans.json").exists()
+
+    # Redaction invariant: no /Users/ in any committed artifact
+    for f in showcase_dir.iterdir():
+        body = f.read_text(encoding="utf-8")
+        assert "/Users/" not in body, f"absolute path leaked in {f.name}"
+
+
 def test_generator_skips_drift_for_target_without_committed_arch_json(
     isolated_showcase_home, tmp_path
 ):
@@ -415,23 +523,56 @@ def test_doctor_architecture_drift_uses_external_architecture_json(tmp_path):
 # ── (6) sanitization_check.py extension ───────────────────────────────────
 
 
-def test_sanitization_check_allows_docs_showcase_prefix():
-    """ALLOWED_PREFIXES must include 'docs/showcase/' so showcase artifacts
-    don't trip the campaign-id allowlist. The secret-shape scan still
-    applies to every file (no exemption)."""
+def test_sanitization_check_docs_showcase_campaign_ids_ok_but_scan_secrets():
+    """docs/showcase/ must be in the split tier CAMPAIGN_IDS_OK_BUT_SCAN_SECRETS
+    (NOT in ALLOWED_PREFIXES which would skip secret-shape scanning entirely).
+    Regression for P5 F001 i1 auditor finding (high/security): the original
+    implementation placed docs/showcase/ in ALLOWED_PREFIXES, which made
+    `is_allowed()` return True and `main()` skipped scan_line entirely —
+    secret-shape regexes never ran on showcase artifacts."""
     spec = importlib.util.spec_from_file_location(
         "sanitization_check_f001",
         REPO_ROOT / "scripts" / "sanitization_check.py",
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    assert "docs/showcase/" in mod.ALLOWED_PREFIXES
-    assert mod.is_allowed("docs/showcase/dontpanic-architecture.json")
-    # Secret-shape scan must still apply to anything under the new
-    # prefix. Synthesize a fake AWS key via assembled parts so this test
-    # file itself doesn't trip the leak check.
-    fake_key = "AKIA" + "1234567890ABCDEF12"  # 16 chars after AKIA, mixed letters/digits
-    assert mod.scan_line(fake_key) is not None
+    # docs/showcase/ is NOT in the fully-exempt tier
+    assert "docs/showcase/" not in mod.ALLOWED_PREFIXES
+    # docs/showcase/ IS in the split tier
+    assert "docs/showcase/" in mod.CAMPAIGN_IDS_OK_BUT_SCAN_SECRETS
+    # is_allowed returns False (no full exemption); allows_campaign_ids_only
+    # returns True (campaign ID literals OK but secrets still scanned).
+    assert not mod.is_allowed("docs/showcase/dontpanic-architecture.json")
+    assert mod.allows_campaign_ids_only("docs/showcase/dontpanic-architecture.json")
+    # scan_line with secrets_only=True skips campaign-ID literals but still
+    # runs secret regexes.
+    fake_key = "AKIA" + "1234567890ABCDEF12"
+    assert mod.scan_line(fake_key, secrets_only=True) is not None
+    # And under secrets_only mode, a project-ID literal IS skipped (the
+    # operator-generated artifact may legitimately reference project IDs in
+    # module paths / schema descriptions).
+    project_id_literal = mod.PATTERNS[0]
+    assert mod.scan_line(project_id_literal, secrets_only=True) is None
+    # Default mode (secrets_only=False) still catches campaign IDs.
+    assert mod.scan_line(project_id_literal) is not None
+
+
+def test_sanitization_check_full_path_secrets_scanned_under_docs_showcase(tmp_path, monkeypatch):
+    """End-to-end: a fake secret committed under docs/showcase/ must be
+    flagged by main() — proves the split policy actually runs scan_line
+    instead of skipping it via is_allowed()."""
+    spec = importlib.util.spec_from_file_location(
+        "sanitization_check_full_path_f001",
+        REPO_ROOT / "scripts" / "sanitization_check.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    # Synthesize a fake AWS key in a content blob; assert scan_line catches it
+    # under the secrets_only=True path that docs/showcase/ uses.
+    leaky_line = "fake_creds = AKIA" + "1234567890ABCDEF12"
+    rule = mod.scan_line(leaky_line, secrets_only=True)
+    assert rule is not None
+    assert rule.startswith("secret-shape:")
 
 
 # ── Default config sanity ─────────────────────────────────────────────────

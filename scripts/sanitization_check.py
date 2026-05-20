@@ -108,9 +108,6 @@ ALLOWED_PREFIXES = (
     "docs/plans/",
     "docs/roadmap-",  # operator planning docs by definition reference operator's project IDs
     "docs/architecture/",  # generated map that inventories docs/plans/ plan titles (already allowlisted)
-    # Plan 2026-05-19-005 F001: showcase artifacts. Redactor strips absolute
-    # paths pre-write; secret-shape regexes still apply to every line.
-    "docs/showcase/",
     "dashboard/state/",
     ".git/",
     "claude/projects/",
@@ -120,6 +117,19 @@ ALLOWED_PREFIXES = (
     ".pytest_cache/",
     ".secrets/",
     "scripts/maintainer/",  # gitignored, but defense-in-depth if it slips
+)
+
+# Prefixes that allow campaign-ID literals (because the artifact is
+# operator-generated dogfood content that legitimately references the
+# operator's own project IDs in module paths / schema descriptions) BUT
+# MUST still get secret-shape scanned. Plan 2026-05-19-005 F001 auditor
+# finding: putting docs/showcase/ into ALLOWED_PREFIXES skipped BOTH
+# campaign IDs AND secret shapes, which broke the security invariant.
+# Split: this tuple skips only the campaign-ID literal check; secret
+# regexes (AWS / GitHub / Anthropic / OpenAI / Slack / PEM / JWT /
+# Discord webhook) still run.
+CAMPAIGN_IDS_OK_BUT_SCAN_SECRETS = (
+    "docs/showcase/",
 )
 # Specific files allowed to retain identifiers. The sanitization script
 # itself contains the assembled patterns; CONTRIBUTING.md explicitly
@@ -143,6 +153,10 @@ ALLOWED_GLOBS = (
 
 
 def is_allowed(rel_path: str) -> bool:
+    """True when the file is fully exempt from scanning (campaign IDs AND
+    secret shapes). For the split case where campaign IDs are OK but
+    secret-shape scanning still applies, see ``allows_campaign_ids_only``.
+    """
     if rel_path in ALLOWED_FILES:
         return True
     if any(rel_path.startswith(p) for p in ALLOWED_PREFIXES):
@@ -150,6 +164,14 @@ def is_allowed(rel_path: str) -> bool:
     if any(rel_path.startswith(g) for g in ALLOWED_GLOBS):
         return True
     return False
+
+
+def allows_campaign_ids_only(rel_path: str) -> bool:
+    """True when this prefix allows campaign-ID literals but secret-shape
+    scanning still runs. Plan 2026-05-19-005 F001 introduced this split
+    after the auditor caught that putting docs/showcase/ in
+    ALLOWED_PREFIXES skipped secret scanning too."""
+    return any(rel_path.startswith(p) for p in CAMPAIGN_IDS_OK_BUT_SCAN_SECRETS)
 
 
 def tracked_files() -> list[str]:
@@ -180,15 +202,20 @@ def tracked_files() -> list[str]:
     return [line for line in proc.stdout.splitlines() if line]
 
 
-def scan_line(line: str) -> str | None:
+def scan_line(line: str, *, secrets_only: bool = False) -> str | None:
     """Return the name of the first matching rule, or None.
 
     Two rule families: campaign-ID literals (PATTERNS) and secret-shape
-    regexes (SECRET_REGEXES). Both run against every non-allowlisted line.
+    regexes (SECRET_REGEXES). Both run against every non-allowlisted line
+    by default. When ``secrets_only=True``, the campaign-ID check is
+    skipped — used for prefixes in CAMPAIGN_IDS_OK_BUT_SCAN_SECRETS where
+    operator-generated dogfood artifacts legitimately reference project
+    IDs but must still get secret-shape scanned.
     """
-    for literal in PATTERNS:
-        if literal in line:
-            return f"campaign-id:{literal[:8]}…"
+    if not secrets_only:
+        for literal in PATTERNS:
+            if literal in line:
+                return f"campaign-id:{literal[:8]}…"
     for rx in SECRET_REGEXES:
         if rx.search(line):
             return f"secret-shape:{rx.pattern[:32]}…"
@@ -200,6 +227,7 @@ def main() -> int:
     for rel in tracked_files():
         if is_allowed(rel):
             continue
+        secrets_only = allows_campaign_ids_only(rel)
         path = REPO_ROOT / rel
         if not path.is_file():
             continue
@@ -208,7 +236,7 @@ def main() -> int:
         except OSError:
             continue
         for lineno, line in enumerate(text.splitlines(), start=1):
-            rule = scan_line(line)
+            rule = scan_line(line, secrets_only=secrets_only)
             if rule is not None:
                 leaks.append((rel, lineno, rule, line.strip()[:160]))
     if leaks:
