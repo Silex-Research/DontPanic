@@ -1,0 +1,57 @@
+{
+  "task_id": "2026-05-19-002-feat-install-ux-hardening-v0",
+  "audit_id": "2026-05-19-002-feat-install-ux-hardening-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-20T15:44:59Z",
+  "completed_at": "2026-05-20T15:48:38Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-002-feat-install-ux-hardening-v0-dfv0skii target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 279097 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2319637,
+    "tokens_out": 14450,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes.\n\nImplementer target declaration is correct: summary has `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` is `env=dev`, `project=null`. No forbidden command shapes found in their `commands_run`.\n\nFINDING (high, correctness): `dontpanic doctor --profile=<name> --report` is not wired in the actual console CLI. Evidence: `scripts/dontpanic_orchestrate/cli.py:_doctor_main` lacks `--profile`, `--report`, and `--report-path`; the implementation only patched `scripts/dontpanic_doctor.py`, while `dontpanic` routes `doctor` through `_doctor_main`. Running the accepted command fails with `unrecognized arguments: --profile=core --report`. Recommendation: add the F001 profile-aware path and F004 report flags to `_doctor_main`, or delegate the console subcommand to the canonical doctor script path, and add a regression test for `dontpanic doctor --profile=core --report --report-path`.\n\nFINDING (medium, correctness): the doctor validator accepts malformed F001 envelopes missing `generated_at`. Evidence: `_DOCTOR_REQUIRED_KEYS` only includes `schema_version`, `profile`, `exit_code`, `prereq_probes`, and `render_install_report` falls back to `\"(unknown)\"`; direct check printed `missing generated_at accepted`. Recommendation: require `generated_at: str` and reject missing/wrong type with `InstallReportError`.\n\nFINDING (medium, correctness): rendered fix commands are not reliably copy-past",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_install_report_html_f004.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --profile=core --report",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate init --report --help"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "`dontpanic doctor --profile=<name> --report` is not wired in the actual console CLI. Evidence: `scripts/dontpanic_orchestrate/cli.py:_doctor_main` lacks `--profile`, `--report`, and `--report-path`; the implementation only patched `scripts/dontpanic_doctor.py`, while `dontpanic` routes `doctor` through `_doctor_main`. Running the accepted command fails with `unrecognized arguments: --profile=core --report`. Recommendation: add the F001 profile-aware path and F004 report flags to `_doctor_main`, ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "the doctor validator accepts malformed F001 envelopes missing `generated_at`. Evidence: `_DOCTOR_REQUIRED_KEYS` only includes `schema_version`, `profile`, `exit_code`, `prereq_probes`, and `render_install_report` falls back to `\"(unknown)\"`; direct check printed `missing generated_at accepted`. Recommendation: require `generated_at: str` and reject missing/wrong type with `InstallReportError`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "rendered fix commands are not reliably copy-paste-safe for argv tokens containing spaces or shell metacharacters. Evidence: `_render_whats_next` and `_render_probe_card` use `\" \".join(fix_command)`, so `[\"python\", \"-c\", \"print(1) and more\"]` renders as `python -c print(1) and more`. Recommendation: use `shlex.join()` before escaping. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_install_report_html_f004.py -q -p no:cacheprovi",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

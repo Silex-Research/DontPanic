@@ -126,11 +126,22 @@
         "Run full orchestrator sweep + sanitization check. Sanity-check the rendered HTML in Chrome on macOS (operator-side, not test-automated)."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/init/report_html.py exposes render_install_report(doctor_payload, smoke_payload) -> str + InstallReportError + _validate_doctor_payload + _validate_smoke_payload. (2) Output is single-page self-contained HTML5: no JS framework, no external CSS, no external fonts; mobile-responsive (single column <800px, two-column wider); copy-paste-friendly fix commands. (3) `dontpanic doctor --profile=<name> --report` and `dontpanic init --report` write to docs/install-report.html (or --report-path override). docs/install-report.html added to .gitignore. (4) All operator-facing output html.escape'd at every interpolation seam (no injection). (5) Validator rejects malformed payloads (missing schema_version, wrong types) with operator-actionable error. (6) New test module test_install_report_html_f004.py with >=8 cases mirroring Plan 4 F002 b6-b9 patterns. (7) Full sweep at or above lock-time baseline; sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T16:00:58Z"
     }
   ]
 }

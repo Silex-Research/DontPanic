@@ -2,12 +2,12 @@
 status: operator_resolved
 reason_class: implementation_defect
 plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
-feature_id: F003
-closed_at: 2026-05-20T15:20:05Z
+feature_id: F004
+closed_at: 2026-05-20T16:00:58Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-19-002-feat-install-ux-hardening-v0 / F003
+# Closeout memo — 2026-05-19-002-feat-install-ux-hardening-v0 / F004
 
 ## Operator decision
 
@@ -19,15 +19,17 @@ This feature was closed under class `implementation_defect` after operator revie
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 2 (see structured target_context.commands_run)
+- Command: 5 (see structured target_context.commands_run)
 
-[F003] Repo: DontPanic
+[F004] Repo: DontPanic
 Env: dev
 Project: (none)
 
-Overall verdict: needs_changes. The implementer audit summary declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; `target_context.commands_run` was empty, so I found no forbidden command shapes there.
+Overall verdict: needs_changes.
 
-FINDING (high, correctness): `dontpanic smoke --mode=mocked --json` crashes instead of returning exit code 2 for an env blocker. Evidence: `run_smoke()` catches `tempfile.mkdtemp()` failure, then calls `tempfile.gettempdir()` again while formatting the error at `scripts/dontpanic_orchestrate/smoke/__init__.py:611-614`, producing an uncaught `FileNotFoundError`. Recommendation: avoid re-calling `get...
+Implementer target declaration is correct: summary has `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` is `env=dev`, `project=null`. No forbidden command shapes found in their `commands_run`.
+
+FINDING (high, correctness): `dontpanic doctor --profile=<name> --report` is not wired in the actual console CLI. Evidence: `scripts/dontpanic_orchestrate/cli.py:_doctor_main` lacks `--profile`, `--report`, and `--report-path`; the implementation only patched `scripts/dontpanic_doctor.py`, while `dontpanic` routes `doctor` through `_doctor_main`. Running the acc...
 
 ## Rationale (operator — fill in)
 

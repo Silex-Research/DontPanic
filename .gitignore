@@ -83,3 +83,8 @@ dashboard/firebase-config.local.js
 # Architecture map HTML — regenerated locally on demand (plan
 # 2026-05-19-004 F002). architecture.json IS tracked; the HTML is not.
 docs/architecture/architecture.html
+
+# Install report HTML — regenerated locally on demand (plan
+# 2026-05-19-002 F004). Produced by `dontpanic doctor --profile=<name>
+# --report` or `dontpanic init --report`.
+docs/install-report.html

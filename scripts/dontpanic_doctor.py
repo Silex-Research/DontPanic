@@ -2137,6 +2137,25 @@ def main(argv: list[str] | None = None) -> int:
             "--architecture-drift-strict flags."
         ),
     )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help=(
+            "Plan 2026-05-19-002 F004: also render the install report "
+            "to docs/install-report.html (or the --report-path override). "
+            "Requires --profile=<name>; the legacy no-flag path is "
+            "unaffected. Output is gitignored."
+        ),
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=None,
+        help=(
+            "Override the install-report output path. Default = "
+            "<repo>/docs/install-report.html. Only honored with --report."
+        ),
+    )
     args = parser.parse_args(argv)
 
     results = run_all_checks(
@@ -2161,6 +2180,26 @@ def main(argv: list[str] | None = None) -> int:
             legacy_results=results,
         )
         print(rendered)
+        if args.report:
+            # Plan 2026-05-19-002 F004: render install-report HTML
+            # alongside the normal output. Build a fresh envelope (so the
+            # report contains the structured shape regardless of whether
+            # --json was requested) and write to docs/install-report.html
+            # by default, or the operator's --report-path override.
+            from dontpanic_orchestrate.init.report_html import (
+                write_install_report,
+            )
+            pr = _load_prereq_registry()
+            activation_context = pr.build_activation_context(REPO_ROOT)
+            sweep = pr.run_sweep(
+                profile=args.profile,
+                activation_context=activation_context,
+                profile_strict=args.profile_strict,
+            )
+            doctor_envelope = pr.envelope_for_sweep(sweep)
+            out_path = args.report_path or (REPO_ROOT / "docs" / "install-report.html")
+            written = write_install_report(doctor_envelope, None, out_path)
+            print(f"[report] wrote {written}", file=sys.stderr)
         return exit_code
     print(render_json(results) if args.json else render_text(results))
     # The --validate-plans-strict and --architecture-drift-strict flags

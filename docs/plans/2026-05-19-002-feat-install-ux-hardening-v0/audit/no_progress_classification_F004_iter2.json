@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T15:48:38Z",
+  "feature_id": "F004",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "`dontpanic doctor --profile=<name> --report` is not wired in the actual console CLI. Evidence: `scripts/dontpanic_orchestrate/cli.py:_doctor_main` lacks `--pro…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "the doctor validator accepts malformed F001 envelopes missing `generated_at`. Evidence: `_DOCTOR_REQUIRED_KEYS` only includes `schema_version`, `profile`, `exi…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "rendered fix commands are not reliably copy-paste-safe for argv tokens containing spaces or shell metacharacters. Evidence: `_render_whats_next` and `_render_p…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}
