@@ -1,41 +1,184 @@
 {
-  "staged": [],
+  "staged": [
+    {
+      "path": "dashboard/functions/RUNBOOK.md",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/adapters-example.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/linear-config-example.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/smoke-trace-linear.jsonl",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/adapters/__init__.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/adapters/linear_adapter.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/integrations/linear_pp_adapter.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/fake_cli/fake-pp-linear",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py",
+      "status": "A"
+    }
+  ],
   "unstaged_modified": [
     {
-      "path": ".gitignore",
+      "path": "dashboard/config-firebase.js",
       "status": "M"
     },
     {
-      "path": "dashboard/core.js",
+      "path": "dashboard/functions/RUNBOOK.md",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/INBOX.md",
+      "path": "dashboard/lib/mission-control-logic.js",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/audit/gate-state.json",
+      "path": "dashboard/pages/mission-control/mission-control.js",
+      "status": "M"
+    },
+    {
+      "path": "dashboard/vitest.config.js",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/features.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/features.json",
       "status": "M"
     },
     {
       "path": "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events.jsonl",
       "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "firebase.json",
+      "status": "M"
     }
   ],
   "untracked": [
-    "dashboard/config-firebase.example.js",
-    "dashboard/config-firebase.js",
-    "dashboard/index-firebase.html",
-    "dashboard/tests/fixtures/firestore-mock.json",
-    "dashboard/tests/helpers/firestore-stub.js",
-    "dashboard/tests/integration/firebase-adapter.test.js",
-    "dashboard/tests/unit/config-firebase.test.js",
-    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/INBOX.md",
-    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/",
-    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/",
-    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/INBOX 2.md",
-    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/events 2.jsonl",
-    "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/evidence/dispatch-plan004-f001-attempt1.log"
+    "dashboard/functions/index.js",
+    "dashboard/functions/lib/",
+    "dashboard/functions/package.json",
+    "dashboard/functions/tests/",
+    "dashboard/lib/realtime-actions.js",
+    "dashboard/tests/unit/realtime-actions.test.js",
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/claude-implementer-F003-i1.json",
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/audit/codex-auditor-F003-i0.json",
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/F003-callables-tests.log",
+    "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/evidence/F003-impl-notes.md",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/claude-implementer-F003-i1.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F003-i0.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/codex-auditor-F003-i1.json",
+    "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/audit/no_progress_classification_F003_iter2.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/codex-auditor-F002-i1.json",
+    "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/audit/no_progress_classification_F002_iter2.json",
+    "scripts/firebase_adapter/mcp_http_bridge.py",
+    "scripts/firebase_adapter/tests/test_mcp_http_bridge.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

@@ -69,3 +69,62 @@ export function deriveColumn(task) {
   if (task.column && MC_COLUMNS.includes(task.column)) return task.column;
   return STATUS_TO_COLUMN[task.status] || 'backlog';
 }
+
+/**
+ * Pure resolver for a kanban drag — given the task being dragged and the
+ * column it landed on, decide whether to call the kanbanMove callable and
+ * with what args, or surface a structured local rejection. Used by both
+ * the mission-control page's drop handler and the realtime-actions
+ * integration test (plan 2026-05-09-004 F003 audit-i1).
+ *
+ * Returns one of:
+ *   - { action: 'noop', reason: 'same-column' | 'unknown-column' | … }
+ *   - { action: 'reject-local', code, message } — surface to UI, do NOT
+ *     hit the callable. Used to short-circuit drags that are
+ *     definitely-unsupported in v0 so users see the message immediately.
+ *   - { action: 'invoke', planId, currentColumn, newColumn, featureId? }
+ *     — the dashboard should call realtimeActions.kanbanMove(...) and
+ *     react to the result.
+ *
+ * The list of "definitely unsupported" transitions is kept in sync with
+ * `dashboard/functions/lib/column-mapping.js` — the source of truth is on
+ * the Cloud Function side so we can't drift, but pre-flighting here makes
+ * the UX snappy and gives us a unit-test seam.
+ *
+ * @param {{ taskId: string, sourceColumn: string, targetColumn: string }} args
+ * @returns {object}
+ */
+export function resolveDragIntent({ taskId, sourceColumn, targetColumn }) {
+  if (!taskId || typeof taskId !== 'string') {
+    return { action: 'noop', reason: 'no-task-id' };
+  }
+  if (!MC_COLUMNS.includes(targetColumn)) {
+    return { action: 'noop', reason: 'unknown-target-column' };
+  }
+  if (sourceColumn && !MC_COLUMNS.includes(sourceColumn)) {
+    return { action: 'noop', reason: 'unknown-source-column' };
+  }
+  if (sourceColumn === targetColumn) {
+    return { action: 'noop', reason: 'same-column' };
+  }
+  // v0: only todo → in_progress is wired to an MCP tool (dispatch). Every
+  // other drop must be rejected at the local layer so the user sees the
+  // hint instead of waiting on a Cloud Function round-trip.
+  if (sourceColumn === 'todo' && targetColumn === 'in_progress') {
+    return {
+      action: 'invoke',
+      planId: taskId,
+      currentColumn: sourceColumn,
+      newColumn: targetColumn,
+    };
+  }
+  return {
+    action: 'reject-local',
+    code: 'transition-not-supported-v0',
+    message: (
+      `Kanban drag ${sourceColumn || '?'} → ${targetColumn} is not wired to an ` +
+      'MCP tool in v0. Use the modal\'s Approve / Dispatch buttons or the CLI ' +
+      'for other status changes.'
+    ),
+  };
+}

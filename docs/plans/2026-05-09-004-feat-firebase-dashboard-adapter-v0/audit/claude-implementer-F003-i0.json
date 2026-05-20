@@ -1,0 +1,45 @@
+{
+  "task_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+  "audit_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-20T21:23:13Z",
+  "completed_at": "2026-05-20T21:32:22Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-09-004-feat-firebase-dashboard-adapter-v0-2s4s2wmu target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3714 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 9156982,
+    "tokens_out": 36040,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Final verification: features.json is valid JSON, all 39 new tests pass, no regression in the existing 356 dashboard tests (395/395 total).\n\n## Summary\n\n**Repo:** DontPanic · **Env:** dev · **Project:** (none)\n\nF003 ships code-only per parent_acceptance_item / D007 — `firebase deploy` stays operator-gated until `jarvis-a6ee1` credentials reactivate. Landed:\n\n- **`dashboard/functions/index.js`** — three v2 `onCall` callables (`kanbanMoveCallable`, `approveGateCallable`, `triggerDispatchCallable`) with HttpsError translation + secret/param plumbing.\n- **`dashboard/functions/lib/`** — `mcp-bridge.js` (JSON-RPC 2.0 `tools/call` over the operator's tunnel with bearer auth + boundary-enforced `confirm:true` per D003), `auth.js` (Operator / Observer role resolver via allowlist or `dontpanic_role` custom claim), `column-mapping.js` (v0 supported-transition allowlist for kanban → `set_plan_status`), `callables.js` (dependency-injected handlers).\n- **`dashboard/functions/tests/`** — 39 vitest cases across 4 files (mcp-bridge, auth, column-mapping, callables) covering happy path, unauth/observer rejection (acceptance #3), MCP `confirm:true` enforcement (acceptance #2), bridge-side error surfacing, and end-to-end smoke against a fake bridge (acceptance #4).\n- **`dashboard/functions/RUNBOOK.md`** — Tailscale Funnel walkthrough + Cloudflare Tunnel / ngrok alternates, env-var/secret config table, deploy + smoke-test procedure.\n- **`firebase.json`** — added `functions` block (source=`dashboar",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "mkdir -p /Users/bayesian/Documents/GitHub/DontPanic/dashboard/functions/lib /Users/bayesian/Documents/GitHub/DontPanic/dashboard/functions/tests",
+      "node_modules/.bin/vitest run functions/tests/",
+      "node_modules/.bin/vitest run",
+      "node_modules/.bin/vitest run functions/tests/ --reporter=verbose",
+      "python3 -c \"import json; json.load(open('docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/features.json')); print('OK')\"",
+      "printf '%s\\n' '{\"id\":\"D008\",...}' >> docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/decisions.jsonl"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

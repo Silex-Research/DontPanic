@@ -1,0 +1,48 @@
+
+ RUN  v3.2.4 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+ ✓ functions/tests/auth.test.js > parseOperatorAllowlist > returns empty set for empty / null input 1ms
+ ✓ functions/tests/auth.test.js > parseOperatorAllowlist > splits on semicolons, commas, and whitespace 0ms
+ ✓ functions/tests/auth.test.js > parseOperatorAllowlist > trims whitespace 0ms
+ ✓ functions/tests/auth.test.js > resolveRole > refuses to resolve a role when there is no authContext.uid 0ms
+ ✓ functions/tests/auth.test.js > resolveRole > maps allowlisted UID → operator 0ms
+ ✓ functions/tests/auth.test.js > resolveRole > maps custom claim dontpanic_role=operator → operator 0ms
+ ✓ functions/tests/auth.test.js > resolveRole > falls back to observer for authed but unprivileged users 0ms
+ ✓ functions/tests/auth.test.js > requireOperator > throws unauthenticated when there is no auth at all 0ms
+ ✓ functions/tests/auth.test.js > requireOperator > throws permission-denied for observer role 0ms
+ ✓ functions/tests/auth.test.js > requireOperator > returns operator for an allowlisted UID 0ms
+ ✓ functions/tests/mcp-bridge.test.js > buildToolsCallPayload > produces a JSON-RPC 2.0 tools/call envelope 1ms
+ ✓ functions/tests/mcp-bridge.test.js > buildToolsCallPayload > rejects mutations without confirm:true (D003) 0ms
+ ✓ functions/tests/mcp-bridge.test.js > buildToolsCallPayload > rejects empty tool name 0ms
+ ✓ functions/tests/mcp-bridge.test.js > buildToolsCallPayload > rejects null args 0ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > refuses construction without tunnel URL 0ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > refuses construction without tunnel token 0ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > POSTs the tools/call payload with bearer auth + content-type 1ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > surfaces HTTP errors as tunnel-http-error 1ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > surfaces MCP-side errors as mcp-error with details 0ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > surfaces network failures as tunnel-unreachable 0ms
+ ✓ functions/tests/mcp-bridge.test.js > createMcpBridge > refuses to send mutations without confirm:true at the bridge boundary 0ms
+ ✓ functions/tests/callables.test.js > approveGate > rejects unauthenticated calls 1ms
+ ✓ functions/tests/callables.test.js > approveGate > rejects observer (non-operator) UID 0ms
+ ✓ functions/tests/callables.test.js > approveGate > calls MCP approve_gate with confirm:true for operator 0ms
+ ✓ functions/tests/callables.test.js > approveGate > rejects missing planId 0ms
+ ✓ functions/tests/callables.test.js > triggerDispatch > calls MCP dispatch with confirm:true and feature id 0ms
+ ✓ functions/tests/callables.test.js > triggerDispatch > surfaces bridge errors as mcp-bridge-failure CallableError 0ms
+ ✓ functions/tests/callables.test.js > kanbanMove > calls MCP set_plan_status for a supported column move 0ms
+ ✓ functions/tests/callables.test.js > kanbanMove > rejects unsupported transitions before reaching MCP 0ms
+ ✓ functions/tests/callables.test.js > kanbanMove > rejects unauthenticated kanban moves 0ms
+ ✓ functions/tests/callables.test.js > CallableError type guard > is what handlers throw on input/auth failure 0ms
+ ✓ functions/tests/column-mapping.test.js > COLUMN_TO_STATUS > covers every kanban column 1ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > builds an MCP set_plan_status request with confirm:true 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > rejects unknown newColumn 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > rejects same-column drops as no-op 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > rejects unsupported v0 transitions (backlog→done) 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > allows review→done (acceptance close-out path) 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > allows missing currentColumn (UI may not know it) 0ms
+ ✓ functions/tests/column-mapping.test.js > resolveKanbanMove > rejects empty planId 0ms
+
+ Test Files  4 passed (4)
+      Tests  39 passed (39)
+   Start at  17:30:38
+   Duration  488ms (transform 36ms, setup 0ms, collect 61ms, tests 13ms, environment 822ms, prepare 169ms)
+
