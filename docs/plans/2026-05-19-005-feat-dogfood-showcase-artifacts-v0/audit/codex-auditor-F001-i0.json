@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+  "audit_id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T05:02:10Z",
+  "completed_at": "2026-05-20T05:07:19Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-005-feat-dogfood-showcase-artifacts-v0-4f8w55xp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 185056 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3314063,
+    "tokens_out": 16982,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer audit target declaration was correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` was empty, so I found no forbidden command shapes there.\n\nFINDING (high, correctness): `--all` does not attempt all configured targets. Evidence: `default_showcase_config()` returns `['dontpanic', 'agent-conventions', 'axiom', 'glam', 'spindine']`, but `filter_targets(..., all_flag=True)` returns only `['dontpanic', 'agent-conventions', 'axiom', 'glam']`; [generator.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/showcase/generator.py:483) hard-codes `DEFAULT_TARGETS_FOR_ALL`. Recommendation: make `--all` return every configured target, or remove non-default targets from the config and provide a separate explicit config path.\n\nFINDING (high, correctness): the main implementation surface is untracked, so the claimed feature is not committed. Evidence: `git status --short --untracked-files=all ...` shows `?? docs/showcase/...`, `?? scripts/dontpanic_orchestrate/showcase/...`, and both new test files; `git ls-files` returned nothing for those paths. Recommendation: add and commit the showcase package, tests, and generated artifact sets.\n\nFINDING (medium, correctness): `DEFAULT_SHOWCASE_CONFIG` is missing despite being an explicit acceptance item. Evidence: `hasattr(config, 'DEFAULT_SHOWCASE_CONFIG')` printed `False`; [config.py](/Users/bayes",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py scripts/dontpanic_orchestrate/tests/test_showcase_cli_integration.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --skip-auth --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate showcase --help",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --help",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate doctor --help"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`--all` does not attempt all configured targets. Evidence: `default_showcase_config()` returns `['dontpanic', 'agent-conventions', 'axiom', 'glam', 'spindine']`, but `filter_targets(..., all_flag=True)` returns only `['dontpanic', 'agent-conventions', 'axiom', 'glam']`; [generator.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/showcase/generator.py:483) hard-codes `DEFAULT_TARGETS_FOR_ALL`. Recommendation: make `--all` return every configured target, or remove non-d",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "the main implementation surface is untracked, so the claimed feature is not committed. Evidence: `git status --short --untracked-files=all ...` shows `?? docs/showcase/...`, `?? scripts/dontpanic_orchestrate/showcase/...`, and both new test files; `git ls-files` returned nothing for those paths. Recommendation: add and commit the showcase package, tests, and generated artifact sets.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`DEFAULT_SHOWCASE_CONFIG` is missing despite being an explicit acceptance item. Evidence: `hasattr(config, 'DEFAULT_SHOWCASE_CONFIG')` printed `False`; [config.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/showcase/config.py:86) exposes `default_showcase_config()` instead. Recommendation: define/export `DEFAULT_SHOWCASE_CONFIG` with 4+ `TargetSpec`s, or update acceptance and tests if the factory is intentional.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "required CLI wire-through coverage is incomplete. Evidence: the “--plans-root” and “--architecture-json” tests call `doctor.validate_plans_strict(...)` and `doctor.check_architecture_drift(...)` directly at [test_showcase_generator_f001.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py:361) and [test_showcase_generator_f001.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_showcase_generator_f0",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

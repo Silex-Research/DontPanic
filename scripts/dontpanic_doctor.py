@@ -1812,6 +1812,8 @@ def run_all_checks(
     validate_plans: bool = False,
     validate_plans_strict_mode: bool | None = None,
     architecture_drift_strict_mode: bool | None = None,
+    plans_root: Path | None = None,
+    architecture_json: Path | None = None,
 ) -> list[CheckResult]:
     """Execute the full check battery.
 
@@ -1869,8 +1871,18 @@ def run_all_checks(
         results.extend(check_registered_projects())
     if validate_plans:
         results.extend(check_plan_cohesion())
-    results.extend(validate_plans_strict(strict=bool(validate_plans_strict_mode)))
-    results.append(check_architecture_drift(strict=bool(architecture_drift_strict_mode)))
+    results.extend(
+        validate_plans_strict(
+            plans_root=plans_root,
+            strict=bool(validate_plans_strict_mode),
+        )
+    )
+    results.append(
+        check_architecture_drift(
+            architecture_path=architecture_json,
+            strict=bool(architecture_drift_strict_mode),
+        )
+    )
     return results
 
 
@@ -2030,6 +2042,29 @@ def main(argv: list[str] | None = None) -> int:
             "in both modes."
         ),
     )
+    parser.add_argument(
+        "--plans-root",
+        type=Path,
+        default=None,
+        help=(
+            "Plan 2026-05-19-005 F001: override the plans root walked by "
+            "the validate-plans-strict probe. Default = <repo>/docs/plans. "
+            "Enables showcase generator to validate plan inventories in "
+            "external checkouts (e.g. ../Glam/docs/plans) without copying "
+            "runtime code."
+        ),
+    )
+    parser.add_argument(
+        "--architecture-json",
+        type=Path,
+        default=None,
+        help=(
+            "Plan 2026-05-19-005 F001: override the architecture.json path "
+            "read by the architecture-drift probe. Default = "
+            "<repo>/docs/architecture/architecture.json. Enables drift "
+            "evaluation against an external snapshot."
+        ),
+    )
     args = parser.parse_args(argv)
 
     results = run_all_checks(
@@ -2038,6 +2073,8 @@ def main(argv: list[str] | None = None) -> int:
         validate_plans=args.validate_plans,
         validate_plans_strict_mode=args.validate_plans_strict,
         architecture_drift_strict_mode=args.architecture_drift_strict,
+        plans_root=args.plans_root,
+        architecture_json=args.architecture_json,
     )
     print(render_json(results) if args.json else render_text(results))
     # The --validate-plans-strict and --architecture-drift-strict flags

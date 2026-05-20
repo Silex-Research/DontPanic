@@ -1,0 +1,13 @@
+{
+  "findings": [],
+  "label": "Glam",
+  "per_plan": [],
+  "plans_root": "./docs/plans",
+  "repo_key": "glam",
+  "summary": {
+    "message": "0 locked plan(s) under ./docs/plans validate clean against plan.schema.json",
+    "name": "validate-plans-strict",
+    "ok": true,
+    "warn": false
+  }
+}
