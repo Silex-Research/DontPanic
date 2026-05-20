@@ -135,3 +135,102 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-20T12:26:39Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-20T12:26:39Z
+event: volley_start
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-20T12:48:23Z
+event: no_progress_classification
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+aggregate: unknown
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F002
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=medium, category=correctness: Walker does not re-run each probe immediately after operator action. Evidence: `Walker.run()` iterates over `initial.probes`, calls `_handle_probe()`, then onl…
+  - [unknown] severity=advisory, category=test_coverage: The CLI integration test does not spawn `python -m dontpanic_orchestrate init ...` against a synthetic fixture as required. Evidence: subprocess tests at `test…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-19-002-feat-install-ux-hardening-v0 F002 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-20T12:48:23Z
+event: breaker_tripped
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-19-002-feat-install-ux-hardening-v0 breaker:no_progress` or `jarvis resume 2026-05-19-002-feat-install-ux-hardening-v0 --all`.
+
+===
+---
+timestamp: 2026-05-20T12:48:24Z
+event: volley_terminal
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-20T13:15:43Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-002-feat-install-ux-hardening-v0
+feature_id: F002
+reason_class: implementation_defect
+---
+
+Operator closed feature F002 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-19-002-feat-install-ux-hardening-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

@@ -2498,6 +2498,7 @@ Private-alpha command surface:
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
   doctor                         Run local readiness checks
+  init                           Interactive installer (default --profile=core)
   architecture regen|status|diff Codebase + plan snapshot + drift surface
   showcase regen                 Generate showcase artifacts for external repos
   plan lock|audit|close          Goal-governed plan lifecycle gates
@@ -2567,6 +2568,9 @@ def main(argv: list[str] | None = None) -> int:
         return _dispatch_from_plan_main(raw[1:])
     if raw and raw[0] == "doctor":
         return _doctor_main(raw[1:])
+    if raw and raw[0] == "init":
+        from dontpanic_orchestrate.init import init_main as _init_main
+        return _init_main(raw[1:])
     if raw and raw[0] == "architecture":
         from dontpanic_orchestrate import architecture as _arch
         return _arch.cli_main(raw[1:])

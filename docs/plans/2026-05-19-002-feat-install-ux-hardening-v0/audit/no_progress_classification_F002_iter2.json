@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-20T12:48:23Z",
+  "feature_id": "F002",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "Walker does not re-run each probe immediately after operator action. Evidence: `Walker.run()` iterates over `initial.probes`, calls `_handle_probe()`, then onl…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "advisory",
+      "category": "test_coverage",
+      "issue_excerpt": "The CLI integration test does not spawn `python -m dontpanic_orchestrate init ...` against a synthetic fixture as required. Evidence: subprocess tests at `test…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}
