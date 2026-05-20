@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
+  "audit_id": "2026-05-19-004-feat-architecture-map-with-drift-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-20T03:34:09Z",
+  "completed_at": "2026-05-20T03:36:57Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-004-feat-architecture-map-with-drift-v0-oq3zor0j target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 207241 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1203649,
+    "tokens_out": 11229,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\nCommand: (none; audit complete)\n\nVerdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their recorded commands contain no forbidden shapes.\n\nFINDING (medium, correctness): JSON output does not include an `architecture_drift` section as specified. Evidence: `render_json()` only emits top-level `checks/passed/failed/warnings`, with drift nested under a `checks[]` entry named `architecture-drift`; `changed_files` is also a categorized dict, not the requested list. Recommendation: add a stable `architecture_drift` JSON section or align the acceptance/tests to the existing `checks[]` contract.\n\nFINDING (medium, correctness): Missing required modules/plans are not explicitly promoted to `stale_major`. Evidence: `_classify_architecture_drift()` only uses changed-file ratio; `Crawler._plan_fingerprint_files()` returns `[]` when `docs/plans` is absent, so a small missing required surface can classify as `stale_minor`. Recommendation: add required-root/module/plan presence checks before ratio classification.\n\nFINDING (low, test_coverage): The performance test does not enforce the `<2s` acceptance budget. Evidence: `test_probe_runs_fast_on_live_repo` asserts `<5.0` while the acceptance requires `<2s`. Recommendation: assert `<2.0` or split a strict local performance assertion from a looser CI smoke test.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_architecture_drift_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/dontpanic_doctor.py --skip-auth --json",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c \"import importlib.util,sys,time; from pathlib import Path; p=Path('scripts/dontpanic_doctor.py').resolve(); spec=importlib.util.spec_from_file_location('doctor_perf_audit', p); m=importlib.util.module_from_spec(spec); sys.modules['doctor_perf_audit']=m; spec.loader.exec_module(m); t=time.perf_counter(); r=m.check_architecture_drift(); dt=time.perf_counter()-t; print(f'{dt:.4f}s {r.name} {r.details[0].get(\\\"state\\\")}')\"",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "JSON output does not include an `architecture_drift` section as specified. Evidence: `render_json()` only emits top-level `checks/passed/failed/warnings`, with drift nested under a `checks[]` entry named `architecture-drift`; `changed_files` is also a categorized dict, not the requested list. Recommendation: add a stable `architecture_drift` JSON section or align the acceptance/tests to the existing `checks[]` contract.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Missing required modules/plans are not explicitly promoted to `stale_major`. Evidence: `_classify_architecture_drift()` only uses changed-file ratio; `Crawler._plan_fingerprint_files()` returns `[]` when `docs/plans` is absent, so a small missing required surface can classify as `stale_minor`. Recommendation: add required-root/module/plan presence checks before ratio classification.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The performance test does not enforce the `<2s` acceptance budget. Evidence: `test_probe_runs_fast_on_live_repo` asserts `<5.0` while the acceptance requires `<2s`. Recommendation: assert `<2.0` or split a strict local performance assertion from a looser CI smoke test. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-only HEAD~1 $ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_architecture_drift_f003.py -",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

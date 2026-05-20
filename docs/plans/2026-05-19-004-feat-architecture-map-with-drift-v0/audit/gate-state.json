@@ -44,6 +44,28 @@
       "gate": "breaker:no_progress",
       "at": "2026-05-20T02:53:19Z",
       "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-20T03:37:00Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-20T03:44:52Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-20T03:47:54Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
@@ -56,5 +78,10 @@
   ],
   "completed_stages": [
     "pre_impl"
-  ]
+  ],
+  "paused_at": "2026-05-20T03:37:00Z",
+  "pause_gates": [
+    "pre_merge"
+  ],
+  "pending_stage": "pre_merge"
 }

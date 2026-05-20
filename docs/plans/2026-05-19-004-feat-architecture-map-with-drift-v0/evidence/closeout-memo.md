@@ -1,17 +1,17 @@
 ---
 status: operator_resolved
-reason_class: implementation_defect
+reason_class: spec_ambiguity
 plan_id: 2026-05-19-004-feat-architecture-map-with-drift-v0
-feature_id: F002
-closed_at: 2026-05-20T02:53:19Z
+feature_id: F003
+closed_at: 2026-05-20T03:48:03Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F002
+# Closeout memo — 2026-05-19-004-feat-architecture-map-with-drift-v0 / F003
 
 ## Operator decision
 
-This feature was closed under class `implementation_defect` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `spec_ambiguity` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,15 +19,15 @@ This feature was closed under class `implementation_defect` after operator revie
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 8 (see structured target_context.commands_run)
+- Command: 7 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic
-Env: dev
+[F003] Repo: DontPanic  
+Env: dev  
 Project: (none)
 
-Verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains no forbidden command shapes.
+Overall verdict: needs_changes. Implementer summary declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and recorded commands contain no forbidden shapes.
 
-FINDING (high, correctness): Schema-invalid `architecture.json` can still render instead of failing clearly. Evidence: `architecture_html.py` does not validate against `architecture-snapshot.schema.json`; it intentionally excludes required `schema_version`, and my smoke check rendered a snapshot missing `schema_version`. Recommendation: validate the snapshot against the schema, or mirror all required fields/types, and raise `Arch...
+FINDING (medium, correctness): The required `--strict` mode is not wired for architecture drift. Evidence: `features.json:77-82` requires `--strict` to block on `stale_major`/`ABSENT`, but `scripts/dontpanic_doctor.py:1992-2040` only wires `--strict-codes` and `--architecture-drift-strict`; `scripts/dontpanic_orchestrate/cli.py:1464-1492` also only exposes `--architecture-drift-strict`. Running `--strict` on the script is accepted as an argpar...
 
 ## Rationale (operator — fill in)
 
@@ -44,3 +44,7 @@ Explain in 2-4 sentences:
 - `audit/signoff-2026-05-19-004-feat-architecture-map-with-drift-v0.json`
 - `(latest auditor envelope not located)`
 
+
+## Return Condition
+
+F003 (doctor architecture_drift probe) + F005 (opt-in pre-commit hook) shipped together in this commit. F005 signed_off on iter0 (1 round) with one advisory (perf-test rename — patched). F003 stopped_no_progress on flag-naming spec_ambiguity (implementer's `--architecture-drift-strict` chosen over spec's `--strict` to avoid argparse abbreviation collision with existing `--strict-codes`; mirrors `--validate-plans-strict` pattern from Plan 3 F003). No hand-patch required for F003. Full sweep 2036 passed / 7 skipped; sanitization clean (1288 files). See D005 (F005) + D006 (F003).

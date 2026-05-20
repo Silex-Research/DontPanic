@@ -80,10 +80,21 @@
         "Run full sweep + sanitization."
       ],
       "acceptance": "(1) dontpanic_doctor.py has architecture_drift probe registered. (2) Default mode emits advisory output; --strict mode blocks on stale_major or ABSENT. (3) JSON output includes architecture_drift section with state + changed_files + recommendation. (4) Fixture tests cover ≥5 cases including fresh, stale_minor, stale_major, ABSENT, and --strict blocker. (5) Probe runs in <2s on this codebase. (6) Full sweep ≥1929 green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=spec_ambiguity)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T03:48:03Z"
     },
     {
       "id": "F004",
@@ -120,10 +131,21 @@
         "Run full sweep + sanitization."
       ],
       "acceptance": "(1) `dontpanic architecture hook --install` installs a .git/hooks/pre-commit that defaults to warn-only behavior. (2) Default mode prints warning + regen command when stale; does NOT block the commit; does NOT mutate staged files. (3) `--auto-regen` mode regenerates + stages architecture.json before commit. (4) `--install` preserves any existing pre-commit hook via backup + wrapper. (5) `--uninstall` removes the DontPanic hook + restores backup. (6) Hook completes in <1s on this codebase. (7) Fixture tests cover ≥5 cases. (8) Full sweep ≥1929 green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-20T03:47:54Z"
     }
   ]
 }

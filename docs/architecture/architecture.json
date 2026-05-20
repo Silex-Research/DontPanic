@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-20T02:53:23Z",
+  "generated_at": "2026-05-20T03:48:13Z",
   "modules": [
     {
       "imports": [],
@@ -95,6 +95,32 @@
         "status"
       ],
       "summary": "dontpanic architecture — crawler + CLI for a stable architecture snapshot."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "os",
+        "pathlib",
+        "shutil",
+        "stat",
+        "sys"
+      ],
+      "name": "dontpanic_orchestrate.architecture_hook",
+      "path": "scripts/dontpanic_orchestrate/architecture_hook.py",
+      "public_symbols": [
+        "BACKUP_SUFFIX",
+        "HOOK_NAME",
+        "HOOK_TEMPLATE",
+        "HookPaths",
+        "SENTINEL",
+        "build_hook_script",
+        "install",
+        "is_dontpanic_hook",
+        "status",
+        "uninstall"
+      ],
+      "summary": "dontpanic architecture hook — opt-in pre-commit installer."
     },
     {
       "imports": [
@@ -1977,7 +2003,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-20T02:53:23Z",
+    "computed_at": "2026-05-20T03:48:13Z",
     "file_hashes": {
       "claude/shared/VERSION": "0ab4fa190ca1b1d1f630ac87cf34672bfbaf1395d0148c7568d38e58335b8d68",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -2090,19 +2116,20 @@
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md": "8ec5179ed3d18eb018be9c244a54532f69819d1fc4c5b5924c462e9d379f6b03",
       "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "6523a79523f8538d5ba8e3db0f81af09b691b50b8cd18a437543dcc8d9d155ed",
       "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md": "60b89d82a76a55e3bdb5037f1a188f91c09850df546dde04d9034e960974359a",
-      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "74340b29100edd11a59ccc0652cced290e797d021c9ed3b28f67a8c33e93265a",
+      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "728b2eb73b6576689d286bc05aa16cde6b94a1705747f709ceec77a77d24dbfe",
       "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md": "344e84b174b1e35a48dc43a305bf338a460a9c949cc3957c4127869cc0c02aae",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
       "scripts/dontpanic_orchestrate/active_supervisors.py": "4e0a75b8435e0e0a99e5f5259dd75578f2c85a889474f101ed48262132fe5408",
       "scripts/dontpanic_orchestrate/agent_manifest.py": "247cfefd2a5bc21c4904a24c6acb584b19e5d0096a2d989149fb3e0dd09bce8c",
-      "scripts/dontpanic_orchestrate/architecture.py": "b41d25cb9d9b36e212df473f268db35d723a48eb8d27977715cdbba5e058633d",
+      "scripts/dontpanic_orchestrate/architecture.py": "f1d1d68742d38c360ee60afcf831216133fbee83ad4a77961efbf3a2338564c1",
+      "scripts/dontpanic_orchestrate/architecture_hook.py": "25b3818a324444f5610ec7539ab560ce6ed47686a24ddf55f3167779fe763313",
       "scripts/dontpanic_orchestrate/architecture_html.py": "c00b3cd5dfd21ae7da189ba5c10058c03566eb7dcf6144cb1e20b411e00f8172",
       "scripts/dontpanic_orchestrate/audit_writer.py": "5d1c762c312e8ae4a58ffc605fec79314922cb3775d184338f6bd4a5d6597480",
       "scripts/dontpanic_orchestrate/auditor_taxonomy.py": "91b2981203a0cd125dfed077d6e0dcc37137058b2e895c91e427c4d18df9a15a",
       "scripts/dontpanic_orchestrate/calibration_loader.py": "31b0cc76eb596bdde4ab9a189c543d78ace6bad8c1bcd76f60410d3385d00a96",
       "scripts/dontpanic_orchestrate/circuit_breakers.py": "20b51629a021346516c349f44469509498d6d2cd21838407ede6efebd68369b3",
-      "scripts/dontpanic_orchestrate/cli.py": "bd00aaf779c94c0d82ed140ec1e8f8950505b8a15cf3c6ed1c33549d9cfd9d48",
+      "scripts/dontpanic_orchestrate/cli.py": "b97e41d79b509773a31932c46a3d6450af5708cc43afbb2fd5e80f86b11eb553",
       "scripts/dontpanic_orchestrate/closeout.py": "e0b4a65d5b05a1b6b1c2339add1b833366d98a0a8a5570a8c02fbf390a346752",
       "scripts/dontpanic_orchestrate/command_guard.py": "53ed08234b3c4472b12d4c468291151ffd0542b78f06405baa11482cdc0cb1d6",
       "scripts/dontpanic_orchestrate/completion_auditor.py": "5eaf04e6e95f9b222617bfb773ae58f3908db79db06acf5b234cebdb154cbe15",
@@ -2184,6 +2211,7 @@
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-dom.html": "33d47ae50455893d7fbd6330d5bf3f2611f760d88df076509ce35b86bfe6b3a9",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-network.json": "ca5e712169f666b43010ec6062e3f811fe2a1269b20f7f18aca8a3c4c2a7f96c",
       "scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py": "be7dec5376363e7775ceb735af3d384464d2e0a097a361253a3d0301f322218e",
+      "scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py": "7e2bba3031c1dc5c21c04cf48933649c1bd7f0c6366cdc67b1700acddf964c34",
       "scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py": "98492a10450039b4db118eb89e92165c86e245c8cf75832d0f489214cb495423",
       "scripts/dontpanic_orchestrate/tests/test_audit_envelope_timeout_evidence.py": "a4ece01031dbe0d28b8fc1c2fbefcb4d25e2f6f9c4b4a320c98378fc16e593f5",
       "scripts/dontpanic_orchestrate/tests/test_audit_filename_feature_id.py": "09b37753438d206b7d87726003239088c7118d5160ba2019de2b73027305788f",
@@ -2199,6 +2227,7 @@
       "scripts/dontpanic_orchestrate/tests/test_completion_gate.py": "9a8d92b7dc73bf2707cdd02afbfbe5c2739b790578c8a83648ef4fd8feb4290b",
       "scripts/dontpanic_orchestrate/tests/test_conftest_global_config_isolation.py": "5b1477de9c43b4a25c4b5bc2faf056ac5e56d30007726fb1b60a9be9331745a0",
       "scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py": "144b68be1f0e0ba73bb71989a1f0985b7c9e186c65cd56ec0774e4855ca41ae5",
+      "scripts/dontpanic_orchestrate/tests/test_doctor_architecture_drift_f003.py": "d35f69c0d57ec079360e2dd0746f922be671004463f9917e0987a7a0f8a485d6",
       "scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py": "ff2e9c88e3cb1c482d8d71aa18c528d63bd0551fe130aab1ae476a4b348b735a",
       "scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py": "868665e296a910708dfff14072025a69569c94dee725d69916ddb066831af2d3",
       "scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py": "5dbf3de7086b637891b3b26b5810e678940c8f86d2a11bcfe31096cd63aebdae",
@@ -2275,7 +2304,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "c3242aa51ac53e06d052db84f86747f536768c55e608cc5cd489863a4b2c58e2",
-    "files_count": 295
+    "file_hashes_root": "277701a51e7e20151eae6b2bf0e92a0170286c8c97e743b13399cc7415f4b255",
+    "files_count": 298
   }
 }
