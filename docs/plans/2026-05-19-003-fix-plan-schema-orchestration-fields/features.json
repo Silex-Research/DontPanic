@@ -45,10 +45,21 @@
         "(operator) Close F002 via dontpanic close --operator-resolved --reason cross_repo_handoff (or equivalent) once the upstream tag is visible on the remote."
       ],
       "acceptance": "(1) agent-conventions HEAD matches DontPanic's claude/shared/ mirror byte-for-byte (no drift). (2) agent-conventions VERSION = 1.9.0. (3) v1.9.0 tag exists in agent-conventions and is pushed to the remote (Plan 5's outcome). (4) Operator close-out via CLI flips F002 passes:true with reason recorded.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/f002-agent-conventions-publication.md",
+          "note": "Operator close-out: public agent-conventions repository created, v1.9.0 tag pushed, and current v1.10.0 contract also published to avoid day-one drift."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-21T00:11:03Z"
     },
     {
       "id": "F003",

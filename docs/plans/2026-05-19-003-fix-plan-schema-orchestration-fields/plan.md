@@ -3,7 +3,7 @@ id: 2026-05-19-003-fix-plan-schema-orchestration-fields
 title: Plan schema mismatch fix — orchestration / child_charter / commit_policy
 type: fix
 tier: local
-status: active
+status: completed
 date: "2026-05-19"
 goal_type: infra
 surfaces:

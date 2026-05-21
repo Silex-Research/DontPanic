@@ -1,0 +1,8 @@
+{
+  "plan_id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
+  "feature_id": "F002",
+  "class": "operator_judgment",
+  "memo": "evidence/f002-agent-conventions-publication.md",
+  "resolved": true,
+  "resolved_at": "2026-05-21T00:20:00Z"
+}

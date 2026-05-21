@@ -334,3 +334,19 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
 ===
+---
+timestamp: 2026-05-21T00:11:03Z
+event: feature_operator_resolved
+plan_id: 2026-05-19-003-fix-plan-schema-orchestration-fields
+feature_id: F002
+reason_class: operator_judgment
+---
+
+Operator closed feature F002 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/f002-agent-conventions-publication.md
+Operator resolution: audit/operator-resolution-2026-05-19-003-fix-plan-schema-orchestration-fields-F002.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+===
