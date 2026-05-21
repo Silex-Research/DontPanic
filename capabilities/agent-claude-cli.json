@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "id": "agent-claude-cli",
+  "title": "Claude CLI agent runtime",
+  "kind": "agent_cli",
+  "category": "agent-cli",
+  "summary": "External agent CLI used by DontPanic as an implementer, auditor, or goal-auditor runtime.",
+  "setup_required": true,
+  "setup_doc": "docs/GETTING_STARTED.md#setup-tracks--pick-yours",
+  "default_in_profiles": ["core"],
+  "use_cases": ["U1", "U3", "U4", "U5", "U6", "U7"],
+  "requires": {
+    "commands": ["claude"],
+    "env": [],
+    "files": ["~/.dontpanic/config.json"],
+    "services": ["Claude account / Claude Code or CLI runtime"],
+    "auth": ["Claude CLI authenticated by operator"],
+    "config": [
+      "roles.implementer",
+      "roles.auditor",
+      "roles.goal_auditor"
+    ]
+  },
+  "verify": {
+    "doctor_profiles": ["core"],
+    "probes": ["cli:claude", "agent_role_config"],
+    "readiness": "Ready when the claude command is present and the selected DontPanic role points at claude."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "agent registry entry",
+      "dispatch envelope",
+      "audit/signoff capture",
+      "quota and breaker handling",
+      "role configuration"
+    ],
+    "adapter": [
+      "subprocess executor for claude",
+      "stream/output parsing",
+      "timeout and envelope normalization"
+    ],
+    "operator": [
+      "Claude CLI installation",
+      "account authentication",
+      "model/quota management",
+      "local CLI updates"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": true,
+    "external_mutation": "agent_subprocess_execution",
+    "allowed_path": "DontPanic supervisor invokes claude through the governed executor and captures artifacts through audit/signoff writers.",
+    "forbidden": [
+      "Bypassing supervisor gates",
+      "Untracked agent writes outside declared plan scope",
+      "Treating Claude account configuration as DontPanic-owned state"
+    ]
+  },
+  "notes": [
+    "Claude is an external runtime, not bundled by DontPanic.",
+    "Core profile may also support other agent CLIs; this manifest records the Claude-specific path."
+  ]
+}

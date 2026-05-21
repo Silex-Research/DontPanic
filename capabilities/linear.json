@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0.0",
+  "id": "linear",
+  "title": "Linear PM-tool adapter",
+  "kind": "service_adapter",
+  "category": "pm-tool",
+  "summary": "Reference PM-tool adapter for linking DontPanic plans to Linear issues and pushing plan status updates through the external integrations bridge.",
+  "setup_required": true,
+  "setup_doc": "docs/USE_CASES.md#external-evidence-providers-linear--sentry--github-projects--printing-press",
+  "default_in_profiles": [],
+  "use_cases": ["U8", "U9"],
+  "requires": {
+    "commands": ["linear-pp-cli"],
+    "env": [],
+    "files": [
+      "~/.dontpanic/adapters/linear.json",
+      "~/.dontpanic/adapters.json"
+    ],
+    "services": ["Linear workspace", "Printing Press generated adapter"],
+    "auth": ["Linear API token or adapter-managed auth"],
+    "config": [
+      "PM-tool category mapping",
+      "status mapping",
+      "priority mapping",
+      "adapter binary path and version pin"
+    ]
+  },
+  "verify": {
+    "doctor_profiles": [],
+    "probes": [
+      "adapter:linear_registered",
+      "adapter:linear_binary_present",
+      "adapter:linear_mapping_valid"
+    ],
+    "readiness": "Ready when a pinned Linear adapter is registered, its mapping validates against the PM-tool category contract, and dry-run status push can produce an external_sync evidence payload."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "PM-tool category contract",
+      "external_refs[] plan binding",
+      "external_sync evidence records",
+      "dry-run close preview",
+      "plan close/resync hooks"
+    ],
+    "adapter": [
+      "Printing Press generated Linear CLI or MCP server",
+      "Linear field mapping",
+      "status/priority translation",
+      "redaction and response normalization"
+    ],
+    "operator": [
+      "Linear workspace access",
+      "API token or auth setup",
+      "adapter installation approval",
+      "mapping review",
+      "token rotation"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "push_status",
+    "allowed_path": "DontPanic plan close/resync invokes the registered adapter for opted-in external_refs and writes durable external_sync evidence.",
+    "forbidden": [
+      "Silent external write failure",
+      "Plan close blocked solely because Linear is unreachable",
+      "Adapter writes to plan files directly"
+    ]
+  },
+  "notes": [
+    "Linear is the reference implementation for the PM-tool category, not a core dependency.",
+    "Additional PM tools should use the same category contract before adding service-specific Python code."
+  ]
+}
