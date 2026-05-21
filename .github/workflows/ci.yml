@@ -42,6 +42,19 @@ jobs:
           git config --global user.email "dontpanic-ci@example.invalid"
           git config --global commit.gpgsign false
 
+      - name: CI doctor fixture environment
+        # The doctor tests exercise --skip-auth behavior, not real Firebase
+        # auth. Give the runner a harmless firebase executable + target project
+        # so advisory-mode plan-validation tests are not polluted by missing
+        # local operator tooling.
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/usr/bin/env sh\nexit 0\n' > "$RUNNER_TEMP/bin/firebase"
+          chmod +x "$RUNNER_TEMP/bin/firebase"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "DONTPANIC_FIREBASE_PROJECT=ci-placeholder" >> "$GITHUB_ENV"
+          echo "JARVIS_FIREBASE_PROJECT=ci-placeholder" >> "$GITHUB_ENV"
+
       - name: Pydantic schema imports
         # Loads every promoted v1.0 Pydantic model. Same set jarvis_doctor checks.
         run: |
