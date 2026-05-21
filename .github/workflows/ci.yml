@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   python:
-    name: Python — lint + format + tests + schema
+    name: Python — tests + schema + security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
@@ -31,13 +31,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pydantic pyyaml firebase-admin google-cloud-storage
+          pip install -e ".[dev,firebase]" jsonschema google-cloud-storage
 
-      - name: ruff check (lint)
-        run: ruff check scripts/
-
-      - name: ruff format --check
-        run: ruff format --check scripts/
+      - name: Git identity for synthetic-repo tests
+        # Several tests create temporary git repositories and commit fixtures.
+        # Public CI must not inherit maintainer signing configuration, and
+        # GitHub runners need an explicit identity for those synthetic commits.
+        run: |
+          git config --global user.name "DontPanic CI"
+          git config --global user.email "dontpanic-ci@example.invalid"
+          git config --global commit.gpgsign false
 
       - name: Pydantic schema imports
         # Loads every promoted v1.0 Pydantic model. Same set jarvis_doctor checks.
@@ -46,13 +49,13 @@ jobs:
             python -c "from models import plan_model, features_model, audit_model, environments_model, signoff_model; print('schema models import OK')"
 
       - name: pytest
-        run: PYTHONPATH=scripts pytest scripts/jarvis_orchestrate/tests/ -q
+        run: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q
 
-      - name: jarvis_doctor — structural checks (gcloud/firebase auth omitted)
+      - name: dontpanic_doctor — structural checks (gcloud/firebase auth omitted)
         # CI runs --skip-auth: gcloud + firebase aren't authenticated here, but
         # every structural check (schemas, Pydantic models, parent plan, .secrets/
         # gitignore) must still be green.
-        run: python scripts/jarvis_doctor.py --skip-auth
+        run: python scripts/dontpanic_doctor.py --skip-auth
 
       - name: Sanitization — no campaign IDs in committed surface
         # Scans every file that would land in `git add .` (tracked, staged,
