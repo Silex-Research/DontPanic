@@ -1,0 +1,9 @@
+0eae15c08d726e2313366f5003c2229de0e8068c:docs/plans/2026-05-09-003-feat-state-projection-v0/evidence/F003-redaction-tests.log:private-key:15
+7937975450576f3ab91890241a405bec0dbff6a6:docs/showcase/dontpanic-architecture.json:generic-api-key:2362
+7937975450576f3ab91890241a405bec0dbff6a6:docs/showcase/dontpanic-architecture.json:discord-api-token:2277
+7937975450576f3ab91890241a405bec0dbff6a6:docs/showcase/dontpanic-architecture.json:discord-api-token:2384
+7ce2289ddb359004f98d1718412e373d1bbbc7ff:docs/architecture/architecture.json:generic-api-key:2189
+7ce2289ddb359004f98d1718412e373d1bbbc7ff:docs/architecture/architecture.json:discord-api-token:2112
+7ce2289ddb359004f98d1718412e373d1bbbc7ff:docs/architecture/architecture.json:discord-api-token:2211
+346ab37e32e74a91267f5a41e823a2f157bbf74c:scripts/jarvis_orchestrate/tests/test_f001_secret_shapes.py:jwt:91
+826c1af3c86c639374dc626128c4fdc727666a6c:tracking/BLOCKED.md:curl-auth-header:130

@@ -1,0 +1,26 @@
+# Public-release ownership guardrails.
+#
+# Keep this file intentionally small: DontPanic is currently maintainer-led, and
+# the goal is to force review on contract, orchestration, security, and release
+# surfaces before public collaboration broadens.
+
+* @GodEquation
+
+/.github/ @GodEquation
+/SECURITY.md @GodEquation
+/CONTRIBUTING.md @GodEquation
+/CODE_OF_CONDUCT.md @GodEquation
+/LICENSE @GodEquation
+
+/claude/shared/ @GodEquation
+/claude/skills/ @GodEquation
+/docs/plans/ @GodEquation
+/docs/architecture/ @GodEquation
+/docs/ROADMAP.md @GodEquation
+/docs/PRODUCT.md @GodEquation
+/docs/PLATFORM.md @GodEquation
+
+/scripts/dontpanic_orchestrate/ @GodEquation
+/scripts/dontpanic_doctor.py @GodEquation
+/scripts/sanitization_check.py @GodEquation
+/pyproject.toml @GodEquation
