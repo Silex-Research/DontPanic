@@ -10,7 +10,7 @@ description: |
   plan lock. No `dontpanic capabilities` CLI in v0.
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-21"
 goal_type: infra
 surfaces:
