@@ -1,0 +1,102 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Capability manifest loader + schema validation. Add a small module that discovers `capabilities/*.json`, validates each file against `claude/shared/schemas/v1.0/capability.schema.json`, enforces id == filename stem, and exposes typed read-only models for downstream consumers. This is the foundation that turns ADR-001 from prose into a machine-checkable convention.",
+      "steps": [
+        "Read `capabilities/README.md`, `docs/adr/ADR-001-external-capability-model.md`, and `capability.schema.json`.",
+        "Add `scripts/dontpanic_orchestrate/capabilities.py` with `CapabilityManifest`, `CapabilityIndex`, `load_capabilities(root)`, and `validate_capability_file(path)`.",
+        "Validation must use the checked-in JSON schema; do not duplicate schema rules by hand beyond id == filename stem and repo-relative setup_doc file existence.",
+        "Expose lookup by id and by category. Duplicate IDs fail loud.",
+        "Add tests covering valid manifests, missing required field, invalid kind, id/filename mismatch, duplicate ID, missing setup_doc file, and category lookup."
+      ],
+      "acceptance": "(1) `scripts/dontpanic_orchestrate/capabilities.py` exists and validates all checked-in manifests. (2) Loader fails loud on invalid schema, duplicate id, filename/id mismatch, and missing setup_doc file. (3) Category and id lookup APIs exist. (4) Tests cover at least 7 cases including all listed failure modes. (5) No external services or credentials required.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Doctor/prereq probe binding. Extend existing profile-aware prereq probes so a probe can optionally declare `capability_id`. The doctor output should include the capability ID and setup_doc when a probe is tied to a manifest. This is metadata binding only; the current probe execution behavior and profile severity rules stay unchanged.",
+      "steps": [
+        "Read `scripts/dontpanic_orchestrate/prereq_registry.py` and current profile tests.",
+        "Add optional `capability_id` to `PrereqProbe` and `ProbeResult`.",
+        "At registry construction time, validate any non-null capability_id against the F001 loader.",
+        "Bind existing relevant probes: Claude CLI -> `agent-claude-cli`, Firebase/gcloud/Firebase target probes -> `firebase-dashboard`, Discord webhook probe -> `discord-notify`.",
+        "Ensure JSON output includes capability_id and setup_doc for bound probes while preserving existing fields.",
+        "Tests must prove no behavior change to pass/warn/fail/omit decisions."
+      ],
+      "acceptance": "(1) PrereqProbe and ProbeResult include optional capability_id. (2) Bound probe IDs validate through the manifest loader. (3) Doctor JSON includes capability_id + setup_doc for bound probes. (4) Existing profile severity behavior is unchanged. (5) Tests cover Claude, Firebase, Discord, and an invalid capability_id registry-authoring failure.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Adapter registry capability_id binding. Extend the local adapter registry so registered adapters can declare which capability manifest they implement. v0 validation is read-only and local: if a registry record includes capability_id, the ID must exist and the adapter category must be compatible with the manifest category. This gives Linear and future adapters one stable link to the manifest convention without adding `dontpanic capabilities` CLI.",
+      "steps": [
+        "Read `scripts/dontpanic_orchestrate/integrations/adapter_registry.py` and P10/bridge tests.",
+        "Add optional `capability_id` to adapter registry records.",
+        "Validate capability_id existence through the F001 loader when reading/writing registry records.",
+        "For PM-tool adapters, require manifest category `pm-tool` when capability_id is present.",
+        "Update Linear fixture/example registry records to use `capability_id: linear`.",
+        "Tests cover valid Linear record, missing capability, incompatible category, and backward compatibility for legacy records without capability_id."
+      ],
+      "acceptance": "(1) Adapter registry records accept optional capability_id. (2) capability_id validates against manifests. (3) PM-tool adapter category compatibility is enforced. (4) Existing records without capability_id still parse. (5) Linear examples/fixtures use `capability_id: linear`.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "external_refs capability binding. Extend plan external_refs so refs can bind to a capability ID. For v0, PM-tool refs with sync=push_status should resolve to a registered adapter whose capability_id matches the ref capability_id. This keeps external_refs from being freeform service strings while preserving the existing one-way sync behavior.",
+      "steps": [
+        "Read `scripts/dontpanic_orchestrate/external_refs_sync.py`, plan_loader external ref models, and F002 bridge tests.",
+        "Add optional `capability_id` to ExternalRef if not already present through schema/model plumbing.",
+        "Validate declared capability_id exists and has compatible category for `kind: pm_issue`.",
+        "When resolving a sync target, prefer adapter records matching capability_id; fail loud when sync=push_status and no matching registered adapter exists.",
+        "Preserve `sync: none` advisory behavior: missing adapter should not block lock for non-push refs.",
+        "Tests cover valid Linear ref, unknown capability, PM ref bound to non-PM capability, push ref with no matching adapter, and sync=none non-blocking behavior."
+      ],
+      "acceptance": "(1) ExternalRef supports optional capability_id. (2) PM-tool push refs bind to registered adapters by capability_id. (3) Invalid or incompatible capability IDs fail with actionable errors. (4) sync=none remains non-blocking. (5) Existing external_refs tests remain green.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "infra",
+      "phase": 5,
+      "description": "Plan-lock advisory required-capabilities sidecar. At `dontpanic plan lock`, inspect the plan's surfaces, external_refs, and matched skill applicability results to infer relevant capability manifests. Emit `evidence/required-capabilities.json` with matched capability IDs, setup_required, setup_doc, owner_boundary summary, and whether each is currently verified/registered. Advisory only: never blocks lock in v0.",
+      "steps": [
+        "Read `plan lock` flow and the skill-applicability sidecar writer.",
+        "Add a pure function that computes required/advisory capabilities from plan frontmatter surfaces and external_refs.",
+        "Write `evidence/required-capabilities.json` after successful lock, best-effort like applicable-skills sidecar.",
+        "Sidecar should include `schema_version`, `plan_id`, `generated_at`, `matches[]`, and `skips[]`.",
+        "Matches include capability_id, source (`external_ref|surface|skill`), setup_required, setup_doc, owner_boundary, and current local status (`unknown|verified|missing_config|not_registered`).",
+        "Tests cover external_refs -> Linear, surfaces/web+firebase profile -> Firebase advisory, no capability matches -> empty report, and writer failure never blocks lock."
+      ],
+      "acceptance": "(1) `dontpanic plan lock` emits advisory `evidence/required-capabilities.json` when capability matches exist. (2) Sidecar includes setup_required, setup_doc, owner_boundary, and current status. (3) Missing optional capabilities do not block lock. (4) Tests cover Linear, Firebase, empty, and failure-is-nonblocking paths. (5) No `dontpanic capabilities` CLI is added.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ]
+    }
+  ]
+}
