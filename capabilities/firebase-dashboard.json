@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "id": "firebase-dashboard",
+  "title": "Firebase realtime dashboard adapter",
+  "kind": "external_adapter",
+  "category": "dashboard-realtime",
+  "summary": "Optional realtime team dashboard adapter that mirrors DontPanic state projection into Firebase and routes dashboard mutations through DontPanic MCP.",
+  "setup_required": true,
+  "setup_doc": "docs/USE_CASES.md#u6-team-collaboration-with-shared-dashboard",
+  "default_in_profiles": ["firebase-dashboard"],
+  "use_cases": ["U6b"],
+  "requires": {
+    "commands": ["firebase", "gcloud"],
+    "env": ["DONTPANIC_FIREBASE_PROJECT"],
+    "files": ["environments.json", ".firebaserc"],
+    "services": [
+      "Firebase project",
+      "Firebase Auth",
+      "Firestore",
+      "Cloud Functions",
+      "local DontPanic MCP server",
+      "Firebase sync daemon"
+    ],
+    "auth": [
+      "firebase login",
+      "gcloud auth login",
+      "gcloud application-default credentials or service account for deploy"
+    ],
+    "config": [
+      "Firebase web app config for dashboard",
+      "Firestore rules",
+      "Cloud Functions environment",
+      "single-tenant project path mapping"
+    ]
+  },
+  "verify": {
+    "doctor_profiles": ["firebase-dashboard"],
+    "probes": [
+      "cli:firebase",
+      "cli:gcloud",
+      "firebase-auth",
+      "gcloud-auth",
+      "target-project",
+      "firebase_dashboard_config"
+    ],
+    "readiness": "Core/static dashboard does not require Firebase. This adapter is ready only when Firebase project, auth, rules/functions deploy access, and local MCP mutation path are configured."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "state projection",
+      "bundled static dashboard export",
+      "MCP mutation tools",
+      "doctor profile hooks",
+      "adapter governance contract"
+    ],
+    "adapter": [
+      "Firestore mirror schema",
+      "sync daemon",
+      "Firebase dashboard configuration",
+      "Cloud Functions that call DontPanic MCP",
+      "Firestore rules"
+    ],
+    "operator": [
+      "Firebase project ownership",
+      "Firebase Auth configuration",
+      "gcloud/firebase authentication",
+      "service account and deploy credentials",
+      "cost and quota management",
+      "hosting/deploy choice"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "firestore_mirror_and_cloud_function_actions",
+    "allowed_path": "Dashboard action -> Cloud Function -> DontPanic MCP mutating tool with confirm=true. Firestore mirrors projection state and is not the source of truth.",
+    "forbidden": [
+      "Browser writes that directly mutate plan/gate/signoff state",
+      "Cloud Functions writing DontPanic local state without MCP",
+      "Making Firebase a requirement for core onboarding"
+    ]
+  },
+  "notes": [
+    "Static dashboard is core and has no Firebase dependency.",
+    "Firebase Hosting may host static files, but Firebase realtime behavior is an optional adapter."
+  ]
+}
