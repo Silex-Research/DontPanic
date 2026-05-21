@@ -15,7 +15,37 @@
         "Add tests covering valid manifests, missing required field, invalid kind, id/filename mismatch, duplicate ID, missing setup_doc file, and category lookup."
       ],
       "acceptance": "(1) `scripts/dontpanic_orchestrate/capabilities.py` exists and validates all checked-in manifests. (2) Loader fails loud on invalid schema, duplicate id, filename/id mismatch, and missing setup_doc file. (3) Category and id lookup APIs exist. (4) Tests cover at least 7 cases including all listed failure modes. (5) No external services or credentials required.",
-      "passes": false,
+      "passes": true,
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-05-21T20:06:45Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities.py",
+          "captured_by": "codex",
+          "note": "F001 manifest loader with typed models, JSON schema validation, id/category lookup, duplicate-id guard, and setup_doc file validation."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py",
+          "captured_by": "codex",
+          "note": "Focused F001 test suite: checked-in manifest load, category lookup, valid temp manifest, missing field, invalid kind, filename mismatch, duplicate ID, missing setup_doc, and missing capabilities dir."
+        },
+        {
+          "type": "file",
+          "uri": "../../../pyproject.toml",
+          "captured_by": "codex",
+          "note": "Adds jsonschema runtime dependency because manifest validation is now a core loader contract."
+        },
+        {
+          "type": "log",
+          "uri": "evidence/applicable-skills.json",
+          "captured_by": "dontpanic",
+          "note": "Lock-time advisory sidecar emitted when plan status flipped draft to active."
+        }
+      ],
       "depends_on": []
     },
     {
