@@ -1,0 +1,56 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "capabilities/agent-claude-cli.json",
+      "status": "M"
+    },
+    {
+      "path": "capabilities/discord-notify.json",
+      "status": "M"
+    },
+    {
+      "path": "capabilities/firebase-dashboard.json",
+      "status": "M"
+    },
+    {
+      "path": "capabilities/linear.json",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/CHANGELOG.md",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/VERSION",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/schemas/v1.0/capability.schema.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/capabilities.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/prereq_registry.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/INBOX.md",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/audit/",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py",
+    "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

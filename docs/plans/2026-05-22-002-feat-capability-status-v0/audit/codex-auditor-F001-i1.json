@@ -1,0 +1,37 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-22T17:01:13Z",
+  "completed_at": "2026-05-22T17:05:25Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-dx32bnve target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1232545 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1566540,
+    "tokens_out": 14933,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: signed_off. No substantive findings.\n\nThe implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, and `Project: (none)`. `target_context.commands_run` contains only local Python/pytest commands; no forbidden command shapes observed. Static inspection confirms the schema/model/backfilled manifests/version/changelog/test additions are present, no forbidden new `capabilities/` package or `schemas/v1.1/` directory exists, and direct loader/sanitization probes passed.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate.capabilities import load_capabilities; idx=load_capabilities(Path('.')); print([(m.id, len(m.setup_steps)) for m in idx.all]); print('ok')\"\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...duplicate setup_steps id schema probe...\"\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...command_template secret-pattern sanitization probe...\"\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...prereq registry/run_sweep smoke",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate.capabilities import load_capabilities; idx=load_capabilities(Path('.')); print([(m.id, len(m.setup_steps)) for m in idx.all]); print('ok')\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...duplicate setup_steps id schema probe...\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...command_template secret-pattern sanitization probe...\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...prereq registry/run_sweep smoke...\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}
