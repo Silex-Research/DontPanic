@@ -1,0 +1,63 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T17:14:36Z",
+  "completed_at": "2026-05-22T17:17:20Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-1cogxxoh target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 368687 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1466737,
+    "tokens_out": 10395,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. No EC5 finding: the implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (critical, correctness): `dontpanic capabilities status` is not implemented. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2714) has no `capabilities` dispatch, `scripts/dontpanic_orchestrate/capabilities_status.py` is absent, and the command exits with argparse error. Recommendation: add the required sibling module and CLI route.\n\nFINDING (high, test_coverage): Required F002 status CLI tests are missing. Evidence: `scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py` does not exist. Recommendation: add the ≥10 required cases covering text/json/status/PENDING/cache/profile/unknown-id behavior.\n\nFINDING (medium, documentation): JSON output shape documentation is missing. Evidence: `docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/json-schema-doc.md` does not exist. Recommendation: document the stable JSON schema and pin it with a snapshot test.\n\nFINDING (low, style): Touched Python code does not pass lint. Evidence: `ruff check --no-cache ...` reports import ordering and `UP037` annotation issues in `adapter_registry.py`; some `pm_tool_mapping.py` findings may predate F002, but the touched surface is not clean. Recommendat",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities status --format=json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py -q",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/prereq_registry.py scripts/dontpanic_orchestrate/integrations/adapter_registry.py scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/capabilities.py",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "critical",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`dontpanic capabilities status` is not implemented. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2714) has no `capabilities` dispatch, `scripts/dontpanic_orchestrate/capabilities_status.py` is absent, and the command exits with argparse error. Recommendation: add the required sibling module and CLI route.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Required F002 status CLI tests are missing. Evidence: `scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py` does not exist. Recommendation: add the ≥10 required cases covering text/json/status/PENDING/cache/profile/unknown-id behavior.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F002",
+      "issue": "JSON output shape documentation is missing. Evidence: `docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/json-schema-doc.md` does not exist. Recommendation: document the stable JSON schema and pin it with a snapshot test.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F002",
+      "issue": "Touched Python code does not pass lint. Evidence: `ruff check --no-cache ...` reports import ordering and `UP037` annotation issues in `adapter_registry.py`; some `pm_tool_mapping.py` findings may predate F002, but the touched surface is not clean. Recommendation: run ruff fix/check on changed Python files. Checks run: $ PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities status --format=json $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

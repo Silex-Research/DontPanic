@@ -2694,6 +2694,7 @@ Private-alpha command surface:
   smoke                          Mocked supervisor-plumbing smoke test (no real CLI)
   architecture regen|status|diff Codebase + plan snapshot + drift surface
   showcase regen                 Generate showcase artifacts for external repos
+  capabilities status            Inspect capability readiness vs. local env
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
@@ -2778,6 +2779,10 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.showcase import showcase_main
 
         return showcase_main(raw[1:])
+    if raw and raw[0] == "capabilities":
+        from dontpanic_orchestrate.capabilities_status import main as _capabilities_main
+
+        return _capabilities_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

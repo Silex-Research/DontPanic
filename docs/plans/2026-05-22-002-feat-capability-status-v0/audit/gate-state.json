@@ -34,6 +34,13 @@
       "gate": "pre_merge",
       "at": "2026-05-22T17:05:44Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-22T17:29:27Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
     }
   ],
   "gate_events": [
@@ -53,5 +60,8 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:no_progress"
   ]
 }
