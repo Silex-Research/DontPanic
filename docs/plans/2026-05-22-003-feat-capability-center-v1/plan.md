@@ -11,7 +11,7 @@ description: |
   to active roadmap work.
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-22"
 goal_type: new_feature
 surfaces:

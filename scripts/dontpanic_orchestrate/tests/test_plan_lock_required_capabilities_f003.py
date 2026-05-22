@@ -627,3 +627,52 @@ def test_cli_emit_sidecar_writes_to_evidence_dir(
     assert out.is_file()
     captured = capsys.readouterr()
     assert "WARN: plan requires 1 capabilities not ready" in captured.out
+
+
+def test_cli_emit_sidecar_handles_relative_plan_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _isolate_cache: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Regression: normal operator usage passes a repo-relative plan path.
+
+    The emitter resolves the plan dir internally and returns an absolute
+    sidecar path; CLI reporting must relativize against ``plan_dir.resolve()``
+    rather than the original relative Path.
+    """
+
+    plan_dir = tmp_path / "plan"
+    _write_fixture_plan(plan_dir, requires_capabilities_yaml="  - firebase-dashboard\n")
+    _isolate_cache.parent.mkdir(parents=True, exist_ok=True)
+    _isolate_cache.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0.0",
+                "generated_at": "2026-05-22T00:00:00Z",
+                "advisory_notes": [],
+                "capabilities": [
+                    {
+                        "capability_id": "firebase-dashboard",
+                        "status": "needs_setup",
+                        "owner_boundary": {
+                            "dontpanic_core": [],
+                            "adapter": [],
+                            "operator": ["project select"],
+                        },
+                        "missing": ["DONTPANIC_FIREBASE_PROJECT"],
+                        "next_actions": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    cli._emit_required_capabilities_sidecar(Path("plan"))
+
+    assert (plan_dir / sidecar.SIDECAR_RELPATH).is_file()
+    captured = capsys.readouterr()
+    assert "sidecar: evidence/required-capabilities.json" in captured.out

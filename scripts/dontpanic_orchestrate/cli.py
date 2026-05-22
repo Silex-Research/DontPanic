@@ -2504,7 +2504,7 @@ def _emit_required_capabilities_sidecar(
         return
 
     unready = sidecar.count_unready_capabilities(sidecar_path)
-    rel = sidecar_path.relative_to(plan_dir)
+    rel = sidecar_path.relative_to(plan_dir.resolve())
     if unready > 0:
         # Acceptance #5 specifies the chip text references the bare
         # filename (``required-capabilities.json``) rather than the
