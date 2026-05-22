@@ -17,7 +17,7 @@ description: |
   V1/V2 per the roadmap.
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-22"
 goal_type: new_feature
 surfaces:
@@ -157,7 +157,7 @@ semantics let V0b ship usefully before V0a F002/F003 fully land.
 
 ```yaml
 target_env: dev
-target_project: null
+target_project: none
 ```
 
 DontPanic-internal infra plan. No external Firebase / Cloud project.
