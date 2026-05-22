@@ -144,17 +144,17 @@
       "id": "run_mcp_bridge",
       "what": "Start the local MCP bridge process the Cloud Functions call back into for mutations.",
       "automatable": true,
-      "command_template": "dontpanic mcp serve --bind 127.0.0.1:<YOUR_MCP_PORT>",
+      "command_template": "PYTHONPATH=scripts python -m firebase_adapter.mcp_http_bridge serve --bind 127.0.0.1:<YOUR_MCP_PORT> --token-env DONTPANIC_MCP_TUNNEL_TOKEN",
       "verify_probe": "firebase_dashboard_config",
       "human_required_reason": null
     },
     {
       "id": "smoke_test",
-      "what": "Trigger a dashboard action end-to-end to confirm the browser->Cloud Function->MCP mutation path is wired.",
-      "automatable": true,
-      "command_template": "dontpanic capabilities smoke firebase-dashboard --project <YOUR_FIREBASE_PROJECT_ID>",
+      "what": "Trigger a deployed dashboard action end-to-end per dashboard/functions/RUNBOOK.md section 5.",
+      "automatable": false,
+      "command_template": null,
       "verify_probe": "firebase_dashboard_config",
-      "human_required_reason": null
+      "human_required_reason": "Requires a deployed Firebase project, an authenticated dashboard session, a running tunnel to the local MCP bridge, and a real dashboard action; DontPanic v0 does not ship an automated firebase-dashboard smoke runner."
     }
   ]
 }
