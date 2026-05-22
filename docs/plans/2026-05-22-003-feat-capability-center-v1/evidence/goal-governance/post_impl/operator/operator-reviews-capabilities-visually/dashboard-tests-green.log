@@ -1,0 +1,10 @@
+Evidence: dashboard tests.
+
+Target dashboard tests passed:
+- `tests/unit/capabilities-logic.test.js`
+- `tests/integration/capabilities-page.test.js`
+- `tests/integration/core-router.test.js`
+
+Recorded result during close-out: 74 passed.
+
+The full dashboard suite also passed during F001 verification: 466 tests.

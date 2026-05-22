@@ -1,0 +1,10 @@
+Evidence: Python MCP/capability tests.
+
+Local verification after F002 close-out:
+- `test_capabilities_mcp_f002.py`
+- `test_f002_mcp_server.py`
+- `test_state_mcp_f005.py`
+- `test_capabilities_status_cli_f002.py`
+- `test_capabilities_f001.py`
+
+Recorded result: 144 passed.

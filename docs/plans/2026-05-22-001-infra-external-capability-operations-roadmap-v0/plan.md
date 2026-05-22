@@ -12,7 +12,7 @@ description: |
   orchestrator.
 type: infra
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-22"
 goal_type: infra
 surfaces:

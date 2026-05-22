@@ -1,0 +1,10 @@
+Evidence: `dontpanic capabilities setup firebase-dashboard --print-steps`.
+
+The command renders all nine Firebase dashboard setup steps in manifest order:
+install_firebase_cli, install_gcloud_cli, firebase_login, gcloud_auth_login,
+select_target_project, deploy_firestore_rules, deploy_cloud_functions,
+run_mcp_bridge, and smoke_test.
+
+The output includes the current capability status, setup_doc, automatable labels,
+human-required labels, command templates where declared, verify_probe names, and
+the final line: `F001 is a planning surface only — no commands are executed.`
