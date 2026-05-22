@@ -1,0 +1,6 @@
+Evidence: V0b F003 required-capabilities sidecar tests.
+
+The lock sidecar is emitted when plan frontmatter declares
+`requires_capabilities[]`. Unknown capability ids fail loud with suggestions;
+known capability ids are rendered into the advisory sidecar with status,
+missing, next_actions, and owner_boundary.

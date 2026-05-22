@@ -1,0 +1,11 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+JSON output exited 0 and emitted machine-only JSON with top-level fields:
+- schema_version
+- generated_at
+- capabilities
+- advisory_notes
+
+Each capability entry included stable handoff fields: capability_id, status,
+missing, configured, automatable, human_required, owner_boundary, next_actions,
+pending_probes, and advisory_notes. Snapshot coverage is part of F002 tests.

@@ -1,0 +1,8 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+discord-notify rendered two setup steps:
+- configure_webhook_url
+- smoke_test
+
+Webhook creation and secret entry remain operator-owned; the smoke test is
+automatable after configuration.

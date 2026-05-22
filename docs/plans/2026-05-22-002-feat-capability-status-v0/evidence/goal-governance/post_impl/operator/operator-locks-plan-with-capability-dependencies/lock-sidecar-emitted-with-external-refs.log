@@ -1,0 +1,5 @@
+Evidence: V0a F005 and V0b F003 lock-sidecar tests.
+
+The plan-lock integration writes `evidence/required-capabilities.json` when a
+plan declares capability-bearing `external_refs[]`. The final F005 regression
+test proves `_plan_lock_main` emits the sidecar for a matching plan lock path.
