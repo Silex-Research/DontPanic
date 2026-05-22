@@ -2,7 +2,10 @@
 
 Tests cover the full F002 acceptance contract:
 
-  - Tool surface = exactly the documented 6 (D002 — NO ``intake``).
+  - Tool surface = exactly the documented 9 (D002 base 6, plus the
+    2 state-projection tools added by F005 of plan 2026-05-09-003,
+    plus ``capabilities.get_status`` added by F002 of plan
+    2026-05-22-003 — NO ``intake``).
   - Each tool's input is Pydantic-validated; unknown args refused.
   - Read-only tools return the documented shapes for a tmp_path-rooted
     registry (``list_projects`` / ``validate_plan`` / ``status`` /
@@ -146,7 +149,9 @@ def registered_repo(tmp_path, isolated_home):
 
 
 class TestToolSurface:
-    """The documented tool surface — 6 from D002 plus 2 added by F005 of plan 2026-05-09-003."""
+    """The documented tool surface — 6 from D002, plus 2 added by F005 of plan
+    2026-05-09-003, plus the read-only ``capabilities.get_status`` added by
+    F002 of plan 2026-05-22-003 (9 total)."""
 
     EXPECTED_TOOLS = (
         "list_projects",

@@ -26,3 +26,8 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 **2026-05-22T21:31:22Z** — feature **F002** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
+| 2026-05-22T21:35:48Z | F002 | i0 | claude / implementer | signed_off | 2,133,476 / 8,301 | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-05-22T21:38:58Z | F002 | i0 | codex / auditor | blocked | 1,922,309 / 12,687 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+
+**2026-05-22T21:38:58Z** — feature **F002** terminal: `stopped_environmental_blocker` after 1 round(s) — verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+

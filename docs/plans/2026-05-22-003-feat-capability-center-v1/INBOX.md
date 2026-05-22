@@ -176,7 +176,7 @@ reason_class: operator_judgment
 
 Operator closed feature F001 as operator_resolved (class=operator_judgment).
 
-Closeout memo: evidence/closeout-memo.md
+Closeout memo: evidence/closeout-memo-F001.md
 Signoff envelope: audit/signoff-2026-05-22-003-feat-capability-center-v1.json
 breaker:no_progress cleared: False
 features.json passes flipped: True
@@ -228,7 +228,7 @@ Aggregate class blocks auto-advance. Operator must review the underlying audit e
 To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
   dontpanic close --operator-resolved 2026-05-22-003-feat-capability-center-v1 F002 --reason unknown
 
-This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+This generates a closeout-memo template (later split into feature-specific memo files), clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
 
 ===
 ---
@@ -262,5 +262,146 @@ rounds: 2
 audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
 reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-22T21:33:05Z
+event: gate_hit
+plan_id: 2026-05-22-003-feat-capability-center-v1
+unmet_gates: breaker:no_progress
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:no_progress']
+Cleared gates : ['pre_impl', 'pre_merge']
+Awaiting      : ['breaker:no_progress']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-22-003-feat-capability-center-v1 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-22-003-feat-capability-center-v1 --all
+
+===
+---
+timestamp: 2026-05-22T21:33:11Z
+event: gate_cleared
+plan_id: 2026-05-22-003-feat-capability-center-v1
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-22T21:33:17Z
+event: volley_start
+plan_id: 2026-05-22-003-feat-capability-center-v1
+feature_id: F002
+---
+
+impl=claude aud=codex cap=1 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T21:33:17Z
+event: volley_start
+plan_id: 2026-05-22-003-feat-capability-center-v1
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=1
+
+===
+---
+timestamp: 2026-05-22T21:38:58Z
+event: verdict_blocked_reconciled
+plan_id: 2026-05-22-003-feat-capability-center-v1
+aggregate: environmental_reproduction_failure
+blocking: false
+feature_id: F002
+iteration: 1
+original_verdict: blocked
+---
+
+Auditor returned `audit_status=blocked` but every finding classified as advisory-only via the v3 taxonomy. The supervisor refuses to trust the verdict string alone when the underlying findings are non-substantive.
+
+Aggregate class: environmental_reproduction_failure
+Blocking: False
+Recommended action: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Terminal promoted from `blocked` to `stopped_environmental_blocker` (matches F003 ENVIRONMENTAL_BLOCKER semantics — operator clears via the normal `dontpanic approve <plan> breaker:environmental_blocker` flow rather than manual `close --operator-resolved`).
+
+Auditor verdict taxonomy [environmental_reproduction_failure] — ADVISORY.
+
+Feature: F002
+Recommended next action: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Per-finding classification:
+  - [environmental_reproduction_failure] severity=medium, category=test_coverage: Required pytest suites could not be independently verified in this audit environment. Evidence: both pytest commands failed before collection with `FileNotFoun…
+
+Aggregate class is advisory: every finding mapped to a non-defect harness/scope class. F003 does NOT auto-sign-off; the operator still owns the close decision.
+
+===
+---
+timestamp: 2026-05-22T21:38:58Z
+event: breaker_tripped
+plan_id: 2026-05-22-003-feat-capability-center-v1
+breaker_kind: environmental_blocker
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: environmental_blocker
+
+Reason: verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Operator clearance required: `jarvis approve 2026-05-22-003-feat-capability-center-v1 breaker:environmental_blocker` or `jarvis resume 2026-05-22-003-feat-capability-center-v1 --all`.
+
+===
+---
+timestamp: 2026-05-22T21:38:58Z
+event: volley_terminal
+plan_id: 2026-05-22-003-feat-capability-center-v1
+final_status: stopped_environmental_blocker
+rounds: 1
+feature_id: F002
+---
+
+final_status: stopped_environmental_blocker
+rounds: 1
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json']
+reason: verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+===
+---
+timestamp: 2026-05-22T21:39:37Z
+event: feature_operator_resolved
+plan_id: 2026-05-22-003-feat-capability-center-v1
+feature_id: F002
+reason_class: environmental_reproduction_failure
+---
+
+Operator closed feature F002 as operator_resolved (class=environmental_reproduction_failure).
+
+Closeout memo: evidence/closeout-memo-F002.md
+Signoff envelope: audit/signoff-2026-05-22-003-feat-capability-center-v1.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
+---
+timestamp: 2026-05-22T21:41:22Z
+event: gate_cleared
+plan_id: 2026-05-22-003-feat-capability-center-v1
+gate: breaker:environmental_blocker
+---
+
+Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
 
 ===

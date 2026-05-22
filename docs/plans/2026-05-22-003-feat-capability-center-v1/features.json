@@ -22,7 +22,7 @@
       "evidence_refs": [
         {
           "type": "file",
-          "uri": "evidence/closeout-memo.md",
+          "uri": "evidence/closeout-memo-F001.md",
           "note": "operator_resolved close-out (class=operator_judgment)"
         }
       ],
@@ -45,8 +45,19 @@
         "Run MCP tests, capability status tests, plan validation, and sanitization."
       ],
       "acceptance": "(1) MCP exposes a read-only capability status tool. (2) Tool output matches the CLI JSON envelope shape. (3) Optional capability_id narrows output or returns a clear unknown-id error. (4) Optional profile filtering matches CLI behavior. (5) No setup/mutation action is exposed. (6) Tests cover success, narrowing, unknown id, profile, and no-secret-value invariants. (7) Relevant Python tests pass. (8) Sanitization clean.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T21:39:37Z"
     },
     {
       "id": "F003",

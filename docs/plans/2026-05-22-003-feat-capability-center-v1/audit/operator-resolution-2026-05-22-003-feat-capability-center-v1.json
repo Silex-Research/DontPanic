@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-22-003-feat-capability-center-v1",
-  "feature_id": "F001",
-  "class": "operator_judgment",
-  "memo": "evidence/closeout-memo.md",
+  "feature_id": "F002",
+  "class": "environmental_reproduction_failure",
+  "memo": "evidence/closeout-memo-F002.md",
   "resolved": true,
-  "resolved_at": "2026-05-22T21:13:06Z"
+  "resolved_at": "2026-05-22T21:39:37Z"
 }
