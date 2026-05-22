@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T21:54:11Z",
+  "completed_at": "2026-05-22T21:57:05Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-oogi9hzd target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 249489 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1233798,
+    "tokens_out": 12366,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct in summary and structured `target_context` (`env=dev`, `project=null`); `target_context.commands_run` is empty, so no forbidden command shapes there.\n\nFINDING (high, correctness): `dontpanic capabilities setup firebase-dashboard --print-steps` executes status probes despite acceptance requiring no commands execute. Evidence: `capabilities_setup.py:206` calls `run_status()` with default probes; patched audit probe recorded attempted subprocess calls `git remote -v`, `gh auth status`, and `git config --get user.email` before rendering. Recommendation: add a non-executing status-context path for setup planning, or pass an explicit no-probe/status-cache mode so `--print-steps` never invokes subprocess/network probes.\n\nFINDING (medium, test_coverage): The no-command test only rejects manifest `command_template` execution and explicitly allows status-gathering subprocesses. Evidence: `test_capabilities_setup_cli_f001.py:323-329` narrows acceptance #4 to setup commands only, then allows captured subprocess invocations unless they match templates. Recommendation: assert zero subprocess/process/network execution for `--print-steps`, or inject a non-executing status projection.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scrip",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python - <<'PY' ... PY",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"<inline subprocess-capture audit probe>\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`dontpanic capabilities setup firebase-dashboard --print-steps` executes status probes despite acceptance requiring no commands execute. Evidence: `capabilities_setup.py:206` calls `run_status()` with default probes; patched audit probe recorded attempted subprocess calls `git remote -v`, `gh auth status`, and `git config --get user.email` before rendering. Recommendation: add a non-executing status-context path for setup planning, or pass an explicit no-probe/status-cache mode so `--print-steps",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "The no-command test only rejects manifest `command_template` execution and explicitly allows status-gathering subprocesses. Evidence: `test_capabilities_setup_cli_f001.py:323-329` narrows acceptance #4 to setup commands only, then allows captured subprocess invocations unless they match templates. Recommendation: assert zero subprocess/process/network execution for `--print-steps`, or inject a non-executing status projection. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

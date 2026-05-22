@@ -1,0 +1,30 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md",
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/",
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/capabilities_setup.py",
+    "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

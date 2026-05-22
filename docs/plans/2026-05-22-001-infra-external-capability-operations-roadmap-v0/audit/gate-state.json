@@ -15,10 +15,18 @@
       "at": "2026-05-22T20:38:18Z",
       "actor": "supervisor",
       "reason": "child '2026-05-22-003-feat-capability-center-v1' dispatched"
+    },
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-22-004-feat-capability-guided-setup-v2",
+      "at": "2026-05-22T21:49:44Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-22-004-feat-capability-guided-setup-v2' dispatched"
     }
   ],
   "active_pre_resume_after_children": [
     "pre_resume_after_child:2026-05-22-002-feat-capability-status-v0",
-    "pre_resume_after_child:2026-05-22-003-feat-capability-center-v1"
+    "pre_resume_after_child:2026-05-22-003-feat-capability-center-v1",
+    "pre_resume_after_child:2026-05-22-004-feat-capability-guided-setup-v2"
   ]
 }
