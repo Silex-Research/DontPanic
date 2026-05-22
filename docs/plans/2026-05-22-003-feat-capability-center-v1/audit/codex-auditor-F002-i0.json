@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-22-003-feat-capability-center-v1",
+  "audit_id": "2026-05-22-003-feat-capability-center-v1#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T21:21:20Z",
+  "completed_at": "2026-05-22T21:24:42Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-003-feat-capability-center-v1-_b715dc1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2578424 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3019306,
+    "tokens_out": 13967,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so I found no forbidden command shapes there.\n\nFINDING (high, correctness): The required MCP tool name is not exposed. Evidence: F002 step requires `capabilities.get_status` in `features.json:41`, but the registered tool is `capabilities_get_status` in `mcp_server.py:569`, and the new tests hard-code the underscore name at `test_capabilities_mcp_f002.py:39`. Recommendation: register the required dotted tool name, or add it as an alias if preserving the underscore name matters, and update tests to assert the required surface.\n\nFINDING (high, test_coverage): The new MCP coverage file is untracked, so the claimed tests may not ship. Evidence: `git status` shows `?? ../scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py`, and `git ls-files` does not list that file. Recommendation: add/track the test file before claiming F002 complete.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py -q -p no:cacheprovider\n$ git diff --check -- scripts/dontpanic_",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py -q -p no:cacheprovider",
+      "git diff --check -- scripts/dontpanic_orchestrate/mcp_server.py scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py",
+      "git ls-files scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py scripts/dontpanic_orchestrate/mcp_server.py scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c '<direct MCP smoke for envelope, no-secret, single capability, profile, unknown-id>'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python scripts/dontpanic_doctor.py --skip-auth --validate-plans --strict-codes",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "The required MCP tool name is not exposed. Evidence: F002 step requires `capabilities.get_status` in `features.json:41`, but the registered tool is `capabilities_get_status` in `mcp_server.py:569`, and the new tests hard-code the underscore name at `test_capabilities_mcp_f002.py:39`. Recommendation: register the required dotted tool name, or add it as an alias if preserving the underscore name matters, and update tests to assert the required surface.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The new MCP coverage file is untracked, so the claimed tests may not ship. Evidence: `git status` shows `?? ../scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py`, and `git ls-files` does not list that file. Recommendation: add/track the test file before claiming F002 complete. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py scripts/dontpanic_orchestrate/t",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

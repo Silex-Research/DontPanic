@@ -198,7 +198,8 @@ class TestApprovalMetadata:
 class TestToolSurface:
     def test_state_tools_present(self) -> None:
         names = mcp_server.list_tool_names()
-        # F005 adds two; original D002 surface was 6, now 8
+        # F005 adds two; original D002 surface was 6, now 9 with the
+        # plan 2026-05-22-003 F002 read-only capability status tool.
         assert "state_snapshot" in names
         assert "state_stream" in names
-        assert len(names) == 8
+        assert len(names) == 9

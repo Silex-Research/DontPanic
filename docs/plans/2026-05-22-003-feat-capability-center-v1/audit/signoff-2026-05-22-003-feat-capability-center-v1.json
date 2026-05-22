@@ -8,19 +8,19 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F001-i0.json",
-    "audit/codex-auditor-F001-i0.json",
-    "audit/claude-implementer-F001-i1.json",
-    "audit/codex-auditor-F001-i1.json"
+    "audit/claude-implementer-F002-i0.json",
+    "audit/codex-auditor-F002-i0.json",
+    "audit/claude-implementer-F002-i1.json",
+    "audit/codex-auditor-F002-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 4,
-    "needs_changes_count": 0,
+    "signed_off_count": 2,
+    "needs_changes_count": 2,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
-  "signoff": true,
-  "signoff_reason": "operator_resolved (class=operator_judgment): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
-  "next_action": "merge",
-  "decided_at": "2026-05-22T21:13:06Z"
+  "signoff": false,
+  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "next_action": "remediate",
+  "decided_at": "2026-05-22T21:31:23Z"
 }

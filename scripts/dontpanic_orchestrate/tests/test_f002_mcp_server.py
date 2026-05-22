@@ -158,6 +158,8 @@ class TestToolSurface:
         # Plan 2026-05-09-003 F005 — state projection MCP tools.
         "state_snapshot",
         "state_stream",
+        # Plan 2026-05-22-003 F002 — read-only capability status projection.
+        "capabilities.get_status",
     )
 
     def test_documented_tool_surface_registered(self):
@@ -166,7 +168,8 @@ class TestToolSurface:
             f"Tool surface drift: got {names}, expected {list(self.EXPECTED_TOOLS)}. "
             "Adding tools beyond the documented surface violates D002 — "
             "Phase C still owns intake; F005 added the two state-projection "
-            "read tools per plan 2026-05-09-003."
+            "read tools per plan 2026-05-09-003; plan 2026-05-22-003 F002 "
+            "added the read-only capabilities.get_status projection."
         )
 
     @pytest.mark.parametrize("forbidden", ["intake", "submit_plan", "create_plan"])
