@@ -2,6 +2,10 @@
   "staged": [],
   "unstaged_modified": [
     {
+      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
       "status": "M"
     },
@@ -10,19 +14,14 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-22-003-feat-capability-center-v1/audit/claude-implementer-F002-i0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-22-003-feat-capability-center-v1/audit/gate-state.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py",
+      "path": "docs/plans/2026-05-22-003-feat-capability-center-v1/features.json",
       "status": "M"
     }
   ],
-  "untracked": [],
+  "untracked": [
+    "docs/plans/2026-05-22-003-feat-capability-center-v1/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-22-003-feat-capability-center-v1/evidence/closeout-memo-V1.md"
+  ],
   "deleted_staged": [],
   "deleted_unstaged": []
 }

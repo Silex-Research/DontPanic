@@ -71,11 +71,27 @@
         "Validate this child plan and the parent roadmap."
       ],
       "acceptance": "(1) Parent roadmap decisions cite this child plan and shipped evidence. (2) This plan has close-out evidence covering dashboard + MCP. (3) V2 remains a separate child plan and is not silently folded into V1. (4) Plan validation passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-V1.md",
+          "note": "V1 close-out covering dashboard (F001) + MCP (F002) shipped surface"
+        },
+        {
+          "type": "file",
+          "uri": "../2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl#D012",
+          "note": "Parent roadmap D-entry linking V1 implementation evidence"
+    }
+  ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T22:00:00Z"
     }
   ]
 }
