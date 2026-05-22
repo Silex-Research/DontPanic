@@ -62,9 +62,42 @@
         "Tests must prove no behavior change to pass/warn/fail/omit decisions."
       ],
       "acceptance": "(1) PrereqProbe and ProbeResult include optional capability_id. (2) Bound probe IDs validate through the manifest loader. (3) Doctor JSON includes capability_id + setup_doc for bound probes. (4) Existing profile severity behavior is unchanged. (5) Tests cover Claude, Firebase, Discord, and an invalid capability_id registry-authoring failure.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:06:34Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/prereq_registry.py",
+          "note": "F002 implementation: PrereqProbe/ProbeResult capability_id binding and doctor output metadata."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py",
+          "note": "F002 tests for bound probes, invalid capability ids, setup_doc output, and JSON shape."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i0.json",
+          "note": "Implementer completion envelope."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "Auditor signed_off with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "audit/gate-state.json",
+          "note": "pre_impl auto-cleared and pre_merge operator-approved after signed_off verdict."
+        }
       ]
     },
     {

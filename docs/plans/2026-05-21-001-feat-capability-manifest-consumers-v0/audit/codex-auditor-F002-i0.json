@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T16:55:07Z",
+  "completed_at": "2026-05-22T16:58:06Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-x0t_hhea target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 217894 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 826777,
+    "tokens_out": 13059,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. Findings: none.\n\nThe implementer correctly declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` in the summary, and structured `target_context` matches `env=dev`, `project=null`. Their recorded commands are local Python commands only; I found no forbidden command shapes.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --profile=firebase-dashboard --json --skip-auth\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py -q -s -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"<direct F002 binding/registry/envelope assertion smoke check>\"\n\nPytest could not run in this read-only sandbox because Python reports no usable writable temp directory. The doctor JSON spot check did run and showed bound `capability_id` + `setup_doc` for Claude and Firebase probes; its exit code was `2` only because the network prereq failed in this restricted environment.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --profile=firebase-dashboard --json --skip-auth",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py -q -s -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"<direct F002 binding/registry/envelope assertion smoke check>\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}
