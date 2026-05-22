@@ -1,0 +1,13 @@
+Evidence: full orchestrator test sweep.
+
+Command:
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests -q
+
+Result:
+2334 passed, 7 skipped, 1 warning in 63.80s.
+
+Note: the same sweep without the scoped `commit.gpgsign=false` override produced
+15 errors in temporary git-repo fixtures because subprocess `git commit` calls
+inherited 1Password signing and could not reach the 1Password agent socket. The
+scoped override affects only synthetic test commits and does not change the repo
+under test.

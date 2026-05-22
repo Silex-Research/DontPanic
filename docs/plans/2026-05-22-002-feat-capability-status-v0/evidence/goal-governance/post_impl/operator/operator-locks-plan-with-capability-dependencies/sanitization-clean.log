@@ -1,0 +1,7 @@
+Evidence: `python3 scripts/sanitization_check.py`
+
+Result during F003 verification: sanitization clean.
+
+Setup-step command templates use placeholders such as <YOUR_FIREBASE_PROJECT_ID>,
+<YOUR_LINEAR_API_TOKEN>, and <YOUR_MCP_PORT>; no secret values are committed in
+manifest setup guidance.

@@ -1,0 +1,6 @@
+Evidence: schema validation and full orchestrator sweep.
+
+`setup_steps[]` was added as an optional field on the existing v1.0 capability
+schema. Existing manifests continue to load through the V0a manifest loader, and
+all four checked-in manifests render through `dontpanic capabilities status`.
+No v1.1 schema directory was introduced.

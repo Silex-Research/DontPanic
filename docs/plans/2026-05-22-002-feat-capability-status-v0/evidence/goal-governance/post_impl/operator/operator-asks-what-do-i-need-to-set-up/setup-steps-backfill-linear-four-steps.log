@@ -1,0 +1,10 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+linear rendered four setup steps:
+- emit_pp_binary
+- register_adapter
+- paste_api_token
+- validate_mapping
+
+The output partitions generated-adapter and registration work as automatable,
+and Linear token minting/paste as human-required.
