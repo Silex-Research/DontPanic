@@ -176,6 +176,28 @@ class AdapterResolver:
     def has_capability_id(self, capability_id: str) -> bool:
         return capability_id in self._by_capability_id
 
+    def capability_id_for_uri(self, uri: str) -> str | None:
+        """Plan 2026-05-22-002 F003 — map a URI to a capability_id when a
+        registered adapter exposes one. Returns None when the URI scheme
+        resolves to an unbound (legacy) adapter or when no adapter is
+        registered for the scheme. Used by the lock-time advisory sidecar
+        to pull external_refs[] entries into the per-capability summary
+        when the URI scheme maps to a registered, capability-bound
+        adapter; callers MUST treat None as "not advisory-relevant" rather
+        than as a validation failure (sidecar is advisory only)."""
+
+        try:
+            scheme = _scheme_from_uri(uri)
+        except ExternalRefsSyncError:
+            return None
+        hook = self._by_scheme.get(scheme)
+        if hook is None:
+            return None
+        for capability_id, candidate in self._by_capability_id.items():
+            if candidate is hook:
+                return capability_id
+        return None
+
 
 def _scheme_from_uri(uri: str) -> str:
     """``linear://issue/ABC-123`` → ``"linear"``. Plan_loader validates

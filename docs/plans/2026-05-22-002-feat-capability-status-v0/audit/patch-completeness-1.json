@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "test_file_untracked",
+      "files": [
+        "scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py"
+      ],
+      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
+      "severity": "block",
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py"
+    },
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "claude/shared/CHANGELOG.md",
+        "claude/shared/VERSION",
+        "claude/shared/schemas/v1.0/models/plan_model.py",
+        "claude/shared/schemas/v1.0/plan.schema.json",
+        "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/features.json",
+        "scripts/dontpanic_orchestrate/cli.py",
+        "scripts/dontpanic_orchestrate/external_refs_sync.py"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py",
+    "claude/shared/CHANGELOG.md",
+    "claude/shared/VERSION",
+    "claude/shared/schemas/v1.0/models/plan_model.py",
+    "claude/shared/schemas/v1.0/plan.schema.json",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/features.json",
+    "scripts/dontpanic_orchestrate/cli.py",
+    "scripts/dontpanic_orchestrate/external_refs_sync.py"
+  ]
+}

@@ -41,6 +41,20 @@
       "at": "2026-05-22T17:29:27Z",
       "actor": "supervisor",
       "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-22T18:46:12Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:no_progress"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-22T18:46:22Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
@@ -60,8 +74,5 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
-  ],
-  "active_breakers": [
-    "breaker:no_progress"
   ]
 }
