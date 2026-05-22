@@ -67,7 +67,7 @@ _SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
     # ``Bearer <token>`` outside a header context.
     re.compile(r"\bBearer\s+[A-Za-z0-9._\-+/=]{8,}\b"),
     # Stripe / GitHub / OpenAI style prefixed tokens (``<prefix>_<body>``).
-    re.compile(r"\b(sk|pk|rk|whsec|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_\-]{16,}\b"),
+    re.compile(r"\b(sk|pk|rk|whsec|ghp|gho|ghu|ghs|ghr|npm)_[A-Za-z0-9_\-]{16,}\b"),
     # OpenAI project keys and similar dash-separated secret forms.
     re.compile(r"\b(sk|pk|rk|whsec)-[A-Za-z0-9_\-]{16,}\b"),
     # AWS access key ids.
@@ -82,6 +82,12 @@ _SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
     # ``password=`` etc. — keeps the key, drops the value.
     re.compile(
         r"\b(token|api[_-]?key|apikey|password|passwd|secret|access[_-]?key|client[_-]?secret)\s*[=:]\s*[^\s\"',;&|]+",
+        re.IGNORECASE,
+    ),
+    # npm registry auth-token spellings, including
+    # ``//registry.npmjs.org/:_authToken=npm_...``.
+    re.compile(
+        r"((?:[A-Za-z0-9./:@_-]*auth[_-]?token|_authToken)\s*[=:]\s*)[^\s\"',;&|]+",
         re.IGNORECASE,
     ),
     # ``NAME=value`` env-prefix syntax that survived the command (F002

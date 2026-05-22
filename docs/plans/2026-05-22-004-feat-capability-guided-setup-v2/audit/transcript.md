@@ -39,3 +39,11 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 **2026-05-22T22:48:13Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-05-22T22:56:36Z | F003 | i0 | claude / implementer | signed_off | 3,166,039 / 19,643 | [claude-implementer-F003-i0.json](audit/claude-implementer-F003-i0.json) |
+| 2026-05-22T22:59:51Z | F003 | i0 | codex / auditor | needs_changes | 1,256,997 / 13,110 | [codex-auditor-F003-i0.json](audit/codex-auditor-F003-i0.json) |
+| 2026-05-22T23:03:07Z | F003 | i1 | claude / implementer | signed_off | 2,046,482 / 11,834 | [claude-implementer-F003-i1.json](audit/claude-implementer-F003-i1.json) |
+| 2026-05-22T23:06:31Z | F003 | i1 | codex / auditor | needs_changes | 1,584,946 / 15,482 | [codex-auditor-F003-i1.json](audit/codex-auditor-F003-i1.json) |
+
+**2026-05-22T23:06:31Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

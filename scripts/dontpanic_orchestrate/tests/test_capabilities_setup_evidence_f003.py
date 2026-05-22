@@ -458,6 +458,46 @@ def test_build_evidence_record_redacts_dash_style_and_aws_tokens_in_command_fiel
     assert all(bearer_token not in arg and aws_key not in arg for arg in step["argv"])
 
 
+def test_build_evidence_record_redacts_npm_auth_token_in_command_fields():
+    """Regression for F003 i1: npm registry auth tokens can appear in an
+    otherwise allowlisted npm install command and must not persist."""
+    base = _firebase_manifest()
+    npm_token = "abcdef1234567890"  # noqa: S105 - redaction sentinel
+    leaky_template = (
+        f"npm install --//registry.npmjs.org/:_authToken={npm_token} -g firebase-tools"
+    )
+    synthetic = base.model_copy(
+        update={
+            "setup_steps": (
+                SetupStep(
+                    id="npm_auth_token",
+                    what="Allowlisted npm install with registry auth token.",
+                    automatable=True,
+                    command_template=leaky_template,
+                    verify_probe=None,
+                    human_required_reason=None,
+                ),
+            )
+        }
+    )
+    runner = _RecorderRunner(exit_code=0, stdout="", stderr="")
+    probe = _make_status_probe([cs_status.CapabilityStatus.NEEDS_SETUP])
+    report = cs_runner.run_automate_safe(
+        synthetic,
+        confirm=True,
+        command_runner=runner,
+        status_probe=probe,
+    )
+
+    evidence = cs_evidence.build_evidence_record(report, synthetic)
+    payload_text = json.dumps(evidence.to_json_dict())
+    step = next(s for s in evidence.attempted_steps if s["step_id"] == "npm_auth_token")
+
+    assert npm_token not in payload_text
+    assert "_authToken=[redacted-secret]" in (step["command_template"] or "")
+    assert any("_authToken=[redacted-secret]" in arg for arg in step["argv"])
+
+
 def test_build_evidence_record_preserves_manifest_placeholders_in_command_template():
     """Sanitization must not eat the ``<YOUR_*>`` placeholders the
     operator needs to fill in for denied steps."""

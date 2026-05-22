@@ -353,3 +353,114 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
 ===
+---
+timestamp: 2026-05-22T22:50:23Z
+event: gate_hit
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+unmet_gates: breaker:no_progress
+target_env: dev
+target_project: (none)
+feature_id: F003
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:no_progress']
+Cleared gates : ['pre_impl', 'pre_merge']
+Awaiting      : ['breaker:no_progress']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-22-004-feat-capability-guided-setup-v2 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-22-004-feat-capability-guided-setup-v2 --all
+
+===
+---
+timestamp: 2026-05-22T22:50:29Z
+event: gate_cleared
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-22T22:50:36Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+---
+
+impl=claude aud=codex cap=1 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T22:50:36Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=1
+
+===
+---
+timestamp: 2026-05-22T23:06:31Z
+event: no_progress_classification
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=security: Evidence sanitization still allows common npm auth-token values to persist. Evidence: `_apply_secret_patterns()` leaves `npm install --//registry.npmjs.org/:_a…
+  - [spec_ambiguity] severity=medium, category=documentation: Parent roadmap still does not record V2 completion. Evidence: D013 says “V2 is in progress” and “A subsequent D-entry will record V2 close-out once F003 ships…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-22-004-feat-capability-guided-setup-v2 F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-22T23:06:31Z
+event: breaker_tripped
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-22-004-feat-capability-guided-setup-v2 breaker:no_progress` or `jarvis resume 2026-05-22-004-feat-capability-guided-setup-v2 --all`.
+
+===
+---
+timestamp: 2026-05-22T23:06:32Z
+event: volley_terminal
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
