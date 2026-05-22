@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-22T22:48:13Z",
+  "feature_id": "F003",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Issue: `--no-evidence` allows a governed setup run to complete without writing the required F003 evidence record. Evidence: [capabilities_setup.py](/Users/baye…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "security",
+      "issue_excerpt": "Issue: the sanitizer still persists common secret-shaped values in evidence fields. Evidence: `_SECRET_PATTERNS` only covers underscore `sk_*` forms and select…",
+      "rationale": "severity=high, category=security — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "spec_ambiguity",
+      "severity": "medium",
+      "category": "documentation",
+      "issue_excerpt": "Issue: the parent roadmap entry claims V2/F003 is closed as `passes:true` while the child feature remains `passes:false`. Evidence: D013 says “closed F001 ...…",
+      "rationale": "severity=medium, category=documentation — finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    }
+  ]
+}

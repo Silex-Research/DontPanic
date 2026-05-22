@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-22T22:30:11Z",
+  "completed_at": "2026-05-22T22:38:59Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-mljp_8ch target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4172 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 9741861,
+    "tokens_out": 33976,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] All 176 capabilities-related tests pass. F003 implementation is complete.\n\n## Summary\n\nImplemented F003 of the capability guided setup v2 plan: setup-run evidence and roadmap close-out.\n\n**New module** `scripts/dontpanic_orchestrate/capabilities_setup_evidence.py` projects an `AutomateSafeReport` into a structured `SetupRunEvidence` record (schema_version 1.0.0, capability_id, before/after status, attempted_steps with sanitized stdout/stderr tails, denied_steps, skipped_human_required, derived next_human_actions, declared_requires as names-only). Sanitization redacts JWT/Authorization/`Bearer`/`sk_*`/`ghp_*`/`xoxb-`/`sk-ant-` prefix-style credential tokens, `NAME=value` env-prefix syntax, and generic `token=`/`api_key=`/`password=` forms to `[redacted-secret]`; output tails are capped at 1000 chars. `write_evidence()` writes JSON to `$DONTPANIC_HOME/setup-runs/<capability>-<ts>.json` (file mode 0600, dir mode 0700) by default, or to a plan-supplied `--evidence-dir`. **CLI** gains `--evidence-dir` and `--no-evidence` flags; `--automate-safe --confirm` now writes evidence after rendering the report.\n\n**Tests** (`tests/test_capabilities_setup_evidence_f003.py`, 21 cases) cover record shape, attempted/skipped/denied projection, next_human_actions composition, secret redaction (Bearer, key=value, prefixed tokens, env values), output-tail capping, filename sanitization, perms, and CLI integration (default path, plan evidence-dir redirect, `--no-evidence`, print-steps no-write).\n\n**",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q",
+      "ruff check scripts/dontpanic_orchestrate/capabilities_setup_evidence.py scripts/dontpanic_orchestrate/capabilities_setup.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q -k 'capabilities'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

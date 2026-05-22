@@ -271,3 +271,85 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-22T22:30:11Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T22:30:11Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-05-22T22:48:13Z
+event: no_progress_classification
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Issue: `--no-evidence` allows a governed setup run to complete without writing the required F003 evidence record. Evidence: [capabilities_setup.py](/Users/baye…
+  - [implementation_defect] severity=high, category=security: Issue: the sanitizer still persists common secret-shaped values in evidence fields. Evidence: `_SECRET_PATTERNS` only covers underscore `sk_*` forms and select…
+  - [spec_ambiguity] severity=medium, category=documentation: Issue: the parent roadmap entry claims V2/F003 is closed as `passes:true` while the child feature remains `passes:false`. Evidence: D013 says “closed F001 ...…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-22-004-feat-capability-guided-setup-v2 F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-22T22:48:13Z
+event: breaker_tripped
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-22-004-feat-capability-guided-setup-v2 breaker:no_progress` or `jarvis resume 2026-05-22-004-feat-capability-guided-setup-v2 --all`.
+
+===
+---
+timestamp: 2026-05-22T22:48:13Z
+event: volley_terminal
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===

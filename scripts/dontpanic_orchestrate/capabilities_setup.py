@@ -1,13 +1,15 @@
-"""Plan 2026-05-22-004 F001 — `dontpanic capabilities setup` planning surface.
+"""Plan 2026-05-22-004 F001/F003 — `dontpanic capabilities setup` CLI.
 
 Reads the selected capability manifest and current status from V0b
 ``capabilities status`` projection, then prints the ordered ``setup_steps[]``
 with automatable/human-required labels, command templates, verification
-probes, and current readiness. No commands are executed in F001 — this is
-strictly a planning surface.
+probes, and current readiness. F001 is strictly a planning surface — no
+commands run.
 
-Future V2 features (F002 governed runner, F003 evidence) layer on top of
-the same envelope.
+F002 adds the ``--automate-safe --confirm`` governed runner. F003 writes
+a structured evidence record after each governed run; the path defaults
+to ``$DONTPANIC_HOME/setup-runs`` and can be redirected with
+``--evidence-dir`` when invoked from inside a plan.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ import argparse
 import difflib
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from dontpanic_orchestrate.capabilities import (
     CapabilityIndex,
@@ -215,6 +218,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Required companion for --automate-safe; without it the runner refuses to execute.",
     )
+    parser.add_argument(
+        "--evidence-dir",
+        default=None,
+        help=(
+            "Directory the F003 evidence record is written to."
+            " Default: $DONTPANIC_HOME/setup-runs/. Supervisors invoking"
+            " the runner inside a plan should pass the plan's evidence/"
+            " directory so the record lands next to other plan evidence."
+        ),
+    )
     return parser
 
 
@@ -261,6 +274,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     # --automate-safe --confirm path.
+    from dontpanic_orchestrate.capabilities_setup_evidence import (
+        build_evidence_record,
+        write_evidence,
+    )
     from dontpanic_orchestrate.capabilities_setup_runner import (
         SubprocessRunner,
         render_report,
@@ -275,6 +292,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         status_probe=build_runtime_status,
     )
     sys.stdout.write(render_report(report))
+
+    evidence = build_evidence_record(report, manifest)
+    evidence_dir = Path(args.evidence_dir).expanduser() if args.evidence_dir else None
+    written = write_evidence(evidence, evidence_dir=evidence_dir)
+    sys.stdout.write(f"\nevidence_written: {written}\n")
     return 0
 
 

@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-22T22:45:49Z",
+  "completed_at": "2026-05-22T22:48:13Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-mljp_8ch target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 475341 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1006682,
+    "tokens_out": 9946,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. The implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, structured `target_context` matches, and its recorded commands contain no forbidden shapes.\n\nFINDING (high, correctness): Issue: `--no-evidence` allows a governed setup run to complete without writing the required F003 evidence record. Evidence: [capabilities_setup.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup.py:231) adds `--no-evidence`, and [capabilities_setup.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup.py:305) skips `write_evidence()` when set; the test suite even asserts this skip path at [test_capabilities_setup_evidence_f003.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:617). Recommendation: remove the bypass or restrict it outside governed `--automate-safe --confirm` runs so every setup run persists evidence.\n\nFINDING (high, security): Issue: the sanitizer still persists common secret-shaped values in evidence fields. Evidence: `_SECRET_PATTERNS` only covers underscore `sk_*` forms and selected prefixes at [capabilities_setup_evidence.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_evidence.py:63); direct probing left `sk-proj-...` and `AKIA...` unchanged while these fields are persisted ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q -p no:cacheprovider",
+      "ruff check --no-cache ../scripts/dontpanic_orchestrate/capabilities_setup_evidence.py ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate.capabilities_setup_evidence import _apply_secret_patterns; samples=['test-openai-token-value','AKIAIOSFODNN7EXAMPLE','test-github-token-value','token=abcdef1234567890']; print('\\\\n'.join(f'{s} -> {_apply_secret_patterns(s)}' for s in samples))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Issue: `--no-evidence` allows a governed setup run to complete without writing the required F003 evidence record. Evidence: [capabilities_setup.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup.py:231) adds `--no-evidence`, and [capabilities_setup.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup.py:305) skips `write_evidence()` when set; the test suite even asserts this skip path at [test_capabilities_se",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F003",
+      "issue": "Issue: the sanitizer still persists common secret-shaped values in evidence fields. Evidence: `_SECRET_PATTERNS` only covers underscore `sk_*` forms and selected prefixes at [capabilities_setup_evidence.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_evidence.py:63); direct probing left `sk-proj-...` and `AKIA...` unchanged while these fields are persisted through `_sanitize_text()` / `_sanitize_argv()`. Recommendation: add coverage for current Ope",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F003",
+      "issue": "Issue: the parent roadmap entry claims V2/F003 is closed as `passes:true` while the child feature remains `passes:false`. Evidence: D013 says “closed F001 ... F003 ... as passes:true” in `decisions.jsonl`, but [features.json](/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/features.json:73) still has `F003` as `passes:false`. Recommendation: update the roadmap only after actual F003 signoff, or word D013 as pending audit until the feature reco",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
