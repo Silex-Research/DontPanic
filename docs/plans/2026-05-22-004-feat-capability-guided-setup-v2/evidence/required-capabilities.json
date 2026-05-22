@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-05-22T21:49:19Z",
+  "matches": [
+    {
+      "capability_id": "firebase-dashboard",
+      "owner_boundary": {
+        "adapter": [
+          "Firestore mirror schema",
+          "sync daemon",
+          "Firebase dashboard configuration",
+          "Cloud Functions that call DontPanic MCP",
+          "Firestore rules"
+        ],
+        "dontpanic_core": [
+          "state projection",
+          "bundled static dashboard export",
+          "MCP mutation tools",
+          "doctor profile hooks",
+          "adapter governance contract"
+        ],
+        "operator": [
+          "Firebase project ownership",
+          "Firebase Auth configuration",
+          "gcloud/firebase authentication",
+          "service account and deploy credentials",
+          "cost and quota management",
+          "hosting/deploy choice"
+        ]
+      },
+      "setup_doc": "docs/USE_CASES.md#u6-team-collaboration-with-shared-dashboard",
+      "setup_required": true,
+      "source": "surface",
+      "status": "missing_config",
+      "surface_names": [
+        "infra"
+      ]
+    }
+  ],
+  "plan_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "required_capabilities": [],
+  "schema_version": "1.0.0",
+  "skips": []
+}
