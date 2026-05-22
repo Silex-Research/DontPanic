@@ -14,8 +14,19 @@
         "Add tests for Firebase, Linear, empty setup_steps, unknown id, and no-command execution."
       ],
       "acceptance": "(1) `dontpanic capabilities setup firebase-dashboard --print-steps` renders all setup steps in order. (2) Human-required steps include reason text. (3) Automatable steps include command_template and verify_probe when present. (4) No commands execute. (5) Tests cover happy path and unknown id.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T22:09:09Z"
     },
     {
       "id": "F002",
