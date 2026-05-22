@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T19:18:03Z",
+  "completed_at": "2026-05-22T19:21:41Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F005-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-zvy5emmb target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1743328 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3278143,
+    "tokens_out": 16858,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct in the summary (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), structured `target_context` is `env=dev`, `project=null`, and `commands_run` is empty, so no forbidden command shapes.\n\nFINDING (medium, test_coverage): The writer-failure test does not prove lock is nonblocking. Evidence: `test_cli_wrapper_swallows_writer_failure` claims the wrapper catches the exception, but asserts `cli._emit_required_capabilities_sidecar(...)` raises at `scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py:437`; the actual nonblocking catch is only in `_plan_lock_main` at `scripts/dontpanic_orchestrate/cli.py:2110`. Recommendation: add a lock-flow test or extract a catchable helper that proves sidecar writer failure returns lock success and emits the warning.\n\nChecks run:\n$ PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py\n$ git diff --check -- scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py\n$ PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"compile/import smoke for changed F005 files and firebase advisory inference\"\n$ PYTHONPA",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py",
+      "git diff --check -- scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"compile/import smoke for changed F005 files and firebase advisory inference\"",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import cli; print('cli-import-ok', hasattr(cli, '_plan_lock_main'))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "The writer-failure test does not prove lock is nonblocking. Evidence: `test_cli_wrapper_swallows_writer_failure` claims the wrapper catches the exception, but asserts `cli._emit_required_capabilities_sidecar(...)` raises at `scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py:437`; the actual nonblocking catch is only in `_plan_lock_main` at `scripts/dontpanic_orchestrate/cli.py:2110`. Recommendation: add a lock-flow test or extract a catchable helper that proves sid",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

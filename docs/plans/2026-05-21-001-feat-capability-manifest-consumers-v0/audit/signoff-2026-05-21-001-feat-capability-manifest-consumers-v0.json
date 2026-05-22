@@ -8,19 +8,19 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F004-i0.json",
-    "audit/codex-auditor-F004-i0.json",
-    "audit/claude-implementer-F004-i1.json",
-    "audit/codex-auditor-F004-i1.json"
+    "audit/claude-implementer-F005-i0.json",
+    "audit/codex-auditor-F005-i0.json",
+    "audit/claude-implementer-F005-i1.json",
+    "audit/codex-auditor-F005-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 2,
+    "signed_off_count": 1,
     "needs_changes_count": 2,
-    "blocked_count": 0,
+    "blocked_count": 1,
     "inconclusive_count": 0
   },
   "signoff": false,
-  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
   "next_action": "remediate",
-  "decided_at": "2026-05-22T17:54:47Z"
+  "decided_at": "2026-05-22T19:29:04Z"
 }
