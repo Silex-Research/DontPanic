@@ -13,6 +13,9 @@ const Jarvis = {
     activity: [],
     costs: null,
     security: [],
+    // `capabilities` stays null when capabilities-status.json is absent —
+    // the Capability Center page uses null as the missing-state sentinel.
+    capabilities: null,
   },
 
   // ── Page Registration ──
@@ -56,15 +59,24 @@ const Jarvis = {
 
   // ── State Loading ──
   async loadState() {
-    const files = ['agents', 'tasks', 'activity', 'costs', 'security'];
-    await Promise.all(files.map(async (name) => {
+    // Most state files are loaded by `state/<key>.json` convention.
+    const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
+    // Files whose on-disk name differs from the state key.
+    const aliasedFiles = [
+      { key: 'capabilities', file: 'capabilities-status.json' },
+    ];
+    const loaders = [
+      ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
+      ...aliasedFiles,
+    ];
+    await Promise.all(loaders.map(async ({ key, file }) => {
       try {
-        const resp = await fetch(`state/${name}.json`);
+        const resp = await fetch(`state/${file}`);
         if (resp.ok) {
-          this.state[name] = await resp.json();
+          this.state[key] = await resp.json();
         }
       } catch {
-        // File doesn't exist yet — use empty default
+        // File doesn't exist yet — keep the default value (empty list / null).
       }
     }));
   },
@@ -192,6 +204,7 @@ const pageModules = [
   'pages/financial/financial.js',
   'pages/mission-control/mission-control.js',
   'pages/security/security.js',
+  'pages/capabilities/capabilities.js',
   'pages/settings/settings.js',
 ];
 

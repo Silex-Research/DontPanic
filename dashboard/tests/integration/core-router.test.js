@@ -22,6 +22,9 @@ function createRouter() {
       activity: [],
       costs: null,
       security: [],
+      // Mirrors core.js — capabilities defaults to null so the page can
+      // render its empty-state when capabilities-status.json is absent.
+      capabilities: null,
     },
 
     registerPage(config) {
@@ -76,15 +79,24 @@ function createRouter() {
     },
 
     async loadState() {
-      const files = ['agents', 'tasks', 'activity', 'costs', 'security'];
-      await Promise.all(files.map(async (name) => {
+      // Mirrors core.js exactly: simple-name files plus aliased loaders
+      // whose on-disk name differs from the state key.
+      const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
+      const aliasedFiles = [
+        { key: 'capabilities', file: 'capabilities-status.json' },
+      ];
+      const loaders = [
+        ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
+        ...aliasedFiles,
+      ];
+      await Promise.all(loaders.map(async ({ key, file }) => {
         try {
-          const resp = await fetch(`state/${name}.json`);
+          const resp = await fetch(`state/${file}`);
           if (resp.ok) {
-            this.state[name] = await resp.json();
+            this.state[key] = await resp.json();
           }
         } catch {
-          // file missing — keep empty default
+          // file missing — keep default value
         }
       }));
     },
@@ -299,6 +311,9 @@ describe('loadState', () => {
     expect(router.state.activity).toEqual([]);
     expect(router.state.costs).toBeNull();
     expect(router.state.security).toEqual([]);
+    // capabilities-status.json absent — capabilities stays null so the
+    // Capability Center page can render its empty-state.
+    expect(router.state.capabilities).toBeNull();
   });
 
   it('silently keeps the default value for any file whose fetch throws', async () => {
@@ -307,6 +322,7 @@ describe('loadState', () => {
     const router = createRouter();
     await expect(router.loadState()).resolves.not.toThrow();
     expect(router.state.agents).toEqual([]);
+    expect(router.state.capabilities).toBeNull();
   });
 
   it('partially loads state when only some files are available', async () => {
@@ -319,6 +335,42 @@ describe('loadState', () => {
     expect(router.state.agents).toEqual(mockState.agents);
     expect(router.state.tasks).toEqual([]);   // 404 — kept at default
     expect(router.state.costs).toBeNull();
+  });
+
+  // Acceptance #2: Capability Center reads from the aliased filename
+  // `capabilities-status.json`, not `capabilities.json`. The router must
+  // therefore fetch the aliased path AND surface the result under the
+  // `capabilities` state key.
+  it('loads the aliased capabilities-status.json into state.capabilities', async () => {
+    const envelope = {
+      schema_version: '1.0.0',
+      generated_at:   '2026-05-22T12:00:00Z',
+      advisory_notes: [],
+      capabilities: [
+        { capability_id: 'agent-claude-cli', status: 'ready',
+          owner_boundary: { dontpanic_core: [], adapter: [], operator: [] },
+          configured: [], missing: [], automatable: [], human_required: [],
+          pending_probes: [], next_actions: [], advisory_notes: [] },
+      ],
+    };
+    // setupFetchMock keys by `<basename without .json>`, so the alias
+    // `capabilities-status.json` resolves to the `capabilities-status` key.
+    setupFetchMock({ 'capabilities-status': envelope });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.capabilities).toEqual(envelope);
+  });
+
+  it('uses the aliased URL — not state/capabilities.json', async () => {
+    const fetchSpy = setupFetchMock({});
+    const router = createRouter();
+    await router.loadState();
+
+    const urls = fetchSpy.mock.calls.map(call => call[0]);
+    expect(urls).toContain('state/capabilities-status.json');
+    expect(urls).not.toContain('state/capabilities.json');
   });
 });
 

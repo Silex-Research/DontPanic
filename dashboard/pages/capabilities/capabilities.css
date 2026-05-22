@@ -1,0 +1,412 @@
+/* ── JARVIS Capability Center — capabilities.css ──
+   Static review surface for `dontpanic capabilities status`.
+   All selectors are prefixed `.cap-` to avoid collisions.        */
+
+.cap-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* ── Summary panel ── */
+
+.cap-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cap-summary-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cap-summary-meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+}
+
+.cap-summary-meta-value {
+  color: var(--text-secondary);
+  font-family: var(--font);
+}
+
+.cap-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.cap-summary-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.cap-summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cap-summary-value--green  { color: var(--green); }
+.cap-summary-value--yellow { color: var(--yellow); }
+.cap-summary-value--red    { color: var(--red); }
+.cap-summary-value--muted  { color: var(--text-muted); }
+.cap-summary-value--accent { color: var(--accent); }
+
+.cap-summary-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Capability cards ── */
+
+.cap-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.cap-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.cap-card--green  { border-left-color: var(--green);  }
+.cap-card--yellow { border-left-color: var(--yellow); }
+.cap-card--red    { border-left-color: var(--red);    }
+.cap-card--muted  { border-left-color: var(--text-muted); }
+.cap-card--accent { border-left-color: var(--accent); }
+
+.cap-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cap-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font);
+  word-break: break-word;
+}
+
+.cap-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cap-status-badge--green  { background: var(--green-dim);                color: var(--green);  }
+.cap-status-badge--yellow { background: var(--yellow-dim);               color: var(--yellow); }
+.cap-status-badge--red    { background: var(--red-dim);                  color: var(--red);    }
+.cap-status-badge--muted  { background: rgba(100, 116, 139, 0.15);       color: var(--text-muted); }
+.cap-status-badge--accent { background: rgba(59, 130, 246, 0.15);        color: var(--accent); }
+
+/* ── Owner boundary chips ── */
+
+.cap-owner-boundary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 10px;
+}
+
+.cap-owner-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.cap-owner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.cap-owner-chip--dontpanic_core {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.cap-owner-chip--adapter {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--purple);
+}
+
+.cap-owner-chip--operator {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.cap-owner-chip-count {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* ── List blocks (Configured / Missing / Pending probes) ── */
+
+.cap-list-block {
+  margin-top: 8px;
+}
+
+.cap-list-title {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.cap-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cap-list li {
+  word-break: break-word;
+}
+
+.cap-list-configured li { color: var(--green); }
+.cap-list-missing li    { color: var(--text-secondary); }
+
+.cap-list-probes {
+  list-style: none;
+  padding-left: 0;
+}
+
+.cap-list-probes li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px dashed var(--border);
+}
+
+.cap-list-probes li:first-child { border-top: none; }
+
+.cap-probe-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cap-probe-reason {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* ── Next actions ── */
+
+.cap-next-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.cap-action-group {
+  margin-top: 8px;
+}
+
+.cap-action-group-label {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+.cap-action-group--auto .cap-action-group-label {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+}
+
+.cap-action-group--human .cap-action-group-label {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.cap-action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cap-action-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.cap-action-what {
+  font-size: 11px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.cap-action-cmd {
+  font-size: 10px;
+  background: var(--bg-primary);
+  color: var(--accent);
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin: 4px 0 0 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cap-action-reason {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── Advisory notes ── */
+
+.cap-advisory-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cap-advisory {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: rgba(168, 85, 247, 0.08);
+  border-left: 2px solid var(--purple);
+  border-radius: 2px;
+}
+
+/* ── Empty state ── */
+
+.cap-empty-state {
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: left;
+  max-width: 760px;
+  margin: 24px auto;
+}
+
+.cap-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.cap-empty-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.cap-empty-body code {
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.cap-empty-cmd {
+  background: var(--bg-primary);
+  color: var(--green);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-family: var(--font);
+  overflow-x: auto;
+  margin: 0 0 12px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cap-empty-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cap-empty-inline {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .cap-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .cap-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cap-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
