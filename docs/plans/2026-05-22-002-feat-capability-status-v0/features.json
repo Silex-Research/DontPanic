@@ -96,9 +96,57 @@
         "Run full orchestrator sweep + sanitization."
       ],
       "acceptance": "(1) `dontpanic capabilities status` runs against the four checked-in manifests + emits human-readable table. (2) `--format=json` emits stable JSON snapshot-pinned. (3) `dontpanic capabilities status firebase-dashboard` shows per-capability detail with ≥6 next_actions from setup_steps. (4) `ProbeStatus.PENDING` enum exists; capabilities with only PENDING probes still compute status `ready` (when requires resolve), NOT `blocked`. (5) PENDING probes render as informational chip in text output + `pending_probes[]` array in JSON. (6) `~/.dontpanic/capabilities-status.json` cache written after every run unless --no-cache-write; mode 0600. (7) `--profile=firebase-dashboard` filters to that profile's capabilities. (8) Unknown capability_id exits non-zero with closest-match suggestion. (9) Graceful degradation: works when V0a F002 (probe capability_id binding) not yet shipped. (10) ≥10 test cases. (11) Sanitization clean. (12) Sweep at or above baseline.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:36:34Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities_status.py",
+          "note": "Capability status CLI implementation; manual remediation included auth/config setup blockers and true profile filtering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/prereq_registry.py",
+          "note": "ProbeStatus.PENDING enum semantics added as probe-state only, not capability status."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "Top-level dontpanic capabilities command routing."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py",
+          "note": "F002 tests cover status computation, cache mode, PENDING rendering, true profile filtering, and full JSON payload pinning."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/json-schema-doc.md",
+          "note": "Documented stable JSON handoff shape."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i1.json",
+          "note": "Second implementer iteration before stopped_no_progress terminal."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "Auditor identified three remaining findings that were remediated manually."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F002_iter2.json",
+          "note": "Stopped_no_progress classification; implementation_defect findings drove manual remediation."
+        }
       ]
     },
     {

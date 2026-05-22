@@ -69,13 +69,22 @@ class SeverityWhenInactive(str, Enum):
 
 
 class ProbeStatus(str, Enum):
-    """Effective status of a probe after activation + execution."""
+    """Effective status of a probe after activation + execution.
+
+    ``PENDING`` semantics (plan 2026-05-22-002 F002): the probe is declared
+    but its implementation is not yet wired — the binding exists, but the
+    runtime answer is *unknown*. PENDING is NOT a synonym for ``FAIL`` or
+    ``blocked``; downstream capability-status computation treats it as an
+    informational marker. A capability that has only PENDING probes and
+    whose ``requires`` resolve is still ``ready``.
+    """
 
     PASS = "pass"  # noqa: S105 - status enum value, not a credential.
     WARN = "warn"
     ADVISORY = "advisory"
     FAIL = "fail"
     OMIT = "omit"
+    PENDING = "pending"  # plan 2026-05-22-002 F002 — needs_probe_implementation
 
 
 @dataclass(frozen=True)

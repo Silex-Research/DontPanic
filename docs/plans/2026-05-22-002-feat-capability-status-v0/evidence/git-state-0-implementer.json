@@ -2,35 +2,27 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "capabilities/agent-claude-cli.json",
+      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json",
       "status": "M"
     },
     {
-      "path": "capabilities/discord-notify.json",
+      "path": "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md",
       "status": "M"
     },
     {
-      "path": "capabilities/firebase-dashboard.json",
+      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
       "status": "M"
     },
     {
-      "path": "capabilities/linear.json",
+      "path": "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
       "status": "M"
     },
     {
-      "path": "claude/shared/CHANGELOG.md",
+      "path": "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
       "status": "M"
     },
     {
-      "path": "claude/shared/VERSION",
-      "status": "M"
-    },
-    {
-      "path": "claude/shared/schemas/v1.0/capability.schema.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/capabilities.py",
+      "path": "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
       "status": "M"
     },
     {
@@ -39,14 +31,7 @@
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md",
-    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/",
-    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/INBOX.md",
-    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/audit/",
-    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
-    "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
-    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/",
-    "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py"
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/claude-implementer-F002-i0.json"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
