@@ -45,18 +45,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from dontpanic_orchestrate.integrations.pm_tool_models import PMStatus
 
-
 # Required field paths every PM-tool mapping must declare. Per-service
 # wrappers compose ``translate_issue`` against this set; missing any
 # entry would leave the wrapper unable to populate the corresponding
 # ``PMIssue`` field.
-REQUIRED_ISSUE_FIELD_PATHS: frozenset[str] = frozenset({
-    "PMIssue.id",
-    "PMIssue.project_id",
-    "PMIssue.title",
-    "PMIssue.status",
-    "PMIssue.uri",
-})
+REQUIRED_ISSUE_FIELD_PATHS: frozenset[str] = frozenset(
+    {
+        "PMIssue.id",
+        "PMIssue.project_id",
+        "PMIssue.title",
+        "PMIssue.status",
+        "PMIssue.uri",
+    }
+)
 
 
 class PMToolMappingConfig(BaseModel):
@@ -138,9 +139,22 @@ class PMToolMappingConfig(BaseModel):
             "response through translate_issue."
         ),
     )
+    capability_id: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Plan 2026-05-21-001 F003 — optional binding to a "
+            "``capabilities/<id>.json`` manifest. When set, the adapter "
+            "registry validates the ID resolves through the F001 loader "
+            "and that the manifest category is compatible with the "
+            "adapter kind (PM-tool adapters require category 'pm-tool'). "
+            "Legacy records without ``capability_id`` continue to parse "
+            "and register unchanged."
+        ),
+    )
 
     @model_validator(mode="after")
-    def _check_status_enum_map_covers_every_pmstatus(self) -> "PMToolMappingConfig":
+    def _check_status_enum_map_covers_every_pmstatus(self) -> PMToolMappingConfig:
         present = set(self.status_enum_map.values())
         missing = set(PMStatus) - present
         if missing:
@@ -154,7 +168,7 @@ class PMToolMappingConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _check_status_enum_map_keys_unique(self) -> "PMToolMappingConfig":
+    def _check_status_enum_map_keys_unique(self) -> PMToolMappingConfig:
         # Pydantic's dict already collapses duplicate keys at JSON parse
         # time (last-write-wins). We add a separate guard against
         # case-insensitive duplicates because PM-tool status labels are
@@ -171,7 +185,7 @@ class PMToolMappingConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _check_required_field_paths_present(self) -> "PMToolMappingConfig":
+    def _check_required_field_paths_present(self) -> PMToolMappingConfig:
         missing = sorted(REQUIRED_ISSUE_FIELD_PATHS - set(self.field_name_map.keys()))
         if missing:
             raise ValueError(

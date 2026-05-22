@@ -1,6 +1,7 @@
 {
   "service_name": "linear",
   "uri_scheme": "linear",
+  "capability_id": "linear",
   "pp_version": "<pin-at-plan-lock>",
   "api_key_env": "<paste-your-env-var-name>",
   "api_key_value": "<paste-your-token>",
