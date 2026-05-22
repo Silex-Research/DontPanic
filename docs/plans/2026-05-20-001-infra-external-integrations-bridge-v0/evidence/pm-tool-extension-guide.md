@@ -89,6 +89,16 @@ Extra keys (`pp_version`, `api_key_env`, etc.) pass through silently —
 the per-service JSON is multi-purpose and the mapping schema only
 validates the mapping-specific fields.
 
+Before any live `push_status` or `plan resync`, verify the generated
+MCP binary actually exposes the mapping's `read_issue_tool` and
+`push_status_tool` names. The mapping parser cannot prove this because
+it is deliberately service-agnostic and does not spawn operator-local
+binaries. Use the generated MCP tool list or the adapter's equivalent
+introspection command, then compare it with the JSON mapping. If either
+tool is absent, do not run live sync; record the mismatch and either
+regenerate the PP adapter with the required endpoints or add a bounded
+wrapper follow-up plan.
+
 Commit a redacted version of the JSON under your plan's `evidence/`
 directory with the token-bearing fields replaced by
 `<paste-your-token>` placeholders. The real config stays gitignored at
