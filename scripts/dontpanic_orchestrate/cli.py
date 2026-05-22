@@ -2348,8 +2348,26 @@ def _resolver_for_external_refs():
     return default_resolver()
 
 
+def _capability_index_for_external_refs():
+    """Plan 2026-05-21-001 F004 — lazy load of the capability manifest
+    index. Only invoked when at least one external_ref declares a
+    ``capability_id``, so plans with legacy refs (or no refs) don't pay
+    the manifest-load cost. Tests monkeypatch this seam via
+    :data:`_CAPABILITY_INDEX_FACTORY`."""
+
+    factory = _CAPABILITY_INDEX_FACTORY
+    if factory is not None:
+        return factory()
+    from dontpanic_orchestrate.capabilities import load_capabilities
+
+    return load_capabilities()
+
+
 # Test-injectable override. ``None`` falls through to ``default_resolver``.
 _RESOLVER_FACTORY = None
+
+# Test-injectable override. ``None`` falls through to ``load_capabilities``.
+_CAPABILITY_INDEX_FACTORY = None
 
 
 def _read_external_refs_from_frontmatter(plan_dir: Path) -> list:
@@ -2385,7 +2403,13 @@ def _validate_external_refs_at_lock(plan_dir: Path) -> None:
     plan.md (no full plan_loader.load — see
     :func:`_read_external_refs_from_frontmatter` for the rationale) and
     calls into :func:`external_refs_sync.validate_refs_for_lock`. Plans
-    with no refs return immediately."""
+    with no refs return immediately.
+
+    Plan 2026-05-21-001 F004 — when any ref declares ``capability_id``,
+    load the manifest index and pass it through so unknown or
+    incompatible capability IDs fail loud at lock-time. Plans with only
+    legacy refs (no ``capability_id``) skip the manifest load entirely
+    for backward compatibility."""
 
     from dontpanic_orchestrate import external_refs_sync as ers
 
@@ -2393,7 +2417,10 @@ def _validate_external_refs_at_lock(plan_dir: Path) -> None:
     if not refs:
         return
     resolver = _resolver_for_external_refs()
-    ers.validate_refs_for_lock(refs, resolver)
+    capability_index = None
+    if any(getattr(r, "capability_id", None) is not None for r in refs):
+        capability_index = _capability_index_for_external_refs()
+    ers.validate_refs_for_lock(refs, resolver, capability_index=capability_index)
 
 
 def _run_external_refs_at_close(plan_dir: Path, *, dry_run: bool) -> None:

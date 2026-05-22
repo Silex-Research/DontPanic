@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-22T17:46:51Z",
+  "completed_at": "2026-05-22T17:50:56Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/codex-auditor-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-mb2gndv7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3555 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3651827,
+    "tokens_out": 15490,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F004] All 103 relevant tests pass (up from 99 prior — 4 new CLI lock-path tests added).\n\nRepo: DontPanic  \nEnv: dev  \nProject: (none)\n\nCommands run:\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q -k \"external_refs or adapter_registry or plan_loader or capabilities\"\n\n**Finding 1 (high/correctness)** — addressed by editing `cli.py:2383-2410` (`_validate_external_refs_at_lock`) to lazily load the F001 capability manifest index via a new test-injectable `_CAPABILITY_INDEX_FACTORY` seam + `_capability_index_for_external_refs()` helper, and pass it through as `capability_index=` to `ers.validate_refs_for_lock(...)`. The manifest load is gated on `any(ref.capability_id is not None for ref in refs)` so legacy plans (and operators without a capabilities directory) don't pay the load cost or block on a missing manifests dir — preserves backward compat while making unknown/incompatible IDs fail loud at the real CLI lock seam.\n\n**Finding 2 (medium/test_coverage)** — addressed by adding 4 new tests in `test_external_refs_sync_capability_binding_f004.py` that exercise `cli._validate_external_refs_at_lock` directly with frontmatter-loaded refs: (a) `",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q -k \"external_refs or adapter_registry or plan_loader or capabilities\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

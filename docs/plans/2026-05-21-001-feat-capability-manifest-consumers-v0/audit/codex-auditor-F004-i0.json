@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T17:44:30Z",
+  "completed_at": "2026-05-22T17:46:51Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-mb2gndv7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 176871 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1024969,
+    "tokens_out": 9295,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): The real CLI lock path does not pass a `CapabilityIndex`, so invalid or incompatible `capability_id` values are not validated in the consumer path. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2396) calls `ers.validate_refs_for_lock(refs, resolver)` without `capability_index`; [external_refs_sync.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/external_refs_sync.py:296) only runs `validate_capability_bindings()` when that argument is supplied. This means a `sync: none` ref bound to a non-PM capability can remain advisory instead of failing as required. Recommendation: load capabilities in `_validate_external_refs_at_lock()` and pass `capability_index=...`; add a CLI-level regression test for unknown and incompatible IDs.\n\nFINDING (medium, test_coverage): The new tests cover direct `validate_refs_for_lock(..., capability_index=index)` calls, but not the actual `_validate_external_refs_at_lock()` CLI integration path. Evidence: test references only call `ers.validate_refs_for_lock(...)` directly; `rg` found no `_validate_external_refs_at_lock` coverage in `scripts/dontpanic_orchestrate/tests`. Recommendation: add a lock-path test with frontmatter `capability_id: firebase-dashboard` and `sync: none` proving it fails with `ExternalRefCapabilityBindingError`.\n\nImplementer target declaration ch",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff HEAD~1 -- ../scripts/dontpanic_orchestrate/external_refs_sync.py",
+      "git diff HEAD~1 -- ../scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+      "git diff HEAD~1 -- ../claude/shared/schemas/v1.0/models/plan_model.py ../claude/shared/schemas/v1.0/plan.schema.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "The real CLI lock path does not pass a `CapabilityIndex`, so invalid or incompatible `capability_id` values are not validated in the consumer path. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2396) calls `ers.validate_refs_for_lock(refs, resolver)` without `capability_index`; [external_refs_sync.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/external_refs_sync.py:296) only runs `validate_capability_bindings()` w",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "The new tests cover direct `validate_refs_for_lock(..., capability_index=index)` calls, but not the actual `_validate_external_refs_at_lock()` CLI integration path. Evidence: test references only call `ers.validate_refs_for_lock(...)` directly; `rg` found no `_validate_external_refs_at_lock` coverage in `scripts/dontpanic_orchestrate/tests`. Recommendation: add a lock-path test with frontmatter `capability_id: firebase-dashboard` and `sync: none` proving it fails with `ExternalRefCapabilityBindi",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

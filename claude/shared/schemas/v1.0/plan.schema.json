@@ -210,6 +210,11 @@
           "sync": {
             "enum": ["none", "push_status"],
             "description": "Outbound sync opt-in. 'none' (default at semantic level) = ref is informational only; lock-time reachability failures DO NOT block lock. 'push_status' = plan close pushes DontPanic status flip to the external entity; lock-time reachability failures block lock loud."
+          },
+          "capability_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "Plan 2026-05-21-001 F004 — optional binding to a capabilities/<id>.json manifest. When set, lock-time validation resolves the ref to a registered adapter whose capability_id matches (not just by URI scheme) and requires the manifest category to match the ref kind ('pm_issue' requires category 'pm-tool'). Legacy refs without capability_id continue to resolve by URI scheme as before."
           }
         },
         "additionalProperties": false
