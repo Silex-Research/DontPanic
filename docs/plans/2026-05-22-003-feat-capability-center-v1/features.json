@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-05-22-003-feat-capability-center-v1",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Static dashboard Capability Center. Add a dashboard page/module registered through the existing static dashboard router that reads `dashboard/state/capabilities-status.json` when present, degrades to an empty/helpful state when absent, and renders one card/row per capability from the V0b status JSON envelope. The view must show status badge, owner_boundary chips, configured list, missing list, automatable next actions, human-required next actions with reason text, and pending probe advisories. It must live in the static dashboard, not Firebase realtime. It must not require Firebase Auth, Firestore, Cloud Functions, or any external service to render.",
+      "steps": [
+        "Read dashboard/core.js, dashboard/core.css, existing page modules, and V0b capabilities status JSON shape.",
+        "Add dashboard state loading for `capabilities-status.json` without breaking existing state files.",
+        "Add a `pages/capabilities/` static dashboard module and CSS that registers a Capability Center page with the existing router.",
+        "Render capability status, owner_boundary chips, configured/missing lists, pending probes, and next actions partitioned into automatable/human-required.",
+        "Add an empty-state when `dashboard/state/capabilities-status.json` is missing that points operators to `dontpanic capabilities status --format=json` and does not imply Firebase is required.",
+        "Add unit tests for the pure rendering/data transformation layer and a browser/static smoke where feasible.",
+        "Run dashboard tests, relevant Python tests, plan validation, and sanitization."
+      ],
+      "acceptance": "(1) Static dashboard nav includes Capability Center. (2) Capability Center renders from `dashboard/state/capabilities-status.json` with no Firebase dependency. (3) Missing state file renders a useful empty state and does not fail page bootstrap. (4) Each capability displays status, owner_boundary chips, configured/missing lists, automatable next actions, human-required next actions, and pending probes. (5) Firebase-dashboard and Linear example statuses are visually distinguishable as setup/not-installed cases. (6) Tests cover rendering/data transformation. (7) Dashboard tests and relevant Python tests pass. (8) Sanitization clean.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Read-only MCP capability status projection. Add an MCP tool such as `capabilities.get_status` that returns the same status envelope as `dontpanic capabilities status --format=json`, optionally narrowed by capability_id/profile, without mutating local state and without exposing secret values. The tool may read the V0b cache or recompute through the same capability status module. It must explicitly reject mutation/setup requests in v1.",
+      "steps": [
+        "Read the existing MCP server/tool registration code and V0b capabilities_status module.",
+        "Add a read-only `capabilities.get_status` tool with optional capability_id/profile inputs.",
+        "Reuse the V0b status envelope schema; do not create a second JSON shape.",
+        "Ensure returned data contains missing secret names only, never secret values.",
+        "Add MCP unit tests for full status, single capability, unknown capability, profile filtering, and read-only/no-mutation behavior.",
+        "Run MCP tests, capability status tests, plan validation, and sanitization."
+      ],
+      "acceptance": "(1) MCP exposes a read-only capability status tool. (2) Tool output matches the CLI JSON envelope shape. (3) Optional capability_id narrows output or returns a clear unknown-id error. (4) Optional profile filtering matches CLI behavior. (5) No setup/mutation action is exposed. (6) Tests cover success, narrowing, unknown id, profile, and no-secret-value invariants. (7) Relevant Python tests pass. (8) Sanitization clean.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Roadmap parent update and v1 close-out. Update the parent roadmap with actual V1 evidence, note that V2 remains the next executable child only after V1 is accepted, and preserve the trigger history by recording the operator override that promoted V1 to implementation now.",
+      "steps": [
+        "Append parent roadmap D-entry linking V1 implementation evidence.",
+        "Add V1 close-out evidence summarizing tests, dashboard behavior, and MCP read-only behavior.",
+        "Flip F003 only after F001 and F002 are green and operator has reviewed the visual dashboard surface.",
+        "Validate this child plan and the parent roadmap."
+      ],
+      "acceptance": "(1) Parent roadmap decisions cite this child plan and shipped evidence. (2) This plan has close-out evidence covering dashboard + MCP. (3) V2 remains a separate child plan and is not silently folded into V1. (4) Plan validation passes.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Parent roadmap 2026-05-22-001 promotes V1 from future milestone to executable child work: humans need a visual static dashboard Capability Center and agents need a read-only MCP projection over the same V0b capability status envelope.",
+  "user_journeys": [
+    {
+      "name": "operator-reviews-capabilities-visually",
+      "description": "An operator opens the bundled static dashboard and sees a Capability Center page without configuring Firebase. The page shows each capability's status, ownership boundary, missing setup, and next actions.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "dashboard_loaded",
+        "capability_cards_rendered",
+        "missing_setup_visible",
+        "firebase_not_required"
+      ],
+      "acceptance_signals": [
+        "Dashboard nav includes Capability Center",
+        "Capability Center renders from dashboard/state/capabilities-status.json",
+        "Empty state points to dontpanic capabilities status when the state file is absent",
+        "Firebase-dashboard and Linear show actionable setup states without requiring Firebase realtime"
+      ]
+    },
+    {
+      "name": "agent-reads-capability-status-through-mcp",
+      "description": "An agent calls a read-only MCP tool to retrieve the same capability status envelope the CLI emits, optionally narrowed to one capability.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "mcp_tool_called",
+        "status_envelope_returned",
+        "no_secret_values_returned"
+      ],
+      "acceptance_signals": [
+        "MCP tool returns the CLI-compatible JSON shape",
+        "Single capability filtering works",
+        "Unknown capability id returns a clear error",
+        "No mutating setup tool is exposed"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "capability-center-static-dashboard-render.log",
+    "capability-center-empty-state.log",
+    "mcp-capabilities-get-status.log",
+    "mcp-capabilities-no-mutation.log",
+    "dashboard-tests-green.log",
+    "python-tests-green.log",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No Firebase realtime dependency",
+    "No guided setup runner",
+    "No secret storage",
+    "No new capability schema fields",
+    "No mutation MCP tools"
+  ],
+  "completion_test": "A fresh static dashboard render shows a Capability Center from a sample capabilities-status JSON file, while an MCP call returns the same status envelope without mutation tools or secret values. Relevant dashboard and Python tests are green and sanitization is clean."
+}

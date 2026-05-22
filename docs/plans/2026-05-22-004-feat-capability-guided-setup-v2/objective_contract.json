@@ -1,0 +1,57 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Parent roadmap 2026-05-22-001 defines V2 as guided setup: use setup_steps[] to execute safe automatable work, display human-required work, and verify capability readiness without storing secrets.",
+  "user_journeys": [
+    {
+      "name": "operator-prints-guided-setup",
+      "description": "An operator runs a print-only setup command and receives an ordered checklist for one capability without executing anything.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "steps_loaded",
+        "human_required_separated",
+        "no_execution"
+      ],
+      "acceptance_signals": [
+        "Print-only setup renders all setup_steps[] in order",
+        "Human-required steps show reason text",
+        "No subprocess execution occurs"
+      ]
+    },
+    {
+      "name": "agent-runs-safe-automatable-steps",
+      "description": "An agent or operator runs the guarded setup runner with confirm; only allowlisted automatable steps execute, human-required steps are skipped, and verification runs after attempts.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "confirm_gate_cleared",
+        "automatable_steps_attempted",
+        "human_required_skipped",
+        "verification_rerun"
+      ],
+      "acceptance_signals": [
+        "--automate-safe refuses without --confirm",
+        "Unsafe command templates are denied",
+        "Human-required steps never execute",
+        "Evidence records before/after status"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "setup-print-steps-firebase-dashboard.log",
+    "setup-automate-safe-confirm-required.log",
+    "setup-human-required-skipped.log",
+    "setup-evidence-no-secrets.log",
+    "python-tests-green.log",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No secret storage",
+    "No execution of human-required steps",
+    "No unconfirmed cloud deployment mutation",
+    "No dashboard work"
+  ],
+  "completion_test": "The setup runner can print Firebase setup steps without execution, safely execute a fixture automatable step only with confirm, skip human-required work, write no-secret evidence, and pass relevant tests."
+}

@@ -6,13 +6,13 @@ description: |
   capabilities/*.json manifest convention (already shipped via ADR-001)
   through CLI status, dashboard Capability Center, MCP projection, and
   guided setup. This plan documents the strategic outcome and future
-  architecture; only the V0 child plan
-  (2026-05-22-002-feat-capability-status-v0) is dispatchable now. V1 and
-  V2 are documented future milestones with explicit trigger conditions
-  and will open their own child plans when those triggers fire.
+  architecture; executable work lives in child plans. V0a and V0b are
+  complete. The operator has now promoted V1/V2 from trigger-gated future
+  milestones to concrete child plans so the roadmap can move through the
+  orchestrator.
 type: infra
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-22"
 goal_type: infra
 surfaces:
@@ -32,6 +32,9 @@ dependencies:
   - 2026-05-10-001-feat-printing-press-adapter-skill
   - 2026-05-20-001-infra-external-integrations-bridge-v0
   - 2026-05-21-001-feat-capability-manifest-consumers-v0
+  - 2026-05-22-002-feat-capability-status-v0
+  - 2026-05-22-003-feat-capability-center-v1
+  - 2026-05-22-004-feat-capability-guided-setup-v2
 links:
   decisions: ./decisions.jsonl
   evidence_dir: ./evidence/
@@ -41,13 +44,15 @@ links:
 
 ## Status
 
-**Tracking-only.** This plan documents the strategic arc. It does NOT
-ship code itself. Child plans (V0 / V1 / V2) carry the executable work.
-This plan stays `status: draft` indefinitely as a tracking doc — it is
-not intended to be locked or dispatched. The convention of
-"meta-planning as a tracking-only plan" is currently learned operator
-discipline, not first-class DontPanic schema; see D003 + the
-`feedback_dontpanic_meta_planning_gap` memory note.
+**Tracking parent, active.** This plan documents the strategic arc and
+tracks child-plan progress. It does NOT ship code itself. Child plans
+(V0 / V1 / V2) carry the executable work. Earlier revisions kept this
+plan `status: draft` indefinitely; the operator has now explicitly
+promoted the roadmap into an active tracking parent so V1/V2 can be
+implemented through the orchestrator while preserving the parent/child
+audit trail. The convention of "meta-planning as a tracking plan" is
+currently learned operator discipline, not first-class DontPanic schema;
+see D003 + the `feedback_dontpanic_meta_planning_gap` memory note.
 
 ## Strategic Outcome
 
@@ -229,10 +234,7 @@ adapter registry `capability_id` binding. Turns ADR-001 manifests from
 prose into a machine-checkable contract that downstream consumers can
 bind to.
 
-**Status:** F001 (loader) shipped 2026-05-21 (passes:true). F002
-(probe binding) and F003 (adapter binding) in-flight at lock time of
-this roadmap. **No action from this roadmap** — V0a is its own child
-plan and runs on its own track.
+**Status:** Completed. F001-F005 are passes:true.
 
 ### V0b — Status Surface (LOCKABLE NOW, layered on V0a)
 
@@ -248,9 +250,9 @@ existing `external_refs[]` + new optional `requires_capabilities[]`.
 Backfill `setup_steps[]` on the four checked-in manifests, deepest on
 `firebase-dashboard.json` (operator's real blocker).
 
-**Trigger:** Already triggered. ADR-001 shipped; V0a loader landed;
-operator has Firebase blockers this surface directly resolves.
-**Dispatch as soon as V0b child plan locks.**
+**Status:** Completed. F001-F003 are passes:true. V0b produced the
+`dontpanic capabilities status` CLI, `setup_steps[]`, cache, and
+lock-time advisory sidecar.
 
 **Coupling to V0a:** V0b F001 (schema additive) is independent. V0b
 F002 (CLI) soft-depends on V0a F002 — when probe `capability_id`
@@ -260,7 +262,9 @@ V0b F003 (lock-time sidecar) more strictly depends on V0a F002+F003 —
 adapter `capability_id` binding is the natural seam where
 `external_refs[].uri` maps to a registered adapter's capability.
 
-### V1 — Static Dashboard Capability Center + MCP Read-Only Projection (FUTURE)
+### V1 — Static Dashboard Capability Center + MCP Read-Only Projection (ACTIVE CHILD)
+
+**Child plan:** `docs/plans/2026-05-22-003-feat-capability-center-v1/`
 
 **Scope:** Static dashboard "Capability Center" view that reads
 `~/.dontpanic/capabilities-status.json` and renders per-capability cards
@@ -269,36 +273,21 @@ Lives in the static/core dashboard — NOT in the Firebase realtime
 dashboard. MCP `capabilities.get_status` read-only tool exposes the
 same data for agent consumption.
 
-**Trigger conditions:** V1 child plan opens when the prerequisite is
-met AND at least one demand signal has fired.
+**Activation:** Operator override on 2026-05-22 promoted V1 to
+executable child work. The static dashboard substrate exists under
+`dashboard/`, and the operator explicitly asked to complete the roadmap
+through orchestrator-driven child plans rather than waiting for more
+calendar time.
 
-**Prerequisite** (must be true — purely an enabling condition, NOT a
-trigger on its own):
+**Status:** Draft child plan, ready to lock and dispatch F001 first.
+F001 (dashboard view) and F002 (MCP read-only projection) are disjoint
+enough to dispatch separately after lock if the operator wants
+parallelism, but F001 is the recommended first slice because it
+validates the human-review surface.
 
-- Static/core dashboard exists as a surface this can hook into (i.e.,
-  Plan 2026-05-09-004 amendment splits static from Firebase realtime,
-  OR a separate static dashboard plan ships). Without a dashboard
-  substrate, V1 has nowhere to render.
+### V2 — Guided Setup Runner (DRAFT CHILD, SEQUENCED AFTER V1)
 
-**Demand signal** (at least one must fire — observed real-world
-friction, NOT calendar-driven):
-
-- Operator has used `dontpanic capabilities status` (V0b) for ≥2 weeks
-  and reports a specific friction the CLI does not address (e.g., "I
-  need to see all my capabilities at once without scrolling terminal
-  output").
-- A third capability (beyond Firebase + Linear) hits configuration
-  friction where operator explicitly says "this would be easier with
-  visual review."
-- An external agent or operator workflow needs the MCP read-only
-  projection specifically (subset of V1 that may justify its own
-  smaller child plan rather than the full Capability Center view).
-
-**Explicitly NOT dispatch target until both prerequisite + demand
-signal are met.** No features.json entry, no scaffolded acceptance, no
-lockable scope yet.
-
-### V2 — Guided Setup Runner (FUTURE)
+**Child plan:** `docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/`
 
 **Scope:** `dontpanic capabilities setup <id> [--print-steps]
 [--automate-safe]` walks `setup_steps[]` from the manifest. Runs
@@ -307,19 +296,13 @@ Mutations flow through governed paths (MCP tools with confirm, or
 scoped shell commands recorded as evidence). Failures produce durable
 records. Re-runs verification probes until ready or explicitly blocked.
 
-**Trigger conditions** (V2 child plan opens when ANY of these is met):
+**Activation:** Drafted now per operator request to build out the full
+roadmap, but sequenced after V1. V2 should not lock until V1 is accepted
+because guided setup needs the V1 review/projection surfaces to make
+human/agent handoff understandable.
 
-- Operator has used CLI status (V0) and dashboard Capability Center (V1)
-  and explicitly reports "the status view tells me what's wrong but I
-  want it to fix what it can."
-- Two or more capabilities have ≥5 `setup_steps[]` each, making
-  copy-paste setup error-prone enough to justify automation.
-- Agent-handoff JSON (from V0 `--format=json`) is being consumed by an
-  external agent that wants to delegate the automatable-step execution
-  back to DontPanic.
-
-**Explicitly NOT dispatch target until trigger.** No features.json
-entry, no scaffolded acceptance, no lockable scope yet.
+**Status:** Draft child plan with F001 print-only setup, F002 guarded
+automatable execution, and F003 setup evidence/roadmap close-out.
 
 ## Why a Meta-Plan, Not a Monolithic Plan
 
@@ -378,6 +361,7 @@ from the convention. See decisions.jsonl D003 + memory entry
 
 ## Status (Reiterated)
 
-`draft` — tracking only. Not dispatched. Not locked. V0 child plan
-(`2026-05-22-002-feat-capability-status-v0`) is the next executable
-work.
+`active` — tracking parent only. V0a and V0b complete. V1 child plan
+(`2026-05-22-003-feat-capability-center-v1`) is the next executable
+work. V2 child plan (`2026-05-22-004-feat-capability-guided-setup-v2`)
+is drafted and waits on V1.
