@@ -6,7 +6,7 @@
   "category": "dashboard-realtime",
   "summary": "Optional realtime team dashboard adapter that mirrors DontPanic state projection into Firebase and routes dashboard mutations through DontPanic MCP.",
   "setup_required": true,
-  "setup_doc": "docs/USE_CASES.md#u6-team-collaboration-with-shared-dashboard",
+  "setup_doc": "dashboard/functions/RUNBOOK.md",
   "default_in_profiles": ["firebase-dashboard"],
   "use_cases": ["U6b"],
   "requires": {
