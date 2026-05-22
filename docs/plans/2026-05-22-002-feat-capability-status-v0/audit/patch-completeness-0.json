@@ -1,46 +1,6 @@
 {
   "schema_version": "1.0",
-  "status": "fail",
-  "findings": [
-    {
-      "mode": "test_file_untracked",
-      "files": [
-        "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py",
-        "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py"
-      ],
-      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
-      "severity": "block",
-      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py"
-    },
-    {
-      "mode": "unstaged_dirty_state",
-      "files": [
-        "capabilities/agent-claude-cli.json",
-        "capabilities/discord-notify.json",
-        "capabilities/firebase-dashboard.json",
-        "capabilities/linear.json",
-        "claude/shared/CHANGELOG.md",
-        "claude/shared/VERSION",
-        "claude/shared/schemas/v1.0/capability.schema.json",
-        "scripts/dontpanic_orchestrate/capabilities.py",
-        "scripts/dontpanic_orchestrate/prereq_registry.py"
-      ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: capabilities/agent-claude-cli.json,capabilities/discord-notify.json,capabilities/firebase-dashboard.json,capabilities/linear.json,claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/capability.schema.json,scripts/dontpanic_orchestrate/capabilities.py,scripts/dontpanic_orchestrate/prereq_registry.py",
-      "severity": "block",
-      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
-    }
-  ],
-  "files": [
-    "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py",
-    "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py",
-    "capabilities/agent-claude-cli.json",
-    "capabilities/discord-notify.json",
-    "capabilities/firebase-dashboard.json",
-    "capabilities/linear.json",
-    "claude/shared/CHANGELOG.md",
-    "claude/shared/VERSION",
-    "claude/shared/schemas/v1.0/capability.schema.json",
-    "scripts/dontpanic_orchestrate/capabilities.py",
-    "scripts/dontpanic_orchestrate/prereq_registry.py"
-  ]
+  "status": "pass",
+  "findings": [],
+  "files": []
 }
