@@ -1,0 +1,82 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Roadmap plan docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/ identifies V0b (this plan) as the capability status surface layered on V0a (plan 2026-05-21-001 manifest consumer foundation). V0a F001 is shipped; V0a F002 (probe capability_id binding) and V0a F003 (adapter registry capability_id binding) are in-flight dependencies. ADR-001 (docs/adr/ADR-001-external-capability-model.md) defines the manifest convention this plan extends. Operator's current Firebase-realtime dashboard blockers (MCP_TUNNEL_URL, MCP_TUNNEL_TOKEN, DONTPANIC_OPERATOR_UIDS, bridge, deploy creds) are the concrete first-touch test case for whether `dontpanic capabilities status` produces actionable output without manual archaeology.",
+  "user_journeys": [
+    {
+      "name": "operator-asks-what-do-i-need-to-set-up",
+      "description": "An operator with a half-configured workstation runs `dontpanic capabilities status`. Output shows each capability's status (`ready`, `needs_setup`, `blocked`, `not_installed`, `optional`) with owner_boundary chip (core/adapter/operator), a 'Configured' list naming resolved requires, a 'Missing' list naming unresolved env/auth/files/config, and a 'Next actions' list rendered from `setup_steps[]` with automatable vs human-required labels. Firebase-dashboard appears as the deepest example (≥6 setup_steps) since that's the operator's real current blocker. PENDING-probe capabilities are surfaced as informational (`needs_probe_implementation`), NOT as blockers — preserving the property that V0b can ship before V0a F002/F003 fully land.",
+      "surfaces": ["infra"],
+      "states": ["operator_runs_status", "per_capability_breakdown_rendered", "next_actions_actionable", "PENDING_probes_informational_not_blocking"],
+      "acceptance_signals": [
+        "`dontpanic capabilities status` runs without error against the four checked-in manifests",
+        "Each capability shows status enum from {ready, needs_setup, blocked, not_installed, optional} — NOT including 'pending' as a status (PENDING is a probe-state, not a capability-state)",
+        "PENDING probes (forward-declared, no implementation yet) render as informational chip 'probe pending: <reason>' and do NOT downgrade capability status to 'blocked'",
+        "owner_boundary chips (core/adapter/operator) render on every capability",
+        "`Next actions` lists derive from `setup_steps[]` and label entries as [automatable] or [human-required: <reason>]",
+        "`status firebase-dashboard` per-capability detail view shows ≥6 setup_steps including operator-Firebase blockers",
+        "JSON output (`--format=json`) carries stable schema with `capability_id`, `status`, `missing[]`, `configured[]`, `automatable[]`, `human_required[]`, `owner_boundary`, `next_actions[]`",
+        "`~/.dontpanic/capabilities-status.json` cache written after every run unless `--no-cache-write`"
+      ]
+    },
+    {
+      "name": "agent-consumes-json-handoff",
+      "description": "An agent (Claude implementer or codex auditor) runs `dontpanic capabilities status --format=json` and parses the structured shape to produce a task list. The `automatable[]` array names commands the agent (or operator under agent guidance) can run unattended; the `human_required[]` array names steps that need operator intervention with reason text. This IS the agent-handoff format — no separate API needed. Schema is locally documented in this plan's evidence; formal agent-conventions schema bump deferred to a future plan.",
+      "surfaces": ["infra"],
+      "states": ["agent_invokes_status_json", "structured_output_parsed", "task_list_partitioned_automatable_vs_human"],
+      "acceptance_signals": [
+        "JSON envelope carries top-level `schema_version` field",
+        "Snapshot test pins JSON shape for stability",
+        "`automatable[]` and `human_required[]` derive deterministically from each setup_step's `automatable: bool` flag",
+        "`--format=json` produces no human-readable prose (machine-only output)",
+        "Unknown capability_id passed as positional arg exits non-zero with a closest-match suggestion",
+        "Local schema doc in this plan's evidence; agent-conventions schema bump explicitly deferred"
+      ]
+    },
+    {
+      "name": "operator-locks-plan-with-capability-dependencies",
+      "description": "An operator runs `dontpanic plan lock <plan-id>` on a plan whose frontmatter declares `external_refs[]` (existing v1.10.0 substrate from plan 2026-05-20-001 F002) AND/OR a new optional `requires_capabilities[]` array naming capability_ids. Lock validates each capability_id against the manifest registry; emits `evidence/required-capabilities.json` summarizing per-capability readiness (sourced from the capabilities-status cache); displays a warning chip in lock output when any required capability is not ready. Lock proceeds — sidecar is advisory only, NOT a lock-blocker.",
+      "surfaces": ["infra"],
+      "states": ["plan_declares_capability_deps", "lock_validates_capability_ids", "sidecar_emitted", "warning_chip_displayed_if_not_ready"],
+      "acceptance_signals": [
+        "Optional `requires_capabilities[]` field added to plan.schema.json (backward-compat: absent or empty = no advisory)",
+        "Unknown capability_id in requires_capabilities[] fails lock loud with closest-match suggestion",
+        "`evidence/required-capabilities.json` written on every lock when plan has external_refs OR requires_capabilities",
+        "Sidecar JSON: {plan_id, generated_at, required_capabilities[{capability_id, status, missing[], next_actions[], owner_boundary}]}",
+        "Lock output displays warning chip 'plan requires X capabilities not ready (see required-capabilities.json)' but lock proceeds",
+        "Plans without external_refs and without requires_capabilities[] emit no sidecar (no false advisory)"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "capabilities-status-cli-runs-against-four-manifests.log",
+    "PENDING-probes-render-informational-not-blocking.log",
+    "json-format-schema-pinned-snapshot.log",
+    "setup-steps-backfill-firebase-six-steps.log",
+    "setup-steps-backfill-linear-four-steps.log",
+    "setup-steps-backfill-discord-two-steps.log",
+    "setup-steps-backfill-claude-two-steps.log",
+    "cache-written-to-dontpanic-home.log",
+    "lock-sidecar-emitted-with-external-refs.log",
+    "lock-sidecar-emitted-with-requires-capabilities.log",
+    "lock-sidecar-absent-when-no-capability-deps.log",
+    "schema-additive-no-breaking-change-existing-manifests-load.log",
+    "no-conflict-with-2026-05-21-001-loader.log",
+    "sanitization-clean.log",
+    "full-orchestrate-sweep-at-or-above-baseline.log"
+  ],
+  "non_goals": [
+    "No dashboard Capability Center view (V1 — roadmap-gated)",
+    "No MCP `capabilities.get_status` tool (V1 — roadmap-gated)",
+    "No `dontpanic capabilities setup <id>` guided runner (V2 — roadmap-gated)",
+    "No mutation tools — read-only by design (status surface only)",
+    "No new plan-lock blocking behavior — sidecar is advisory only",
+    "No new schema version directory (no `claude/shared/schemas/v1.1/`) — `setup_steps[]` is added as optional field on the existing v1.0 capability schema; schema_version const stays '1.0.0' since the change is additive and backward-compatible",
+    "No new `capabilities/` package directory in dontpanic_orchestrate — extends existing `scripts/dontpanic_orchestrate/capabilities.py` module (a package would collide with the existing module name)",
+    "No re-implementation of manifest loader (plan 2026-05-21-001 F001 already shipped — declared as dependency)",
+    "No probe `capability_id` binding work (plan 2026-05-21-001 F002 in-flight — declared as soft dependency; this plan degrades gracefully when probes lack capability_id binding)",
+    "No adapter registry `capability_id` binding work (plan 2026-05-21-001 F003 in-flight — declared as soft dependency)",
+    "No formal agent-conventions schema bump for the status JSON envelope in V0 — local schema doc in evidence; formal promotion deferred to a future plan",
+    "No `--strict-capabilities` lock flag — explicitly out of V0 scope; demand-driven addition in a follow-up if friction appears"
+  ],
+  "completion_test": "An operator on a workstation with partial Firebase setup runs `dontpanic capabilities status` and gets a per-capability table showing firebase-dashboard as needs_setup with ≥6 actionable next_actions; linear as needs_setup with ≥4 next_actions; discord-notify and agent-claude-cli with their respective setup_steps. PENDING probes from V0a F002 not-yet-shipped binding work render as informational chips, NOT as blockers. The operator runs `dontpanic capabilities status --format=json > /tmp/status.json`; an agent reads /tmp/status.json and produces a partitioned task list (automatable subset + human-required subset) without further input. The operator then runs `dontpanic plan lock` on a plan declaring `requires_capabilities: [firebase-dashboard]`; lock proceeds, emits `evidence/required-capabilities.json`, and displays a warning chip naming the gap. Full orchestrator sweep at or above lock-time baseline. Sanitization clean (no leaked secrets in setup_step command_template entries — all use placeholders)."
+}
