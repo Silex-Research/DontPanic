@@ -2,7 +2,11 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json",
+      "path": "claude/shared/schemas/v1.0/models/plan_model.py",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/schemas/v1.0/plan.schema.json",
       "status": "M"
     },
     {
@@ -10,38 +14,17 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+      "path": "scripts/dontpanic_orchestrate/external_refs_sync.py",
       "status": "M"
     },
     {
       "path": "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
       "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/prereq_registry.py",
-      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/claude-implementer-F003-i0.json",
-    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/claude-implementer-F002-i0.json",
-    "scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py"
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/claude-implementer-F004-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

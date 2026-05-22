@@ -176,10 +176,58 @@
         "Tests cover valid Linear ref, unknown capability, PM ref bound to non-PM capability, push ref with no matching adapter, and sync=none non-blocking behavior."
       ],
       "acceptance": "(1) ExternalRef supports optional capability_id. (2) PM-tool push refs bind to registered adapters by capability_id. (3) Invalid or incompatible capability IDs fail with actionable errors. (4) sync=none remains non-blocking. (5) Existing external_refs tests remain green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F003"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:57:03Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/plan.schema.json",
+          "note": "ExternalRef schema supports optional capability_id."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/models/plan_model.py",
+          "note": "Generated ExternalRef model includes capability_id."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/external_refs_sync.py",
+          "note": "Lock and close paths prefer capability_id resolver bindings; cache key includes capability_id."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "Lock path passes capability index when refs declare capability_id."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py",
+          "note": "F004 tests cover schema/model parsing, lock path validation, sync=none behavior, and cache-bypass regression."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F004-i1.json",
+          "note": "Second implementer iteration after CLI-lock-path auditor feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i1.json",
+          "note": "Final auditor envelope identified the same-URI cache bypass defect remediated manually."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F004_iter2.json",
+          "note": "Stopped_no_progress classification; implementation_defect drove manual remediation."
+        }
       ]
     },
     {

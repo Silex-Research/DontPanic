@@ -169,7 +169,7 @@ def default_resolver(
         if hook is None:
             continue
         try:
-            resolver.register(hook)
+            resolver.register(hook, capability_id=mapping.capability_id)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "adapter_registry: refusing duplicate scheme %r: %s",

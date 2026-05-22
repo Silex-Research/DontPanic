@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-22T17:38:11Z",
+  "completed_at": "2026-05-22T17:44:30Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-mb2gndv7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3514 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 5253631,
+    "tokens_out": 26585,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F004] 99 tests passing across external_refs / adapter_registry / plan_loader / capabilities. Implementation complete.\n\n## Summary\n\nImplemented F004 external_refs capability binding by:\n\n1. **Schema + model** (`plan.schema.json`, `plan_model.py`): added optional `capability_id` field on `ExternalRef`, pattern-constrained to capability-id slug shape (`^[a-z0-9][a-z0-9-]*$`); legacy refs without the field continue to parse.\n2. **External-refs sync** (`external_refs_sync.py`): added `EXTERNAL_REF_KIND_CATEGORY` (`pm_issue` → `pm-tool`), `ExternalRefCapabilityBindingError`, and `validate_capability_bindings()`. Extended `AdapterResolver` with a `_by_capability_id` index, `register(hook, capability_id=...)`, `resolve_by_capability_id()`, and `has_capability_id()`. Added `_resolve_for_ref()` to prefer capability-based lookup when the ref declares one, and threaded it through `validate_refs_for_lock` (now accepts `capability_index=`) and `run_close_push`. `sync=none` continues to swallow missing-adapter errors; `sync=push_status` blocks loud.\n3. **Resolver bootstrap** (`adapter_registry.py`): `default_resolver()` now forwards `mapping.capability_id` to `resolver.register()`, completing the F003→F004 wiring.\n4. **Tests** (`test_external_refs_sync_capability_binding_f004.py`): 18 new cases covering ExternalRef field, malformed id rejection, capability validator happy/unknown/incompatible/non-pm-kind, resolver routing, push-with-no-matching-adapter blocks at lock, `sync=none` non-blocking, sc",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/ -q -k \"external_refs or adapter_registry or plan_loader or capabilities\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

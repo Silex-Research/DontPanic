@@ -152,3 +152,83 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   unstaged_dirty_state | block | docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
 
 ===
+---
+timestamp: 2026-05-22T17:38:11Z
+event: volley_start
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T17:38:11Z
+event: volley_start
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-22T17:54:47Z
+event: no_progress_classification
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F004
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F004
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: `validate_refs_for_lock` can bypass required capability-adapter matching after a same-URI cache hit. Evidence: `_READ_CACHE` is keyed only by `uri` and checked…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-21-001-feat-capability-manifest-consumers-v0 F004 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-22T17:54:47Z
+event: breaker_tripped
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+breaker_kind: no_progress
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-21-001-feat-capability-manifest-consumers-v0 breaker:no_progress` or `jarvis resume 2026-05-21-001-feat-capability-manifest-consumers-v0 --all`.
+
+===
+---
+timestamp: 2026-05-22T17:54:47Z
+event: volley_terminal
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F004
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
