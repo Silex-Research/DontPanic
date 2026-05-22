@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+  "audit_id": "2026-05-21-001-feat-capability-manifest-consumers-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T17:16:26Z",
+  "completed_at": "2026-05-22T17:20:12Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-21-001-feat-capability-manifest-consumers-v0-0bpde39g target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 226058 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1919203,
+    "tokens_out": 13267,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), structured `target_context` matches `env=dev`, `project=null`, and I found no forbidden command shapes in their recorded commands.\n\nFINDING (medium, test_coverage): the new F003 regression test file is untracked, so the acceptance coverage is not part of the tracked patch. Evidence: `git status --short --untracked-files=all` shows `?? ../scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py`, and `git diff HEAD~1` did not include it. Recommendation: add the test file to the tracked change set before signoff.\n\nFINDING (low, style): targeted Ruff fails on an unused import in the new F003 test. Evidence: `ruff check --no-cache ...` reports `F401 PMToolMappingConfig imported but unused` at `scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py:25`. Recommendation: remove the unused `PMToolMappingConfig` import and rerun Ruff.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q -o cache_provider_disabled=true\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c '<manual capability binding checks for valid linear, legacy no capability_id, missing capability, incompatible category>'\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q -o cache_provider_disabled=true",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c '<manual capability binding checks for valid linear, legacy no capability_id, missing capability, incompatible category>'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c '<default_resolver smoke against Linear example fixture>'",
+      "ruff check scripts/dontpanic_orchestrate/integrations/adapter_registry.py scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/integrations/adapter_registry.py scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "the new F003 regression test file is untracked, so the acceptance coverage is not part of the tracked patch. Evidence: `git status --short --untracked-files=all` shows `?? ../scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py`, and `git diff HEAD~1` did not include it. Recommendation: add the test file to the tracked change set before signoff.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F003",
+      "issue": "targeted Ruff fails on an unused import in the new F003 test. Evidence: `ruff check --no-cache ...` reports `F401 PMToolMappingConfig imported but unused` at `scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py:25`. Recommendation: remove the unused `PMToolMappingConfig` import and rerun Ruff. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py -q -o cache",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

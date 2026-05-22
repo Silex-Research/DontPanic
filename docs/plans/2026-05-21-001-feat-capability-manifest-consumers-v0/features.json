@@ -114,9 +114,52 @@
         "Tests cover valid Linear record, missing capability, incompatible category, and backward compatibility for legacy records without capability_id."
       ],
       "acceptance": "(1) Adapter registry records accept optional capability_id. (2) capability_id validates against manifests. (3) PM-tool adapter category compatibility is enforced. (4) Existing records without capability_id still parse. (5) Linear examples/fixtures use `capability_id: linear`.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:06:34Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+          "note": "F003 implementation: adapter registry capability_id validation and manifest category compatibility."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
+          "note": "Adds optional capability_id to PM-tool mapping config."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py",
+          "note": "F003 tests for valid Linear binding, legacy no-id records, unknown ids, incompatible categories, and default resolver behavior."
+        },
+        {
+          "type": "file",
+          "uri": "../../2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json",
+          "note": "Linear mapping example updated with capability_id: linear."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "note": "Iteration 1 implementer completion envelope after auditor i0 feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "note": "Auditor signed_off with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "audit/terminal-state-iter1.json",
+          "note": "Terminal blocked only by parallel dirty-state patch completeness after signed_off verdict."
+        }
       ]
     },
     {

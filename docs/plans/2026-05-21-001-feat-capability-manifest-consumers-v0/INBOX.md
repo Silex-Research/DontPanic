@@ -72,3 +72,83 @@ gate: pre_merge
 Operator cleared gate 'pre_merge' via 'approve'.
 
 ===
+---
+timestamp: 2026-05-22T17:11:04Z
+event: volley_start
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T17:11:04Z
+event: volley_start
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-22T17:23:59Z
+event: volley_terminal
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+final_status: signed_off
+rounds: 2
+feature_id: F003
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-22T17:23:59Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+report_path: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-22T17:23:59Z
+event: volley_crash_caught
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+feature_id: F003
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-22T17:23:59Z
+event: volley_terminal
+plan_id: 2026-05-21-001-feat-capability-manifest-consumers-v0
+final_status: blocked
+rounds: 2
+feature_id: F003
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
