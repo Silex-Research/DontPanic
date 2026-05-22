@@ -82,5 +82,79 @@
   "notes": [
     "Static dashboard is core and has no Firebase dependency.",
     "Firebase Hosting may host static files, but Firebase realtime behavior is an optional adapter."
+  ],
+  "setup_steps": [
+    {
+      "id": "install_firebase_cli",
+      "what": "Install the Firebase CLI so the operator can deploy rules and Cloud Functions.",
+      "automatable": true,
+      "command_template": "npm install -g firebase-tools",
+      "verify_probe": "cli:firebase",
+      "human_required_reason": null
+    },
+    {
+      "id": "install_gcloud_cli",
+      "what": "Install the gcloud CLI so the operator can manage service accounts and deploy credentials.",
+      "automatable": true,
+      "command_template": "curl -sSL https://sdk.cloud.google.com | bash",
+      "verify_probe": "cli:gcloud",
+      "human_required_reason": null
+    },
+    {
+      "id": "firebase_login",
+      "what": "Authenticate the Firebase CLI against the operator's Google account.",
+      "automatable": false,
+      "command_template": "firebase login",
+      "verify_probe": "firebase-auth",
+      "human_required_reason": "Requires interactive browser sign-in with the operator's Google account; DontPanic cannot proxy this consent."
+    },
+    {
+      "id": "gcloud_auth_login",
+      "what": "Authenticate gcloud and set application-default credentials for deploys.",
+      "automatable": false,
+      "command_template": "gcloud auth login && gcloud auth application-default login",
+      "verify_probe": "gcloud-auth",
+      "human_required_reason": "Requires interactive browser sign-in; the operator must approve cloud platform scopes."
+    },
+    {
+      "id": "select_target_project",
+      "what": "Point the local Firebase config at the operator's target Firebase project.",
+      "automatable": true,
+      "command_template": "firebase use --add --project <YOUR_FIREBASE_PROJECT_ID>",
+      "verify_probe": "target-project",
+      "human_required_reason": null
+    },
+    {
+      "id": "deploy_firestore_rules",
+      "what": "Deploy the dashboard Firestore rules so the mirror collection enforces read-only browser access.",
+      "automatable": true,
+      "command_template": "firebase deploy --project <YOUR_FIREBASE_PROJECT_ID> --only firestore:rules",
+      "verify_probe": null,
+      "human_required_reason": null
+    },
+    {
+      "id": "deploy_cloud_functions",
+      "what": "Deploy the Cloud Functions that proxy dashboard mutations through the DontPanic MCP server.",
+      "automatable": true,
+      "command_template": "firebase deploy --project <YOUR_FIREBASE_PROJECT_ID> --only functions",
+      "verify_probe": null,
+      "human_required_reason": null
+    },
+    {
+      "id": "run_mcp_bridge",
+      "what": "Start the local MCP bridge process the Cloud Functions call back into for mutations.",
+      "automatable": true,
+      "command_template": "dontpanic mcp serve --bind 127.0.0.1:<YOUR_MCP_PORT>",
+      "verify_probe": "firebase_dashboard_config",
+      "human_required_reason": null
+    },
+    {
+      "id": "smoke_test",
+      "what": "Trigger a dashboard action end-to-end to confirm the browser->Cloud Function->MCP mutation path is wired.",
+      "automatable": true,
+      "command_template": "dontpanic capabilities smoke firebase-dashboard --project <YOUR_FIREBASE_PROJECT_ID>",
+      "verify_probe": "firebase_dashboard_config",
+      "human_required_reason": null
+    }
   ]
 }

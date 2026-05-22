@@ -175,6 +175,14 @@
     },
     "notes": {
       "$ref": "#/$defs/stringArray"
+    },
+    "setup_steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/setupStep"
+      },
+      "uniqueItems": true,
+      "uniqueBy": "id"
     }
   },
   "$defs": {
@@ -185,6 +193,40 @@
         "minLength": 1
       },
       "uniqueItems": true
+    },
+    "setupStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "what",
+        "automatable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "what": {
+          "type": "string",
+          "minLength": 1
+        },
+        "automatable": {
+          "type": "boolean"
+        },
+        "command_template": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "verify_probe": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "human_required_reason": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      }
     }
   }
 }

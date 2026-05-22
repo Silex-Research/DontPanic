@@ -59,5 +59,23 @@
   "notes": [
     "Claude is an external runtime, not bundled by DontPanic.",
     "Core profile may also support other agent CLIs; this manifest records the Claude-specific path."
+  ],
+  "setup_steps": [
+    {
+      "id": "install_claude_cli",
+      "what": "Install the Claude CLI so DontPanic can spawn agent runs through the governed executor.",
+      "automatable": true,
+      "command_template": "npm install -g @anthropic-ai/claude-cli",
+      "verify_probe": "cli:claude",
+      "human_required_reason": null
+    },
+    {
+      "id": "authenticate_claude",
+      "what": "Authenticate the Claude CLI against the operator's Claude account or API key.",
+      "automatable": false,
+      "command_template": "claude auth login --token <YOUR_CLAUDE_API_TOKEN>",
+      "verify_probe": "agent_role_config",
+      "human_required_reason": "Operator must approve scopes for their Claude account and treat the API token as a secret; DontPanic does not provision Claude credentials on the operator's behalf."
+    }
   ]
 }

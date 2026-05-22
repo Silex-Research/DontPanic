@@ -1,0 +1,1 @@
+{"kind": "volley.spawn_child", "plan_id": "2026-05-22-001-infra-external-capability-operations-roadmap-v0", "ts": "2026-05-22T16:49:03Z", "parent_plan_id": "2026-05-22-001-infra-external-capability-operations-roadmap-v0", "child_plan_id": "2026-05-22-002-feat-capability-status-v0", "spawn_reason": "operator_manual", "finding_signature": null, "newly_armed": true}

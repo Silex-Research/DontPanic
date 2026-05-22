@@ -69,5 +69,39 @@
   "notes": [
     "Linear is the reference implementation for the PM-tool category, not a core dependency.",
     "Additional PM tools should use the same category contract before adding service-specific Python code."
+  ],
+  "setup_steps": [
+    {
+      "id": "emit_pp_binary",
+      "what": "Generate the Printing Press Linear adapter binary the operator will register with DontPanic.",
+      "automatable": true,
+      "command_template": "printing-press emit --target linear --out <YOUR_ADAPTER_BIN_PATH>",
+      "verify_probe": "adapter:linear_binary_present",
+      "human_required_reason": null
+    },
+    {
+      "id": "register_adapter",
+      "what": "Register the emitted Linear adapter binary with DontPanic so plan close/resync can find it.",
+      "automatable": true,
+      "command_template": "dontpanic adapters register linear --binary <YOUR_ADAPTER_BIN_PATH>",
+      "verify_probe": "adapter:linear_registered",
+      "human_required_reason": null
+    },
+    {
+      "id": "paste_api_token",
+      "what": "Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate.",
+      "automatable": false,
+      "command_template": "echo '{\"api_token\": \"<YOUR_LINEAR_API_TOKEN>\"}' > ~/.dontpanic/adapters/linear.json && chmod 600 ~/.dontpanic/adapters/linear.json",
+      "verify_probe": null,
+      "human_required_reason": "Operator must mint and paste their own Linear API token; DontPanic does not provision Linear credentials on the operator's behalf."
+    },
+    {
+      "id": "validate_mapping",
+      "what": "Validate the PM-tool category mapping (status, priority, project) resolves against the operator's Linear workspace.",
+      "automatable": true,
+      "command_template": "dontpanic adapters validate linear --workspace <YOUR_LINEAR_WORKSPACE>",
+      "verify_probe": "adapter:linear_mapping_valid",
+      "human_required_reason": null
+    }
   ]
 }

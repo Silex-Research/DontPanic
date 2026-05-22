@@ -13,7 +13,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 
 class CapabilityManifestError(ValueError):
@@ -56,6 +56,19 @@ class CapabilityMutationBoundary(BaseModel):
     forbidden: tuple[str, ...] = ()
 
 
+class SetupStep(BaseModel):
+    """One step an operator must complete to make a capability ready."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(..., pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    what: str = Field(..., min_length=1)
+    automatable: bool
+    command_template: str | None = None
+    verify_probe: str | None = None
+    human_required_reason: str | None = None
+
+
 class CapabilityManifest(BaseModel):
     """Typed read-only view of one ``capabilities/<id>.json`` manifest."""
 
@@ -76,7 +89,17 @@ class CapabilityManifest(BaseModel):
     owner_boundary: CapabilityOwnerBoundary
     mutation_boundary: CapabilityMutationBoundary
     notes: tuple[str, ...] = ()
+    setup_steps: tuple[SetupStep, ...] = ()
     source_path: Path | None = None
+
+    @model_validator(mode="after")
+    def _setup_step_ids_unique(self) -> CapabilityManifest:
+        seen: set[str] = set()
+        for step in self.setup_steps:
+            if step.id in seen:
+                raise ValueError(f"duplicate setup_steps[].id {step.id!r}")
+            seen.add(step.id)
+        return self
 
 
 class CapabilityIndex:
@@ -144,9 +167,12 @@ def validate_capability_file(
     schema = _read_json(root / "claude" / "shared" / "schemas" / "v1.0" / "capability.schema.json")
     _jsonschema_validate(payload, schema, manifest_path)
 
-    manifest = CapabilityManifest.model_validate(payload).model_copy(
-        update={"source_path": manifest_path}
-    )
+    try:
+        manifest = CapabilityManifest.model_validate(payload).model_copy(
+            update={"source_path": manifest_path}
+        )
+    except ValidationError as exc:
+        raise CapabilityManifestError(f"{manifest_path}: {exc}") from exc
     if manifest.id != manifest_path.stem:
         raise CapabilityManifestError(
             f"{manifest_path}: id {manifest.id!r} must match filename stem {manifest_path.stem!r}"
@@ -190,12 +216,40 @@ def _jsonschema_validate(payload: dict[str, Any], schema: dict[str, Any], path: 
         raise CapabilityManifestError(
             "jsonschema is required to validate capability manifests; install jsonschema"
         ) from exc
-    validator = jsonschema.Draft202012Validator(schema)
+    validator = _build_validator(jsonschema, schema)
     errors = sorted(validator.iter_errors(payload), key=lambda err: list(err.path))
     if errors:
         first = errors[0]
         loc = ".".join(str(part) for part in first.path) or "<root>"
         raise CapabilityManifestError(f"{path}: schema validation failed at {loc}: {first.message}")
+
+
+def _build_validator(jsonschema_module: Any, schema: dict[str, Any]) -> Any:
+    # Custom keyword `uniqueBy: <property>` enforces cross-item uniqueness of a
+    # sub-property within an array. Standard JSON Schema 2020-12 has no native
+    # way to express this; declaring it in the schema keeps the constraint
+    # next to the field it governs rather than hidden in loader code.
+    def _unique_by(validator: Any, value: Any, instance: Any, schema: dict[str, Any]) -> Any:
+        if not isinstance(instance, list) or not isinstance(value, str):
+            return
+        seen: dict[Any, int] = {}
+        for index, item in enumerate(instance):
+            if not isinstance(item, dict) or value not in item:
+                continue
+            key = item[value]
+            if key in seen:
+                yield jsonschema_module.ValidationError(
+                    f"duplicate {value!r}={key!r} at index {index} "
+                    f"(first seen at index {seen[key]})"
+                )
+            else:
+                seen[key] = index
+
+    extended = jsonschema_module.validators.extend(
+        jsonschema_module.Draft202012Validator,
+        validators={"uniqueBy": _unique_by},
+    )
+    return extended(schema)
 
 
 __all__ = [
@@ -206,6 +260,7 @@ __all__ = [
     "CapabilityOwnerBoundary",
     "CapabilityRequires",
     "CapabilityVerify",
+    "SetupStep",
     "load_capabilities",
     "validate_capability_file",
 ]
