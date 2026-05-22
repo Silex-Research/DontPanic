@@ -396,3 +396,13 @@ class Plan(BaseModel):
             "layer; close pushes status to refs with sync='push_status'."
         ),
     )
+    requires_capabilities: list[constr(pattern=r"^[a-z0-9][a-z0-9-]*$")] | None = Field(
+        None,
+        description=(
+            "v1.12.0 — advisory binding to capability manifests. Lock "
+            "validates each id against the manifest registry (unknown id "
+            "fails loud) and emits evidence/required-capabilities.json. "
+            "Sidecar is advisory only — lock proceeds even when bound "
+            "capabilities are not ready."
+        ),
+    )

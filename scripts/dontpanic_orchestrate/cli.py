@@ -2053,6 +2053,15 @@ def _plan_lock_main(argv: list[str]) -> int:
         print(f"[plan lock] REFUSED (external_refs): {exc}", file=sys.stderr)
         return 3
 
+    # Plan 2026-05-22-002 F003 — pre-flight requires_capabilities validation.
+    # Unknown capability_id is operator-introduced config error (not env state),
+    # so it MUST block the status flip with a closest-match suggestion.
+    try:
+        _validate_requires_capabilities_at_lock(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — surfaced as REFUSED
+        print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
+        return 3
+
     try:
         plan_md = sufficiency_gate.lock_plan(
             plan_dir,
@@ -2067,6 +2076,18 @@ def _plan_lock_main(argv: list[str]) -> int:
         if override_path.is_file():
             print(f"[plan lock] override recorded at {override_path}")
     print(f"[plan lock] status flipped: draft → active in {plan_md}")
+
+    # Plan 2026-05-22-002 F003 — emit advisory required-capabilities sidecar.
+    # Best-effort: emission failures surface as a one-line warning but
+    # NEVER block lock outcome (sidecar is advisory only).
+    try:
+        _emit_required_capabilities_sidecar(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory emitter must never block
+        print(
+            f"[required-capabilities] WARN: sidecar emit failed ({exc!r}); "
+            "lock succeeded — sidecar NOT written",
+            file=sys.stderr,
+        )
 
     # Plan 2026-05-08-002 F002 — emit advisory applicable-skills sidecar.
     # Best-effort: matcher errors are surfaced as a one-line warning but
@@ -2421,6 +2442,70 @@ def _validate_external_refs_at_lock(plan_dir: Path) -> None:
     if any(getattr(r, "capability_id", None) is not None for r in refs):
         capability_index = _capability_index_for_external_refs()
     ers.validate_refs_for_lock(refs, resolver, capability_index=capability_index)
+
+
+def _validate_requires_capabilities_at_lock(plan_dir: Path) -> None:
+    """Plan 2026-05-22-002 F003 — pre-lock validation hook.
+
+    Reads ``requires_capabilities[]`` from plan.md frontmatter and validates
+    each id against the manifest registry. Unknown ids raise
+    :class:`RequiresCapabilityUnknownError` with a closest-match suggestion;
+    callers translate that into a loud REFUSED. Plans without the field
+    return immediately so backward-compat plans pay no manifest-load cost."""
+
+    from dontpanic_orchestrate import capabilities_lock_sidecar as sidecar
+
+    required_ids = sidecar.read_requires_capabilities(plan_dir)
+    if not required_ids:
+        return
+    capability_index = _capability_index_for_external_refs()
+    sidecar.validate_requires_capabilities(required_ids, capability_index)
+
+
+def _emit_required_capabilities_sidecar(plan_dir: Path) -> None:
+    """Plan 2026-05-22-002 F003 — post-lock sidecar emission.
+
+    Returns silently when the plan declares neither external_refs[] nor
+    requires_capabilities[]. Otherwise emits
+    ``evidence/required-capabilities.json`` and prints the warning chip
+    when any required capability has status != ready. Lock proceeds
+    regardless — sidecar is advisory only."""
+
+    from dontpanic_orchestrate import capabilities_lock_sidecar as sidecar
+
+    requires_caps = sidecar.read_requires_capabilities(plan_dir)
+    external_refs = sidecar.read_external_refs(plan_dir)
+    if not requires_caps and not external_refs:
+        return
+
+    capability_index = _capability_index_for_external_refs()
+    # Resolver is needed for the scheme→capability_id fallback path. Lazy-
+    # load via the same factory the external_refs lock-time path uses so
+    # tests can monkeypatch a single seam.
+    resolver = _resolver_for_external_refs() if external_refs else None
+
+    sidecar_path = sidecar.emit_required_capabilities(
+        plan_dir,
+        capability_index=capability_index,
+        resolver=resolver,
+    )
+    if sidecar_path is None:
+        return
+
+    unready = sidecar.count_unready_capabilities(sidecar_path)
+    rel = sidecar_path.relative_to(plan_dir)
+    if unready > 0:
+        # Acceptance #5 specifies the chip text references the bare
+        # filename (``required-capabilities.json``) rather than the
+        # ``evidence/`` relative path; keep the full path on a follow-up
+        # line so operators can still copy/paste it.
+        print(
+            f"[required-capabilities] WARN: plan requires {unready} "
+            f"capabilities not ready (see {sidecar_path.name})"
+        )
+        print(f"[required-capabilities] sidecar: {rel}")
+    else:
+        print(f"[required-capabilities] sidecar written to {rel}")
 
 
 def _run_external_refs_at_close(plan_dir: Path, *, dry_run: bool) -> None:

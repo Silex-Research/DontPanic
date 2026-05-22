@@ -169,3 +169,116 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
 ===
+---
+timestamp: 2026-05-22T18:46:12Z
+event: gate_hit
+plan_id: 2026-05-22-002-feat-capability-status-v0
+unmet_gates: breaker:no_progress
+target_env: dev
+target_project: (none)
+feature_id: F003
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:no_progress']
+Cleared gates : ['pre_impl', 'pre_merge']
+Awaiting      : ['breaker:no_progress']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-22-002-feat-capability-status-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-22-002-feat-capability-status-v0 --all
+
+===
+---
+timestamp: 2026-05-22T18:46:22Z
+event: gate_cleared
+plan_id: 2026-05-22-002-feat-capability-status-v0
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-22T18:46:27Z
+event: volley_start
+plan_id: 2026-05-22-002-feat-capability-status-v0
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T18:46:27Z
+event: volley_start
+plan_id: 2026-05-22-002-feat-capability-status-v0
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-22T19:05:20Z
+event: volley_terminal
+plan_id: 2026-05-22-002-feat-capability-status-v0
+final_status: signed_off
+rounds: 2
+feature_id: F003
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-22T19:05:20Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-22-002-feat-capability-status-v0
+report_path: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-22-002-feat-capability-status-v0/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py
+  unstaged_dirty_state | block | claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-22T19:05:20Z
+event: volley_crash_caught
+plan_id: 2026-05-22-002-feat-capability-status-v0
+feature_id: F003
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py
+  unstaged_dirty_state | block | claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-22T19:05:20Z
+event: volley_terminal
+plan_id: 2026-05-22-002-feat-capability-status-v0
+final_status: blocked
+rounds: 2
+feature_id: F003
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py
+  unstaged_dirty_state | block | claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: claude/shared/CHANGELOG.md,claude/shared/VERSION,claude/shared/schemas/v1.0/models/plan_model.py,claude/shared/schemas/v1.0/plan.schema.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/gate-state.json,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/decisions.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-002-feat-capability-status-v0/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/external_refs_sync.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===

@@ -165,10 +165,73 @@
         "Run full orchestrator sweep + sanitization."
       ],
       "acceptance": "(1) plan.schema.json supports optional `requires_capabilities[]`; backward-compat for plans without it. (2) Existing plans without requires_capabilities continue to lock without modification. (3) `dontpanic plan lock` validates each capability_id reference; unknown id fails loud with closest-match suggestion (this is a hard error). (4) `evidence/required-capabilities.json` emitted on every lock when plan has external_refs[] (with mapped adapters) OR requires_capabilities[]. (5) Lock output displays warning chip when any required capability has status != ready; lock proceeds (advisory only). (6) Sidecar JSON shape includes source field distinguishing external_refs vs requires_capabilities origin. (7) No raw command_template strings in sidecar output (sanitization invariant). (8) ≥8 test cases. (9) Sweep at or above baseline.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T19:05:20Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/plan.schema.json",
+          "note": "plan.schema.json gained optional requires_capabilities[] (additive)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/models/plan_model.py",
+          "note": "Pydantic mirror Plan.requires_capabilities field."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/VERSION",
+          "note": "agent-conventions bumped to 1.12.0."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/CHANGELOG.md",
+          "note": "1.12.0 changelog entry for additive requires_capabilities[]."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py",
+          "note": "emit_required_capabilities + validate_requires_capabilities; sanitized next_actions."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/external_refs_sync.py",
+          "note": "AdapterResolver.capability_id_for_uri() — scheme→capability_id helper for sidecar binding."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "_validate_requires_capabilities_at_lock pre-flight + _emit_required_capabilities_sidecar post-flip."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py",
+          "note": "14 fixture cases covering acceptance (a)–(h) plus CLI seam regressions."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "note": "Iteration 1 implementer completion envelope after auditor i0 feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "note": "Auditor signed_off with advisory-only environmental test reproduction note."
+        },
+        {
+          "type": "file",
+          "uri": "audit/terminal-state-iter1.json",
+          "note": "Terminal blocked only by patch-completeness after signed_off verdict."
+        }
       ]
     }
   ]
