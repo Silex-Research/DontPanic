@@ -244,12 +244,50 @@
         "Tests cover external_refs -> Linear, surfaces/web+firebase profile -> Firebase advisory, no capability matches -> empty report, and writer failure never blocks lock."
       ],
       "acceptance": "(1) `dontpanic plan lock` emits advisory `evidence/required-capabilities.json` when capability matches exist. (2) Sidecar includes setup_required, setup_doc, owner_boundary, and current status. (3) Missing optional capabilities do not block lock. (4) Tests cover Linear, Firebase, empty, and failure-is-nonblocking paths. (5) No `dontpanic capabilities` CLI is added.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T19:30:33Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py",
+          "note": "F005 advisory inference adds matches[]/skips[] from surfaces, external_refs, and skill applicability."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "plan lock catches required-capabilities sidecar writer failures so lock remains nonblocking."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py",
+          "note": "F005 tests cover Linear external_ref, Firebase surface advisory, empty inputs, writer-failure nonblocking, and positive CLI lock sidecar emission."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F005-i1.json",
+          "note": "Iteration 1 implementer envelope after auditor i0 test-coverage feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F005-i1.json",
+          "note": "Final auditor envelope identified test-coverage gaps remediated manually."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F005_iter2.json",
+          "note": "Stopped_no_progress classification; remaining findings drove manual test remediation."
+        }
       ]
     }
   ]

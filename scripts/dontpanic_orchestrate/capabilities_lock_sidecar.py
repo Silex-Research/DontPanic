@@ -338,20 +338,26 @@ def emit_required_capabilities(
     resolver: AdapterResolver | None = None,
     status_cache: Path | None = None,
     now: _dt.datetime | None = None,
+    applicability_report: Any | None = None,
 ) -> Path | None:
     """Write ``evidence/required-capabilities.json`` for one plan.
 
     Returns the sidecar path when the plan declares external_refs OR
-    requires_capabilities — even if no capability bindings ultimately
-    resolve. Returns ``None`` only when BOTH lists are absent/empty, so
-    plans with no advisory binding pay no I/O.
+    requires_capabilities OR yields any F005 advisory match (surface or
+    skill inference) — even if no bindings ultimately resolve. Returns
+    ``None`` only when ALL inputs are empty.
 
     The public contract is ``emit_required_capabilities(plan_dir, *,
-    status_cache=None)`` — :class:`CapabilityIndex` and
-    :class:`AdapterResolver` defaults are lazy-loaded from the manifest
-    registry and the operator's adapter config respectively, so callers
-    that only have a plan path do not need to wire dependency injection
-    seams. Tests still pass instances for hermetic fakes.
+    status_cache=None, applicability_report=None)`` —
+    :class:`CapabilityIndex` and :class:`AdapterResolver` defaults are
+    lazy-loaded from the manifest registry and the operator's adapter
+    config respectively. Tests still pass instances for hermetic fakes.
+
+    F005 (plan 2026-05-21-001) adds the ``matches[]`` + ``skips[]``
+    arrays alongside the existing ``required_capabilities[]`` view. The
+    new arrays infer capabilities from plan ``surfaces``,
+    ``external_refs[]``, and the optional applicability report — see
+    :func:`infer_advisory_capabilities` for the precedence rules.
 
     The caller is responsible for pre-validating ``requires_capabilities``
     via :func:`validate_requires_capabilities` BEFORE calling this — the
@@ -362,8 +368,10 @@ def emit_required_capabilities(
     plan_dir = Path(plan_dir).resolve()
     requires_caps = read_requires_capabilities(plan_dir)
     external_refs = read_external_refs(plan_dir)
-    if not requires_caps and not external_refs:
-        return None
+
+    plan_frontmatter = _read_plan_frontmatter(plan_dir)
+    raw_surfaces = plan_frontmatter.get("surfaces") or []
+    surfaces = [str(s) for s in raw_surfaces if isinstance(s, str)]
 
     if capability_index is None:
         capability_index = load_capabilities()
@@ -376,14 +384,36 @@ def emit_required_capabilities(
 
         resolver = default_resolver(capability_index=capability_index)
 
-    # Pull external_refs capability bindings (explicit + resolver-derived).
-    ref_bindings = _collect_external_ref_capability_ids(external_refs, resolver)
-
     # Status data: prefer the F002 cache, fall back to fresh recompute.
+    # Computed up-front because F005 inference also consumes it for the
+    # ``verified|missing_config|...`` status mapping.
     cache_path = status_cache if status_cache is not None else DEFAULT_CACHE_PATH
+    status_data: dict[str, dict[str, Any]] | None = None
+    if not requires_caps and not external_refs and not surfaces and applicability_report is None:
+        # Cheap exit: no inputs at all → no sidecar.
+        return None
+
     status_data = _read_status_from_cache(cache_path)
     if status_data is None:
         status_data = _compute_status_fresh(capability_index)
+
+    # F005 (plan 2026-05-21-001) advisory inference. Runs even when only
+    # surfaces or a skill applicability report are present, so plans without
+    # external_refs/requires_capabilities can still emit a matches[] view.
+    f005_matches, f005_skips = infer_advisory_capabilities(
+        surfaces=surfaces,
+        external_refs=external_refs,
+        applicability_report=applicability_report,
+        capability_index=capability_index,
+        status_data=status_data,
+        resolver=resolver,
+    )
+
+    if not requires_caps and not external_refs and not f005_matches and not f005_skips:
+        return None
+
+    # Pull external_refs capability bindings (explicit + resolver-derived).
+    ref_bindings = _collect_external_ref_capability_ids(external_refs, resolver)
 
     # Source-tag every binding. ``requires_capabilities`` wins precedence
     # when an id appears in both, but the source field encodes both
@@ -433,6 +463,10 @@ def emit_required_capabilities(
         "plan_id": plan_id,
         "generated_at": generated_at,
         "required_capabilities": required_entries,
+        # F005 plan 2026-05-21-001 — advisory matches/skips inferred from
+        # plan surfaces, external_refs, and (optional) skill applicability.
+        "matches": f005_matches,
+        "skips": f005_skips,
     }
     if advisory_notes:
         payload["advisory_notes"] = advisory_notes
@@ -461,12 +495,203 @@ def count_unready_capabilities(sidecar_path: Path) -> int:
     return sum(1 for e in entries if isinstance(e, dict) and e.get("status") != "ready")
 
 
+# ── F005 advisory inference (plan 2026-05-21-001) ─────────────────────────
+#
+# Separate from the requires_capabilities/external_refs ``required_capabilities[]``
+# path above: F005 emits a complementary ``matches[]`` + ``skips[]`` view that
+# captures advisory bindings inferred from plan surfaces, external_refs, and
+# matched skill applicability results. Status values use the F005 vocabulary
+# (``unknown|verified|missing_config|not_registered``) rather than the F003
+# CapabilityStatus enum so consumers can read either array without conflating
+# the schemas.
+
+
+# Surface → capability advisory hints. Intentionally a small, reviewable
+# table — F005 is advisory only, so over-matching is worse than missing
+# matches (each row should be defensible without an ADR amendment). The
+# mapping reflects ADR-001's category split: surfaces that commonly involve
+# a hosted dashboard surface (web/backend/infra) hint at firebase-dashboard.
+_SURFACE_CAPABILITY_HINTS: dict[str, tuple[str, ...]] = {
+    "web": ("firebase-dashboard",),
+    "backend": ("firebase-dashboard",),
+    "infra": ("firebase-dashboard",),
+}
+
+
+def _f005_status_for(
+    capability_id: str,
+    manifest: CapabilityManifest | None,
+    status_entry: dict[str, Any] | None,
+    resolver: AdapterResolver | None,
+) -> str:
+    """Map F003-status + adapter registration into the F005 status vocab.
+
+    ``verified``         → F002 says ready.
+    ``missing_config``   → F002 says needs_setup/blocked/not_installed.
+    ``not_registered``   → adapter-kind capability with no registered adapter.
+    ``unknown``          → no manifest match OR no status data.
+    """
+
+    if manifest is None:
+        return "unknown"
+
+    # Adapter-kind capabilities need a registered adapter to be useful.
+    # Probe the resolver only when one is available; absence of a resolver
+    # leaves status to the readiness pipeline.
+    if resolver is not None and manifest.kind in {"service_adapter", "external_adapter"}:
+        registered = (
+            resolver.has_capability_id(capability_id)
+            if hasattr(resolver, "has_capability_id")
+            else None
+        )
+        if registered is False:
+            return "not_registered"
+
+    if status_entry is None:
+        return "unknown"
+    raw = status_entry.get("status")
+    if raw == CapabilityStatus.READY.value or raw == "ready":
+        return "verified"
+    if raw in {
+        CapabilityStatus.NEEDS_SETUP.value,
+        CapabilityStatus.BLOCKED.value,
+        CapabilityStatus.NOT_INSTALLED.value,
+    }:
+        return "missing_config"
+    return "unknown"
+
+
+def _skill_applicability_capability_hints(
+    applicability_report: Any | None,
+    capability_index: CapabilityIndex,
+) -> dict[str, list[str]]:
+    """Walk skill matches and bind any external_cli.command back to the
+    capability whose ``requires.commands[]`` includes that command.
+
+    Returns ``capability_id → [skill_name, …]`` for attribution. Skipping
+    matches without external_cli (internal skills) is fine — those have no
+    capability binding by construction.
+    """
+
+    if applicability_report is None:
+        return {}
+    matches = getattr(applicability_report, "matches", None) or []
+    bindings: dict[str, list[str]] = {}
+    for match in matches:
+        ext = getattr(match, "external_cli", None)
+        if ext is None:
+            continue
+        command = getattr(ext, "command", None)
+        if not command:
+            continue
+        for manifest in capability_index.all:
+            if command in manifest.requires.commands:
+                bindings.setdefault(manifest.id, []).append(getattr(match, "skill_name", ""))
+    return bindings
+
+
+def infer_advisory_capabilities(
+    *,
+    surfaces: list[str],
+    external_refs: list[dict[str, Any]],
+    applicability_report: Any | None,
+    capability_index: CapabilityIndex,
+    status_data: dict[str, dict[str, Any]] | None = None,
+    resolver: AdapterResolver | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Pure inference: compute F005 ``matches[]`` + ``skips[]`` arrays.
+
+    Sources, in precedence order when a capability is bound by more than
+    one (single-valued ``source`` field per F005 spec):
+
+      1. ``external_ref`` — an external_ref carries an explicit capability_id
+         or the URI scheme resolves through an adapter whose record declares
+         capability_id.
+      2. ``skill``        — a matched skill's ``external_cli.command`` is one
+         of a capability manifest's ``requires.commands[]``.
+      3. ``surface``      — plan surface name is in the small hint table.
+
+    Skips[] records capability ids that were referenced (e.g. via an
+    external_ref with explicit capability_id) but for which no manifest is
+    registered — useful diagnostic without blocking lock.
+    """
+
+    status_data = status_data or {}
+
+    # 1. external_ref bindings (explicit + resolver-derived).
+    ref_bindings = _collect_external_ref_capability_ids(external_refs, resolver)
+
+    # 2. skill bindings via external_cli.command → manifest.requires.commands.
+    skill_bindings = _skill_applicability_capability_hints(applicability_report, capability_index)
+
+    # 3. surface bindings via the static hint table.
+    surface_bindings: dict[str, list[str]] = {}
+    for surface in surfaces:
+        for cap_id in _SURFACE_CAPABILITY_HINTS.get(surface, ()):
+            surface_bindings.setdefault(cap_id, []).append(surface)
+
+    # Precedence resolution. Same capability bound by multiple sources →
+    # external_ref wins (explicit cite), then skill, then surface. Sources
+    # are intentionally single-valued per F005 spec — a separate per-entry
+    # ``contributing_sources[]`` array would over-spec the v0 contract.
+    matches: list[dict[str, Any]] = []
+    skips: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def _add_match(cap_id: str, source: str, attribution: list[str] | None) -> None:
+        if cap_id in seen:
+            return
+        seen.add(cap_id)
+        manifest = capability_index.get(cap_id)
+        if manifest is None:
+            skips.append(
+                {
+                    "capability_id": cap_id,
+                    "reason": "no_manifest_match",
+                    "source": source,
+                }
+            )
+            return
+        status = _f005_status_for(cap_id, manifest, status_data.get(cap_id), resolver)
+        entry: dict[str, Any] = {
+            "capability_id": cap_id,
+            "source": source,
+            "setup_required": manifest.setup_required,
+            "setup_doc": manifest.setup_doc,
+            "owner_boundary": {
+                "dontpanic_core": list(manifest.owner_boundary.dontpanic_core),
+                "adapter": list(manifest.owner_boundary.adapter),
+                "operator": list(manifest.owner_boundary.operator),
+            },
+            "status": status,
+        }
+        if source == "external_ref" and attribution:
+            entry["external_ref_uris"] = list(attribution)
+        elif source == "skill" and attribution:
+            entry["skill_names"] = list(attribution)
+        elif source == "surface" and attribution:
+            entry["surface_names"] = list(attribution)
+        matches.append(entry)
+
+    for cap_id, uris in ref_bindings.items():
+        _add_match(cap_id, "external_ref", uris)
+    for cap_id, skill_names in skill_bindings.items():
+        _add_match(cap_id, "skill", skill_names)
+    for cap_id, surface_names in surface_bindings.items():
+        _add_match(cap_id, "surface", surface_names)
+
+    matches.sort(key=lambda e: e["capability_id"])
+    skips.sort(key=lambda e: e["capability_id"])
+    return matches, skips
+
+
 __all__ = [
     "RequiresCapabilityUnknownError",
     "SCHEMA_VERSION",
     "SIDECAR_RELPATH",
     "count_unready_capabilities",
     "emit_required_capabilities",
+    "infer_advisory_capabilities",
     "read_external_refs",
     "read_requires_capabilities",
     "validate_requires_capabilities",

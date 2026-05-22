@@ -49,6 +49,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from dontpanic_orchestrate import (
     active_supervisors,
@@ -2077,30 +2078,21 @@ def _plan_lock_main(argv: list[str]) -> int:
             print(f"[plan lock] override recorded at {override_path}")
     print(f"[plan lock] status flipped: draft → active in {plan_md}")
 
-    # Plan 2026-05-22-002 F003 — emit advisory required-capabilities sidecar.
-    # Best-effort: emission failures surface as a one-line warning but
-    # NEVER block lock outcome (sidecar is advisory only).
-    try:
-        _emit_required_capabilities_sidecar(plan_dir)
-    except Exception as exc:  # noqa: BLE001 — advisory emitter must never block
-        print(
-            f"[required-capabilities] WARN: sidecar emit failed ({exc!r}); "
-            "lock succeeded — sidecar NOT written",
-            file=sys.stderr,
-        )
-
     # Plan 2026-05-08-002 F002 — emit advisory applicable-skills sidecar.
     # Best-effort: matcher errors are surfaced as a one-line warning but
-    # NEVER block the lock outcome (D004: advisory only).
+    # NEVER block the lock outcome (D004: advisory only). Runs BEFORE
+    # the required-capabilities sidecar so the latter can read the
+    # ApplicabilityReport for F005 skill→capability inference.
+    applicability_report: Any | None = None
     try:
         loaded = plan_loader.load(plan_dir)
         skills_dir = _resolve_skills_dir(plan_dir)
         if skills_dir is not None:
-            report = skill_applicability.match(loaded, skills_dir)
-            sidecar = skill_applicability.write_report(report, plan_dir)
+            applicability_report = skill_applicability.match(loaded, skills_dir)
+            sidecar = skill_applicability.write_report(applicability_report, plan_dir)
             print(
-                f"[applicable-skills] {len(report.matches)} matches, "
-                f"{len(report.skipped)} skips written to "
+                f"[applicable-skills] {len(applicability_report.matches)} matches, "
+                f"{len(applicability_report.skipped)} skips written to "
                 f"{sidecar.relative_to(plan_dir)}"
             )
         else:
@@ -2108,6 +2100,18 @@ def _plan_lock_main(argv: list[str]) -> int:
     except Exception as exc:  # noqa: BLE001 — advisory matcher must never block
         print(
             f"[applicable-skills] WARN: matcher failed ({exc!r}); "
+            "lock succeeded — sidecar NOT written",
+            file=sys.stderr,
+        )
+
+    # Plan 2026-05-22-002 F003 + 2026-05-21-001 F005 — emit advisory
+    # required-capabilities sidecar. Best-effort: emission failures surface
+    # as a one-line warning but NEVER block lock outcome.
+    try:
+        _emit_required_capabilities_sidecar(plan_dir, applicability_report=applicability_report)
+    except Exception as exc:  # noqa: BLE001 — advisory emitter must never block
+        print(
+            f"[required-capabilities] WARN: sidecar emit failed ({exc!r}); "
             "lock succeeded — sidecar NOT written",
             file=sys.stderr,
         )
@@ -2462,32 +2466,39 @@ def _validate_requires_capabilities_at_lock(plan_dir: Path) -> None:
     sidecar.validate_requires_capabilities(required_ids, capability_index)
 
 
-def _emit_required_capabilities_sidecar(plan_dir: Path) -> None:
-    """Plan 2026-05-22-002 F003 — post-lock sidecar emission.
+def _emit_required_capabilities_sidecar(
+    plan_dir: Path, *, applicability_report: Any | None = None
+) -> None:
+    """Plan 2026-05-22-002 F003 + 2026-05-21-001 F005 — post-lock sidecar.
 
-    Returns silently when the plan declares neither external_refs[] nor
-    requires_capabilities[]. Otherwise emits
-    ``evidence/required-capabilities.json`` and prints the warning chip
-    when any required capability has status != ready. Lock proceeds
+    Emits ``evidence/required-capabilities.json`` when the plan declares
+    external_refs[], requires_capabilities[], a surface that hints at a
+    capability (F005), or a skill applicability report carries an
+    external_cli command bound to a manifest (F005). Returns silently
+    when none of those produce a binding. Prints the warning chip when
+    any required capability has status != ready. Lock proceeds
     regardless — sidecar is advisory only."""
 
     from dontpanic_orchestrate import capabilities_lock_sidecar as sidecar
 
-    requires_caps = sidecar.read_requires_capabilities(plan_dir)
     external_refs = sidecar.read_external_refs(plan_dir)
-    if not requires_caps and not external_refs:
-        return
+    # F005: surface or skill matches alone can trigger emission, so do not
+    # short-circuit here on empty refs+requires.
 
     capability_index = _capability_index_for_external_refs()
     # Resolver is needed for the scheme→capability_id fallback path. Lazy-
     # load via the same factory the external_refs lock-time path uses so
-    # tests can monkeypatch a single seam.
+    # tests can monkeypatch a single seam. F005 inference treats a None
+    # resolver as "no adapter-registration probe" — surface/skill matches
+    # still surface, they just default to status=unknown rather than
+    # not_registered.
     resolver = _resolver_for_external_refs() if external_refs else None
 
     sidecar_path = sidecar.emit_required_capabilities(
         plan_dir,
         capability_index=capability_index,
         resolver=resolver,
+        applicability_report=applicability_report,
     )
     if sidecar_path is None:
         return
