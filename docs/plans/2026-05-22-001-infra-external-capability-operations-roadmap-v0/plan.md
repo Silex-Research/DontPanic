@@ -361,7 +361,15 @@ from the convention. See decisions.jsonl D003 + memory entry
 
 ## Status (Reiterated)
 
-`active` — tracking parent only. V0a and V0b complete. V1 child plan
-(`2026-05-22-003-feat-capability-center-v1`) is the next executable
-work. V2 child plan (`2026-05-22-004-feat-capability-guided-setup-v2`)
-is drafted and waits on V1.
+`active` — tracking parent. V0a, V0b, V1, and V2 are all implemented;
+V2 close-out is recorded in D014. The roadmap-level V0→V2 capability-
+operations arc is complete in code: CLI `dontpanic capabilities status`
+(V0b), static dashboard Capability Center + MCP `capabilities.get_status`
+(V1, child plan `2026-05-22-003-feat-capability-center-v1`, D012), and
+the governed setup runner `dontpanic capabilities setup <id>
+[--print-steps | --automate-safe --confirm]` with sanitized evidence
+records (V2, child plan `2026-05-22-004-feat-capability-guided-setup-v2`,
+D013 + D014). The V2 child plan's features.json `F003 passes:true` flip
+and signoff envelope are operator close-out territory (D008/D012
+precedent — `dontpanic close --operator-resolved`); the parent roadmap
+itself needs no further D-entry once that operator step lands.

@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-22-004-feat-capability-guided-setup-v2",
-  "feature_id": "F002",
+  "feature_id": "F003",
   "class": "operator_judgment",
-  "memo": "evidence/closeout-memo-F002.md",
+  "memo": "evidence/closeout-memo-F003.md",
   "resolved": true,
-  "resolved_at": "2026-05-22T22:28:43Z"
+  "resolved_at": "2026-05-22T23:15:42Z"
 }

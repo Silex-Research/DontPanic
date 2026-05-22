@@ -14,13 +14,13 @@
     "audit/codex-auditor-F003-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 2,
-    "needs_changes_count": 2,
+    "signed_off_count": 3,
+    "needs_changes_count": 1,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
-  "signoff": false,
-  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
-  "next_action": "remediate",
-  "decided_at": "2026-05-22T23:06:32Z"
+  "signoff": true,
+  "signoff_reason": "operator_resolved (class=operator_judgment): operator accepted the post-iteration patch-completeness terminal as non-defect after review. See evidence/closeout-memo-F003.md for rationale.",
+  "next_action": "merge",
+  "decided_at": "2026-05-22T23:15:42Z"
 }

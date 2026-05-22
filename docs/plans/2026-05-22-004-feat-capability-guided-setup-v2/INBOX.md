@@ -464,3 +464,111 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
 ===
+---
+timestamp: 2026-05-22T23:08:02Z
+event: gate_cleared
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-22T23:08:07Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+---
+
+impl=claude aud=codex cap=1 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-22T23:08:07Z
+event: volley_start
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=1
+
+===
+---
+timestamp: 2026-05-22T23:15:34Z
+event: volley_terminal
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+final_status: signed_off
+rounds: 1
+feature_id: F003
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-22T23:15:34Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/patch-completeness-0.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-22T23:15:34Z
+event: volley_crash_caught
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-22T23:15:34Z
+event: volley_terminal
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+final_status: blocked
+rounds: 1
+feature_id: F003
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-22T23:15:42Z
+event: feature_operator_resolved
+plan_id: 2026-05-22-004-feat-capability-guided-setup-v2
+feature_id: F003
+reason_class: operator_judgment
+---
+
+Operator closed feature F003 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo-F003.md
+Signoff envelope: audit/signoff-2026-05-22-004-feat-capability-guided-setup-v2.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

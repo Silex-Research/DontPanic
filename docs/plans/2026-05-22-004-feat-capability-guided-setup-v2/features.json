@@ -70,11 +70,22 @@
         "Update parent roadmap D-entry after V2 completion."
       ],
       "acceptance": "(1) Setup run evidence records capability_id, attempted steps, skipped human-required steps, before/after status, and next actions. (2) No secret values are persisted. (3) Tests cover evidence shape. (4) Parent roadmap updated after V2 completion.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F003.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T23:15:42Z"
     }
   ]
 }
