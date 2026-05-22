@@ -19,7 +19,7 @@
       "evidence_refs": [
         {
           "type": "file",
-          "uri": "evidence/closeout-memo.md",
+          "uri": "evidence/closeout-memo-F001.md",
           "note": "operator_resolved close-out (class=operator_judgment)"
         }
       ],
@@ -42,10 +42,21 @@
         "Add tests for allowlisted command, denied command, human-required skip, and confirm gate."
       ],
       "acceptance": "(1) --automate-safe requires --confirm. (2) Human-required steps never execute. (3) Unsafe command templates are denied with explanation. (4) Allowlisted automatable steps execute in tests via fixture command runner. (5) Probes/status re-run after attempted steps. (6) Tests cover deny/allow/skip/confirm.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T22:28:43Z"
     },
     {
       "id": "F003",

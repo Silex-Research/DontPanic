@@ -2818,7 +2818,7 @@ Private-alpha command surface:
   architecture regen|status|diff Codebase + plan snapshot + drift surface
   showcase regen                 Generate showcase artifacts for external repos
   capabilities status            Inspect capability readiness vs. local env
-  capabilities setup             Plan setup steps for one capability (F001: --print-steps)
+  capabilities setup             Plan or execute setup for one capability (--print-steps | --automate-safe --confirm)
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch

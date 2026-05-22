@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T22:15:40Z",
+  "completed_at": "2026-05-22T22:19:27Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-wj2yoc9h target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 452465 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1928770,
+    "tokens_out": 16300,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly in the summary, and structured `target_context.commands_run` is empty, so I found no EC5/forbidden-command issue.\n\nFINDING (high, security): The “allowlist” policy is actually default-allow after a small denylist, so syntactically simple dangerous templates are approved. Evidence: [capabilities_setup_runner.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_runner.py:101) denies placeholders/metacharacters/dangerous heads, then returns allow at line 156; manual smoke showed `git push origin main`, `gh repo delete owner/repo --yes`, and `firebase deploy --project real-prod --only functions` all return `allow=True`. Recommendation: make the policy explicit default-deny, with allowed command heads/subcommands/templates enumerated and tests for syntactically clean but unallowlisted dangerous commands.\n\nFINDING (medium, correctness): Production command execution can crash instead of returning a captured failure summary when the executable is missing or `subprocess.run` raises `OSError`. Evidence: [capabilities_setup_runner.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_runner.py:81) calls `subprocess.run` without handling `FileNotFoundError`/`OSError`, so the report and final status rerun can be skipped. Recommendation: convert spawn failure",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py -p no:cacheprovider -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py -p no:cacheprovider -q -s",
+      "PYTHONDONTWRITEBYTECODE=1 python -c 'from dontpanic_orchestrate.capabilities_setup_runner import evaluate_command_template as e; assert e(\"npm install -g firebase-tools\").allow; assert not e(\"curl -sSL https://sdk.cloud.google.com | bash\").allow; assert not e(\"firebase deploy --project <YOUR_FIREBASE_PROJECT_ID>\").allow; assert not e(\"PYTHONPATH=scripts python -m x\").allow; print(\"manual allowlist smoke ok\")'",
+      "PYTHONDONTWRITEBYTECODE=1 python -c 'from dontpanic_orchestrate import capabilities_setup as s; code=s.main([\"firebase-dashboard\",\"--automate-safe\"]); assert code==2, code; print(\"manual confirm gate smoke ok\")'",
+      "PYTHONDONTWRITEBYTECODE=1 python -c 'from dontpanic_orchestrate.capabilities_setup_runner import evaluate_command_template as e; samples=[\"git push origin main\",\"gh repo delete owner/repo --yes\",\"firebase deploy --project real-prod --only functions\"]; print({s:e(s).allow for s in samples})'",
+      "PYTHONDONTWRITEBYTECODE=1 python -m ruff check scripts/dontpanic_orchestrate/capabilities_setup.py scripts/dontpanic_orchestrate/capabilities_setup_runner.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py --no-cache"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F002",
+      "issue": "The “allowlist” policy is actually default-allow after a small denylist, so syntactically simple dangerous templates are approved. Evidence: [capabilities_setup_runner.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_runner.py:101) denies placeholders/metacharacters/dangerous heads, then returns allow at line 156; manual smoke showed `git push origin main`, `gh repo delete owner/repo --yes`, and `firebase deploy --project real-prod --only functions`",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Production command execution can crash instead of returning a captured failure summary when the executable is missing or `subprocess.run` raises `OSError`. Evidence: [capabilities_setup_runner.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup_runner.py:81) calls `subprocess.run` without handling `FileNotFoundError`/`OSError`, so the report and final status rerun can be skipped. Recommendation: convert spawn failures into `CommandResult` with a nonzer",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "The CLI `--automate-safe --confirm` path reruns only the F001 non-probing status snapshot, not capability probes. Evidence: [capabilities_setup.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_setup.py:251) passes `status_probe=build_planning_status`, whose docstring says it intentionally does not invoke `run_status()` probes. Recommendation: wire F002 to a probe-capable status function, filtered to the target capability and without cache writes, so probe",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

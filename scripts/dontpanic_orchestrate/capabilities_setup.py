@@ -29,6 +29,7 @@ from dontpanic_orchestrate.capabilities_status import (
     CapabilityStatusResult,
     build_capability_result,
     resolve_requires,
+    run_status,
 )
 
 
@@ -163,22 +164,56 @@ def build_planning_status(manifest: CapabilityManifest) -> CapabilityStatusResul
     )
 
 
+def build_runtime_status(manifest: CapabilityManifest) -> CapabilityStatusResult:
+    """Probe-capable status snapshot for one capability — no cache write.
+
+    F002's governed runner calls this between attempted steps so probe
+    re-runs surface ``requires``/probe changes in the report. Differs from
+    :func:`build_planning_status` (which deliberately omits probes for the
+    F001 planning surface) and from the top-level
+    :func:`capabilities_status.run_status` invocation in the
+    ``capabilities status`` CLI (which sweeps every capability + writes
+    the on-disk cache). Here we filter the index to the single target
+    manifest and never write the cache.
+    """
+
+    single_index = CapabilityIndex([manifest])
+    envelope = run_status(capability_index=single_index)
+    # Exactly one capability in the index, so it always appears first.
+    return envelope.capabilities[0]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="dontpanic capabilities setup",
         description=(
-            "Plan setup for a capability. F001 only prints steps; F002 will add"
-            " a governed --automate-safe runner."
+            "Plan setup for a capability. F001 prints steps; F002 adds a"
+            " governed --automate-safe --confirm runner."
         ),
     )
     parser.add_argument(
         "capability_id",
         help="Capability id (matches a checked-in capabilities/<id>.json).",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--print-steps",
         action="store_true",
-        help="Print the ordered setup_steps[] plan. F001 only supports this mode.",
+        help="Print the ordered setup_steps[] plan (F001).",
+    )
+    mode.add_argument(
+        "--automate-safe",
+        action="store_true",
+        help=(
+            "Execute only setup_steps whose command_template passes the F002"
+            " allowlist. Human-required steps are always skipped. Requires"
+            " --confirm to actually run commands."
+        ),
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required companion for --automate-safe; without it the runner refuses to execute.",
     )
     return parser
 
@@ -189,13 +224,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    if not args.print_steps:
-        # F001 is print-only. Refusing without --print-steps keeps the
-        # exec/automate-safe paths reserved for F002 and prevents any
-        # surprise side effects when the flag is forgotten.
+    if not args.print_steps and not args.automate_safe:
+        # No execution mode requested. We refuse with a usage hint so a
+        # bare ``dontpanic capabilities setup <id>`` does not surprise the
+        # operator with either a no-op or unintended side effects.
         print(
-            "capabilities setup: F001 requires --print-steps "
-            "(no execution mode is implemented yet)",
+            "capabilities setup: pick --print-steps (plan) or "
+            "--automate-safe --confirm (execute allowlisted steps)",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.automate_safe and not args.confirm:
+        # F002 acceptance #1: --automate-safe requires --confirm.
+        print(
+            "capabilities setup: --automate-safe requires --confirm; refusing to execute",
             file=sys.stderr,
         )
         return 2
@@ -212,14 +255,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"capabilities setup: {exc}", file=sys.stderr)
         return 2
 
-    status_result = build_planning_status(manifest)
-    sys.stdout.write(render_print_steps(manifest, status_result))
+    if args.print_steps:
+        status_result = build_planning_status(manifest)
+        sys.stdout.write(render_print_steps(manifest, status_result))
+        return 0
+
+    # --automate-safe --confirm path.
+    from dontpanic_orchestrate.capabilities_setup_runner import (
+        SubprocessRunner,
+        render_report,
+        run_automate_safe,
+    )
+
+    runner = SubprocessRunner()
+    report = run_automate_safe(
+        manifest,
+        confirm=True,
+        command_runner=runner,
+        status_probe=build_runtime_status,
+    )
+    sys.stdout.write(render_report(report))
     return 0
 
 
 __all__ = [
     "build_parser",
     "build_planning_status",
+    "build_runtime_status",
     "main",
     "render_print_steps",
     "resolve_capability",
