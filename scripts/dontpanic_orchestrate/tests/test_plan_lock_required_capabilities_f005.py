@@ -201,7 +201,10 @@ def test_infer_advisory_surface_web_yields_firebase_dashboard(
     assert fb["source"] == "surface"
     assert fb["surface_names"] == ["web"]
     assert fb["setup_required"] is True
-    assert fb["setup_doc"].startswith("docs/")
+    setup_doc = fb["setup_doc"]
+    assert setup_doc.endswith(".md")
+    assert not setup_doc.startswith("/")
+    assert (HERE.parents[3] / setup_doc).is_file()
 
 
 def test_infer_advisory_external_ref_outranks_surface(
