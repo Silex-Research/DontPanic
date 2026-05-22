@@ -1,0 +1,1 @@
+{"kind": "volley.return_to_parent", "plan_id": "2026-05-22-003-feat-capability-center-v1", "ts": "2026-05-22T21:11:08Z", "child_plan_id": "2026-05-22-003-feat-capability-center-v1", "parent_plan_id": "2026-05-22-001-infra-external-capability-operations-roadmap-v0", "child_final_status": "blocked", "return_condition_status": null}

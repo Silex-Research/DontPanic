@@ -17,8 +17,19 @@
         "Run dashboard tests, relevant Python tests, plan validation, and sanitization."
       ],
       "acceptance": "(1) Static dashboard nav includes Capability Center. (2) Capability Center renders from `dashboard/state/capabilities-status.json` with no Firebase dependency. (3) Missing state file renders a useful empty state and does not fail page bootstrap. (4) Each capability displays status, owner_boundary chips, configured/missing lists, automatable next actions, human-required next actions, and pending probes. (5) Firebase-dashboard and Linear example statuses are visually distinguishable as setup/not-installed cases. (6) Tests cover rendering/data transformation. (7) Dashboard tests and relevant Python tests pass. (8) Sanitization clean.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T21:13:06Z"
     },
     {
       "id": "F002",
