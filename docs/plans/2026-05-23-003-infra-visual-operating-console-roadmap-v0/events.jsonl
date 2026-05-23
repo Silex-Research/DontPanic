@@ -1,0 +1,1 @@
+{"kind": "volley.spawn_child", "plan_id": "2026-05-23-003-infra-visual-operating-console-roadmap-v0", "ts": "2026-05-23T02:37:49Z", "parent_plan_id": "2026-05-23-003-infra-visual-operating-console-roadmap-v0", "child_plan_id": "2026-05-23-004-feat-operator-console-v0", "spawn_reason": "operator_manual", "finding_signature": null, "newly_armed": true}

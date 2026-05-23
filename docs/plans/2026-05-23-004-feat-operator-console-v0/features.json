@@ -16,8 +16,46 @@
         "Add tests for taxonomy mappings, action ordering, no-secret fields, empty state, and multi-source aggregation."
       ],
       "acceptance": "(1) A typed/shared ActionItem model exists and is documented in code. (2) Providers cover gates, capabilities, reconcile drift, and active supervisors. (3) Four-band taxonomy is the only dashboard status language used by V0 provider output. (4) Provider output is deterministic and secret-free. (5) Cache JSON is stable for agents. (6) Tests cover mappings, ordering, empty state, no-secret invariant, and aggregation.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T02:49:39Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/operator_console.py",
+          "note": "ActionItem model, four-band taxonomy, providers, renderer, and cache writer."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py",
+          "note": "F001 focused tests; local run passed with related regression tests, 53 passed total."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i0.json",
+          "note": "Implementer signed off F001."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "note": "Auditor blocked only on sandbox temp-dir test reproduction; finding classified environmental."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F001_iter1.json",
+          "note": "Environmental reproduction failure classification; non-blocking with local verification."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F001.md",
+          "note": "Operator verification after local Ruff/test/sanitization run and architecture command correction."
+        }
+      ]
     },
     {
       "id": "F002",

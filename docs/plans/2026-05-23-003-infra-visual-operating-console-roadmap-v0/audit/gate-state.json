@@ -1,0 +1,16 @@
+{
+  "plan_id": "2026-05-23-003-infra-visual-operating-console-roadmap-v0",
+  "cleared_gates": [],
+  "history": [
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-23-004-feat-operator-console-v0",
+      "at": "2026-05-23T02:37:49Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-23-004-feat-operator-console-v0' dispatched"
+    }
+  ],
+  "active_pre_resume_after_children": [
+    "pre_resume_after_child:2026-05-23-004-feat-operator-console-v0"
+  ]
+}
