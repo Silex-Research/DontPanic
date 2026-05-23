@@ -12,6 +12,7 @@ import {
   mergePerStreamIntoState,
   PER_STREAM_FILES,
 } from '../../lib/projection-adapter.js';
+import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
 import snapshotFixture from '../fixtures/state-snapshot.json' with { type: 'json' };
 
@@ -43,6 +44,12 @@ function createRouter() {
       decisions: [],
       evidenceRefs: [],
       snapshotMeta: null,
+      // F004 What Now cache — null sentinel until what-now.json loads.
+      whatNow: null,
+      // F003 fleet summary — null sentinel until fleet-summary.json loads.
+      fleetSummary: null,
+      // F003 selected project — defaults to All Projects until init resolves.
+      selectedProject: ALL_PROJECTS_VALUE,
     },
 
     registerPage(config) {
@@ -98,23 +105,34 @@ function createRouter() {
 
     async loadState() {
       // Mirrors core.js exactly: simple-name files plus aliased loaders
-      // whose on-disk name differs from the state key.
+      // whose on-disk name differs from the state key. `nullableMissing`
+      // aliases (whatNow, fleetSummary) reset to null on non-OK / fetch
+      // failure so a present→missing refresh actually surfaces the
+      // missing-state UI instead of holding stale data.
       const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
       const aliasedFiles = [
         { key: 'capabilities', file: 'capabilities-status.json' },
+        { key: 'whatNow',      file: 'what-now.json',      nullableMissing: true },
+        { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
       ];
       const loaders = [
         ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
         ...aliasedFiles,
       ];
-      await Promise.all(loaders.map(async ({ key, file }) => {
+      await Promise.all(loaders.map(async ({ key, file, nullableMissing }) => {
         try {
           const resp = await fetch(`state/${file}`);
           if (resp.ok) {
             this.state[key] = await resp.json();
+          } else if (nullableMissing) {
+            this.state[key] = null;
           }
         } catch {
-          // file missing — keep default value
+          // file missing — keep default value (or reset to null for
+          // nullable aliased files so the missing-state UI surfaces).
+          if (nullableMissing) {
+            this.state[key] = null;
+          }
         }
       }));
       // Mirrors core.js — try envelope first, then per-stream fallback.

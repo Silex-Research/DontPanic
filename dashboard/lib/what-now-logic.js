@@ -12,6 +12,10 @@
 // in `pages/what-now/what-now.js`.
 
 import { esc } from './html-escape.js';
+import {
+  ALL_PROJECTS_VALUE,
+  renderScopeBadgeHTML,
+} from './project-selector-logic.js';
 
 /** Four-band taxonomy emitted by F001 providers — ordering reflects display priority. */
 export const BANDS = Object.freeze(['needs_action', 'advisory', 'info', 'ready']);
@@ -180,30 +184,44 @@ export function getSourceLabel(source) {
 /**
  * Top-level page renderer. Returns the innerHTML for the What Now page
  * given the raw `state.whatNow` value (already-parsed JSON or null).
+ *
+ * The optional `selectedProject` argument toggles the scope badge
+ * between Project (any registered project name) and Fleet (the
+ * ALL_PROJECTS_VALUE sentinel). The What Now surface itself is the
+ * same query in either case — only the badge changes.
+ *
  * @param {unknown} raw
+ * @param {object} [opts]
+ * @param {string} [opts.selectedProject]
  * @returns {string}
  */
-export function renderWhatNowHTML(raw) {
+export function renderWhatNowHTML(raw, opts = {}) {
   const envelope = normalizeEnvelope(raw);
+  const selected = typeof opts.selectedProject === 'string'
+    ? opts.selectedProject
+    : ALL_PROJECTS_VALUE;
+  const scope = selected === ALL_PROJECTS_VALUE ? 'fleet' : 'project';
   if (envelope == null) {
-    return renderMissingStateHTML();
+    return renderMissingStateHTML(scope);
   }
   // Quiet state only when there is literally nothing to surface. Advisory
   // and info items must render as cards so their exact commands stay
   // visible/copyable (F004 acceptance #3) — band colors handle restraint.
   if (envelope.items.length === 0) {
-    return renderQuietStateHTML(envelope);
+    return renderQuietStateHTML(envelope, scope);
   }
-  return renderPopulatedHTML(envelope);
+  return renderPopulatedHTML(envelope, scope);
 }
 
 /**
  * Missing-cache empty-state. Non-alarming wording: F004 acceptance (4)
  * says stale/missing optional data must not render as a blocker.
+ * @param {'project'|'fleet'} [scope]
  */
-export function renderMissingStateHTML() {
+export function renderMissingStateHTML(scope = 'project') {
   return `
     <div class="wn-empty-state" data-state="missing">
+      <div class="wn-empty-scope">${renderScopeBadgeHTML(scope)}</div>
       <div class="wn-empty-title">No what-now cache yet</div>
       <div class="wn-empty-body">
         Run <code>dontpanic dashboard build</code> to populate
@@ -223,8 +241,10 @@ export function renderMissingStateHTML() {
  * Quiet healthy state — rendered when the envelope is present but no
  * item is in the `needs_action` band. F004 acceptance (4): restrained
  * when no action is needed.
+ * @param {object} envelope
+ * @param {'project'|'fleet'} [scope]
  */
-export function renderQuietStateHTML(envelope) {
+export function renderQuietStateHTML(envelope, scope = 'project') {
   const summary = summarizeByBand(envelope.items);
   const advisoryLine = summary.advisory > 0
     ? `${summary.advisory} advisory item${summary.advisory === 1 ? '' : 's'} present.`
@@ -235,6 +255,7 @@ export function renderQuietStateHTML(envelope) {
   const sublines = [advisoryLine, infoLine].filter(Boolean).join(' ');
   return `
     <div class="wn-quiet-state" data-state="quiet">
+      <div class="wn-quiet-scope">${renderScopeBadgeHTML(scope)}</div>
       <div class="wn-quiet-title">No action needed</div>
       <div class="wn-quiet-body">
         Gates are clear, capabilities are ready or optional, reconcile is
@@ -248,18 +269,19 @@ export function renderQuietStateHTML(envelope) {
   `;
 }
 
-function renderPopulatedHTML(envelope) {
+function renderPopulatedHTML(envelope, scope = 'project') {
   const groups = groupByBand(envelope.items);
   return `
     <div class="wn-layout">
       <section class="panel wn-header-panel">
         <div class="wn-header-row">
           <h2>What Now</h2>
+          <div class="wn-header-scope">${renderScopeBadgeHTML(scope)}</div>
           <div class="wn-header-meta">${renderMetaHTML(envelope)}</div>
         </div>
         <div class="wn-summary-strip">${renderSummaryStripHTML(envelope.items)}</div>
       </section>
-      ${groups.map(renderBandSectionHTML).join('')}
+      ${groups.map((g) => renderBandSectionHTML(g, scope)).join('')}
     </div>
   `;
 }
@@ -290,13 +312,14 @@ function summaryChipHTML(label, value, color) {
   `;
 }
 
-function renderBandSectionHTML(group) {
+function renderBandSectionHTML(group, scope = 'project') {
   const badge = getBandBadge(group.band);
   return `
     <section class="panel wn-band-panel wn-band-panel--${esc(badge.color)}" data-band="${esc(group.band)}">
       <div class="wn-band-header">
         <span class="wn-band-badge wn-band-badge--${esc(badge.color)}">${esc(badge.label)}</span>
         <span class="wn-band-count">${esc(String(group.items.length))} item${group.items.length === 1 ? '' : 's'}</span>
+        <span class="wn-band-scope">${renderScopeBadgeHTML(scope)}</span>
       </div>
       <div class="wn-cards">${group.items.map(renderActionCardHTML).join('')}</div>
     </section>

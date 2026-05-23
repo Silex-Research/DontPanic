@@ -20,7 +20,9 @@ import { renderWhatNowHTML } from '../../lib/what-now-logic.js';
 
   function render(state) {
     if (!_el) return;
-    _el.innerHTML = renderWhatNowHTML(state ? state.whatNow : null);
+    _el.innerHTML = renderWhatNowHTML(state ? state.whatNow : null, {
+      selectedProject: state ? state.selectedProject : undefined,
+    });
   }
 
   function attachCopyHandler() {

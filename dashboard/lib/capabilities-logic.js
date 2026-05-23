@@ -9,6 +9,7 @@
 // for wiring this output into `Jarvis.getPageEl('capabilities').innerHTML`.
 
 import { esc } from './html-escape.js';
+import { renderScopeBadgeHTML } from './project-selector-logic.js';
 
 /** Closed set of per-capability status values (mirrors V0b). */
 export const CAPABILITY_STATUSES = Object.freeze([
@@ -220,6 +221,7 @@ export function renderCapabilityCenterHTML(raw) {
 export function renderEmptyStateHTML() {
   return `
     <div class="cap-empty-state">
+      <div class="cap-empty-scope">${renderScopeBadgeHTML('global')}</div>
       <div class="cap-empty-title">No capability snapshot yet</div>
       <div class="cap-empty-body">
         Run the local CLI to produce <code>dashboard/state/capabilities-status.json</code>,
@@ -239,13 +241,17 @@ function renderPopulatedHTML(envelope) {
     <div class="cap-layout">
       <section class="panel cap-summary-panel">
         <h2>Capability Center</h2>
+        <div class="cap-summary-scope">${renderScopeBadgeHTML('global')}</div>
         <div class="cap-summary-meta">${renderMetaHTML(envelope)}</div>
         <div class="cap-summary-grid" id="cap-summary-grid">${renderSummaryGridHTML(envelope)}</div>
         <div class="cap-advisory-list" id="cap-advisory-list">${renderAdvisoryListHTML(envelope.advisory_notes)}</div>
       </section>
 
       <section class="panel cap-cards-panel">
-        <h2>Capabilities</h2>
+        <div class="cap-cards-header">
+          <h2>Capabilities</h2>
+          <div class="cap-cards-scope">${renderScopeBadgeHTML('global')}</div>
+        </div>
         <div class="cap-cards" id="cap-cards">${renderCardsHTML(envelope.capabilities)}</div>
       </section>
     </div>

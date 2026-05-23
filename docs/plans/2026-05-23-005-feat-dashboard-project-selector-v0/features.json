@@ -141,11 +141,59 @@
         "Add unit/integration tests for selector rendering, URL-state persistence, localStorage fallback, command-emission Add Project, missing summary, registry refresh, and scope labels."
       ],
       "acceptance": "(1) The dashboard shows a project selector with All Projects and registered projects. (2) Selection persists through URL state with localStorage fallback and does not mutate governed state. (3) V0 dashboard sections clearly label Global, Project, or Fleet scope. (4) Add Project emits a command rather than writing config. (5) Missing state produces an actionable command. (6) Selector options refresh after registry changes. (7) Tests cover selector states and scope labels.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../dashboard/core.js",
+          "note": "Project selector shell wiring, URL/localStorage persistence, selector refresh, and manual remediation for stale scope badge / display-name fingerprint defects."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/project-selector-logic.js",
+          "note": "Pure project selector logic: normalized fleet summary, options, URL builder, Add Project command emission, missing summary command, and scope badge rendering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/project-selector.test.js",
+          "note": "Integration coverage for selector rendering, persistence, missing summary, add-project command emission, registry refresh, present-to-missing refresh, stale badge remediation, display-name refresh remediation, and scope labels."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/project-selector-logic.test.js",
+          "note": "Pure unit coverage for project selector transformations and HTML builders."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "note": "Iteration-1 implementer signed off after addressing the first auditor round."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "note": "Iteration-1 auditor left two valid bounded UI-state findings and one advisory evidence issue."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "Operator close-out after manually remediating the valid stopped_no_progress findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F003.txt",
+          "note": "Operator verification: focused F003-related dashboard tests and full dashboard suite."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:03:36Z"
     },
     {
       "id": "F004",
