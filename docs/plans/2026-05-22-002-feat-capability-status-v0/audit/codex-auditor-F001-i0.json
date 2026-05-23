@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T16:54:14Z",
+  "completed_at": "2026-05-22T16:57:10Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-dx32bnve target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 113338 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 948817,
+    "tokens_out": 12268,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): `capability.schema.json` does not enforce unique `setup_steps[].id`; evidence: schema line 184 uses JSON Schema `uniqueItems` on whole objects only, and my direct schema probe with duplicate `id` but different `what` values returned `0` errors; recommendation: enforce id uniqueness at the schema contract level or adjust the accepted schema strategy explicitly, then test it.\n\nFINDING (medium, test_coverage): the duplicate-id test is not a schema-rejection test as required; evidence: `test_setup_step_duplicate_id_fails` expects `duplicate setup_steps` from the Pydantic validator, not `schema validation failed`; recommendation: add/adjust a test that proves duplicate ids are rejected by the JSON Schema layer.\n\nImplementer target declaration is correct: summary has `Repo: DontPanic`, `Env: dev`, `Project: (none)`. Their `target_context.commands_run` has no forbidden command shapes.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/ -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"import json, jsonschema; from pathlib import Path; schema=json.loads(Path('claude/shared/schemas/v1.0/capability.schema.json').read_text());",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/ -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import json, jsonschema; from pathlib import Path; schema=json.loads(Path('claude/shared/schemas/v1.0/capability.schema.json').read_text()); payload={'schema_version':'1.0.0','id':'example','title':'Example','kind':'service_adapter','category':'pm-tool','summary':'Example','setup_required':True,'setup_doc':'docs/USE_CASES.md','default_in_profiles':[],'use_cases':[],'requires':{'commands':[],'env':[],'files':[],'services':[],'auth':[],'config':[]},'verify':{'doctor_profiles':[],'probes':[],'readiness':'Ready'},'owner_boundary':{'dontpanic_core':[],'adapter':[],'operator':[]},'mutation_boundary':{'writes_dontpanic_state':False,'external_mutation':'none','allowed_path':'none','forbidden':[]},'notes':[],'setup_steps':[{'id':'dup','what':'one','automatable':True},{'id':'dup','what':'two','automatable':False}]}; errors=list(jsonschema.Draft202012Validator(schema).iter_errors(payload)); print(len(errors)); [print(e.message) for e in errors]\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.capabilities import load_capabilities; idx=load_capabilities('.'); print([(m.id, len(m.setup_steps)) for m in idx.all])\"",
+      "rg -n 'sk-|sk_live_|ghp_|xox[abprs]-|AIza|AKIA|discord\\.com/api/webhooks' capabilities/*.json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`capability.schema.json` does not enforce unique `setup_steps[].id`; evidence: schema line 184 uses JSON Schema `uniqueItems` on whole objects only, and my direct schema probe with duplicate `id` but different `what` values returned `0` errors; recommendation: enforce id uniqueness at the schema contract level or adjust the accepted schema strategy explicitly, then test it.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "the duplicate-id test is not a schema-rejection test as required; evidence: `test_setup_step_duplicate_id_fails` expects `duplicate setup_steps` from the Pydantic validator, not `schema validation failed`; recommendation: add/adjust a test that proves duplicate ids are rejected by the JSON Schema layer. Implementer target declaration is correct: summary has `Repo: DontPanic`, `Env: dev`, `Project: (none)`. Their `target_context.commands_run` has no forbidden command shapes. Checks run: $ PYTHOND",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/audit/transcript.md",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-implementer.json",
+        "scripts/dontpanic_orchestrate/cli.py",
+        "scripts/dontpanic_orchestrate/reconcile.py"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/audit/transcript.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/reconcile.py",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/audit/transcript.md",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/cli.py",
+    "scripts/dontpanic_orchestrate/reconcile.py"
+  ]
+}

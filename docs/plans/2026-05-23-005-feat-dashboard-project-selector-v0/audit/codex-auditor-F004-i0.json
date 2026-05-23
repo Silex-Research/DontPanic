@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T07:15:04Z",
+  "completed_at": "2026-05-23T07:17:32Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-tbwla4i4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1510564 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1727950,
+    "tokens_out": 9500,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer audit target context is structurally valid: summary declares Repo/Env/Project, structured `target_context.env=dev`, `project=null`, and `commands_run=[]`; no forbidden command shapes.\n\nFINDING (high, correctness): The dashboard does not actually use the new fleet/project What Now renderers, so All Projects grouping and selected-project filtering are not live. Evidence: `dashboard/core.js:216` still loads only `state/what-now.json`, and `dashboard/pages/what-now/what-now.js:14-24` calls `renderWhatNowHTML(state.whatNow, selectedProject)` instead of `renderFleetWhatNowHTML` / `renderProjectWhatNowHTML`; the F004 renderers exist unused at `dashboard/lib/what-now-logic.js:653-715`. Recommendation: load `fleet-what-now.json`, store it in state, and route What Now rendering by `selectedProject === all`.\n\nFINDING (high, correctness): Status header acceptance is not implemented in the rendered dashboard. Evidence: `buildStatusHeader` / `renderStatusHeaderHTML` exist at `dashboard/lib/what-now-logic.js:559-643`, but no caller references them. Recommendation: render the status header in both fleet and project What Now views with selected scope, health band, warning count, and data age.\n\nFINDING (high, correctness): Global blocker relevance is incomplete in the browser path. Evidence: JS `filterItemsForProject` only checks `requiredCapabilityIds` at `dashboard/lib/what-now-logic.js:522-535`, but no cal",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -q",
+      "npm test -- --run tests/unit/project-selector-logic.test.js tests/integration/project-selector.test.js tests/integration/what-now-page.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "The dashboard does not actually use the new fleet/project What Now renderers, so All Projects grouping and selected-project filtering are not live. Evidence: `dashboard/core.js:216` still loads only `state/what-now.json`, and `dashboard/pages/what-now/what-now.js:14-24` calls `renderWhatNowHTML(state.whatNow, selectedProject)` instead of `renderFleetWhatNowHTML` / `renderProjectWhatNowHTML`; the F004 renderers exist unused at `dashboard/lib/what-now-logic.js:653-715`. Recommendation: load `fleet",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Status header acceptance is not implemented in the rendered dashboard. Evidence: `buildStatusHeader` / `renderStatusHeaderHTML` exist at `dashboard/lib/what-now-logic.js:559-643`, but no caller references them. Recommendation: render the status header in both fleet and project What Now views with selected scope, health band, warning count, and data age.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Global blocker relevance is incomplete in the browser path. Evidence: JS `filterItemsForProject` only checks `requiredCapabilityIds` at `dashboard/lib/what-now-logic.js:522-535`, but no caller passes those declarations, and adapter-category relevance from the plan table/Python rule is absent. Recommendation: persist per-project declarations/category refs into the fleet envelope or summary and apply the full typed relevance rule in the project renderer.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Fleet aggregation can drop project-scoped items that share the same id across projects. Evidence: `build_fleet_what_now` merges by raw `it.id` at `scripts/dontpanic_orchestrate/projects_dashboard.py:1026-1030`; architecture items use ids like `architecture:<state>`, so only the last project survives. Recommendation: dedupe by `(project_name || \"__global__\", id)` or prefix project-scoped ids before merging. Checks attempted: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:c",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

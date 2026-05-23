@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0.0",
+  "id": "firebase-dashboard",
+  "title": "Firebase realtime dashboard adapter",
+  "kind": "external_adapter",
+  "category": "dashboard-realtime",
+  "summary": "Optional realtime team dashboard adapter that mirrors DontPanic state projection into Firebase and routes dashboard mutations through DontPanic MCP.",
+  "setup_required": true,
+  "setup_doc": "docs/USE_CASES.md#u6-team-collaboration-with-shared-dashboard",
+  "default_in_profiles": ["firebase-dashboard"],
+  "use_cases": ["U6b"],
+  "requires": {
+    "commands": ["firebase", "gcloud"],
+    "env": ["DONTPANIC_FIREBASE_PROJECT"],
+    "files": ["environments.json", ".firebaserc"],
+    "services": [
+      "Firebase project",
+      "Firebase Auth",
+      "Firestore",
+      "Cloud Functions",
+      "local DontPanic MCP server",
+      "Firebase sync daemon"
+    ],
+    "auth": [
+      "firebase login",
+      "gcloud auth login",
+      "gcloud application-default credentials or service account for deploy"
+    ],
+    "config": [
+      "Firebase web app config for dashboard",
+      "Firestore rules",
+      "Cloud Functions environment",
+      "single-tenant project path mapping"
+    ]
+  },
+  "verify": {
+    "doctor_profiles": ["firebase-dashboard"],
+    "probes": [
+      "cli:firebase",
+      "cli:gcloud",
+      "firebase-auth",
+      "gcloud-auth",
+      "target-project",
+      "firebase_dashboard_config"
+    ],
+    "readiness": "Core/static dashboard does not require Firebase. This adapter is ready only when Firebase project, auth, rules/functions deploy access, and local MCP mutation path are configured."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "state projection",
+      "bundled static dashboard export",
+      "MCP mutation tools",
+      "doctor profile hooks",
+      "adapter governance contract"
+    ],
+    "adapter": [
+      "Firestore mirror schema",
+      "sync daemon",
+      "Firebase dashboard configuration",
+      "Cloud Functions that call DontPanic MCP",
+      "Firestore rules"
+    ],
+    "operator": [
+      "Firebase project ownership",
+      "Firebase Auth configuration",
+      "gcloud/firebase authentication",
+      "service account and deploy credentials",
+      "cost and quota management",
+      "hosting/deploy choice"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "firestore_mirror_and_cloud_function_actions",
+    "allowed_path": "Dashboard action -> Cloud Function -> DontPanic MCP mutating tool with confirm=true. Firestore mirrors projection state and is not the source of truth.",
+    "forbidden": [
+      "Browser writes that directly mutate plan/gate/signoff state",
+      "Cloud Functions writing DontPanic local state without MCP",
+      "Making Firebase a requirement for core onboarding"
+    ]
+  },
+  "notes": [
+    "Static dashboard is core and has no Firebase dependency.",
+    "Firebase Hosting may host static files, but Firebase realtime behavior is an optional adapter."
+  ],
+  "setup_steps": [
+    {
+      "id": "install_firebase_cli",
+      "what": "Install the Firebase CLI so the operator can deploy rules and Cloud Functions.",
+      "automatable": true,
+      "command_template": "npm install -g firebase-tools",
+      "verify_probe": "cli:firebase",
+      "human_required_reason": null
+    },
+    {
+      "id": "install_gcloud_cli",
+      "what": "Install the gcloud CLI so the operator can manage service accounts and deploy credentials.",
+      "automatable": true,
+      "command_template": "curl -sSL https://sdk.cloud.google.com | bash",
+      "verify_probe": "cli:gcloud",
+      "human_required_reason": null
+    },
+    {
+      "id": "firebase_login",
+      "what": "Authenticate the Firebase CLI against the operator's Google account.",
+      "automatable": false,
+      "command_template": "firebase login",
+      "verify_probe": "firebase-auth",
+      "human_required_reason": "Requires interactive browser sign-in with the operator's Google account; DontPanic cannot proxy this consent."
+    },
+    {
+      "id": "gcloud_auth_login",
+      "what": "Authenticate gcloud and set application-default credentials for deploys.",
+      "automatable": false,
+      "command_template": "gcloud auth login && gcloud auth application-default login",
+      "verify_probe": "gcloud-auth",
+      "human_required_reason": "Requires interactive browser sign-in; the operator must approve cloud platform scopes."
+    },
+    {
+      "id": "select_target_project",
+      "what": "Point the local Firebase config at the operator's target Firebase project.",
+      "automatable": true,
+      "command_template": "firebase use --add --project <YOUR_FIREBASE_PROJECT_ID>",
+      "verify_probe": "target-project",
+      "human_required_reason": null
+    },
+    {
+      "id": "deploy_firestore_rules",
+      "what": "Deploy the dashboard Firestore rules so the mirror collection enforces read-only browser access.",
+      "automatable": true,
+      "command_template": "firebase deploy --project <YOUR_FIREBASE_PROJECT_ID> --only firestore:rules",
+      "verify_probe": null,
+      "human_required_reason": null
+    },
+    {
+      "id": "deploy_cloud_functions",
+      "what": "Deploy the Cloud Functions that proxy dashboard mutations through the DontPanic MCP server.",
+      "automatable": true,
+      "command_template": "firebase deploy --project <YOUR_FIREBASE_PROJECT_ID> --only functions",
+      "verify_probe": null,
+      "human_required_reason": null
+    },
+    {
+      "id": "run_mcp_bridge",
+      "what": "Start the local MCP bridge process the Cloud Functions call back into for mutations.",
+      "automatable": true,
+      "command_template": "PYTHONPATH=scripts python -m firebase_adapter.mcp_http_bridge serve --bind 127.0.0.1:<YOUR_MCP_PORT> --token-env DONTPANIC_MCP_TUNNEL_TOKEN",
+      "verify_probe": "firebase_dashboard_config",
+      "human_required_reason": null
+    },
+    {
+      "id": "smoke_test",
+      "what": "Trigger a deployed dashboard action end-to-end per dashboard/functions/RUNBOOK.md section 5.",
+      "automatable": false,
+      "command_template": null,
+      "verify_probe": "firebase_dashboard_config",
+      "human_required_reason": "Requires a deployed Firebase project, an authenticated dashboard session, a running tunnel to the local MCP bridge, and a real dashboard action; DontPanic v0 does not ship an automated firebase-dashboard smoke runner."
+    }
+  ]
+}

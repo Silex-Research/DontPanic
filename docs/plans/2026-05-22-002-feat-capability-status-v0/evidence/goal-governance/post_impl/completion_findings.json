@@ -1,0 +1,24 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-22T19:40:04.031098+00:00",
+  "plan_id": "2026-05-22-002-feat-capability-status-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/operator/agent-consumes-json-handoff/json-format-schema-pinned-snapshot.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/PENDING-probes-render-informational-not-blocking.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/cache-written-to-dontpanic-home.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/capabilities-status-cli-runs-against-four-manifests.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/setup-steps-backfill-claude-two-steps.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/setup-steps-backfill-discord-two-steps.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/setup-steps-backfill-firebase-six-steps.log",
+    "evidence/goal-governance/post_impl/operator/operator-asks-what-do-i-need-to-set-up/setup-steps-backfill-linear-four-steps.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/full-orchestrate-sweep-at-or-above-baseline.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/lock-sidecar-absent-when-no-capability-deps.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/lock-sidecar-emitted-with-external-refs.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/lock-sidecar-emitted-with-requires-capabilities.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/no-conflict-with-2026-05-21-001-loader.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/sanitization-clean.log",
+    "evidence/goal-governance/post_impl/operator/operator-locks-plan-with-capability-dependencies/schema-additive-no-breaking-change-existing-manifests-load.log"
+  ],
+  "findings": []
+}

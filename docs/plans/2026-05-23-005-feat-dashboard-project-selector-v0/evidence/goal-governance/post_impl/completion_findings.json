@@ -1,0 +1,30 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-23T08:07:06.865768+00:00",
+  "plan_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/infra/agent-reads-fleet-summary-without-scraping-html/fleet-summary-8-project-snapshot.json",
+    "evidence/goal-governance/post_impl/infra/agent-reads-fleet-summary-without-scraping-html/fleet-summary-snapshot.json",
+    "evidence/goal-governance/post_impl/infra/agent-reads-fleet-summary-without-scraping-html/fleet-what-now-8-project-snapshot.json",
+    "evidence/goal-governance/post_impl/infra/agent-reads-fleet-summary-without-scraping-html/sanitization-clean.log",
+    "evidence/goal-governance/post_impl/infra/operator-in-unregistered-single-repo-gets-current-behavior/cwd-match-default-cli-transcript.txt",
+    "evidence/goal-governance/post_impl/infra/operator-in-unregistered-single-repo-gets-current-behavior/cwd-match-default-snapshot.json",
+    "evidence/goal-governance/post_impl/infra/operator-in-unregistered-single-repo-gets-current-behavior/single-repo-fallback-log.txt",
+    "evidence/goal-governance/post_impl/web/operator-sees-malformed-project-warning-in-dashboard/dashboard-build-warnings-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-sees-malformed-project-warning-in-dashboard/fleet-what-now-8-project-snapshot.json",
+    "evidence/goal-governance/post_impl/web/operator-sees-malformed-project-warning-in-dashboard/status-header-fleet-snapshot.html",
+    "evidence/goal-governance/post_impl/web/operator-selects-one-project-and-sees-scoped-state/project-selector-single-project-snapshot.html",
+    "evidence/goal-governance/post_impl/web/operator-selects-one-project-and-sees-scoped-state/status-header-project-snapshot.html",
+    "evidence/goal-governance/post_impl/web/operator-selects-one-project-and-sees-scoped-state/what-now-project-scope-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/dashboard-build-warnings-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/dashboard-project-cli-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/fleet-summary-8-project-snapshot.json",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/fleet-summary-snapshot.json",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/project-registry-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/project-selector-all-projects-snapshot.html",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/project-selector-ui-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-three-projects-opens-all-projects-dashboard/status-header-fleet-snapshot.html"
+  ],
+  "findings": []
+}

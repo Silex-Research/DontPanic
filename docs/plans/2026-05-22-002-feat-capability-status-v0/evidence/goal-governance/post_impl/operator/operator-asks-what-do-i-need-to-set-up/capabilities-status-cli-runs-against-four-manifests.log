@@ -1,0 +1,11 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+Result: command exited 0 and returned four capability entries:
+- agent-claude-cli
+- discord-notify
+- firebase-dashboard
+- linear
+
+Each entry included capability_id, status, missing, configured, owner_boundary,
+next_actions, automatable, human_required, advisory_notes, and pending_probes.
+This verifies the V0b status surface runs against all four checked-in manifests.

@@ -1,0 +1,62 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T06:07:22Z",
+  "completed_at": "2026-05-23T06:10:56Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-edhhelf2 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 339377 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2168861,
+    "tokens_out": 14829,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target context is correct: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, structured `target_context.env=dev`, `project=null`, and `commands_run=[]`; no forbidden command shapes were present.\n\nFINDING (medium, correctness): Per-project cache layout does not match the plan’s declared data shape. Evidence: plan.md lines 128-138 specifies `~/.dontpanic/dashboard/projects/<project-name>/state-snapshot.json`, `what-now.json`, etc. directly under the project directory, but `projects_dashboard.py` lines 229-270 writes dashboard state under `<project-name>/state/`; tests at `test_projects_dashboard_f001.py` lines 123-125 codify the divergent layout. Recommendation: write the per-project dashboard files directly under `<project-name>/` or explicitly update the contract before downstream UI work depends on it.\n\nFINDING (medium, architecture): Per-project builds still write project-specific generated caches into shared operator-global locations, causing last-project-wins state during fleet builds. Evidence: `projects_dashboard.py` lines 267-273 calls `dashboard.build()` with default cache behavior; `dashboard.py` lines 205-207 writes `~/.dontpanic/capabilities-status.json`, and line 272 writes `~/.dontpanic/dashboard/what-now.json`. Recommendation: add path overrides or disable global cache writes for project-scoped builds, while preserving current single-repo behavior when `dashboard.b",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest ../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate import projects_dashboard as pd, projects_registry as pr; print(pd.FLEET_SUMMARY_SCHEMA_VERSION); print(hasattr(pr.ProjectEntry, 'display_name'))\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate import projects_registry as pr; print(sorted(k for k in pr.ProjectEntry.model_fields if k in {'display_name','profile','active','dontpanic_version'}))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Per-project cache layout does not match the plan’s declared data shape. Evidence: plan.md lines 128-138 specifies `~/.dontpanic/dashboard/projects/<project-name>/state-snapshot.json`, `what-now.json`, etc. directly under the project directory, but `projects_dashboard.py` lines 229-270 writes dashboard state under `<project-name>/state/`; tests at `test_projects_dashboard_f001.py` lines 123-125 codify the divergent layout. Recommendation: write the per-project dashboard files directly under `<pro",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F001",
+      "issue": "Per-project builds still write project-specific generated caches into shared operator-global locations, causing last-project-wins state during fleet builds. Evidence: `projects_dashboard.py` lines 267-273 calls `dashboard.build()` with default cache behavior; `dashboard.py` lines 205-207 writes `~/.dontpanic/capabilities-status.json`, and line 272 writes `~/.dontpanic/dashboard/what-now.json`. Recommendation: add path overrides or disable global cache writes for project-scoped builds, while pres",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "Required mutable-path behavior is not tested. Evidence: the new test file has no `force`, mutable path, or same-name re-registration case; `rg` only finds cache-path assertions, not a path-change scenario. Recommendation: add a test that re-registers the same `ProjectEntry.name` to a different repo path and verifies identity/cache stability plus updated `repo_root`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "No-secret coverage does not scan the full generated per-project dashboard cache. Evidence: tests only exercise secret-shaped build warnings and fleet summary text, while `dashboard.build()` emits state, capabilities, reconcile, architecture, and what-now JSON files. Recommendation: add a recursive cache scan using the existing secret regexes after a representative project build. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest ../scripts/dontpanic_orchestrate/tests/test_proje",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

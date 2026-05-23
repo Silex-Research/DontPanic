@@ -1,0 +1,19 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-23T04:55:01.712595+00:00",
+  "plan_id": "2026-05-23-004-feat-operator-console-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/backend/agent-reads-dashboard-cache-and-gets-same-action-shape/agent-cache-shape-snapshot.json",
+    "evidence/goal-governance/post_impl/backend/agent-reads-dashboard-cache-and-gets-same-action-shape/sanitization-clean.log",
+    "evidence/goal-governance/post_impl/web/operator-clicks-needs-setup-card-gets-copyable-commands/init-dashboard-message.log",
+    "evidence/goal-governance/post_impl/web/operator-clicks-needs-setup-card-gets-copyable-commands/projection-view-adapter-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-clicks-needs-setup-card-gets-copyable-commands/what-now-needs-action-snapshot.html",
+    "evidence/goal-governance/post_impl/web/operator-runs-action-sees-dashboard-reflect-it-without-manual-rebuild/dashboard-serve-localhost-safety.log",
+    "evidence/goal-governance/post_impl/web/operator-with-stale-capabilities-opens-dashboard-sees-actionable-items/dashboard-build-cache-output.log",
+    "evidence/goal-governance/post_impl/web/operator-with-stale-capabilities-opens-dashboard-sees-actionable-items/doctor-dashboard-readiness.log",
+    "evidence/goal-governance/post_impl/web/operator-with-stale-capabilities-opens-dashboard-sees-actionable-items/what-now-action-provider-tests.log",
+    "evidence/goal-governance/post_impl/web/operator-with-zero-drift-sees-quiet-dashboard-not-noise/what-now-quiet-state-snapshot.html"
+  ],
+  "findings": []
+}

@@ -1,0 +1,21 @@
+F001 verification summary
+
+Focused:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py -q
+=> 24 passed in 0.24s
+
+Related registry/project-config/F001:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_f002_projects_registry.py scripts/dontpanic_orchestrate/tests/test_f003_project_config.py scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py -q
+=> 124 passed in 3.52s
+
+Dashboard serve regression suite:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py -q
+=> 21 passed in 11.36s outside sandbox; sandbox run failed only on localhost socket bind PermissionError.
+
+Syntax:
+PYTHONPATH=scripts python3 -m py_compile scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/projects_registry.py scripts/dontpanic_orchestrate/dashboard.py
+=> pass
+
+Sanitization:
+python3 scripts/sanitization_check.py
+=> no campaign IDs or secret shapes in sanitized surface (1849 files scanned)

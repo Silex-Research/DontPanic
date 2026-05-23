@@ -1,0 +1,30 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-23T06:00:19Z",
+  "completed_at": "2026-05-23T06:07:22Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-edhhelf2 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3622 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 4409881,
+    "tokens_out": 22629,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F001] I'll leave the supervisor-owned files (audit/, INBOX.md, features.json status flips) for the auditor + close-out. The implementation is complete: code + tests + passing regression.\n\n**Summary**\n\nRepo: DontPanic\nEnv: dev\nProject: (none)\n\nImplemented F001 of plan 2026-05-23-005 by additively extending `ProjectEntry` with four optional dashboard-selector fields (`display_name`, `profile`, `active`, `dontpanic_version`) — `name` stays the stable identity and legacy registry files (without those fields) still load + project sensibly with `active` defaulting to `True`. Added a new `dontpanic_orchestrate/projects_dashboard.py` module exposing a `ProjectContext` projection (name, display_name, repo_root, plans_root from per-project `plans_dir`, derived `architecture_path`, `dashboard_cache_path`, profile, active, dontpanic_version, last_used_at), a `build_project_state(...)` that composes `dashboard.build()` with output rooted under `~/.dontpanic/dashboard/projects/<name>/` (never inside the target repo) plus a `build-warnings.json` sibling, and a `build_fleet_summary(...)` that emits `~/.dontpanic/dashboard/fleet-summary.json` with per-project health band, data age, warning count, and cache paths (single envelope-level `dontpanic_version` per the V0 same-version assumption). Wrote 20 targeted tests in `tests/test_projects_dashboard_f001.py` covering stable names, cache-layout isolation from target repo, fleet summary existence + version stamping, single-repo fallback, legacy registr",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

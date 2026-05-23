@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl",
+        "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md",
+        "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md",
+        "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json",
+        "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json,docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/decisions.jsonl",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md",
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/INBOX.md",
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/gate-state.json"
+  ]
+}

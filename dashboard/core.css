@@ -474,3 +474,117 @@ footer {
     font-size: 11px;
   }
 }
+
+/* ── F003 Project Selector ── */
+
+.project-selector-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+}
+
+.project-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.project-selector-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.project-selector-input {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  min-width: 180px;
+}
+
+.project-selector-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.project-selector-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.project-selector-add-cmd {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.project-selector-missing {
+  background: var(--yellow-dim);
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--text-primary);
+}
+
+.project-selector-missing-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.project-selector-missing-body {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.project-selector-missing-cmd {
+  background: var(--bg-card);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+/* ── F003 Scope badges (Global / Project / Fleet) ── */
+
+.scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+}
+
+.scope-badge-label {
+  color: var(--text-muted);
+}
+
+.scope-badge-value {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.scope-badge--global  { border-color: var(--accent); }
+.scope-badge--project { border-color: var(--green); }
+.scope-badge--fleet   { border-color: var(--purple); }

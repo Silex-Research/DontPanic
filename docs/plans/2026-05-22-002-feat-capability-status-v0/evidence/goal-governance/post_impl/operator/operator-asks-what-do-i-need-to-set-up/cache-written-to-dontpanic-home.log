@@ -1,0 +1,7 @@
+Evidence: F002 capability-status implementation and acceptance.
+
+`dontpanic capabilities status` writes `~/.dontpanic/capabilities-status.json`
+after a successful run unless `--no-cache-write` is supplied. The verification
+run used `--no-cache-write` to avoid mutating operator-local state during
+close-out; the cache-write behavior is covered by F002 tests and feature
+evidence.

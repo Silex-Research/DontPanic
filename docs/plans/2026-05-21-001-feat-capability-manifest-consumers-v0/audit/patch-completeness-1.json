@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json",
+        "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md",
+        "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md",
+        "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json",
+        "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+        "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+        "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
+        "scripts/dontpanic_orchestrate/prereq_registry.py"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json,docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl,docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md,docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/integrations/adapter_registry.py,scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py,scripts/dontpanic_orchestrate/prereq_registry.py",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/evidence/linear-mapping-example.json",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/INBOX.md",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/audit/transcript.md",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/INBOX.md",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/audit/transcript.md",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+    "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
+    "scripts/dontpanic_orchestrate/prereq_registry.py"
+  ]
+}

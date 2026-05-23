@@ -1,0 +1,63 @@
+{
+  "acceptance_demonstrated": {
+    "fleet_summary_written": true,
+    "selection_cwd_match_true": true,
+    "selection_is_default_true": true,
+    "selection_kind_is_project": true,
+    "selection_project_name_is_alpha_app": true,
+    "served_state_has_fleet_summary": true,
+    "served_state_has_fleet_what_now": true,
+    "served_state_mirrors_alpha_app": true,
+    "served_state_mirrors_beta_backend": true
+  },
+  "build_result": {
+    "fleet_summary_path": "<HOME>/dashboard/fleet-summary.json",
+    "project_reports": [
+      {
+        "dashboard_cache_path": "<HOME>/dashboard/projects/alpha-app",
+        "name": "alpha-app",
+        "skipped": false,
+        "skipped_reason": null,
+        "warning_count": 1
+      },
+      {
+        "dashboard_cache_path": "<HOME>/dashboard/projects/beta-backend",
+        "name": "beta-backend",
+        "skipped": true,
+        "skipped_reason": "not focused this pass",
+        "warning_count": 1
+      }
+    ],
+    "selection_cwd_match": true,
+    "selection_kind": "project",
+    "selection_project_name": "alpha-app",
+    "served_project_dirs": [
+      "alpha-app",
+      "beta-backend"
+    ],
+    "served_state_files": [
+      "fleet-summary.json",
+      "fleet-what-now.json",
+      "projects"
+    ]
+  },
+  "cwd": "<HOME>/fixtures/alpha-app/docs/plans",
+  "registered_projects": [
+    {
+      "name": "alpha-app",
+      "path": "<HOME>/fixtures/alpha-app"
+    },
+    {
+      "name": "beta-backend",
+      "path": "<HOME>/fixtures/beta-backend"
+    }
+  ],
+  "resolved_selection": {
+    "cwd_match": true,
+    "is_default": true,
+    "kind": "project",
+    "project_name": "alpha-app",
+    "reason": "cwd is inside registered project 'alpha-app'"
+  },
+  "scenario": "two projects registered, omitted --project, cwd inside alpha-app"
+}

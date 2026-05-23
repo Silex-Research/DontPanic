@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "id": "discord-notify",
+  "title": "Discord notification sink",
+  "kind": "notification_sink",
+  "category": "notification-sink",
+  "summary": "Send DontPanic NotifyEvent messages to a Discord webhook for read-only operator awareness.",
+  "setup_required": true,
+  "setup_doc": "docs/USE_CASES.md#u2-solo-dev--discord-receive-only-notifications",
+  "default_in_profiles": [],
+  "use_cases": ["U2", "U4", "U6"],
+  "requires": {
+    "commands": [],
+    "env": ["DONTPANIC_DISCORD_WEBHOOK_URL"],
+    "files": ["~/.dontpanic/discord.json"],
+    "services": ["Discord webhook"],
+    "auth": ["Discord webhook URL"],
+    "config": ["webhook_url"]
+  },
+  "verify": {
+    "doctor_profiles": ["discord"],
+    "probes": ["discord_webhook_config_present"],
+    "readiness": "Webhook URL configured by env var or ~/.dontpanic/discord.json. Network delivery can be smoke-tested with an explicit operator action."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "NotifyEvent envelope",
+      "direct webhook sink implementation",
+      "event emission points"
+    ],
+    "adapter": [
+      "Discord webhook request formatting",
+      "delivery retry policy if enabled"
+    ],
+    "operator": [
+      "Discord server/channel ownership",
+      "webhook creation",
+      "webhook URL secrecy",
+      "channel moderation"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "push_notification_only",
+    "allowed_path": "DontPanic emits NotifyEvent; sink POSTs to Discord webhook. Discord messages do not mutate DontPanic state.",
+    "forbidden": [
+      "Treating Discord messages as approval commands",
+      "Writing gate or plan state from Discord webhook delivery"
+    ]
+  },
+  "notes": [
+    "This is a direct sink for simple receive-only use. Bidirectional chat belongs in a broker such as OpenClaw, not this sink."
+  ],
+  "setup_steps": [
+    {
+      "id": "configure_webhook_url",
+      "what": "Configure the Discord webhook URL the sink will POST NotifyEvent messages to (env var or ~/.dontpanic/discord.json).",
+      "automatable": false,
+      "command_template": "echo '{\"webhook_url\": \"<YOUR_DISCORD_WEBHOOK_URL>\"}' > ~/.dontpanic/discord.json && chmod 600 ~/.dontpanic/discord.json",
+      "verify_probe": "discord_webhook_config_present",
+      "human_required_reason": "Operator must create the Discord channel webhook and treat the URL as a secret; DontPanic cannot create webhooks in the operator's server."
+    },
+    {
+      "id": "smoke_test",
+      "what": "Send a test NotifyEvent to the configured Discord webhook to confirm end-to-end delivery.",
+      "automatable": true,
+      "command_template": "dontpanic notify smoke --sink discord",
+      "verify_probe": null,
+      "human_required_reason": null
+    }
+  ]
+}

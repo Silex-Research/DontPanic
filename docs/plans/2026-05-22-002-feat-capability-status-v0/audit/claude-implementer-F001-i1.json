@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-22T16:57:10Z",
+  "completed_at": "2026-05-22T17:01:13Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-22-002-feat-capability-status-v0/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-dx32bnve target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3635 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 982791,
+    "tokens_out": 13585,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F001] Full sweep: **2247 passed, 7 skipped** — at or above the lock-time baseline. Both auditor findings addressed.\n\nSide-effect commands invoked this turn:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"...direct schema probe with duplicate ids...\"\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests -q\n\n**Finding [high, correctness] — schema doesn't enforce unique `setup_steps[].id`:** Added a non-standard `uniqueBy: \"id\"` annotation on the `setup_steps` array in `claude/shared/schemas/v1.0/capability.schema.json:185`, and registered a matching custom keyword validator on `Draft202012Validator` in `scripts/dontpanic_orchestrate/capabilities.py` via a new `_build_validator` helper. The loader now rejects duplicate ids — even when the surrounding object fields differ — with a `schema validation failed at setup_steps` error. Confirmed by re-running the auditor's exact probe (two entries sharing `id` but differing `what`): now yields 1 schema error where before it yielded 0. The Pydantic-layer `_setup_step_ids_unique` model_validator is retained as defense-in-depth for callers who bypass the schema step. Recorded the addition in `claude/shared/CHANGELOG.md` (1.11",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"...direct schema probe with duplicate ids...\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

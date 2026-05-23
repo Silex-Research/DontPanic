@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-22T12:00:00Z",
+  "advisory_notes": [
+    "No probes declare capability_id bindings — capability status is computed from requires-resolution alone."
+  ],
+  "capabilities": [
+    {
+      "capability_id": "agent-claude-cli",
+      "status": "ready",
+      "owner_boundary": {
+        "dontpanic_core": ["agent dispatch", "supervisor wiring"],
+        "adapter": [],
+        "operator": ["Anthropic billing"]
+      },
+      "configured": ["claude"],
+      "missing": [],
+      "automatable": [],
+      "human_required": [],
+      "pending_probes": [],
+      "next_actions": [],
+      "advisory_notes": []
+    },
+    {
+      "capability_id": "firebase-dashboard",
+      "status": "needs_setup",
+      "owner_boundary": {
+        "dontpanic_core": ["state projection", "bundled static dashboard export"],
+        "adapter": ["Firestore mirror schema", "sync daemon"],
+        "operator": ["Firebase project ownership", "Firebase Auth configuration"]
+      },
+      "configured": ["firebase", "gcloud"],
+      "missing": [
+        "DONTPANIC_FIREBASE_PROJECT",
+        "firebase login",
+        "Firebase web app config for dashboard"
+      ],
+      "automatable": [
+        {
+          "id": "install_firebase_cli",
+          "what": "Install the Firebase CLI so the operator can deploy rules and Cloud Functions.",
+          "command_template": "npm install -g firebase-tools"
+        },
+        {
+          "id": "select_target_project",
+          "what": "Point the local Firebase config at the operator's target Firebase project.",
+          "command_template": "firebase use --add --project <YOUR_FIREBASE_PROJECT_ID>"
+        }
+      ],
+      "human_required": [
+        {
+          "id": "firebase_login",
+          "what": "Authenticate the Firebase CLI against the operator's Google account.",
+          "command_template": "firebase login",
+          "human_required_reason": "Requires interactive browser sign-in with the operator's Google account; DontPanic cannot proxy this consent."
+        }
+      ],
+      "pending_probes": [
+        {
+          "name": "firebase_dashboard_config",
+          "reason": "Awaiting deployed config; probe will activate after firebase deploy runs."
+        }
+      ],
+      "next_actions": [],
+      "advisory_notes": []
+    },
+    {
+      "capability_id": "linear",
+      "status": "not_installed",
+      "owner_boundary": {
+        "dontpanic_core": ["PM-tool category contract", "external_refs[] plan binding"],
+        "adapter": ["Printing Press generated Linear CLI"],
+        "operator": ["Linear workspace access", "API token"]
+      },
+      "configured": [],
+      "missing": ["linear-pp-cli", "~/.dontpanic/adapters/linear.json"],
+      "automatable": [
+        {
+          "id": "emit_pp_binary",
+          "what": "Generate the Printing Press Linear adapter binary the operator will register with DontPanic.",
+          "command_template": "printing-press emit --target linear --out <YOUR_ADAPTER_BIN_PATH>"
+        }
+      ],
+      "human_required": [
+        {
+          "id": "paste_api_token",
+          "what": "Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate.",
+          "command_template": null,
+          "human_required_reason": "Operator must mint and paste their own Linear API token; DontPanic does not provision Linear credentials on the operator's behalf."
+        }
+      ],
+      "pending_probes": [],
+      "next_actions": [],
+      "advisory_notes": []
+    },
+    {
+      "capability_id": "discord-notify",
+      "status": "blocked",
+      "owner_boundary": {
+        "dontpanic_core": ["notification dispatch"],
+        "adapter": [],
+        "operator": ["Discord webhook"]
+      },
+      "configured": [],
+      "missing": ["DISCORD_WEBHOOK_URL"],
+      "automatable": [],
+      "human_required": [
+        {
+          "id": "set_webhook",
+          "what": "Set DISCORD_WEBHOOK_URL in shell env",
+          "command_template": "export DISCORD_WEBHOOK_URL=<your_webhook>",
+          "human_required_reason": "Webhook secret cannot be provisioned by DontPanic."
+        }
+      ],
+      "pending_probes": [],
+      "next_actions": [],
+      "advisory_notes": ["Last delivery attempt failed: 401 unauthorized"]
+    }
+  ]
+}

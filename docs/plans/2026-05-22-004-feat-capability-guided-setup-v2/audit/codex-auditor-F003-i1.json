@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-22T23:03:07Z",
+  "completed_at": "2026-05-22T23:06:31Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-g_t_teog target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 238582 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1584946,
+    "tokens_out": 15482,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and `target_context.commands_run` is empty, so no forbidden command shapes there.\n\nFINDING (high, security): Evidence sanitization still allows common npm auth-token values to persist. Evidence: `_apply_secret_patterns()` leaves `npm install --//registry.npmjs.org/:_authToken=npm_[redacted-test-token]` unchanged, and `evaluate_command_template()` returns `True passes allowlist policy` for that same `npm install` command, so an attempted allowlisted step can write the raw token into `command_template`/`argv`. Recommendation: redact npm token forms such as `_authToken=...`, `authToken=...`, `auth_token=...`, and `npm_...`, and add regression tests covering an allowlisted npm command with those fields.\n\nFINDING (medium, documentation): Parent roadmap still does not record V2 completion. Evidence: D013 says “V2 is in progress” and “A subsequent D-entry will record V2 close-out once F003 ships features.json passes:true,” while F003 acceptance requires the parent roadmap update after V2 completion. Recommendation: when closing F003, add/amend the parent D-entry to state V2 is complete and cite the final F003 evidence/signoff.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -m pytest ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q -p no:cacheprovider\n$ ruff c",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -m pytest ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q -p no:cacheprovider",
+      "ruff check --no-cache ../scripts/dontpanic_orchestrate/capabilities_setup_evidence.py ../scripts/dontpanic_orchestrate/capabilities_setup.py ../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.capabilities_setup_evidence import _apply_secret_patterns; samples=['sk-proj-[redacted-test-token]','AKIAIOSFODNN7EXAMPLE','ghp_[redacted-test-token]','sk_live_[redacted-test-token]','sk-ant-[redacted-test-token]','token=abcdef1234567890','Authorization: Bearer eyJhbGciOi.eyJzdWIiOi.ZjU2ZjUxZTFm']; print('\\\\n'.join(_apply_secret_patterns(s) for s in samples))\"",
+      "git diff --check HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.capabilities_setup_evidence import _apply_secret_patterns; s='npm install --//registry.npmjs.org/:_authToken=npm_[redacted-test-token]'; print(_apply_secret_patterns(s))\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.capabilities_setup_runner import evaluate_command_template; d=evaluate_command_template('npm install --//registry.npmjs.org/:_authToken=npm_[redacted-test-token]'); print(d.allow, d.reason)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F003",
+      "issue": "Evidence sanitization still allows common npm auth-token values to persist. Evidence: `_apply_secret_patterns()` leaves `npm install --//registry.npmjs.org/:_authToken=npm_[redacted-test-token]` unchanged, and `evaluate_command_template()` returns `True passes allowlist policy` for that same `npm install` command, so an attempted allowlisted step can write the raw token into `command_template`/`argv`. Recommendation: redact npm token forms such as `_authToken=...`, `authToken=...`",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F003",
+      "issue": "Parent roadmap still does not record V2 completion. Evidence: D013 says “V2 is in progress” and “A subsequent D-entry will record V2 close-out once F003 ships features.json passes:true,” while F003 acceptance requires the parent roadmap update after V2 completion. Recommendation: when closing F003, add/amend the parent D-entry to state V2 is complete and cite the final F003 evidence/signoff. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -m pytest ../scripts/dontpanic_orch",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

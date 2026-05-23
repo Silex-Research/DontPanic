@@ -1,0 +1,15 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-22T23:19:21.819270+00:00",
+  "plan_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/operator/agent-runs-safe-automatable-steps/python-tests-green.log",
+    "evidence/goal-governance/post_impl/operator/agent-runs-safe-automatable-steps/sanitization-clean.log",
+    "evidence/goal-governance/post_impl/operator/agent-runs-safe-automatable-steps/setup-automate-safe-confirm-required.log",
+    "evidence/goal-governance/post_impl/operator/agent-runs-safe-automatable-steps/setup-evidence-no-secrets.log",
+    "evidence/goal-governance/post_impl/operator/operator-prints-guided-setup/setup-human-required-skipped.log",
+    "evidence/goal-governance/post_impl/operator/operator-prints-guided-setup/setup-print-steps-firebase-dashboard.log"
+  ],
+  "findings": []
+}

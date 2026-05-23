@@ -1,0 +1,37 @@
+{
+  "task_id": "2026-05-23-004-feat-operator-console-v0",
+  "audit_id": "2026-05-23-004-feat-operator-console-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T03:07:38Z",
+  "completed_at": "2026-05-23T03:10:22Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-004-feat-operator-console-v0-y5nov48s target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 227804 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1669762,
+    "tokens_out": 10339,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. The implementer’s audit correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` contains no forbidden command shapes. I found no code findings: the patch now loads `state-snapshot.json`, falls back to canonical per-stream files, preserves legacy demo fallback, and keeps Capability Center on `capabilities-status.json`.\n\nChecks run:\n$ npm test -- tests/unit/projection-adapter.test.js tests/integration/core-router.test.js\n$ node --check dashboard/lib/projection-adapter.js\n$ node --check dashboard/core.js\n$ node --check dashboard/tests/unit/projection-adapter.test.js\n$ node --check dashboard/tests/integration/core-router.test.js\n$ npm test -- --configLoader runner tests/unit/projection-adapter.test.js tests/integration/core-router.test.js\n$ node --input-type=module -e \"import { mergeSnapshotIntoState, mergePerStreamIntoState } from './dashboard/lib/projection-adapter.js'; import snap from './dashboard/tests/fixtures/state-snapshot.json' with { type: 'json' }; const fresh=()=>({agents:[{id:'legacy'}],tasks:[{id:'legacy'}],activity:[{text:'legacy'}],costs:null,security:[],capabilities:{schema_version:'v0b',capabilities:[]},plans:[],gates:[],inbox:[],supervisors:[],quota:[],decisions:[],evidenceRefs:[],snapshotMeta:null}); let state=fresh(); if(!mergeSnapshotIntoState(state,snap)||state.plans.length!==2||state.tasks[0].id==='legacy'||state.capabilities.schema_version!=='",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npm test -- tests/unit/projection-adapter.test.js tests/integration/core-router.test.js",
+      "node --check dashboard/lib/projection-adapter.js",
+      "node --check dashboard/core.js",
+      "node --check dashboard/tests/unit/projection-adapter.test.js",
+      "node --check dashboard/tests/integration/core-router.test.js",
+      "npm test -- --configLoader runner tests/unit/projection-adapter.test.js tests/integration/core-router.test.js",
+      "node --input-type=module -e \"import { mergeSnapshotIntoState, mergePerStreamIntoState } from './dashboard/lib/projection-adapter.js'; import snap from './dashboard/tests/fixtures/state-snapshot.json' with { type: 'json' }; const fresh=()=>({agents:[{id:'legacy'}],tasks:[{id:'legacy'}],activity:[{text:'legacy'}],costs:null,security:[],capabilities:{schema_version:'v0b',capabilities:[]},plans:[],gates:[],inbox:[],supervisors:[],quota:[],decisions:[],evidenceRefs:[],snapshotMeta:null}); let state=fresh(); if(!mergeSnapshotIntoState(state,snap)||state.plans.length!==2||state.tasks[0].id==='legacy'||state.capabilities.schema_version!=='v0b') process.exit(1); state=fresh(); if(!mergePerStreamIntoState(state,{plans:snap.streams.plans,gates:snap.streams.gates,inbox:snap.streams.inbox,supervisors:snap.streams.supervisors,quota:snap.streams.quota,decisions:snap.streams.decisions,evidence_refs:snap.streams.evidence_refs})||state.evidenceRefs.length!==1||state.snapshotMeta!==null||state.tasks[0].id==='legacy') process.exit(2); state=fresh(); if(mergePerStreamIntoState(state,{plans:[],gates:[]})||state.tasks[0].id!=='legacy') process.exit(3);\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

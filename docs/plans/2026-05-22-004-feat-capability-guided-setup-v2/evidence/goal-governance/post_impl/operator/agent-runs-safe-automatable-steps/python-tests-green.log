@@ -1,0 +1,10 @@
+Evidence: local Python verification after F003 remediation.
+
+Commands:
+- `PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q -p no:cacheprovider`
+- `PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py -q -p no:cacheprovider`
+
+Results:
+- F003 evidence tests: 26 passed.
+- Combined setup tests: 79 passed.
+- `ruff check` on setup modules/tests: all checks passed.

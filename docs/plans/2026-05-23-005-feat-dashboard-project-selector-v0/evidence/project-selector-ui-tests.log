@@ -1,0 +1,14 @@
+
+ RUN  v3.2.4 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+2:42:32 AM [vite] (client) warning: invalid import "./${src}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: /Users/bayesian/Documents/GitHub/DontPanic/dashboard/core.js
+ ✓ tests/unit/project-selector-logic.test.js (41 tests) 6ms
+ ✓ tests/integration/project-selector.test.js (19 tests) 73ms
+
+ Test Files  2 passed (2)
+      Tests  60 passed (60)
+   Start at  02:42:32
+   Duration  523ms (transform 85ms, setup 0ms, collect 100ms, tests 79ms, environment 339ms, prepare 68ms)
+

@@ -1,0 +1,11 @@
+
+ RUN  v3.2.4 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+ ✓ tests/unit/what-now-logic.test.js (51 tests) 14ms
+ ✓ tests/integration/what-now-page.test.js (20 tests) 92ms
+
+ Test Files  2 passed (2)
+      Tests  71 passed (71)
+   Start at  02:42:37
+   Duration  548ms (transform 49ms, setup 0ms, collect 80ms, tests 106ms, environment 347ms, prepare 73ms)
+

@@ -1,0 +1,7 @@
+Evidence: `python3 scripts/sanitization_check.py`.
+
+Result after F003 remediation: sanitization clean.
+
+The checked-in code and plan evidence use placeholder strings for external
+tokens and redact secret-shaped evidence fields before persistence. No secret
+values are required for the guided setup tests.

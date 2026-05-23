@@ -1,0 +1,39 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/evidence/closeout-memo-F003.md"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

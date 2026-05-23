@@ -1,0 +1,30 @@
+F004 operator verification — 2026-05-23
+
+Context:
+- DontPanic plan: 2026-05-23-005-feat-dashboard-project-selector-v0
+- Feature: F004 fleet/project-scoped What Now and Status
+- Volley terminal: stopped_no_progress after two rounds
+- Latest auditor verdict: needs_changes
+
+Manual remediation:
+- Added direct browser-side coverage for renderFleetWhatNowHTML, renderProjectWhatNowHTML, groupByProject, filterItemsForProject, buildStatusHeader, and fleet-what-now.json loading.
+- Extended the synthetic eight-project fixture to assert needs_action, advisory/stale, ready, inactive, and missing-repo states.
+- Fixed ruff findings in dashboard_relevance.py and test_dashboard_relevance_f004.py.
+
+Verification commands:
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -q
+  Result: 32 passed.
+- npx vitest run tests/unit/what-now-logic.test.js tests/integration/core-router.test.js tests/integration/project-selector.test.js tests/integration/what-now-page.test.js
+  Result: 4 files passed, 126 tests passed.
+- PYTHONPATH=scripts ruff check scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py
+  Result: all checks passed.
+- npx vitest run
+  Result: 28 files passed, 652 tests passed.
+- PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m py_compile scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py
+  Result: passed.
+- python3 scripts/sanitization_check.py
+  Result: clean, 1874 files scanned.
+
+Notes:
+- Vite still emits the pre-existing dynamic import warning for core.js.
+- Firebase fallback tests intentionally log offline/static-fallback messages.

@@ -1,0 +1,9 @@
+Evidence: capability status CLI behavior and F002 acceptance.
+
+The status output carries `pending_probes` separately from capability `status`.
+Capability status is limited to the closed set ready, needs_setup, blocked,
+not_installed, optional. PENDING is a probe-state meaning the probe declaration
+needs implementation or cannot yet resolve; it is not a capability status and
+does not by itself downgrade a capability to blocked.
+
+Verified by the F002 implementation and tests committed before close-out.

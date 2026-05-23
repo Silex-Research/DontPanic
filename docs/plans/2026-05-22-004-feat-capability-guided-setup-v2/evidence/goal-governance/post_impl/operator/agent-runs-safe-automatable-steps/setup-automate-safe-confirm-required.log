@@ -1,0 +1,9 @@
+Evidence: `dontpanic capabilities setup <id> --automate-safe` confirm gate.
+
+`dontpanic capabilities setup firebase-dashboard --automate-safe` exits 2 and
+prints: `capabilities setup: --automate-safe requires --confirm; refusing to
+execute`.
+
+The guarded execution path only runs with `--automate-safe --confirm`. Unsafe
+or unallowlisted command templates are denied, and human-required steps are
+skipped. Local verification: combined setup tests passed (79 passed).

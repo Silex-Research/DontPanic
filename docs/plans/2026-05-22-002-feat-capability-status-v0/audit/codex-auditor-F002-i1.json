@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-22T17:25:15Z",
+  "completed_at": "2026-05-22T17:29:27Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-1cogxxoh target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 334286 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2986785,
+    "tokens_out": 11861,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 9 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is valid (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): unresolved `requires.auth` / `requires.config` can still compute `ready`. Evidence: [capabilities_status.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_status.py:289) checks only `requires_resolution.hard_unresolved`, which excludes auth/config even though they are emitted as missing at lines 104-106; a pure-function probe returned `ready` with unresolved auth/config. Recommendation: include unresolved auth/config in the `needs_setup` predicate, or model confirmed-vs-informational resolution explicitly.\n\nFINDING (medium, correctness): `--profile=firebase-dashboard` does not filter to that profile’s capabilities. Evidence: [capabilities_status.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_status.py:471) still iterates every manifest and marks out-of-profile capabilities `optional`; the CLI output included `agent-claude-cli`, `discord-notify`, and `linear`. Recommendation: either actually filter the envelope to matching capabilities for `--profile`, or update the acceptance/contract if optional retention is intended.\n\nFINDING (medium, test_coverage): JSON “snapshot-pinned” acceptance is not actually snapshot-pinned. Evi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m pytest -p no:cacheprovider /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py -q",
+      "ruff check --no-cache /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_status.py /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/prereq_registry.py /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate capabilities status --format=json --no-cache-write",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate capabilities status --profile=firebase-dashboard --format=json --no-cache-write",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate capabilities status firebase-dashboard --no-cache-write",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate capabilities status firebase-dashboarrd --no-cache-write",
+      "PYTHONDONTWRITEBYTECODE=1 python /Users/bayesian/Documents/GitHub/DontPanic/scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -m dontpanic_orchestrate doctor --profile=core --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/bayesian/Documents/GitHub/DontPanic/scripts python -c \"from pathlib import Path; from dontpanic_orchestrate.capabilities import load_capabilities; from dontpanic_orchestrate import capabilities_status as cs; from dontpanic_orchestrate.prereq_registry import ProbeResult, ProbeStatus; m=load_capabilities(Path('/Users/bayesian/Documents/GitHub/DontPanic')).require('agent-claude-cli'); r=cs.RequiresResolution(resolved_commands=('claude',), resolved_files=('~/.dontpanic/config.json',), informational_auth=('auth-token',), informational_config=('role-config',)); print(cs.compute_capability_status(m, [], r).value)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "unresolved `requires.auth` / `requires.config` can still compute `ready`. Evidence: [capabilities_status.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_status.py:289) checks only `requires_resolution.hard_unresolved`, which excludes auth/config even though they are emitted as missing at lines 104-106; a pure-function probe returned `ready` with unresolved auth/config. Recommendation: include unresolved auth/config in the `needs_setup` predicate, or mode",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`--profile=firebase-dashboard` does not filter to that profile’s capabilities. Evidence: [capabilities_status.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_status.py:471) still iterates every manifest and marks out-of-profile capabilities `optional`; the CLI output included `agent-claude-cli`, `discord-notify`, and `linear`. Recommendation: either actually filter the envelope to matching capabilities for `--profile`, or update the acceptance/contract i",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "JSON “snapshot-pinned” acceptance is not actually snapshot-pinned. Evidence: [test_capabilities_status_cli_f002.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py:161) uses inline key/value assertions, with no golden snapshot fixture or byte-stable CLI-output comparison. Recommendation: add a checked-in fixture or explicit full-payload expected object for the JSON renderer/CLI output. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYT",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

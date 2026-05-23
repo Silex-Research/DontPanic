@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dontpanic.local/schemas/v1.0/capability.schema.json",
+  "title": "DontPanic Capability Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "kind",
+    "category",
+    "summary",
+    "setup_required",
+    "setup_doc",
+    "default_in_profiles",
+    "use_cases",
+    "requires",
+    "verify",
+    "owner_boundary",
+    "mutation_boundary",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "agent_cli",
+        "notification_sink",
+        "external_adapter",
+        "service_adapter"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "setup_required": {
+      "type": "boolean"
+    },
+    "setup_doc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_in_profiles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "uniqueItems": true
+    },
+    "use_cases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^U[0-9]+[a-z]?$"
+      },
+      "uniqueItems": true
+    },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commands",
+        "env",
+        "files",
+        "services",
+        "auth",
+        "config"
+      ],
+      "properties": {
+        "commands": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "env": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "files": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "services": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "auth": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "config": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "verify": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doctor_profiles",
+        "probes",
+        "readiness"
+      ],
+      "properties": {
+        "doctor_profiles": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "probes": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "readiness": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "owner_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dontpanic_core",
+        "adapter",
+        "operator"
+      ],
+      "properties": {
+        "dontpanic_core": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "adapter": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "operator": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "mutation_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "writes_dontpanic_state",
+        "external_mutation",
+        "allowed_path",
+        "forbidden"
+      ],
+      "properties": {
+        "writes_dontpanic_state": {
+          "type": "boolean"
+        },
+        "external_mutation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidden": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "notes": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "setup_steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/setupStep"
+      },
+      "uniqueItems": true,
+      "uniqueBy": "id"
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "setupStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "what",
+        "automatable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "what": {
+          "type": "string",
+          "minLength": 1
+        },
+        "automatable": {
+          "type": "boolean"
+        },
+        "command_template": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "verify_probe": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "human_required_reason": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

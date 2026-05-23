@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+  "audit_id": "2026-05-23-002-feat-install-reconcile-foundation-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-23T01:12:14Z",
+  "completed_at": "2026-05-23T01:14:50Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-002-feat-install-reconcile-foundation-v0-x6330vaq target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3180 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1272986,
+    "tokens_out": 10828,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] All four findings addressed.\n\n**F001-high (snapshot path → `.jarvis`/`JARVIS_HOME` leak)**: Added `_canonical_dontpanic_home()` in `install_snapshot.py:163-181` that honors only `$DONTPANIC_HOME` and falls back to `Path.home() / \".dontpanic\"` — it does NOT consult `$JARVIS_HOME` and does NOT fall back to legacy `~/.jarvis`. Rewired both `snapshot_path()` and `_read_status_cache_meta()` to use it. Verified the auditor's exact reproduction (`JARVIS_HOME=/tmp/legacy-only-dp-audit HOME=/tmp/fake-home-dp-audit ... reconcile baseline`) now previews the canonical `/tmp/fake-home-dp-audit/.dontpanic/install-snapshot.json` instead of the JARVIS_HOME path.\n\n**F001-high (untracked files)**: `git add`ed `install_snapshot.py`, `reconcile.py`, and `tests/test_install_snapshot_f001.py`; they now show as `A` in `git status` so the patch is self-contained.\n\n**F001-medium (test coverage for `.jarvis` non-redirection)**: Added two regression tests in `tests/test_install_snapshot_f001.py` — `test_jarvis_home_does_not_redirect_snapshot_path` checks the path resolver under a fake `HOME` with `JARVIS_HOME` exported AND a sibling `~/.jarvis` populated; `test_reconcile_baseline_yes_does_not_write_into_jarvis` exercises the end-to-end write path and asserts neither legacy location ever receives bytes. Full F001 suite is 15/15 green.\n\n**F001-advisory (commands_run empty)**: I'm listing my structured side-effect commands explicitly below for the supervisor's audit extraction.\n\nSide-effect commands invok",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -m pytest scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py -q",
+      "JARVIS_HOME=/tmp/legacy-only-dp-audit HOME=/tmp/fake-home-dp-audit python -m dontpanic_orchestrate reconcile baseline --profile=core",
+      "python scripts/sanitization_check.py",
+      "git add scripts/dontpanic_orchestrate/install_snapshot.py scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py",
+      "git status --short"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

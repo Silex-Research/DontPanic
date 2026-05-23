@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-22T18:55:39Z",
+  "completed_at": "2026-05-22T18:58:55Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-o9pwy1uy target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 348017 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1685169,
+    "tokens_out": 13460,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` has `env=dev`, `project=null`; no forbidden command shapes found in their `commands_run`.\n\nFINDING (medium, correctness): `emit_required_capabilities(plan_dir)` does not resolve external_refs through the registered adapter registry unless a caller injects `resolver`, despite the required API specifying only `plan_dir` plus optional `status_cache`. Evidence: [capabilities_lock_sidecar.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:324) defaults `resolver=None`, and [line 151](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:151) skips URI mapping when resolver is absent. Recommendation: have the sidecar function lazily build the default resolver when `external_refs[]` exists, or keep resolver injection internal to CLI-only helpers and expose the required public signature.\n\nFINDING (medium, correctness): Sidecar `source` is not stable to the specified string-union shape when the same capability comes from both origins. Evidence: [capabilities_lock_sidecar.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:317) emits a list for multi-origin entries instead of `source: 'external_refs' | 'requires_capabilities'`.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py -q",
+      "python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/ -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`emit_required_capabilities(plan_dir)` does not resolve external_refs through the registered adapter registry unless a caller injects `resolver`, despite the required API specifying only `plan_dir` plus optional `status_cache`. Evidence: [capabilities_lock_sidecar.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:324) defaults `resolver=None`, and [line 151](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabiliti",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Sidecar `source` is not stable to the specified string-union shape when the same capability comes from both origins. Evidence: [capabilities_lock_sidecar.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:317) emits a list for multi-origin entries instead of `source: 'external_refs' | 'requires_capabilities'`. Recommendation: either emit separate records per origin or keep `source` as a string and add a separate `sources[]` field if multi-or",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Warning chip text does not match the specified filename wording. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2499) prints `see evidence/required-capabilities.json`, while acceptance specifies `see required-capabilities.json`. Recommendation: change the displayed chip to the exact required filename text or update tests to enforce the accepted string. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

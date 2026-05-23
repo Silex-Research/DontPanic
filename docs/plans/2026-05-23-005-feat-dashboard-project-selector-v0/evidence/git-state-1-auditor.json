@@ -1,0 +1,63 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/GETTING_STARTED.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/DASHBOARD_PROJECT_SELECTOR.md",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F005-i1.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F005-i0.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F005-i1.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/_capture_evidence.py",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/cwd-match-default-cli-transcript.txt",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/cwd-match-default-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/dashboard-build-warnings-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/dashboard-project-cli-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/fleet-summary-8-project-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/fleet-summary-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/fleet-what-now-8-project-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-registry-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-all-projects-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-single-project-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-ui-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/sanitization-clean.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/single-repo-fallback-log.txt",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/status-header-fleet-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/status-header-project-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/what-now-project-scope-tests.log"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

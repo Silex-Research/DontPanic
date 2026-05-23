@@ -1,0 +1,24 @@
+{
+  "task_id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+  "signoff_id": "2026-05-23-002-feat-install-reconcile-foundation-v0#signoff#0",
+  "iteration": 0,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F003-i0.json",
+    "audit/codex-auditor-F003-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 2,
+    "needs_changes_count": 0,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.\nPass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:\n  unstaged_dirty_state | block | docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.",
+  "next_action": "blocked_awaiting_human",
+  "decided_at": "2026-05-23T01:50:15Z"
+}

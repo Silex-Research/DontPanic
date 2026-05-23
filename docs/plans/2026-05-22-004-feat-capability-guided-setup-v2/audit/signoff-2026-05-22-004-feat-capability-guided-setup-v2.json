@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "signoff_id": "2026-05-22-004-feat-capability-guided-setup-v2#signoff#1",
+  "iteration": 1,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F003-i0.json",
+    "audit/codex-auditor-F003-i0.json",
+    "audit/claude-implementer-F003-i1.json",
+    "audit/codex-auditor-F003-i1.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 3,
+    "needs_changes_count": 1,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "operator_resolved (class=operator_judgment): operator accepted the post-iteration patch-completeness terminal as non-defect after review. See evidence/closeout-memo-F003.md for rationale.",
+  "next_action": "merge",
+  "decided_at": "2026-05-22T23:15:42Z"
+}

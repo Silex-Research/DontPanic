@@ -1,0 +1,37 @@
+{
+  "task_id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+  "audit_id": "2026-05-23-002-feat-install-reconcile-foundation-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T01:14:50Z",
+  "completed_at": "2026-05-23T01:18:39Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-002-feat-install-reconcile-foundation-v0-x6330vaq target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 204384 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1692311,
+    "tokens_out": 14333,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: signed_off. The implementer’s audit declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and `target_context.commands_run` contains no forbidden command shapes. I found no implementation findings. Pytest could not start in this read-only sandbox because Python had no usable temporary directory; I validated the core invariants with direct read-only checks instead.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS='-p no:cacheprovider' python -m pytest scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate reconcile baseline --profile=core --format=json\n$ PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py\n$ python -m ruff check --no-cache scripts/dontpanic_orchestrate/install_snapshot.py scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/init/__init__.py scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import install_snapshot as s; from dontpanic_orchestrate.capabilities import load_capabilities; [(_ for _ in ()).throw(AssertionError(name)) for model in (s.InstallSnapshot, s.CapabilityFingerprint, s.StatusCacheMeta) for name in model.model_fields if '_token' in name or '_key' in name or '_secret' in name]; idx=load_capabilities(); a=s.build_snapshot(profile='core', capab",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS='-p no:cacheprovider' python -m pytest scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate reconcile baseline --profile=core --format=json",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py",
+      "python -m ruff check --no-cache scripts/dontpanic_orchestrate/install_snapshot.py scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/init/__init__.py scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import install_snapshot as s; from dontpanic_orchestrate.capabilities import load_capabilities; [(_ for _ in ()).throw(AssertionError(name)) for model in (s.InstallSnapshot, s.CapabilityFingerprint, s.StatusCacheMeta) for name in model.model_fields if '_token' in name or '_key' in name or '_secret' in name]; idx=load_capabilities(); a=s.build_snapshot(profile='core', capability_index=idx, mcp_tool_names=('a','b'), now_iso='2026-05-23T00:00:00Z'); b=s.build_snapshot(profile='core', capability_index=idx, mcp_tool_names=('a','b'), now_iso='2099-01-01T00:00:00Z'); ad=a.model_dump(); bd=b.model_dump(); ad.pop('generated_at'); bd.pop('generated_at'); assert ad == bd; assert len(a.capabilities) == len(a.capability_ids) > 0; assert all(c.setup_step_ids is not None for c in a.capabilities); print('snapshot invariants ok')\"",
+      "PYTHONDONTWRITEBYTECODE=1 DONTPANIC_HOME=/nonexistent-dontpanic-audit python -m dontpanic_orchestrate reconcile baseline --profile=core",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; from dontpanic_orchestrate import install_snapshot as s; import sys; try: s.build_snapshot(profile='core', repo_root=Path('docs')); except s.CapabilityLoadError as exc: print('missing capability dir failure ok'); sys.exit(0); raise SystemExit('expected CapabilityLoadError')\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

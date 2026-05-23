@@ -1,0 +1,410 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Project registry and per-project dashboard state substrate. Extend the existing registry shipped by 2026-05-03-001 so a single DontPanic install can discover registered repos by stable ProjectEntry.name, display name, root path, per-project plans_dir, profile, active flag, DontPanic version, and derived architecture artifact path. Build per-project dashboard state into the operator-local dashboard cache and emit a fleet summary for All Projects.",
+      "steps": [
+        "Read 2026-05-03-001 evidence and existing `projects_registry.py`, `project_config.py`, dashboard build code, state projection code, and install reconcile cache paths before implementation.",
+        "Extend the existing ProjectEntry/registry model only additively, using `name` as the stable identity; do not introduce parallel `id`, `slug`, or `project_key` fields.",
+        "Define a ProjectContext projection with name, display_name, repo_root, plans_root from per-project config, architecture_path, dashboard_cache_path, profile, active flag, dontpanic_version, and last_used_at fields.",
+        "Preserve existing `dontpanic projects add|list|show|remove` semantics and migrate older registry files with missing optional dashboard fields without data loss.",
+        "Implement per-project state build into `~/.dontpanic/dashboard/projects/<project-name>/` without writing generated files into target repos.",
+        "Implement fleet summary generation with registered projects, project health rollup, data age, warning counts, and cache paths.",
+        "Add tests for stable names, mutable paths, missing repos, inactive projects, schema migration, same-version assumption, single-repo fallback, multi-project cache layout, and secret-free state output."
+      ],
+      "acceptance": "(1) Registered projects load through the existing operator-local registry and `ProjectEntry.name` remains the stable identity. (2) Dashboard state can be generated per project without writing generated files into the target repo. (3) A fleet summary JSON exists for All Projects. (4) Current single-repo dashboard behavior continues to work when no registry exists. (5) Older registry files without optional dashboard fields still load. (6) Tests cover stable names, missing repos, inactive projects, cache layout, fallback behavior, same-version assumption, and no-secret output.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T06:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "note": "Iteration-1 implementer signed off after remediating the iteration-0 auditor findings."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "note": "Iteration-1 auditor left one valid medium finding: per-project build warnings were double-counted."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "ProjectContext projection, per-project cache build, fleet summary generation, and manual double-count remediation."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_registry.py",
+          "note": "Additive optional dashboard selector fields on ProjectEntry."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "Optional cache-path overrides for project-scoped dashboard builds."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py",
+          "note": "F001 focused coverage including stable names, cache layout, legacy registry compatibility, same-version assumption, inactive/missing repos, no-secret scan, mutable paths, and warning double-count regression."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F001.md",
+          "note": "Operator close-out after stopped_no_progress and manual remediation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F001.txt",
+          "note": "Verification summary: 24 focused tests, 124 related tests, 21 dashboard serve tests outside sandbox, py_compile, and sanitization."
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Dashboard CLI project selection. Extend `dontpanic dashboard build|serve` to consume the existing `dontpanic projects` registry so humans and agents can build or serve the dashboard for either All Projects or one selected project. Unknown project names fail with a clear list of known names and the exact add command.",
+      "steps": [
+        "Reuse existing `dontpanic projects add <name> <path>` and `dontpanic projects list`; add only dashboard-specific registry fields or output options that F001 requires.",
+        "Add `dontpanic dashboard build --project <name>|all` and `dontpanic dashboard serve --project <name>|all`.",
+        "Default dashboard serve to the cwd-matched registered project when cwd is inside one; otherwise default to All Projects when multiple projects are registered, and to current-repo mode when none are registered.",
+        "Ensure `serve --project <name>` rebuilds only the selected project plus enough fleet metadata to populate the selector.",
+        "Make unknown project names fail loud with known names and the exact `dontpanic projects add <name> <path>` registration command shape.",
+        "Watch or poll the project registry while `dashboard serve` is running so a newly added project appears without manual server restart.",
+        "Add tests for CLI help, cwd-match default behavior, explicit project selection, All Projects selection, unknown-name failure, registry refresh, and no Firebase requirement."
+      ],
+      "acceptance": "(1) Dashboard build/serve consumes projects registered through the existing CLI. (2) Dashboard build/serve accepts `--project <name>|all`. (3) Defaults are predictable for zero, one, cwd-matched, and many registered projects. (4) Unknown names fail with actionable output. (5) A running server refreshes selector data after registry changes. (6) The feature requires no Firebase setup and exposes no remote interface by default. (7) Tests cover CLI behavior and defaults.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "ResolvedSelection / UnknownProjectError / resolve_selection / build_selected / mirror_selection_into_state_dir power the F002 CLI surface."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "build/open/serve CLI accept --project, route through build_selected, and the serve watcher fingerprints ~/.dontpanic/projects.json so registry changes refresh the fleet summary live."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py",
+          "note": "24-test focused coverage: default resolution (zero/one/cwd-match/multi), explicit --project, unknown-name fail-loud (CLI + library), build/serve mirroring, registry refresh during serve, no Firebase imports, loopback-only default, CLI help mentions --project."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i0.json",
+          "note": "Implementer signed off F002 in iteration 0."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "Auditor signed off F002 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F002.txt",
+          "note": "Operator verification: F002 focused tests, adjacent dashboard/registry tests, readiness/export/init tests, and sanitization."
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "description": "Project selector UI and scope labels. Add a restrained selector to the local dashboard shell that reads the fleet summary, lets the operator switch between All Projects and individual projects, persists selection through URL state primary plus localStorage fallback, and labels each visible surface as Global, Project, or Fleet scoped.",
+      "steps": [
+        "Add a top-level project selector to the dashboard shell with All Projects and registered project options.",
+        "Persist the selected project in URL state first and localStorage as a fallback default without mutating DontPanic project registry state.",
+        "Render `Scope: Global`, `Scope: Project`, or `Scope: Fleet` labels on dashboard sections included in this V0 slice.",
+        "Render Add Project as command-emission only, showing the exact `dontpanic projects add <name> <path>` command shape.",
+        "Handle stale/missing fleet summary with a clear `run dontpanic dashboard build --project all` command.",
+        "Update selector options when the served fleet summary changes after a registry refresh.",
+        "Add unit/integration tests for selector rendering, URL-state persistence, localStorage fallback, command-emission Add Project, missing summary, registry refresh, and scope labels."
+      ],
+      "acceptance": "(1) The dashboard shows a project selector with All Projects and registered projects. (2) Selection persists through URL state with localStorage fallback and does not mutate governed state. (3) V0 dashboard sections clearly label Global, Project, or Fleet scope. (4) Add Project emits a command rather than writing config. (5) Missing state produces an actionable command. (6) Selector options refresh after registry changes. (7) Tests cover selector states and scope labels.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../dashboard/core.js",
+          "note": "Project selector shell wiring, URL/localStorage persistence, selector refresh, and manual remediation for stale scope badge / display-name fingerprint defects."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/project-selector-logic.js",
+          "note": "Pure project selector logic: normalized fleet summary, options, URL builder, Add Project command emission, missing summary command, and scope badge rendering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/project-selector.test.js",
+          "note": "Integration coverage for selector rendering, persistence, missing summary, add-project command emission, registry refresh, present-to-missing refresh, stale badge remediation, display-name refresh remediation, and scope labels."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/project-selector-logic.test.js",
+          "note": "Pure unit coverage for project selector transformations and HTML builders."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "note": "Iteration-1 implementer signed off after addressing the first auditor round."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "note": "Iteration-1 auditor left two valid bounded UI-state findings and one advisory evidence issue."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F003.md",
+          "note": "Operator close-out after manually remediating the valid stopped_no_progress findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F003.txt",
+          "note": "Operator verification: focused F003-related dashboard tests and full dashboard suite."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:03:36Z"
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "description": "Critical-path design feature: fleet/project-scoped What Now and Status. Make the existing What Now view and status header respect the selected project context using a typed relevance function for global blockers. All Projects groups actions and warnings by project section headers for small-N fleets. Project view filters actions to the selected project while still showing global capability/install blockers that affect that project. Persist dashboard build warnings so skipped or malformed project state is visible in the UI.",
+      "steps": [
+        "Before implementation, write the relevance table from plan.md into code docs/tests so every blocker class has an explicit relevance rule.",
+        "Extend ActionItem output with project_name/display_name fields when built from project-scoped sources.",
+        "Render All Projects What Now as project section headers with nested action lists ordered by worst band, then project name.",
+        "Render Project What Now as a filtered view with global blockers shown only when relevant to the selected project.",
+        "Persist dashboard build warnings per project and in the fleet summary, including malformed/skipped plans and missing optional artifacts.",
+        "Render status header data age, warning count, selected scope, and project health using the existing four-band taxonomy.",
+        "Add tests for every relevance rule, fleet grouping, project filtering, global blocker relevance, build-warning persistence, stale cache, quiet state, and no-secret output.",
+        "Add a synthetic scale fixture with at least 8 registered projects mixing needs_action, advisory, ready, inactive, stale, and missing-repo states."
+      ],
+      "acceptance": "(1) All Projects groups What Now actions by project section headers. (2) Project selection filters What Now to the selected project. (3) Global blockers appear only when the typed relevance function marks them relevant to the selected project. (4) Skipped/malformed project warnings are persisted and visible in the dashboard. (5) Status header shows selected scope, health band, warning count, and data age. (6) Tests cover the relevance table, grouping, filtering, warnings, stale state, quiet state, synthetic 8-project scale fixture, and no-secret output.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard_relevance.py",
+          "note": "Typed F004 global-blocker relevance table and per-project declaration loader."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "Fleet What Now aggregation, per-project ActionItem tagging, build-warning persistence, capability category projection, and served-state mirroring."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+          "note": "32-test Python coverage for relevance rules, project declarations, build warnings, no-secret output, same-id preservation, and synthetic eight-project state mix."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/what-now-logic.js",
+          "note": "Fleet/project What Now renderers, status header, grouping, and browser-side project relevance filtering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/what-now-logic.test.js",
+          "note": "Direct Vitest coverage for F004 grouping, filtering, status header, fleet rendering, and project rendering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/what-now-page.test.js",
+          "note": "Real What Now page routing coverage for fleet and project-filtered views."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F004-i1.json",
+          "note": "Iteration-1 implementer timed out and is recorded as blocked, not as completion evidence."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i1.json",
+          "note": "Iteration-1 auditor identified missing completion evidence, browser coverage gaps, synthetic fixture depth, and ruff findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F004.md",
+          "note": "Operator close-out after manually completing and verifying the timed-out partial implementation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F004.txt",
+          "note": "Operator verification: Python F004 tests, focused dashboard tests, ruff, full dashboard suite, py_compile, and sanitization."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:36:09Z"
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "Multi-repo dashboard documentation and objective evidence. Document the project selector model, cache locations, scope labels, CLI commands, and external-repo usage. Capture objective-contract evidence with at least two fixture projects, one synthetic 8-project fleet, cwd-matched default behavior, and one current-repo fallback run.",
+      "steps": [
+        "Document the one-global-dashboard model and why target repos do not receive generated dashboard assets by default.",
+        "Document project registration with existing `dontpanic projects add <name> <path>`, project selection, All Projects behavior, cache paths, and scope labels.",
+        "Document security posture: local-only server, command-emitter dashboard, no secret values, no Firebase requirement, and no dashboard mutation.",
+        "Create fixture or temporary projects for objective evidence covering multi-project, 8-project synthetic fleet, cwd-matched default, and single-repo fallback flows.",
+        "Capture CLI logs, dashboard state snapshots, selector UI snapshots, status warning snapshots, and sanitization output.",
+        "Update init/doctor messaging only if needed to mention project registration without making it a bootstrap blocker."
+      ],
+      "acceptance": "(1) Documentation explains how a human or agent registers projects and opens the multi-repo dashboard. (2) Docs distinguish Global, Project, and Fleet scope. (3) Security notes are explicit and match implementation. (4) Objective evidence covers two real/fixture registered projects, one 8-project synthetic fleet, cwd-matched default, and one unregistered current-repo fallback. (5) Sanitization output is clean. (6) Init/doctor messaging remains non-blocking for users who only need single-repo mode.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../DASHBOARD_PROJECT_SELECTOR.md",
+          "note": "F005 operator-facing doc: one-global-dashboard model, project registration, --project resolution, cache layout, scope labels, security posture, registered-mode operator-local write boundary, and legacy single-repo fallback caveat."
+        },
+        {
+          "type": "file",
+          "uri": "../../GETTING_STARTED.md",
+          "note": "Discoverability hook — Register a Project section now points at the multi-repo dashboard doc with the cwd-match + All-Projects defaults summary."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-registry-tests.log",
+          "note": "F001 substrate: 24 targeted tests covering stable names, mutable paths, cache layout, legacy registry compatibility, inactive/missing repos, no-secret output."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-project-cli-tests.log",
+          "note": "F002 CLI selection: 24 targeted tests covering zero/one/cwd-match/multi defaults, explicit --project, unknown-name fail-loud, registry refresh, no Firebase dep."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-ui-tests.log",
+          "note": "F003 selector UI: 19 integration + 41 unit tests covering rendering, persistence, missing summary, add-project emission, refresh, scope labels."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/what-now-project-scope-tests.log",
+          "note": "F004 Python relevance: 32 tests covering relevance rules, project declarations, build warnings, no-secret output, 8-project synthetic state mix."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-build-warnings-tests.log",
+          "note": "F004 JS surface: 51 unit + 20 integration tests covering fleet grouping, project filtering, status header, build-warning rendering."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-summary-snapshot.json",
+          "note": "Two fixture projects (alpha-app + beta-backend) → fleet-summary.json envelope (active_count, project_count, per-project health_band/warning_count/cache paths)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-summary-8-project-snapshot.json",
+          "note": "Synthetic 8-project fleet (mobile/backend/schema/frontend/tooling/research/legacy/missing-path) exercises fleet rollup, inactive projects, missing-repo skipped reasons, and advisory architecture/build-warning states."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-all-projects-snapshot.html",
+          "note": "Selector HTML rendered through dashboard/lib/project-selector-logic.js against the 8-project fleet with All Projects selected (Scope: Fleet badge + Add Project command emission)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-single-project-snapshot.html",
+          "note": "Selector HTML for alpha-app from the two-project fleet (Scope: Project badge + per-project selection)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/single-repo-fallback-log.txt",
+          "note": "Empty registry → resolve_selection.kind=='current_repo' and dashboard.build() succeeds without ~/.dontpanic/projects.json; no fleet summary written; doctor non-blocking confirmed at scripts/dontpanic_doctor.py:641."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/cwd-match-default-snapshot.json",
+          "note": "F002 cwd-match default flow (auditor i0 finding 1): two registered projects, omitted --project, cwd inside alpha-app → resolve_selection returns kind='project', project_name='alpha-app', cwd_match=true, is_default=true. acceptance_demonstrated booleans encode every contract assertion."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/cwd-match-default-cli-transcript.txt",
+          "note": "Real CLI proof of cwd-match default: `python -m dontpanic_orchestrate dashboard build` (no --project) from inside alpha-app/docs/plans prints `defaulted to project 'alpha-app' (cwd is inside registered project 'alpha-app')` and writes fleet summary + alpha-app state."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-what-now-8-project-snapshot.json",
+          "note": "Fleet what-now envelope rolled up from the 8-project fleet (items + per-project rollup + capability_categories). This evidence focuses on advisory/warning and skipped-state rendering; the richer needs_action/ready/stale mix is covered by F004's Python fixture tests."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/status-header-fleet-snapshot.html",
+          "note": "Rendered status header (auditor i0 finding 2) for All Projects via dashboard/lib/what-now-logic.js: scope=Fleet, health_band=advisory, warnings=8, data age=60s. Inlines the buildStatusHeader payload + renderStatusHeaderHTML + renderFleetWhatNowHTML for the full surface."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/status-header-project-snapshot.html",
+          "note": "Rendered status header for a focused project (alpha-app, active+warned): scope=Project, health_band=advisory, warnings=1, data age=60s. Pairs with the fleet snapshot to demonstrate the scope toggle drives all four chips."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/sanitization-clean.log",
+          "note": "scripts/sanitization_check.py clean against the full sanitized surface including the new doc + harness + captured artifacts."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/_capture_evidence.py",
+          "note": "Reproducible harness that drives the registry + dashboard + selector logic against an isolated DONTPANIC_HOME tempdir and writes the snapshots under the evidence dir. Re-run to refresh."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F005.md",
+          "note": "Operator close-out after manually resolving the final documentation/evidence findings."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T08:00:59Z"
+    }
+  ]
+}

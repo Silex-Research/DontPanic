@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "dashboard/core.js",
+        "dashboard/index.html",
+        "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md",
+        "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md",
+        "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "dashboard/core.js",
+    "dashboard/index.html",
+    "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json"
+  ]
+}

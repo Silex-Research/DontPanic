@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-22T19:29:00Z",
+  "feature_id": "F005",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [
+    "evidence/required-capabilities.json"
+  ],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "F005’s new test file is untracked, so the required coverage may not ship. Evidence: `git -C docs status --short` shows `?? ../scripts/dontpanic_orchestrate/tes…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "There is no positive end-to-end `dontpanic plan lock` test proving a matching plan writes `evidence/required-capabilities.json`. Evidence: Linear/Firebase test…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "advisory",
+      "category": "correctness",
+      "issue_excerpt": "Implementer audit metadata says `target_context.commands_run: []`, but the prose summary says two pytest commands were invoked. Evidence: audit JSON summary li…",
+      "rationale": "severity=advisory, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

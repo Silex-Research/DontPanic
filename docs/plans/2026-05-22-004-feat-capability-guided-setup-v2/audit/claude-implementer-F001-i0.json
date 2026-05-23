@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "audit_id": "2026-05-22-004-feat-capability-guided-setup-v2#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 0,
+  "started_at": "2026-05-22T22:05:03Z",
+  "completed_at": "2026-05-22T22:06:34Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-004-feat-capability-guided-setup-v2-xy4gvt77 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2570 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1424169,
+    "tokens_out": 4455,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] F001's implementation is already in place (committed in 744f7a8) and fully meets all acceptance criteria. I ran the targeted F001 test file (`test_capabilities_setup_cli_f001.py`) which passes 18/18 in ~0.22s, and smoke-tested the CLI end-to-end: `dontpanic capabilities setup firebase-dashboard --print-steps` renders the ordered 9 setup steps with `[automatable]`/`[human-required]` labels, human-required reasons (e.g., firebase_login's interactive-browser explanation), command_templates and verify_probes for automatable steps, and a trailing \"no commands are executed\" notice. The unknown-id path (`firebase-dashboarrd`) exits non-zero with a `did you mean 'firebase-dashboard'?` suggestion. Acceptance criteria #1-#5 are all satisfied by the existing code at `scripts/dontpanic_orchestrate/capabilities_setup.py` and the CLI wiring at `scripts/dontpanic_orchestrate/cli.py:2906-2914`; no further implementation was needed for this iteration.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities setup firebase-dashboard --print-steps\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities setup firebase-dashboarrd --print-steps",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities setup firebase-dashboard --print-steps",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate capabilities setup firebase-dashboarrd --print-steps"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

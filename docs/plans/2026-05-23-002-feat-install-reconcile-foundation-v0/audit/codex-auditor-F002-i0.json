@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+  "audit_id": "2026-05-23-002-feat-install-reconcile-foundation-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T01:29:12Z",
+  "completed_at": "2026-05-23T01:31:32Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-002-feat-install-reconcile-foundation-v0-8sohiam4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 235727 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1114040,
+    "tokens_out": 9518,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. The implementer correctly declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and their `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): Required drift result statuses are not implemented; all non-missing drift collapses to `\"drift\"`. Evidence: `features.json` requires `clean`, `missing_snapshot`, `new_capabilities`, `removed_capabilities`, `changed_capabilities`, `stale_status_cache`, but `reconcile.py` documents only `clean`, `missing_snapshot`, `drift` and sets `status = \"drift\"` for capability/cache drift. Recommendation: expose the required status vocabulary in the stable result/JSON contract and add tests asserting each required status.\n\nFINDING (high, test_coverage): The new F002 test file is untracked, so the patch does not actually carry the claimed test coverage. Evidence: `git status --porcelain` shows `?? scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py`. Recommendation: add the test file to the patch/commit before signoff.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py -q -p no:cacheprovider\nFailed before collection because this sandbox has no writable temp directory.\n\n$ ruff check scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py\nPassed.\n\n$ PYTHONDONTWRITEBYTECODE=1 python3 scripts/s",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py -q -p no:cacheprovider",
+      "ruff check scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Required drift result statuses are not implemented; all non-missing drift collapses to `\"drift\"`. Evidence: `features.json` requires `clean`, `missing_snapshot`, `new_capabilities`, `removed_capabilities`, `changed_capabilities`, `stale_status_cache`, but `reconcile.py` documents only `clean`, `missing_snapshot`, `drift` and sets `status = \"drift\"` for capability/cache drift. Recommendation: expose the required status vocabulary in the stable result/JSON contract and add tests asserting each req",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The new F002 test file is untracked, so the patch does not actually carry the claimed test coverage. Evidence: `git status --porcelain` shows `?? scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py`. Recommendation: add the test file to the patch/commit before signoff. Checks run: $ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py -q -p no:cacheprovider Failed before collection because this sandbox has no writable temp direc",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
