@@ -2,6 +2,8 @@
 
 > The safety layer between “the agent says it’s done” and “you merge it.”
 
+![DontPanic social preview](./docs/assets/dontpanic-social-preview.png)
+
 DontPanic turns AI coding from "one agent says it finished" into reviewed,
 tested, evidence-backed software delivery. It locks the work into a plan,
 runs implementer and auditor agents against that plan, pauses for human
