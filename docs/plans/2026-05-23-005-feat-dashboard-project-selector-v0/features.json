@@ -290,13 +290,121 @@
         "Update init/doctor messaging only if needed to mention project registration without making it a bootstrap blocker."
       ],
       "acceptance": "(1) Documentation explains how a human or agent registers projects and opens the multi-repo dashboard. (2) Docs distinguish Global, Project, and Fleet scope. (3) Security notes are explicit and match implementation. (4) Objective evidence covers two real/fixture registered projects, one 8-project synthetic fleet, cwd-matched default, and one unregistered current-repo fallback. (5) Sanitization output is clean. (6) Init/doctor messaging remains non-blocking for users who only need single-repo mode.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../DASHBOARD_PROJECT_SELECTOR.md",
+          "note": "F005 operator-facing doc: one-global-dashboard model, project registration, --project resolution, cache layout, scope labels, security posture, registered-mode operator-local write boundary, and legacy single-repo fallback caveat."
+        },
+        {
+          "type": "file",
+          "uri": "../../GETTING_STARTED.md",
+          "note": "Discoverability hook — Register a Project section now points at the multi-repo dashboard doc with the cwd-match + All-Projects defaults summary."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-registry-tests.log",
+          "note": "F001 substrate: 24 targeted tests covering stable names, mutable paths, cache layout, legacy registry compatibility, inactive/missing repos, no-secret output."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-project-cli-tests.log",
+          "note": "F002 CLI selection: 24 targeted tests covering zero/one/cwd-match/multi defaults, explicit --project, unknown-name fail-loud, registry refresh, no Firebase dep."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-ui-tests.log",
+          "note": "F003 selector UI: 19 integration + 41 unit tests covering rendering, persistence, missing summary, add-project emission, refresh, scope labels."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/what-now-project-scope-tests.log",
+          "note": "F004 Python relevance: 32 tests covering relevance rules, project declarations, build warnings, no-secret output, 8-project synthetic state mix."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-build-warnings-tests.log",
+          "note": "F004 JS surface: 51 unit + 20 integration tests covering fleet grouping, project filtering, status header, build-warning rendering."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-summary-snapshot.json",
+          "note": "Two fixture projects (alpha-app + beta-backend) → fleet-summary.json envelope (active_count, project_count, per-project health_band/warning_count/cache paths)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-summary-8-project-snapshot.json",
+          "note": "Synthetic 8-project fleet (mobile/backend/schema/frontend/tooling/research/legacy/missing-path) exercises fleet rollup, inactive projects, missing-repo skipped reasons, and advisory architecture/build-warning states."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-all-projects-snapshot.html",
+          "note": "Selector HTML rendered through dashboard/lib/project-selector-logic.js against the 8-project fleet with All Projects selected (Scope: Fleet badge + Add Project command emission)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/project-selector-single-project-snapshot.html",
+          "note": "Selector HTML for alpha-app from the two-project fleet (Scope: Project badge + per-project selection)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/single-repo-fallback-log.txt",
+          "note": "Empty registry → resolve_selection.kind=='current_repo' and dashboard.build() succeeds without ~/.dontpanic/projects.json; no fleet summary written; doctor non-blocking confirmed at scripts/dontpanic_doctor.py:641."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/cwd-match-default-snapshot.json",
+          "note": "F002 cwd-match default flow (auditor i0 finding 1): two registered projects, omitted --project, cwd inside alpha-app → resolve_selection returns kind='project', project_name='alpha-app', cwd_match=true, is_default=true. acceptance_demonstrated booleans encode every contract assertion."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/cwd-match-default-cli-transcript.txt",
+          "note": "Real CLI proof of cwd-match default: `python -m dontpanic_orchestrate dashboard build` (no --project) from inside alpha-app/docs/plans prints `defaulted to project 'alpha-app' (cwd is inside registered project 'alpha-app')` and writes fleet summary + alpha-app state."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/fleet-what-now-8-project-snapshot.json",
+          "note": "Fleet what-now envelope rolled up from the 8-project fleet (items + per-project rollup + capability_categories). This evidence focuses on advisory/warning and skipped-state rendering; the richer needs_action/ready/stale mix is covered by F004's Python fixture tests."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/status-header-fleet-snapshot.html",
+          "note": "Rendered status header (auditor i0 finding 2) for All Projects via dashboard/lib/what-now-logic.js: scope=Fleet, health_band=advisory, warnings=8, data age=60s. Inlines the buildStatusHeader payload + renderStatusHeaderHTML + renderFleetWhatNowHTML for the full surface."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/status-header-project-snapshot.html",
+          "note": "Rendered status header for a focused project (alpha-app, active+warned): scope=Project, health_band=advisory, warnings=1, data age=60s. Pairs with the fleet snapshot to demonstrate the scope toggle drives all four chips."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/sanitization-clean.log",
+          "note": "scripts/sanitization_check.py clean against the full sanitized surface including the new doc + harness + captured artifacts."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/_capture_evidence.py",
+          "note": "Reproducible harness that drives the registry + dashboard + selector logic against an isolated DONTPANIC_HOME tempdir and writes the snapshots under the evidence dir. Re-run to refresh."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F005.md",
+          "note": "Operator close-out after manually resolving the final documentation/evidence findings."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T08:00:59Z"
     }
   ]
 }

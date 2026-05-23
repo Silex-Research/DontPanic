@@ -1,0 +1,28 @@
+F005 cwd-match default CLI transcript
+=====================================
+
+Scenario:
+  Two projects registered (alpha-app, beta-backend).
+  Operator runs `dontpanic dashboard build` from inside alpha-app/docs/plans.
+  No `--project` flag is passed.
+
+DONTPANIC_HOME = <HOME>
+cwd            = <HOME>/fixtures/alpha-app/docs/plans
+
+Command:
+  python -m dontpanic_orchestrate dashboard build --out <HOME>/cli-served-state --redact-level operator
+
+exit_code = 0
+
+stdout:
+dashboard build: defaulted to project 'alpha-app' (cwd is inside registered project 'alpha-app')
+wrote fleet summary to <HOME>/dashboard/fleet-summary.json
+wrote project 'alpha-app' state to <HOME>/dashboard/projects/alpha-app
+
+stderr:
+dashboard build: capabilities status skipped: capabilities directory not found: <HOME>/fixtures/alpha-app/capabilities
+
+Acceptance items demonstrated:
+  - CLI exited 0 (default resolution did not error).
+  - stdout reports `defaulted to project 'alpha-app'`.
+  - selection.reason mentions `cwd inside`, proving the cwd-match branch fired.

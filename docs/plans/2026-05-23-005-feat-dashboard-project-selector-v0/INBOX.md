@@ -411,3 +411,103 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-23T07:38:19Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F005
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T07:38:19Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T07:59:31Z
+event: no_progress_classification
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+aggregate: unknown
+blocking: true
+feature_id: F005
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F005
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=medium, category=security: Security documentation overstates the no-target-repo-write boundary. Evidence: [DASHBOARD_PROJECT_SELECTOR.md](/Users/bayesian/Documents/GitHub/DontPanic/docs/…
+  - [unknown] severity=low, category=test_coverage: The 8-project synthetic fleet evidence does not demonstrate the richer state mix implied by the evidence harness and feature refs. Evidence: [fleet-summary-8-p…
+
+Audit trail referenced existing evidence at: evidence/cwd-match-default-snapshot.json, evidence/cwd-match-default-cli-transcript.txt, evidence/fleet-what-now-8-project-snapshot.json
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-23-005-feat-dashboard-project-selector-v0 F005 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-23T07:59:31Z
+event: breaker_tripped
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+breaker_kind: no_progress
+feature_id: F005
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-23-005-feat-dashboard-project-selector-v0 breaker:no_progress` or `jarvis resume 2026-05-23-005-feat-dashboard-project-selector-v0 --all`.
+
+===
+---
+timestamp: 2026-05-23T07:59:31Z
+event: volley_terminal
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F005
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-23T08:00:59Z
+event: feature_operator_resolved
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F005
+reason_class: unknown
+---
+
+Operator closed feature F005 as operator_resolved (class=unknown).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-23-005-feat-dashboard-project-selector-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

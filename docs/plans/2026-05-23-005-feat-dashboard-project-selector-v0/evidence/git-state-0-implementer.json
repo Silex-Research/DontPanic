@@ -2,7 +2,7 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "dashboard/lib/what-now-logic.js",
+      "path": "docs/GETTING_STARTED.md",
       "status": "M"
     },
     {
@@ -14,18 +14,25 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/operator_console.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F004-i0.json",
-    "scripts/dontpanic_orchestrate/dashboard_relevance.py",
-    "scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py"
+    "docs/DASHBOARD_PROJECT_SELECTOR.md",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/_capture_evidence.py",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/dashboard-build-warnings-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/dashboard-project-cli-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/fleet-summary-8-project-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/fleet-summary-snapshot.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-registry-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-all-projects-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-single-project-snapshot.html",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/project-selector-ui-tests.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/sanitization-clean.log",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/single-repo-fallback-log.txt",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/what-now-project-scope-tests.log"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
