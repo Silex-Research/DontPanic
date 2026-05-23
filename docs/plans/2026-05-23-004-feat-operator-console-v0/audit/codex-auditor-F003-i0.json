@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-23-004-feat-operator-console-v0",
+  "audit_id": "2026-05-23-004-feat-operator-console-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T03:22:20Z",
+  "completed_at": "2026-05-23T03:25:18Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-004-feat-operator-console-v0-rne6otfa target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 586690 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1288330,
+    "tokens_out": 12537,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. The implementer audit summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (high, correctness): V0 still surfaces Firebase setup as dashboard action work. Evidence: `dashboard.build()` calls `capabilities_status.run_status(profile=None)` and writes the full capabilities cache, while `profile=None` treats every capability as active and `operator_console` converts `needs_setup` capabilities into `needs_action`, including `firebase-dashboard`. Recommendation: scope dashboard V0 capability/action output to local/core requirements or explicitly exclude/demote Firebase dashboard capability items.\n\nFINDING (medium, correctness): `serve` will miss normal edits inside existing plan directories. Evidence: `_watched_paths()` watches `plans_root` and per-plan `audit/` dirs, while `_max_mtime()` only checks one directory level; modifying an existing `plan.md`, `features.json`, or `INBOX.md` usually does not bump the plan directory mtime. Recommendation: recursively hash/mtime relevant source files or enumerate known plan/dashboard source globs, and add a test that edits an existing plan file.\n\nFINDING (medium, performance): The watch loop includes generated output in its watched sources, so rebuilds can trigger more rebuilds. Evidence: `_watched_paths()` includes `out_dir`, and each rebuild write",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import ast, pathlib; [ast.parse(pathlib.Path(p).read_text(), filename=p) for p in ['scripts/dontpanic_orchestrate/dashboard.py','scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py','scripts/dontpanic_orchestrate/cli.py']]; print('syntax ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "V0 still surfaces Firebase setup as dashboard action work. Evidence: `dashboard.build()` calls `capabilities_status.run_status(profile=None)` and writes the full capabilities cache, while `profile=None` treats every capability as active and `operator_console` converts `needs_setup` capabilities into `needs_action`, including `firebase-dashboard`. Recommendation: scope dashboard V0 capability/action output to local/core requirements or explicitly exclude/demote Firebase dashboard capability items",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`serve` will miss normal edits inside existing plan directories. Evidence: `_watched_paths()` watches `plans_root` and per-plan `audit/` dirs, while `_max_mtime()` only checks one directory level; modifying an existing `plan.md`, `features.json`, or `INBOX.md` usually does not bump the plan directory mtime. Recommendation: recursively hash/mtime relevant source files or enumerate known plan/dashboard source globs, and add a test that edits an existing plan file.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "performance",
+      "feature_id": "F003",
+      "issue": "The watch loop includes generated output in its watched sources, so rebuilds can trigger more rebuilds. Evidence: `_watched_paths()` includes `out_dir`, and each rebuild writes files into `state_out_dir`; `last_mtime` is set to the pre-build value. Recommendation: do not watch generated `dashboard/state`, or recompute the baseline after rebuild while excluding generated files.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The serve watcher tests only add a new plan dir and force `plans_root` mtime, so they do not catch missed edits or rebuild feedback. Evidence: `test_serve_watch_loop_rebuilds_on_source_change` creates a second plan and calls `utime(plans_root)`. Recommendation: add tests for editing an existing plan source file and for no rebuild when only generated state files change. Checks run: $ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py -q -p no",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

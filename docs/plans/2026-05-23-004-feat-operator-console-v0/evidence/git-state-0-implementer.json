@@ -2,14 +2,6 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "dashboard/core.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/integration/core-router.test.js",
-      "status": "M"
-    },
-    {
       "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
       "status": "M"
     },
@@ -18,15 +10,14 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/gate-state.json",
+      "path": "scripts/dontpanic_orchestrate/cli.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "dashboard/lib/projection-adapter.js",
-    "dashboard/tests/fixtures/state-snapshot.json",
-    "dashboard/tests/unit/projection-adapter.test.js",
-    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/claude-implementer-F002-i0.json"
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/claude-implementer-F003-i0.json",
+    "scripts/dontpanic_orchestrate/dashboard.py",
+    "scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

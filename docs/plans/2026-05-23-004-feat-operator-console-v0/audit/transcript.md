@@ -13,3 +13,11 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 | 2026-05-23T03:03:23Z | F002 | i0 | codex / auditor | needs_changes | 1,874,933 / 10,850 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
 | 2026-05-23T03:07:38Z | F002 | i1 | claude / implementer | signed_off | 2,762,074 / 18,376 | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |
 | 2026-05-23T03:10:22Z | F002 | i1 | codex / auditor | signed_off | 1,669,762 / 10,339 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
+| 2026-05-23T03:22:20Z | F003 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F003-i0.json](audit/claude-implementer-F003-i0.json) |
+| 2026-05-23T03:25:18Z | F003 | i0 | codex / auditor | needs_changes | 1,288,330 / 12,537 | [codex-auditor-F003-i0.json](audit/codex-auditor-F003-i0.json) |
+| 2026-05-23T03:35:18Z | F003 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F003-i1.json](audit/claude-implementer-F003-i1.json) |
+| 2026-05-23T03:37:36Z | F003 | i1 | codex / auditor | needs_changes | 1,233,997 / 9,923 | [codex-auditor-F003-i1.json](audit/codex-auditor-F003-i1.json) |
+
+**2026-05-23T03:37:36Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

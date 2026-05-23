@@ -2821,6 +2821,7 @@ Private-alpha command surface:
   capabilities setup             Plan or execute setup for one capability (--print-steps | --automate-safe --confirm)
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
+  dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
@@ -2918,6 +2919,10 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.reconcile import reconcile_main as _reconcile_main
 
         return _reconcile_main(raw[1:])
+    if raw and raw[0] == "dashboard":
+        from dontpanic_orchestrate.dashboard import main as _dashboard_main
+
+        return _dashboard_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")
