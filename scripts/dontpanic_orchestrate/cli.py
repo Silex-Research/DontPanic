@@ -1562,6 +1562,14 @@ def _doctor_main(argv: list[str]) -> int:
         ]
     if not args.architecture_drift_strict:
         exit_inputs = [r for r in exit_inputs if r.name != "architecture-drift"]
+    # Plan 2026-05-23-004 F005: dashboard readiness probes
+    # (dashboard-files, dashboard-cache, dashboard-state) are V0
+    # advisory-only — a missing dashboard cache must not escalate the
+    # canonical exit code. Strip them from the strict-exit computation
+    # unconditionally; the WARN text + remediation still renders.
+    exit_inputs = [
+        r for r in exit_inputs if not r.name.startswith("dashboard-")
+    ]
     return jd.compute_strict_exit(exit_inputs)
 
 

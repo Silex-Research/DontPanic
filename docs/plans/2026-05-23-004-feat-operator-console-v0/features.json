@@ -167,8 +167,8 @@
           "type": "audit_json",
           "uri": "audit/codex-auditor-F003-i1.json",
           "note": "Latest auditor finding that prompted manual source-fingerprint remediation."
-                }
-            ],
+        }
+      ],
       "verified_by": [
         "operator"
       ],
@@ -194,48 +194,48 @@
         "F002",
         "F003"
       ],
-            "evidence_refs": [
-                {
-                    "type": "file",
-                    "uri": "evidence/closeout-memo-F004.md",
-                    "note": "operator_resolved close-out (class=evidence_shape_disagreement)"
-                },
-                {
-                    "type": "file",
-                    "uri": "../../../dashboard/lib/what-now-logic.js",
-                    "note": "What Now rendering logic for needs-action, advisory, quiet, missing-cache, and copyable command states."
-                },
-                {
-                    "type": "file",
-                    "uri": "../../../dashboard/pages/what-now/what-now.js",
-                    "note": "Dashboard page registration and What Now first-screen integration."
-                },
-                {
-                    "type": "file",
-                    "uri": "../../../dashboard/tests/unit/what-now-logic.test.js",
-                    "note": "Unit coverage for ActionItem rendering, status bands, quiet state, missing state, and command metadata."
-                },
-                {
-                    "type": "file",
-                    "uri": "../../../dashboard/tests/integration/what-now-page.test.js",
-                    "note": "Integration coverage for the dashboard What Now page."
-                },
-                {
-                    "type": "audit_json",
-                    "uri": "audit/codex-auditor-F004-i1.json",
-                    "note": "Auditor signed off F004 after iteration-1 remediation."
-                },
-                {
-                    "type": "file",
-                    "uri": "audit/terminal-state-iter1.json",
-                    "note": "Terminal state showing post-audit patch-completeness bookkeeping blocker after signed-off audit."
-                },
-                {
-                    "type": "file",
-                    "uri": "audit/signoff-2026-05-23-004-feat-operator-console-v0.json",
-                    "note": "Operator-resolved signoff envelope generated after local verification."
-                }
-            ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F004.md",
+          "note": "operator_resolved close-out (class=evidence_shape_disagreement)"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/what-now-logic.js",
+          "note": "What Now rendering logic for needs-action, advisory, quiet, missing-cache, and copyable command states."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/pages/what-now/what-now.js",
+          "note": "Dashboard page registration and What Now first-screen integration."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/what-now-logic.test.js",
+          "note": "Unit coverage for ActionItem rendering, status bands, quiet state, missing state, and command metadata."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/what-now-page.test.js",
+          "note": "Integration coverage for the dashboard What Now page."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i1.json",
+          "note": "Auditor signed off F004 after iteration-1 remediation."
+        },
+        {
+          "type": "file",
+          "uri": "audit/terminal-state-iter1.json",
+          "note": "Terminal state showing post-audit patch-completeness bookkeeping blocker after signed-off audit."
+        },
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-23-004-feat-operator-console-v0.json",
+          "note": "Operator-resolved signoff envelope generated after local verification."
+        }
+      ],
       "verified_by": [
         "operator"
       ],
@@ -255,12 +255,94 @@
         "Update parent roadmap D-entry and close child plan only after F001-F004 are green."
       ],
       "acceptance": "(1) Successful init points humans at `dontpanic dashboard open` or equivalent. (2) Doctor reports dashboard readiness and exact remediation commands. (3) Objective-contract evidence exists for all five journeys. (4) Parent roadmap records V0 shipped and keeps V1/V2 trigger-gated. (5) Tests/audits/sanitization pass.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T04:21:30Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_doctor.py",
+          "note": "check_dashboard_readiness() emits advisory dashboard-files / dashboard-cache / dashboard-state probes; wired into run_all_checks() and filtered from compute_strict_exit so they never escalate the V0 doctor exit code."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "`dontpanic doctor` wrapper strips dashboard-* probes from strict-exit computation per V0 advisory contract."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/init/__init__.py",
+          "note": "Successful interactive walk + smoke + install-snapshot now prints the `[dashboard] install ready. Open ... dontpanic dashboard open` hand-off line; --json / --non-interactive suppress the prose."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/README.md",
+          "note": "Added V0 Operator Console section documenting `dontpanic dashboard build|open|serve`, localhost-only safety, agent cache path, and doctor/init wiring."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_doctor_dashboard_readiness_f005.py",
+          "note": "5 fixture tests covering all-present PASS, missing-index WARN, missing-cache WARN, missing-state WARN, and advisory strict-exit invariant."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py",
+          "note": "3 tests pinning interactive prints `dontpanic dashboard open` and `dontpanic dashboard serve`, with --json and --non-interactive suppressing the prose."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/doctor-dashboard-readiness.log",
+          "note": "Live `dontpanic doctor --skip-auth` output showing all three dashboard-* probes; exit 0 because dashboard checks remain advisory."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/init-dashboard-message.log",
+          "note": "Pytest output verifying init hand-off line + exact line content."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-build-cache-output.log",
+          "note": "Live `dashboard build` run writing what-now cache + reconcile + architecture status."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-serve-localhost-safety.log",
+          "note": "Live `dashboard serve --once` localhost bind plus REFUSED on --host=0.0.0.0."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/projection-view-adapter-tests.log",
+          "note": "Dashboard vitest suite (26 files, 584 tests) including projection-adapter coverage."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/what-now-action-provider-tests.log",
+          "note": "operator_console F001 fixture run (24 tests) covering ActionItem shape + provider behavior."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/agent-cache-shape-snapshot.json",
+          "note": "Fresh ~/.dontpanic/dashboard/what-now.json captured after `dashboard build`."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/sanitization-clean.log",
+          "note": "`sanitization_check.py` clean across 1810 scanned files."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F005.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
       ]
     }
   ]

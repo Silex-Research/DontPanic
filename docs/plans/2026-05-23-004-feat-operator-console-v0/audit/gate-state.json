@@ -68,6 +68,19 @@
       "gate": "breaker:no_progress",
       "at": "2026-05-23T03:45:37Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-23T04:37:56Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-23T04:47:37Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [

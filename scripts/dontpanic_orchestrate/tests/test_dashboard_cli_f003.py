@@ -195,6 +195,93 @@ def test_build_warnings_are_collected_not_raised(tmp_path: Path, monkeypatch) ->
     assert (out_dir / "what-now.json").is_file()
 
 
+def test_build_tolerates_single_malformed_plan_f005(tmp_path: Path) -> None:
+    """F005 i1 regression — one bad plan must not zero out the snapshot.
+
+    The auditor caught that a legacy plan with ``target_env: local``
+    (outside the F023 plan_target enum) caused ``state_projection.gather``
+    to raise, which in turn caused ``dashboard build`` to write zero
+    state files. Doctor's remediation (`dontpanic dashboard build`) then
+    never resolved the `dashboard-state missing` warning. This test
+    pins the new behavior: dashboard build skips malformed plans with a
+    warning and writes a valid state-snapshot.json from the good ones.
+    """
+
+    plans_root = tmp_path / "plans"
+    out_dir = tmp_path / "out"
+
+    # One healthy plan with a valid Target section.
+    _make_min_plan(plans_root, "2026-05-23-100-feat-good")
+
+    # One malformed plan — Target section uses an unsupported env value.
+    bad_dir = plans_root / "2026-05-23-101-infra-bad-target"
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "plan.md").write_text(
+        """---
+id: 2026-05-23-101-infra-bad-target
+title: Bad target fixture
+description: Synthetic regression fixture for F005 dashboard-build resilience.
+type: infra
+tier: cross-cutting
+status: active
+date: "2026-05-23"
+goal_type: refactor
+agents_required:
+  - claude
+human_gates:
+  - pre_impl
+---
+
+# Bad target fixture
+
+## Target
+
+```yaml
+target_env: local
+target_project: synthetic
+```
+"""
+    )
+    (bad_dir / "features.json").write_text(
+        json.dumps(
+            {
+                "task_id": "2026-05-23-101-infra-bad-target",
+                "schema_version": "1.0",
+                "features": [
+                    {
+                        "id": "F001",
+                        "category": "infra",
+                        "phase": 1,
+                        "description": "Synthetic feature so features.json validates.",
+                        "steps": ["noop"],
+                        "acceptance": "noop",
+                        "passes": False,
+                        "depends_on": [],
+                    }
+                ],
+            }
+        )
+    )
+
+    report = dashboard.build(plans_root=plans_root, out_dir=out_dir)
+
+    # Acceptance: the snapshot file still landed, doctor remediation works.
+    assert (out_dir / "state-snapshot.json").is_file()
+    # And the per-stream files plus what-now cache.
+    assert (out_dir / "plans.json").is_file()
+    assert (out_dir / "what-now.json").is_file()
+    # The bad plan surfaces as a warning, but the build succeeds.
+    assert any(
+        "skipping malformed plan" in w and "2026-05-23-101-infra-bad-target" in w
+        for w in report.warnings
+    ), f"expected malformed-plan warning, got: {list(report.warnings)}"
+    # The good plan made it into the snapshot.
+    envelope = json.loads((out_dir / "state-snapshot.json").read_text())
+    plan_ids = {p["plan_id"] for p in envelope["streams"]["plans"]}
+    assert "2026-05-23-100-feat-good" in plan_ids
+    assert "2026-05-23-101-infra-bad-target" not in plan_ids
+
+
 # ─── (2) open builds and prints local path ─────────────────────────────
 
 

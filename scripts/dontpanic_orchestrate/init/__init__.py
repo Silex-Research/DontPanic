@@ -675,6 +675,17 @@ def init_main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return EXIT_REMAINING
+        # Plan 2026-05-23-004 F005: point successful operators at the
+        # local operator console. JSON / non-interactive callers parse
+        # the envelope and don't want the prose; only the human
+        # interactive path gets the hand-off line.
+        if not (args.non_interactive or args.json):
+            print(
+                "[dashboard] install ready. "
+                "Open the local operator console with `dontpanic dashboard open` "
+                "(or `dontpanic dashboard serve` for a localhost-only HTTP "
+                "session with live refresh)."
+            )
         return EXIT_READY
     if smoke_result.exit_code == _smoke.EXIT_ENV_BLOCKER:
         # Operator-actionable — doctor profile probes own the diag.

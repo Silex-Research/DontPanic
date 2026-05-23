@@ -1803,6 +1803,112 @@ def check_architecture_drift(
     return result
 
 
+# ── dashboard-readiness (plan 2026-05-23-004 F005) ────────────────────────
+
+
+def check_dashboard_readiness(
+    *,
+    repo_root: Path | None = None,
+) -> list[CheckResult]:
+    """Plan 2026-05-23-004 F005 — advisory dashboard readiness probes.
+
+    Surfaces three V0 advisory checks for the local operator console:
+
+      * ``dashboard-files``  — ``dashboard/index.html`` exists.
+      * ``dashboard-cache``  — the operator-local what-now cache exists at
+        ``<dontpanic_home>/dashboard/what-now.json``.
+      * ``dashboard-state``  — ``dashboard/state/state-snapshot.json``
+        and ``what-now.json`` exist alongside the static dashboard.
+
+    All three emit ADVISORY (WARN) when missing — V0 acceptance #2 keeps
+    these advisory; a missing dashboard cache is not a doctor failure,
+    just a remediation pointer at the operator. The exact remediation
+    command appears in ``remediation`` so the strict-codes path still
+    treats them as non-fatal under the default ``--strict-codes`` flag.
+
+    Architecture freshness is already surfaced by
+    :func:`check_architecture_drift`; this set of probes targets only the
+    dashboard surfaces the operator console depends on.
+    """
+
+    repo_root = (repo_root or REPO_ROOT).resolve()
+    results: list[CheckResult] = []
+
+    dashboard_dir = repo_root / "dashboard"
+    index_html = dashboard_dir / "index.html"
+    if index_html.is_file():
+        results.append(
+            _ok(
+                "dashboard-files",
+                f"static dashboard present at {dashboard_dir.name}/index.html",
+            )
+        )
+    else:
+        results.append(
+            _warn(
+                "dashboard-files",
+                f"dashboard/index.html missing at {dashboard_dir}",
+                "run: git restore -- dashboard/index.html",
+            )
+        )
+
+    # Operator-local what-now cache (~/.dontpanic/dashboard/what-now.json
+    # by default; honors $DONTPANIC_HOME / $JARVIS_HOME for tests).
+    try:
+        # Lazy import — keep doctor importable without dragging the
+        # orchestrate package into module-load time.
+        sys.path.insert(0, str(repo_root / "scripts"))
+        try:
+            from dontpanic_orchestrate import operator_console as _oc
+        finally:
+            sys.path.pop(0)
+        cache_path = _oc.default_cache_path()
+    except Exception as exc:  # noqa: BLE001 — surface as WARN with remediation
+        results.append(
+            _warn(
+                "dashboard-cache",
+                f"could not resolve dashboard cache path: {exc.__class__.__name__}",
+                "run: dontpanic dashboard build",
+            )
+        )
+    else:
+        if cache_path.is_file():
+            results.append(
+                _ok("dashboard-cache", f"what-now cache present at {cache_path}")
+            )
+        else:
+            results.append(
+                _warn(
+                    "dashboard-cache",
+                    f"what-now cache missing at {cache_path}",
+                    "run: dontpanic dashboard build",
+                )
+            )
+
+    # Static dashboard state dir — populated by `dontpanic dashboard build`.
+    state_dir = dashboard_dir / "state"
+    snapshot = state_dir / "state-snapshot.json"
+    what_now = state_dir / "what-now.json"
+    missing = [p.name for p in (snapshot, what_now) if not p.is_file()]
+    if not missing:
+        results.append(
+            _ok(
+                "dashboard-state",
+                "dashboard/state has state-snapshot.json + what-now.json",
+            )
+        )
+    else:
+        results.append(
+            _warn(
+                "dashboard-state",
+                f"dashboard/state missing: {', '.join(missing)}",
+                "run: dontpanic dashboard build",
+            )
+        )
+
+    return results
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -1883,6 +1989,12 @@ def run_all_checks(
             strict=bool(architecture_drift_strict_mode),
         )
     )
+    # Plan 2026-05-23-004 F005: advisory dashboard readiness probes.
+    # Failures here emit WARN with exact remediation commands; they
+    # never escalate to FAIL because V0 keeps the local operator
+    # console optional (operators may legitimately not yet have run
+    # `dontpanic dashboard build`).
+    results.extend(check_dashboard_readiness())
     return results
 
 
@@ -2209,7 +2321,13 @@ def main(argv: list[str] | None = None) -> int:
     # semantics; operators who pass none of these stick with the legacy
     # 0/1 contract.
     if args.strict_codes or args.validate_plans_strict or args.architecture_drift_strict:
-        return compute_strict_exit(results)
+        # Plan 2026-05-23-004 F005: dashboard readiness probes stay
+        # advisory in all modes — drop them from the strict-exit
+        # computation. Their WARN text + remediation still prints above.
+        strict_inputs = [
+            r for r in results if not r.name.startswith("dashboard-")
+        ]
+        return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1
 
 

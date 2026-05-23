@@ -302,11 +302,17 @@ def _export_state(
     """
 
     written: list[Path] = []
+
+    def _on_malformed(plan_dir: Path, exc: Exception) -> None:
+        warn(f"state export skipping malformed plan {plan_dir.name}: {exc}")
+
     try:
         snap = state_projection.gather(
             plans_root,
             redact_level=redact_level,
             plan_id=plan_id,
+            tolerate_malformed_plans=True,
+            on_malformed_plan=_on_malformed,
         )
     except Exception as exc:  # noqa: BLE001
         warn(f"state export skipped: {exc}")
