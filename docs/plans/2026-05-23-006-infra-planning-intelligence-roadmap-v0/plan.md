@@ -9,7 +9,7 @@ description: |
   and later UX-aware design and journey verification.
 type: infra
 tier: architectural
-status: draft
+status: active
 date: "2026-05-23"
 goal_type: infra
 surfaces:

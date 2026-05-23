@@ -9,7 +9,7 @@ description: |
   updated.
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-05-23"
 goal_type: new_feature
 surfaces:
