@@ -1,15 +1,18 @@
 # DontPanic
 
-> The safety layer between AI coding agents and production.
+> Trust infrastructure for AI coding agents.
 
 ![DontPanic social preview](./docs/assets/dontpanic-social-preview.jpg)
 
-**Plan-locked. Cross-model audited. Human approved.**
+**From vibe coding to governed software engineering.**
 
-DontPanic turns vibe coding into governed software engineering. It locks AI
-coding work to an explicit plan, sends the work through a second model family
-for audit, pauses at human approval gates, and leaves an evidence trail before
-anything reaches production.
+AI coding agents are getting good enough to build real software. The hard part
+is no longer just capability; it is trust. DontPanic locks autonomous coding
+work to a plan, sends it through an independent model-family audit, pauses at
+human approval gates, and leaves an evidence trail before anything reaches
+production.
+
+**Plan-locked. Cross-model audited. Human approved.**
 
 It works with Claude Code, OpenClaw / Hermes-style workflows, Codex, Gemini,
 Grok, local models, and MCP-enabled tools.
@@ -42,6 +45,39 @@ and:
 
 > "Should we actually merge this?"
 
+## Why AI Coding Breaks At Scale
+
+Vibe coding works surprisingly well for prototypes, demos, side projects, and
+simple apps.
+
+Production software changes the problem.
+
+Real systems have hidden dependencies, security requirements, deployment
+complexity, architectural constraints, cost limits, and people who need to know
+who approved what. At that point, the question is no longer:
+
+> "Can the AI generate code?"
+
+It becomes:
+
+> "Can we trust autonomous systems to safely evolve complex software?"
+
+Most agent harnesses optimize for more autonomy. DontPanic optimizes for more
+trust.
+
+Capability is not reliability. Claude Code, Codex, Gemini, Grok, Cursor, local
+models, and other agent runtimes are execution engines. They are built to
+generate code, edit files, use tools, and complete tasks quickly. They are not,
+by themselves, a governance system.
+
+A brilliant engineer still needs peer review, QA, budgets, approvals,
+architecture review, and deployment controls. Not because the engineer is bad.
+Because complex systems require layered verification. Autonomous coding is the
+same. The more capable the agent becomes, the larger the blast radius becomes
+unless governance matures with it.
+
+That is the gap DontPanic fills: it separates intelligence from trust.
+
 ## The Fix
 
 DontPanic adds trust infrastructure around AI coding:
@@ -56,6 +92,16 @@ DontPanic adds trust infrastructure around AI coding:
 The core rule is simple:
 
 > Never let the same AI that wrote the code be the only AI that approves it.
+
+Plans are not bureaucracy. They preserve intent across autonomous execution.
+A locked plan becomes the memory anchor, acceptance contract, architectural
+constraint, verification target, and anti-drift mechanism. Without that anchor,
+agents can appear coherent while slowly mutating the objective.
+
+Cross-model audits are not theater. They create adversarial diversity. A single
+model reviewing its own work tends to reinforce its assumptions and rationalize
+internally coherent mistakes. Different model families catch different failures,
+the same way human peer review catches what the author missed.
 
 ## Before / After
 
@@ -95,6 +141,10 @@ Model vendors optimize for autonomy, speed, and usage. DontPanic optimizes for
 verification, governance, accountability, auditability, and cost control.
 Different model families catch different mistakes, which is why DontPanic uses
 cross-model audits instead of self-approval.
+
+Skills and better prompts improve execution. They do not automatically create
+separation of duties, reproducibility, cost containment, or organizational
+trust. In production, smarter agents need stronger guardrails, not fewer.
 
 ## See It In Action
 
