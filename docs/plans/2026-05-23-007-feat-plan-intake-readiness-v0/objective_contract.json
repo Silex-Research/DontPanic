@@ -1,0 +1,88 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The Planning Intelligence roadmap V0 scope: guide asks into roadmap vs implementation plan, surface parallel-ready work, and make release/documentation impact visible before dispatch.",
+  "user_journeys": [
+    {
+      "name": "new-user-turns-broad-ask-into-roadmap",
+      "description": "A user asks DontPanic to improve product onboarding across install, dashboard, docs, and setup. The authoring guidance helps classify it as a tracking roadmap with child plans rather than one overloaded implementation plan.",
+      "surfaces": [
+        "docs",
+        "ux"
+      ],
+      "states": [
+        "broad_ask",
+        "roadmap_selected",
+        "child_plans_identified",
+        "future_milestones_trigger_gated"
+      ],
+      "acceptance_signals": [
+        "Guidance explains why the ask is roadmap-shaped",
+        "Guidance shows how to name child implementation plans",
+        "Future milestones require trigger conditions",
+        "Roadmap parent is not treated as the dispatchable implementation unit"
+      ]
+    },
+    {
+      "name": "operator-finds-parallel-work-without-reading-every-plan",
+      "description": "An operator with several active plans runs dontpanic next and sees which features or child plans can safely be dispatched in parallel and which are blocked by dependencies or active overlap.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "multiple_active_plans",
+        "ready_features_present",
+        "blocked_features_present",
+        "collision_warning_present"
+      ],
+      "acceptance_signals": [
+        "Ready work includes exact candidate commands",
+        "Not-ready work explains the blocking dependency",
+        "Active supervisor overlap is advisory and explicit",
+        "JSON output gives agents the same recommendation shape"
+      ]
+    },
+    {
+      "name": "author-catches-missing-public-doc-updates-before-merge",
+      "description": "A plan changes README-facing or CLI-facing behavior. The release-impact checklist prompts the author to update the right public surfaces before the change merges.",
+      "surfaces": [
+        "docs",
+        "infra"
+      ],
+      "states": [
+        "public_surface_touched",
+        "release_impact_detected",
+        "docs_updates_identified",
+        "changelog_updated"
+      ],
+      "acceptance_signals": [
+        "Root CHANGELOG convention exists",
+        "Schema-only changes still point at claude/shared/CHANGELOG.md",
+        "README/onboarding/dashboard/architecture prompts are visible",
+        "Internal-only changes are not forced into public release notes"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "authoring-guidance-diff.md",
+    "dontpanic-next-ready-output.txt",
+    "dontpanic-next-ready-output.json",
+    "dontpanic-next-collision-output.json",
+    "dontpanic-next-real-inventory-output.json",
+    "release-impact-docs-output.txt",
+    "release-impact-schema-output.txt",
+    "release-impact-dashboard-output.txt",
+    "root-changelog-entry.md",
+    "pytest-planning-readiness.log",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No automatic dispatch",
+    "No hard blocking on release-impact advisories",
+    "No first-class roadmap schema changes",
+    "No dashboard Decisions panel",
+    "No design_artifacts schema",
+    "No visual regression enforcement",
+    "No multi-stakeholder approval workflow"
+  ],
+  "completion_test": "`dontpanic next --format=json` recommends independent ready work, suppresses dependency-blocked work with reasons, warns on active overlap without mutating state, and emits exact candidate commands where possible. A new user reading docs/AUTHORING_PLANS.md can distinguish roadmap vs plan vs investigation vs setup. Root CHANGELOG.md and release-impact guidance explain which documentation, onboarding, architecture, dashboard, CLI, schema, and social/discoverability surfaces need review for public-facing changes."
+}
