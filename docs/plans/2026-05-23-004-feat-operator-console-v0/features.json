@@ -1,0 +1,104 @@
+{
+  "task_id": "2026-05-23-004-feat-operator-console-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Shared status taxonomy and ActionItem provider model. Add a small core module that maps subsystem-specific states into four bands (`ready`, `advisory`, `needs_action`, `info`) and exposes a stable `ActionItem` envelope consumed by dashboard, cache, and future MCP. Providers gather gates needing approval, capability setup/blocked states, reconcile drift, and active supervisor/stuck states. V0 may render architecture stale as an action if detected, but does not embed architecture HTML.",
+      "steps": [
+        "Inventory current state sources: state_projection streams, gate-state.json, capabilities-status cache, reconcile check JSON, active supervisors, architecture status.",
+        "Define `ActionItem` fields: id, source, band, title, detail, exact_command, automatable, human_required_reason, evidence_uri, updated_at.",
+        "Define taxonomy mapping for gates, capabilities, reconcile statuses, supervisors, and architecture drift into ready/advisory/needs_action/info.",
+        "Implement pure provider functions with no mutation and deterministic ordering.",
+        "Add JSON renderer/cache writer for `~/.dontpanic/dashboard/what-now.json` or equivalent operator-local cache path.",
+        "Add tests for taxonomy mappings, action ordering, no-secret fields, empty state, and multi-source aggregation."
+      ],
+      "acceptance": "(1) A typed/shared ActionItem model exists and is documented in code. (2) Providers cover gates, capabilities, reconcile drift, and active supervisors. (3) Four-band taxonomy is the only dashboard status language used by V0 provider output. (4) Provider output is deterministic and secret-free. (5) Cache JSON is stable for agents. (6) Tests cover mappings, ordering, empty state, no-secret invariant, and aggregation.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Projection-to-view adapter repair for the V0 dashboard. Add a thin adapter layer so dashboard pages needed by V0 consume the canonical state projection/export outputs instead of relying on stale legacy `dashboard/state/*.json` shapes. Reuse the shipped Capability Center logic rather than creating a second capability UI path.",
+      "steps": [
+        "Read dashboard/README.md D016 gap, dashboard/core.js loader, dashboard/lib/*-logic.js, and state_cli export shape.",
+        "Add view adapter helpers that map state-snapshot/per-stream projection data into the existing dashboard state object for pages used in V0.",
+        "Keep legacy demo state files working for static showcase, but prefer canonical projection files when present.",
+        "Ensure Capability Center keeps reading capabilities-status.json through the existing path and shares action/status vocabulary with F001 where applicable.",
+        "Add dashboard unit tests for projection-shaped inputs, legacy fallback, missing files, and capability-state reuse."
+      ],
+      "acceptance": "(1) V0 dashboard data loading accepts canonical `state-snapshot.json`/per-stream export files. (2) Legacy dashboard/state demo files still render. (3) Capability Center is reused, not duplicated. (4) Missing projection files produce quiet empty states, not bootstrap failure. (5) Dashboard tests cover projection input and legacy fallback.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "description": "Local dashboard CLI. Add `dontpanic dashboard build|open|serve`. `build` exports state, capability status, reconcile status, and what-now cache into dashboard/state. `open` builds then opens or prints the local file/URL. `serve` runs a localhost-only lightweight HTTP server with file-watch/periodic refresh so operator actions appear without manual rebuild. The server writes cache files for agents/headless consumers and does not expose remote interfaces by default.",
+      "steps": [
+        "Add CLI routing for `dontpanic dashboard build`, `open`, and `serve`.",
+        "Implement build as composition of existing state export, capabilities status cache, reconcile check, architecture status check, and F001 action cache writer.",
+        "Implement serve as localhost-only with explicit host/port flags and safe defaults; no Firebase, no auth, no remote binding by default.",
+        "Use a file-watch or periodic refresh loop that rebuilds state after relevant plan/dashboard source changes.",
+        "Implement open behavior that prints the URL/path even if GUI open is unavailable in sandboxed/headless contexts.",
+        "Add tests for build outputs, serve host default, no remote exposure default, missing optional inputs, and help text."
+      ],
+      "acceptance": "(1) `dontpanic dashboard build` writes dashboard/state files plus what-now cache. (2) `dontpanic dashboard open` builds and prints a usable local URL/path. (3) `dontpanic dashboard serve` binds localhost by default and refreshes without requiring manual rebuild. (4) No Firebase config is required or mentioned as a V0 requirement. (5) Tests cover build/open/serve safety and missing optional inputs.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "description": "\"What Now\" operator view. Add or revise a dashboard page/panel that renders the F001 ActionItem cache as the first-viewport operating surface: gates requiring approval, blocking or setup-needed capabilities, reconcile drift, active/stuck supervisors, and exact next commands. The view is read-only; it does not pretend to be kanban or drag/drop. Commands are copyable and evidence links are visible when present.",
+      "steps": [
+        "Design compact first-viewport layout for operator-in-the-loop workflow, not a marketing hero or general overview.",
+        "Render ActionItems grouped by band/source with exact commands and human/automatable labels.",
+        "Show quiet healthy state when no action is needed.",
+        "Make stale/missing state explicit but non-alarming when optional data is absent.",
+        "Add browser/unit tests for needs-action, quiet, missing-cache, and command-copy rendering states.",
+        "Capture screenshot or HTML snapshot evidence for the objective journeys."
+      ],
+      "acceptance": "(1) Dashboard first screen answers `what needs action now?`. (2) Gates, capabilities, reconcile drift, and supervisors can all appear as ActionItems. (3) Exact commands are visible and copyable. (4) Quiet state is restrained when no action is needed. (5) View is read-only and does not expose drag/drop mutation. (6) Tests and screenshot/HTML evidence cover the objective journeys.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "Init/doctor wiring and objective close-out. `dontpanic init` should tell successful operators how to open the local dashboard. `dontpanic doctor` should report dashboard readiness, stale architecture, and missing dashboard cache with exact commands. Close out with objective-contract evidence: operator stale capability journey, live refresh journey, copyable commands journey, quiet dashboard journey, and agent cache journey.",
+      "steps": [
+        "Add doctor readiness checks for dashboard files, dashboard state/cache, and architecture freshness as advisory V0 checks.",
+        "Add post-init messaging that prints the dashboard open command after successful core setup.",
+        "Document dashboard usage in README/quickstart or dashboard README as appropriate.",
+        "Run objective-contract journeys and capture required logs/screenshots.",
+        "Run targeted tests, dashboard tests, plan audits, and sanitization.",
+        "Update parent roadmap D-entry and close child plan only after F001-F004 are green."
+      ],
+      "acceptance": "(1) Successful init points humans at `dontpanic dashboard open` or equivalent. (2) Doctor reports dashboard readiness and exact remediation commands. (3) Objective-contract evidence exists for all five journeys. (4) Parent roadmap records V0 shipped and keeps V1/V2 trigger-gated. (5) Tests/audits/sanitization pass.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ]
+    }
+  ]
+}
