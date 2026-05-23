@@ -174,6 +174,15 @@ class ActionItem:
     instantiating directly outside tests — providers enforce the
     id-prefix convention and supply ``updated_at`` from a single
     captured-at clock so a snapshot is internally consistent.
+
+    Plan 2026-05-23-005 F004 added the optional ``project_name`` /
+    ``display_name`` fields. They are populated only when the item
+    comes from a project-scoped source (per-project gates, architecture,
+    build warnings) so the fleet view can group items by project and
+    the project filter can short-circuit relevance via string equality.
+    Legacy single-repo callers leave them as None — the dashboard's
+    relevance function treats unscoped items as belonging to the
+    selected project (V0 single-repo compat).
     """
 
     id: str
@@ -186,6 +195,8 @@ class ActionItem:
     human_required_reason: str | None
     evidence_uri: str | None
     updated_at: str
+    project_name: str | None = None
+    display_name: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -217,6 +228,8 @@ class ActionItem:
             "human_required_reason": self.human_required_reason,
             "evidence_uri": self.evidence_uri,
             "updated_at": self.updated_at,
+            "project_name": self.project_name,
+            "display_name": self.display_name,
         }
 
 

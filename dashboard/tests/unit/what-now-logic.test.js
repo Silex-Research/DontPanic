@@ -10,7 +10,12 @@ import {
   SOURCE_LABELS,
   getBandBadge,
   getSourceLabel,
+  groupByProject,
   groupByBand,
+  filterItemsForProject,
+  buildStatusHeader,
+  renderFleetWhatNowHTML,
+  renderProjectWhatNowHTML,
   hasNeedsAction,
   isMissingState,
   normalizeEnvelope,
@@ -413,6 +418,108 @@ describe('what-now: renderWhatNowHTML populated', () => {
     });
     expect(html).not.toContain('wn-card-command');
     expect(html).not.toContain('wn-copy-btn');
+  });
+});
+
+// ── F004 fleet/project renderers ──
+
+describe('what-now F004: fleet/project grouping and filtering', () => {
+  const fleetSummary = {
+    worst_band: 'needs_action',
+    projects: [
+      {
+        name: 'spindine',
+        display_name: 'SpinDine',
+        health_band: 'needs_action',
+        warning_count: 2,
+        required_capability_ids: ['linear'],
+        referenced_adapter_categories: ['dashboard-realtime'],
+      },
+      {
+        name: 'glam',
+        display_name: 'Glam',
+        health_band: 'advisory',
+        warning_count: 1,
+        required_capability_ids: [],
+        referenced_adapter_categories: [],
+      },
+    ],
+  };
+
+  const fleetEnvelope = {
+    schema_version: '1.0.0',
+    captured_at: '2026-05-23T03:00:00Z',
+    capability_categories: {
+      'firebase-dashboard': 'dashboard-realtime',
+      linear: 'pm-tool',
+      discord: 'notification-sink',
+    },
+    items: [
+      { id: 'gate:spin', source: 'gate', band: 'needs_action', title: 'Spin gate', project_name: 'spindine', automatable: false, human_required_reason: 'approval' },
+      { id: 'arch:glam', source: 'architecture', band: 'advisory', title: 'Glam architecture stale', project_name: 'glam', automatable: true },
+      { id: 'capability:linear', source: 'capability', band: 'needs_action', title: 'Linear missing', automatable: false, human_required_reason: 'setup' },
+      { id: 'capability:firebase-dashboard', source: 'capability', band: 'advisory', title: 'Firebase missing', automatable: false, human_required_reason: 'setup' },
+      { id: 'capability:discord', source: 'capability', band: 'advisory', title: 'Discord missing', automatable: false, human_required_reason: 'setup' },
+      { id: 'capability:python', source: 'capability', band: 'needs_action', title: 'Python missing', automatable: false, human_required_reason: 'install' },
+    ],
+  };
+
+  it('groups fleet items by project with global blockers pinned first', () => {
+    const groups = groupByProject(fleetEnvelope.items, fleetSummary.projects);
+    expect(groups.map((g) => g.name)).toEqual(['__global__', 'spindine', 'glam']);
+    expect(groups.find((g) => g.name === 'spindine').display_name).toBe('SpinDine');
+  });
+
+  it('filters project view by typed global relevance rules', () => {
+    const filtered = filterItemsForProject(fleetEnvelope.items, 'spindine', {
+      requiredCapabilityIds: ['linear'],
+      referencedAdapterCategories: ['dashboard-realtime'],
+      capabilityCategories: fleetEnvelope.capability_categories,
+    });
+    expect(filtered.map((it) => it.id)).toEqual([
+      'gate:spin',
+      'capability:linear',
+      'capability:firebase-dashboard',
+      'capability:python',
+    ]);
+    expect(filtered.map((it) => it.id)).not.toContain('arch:glam');
+    expect(filtered.map((it) => it.id)).not.toContain('capability:discord');
+  });
+
+  it('builds selected-scope status header values', () => {
+    const header = buildStatusHeader({
+      envelope: fleetEnvelope,
+      fleetSummary,
+      selected: 'spindine',
+      now: Date.parse('2026-05-23T03:00:42Z'),
+    });
+    expect(header.scope).toBe('project');
+    expect(header.health_band).toBe('needs_action');
+    expect(header.warning_count).toBe(2);
+    expect(header.data_age_seconds).toBe(42);
+  });
+
+  it('renders fleet sections and status header', () => {
+    const html = renderFleetWhatNowHTML(fleetEnvelope, fleetSummary, {
+      now: Date.parse('2026-05-23T03:00:10Z'),
+    });
+    expect(html).toContain('data-status-header="1"');
+    expect(html).toContain('What Now — All Projects');
+    expect(html).toContain('data-project="spindine"');
+    expect(html).toContain('data-project="glam"');
+  });
+
+  it('renders project view with filtered relevant global blockers', () => {
+    const html = renderProjectWhatNowHTML(fleetEnvelope, fleetSummary, 'spindine', {
+      now: Date.parse('2026-05-23T03:00:10Z'),
+    });
+    expect(html).toContain('data-status-header="1"');
+    expect(html).toContain('data-action-id="gate:spin"');
+    expect(html).toContain('data-action-id="capability:linear"');
+    expect(html).toContain('data-action-id="capability:firebase-dashboard"');
+    expect(html).toContain('data-action-id="capability:python"');
+    expect(html).not.toContain('data-action-id="arch:glam"');
+    expect(html).not.toContain('data-action-id="capability:discord"');
   });
 });
 

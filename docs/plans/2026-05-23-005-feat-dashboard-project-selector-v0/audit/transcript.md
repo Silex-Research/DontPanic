@@ -22,3 +22,11 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 **2026-05-23T07:02:02Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-05-23T07:15:04Z | F004 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |
+| 2026-05-23T07:17:32Z | F004 | i0 | codex / auditor | needs_changes | 1,727,950 / 9,500 | [codex-auditor-F004-i0.json](audit/codex-auditor-F004-i0.json) |
+| 2026-05-23T07:27:32Z | F004 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F004-i1.json](audit/claude-implementer-F004-i1.json) |
+| 2026-05-23T07:31:41Z | F004 | i1 | codex / auditor | needs_changes | 3,886,175 / 17,592 | [codex-auditor-F004-i1.json](audit/codex-auditor-F004-i1.json) |
+
+**2026-05-23T07:31:41Z** — feature **F004** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+

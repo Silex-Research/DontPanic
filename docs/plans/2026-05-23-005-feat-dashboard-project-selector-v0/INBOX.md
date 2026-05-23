@@ -282,3 +282,132 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-23T07:05:03Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T07:05:03Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T07:15:04Z
+event: error
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-23T07:27:32Z
+event: error
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+agent: claude
+role: implementer
+iteration: 1
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 1 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-23T07:31:41Z
+event: no_progress_classification
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+aggregate: unknown
+blocking: true
+feature_id: F004
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F004
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: The implementer audit is not a completion artifact. Evidence: `claude-implementer-F004-i1.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blo…
+  - [unknown] severity=medium, category=test_coverage: The new browser-side F004 render/filter/status path has no direct tests. Evidence: `rg` found no test references for `renderFleetWhatNowHTML`, `renderProjectWh…
+  - [unknown] severity=medium, category=test_coverage: The synthetic 8-project fixture does not actually exercise the required state mix. Evidence: `test_dashboard_relevance_f004.py:574-633` registers 8 projects bu…
+  - [unknown] severity=low, category=style: Ruff fails on the changed Python files. Evidence: `dashboard_relevance.py:37` has unused `typing.Any`, and `test_dashboard_relevance_f004.py:39` has an unsorte…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-23-005-feat-dashboard-project-selector-v0 F004 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-23T07:31:41Z
+event: breaker_tripped
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+breaker_kind: no_progress
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-05-23-005-feat-dashboard-project-selector-v0 breaker:no_progress` or `jarvis resume 2026-05-23-005-feat-dashboard-project-selector-v0 --all`.
+
+===
+---
+timestamp: 2026-05-23T07:31:42Z
+event: volley_terminal
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F004
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+---
+timestamp: 2026-05-23T07:36:09Z
+event: feature_operator_resolved
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F004
+reason_class: unknown
+---
+
+Operator closed feature F004 as operator_resolved (class=unknown).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-23-005-feat-dashboard-project-selector-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

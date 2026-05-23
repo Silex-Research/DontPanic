@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T07:27:32Z",
+  "completed_at": "2026-05-23T07:31:41Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-tbwla4i4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2271856 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3886175,
+    "tokens_out": 17592,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target context is correct: summary declares Repo/Env/Project, structured `target_context.env=dev`, `project=null`, and `commands_run=[]`; no forbidden command shapes.\n\nFINDING (high, correctness): The implementer audit is not a completion artifact. Evidence: `claude-implementer-F004-i1.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and no validation commands ran. Recommendation: rerun the implementer round to a real terminal signoff before treating F004 as complete.\n\nFINDING (medium, test_coverage): The new browser-side F004 render/filter/status path has no direct tests. Evidence: `rg` found no test references for `renderFleetWhatNowHTML`, `renderProjectWhatNowHTML`, `groupByProject`, `filterItemsForProject`, `buildStatusHeader`, or `fleetWhatNow` under `dashboard/tests`, despite new routing at `dashboard/pages/what-now/what-now.js:37-45`. Recommendation: add Vitest unit/integration coverage for fleet grouping, project filtering, global relevance, status header, quiet/stale states, and `fleet-what-now.json` loading.\n\nFINDING (medium, test_coverage): The synthetic 8-project fixture does not actually exercise the required state mix. Evidence: `test_dashboard_relevance_f004.py:574-633` registers 8 projects but only asserts inactive and missing-repo warning items plus no-secret output; it does not create/assert `needs_action`, stale, or ready rendered/grouped behavio",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -q && npm test -- --run tests/unit/what-now-logic.test.js tests/integration/project-selector.test.js tests/integration/what-now-page.test.js && PYTHONPATH=scripts ruff check scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+      "npm test -- --run tests/unit/what-now-logic.test.js tests/integration/project-selector.test.js tests/integration/what-now-page.test.js && PYTHONPATH=scripts ruff check scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+      "PYTHONPATH=scripts ruff check scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/dashboard_relevance.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate import dashboard_relevance, projects_dashboard, operator_console; print('imports ok')\"",
+      "node --input-type=module -e \"import('./dashboard/lib/what-now-logic.js').then(() => console.log('what-now import ok'))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "The implementer audit is not a completion artifact. Evidence: `claude-implementer-F004-i1.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and no validation commands ran. Recommendation: rerun the implementer round to a real terminal signoff before treating F004 as complete.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "The new browser-side F004 render/filter/status path has no direct tests. Evidence: `rg` found no test references for `renderFleetWhatNowHTML`, `renderProjectWhatNowHTML`, `groupByProject`, `filterItemsForProject`, `buildStatusHeader`, or `fleetWhatNow` under `dashboard/tests`, despite new routing at `dashboard/pages/what-now/what-now.js:37-45`. Recommendation: add Vitest unit/integration coverage for fleet grouping, project filtering, global relevance, status header, quiet/stale states, and `fle",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "The synthetic 8-project fixture does not actually exercise the required state mix. Evidence: `test_dashboard_relevance_f004.py:574-633` registers 8 projects but only asserts inactive and missing-repo warning items plus no-secret output; it does not create/assert `needs_action`, stale, or ready rendered/grouped behavior. Recommendation: seed explicit per-project what-now caches or reports for needs_action, advisory, ready, inactive, stale, and missing-repo states and assert grouping/order/filter ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F004",
+      "issue": "Ruff fails on the changed Python files. Evidence: `dashboard_relevance.py:37` has unused `typing.Any`, and `test_dashboard_relevance_f004.py:39` has an unsorted import block. Recommendation: remove the unused import and run import formatting. Checks invoked: $ PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -q && npm test -- --run tests/unit/what-now-logic.test.js tests/integration/project-selector.test.",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

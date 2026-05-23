@@ -2,19 +2,7 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "dashboard/core.css",
-      "status": "M"
-    },
-    {
       "path": "dashboard/core.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/index.html",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/lib/capabilities-logic.js",
       "status": "M"
     },
     {
@@ -23,14 +11,6 @@
     },
     {
       "path": "dashboard/pages/what-now/what-now.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/integration/core-router.test.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/vitest.config.js",
       "status": "M"
     },
     {
@@ -56,17 +36,23 @@
     {
       "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/evidence/git-state-1-implementer.json",
       "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/operator_console.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
+      "status": "M"
     }
   ],
   "untracked": [
-    "dashboard/lib/project-selector-logic.js",
-    "dashboard/tests/fixtures/fleet-summary.json",
-    "dashboard/tests/integration/project-selector.test.js",
-    "dashboard/tests/unit/project-selector-logic.test.js",
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F003-i0.json",
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F003-i1.json",
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F003-i0.json",
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F003-i1.json"
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F004-i0.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F004-i1.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F004-i0.json",
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F004-i1.json",
+    "scripts/dontpanic_orchestrate/dashboard_relevance.py",
+    "scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

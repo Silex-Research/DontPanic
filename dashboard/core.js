@@ -61,6 +61,11 @@ function JARVIS_LITERAL() { return {
     // when only single-repo state is on disk. The shell renders an
     // actionable build command in the missing case.
     fleetSummary: null,
+    // F004 fleet what-now envelope (plan 2026-05-23-005). Populated by
+    // the loader when `dashboard/state/fleet-what-now.json` is present.
+    // Carries per-project ActionItems + the capability_categories map
+    // the JS project filter uses to mirror the Python relevance rule.
+    fleetWhatNow: null,
     // F003 currently-selected project name or the `all` sentinel. The
     // shell resolves this from URL → localStorage → default on init
     // and re-resolves whenever the selector is mutated.
@@ -220,6 +225,12 @@ function JARVIS_LITERAL() { return {
       // (operator deletes the cache file) actually surfaces the missing
       // banner instead of holding stale registry rows.
       { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
+      // F004 fleet what-now envelope — feeds the All-Projects grouped
+      // view and the project-filtered view. Missing → null; the what-now
+      // page falls back to the single-repo `whatNow` payload in that
+      // case so a fresh operator without `--project all` builds still
+      // gets a usable view.
+      { key: 'fleetWhatNow', file: 'fleet-what-now.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),

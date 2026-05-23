@@ -11,7 +11,12 @@
 // All rendering lives in `lib/what-now-logic.js`; this IIFE only wires
 // DOM lifecycle + the copy-button click handler.
 
-import { renderWhatNowHTML } from '../../lib/what-now-logic.js';
+import {
+  renderFleetWhatNowHTML,
+  renderProjectWhatNowHTML,
+  renderWhatNowHTML,
+} from '../../lib/what-now-logic.js';
+import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
 (() => {
   let _el = null;
@@ -20,8 +25,29 @@ import { renderWhatNowHTML } from '../../lib/what-now-logic.js';
 
   function render(state) {
     if (!_el) return;
+    const selected = state && typeof state.selectedProject === 'string'
+      ? state.selectedProject
+      : ALL_PROJECTS_VALUE;
+    const fleetWhatNow = state ? state.fleetWhatNow : null;
+    const fleetSummary = state ? state.fleetSummary : null;
+    // F004 routing: prefer the fleet what-now envelope when present so
+    // the All-Projects + project-filtered views actually use the new
+    // renderers. Fall back to the single-repo `whatNow` payload when
+    // no fleet build has run (legacy single-repo operator).
+    if (fleetWhatNow != null) {
+      if (selected === ALL_PROJECTS_VALUE) {
+        _el.innerHTML = renderFleetWhatNowHTML(fleetWhatNow, fleetSummary);
+      } else {
+        _el.innerHTML = renderProjectWhatNowHTML(
+          fleetWhatNow,
+          fleetSummary,
+          selected,
+        );
+      }
+      return;
+    }
     _el.innerHTML = renderWhatNowHTML(state ? state.whatNow : null, {
-      selectedProject: state ? state.selectedProject : undefined,
+      selectedProject: selected,
     });
   }
 

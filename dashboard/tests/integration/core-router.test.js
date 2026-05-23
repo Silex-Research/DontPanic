@@ -46,6 +46,9 @@ function createRouter() {
       snapshotMeta: null,
       // F004 What Now cache — null sentinel until what-now.json loads.
       whatNow: null,
+      // F004 fleet What Now cache — null sentinel until
+      // fleet-what-now.json loads.
+      fleetWhatNow: null,
       // F003 fleet summary — null sentinel until fleet-summary.json loads.
       fleetSummary: null,
       // F003 selected project — defaults to All Projects until init resolves.
@@ -113,6 +116,7 @@ function createRouter() {
       const aliasedFiles = [
         { key: 'capabilities', file: 'capabilities-status.json' },
         { key: 'whatNow',      file: 'what-now.json',      nullableMissing: true },
+        { key: 'fleetWhatNow', file: 'fleet-what-now.json', nullableMissing: true },
         { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
       ];
       const loaders = [
@@ -426,6 +430,22 @@ describe('loadState', () => {
     expect(router.state.capabilities).toEqual(envelope);
   });
 
+  it('loads the aliased fleet-what-now.json into state.fleetWhatNow', async () => {
+    const envelope = {
+      schema_version: '1.0.0',
+      captured_at: '2026-05-23T03:00:00Z',
+      items: [
+        { id: 'gate:spin', source: 'gate', band: 'needs_action', title: 'Spin gate' },
+      ],
+    };
+    setupFetchMock({ 'fleet-what-now': envelope });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.fleetWhatNow).toEqual(envelope);
+  });
+
   it('uses the aliased URL — not state/capabilities.json', async () => {
     const fetchSpy = setupFetchMock({});
     const router = createRouter();
@@ -433,6 +453,7 @@ describe('loadState', () => {
 
     const urls = fetchSpy.mock.calls.map(call => call[0]);
     expect(urls).toContain('state/capabilities-status.json');
+    expect(urls).toContain('state/fleet-what-now.json');
     expect(urls).not.toContain('state/capabilities.json');
   });
 

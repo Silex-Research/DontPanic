@@ -60,7 +60,9 @@ from typing import Any
 
 from dontpanic_orchestrate import (
     architecture,
+    capabilities,
     dashboard,
+    dashboard_relevance,
     global_config,
     operator_console,
     project_config,
@@ -84,6 +86,16 @@ BUILD_WARNINGS_FILENAME = "build-warnings.json"
 """Per-project dashboard build warnings cache. Lets the UI surface
 malformed or skipped artifacts without making the operator scrape
 stderr."""
+
+FLEET_WHAT_NOW_FILENAME = "fleet-what-now.json"
+"""Fleet-level what-now ActionItem aggregate. Plan 2026-05-23-005 F004:
+combines per-project ActionItems (tagged with ``project_name``) with
+global capability/install/reconcile items so the dashboard can render
+both a fleet view (grouped by project header) and a project-filtered
+view (filtered + relevance-gated globals). Sits next to
+``fleet-summary.json`` under ``~/.dontpanic/dashboard/``."""
+
+FLEET_WHAT_NOW_SCHEMA_VERSION = "1.0.0"
 
 
 ALL_PROJECTS_SENTINEL = "all"
@@ -609,6 +621,24 @@ def _fleet_entry(
         what_now_path=what_now_path,
     )
 
+    # F004 — persist the project's typed capability/adapter declarations
+    # into the fleet summary so the dashboard's project view can apply the
+    # full relevance rule without re-walking each project's plans dir.
+    # Tolerated absent / unreadable: an empty declarations payload means
+    # the project simply doesn't see capability-class blockers in its
+    # filtered view (matches dashboard_relevance fallthrough).
+    try:
+        declarations = dashboard_relevance.load_project_declarations(
+            ctx.name, ctx.plans_root
+        )
+        required_capability_ids = sorted(declarations.required_capability_ids)
+        referenced_adapter_categories = sorted(
+            declarations.referenced_adapter_categories
+        )
+    except Exception:  # noqa: BLE001 — declarations are optional metadata
+        required_capability_ids = []
+        referenced_adapter_categories = []
+
     entry: dict[str, Any] = {
         "name": ctx.name,
         "display_name": ctx.display_name,
@@ -628,6 +658,8 @@ def _fleet_entry(
         "skipped": report.skipped,
         "skipped_reason": report.skipped_reason,
         "health_band": health_band,
+        "required_capability_ids": required_capability_ids,
+        "referenced_adapter_categories": referenced_adapter_categories,
     }
     return entry
 
@@ -841,12 +873,236 @@ def build_selected(
         project_reports,
         dontpanic_version=dontpanic_version,
     )
+    # F004: emit the fleet what-now envelope alongside the fleet
+    # summary so the dashboard can render the All-Projects view without
+    # walking each project's cache itself. Tolerate failure so a stray
+    # I/O error doesn't take down the rest of the build.
+    try:
+        build_fleet_what_now(project_reports)
+    except Exception as exc:  # noqa: BLE001 — surface to warn, do not crash
+        warn(f"fleet what-now write skipped: {exc}")
+
     return SelectedBuildResult(
         selection=selection,
         current_repo_report=None,
         project_reports=tuple(project_reports),
         fleet_summary_path=summary_path,
     )
+
+
+def fleet_what_now_path() -> Path:
+    """Operator-local fleet what-now ActionItem cache path."""
+
+    return global_config.dontpanic_home() / "dashboard" / FLEET_WHAT_NOW_FILENAME
+
+
+def _load_project_what_now_items(
+    cache_path: Path,
+    *,
+    project_name: str,
+    display_name: str,
+) -> tuple[operator_console.ActionItem, ...]:
+    """Read a per-project ``what-now-cache.json`` and tag every item.
+
+    The per-project cache emitted by :func:`dashboard.build` carries
+    the unmodified F001 envelope shape. F004 needs each item to carry
+    ``project_name`` / ``display_name`` so the fleet view can group by
+    project and the project filter can short-circuit to string equality.
+
+    Missing/malformed cache returns an empty tuple — never raises.
+    """
+
+    if not cache_path.is_file():
+        return ()
+    try:
+        envelope = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    raw_items = envelope.get("items")
+    if not isinstance(raw_items, list):
+        return ()
+    items: list[operator_console.ActionItem] = []
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            band = operator_console.Band(raw.get("band", "info"))
+        except ValueError:
+            band = operator_console.Band.INFO
+        source = raw.get("source")
+        if source not in operator_console._VALID_SOURCES:  # noqa: SLF001
+            continue
+        # Project-scoping rule: gate + architecture + supervisor are
+        # per-project at fleet build time (each project ran its own
+        # provider sweep). Capability + reconcile are *global* — the
+        # capabilities cache is shared across the operator's install, so
+        # tagging them with a project_name would lie about scope.
+        scoped_sources = {
+            operator_console.SOURCE_GATE,
+            operator_console.SOURCE_ARCHITECTURE,
+            operator_console.SOURCE_SUPERVISOR,
+        }
+        project_tag = project_name if source in scoped_sources else None
+        display_tag = display_name if project_tag is not None else None
+        try:
+            items.append(
+                operator_console.ActionItem(
+                    id=str(raw.get("id", "")),
+                    source=str(source),
+                    band=band,
+                    title=str(raw.get("title", "")),
+                    detail=raw.get("detail"),
+                    exact_command=raw.get("exact_command"),
+                    automatable=bool(raw.get("automatable", False)),
+                    human_required_reason=raw.get("human_required_reason"),
+                    evidence_uri=raw.get("evidence_uri"),
+                    updated_at=str(raw.get("updated_at", "")),
+                    project_name=project_tag,
+                    display_name=display_tag,
+                )
+            )
+        except (TypeError, ValueError):
+            # Skip malformed entries rather than crash the whole fleet
+            # build — the source cache was rendered by the same writer
+            # but a hand-edited or corrupted file shouldn't kill the
+            # operator dashboard.
+            continue
+    return tuple(items)
+
+
+def build_fleet_what_now(
+    project_reports: Iterable[ProjectBuildReport],
+    *,
+    captured_at: dt.datetime | None = None,
+    output_path: Path | None = None,
+) -> Path:
+    """Plan 2026-05-23-005 F004 — aggregate per-project ActionItems + warnings.
+
+    Writes a fleet-level what-now envelope to
+    ``~/.dontpanic/dashboard/fleet-what-now.json`` (or to ``output_path``
+    when supplied). The envelope contains:
+
+      * ``items``           — every per-project ActionItem (tagged with
+                              ``project_name``) plus build-warning items
+                              synthesized from skipped/malformed builds,
+                              deterministically sorted.
+      * ``projects``        — fleet-summary-shape list of registered
+                              projects so the dashboard can render
+                              section headers without consulting two
+                              caches at once.
+
+    The dashboard's project filter is a pure-JS filter against this
+    envelope — :func:`dashboard_relevance.is_item_relevant_to_project`
+    is the server-side contract the filter mirrors.
+    """
+
+    captured = captured_at or dt.datetime.now(dt.timezone.utc)
+    if captured.tzinfo is None:
+        captured = captured.replace(tzinfo=dt.timezone.utc)
+    now_iso = _iso(captured)
+
+    # F004 — capability id → category map. Lets the JS project filter
+    # apply the "adapter not configured" rule (relevance via category
+    # fallback) without re-running the Python relevance engine. Failure
+    # to load the manifests degrades gracefully to an empty map; the JS
+    # side just skips the category branch.
+    capability_categories: dict[str, str] = {}
+    try:
+        cap_index = capabilities.load_capabilities()
+        for manifest in cap_index.all:
+            capability_categories[manifest.id] = manifest.category
+    except Exception:  # noqa: BLE001 — capability manifests are optional here
+        capability_categories = {}
+
+    all_items: list[operator_console.ActionItem] = []
+    project_summaries: list[dict[str, Any]] = []
+    reports_list = list(project_reports)
+    for report in reports_list:
+        ctx = report.context
+        # Per-project ActionItems (gate + architecture + supervisor were
+        # tagged with project_name in _load_project_what_now_items; the
+        # capability + reconcile items pass through untagged so the
+        # relevance function decides their fate).
+        cache = ctx.dashboard_cache_path / "what-now-cache.json"
+        per_project_items = _load_project_what_now_items(
+            cache,
+            project_name=ctx.name,
+            display_name=ctx.display_name,
+        )
+        all_items.extend(per_project_items)
+
+        # Surface skipped/malformed builds as ActionItems so the
+        # dashboard renders them next to real action items (F004 acc 4).
+        if report.skipped or report.warnings:
+            warning_items = dashboard_relevance.build_warning_action_items(
+                project_name=ctx.name,
+                display_name=ctx.display_name,
+                warnings=report.warnings,
+                skipped=report.skipped,
+                skipped_reason=report.skipped_reason,
+                warnings_path=report.build_warnings_path,
+                now_iso=now_iso,
+            )
+            all_items.extend(warning_items)
+
+        # Persist the project's typed capability/adapter declarations
+        # alongside the summary so the dashboard's project filter has
+        # everything it needs in one envelope. Best-effort: declarations
+        # default to empty when the plans dir is unreadable, which means
+        # the project's filter simply doesn't surface capability-class
+        # blockers (matches dashboard_relevance fallthrough).
+        try:
+            declarations = dashboard_relevance.load_project_declarations(
+                ctx.name, ctx.plans_root
+            )
+            required_capability_ids = sorted(declarations.required_capability_ids)
+            referenced_adapter_categories = sorted(
+                declarations.referenced_adapter_categories
+            )
+        except Exception:  # noqa: BLE001 — declarations are optional metadata
+            required_capability_ids = []
+            referenced_adapter_categories = []
+        project_summaries.append(
+            {
+                "name": ctx.name,
+                "display_name": ctx.display_name,
+                "active": ctx.active,
+                "skipped": report.skipped,
+                "skipped_reason": report.skipped_reason,
+                "warning_count": len(report.warnings),
+                "required_capability_ids": required_capability_ids,
+                "referenced_adapter_categories": referenced_adapter_categories,
+            }
+        )
+
+    # Coalesce by (project_name || "__global__", id). Two project sweeps
+    # may emit the same id (e.g. ``architecture:stale``) and we must keep
+    # both — collapsing on the bare id would drop project-scoped items
+    # whose id collides across the fleet. Within one project an id still
+    # round-trips through last-write-wins (matches operator_console.
+    # aggregate semantics).
+    merged: dict[tuple[str, str], operator_console.ActionItem] = {}
+    for it in all_items:
+        scope_key = it.project_name or "__global__"
+        merged[(scope_key, it.id)] = it
+    sorted_items = operator_console._sort(merged.values())  # noqa: SLF001
+
+    payload: dict[str, Any] = {
+        "schema_version": FLEET_WHAT_NOW_SCHEMA_VERSION,
+        "captured_at": now_iso,
+        "projects": project_summaries,
+        "capability_categories": capability_categories,
+        "items": [it.to_dict() for it in sorted_items],
+    }
+    operator_console._assert_no_secret_shapes(payload)  # noqa: SLF001
+
+    target = output_path if output_path is not None else fleet_what_now_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return target
 
 
 def mirror_selection_into_state_dir(
@@ -875,6 +1131,16 @@ def mirror_selection_into_state_dir(
     if result.fleet_summary_path is not None and result.fleet_summary_path.is_file():
         (state_out_dir / FLEET_SUMMARY_FILENAME).write_text(
             result.fleet_summary_path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    # F004: mirror the fleet what-now envelope into the served tree so
+    # the static dashboard can fetch `state/fleet-what-now.json` without
+    # leaking absolute $HOME paths.
+    fleet_what_now = fleet_what_now_path()
+    if fleet_what_now.is_file():
+        (state_out_dir / FLEET_WHAT_NOW_FILENAME).write_text(
+            fleet_what_now.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
 
@@ -917,6 +1183,8 @@ __all__ = [
     "BUILD_WARNINGS_FILENAME",
     "FLEET_SUMMARY_FILENAME",
     "FLEET_SUMMARY_SCHEMA_VERSION",
+    "FLEET_WHAT_NOW_FILENAME",
+    "FLEET_WHAT_NOW_SCHEMA_VERSION",
     "PROJECTS_DASHBOARD_SUBDIR",
     "PROJECT_REGISTRY_FILENAME",
     "ProjectBuildReport",
@@ -925,10 +1193,12 @@ __all__ = [
     "SelectedBuildResult",
     "UnknownProjectError",
     "build_fleet_summary",
+    "build_fleet_what_now",
     "build_project_state",
     "build_selected",
     "find_cwd_project_entry",
     "fleet_summary_path",
+    "fleet_what_now_path",
     "load_project_contexts",
     "mirror_selection_into_state_dir",
     "project_context_from_entry",

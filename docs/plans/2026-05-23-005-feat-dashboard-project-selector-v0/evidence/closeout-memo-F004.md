@@ -13,30 +13,11 @@ latest_audit_status: needs_changes
 
 This feature was closed under class `unknown` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as valid but manually remediated: both implementer rounds timed out, leaving partial work, and the final auditor correctly identified missing completion evidence plus test/lint gaps. The operator completed the bounded remediation locally, verified the F004 surfaces, then used the close-out workflow to clear `breaker:no_progress`, write the signoff envelope, and flip `features.json` `passes: true` for this feature.
 
-## Latest auditor envelope summary (lifted automatically)
-
-## Target context
-- Repo: DontPanic
-- Env: dev
-- Project: (none)
-- Command: 6 (see structured target_context.commands_run)
-
-[F004] Repo: DontPanic
-Env: dev
-Project: (none)
-
-Overall verdict: needs_changes. Implementer target context is correct: summary declares Repo/Env/Project, structured `target_context.env=dev`, `project=null`, and `commands_run=[]`; no forbidden command shapes.
-
-FINDING (high, correctness): The implementer audit is not a completion artifact. Evidence: `claude-implementer-F004-i1.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and no validation commands ran. Recommendation: rerun the implementer round to a real terminal signoff before treating F004 as complete.
-
-FINDING (medium, test_coverage): The new browser-side F004 render/filter/status...
-
 ## Rationale
 
 The F004 implementation was salvageable after the timed-out volleys: the core relevance table and fleet What Now substrate existed, but the browser coverage, ruff cleanup, and synthetic fixture depth were incomplete. The operator added direct Vitest coverage for `renderFleetWhatNowHTML`, `renderProjectWhatNowHTML`, `groupByProject`, `filterItemsForProject`, `buildStatusHeader`, and `fleet-what-now.json` loading; extended the eight-project fixture to assert needs_action, advisory/stale, ready, inactive, and missing-repo states; fixed ruff findings; and reran targeted plus full dashboard verification. The remaining audit concern about missing implementer signoff is accurately represented by this operator-resolved closeout, not by a false signed-off implementer artifact.
 
 ## Evidence references
 
-- `audit/signoff-2026-05-23-005-feat-dashboard-project-selector-v0.json`
 - `audit/codex-auditor-F004-i1.json`
 - `evidence/test-log-F004.txt`

@@ -11,6 +11,40 @@ import { setupDOM, setupFetchMock } from '../helpers/setup.js';
 import { renderWhatNowHTML } from '../../lib/what-now-logic.js';
 import fixture from '../fixtures/what-now.json' with { type: 'json' };
 
+const fleetSummary = {
+  worst_band: 'needs_action',
+  projects: [
+    {
+      name: 'spindine',
+      display_name: 'SpinDine',
+      health_band: 'needs_action',
+      warning_count: 1,
+      required_capability_ids: ['linear'],
+      referenced_adapter_categories: ['dashboard-realtime'],
+    },
+    {
+      name: 'glam',
+      display_name: 'Glam',
+      health_band: 'advisory',
+      warning_count: 0,
+      required_capability_ids: [],
+      referenced_adapter_categories: [],
+    },
+  ],
+};
+
+const fleetWhatNow = {
+  schema_version: '1.0.0',
+  captured_at: '2026-05-23T03:00:00Z',
+  capability_categories: { 'firebase-dashboard': 'dashboard-realtime', linear: 'pm-tool' },
+  items: [
+    { id: 'gate:spin', source: 'gate', band: 'needs_action', title: 'Spin gate', project_name: 'spindine', automatable: false, human_required_reason: 'approval' },
+    { id: 'arch:glam', source: 'architecture', band: 'advisory', title: 'Glam stale architecture', project_name: 'glam', automatable: true },
+    { id: 'capability:linear', source: 'capability', band: 'needs_action', title: 'Linear missing', automatable: false, human_required_reason: 'setup' },
+    { id: 'capability:firebase-dashboard', source: 'capability', band: 'advisory', title: 'Firebase missing', automatable: false, human_required_reason: 'setup' },
+  ],
+};
+
 function makePageEl() {
   const container = document.getElementById('page-container');
   const div = document.createElement('div');
@@ -256,6 +290,35 @@ describe('what-now: real page module registration', () => {
     registeredPage.onActivate({ whatNow: fixture });
     expect(el.querySelector('[data-state="missing"]')).toBeNull();
     expect(el.querySelectorAll('.wn-card').length).toBe(fixture.items.length);
+  });
+
+  it('renders the F004 fleet view when fleetWhatNow is present and All Projects is selected', () => {
+    registeredPage.init({
+      whatNow: fixture,
+      fleetWhatNow,
+      fleetSummary,
+      selectedProject: 'all',
+    });
+    const el = jarvisShim.getPageEl('what-now');
+    expect(el.querySelector('[data-status-header="1"]')).not.toBeNull();
+    expect(el.textContent).toContain('What Now — All Projects');
+    expect(el.querySelector('[data-project="spindine"]')).not.toBeNull();
+    expect(el.querySelector('[data-project="glam"]')).not.toBeNull();
+  });
+
+  it('renders the F004 project-filtered view when a project is selected', () => {
+    registeredPage.init({
+      whatNow: fixture,
+      fleetWhatNow,
+      fleetSummary,
+      selectedProject: 'spindine',
+    });
+    const el = jarvisShim.getPageEl('what-now');
+    expect(el.querySelector('[data-status-header="1"]')).not.toBeNull();
+    expect(el.querySelector('[data-action-id="gate:spin"]')).not.toBeNull();
+    expect(el.querySelector('[data-action-id="capability:linear"]')).not.toBeNull();
+    expect(el.querySelector('[data-action-id="capability:firebase-dashboard"]')).not.toBeNull();
+    expect(el.querySelector('[data-action-id="arch:glam"]')).toBeNull();
   });
 
   // ── Copy-command behavior — runs against the same shared page so the

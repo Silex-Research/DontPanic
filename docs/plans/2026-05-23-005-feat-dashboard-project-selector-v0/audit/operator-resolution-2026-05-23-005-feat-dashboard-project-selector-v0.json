@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
-  "feature_id": "F003",
-  "class": "implementation_defect",
+  "feature_id": "F004",
+  "class": "unknown",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-05-23T07:03:36Z"
+  "resolved_at": "2026-05-23T07:36:09Z"
 }

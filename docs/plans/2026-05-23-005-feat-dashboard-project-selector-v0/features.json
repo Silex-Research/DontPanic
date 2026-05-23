@@ -179,7 +179,7 @@
         },
         {
           "type": "file",
-          "uri": "evidence/closeout-memo.md",
+          "uri": "evidence/closeout-memo-F003.md",
           "note": "Operator close-out after manually remediating the valid stopped_no_progress findings."
         },
         {
@@ -211,12 +211,70 @@
         "Add a synthetic scale fixture with at least 8 registered projects mixing needs_action, advisory, ready, inactive, stale, and missing-repo states."
       ],
       "acceptance": "(1) All Projects groups What Now actions by project section headers. (2) Project selection filters What Now to the selected project. (3) Global blockers appear only when the typed relevance function marks them relevant to the selected project. (4) Skipped/malformed project warnings are persisted and visible in the dashboard. (5) Status header shows selected scope, health band, warning count, and data age. (6) Tests cover the relevance table, grouping, filtering, warnings, stale state, quiet state, synthetic 8-project scale fixture, and no-secret output.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard_relevance.py",
+          "note": "Typed F004 global-blocker relevance table and per-project declaration loader."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "Fleet What Now aggregation, per-project ActionItem tagging, build-warning persistence, capability category projection, and served-state mirroring."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
+          "note": "32-test Python coverage for relevance rules, project declarations, build warnings, no-secret output, same-id preservation, and synthetic eight-project state mix."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/what-now-logic.js",
+          "note": "Fleet/project What Now renderers, status header, grouping, and browser-side project relevance filtering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/what-now-logic.test.js",
+          "note": "Direct Vitest coverage for F004 grouping, filtering, status header, fleet rendering, and project rendering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/what-now-page.test.js",
+          "note": "Real What Now page routing coverage for fleet and project-filtered views."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F004-i1.json",
+          "note": "Iteration-1 implementer timed out and is recorded as blocked, not as completion evidence."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i1.json",
+          "note": "Iteration-1 auditor identified missing completion evidence, browser coverage gaps, synthetic fixture depth, and ruff findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F004.md",
+          "note": "Operator close-out after manually completing and verifying the timed-out partial implementation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F004.txt",
+          "note": "Operator verification: Python F004 tests, focused dashboard tests, ruff, full dashboard suite, py_compile, and sanitization."
+        }
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:36:09Z"
     },
     {
       "id": "F005",
