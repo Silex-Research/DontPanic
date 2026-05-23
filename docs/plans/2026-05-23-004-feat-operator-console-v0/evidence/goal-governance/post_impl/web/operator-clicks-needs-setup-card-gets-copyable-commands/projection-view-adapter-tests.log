@@ -1,0 +1,39 @@
+ ✓ tests/integration/mission-control-page.test.js (16 tests) 141ms
+ ✓ tests/integration/what-now-page.test.js (18 tests) 150ms
+ ✓ tests/integration/capabilities-page.test.js (26 tests) 190ms
+ ✓ tests/unit/capabilities-logic.test.js (26 tests) 15ms
+stdout | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when no config is wired up — static fallback preserved
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stderr | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when sdkLoader rejects (offline / SDK fetch failed)
+[Jarvis] Firebase SDK load failed — falling back to static state. Error: offline
+    at $HOME/Documents/GitHub/DontPanic/dashboard/tests/unit/config-firebase.test.js:345:49
+    at file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file://$HOME/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ ✓ tests/unit/config-firebase.test.js (30 tests) 16ms
+ ✓ tests/unit/security-logic.test.js (20 tests) 7ms
+ ✓ functions/tests/column-mapping.test.js (11 tests) 3ms
+ ✓ tests/unit/cloud-costs-logic.test.js (32 tests) 4ms
+ ✓ tests/unit/projection-adapter.test.js (41 tests) 6ms
+ ✓ tests/unit/realtime-actions.test.js (8 tests) 3ms
+ ✓ functions/tests/callables.test.js (12 tests) 4ms
+ ✓ tests/unit/formatters.test.js (27 tests) 6ms
+ ✓ functions/tests/mcp-bridge.test.js (12 tests) 5ms
+ ✓ tests/unit/mission-control-logic.test.js (29 tests) 7ms
+ ✓ tests/unit/settings-logic.test.js (12 tests) 2ms
+ ✓ functions/tests/auth.test.js (10 tests) 3ms
+ ✓ tests/unit/html-escape.test.js (8 tests) 1ms
+ ✓ tests/unit/firestore-rules.test.js (3 tests) 1ms
+
+ Test Files  26 passed (26)
+      Tests  584 passed (584)
+   Start at  23:21:34
+   Duration  1.76s (transform 373ms, setup 0ms, collect 997ms, tests 925ms, environment 7.85s, prepare 1.41s)

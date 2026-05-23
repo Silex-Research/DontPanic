@@ -5,6 +5,67 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.12.0 — 2026-05-22
+
+### Added
+- `plan.schema.json`: optional `requires_capabilities[]` array on the plan
+  frontmatter. Items are strings matching the capability id pattern
+  `^[a-z0-9][a-z0-9-]*$` with `uniqueItems: true`. The field is NOT in the
+  schema's `required` array — plans without it continue to validate
+  unchanged.
+- `models/plan_model.py`: matching `Plan.requires_capabilities: list[constr(...)] | None`
+  field with the same pattern so the Pydantic mirror stays in lockstep.
+
+### Motivation
+DontPanic plan `2026-05-22-002-feat-capability-status-v0` F003 introduces a
+lock-time advisory sidecar. `dontpanic plan lock` validates every
+`requires_capabilities[]` entry against the manifest registry (unknown id
+fails loud with a closest-match suggestion) and emits
+`evidence/required-capabilities.json` summarizing per-capability readiness.
+The sidecar is advisory — lock proceeds even when bound capabilities are
+not ready, so a plan can ship the binding without gating implementation on
+operator setup completion.
+
+### Notes
+- Strictly additive: every plan that validated under v1.11.0 continues to
+  validate under v1.12.0.
+- DontPanic-side change first. Operator cherry-picks into
+  `agent-conventions`, tags `v1.12.0`, and pushes the subtree separately.
+
+## 1.11.0 — 2026-05-22
+
+### Added
+- `capability.schema.json`: optional `setup_steps[]` array field on the
+  capability manifest. Each entry is `{id, what, automatable,
+  command_template?, verify_probe?, human_required_reason?}`. `id` follows
+  the `^[a-z0-9][a-z0-9_-]*$` pattern; `command_template`, `verify_probe`,
+  and `human_required_reason` accept `string | null`. The field is NOT in
+  the schema's `required` array — manifests without it continue to validate
+  unchanged.
+- `capability.schema.json`: `setup_steps[]` declares a non-standard
+  `uniqueBy: "id"` keyword in addition to standard `uniqueItems: true`. The
+  reference loader (`dontpanic_orchestrate.capabilities`) registers a
+  matching custom validator on `Draft202012Validator` so two entries
+  sharing the same `id` (but differing in other fields, which `uniqueItems`
+  does NOT catch) are rejected at the schema-validation step. Generic JSON
+  Schema validators will ignore the keyword as an unknown annotation —
+  consumers that need cross-item id-uniqueness must either reuse the
+  reference loader or implement the same check.
+
+### Motivation
+DontPanic plan `2026-05-22-002-feat-capability-status-v0` F001 introduces a
+machine-readable setup-step list so the forthcoming `dontpanic capabilities
+status` CLI (F002) can render automatable vs. human-required next actions.
+The change is strictly additive: the `schema_version` const stays `1.0.0`
+because every manifest validated under v1.10.0 still validates under v1.11.0.
+
+### Notes
+- Backward compatible: existing four checked-in manifests (without
+  `setup_steps`) continue to load with no test changes; `CapabilityManifest`
+  defaults the field to an empty tuple.
+- DontPanic-side change first. Operator cherry-picks into
+  `agent-conventions`, tags `v1.11.0`, and pushes the subtree separately.
+
 ## 1.9.1 — 2026-05-19
 
 ### Changed

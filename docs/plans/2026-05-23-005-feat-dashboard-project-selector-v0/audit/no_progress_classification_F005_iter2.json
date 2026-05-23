@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-23T07:59:31Z",
+  "feature_id": "F005",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [
+    "evidence/cwd-match-default-snapshot.json",
+    "evidence/cwd-match-default-cli-transcript.txt",
+    "evidence/fleet-what-now-8-project-snapshot.json"
+  ],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "security",
+      "issue_excerpt": "Security documentation overstates the no-target-repo-write boundary. Evidence: [DASHBOARD_PROJECT_SELECTOR.md]($HOME/Documents/GitHub/DontPanic/docs/…",
+      "rationale": "severity=medium, category=security — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "low",
+      "category": "test_coverage",
+      "issue_excerpt": "The 8-project synthetic fleet evidence does not demonstrate the richer state mix implied by the evidence harness and feature refs. Evidence: [fleet-summary-8-p…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

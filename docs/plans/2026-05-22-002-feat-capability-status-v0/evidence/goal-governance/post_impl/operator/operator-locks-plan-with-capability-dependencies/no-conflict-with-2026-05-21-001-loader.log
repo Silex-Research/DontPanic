@@ -1,0 +1,6 @@
+Evidence: sequencing against V0a plan 2026-05-21-001.
+
+V0b extends the existing `scripts/dontpanic_orchestrate/capabilities.py` module
+instead of creating a conflicting package. V0a shipped the loader and schema
+validation foundation; V0b layers setup_steps, status rendering, cache output,
+and lock sidecar behavior on top of that module.

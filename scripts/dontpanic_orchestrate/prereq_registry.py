@@ -34,11 +34,15 @@ import shutil
 import subprocess
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dontpanic_orchestrate.capabilities import CapabilityIndex
 
 
 class ActivationCondition(str, Enum):
@@ -65,13 +69,22 @@ class SeverityWhenInactive(str, Enum):
 
 
 class ProbeStatus(str, Enum):
-    """Effective status of a probe after activation + execution."""
+    """Effective status of a probe after activation + execution.
 
-    PASS = "pass"
+    ``PENDING`` semantics (plan 2026-05-22-002 F002): the probe is declared
+    but its implementation is not yet wired — the binding exists, but the
+    runtime answer is *unknown*. PENDING is NOT a synonym for ``FAIL`` or
+    ``blocked``; downstream capability-status computation treats it as an
+    informational marker. A capability that has only PENDING probes and
+    whose ``requires`` resolve is still ``ready``.
+    """
+
+    PASS = "pass"  # noqa: S105 - status enum value, not a credential.
     WARN = "warn"
     ADVISORY = "advisory"
     FAIL = "fail"
     OMIT = "omit"
+    PENDING = "pending"  # plan 2026-05-22-002 F002 — needs_probe_implementation
 
 
 @dataclass(frozen=True)
@@ -89,6 +102,7 @@ class PrereqProbe:
     activation_condition: ActivationCondition
     severity_when_inactive: SeverityWhenInactive
     timeout_s: float = 2.0
+    capability_id: str | None = None
 
     def __post_init__(self) -> None:
         # Strict-argv invariant — fix_command must be a list of strings,
@@ -105,9 +119,7 @@ class PrereqProbe:
         if isinstance(self.probe_command, list) and not all(
             isinstance(s, str) for s in self.probe_command
         ):
-            raise ValueError(
-                f"PrereqProbe {self.name!r}: probe_command list must contain str only"
-            )
+            raise ValueError(f"PrereqProbe {self.name!r}: probe_command list must contain str only")
 
 
 @dataclass(frozen=True)
@@ -124,6 +136,8 @@ class ProbeResult:
     activation_condition: str
     activation_resolved: bool
     elapsed_s: float
+    capability_id: str | None = None
+    setup_doc: str | None = None
 
 
 # ── activation context ────────────────────────────────────────────────────
@@ -157,7 +171,7 @@ class ActivationContext:
 def _detect_github_remote(repo_root: Path) -> bool:
     try:
         proc = subprocess.run(
-            ["git", "remote", "-v"],
+            ["git", "remote", "-v"],  # noqa: S607 - PATH-relative git invocation per Ruff S D001.
             cwd=str(repo_root),
             capture_output=True,
             text=True,
@@ -303,7 +317,7 @@ def _python_version_probe() -> tuple[bool, str]:
 def _git_user_email_probe() -> tuple[bool, str]:
     try:
         proc = subprocess.run(
-            ["git", "config", "--get", "user.email"],
+            ["git", "config", "--get", "user.email"],  # noqa: S607 - PATH-relative git invocation per Ruff S D001.
             capture_output=True,
             text=True,
             timeout=2.0,
@@ -320,7 +334,6 @@ def _git_user_email_probe() -> tuple[bool, str]:
 def _anthropic_api_network_probe() -> tuple[bool, str]:
     """Reachability probe — uses urllib so we don't need requests as a
     new dependency. Bounded by the per-probe timeout in the runner."""
-    import socket
     import urllib.error
     import urllib.request
 
@@ -335,7 +348,7 @@ def _anthropic_api_network_probe() -> tuple[bool, str]:
     except urllib.error.HTTPError as exc:
         # 4xx counts as reachable for a HEAD that the server refuses.
         return True, f"api.anthropic.com reachable (HTTP {exc.code})"
-    except (urllib.error.URLError, socket.timeout, TimeoutError, OSError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return False, f"api.anthropic.com unreachable: {exc}"
 
 
@@ -454,6 +467,7 @@ def default_probes() -> list[PrereqProbe]:
             required_for_profiles=_ALL_RUNTIME,
             activation_condition=ActivationCondition.ALWAYS,
             severity_when_inactive=SeverityWhenInactive.OMIT,
+            capability_id="agent-claude-cli",
         ),
         PrereqProbe(
             name="git-user-email",
@@ -536,6 +550,7 @@ def default_probes() -> list[PrereqProbe]:
             required_for_profiles=_FIREBASE,
             activation_condition=ActivationCondition.FIREBASE_TARGET_SET,
             severity_when_inactive=SeverityWhenInactive.OMIT,
+            capability_id="firebase-dashboard",
         ),
         PrereqProbe(
             name="gcloud",
@@ -551,6 +566,7 @@ def default_probes() -> list[PrereqProbe]:
             required_for_profiles=_FIREBASE,
             activation_condition=ActivationCondition.FIREBASE_TARGET_SET,
             severity_when_inactive=SeverityWhenInactive.OMIT,
+            capability_id="firebase-dashboard",
         ),
         PrereqProbe(
             name="sa-key",
@@ -566,6 +582,7 @@ def default_probes() -> list[PrereqProbe]:
             required_for_profiles=_FIREBASE,
             activation_condition=ActivationCondition.FIREBASE_TARGET_SET,
             severity_when_inactive=SeverityWhenInactive.OMIT,
+            capability_id="firebase-dashboard",
         ),
         PrereqProbe(
             name="discord-webhook",
@@ -581,6 +598,7 @@ def default_probes() -> list[PrereqProbe]:
             required_for_profiles=_DISCORD,
             activation_condition=ActivationCondition.ALWAYS,
             severity_when_inactive=SeverityWhenInactive.OMIT,
+            capability_id="discord-notify",
         ),
         PrereqProbe(
             name="sanitization-regex",
@@ -602,7 +620,10 @@ def default_probes() -> list[PrereqProbe]:
             probe_command=_openrouter_key_probe,
             version_constraint=None,
             fix_url="https://openrouter.ai/keys",
-            fix_command=["echo", "Set OPENROUTER_API_KEY=<your key from https://openrouter.ai/keys>"],
+            fix_command=[
+                "echo",
+                "Set OPENROUTER_API_KEY=<your key from https://openrouter.ai/keys>",
+            ],
             auto_install_safe=False,
             why_needed="OpenRouter API key for the openclaw executor.",
             required_for_profiles=_OPENCLAW,
@@ -624,10 +645,51 @@ def default_probes() -> list[PrereqProbe]:
     ]
 
 
-def default_profile_registry(probes: list[PrereqProbe] | None = None) -> ProfileRegistry:
-    """Build the pure-set profile -> probe-name registry."""
+def validate_capability_bindings(
+    probes: list[PrereqProbe],
+    *,
+    capability_index: CapabilityIndex | None = None,
+) -> None:
+    """Plan 2026-05-21-001 F002 — validate probe ``capability_id`` bindings.
+
+    Probes with a non-null ``capability_id`` must reference a manifest
+    that the F001 loader can resolve. If ``capability_index`` is not
+    supplied, the default manifests under ``<repo_root>/capabilities``
+    are loaded once.
+
+    Probes without ``capability_id`` are skipped — the field is optional
+    and legacy probes continue to work unchanged.
+    """
+
+    bound = [probe for probe in probes if probe.capability_id is not None]
+    if not bound:
+        return
+    if capability_index is None:
+        from dontpanic_orchestrate.capabilities import load_capabilities
+
+        capability_index = load_capabilities()
+    for probe in bound:
+        if capability_index.get(probe.capability_id) is None:
+            raise ValueError(
+                f"Probe {probe.name!r} declares unknown capability_id "
+                f"{probe.capability_id!r}; check capabilities/<id>.json manifests."
+            )
+
+
+def default_profile_registry(
+    probes: list[PrereqProbe] | None = None,
+    *,
+    capability_index: CapabilityIndex | None = None,
+) -> ProfileRegistry:
+    """Build the pure-set profile -> probe-name registry.
+
+    Also validates that any probe ``capability_id`` resolves through the
+    F001 manifest loader (plan 2026-05-21-001 F002). Authoring a probe
+    against a non-existent capability ID fails registry construction.
+    """
 
     probes = probes if probes is not None else default_probes()
+    validate_capability_bindings(probes, capability_index=capability_index)
     profiles: dict[str, set[str]] = {name: set() for name in PROFILE_NAMES}
     for probe in probes:
         for profile in probe.required_for_profiles:
@@ -690,7 +752,7 @@ def _run_single_probe(probe: PrereqProbe) -> tuple[bool, str, str | None]:
             inner_pool.shutdown(wait=False, cancel_futures=True)
     # list[str] — run via subprocess.run with shell=False
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 - trusted probe argv + shell=False default per Ruff S D001.
             probe.probe_command,
             capture_output=True,
             text=True,
@@ -763,6 +825,21 @@ def _effective_severity(
     return ProbeStatus.ADVISORY, "out-of-profile + advisory-by-default"
 
 
+def _load_default_capability_index_silent() -> CapabilityIndex | None:
+    """Best-effort load of the default ``capabilities/`` manifests.
+
+    Returns ``None`` if the manifests cannot be loaded (e.g. unit tests
+    running in an environment without the directory). The sweep degrades
+    by emitting ``capability_id`` without ``setup_doc`` in that case.
+    """
+    try:
+        from dontpanic_orchestrate.capabilities import load_capabilities
+
+        return load_capabilities()
+    except Exception:
+        return None
+
+
 def run_sweep(
     profile: str,
     probes: list[PrereqProbe] | None = None,
@@ -770,6 +847,7 @@ def run_sweep(
     profile_strict: bool = False,
     max_workers: int = 8,
     wall_clock_budget_s: float = 10.0,
+    capability_index: CapabilityIndex | None = None,
 ) -> SweepResult:
     """Run the profile-aware probe sweep.
 
@@ -778,6 +856,12 @@ def run_sweep(
 
     ``profile_strict=True`` promotes ``WARN`` -> ``FAIL`` under the
     selected profile.
+
+    ``capability_index`` (plan 2026-05-21-001 F002) supplies the
+    manifest registry used to populate ``setup_doc`` on probe results
+    bound to a capability. When omitted the default manifests are
+    loaded best-effort; failure to load degrades to ``setup_doc=None``
+    without breaking the sweep.
     """
 
     if profile not in PROFILE_NAMES:
@@ -787,6 +871,9 @@ def run_sweep(
     if activation_context is None:
         repo_root = Path(__file__).resolve().parents[2]
         activation_context = build_activation_context(repo_root)
+
+    if capability_index is None and any(p.capability_id for p in all_probes):
+        capability_index = _load_default_capability_index_silent()
 
     # Selection rules:
     #   1. In-profile probes always run.
@@ -806,11 +893,14 @@ def run_sweep(
         if in_profile:
             selected.append(probe)
             continue
-        if (
-            profile == "core"
-            and probe.severity_when_inactive is not SeverityWhenInactive.OMIT
-        ):
+        if profile == "core" and probe.severity_when_inactive is not SeverityWhenInactive.OMIT:
             selected.append(probe)
+
+    def _setup_doc_for(probe: PrereqProbe) -> str | None:
+        if probe.capability_id is None or capability_index is None:
+            return None
+        manifest = capability_index.get(probe.capability_id)
+        return manifest.setup_doc if manifest is not None else None
 
     sweep_start = time.monotonic()
     results: list[ProbeResult] = []
@@ -840,6 +930,8 @@ def run_sweep(
             activation_condition=probe.activation_condition.value,
             activation_resolved=activation_resolved,
             elapsed_s=elapsed,
+            capability_id=probe.capability_id,
+            setup_doc=_setup_doc_for(probe),
         )
 
     # NOTE: do NOT use ``with ThreadPoolExecutor(...) as pool`` here —
@@ -860,18 +952,17 @@ def run_sweep(
                         name=probe.name,
                         status=ProbeStatus.FAIL,
                         severity_reason=(
-                            f"probe exceeded sweep wall-clock budget "
-                            f"({wall_clock_budget_s}s)"
+                            f"probe exceeded sweep wall-clock budget ({wall_clock_budget_s}s)"
                         ),
                         version_found=None,
                         fix_url=probe.fix_url,
                         fix_command=list(probe.fix_command),
                         required_for_profiles=sorted(probe.required_for_profiles),
                         activation_condition=probe.activation_condition.value,
-                        activation_resolved=activation_context.resolves(
-                            probe.activation_condition
-                        ),
+                        activation_resolved=activation_context.resolves(probe.activation_condition),
                         elapsed_s=probe.timeout_s,
+                        capability_id=probe.capability_id,
+                        setup_doc=_setup_doc_for(probe),
                     )
                 )
     finally:
@@ -906,32 +997,42 @@ def envelope_for_sweep(
     import datetime as _dt
 
     if generated_at is None:
-        generated_at = (
-            _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        )
+        generated_at = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     return {
         "schema_version": SCHEMA_VERSION,
         "profile": sweep.profile,
         "generated_at": generated_at,
         "exit_code": sweep.exit_code(),
-        "prereq_probes": [
-            {
-                "name": p.name,
-                "status": p.status.value,
-                "severity_reason": p.severity_reason,
-                "version_found": p.version_found,
-                "fix_url": p.fix_url,
-                "fix_command": list(p.fix_command),
-                "required_for_profiles": list(p.required_for_profiles),
-                "activation_condition": p.activation_condition,
-                "activation_resolved": p.activation_resolved,
-                "elapsed_s": round(p.elapsed_s, 4),
-            }
-            for p in sweep.probes
-        ],
+        "prereq_probes": [_probe_envelope_item(p) for p in sweep.probes],
         "legacy_checks": legacy_checks if legacy_checks is not None else [],
     }
+
+
+def _probe_envelope_item(p: ProbeResult) -> dict[str, Any]:
+    """Render one ``ProbeResult`` into the pinned JSON envelope item.
+
+    ``capability_id`` and ``setup_doc`` (plan 2026-05-21-001 F002) are
+    appended only when the probe is bound to a capability manifest, so
+    legacy probes keep the original 10-key pinned shape.
+    """
+    item: dict[str, Any] = {
+        "name": p.name,
+        "status": p.status.value,
+        "severity_reason": p.severity_reason,
+        "version_found": p.version_found,
+        "fix_url": p.fix_url,
+        "fix_command": list(p.fix_command),
+        "required_for_profiles": list(p.required_for_profiles),
+        "activation_condition": p.activation_condition,
+        "activation_resolved": p.activation_resolved,
+        "elapsed_s": round(p.elapsed_s, 4),
+    }
+    if p.capability_id is not None:
+        item["capability_id"] = p.capability_id
+        if p.setup_doc is not None:
+            item["setup_doc"] = p.setup_doc
+    return item
 
 
 # ── rendering ─────────────────────────────────────────────────────────────

@@ -1,0 +1,8 @@
+Evidence: MCP mutation boundary.
+
+`capabilities.get_status` is read-only. It does not expose setup execution,
+does not write the status cache, and does not return secret values. Missing
+configuration appears as names/placeholders only.
+
+The F002 MCP tests cover success, narrowing, unknown id, profile filtering, and
+no-secret-value/no-mutation invariants.

@@ -1,0 +1,61 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T06:58:06Z",
+  "completed_at": "2026-05-23T07:02:02Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-1iohaiex target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 408239 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2631684,
+    "tokens_out": 14451,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 9 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and structured `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (medium, correctness): The selector’s own scope badge stays stale after changing projects. Evidence: `dashboard/core.js:153-159` handles selector changes by calling `setSelectedProject()`, but `setSelectedProject()` only updates state/URL/storage and the active page; a jsdom probe showed state becomes `spindine` while the selector badge still reads `Scope: Fleet`. Recommendation: re-render the selector, or update its scope badge, after `setSelectedProject()` and add an integration test.\n\nFINDING (medium, correctness): Selector options do not refresh for registry changes that only alter display labels. Evidence: `_fleetFingerprint()` at `dashboard/core.js:299-304` fingerprints only `name` and `active`, while option labels use `display_name` in `dashboard/lib/project-selector-logic.js:99-101`; a probe changing `spindine.display_name` left the visible option as `Spin & Dine`. Recommendation: include label-relevant fields in the fingerprint or re-render after every successful fleet summary refresh.\n\nFINDING (advisory, correctness): The implementer audit’s structured command list is inconsistent with its prose. Evidence: `target_context.commands_run` is `[]` and the summary says `Command: 0`, but the same summary lists two `npx vitest",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npx vitest run tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js",
+      "npx vitest run --configLoader runner tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js",
+      "TMPDIR=/tmp npx vitest run --configLoader runner tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js",
+      "node --check core.js",
+      "node --check lib/project-selector-logic.js",
+      "node --check lib/what-now-logic.js",
+      "node --check lib/capabilities-logic.js",
+      "node --check tests/integration/project-selector.test.js",
+      "node --check tests/unit/project-selector-logic.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The selector’s own scope badge stays stale after changing projects. Evidence: `dashboard/core.js:153-159` handles selector changes by calling `setSelectedProject()`, but `setSelectedProject()` only updates state/URL/storage and the active page; a jsdom probe showed state becomes `spindine` while the selector badge still reads `Scope: Fleet`. Recommendation: re-render the selector, or update its scope badge, after `setSelectedProject()` and add an integration test.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Selector options do not refresh for registry changes that only alter display labels. Evidence: `_fleetFingerprint()` at `dashboard/core.js:299-304` fingerprints only `name` and `active`, while option labels use `display_name` in `dashboard/lib/project-selector-logic.js:99-101`; a probe changing `spindine.display_name` left the visible option as `Spin & Dine`. Recommendation: include label-relevant fields in the fingerprint or re-render after every successful fleet summary refresh.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The implementer audit’s structured command list is inconsistent with its prose. Evidence: `target_context.commands_run` is `[]` and the summary says `Command: 0`, but the same summary lists two `npx vitest` side-effect commands. Recommendation: persist those commands in structured `target_context.commands_run`. Checks run: $ npx vitest run tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js t",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

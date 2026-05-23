@@ -49,6 +49,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from dontpanic_orchestrate import (
     active_supervisors,
@@ -1561,6 +1562,14 @@ def _doctor_main(argv: list[str]) -> int:
         ]
     if not args.architecture_drift_strict:
         exit_inputs = [r for r in exit_inputs if r.name != "architecture-drift"]
+    # Plan 2026-05-23-004 F005: dashboard readiness probes
+    # (dashboard-files, dashboard-cache, dashboard-state) are V0
+    # advisory-only — a missing dashboard cache must not escalate the
+    # canonical exit code. Strip them from the strict-exit computation
+    # unconditionally; the WARN text + remediation still renders.
+    exit_inputs = [
+        r for r in exit_inputs if not r.name.startswith("dashboard-")
+    ]
     return jd.compute_strict_exit(exit_inputs)
 
 
@@ -2053,6 +2062,15 @@ def _plan_lock_main(argv: list[str]) -> int:
         print(f"[plan lock] REFUSED (external_refs): {exc}", file=sys.stderr)
         return 3
 
+    # Plan 2026-05-22-002 F003 — pre-flight requires_capabilities validation.
+    # Unknown capability_id is operator-introduced config error (not env state),
+    # so it MUST block the status flip with a closest-match suggestion.
+    try:
+        _validate_requires_capabilities_at_lock(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — surfaced as REFUSED
+        print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
+        return 3
+
     try:
         plan_md = sufficiency_gate.lock_plan(
             plan_dir,
@@ -2070,16 +2088,19 @@ def _plan_lock_main(argv: list[str]) -> int:
 
     # Plan 2026-05-08-002 F002 — emit advisory applicable-skills sidecar.
     # Best-effort: matcher errors are surfaced as a one-line warning but
-    # NEVER block the lock outcome (D004: advisory only).
+    # NEVER block the lock outcome (D004: advisory only). Runs BEFORE
+    # the required-capabilities sidecar so the latter can read the
+    # ApplicabilityReport for F005 skill→capability inference.
+    applicability_report: Any | None = None
     try:
         loaded = plan_loader.load(plan_dir)
         skills_dir = _resolve_skills_dir(plan_dir)
         if skills_dir is not None:
-            report = skill_applicability.match(loaded, skills_dir)
-            sidecar = skill_applicability.write_report(report, plan_dir)
+            applicability_report = skill_applicability.match(loaded, skills_dir)
+            sidecar = skill_applicability.write_report(applicability_report, plan_dir)
             print(
-                f"[applicable-skills] {len(report.matches)} matches, "
-                f"{len(report.skipped)} skips written to "
+                f"[applicable-skills] {len(applicability_report.matches)} matches, "
+                f"{len(applicability_report.skipped)} skips written to "
                 f"{sidecar.relative_to(plan_dir)}"
             )
         else:
@@ -2087,6 +2108,18 @@ def _plan_lock_main(argv: list[str]) -> int:
     except Exception as exc:  # noqa: BLE001 — advisory matcher must never block
         print(
             f"[applicable-skills] WARN: matcher failed ({exc!r}); "
+            "lock succeeded — sidecar NOT written",
+            file=sys.stderr,
+        )
+
+    # Plan 2026-05-22-002 F003 + 2026-05-21-001 F005 — emit advisory
+    # required-capabilities sidecar. Best-effort: emission failures surface
+    # as a one-line warning but NEVER block lock outcome.
+    try:
+        _emit_required_capabilities_sidecar(plan_dir, applicability_report=applicability_report)
+    except Exception as exc:  # noqa: BLE001 — advisory emitter must never block
+        print(
+            f"[required-capabilities] WARN: sidecar emit failed ({exc!r}); "
             "lock succeeded — sidecar NOT written",
             file=sys.stderr,
         )
@@ -2348,8 +2381,26 @@ def _resolver_for_external_refs():
     return default_resolver()
 
 
+def _capability_index_for_external_refs():
+    """Plan 2026-05-21-001 F004 — lazy load of the capability manifest
+    index. Only invoked when at least one external_ref declares a
+    ``capability_id``, so plans with legacy refs (or no refs) don't pay
+    the manifest-load cost. Tests monkeypatch this seam via
+    :data:`_CAPABILITY_INDEX_FACTORY`."""
+
+    factory = _CAPABILITY_INDEX_FACTORY
+    if factory is not None:
+        return factory()
+    from dontpanic_orchestrate.capabilities import load_capabilities
+
+    return load_capabilities()
+
+
 # Test-injectable override. ``None`` falls through to ``default_resolver``.
 _RESOLVER_FACTORY = None
+
+# Test-injectable override. ``None`` falls through to ``load_capabilities``.
+_CAPABILITY_INDEX_FACTORY = None
 
 
 def _read_external_refs_from_frontmatter(plan_dir: Path) -> list:
@@ -2385,7 +2436,13 @@ def _validate_external_refs_at_lock(plan_dir: Path) -> None:
     plan.md (no full plan_loader.load — see
     :func:`_read_external_refs_from_frontmatter` for the rationale) and
     calls into :func:`external_refs_sync.validate_refs_for_lock`. Plans
-    with no refs return immediately."""
+    with no refs return immediately.
+
+    Plan 2026-05-21-001 F004 — when any ref declares ``capability_id``,
+    load the manifest index and pass it through so unknown or
+    incompatible capability IDs fail loud at lock-time. Plans with only
+    legacy refs (no ``capability_id``) skip the manifest load entirely
+    for backward compatibility."""
 
     from dontpanic_orchestrate import external_refs_sync as ers
 
@@ -2393,7 +2450,81 @@ def _validate_external_refs_at_lock(plan_dir: Path) -> None:
     if not refs:
         return
     resolver = _resolver_for_external_refs()
-    ers.validate_refs_for_lock(refs, resolver)
+    capability_index = None
+    if any(getattr(r, "capability_id", None) is not None for r in refs):
+        capability_index = _capability_index_for_external_refs()
+    ers.validate_refs_for_lock(refs, resolver, capability_index=capability_index)
+
+
+def _validate_requires_capabilities_at_lock(plan_dir: Path) -> None:
+    """Plan 2026-05-22-002 F003 — pre-lock validation hook.
+
+    Reads ``requires_capabilities[]`` from plan.md frontmatter and validates
+    each id against the manifest registry. Unknown ids raise
+    :class:`RequiresCapabilityUnknownError` with a closest-match suggestion;
+    callers translate that into a loud REFUSED. Plans without the field
+    return immediately so backward-compat plans pay no manifest-load cost."""
+
+    from dontpanic_orchestrate import capabilities_lock_sidecar as sidecar
+
+    required_ids = sidecar.read_requires_capabilities(plan_dir)
+    if not required_ids:
+        return
+    capability_index = _capability_index_for_external_refs()
+    sidecar.validate_requires_capabilities(required_ids, capability_index)
+
+
+def _emit_required_capabilities_sidecar(
+    plan_dir: Path, *, applicability_report: Any | None = None
+) -> None:
+    """Plan 2026-05-22-002 F003 + 2026-05-21-001 F005 — post-lock sidecar.
+
+    Emits ``evidence/required-capabilities.json`` when the plan declares
+    external_refs[], requires_capabilities[], a surface that hints at a
+    capability (F005), or a skill applicability report carries an
+    external_cli command bound to a manifest (F005). Returns silently
+    when none of those produce a binding. Prints the warning chip when
+    any required capability has status != ready. Lock proceeds
+    regardless — sidecar is advisory only."""
+
+    from dontpanic_orchestrate import capabilities_lock_sidecar as sidecar
+
+    external_refs = sidecar.read_external_refs(plan_dir)
+    # F005: surface or skill matches alone can trigger emission, so do not
+    # short-circuit here on empty refs+requires.
+
+    capability_index = _capability_index_for_external_refs()
+    # Resolver is needed for the scheme→capability_id fallback path. Lazy-
+    # load via the same factory the external_refs lock-time path uses so
+    # tests can monkeypatch a single seam. F005 inference treats a None
+    # resolver as "no adapter-registration probe" — surface/skill matches
+    # still surface, they just default to status=unknown rather than
+    # not_registered.
+    resolver = _resolver_for_external_refs() if external_refs else None
+
+    sidecar_path = sidecar.emit_required_capabilities(
+        plan_dir,
+        capability_index=capability_index,
+        resolver=resolver,
+        applicability_report=applicability_report,
+    )
+    if sidecar_path is None:
+        return
+
+    unready = sidecar.count_unready_capabilities(sidecar_path)
+    rel = sidecar_path.relative_to(plan_dir.resolve())
+    if unready > 0:
+        # Acceptance #5 specifies the chip text references the bare
+        # filename (``required-capabilities.json``) rather than the
+        # ``evidence/`` relative path; keep the full path on a follow-up
+        # line so operators can still copy/paste it.
+        print(
+            f"[required-capabilities] WARN: plan requires {unready} "
+            f"capabilities not ready (see {sidecar_path.name})"
+        )
+        print(f"[required-capabilities] sidecar: {rel}")
+    else:
+        print(f"[required-capabilities] sidecar written to {rel}")
 
 
 def _run_external_refs_at_close(plan_dir: Path, *, dry_run: bool) -> None:
@@ -2694,6 +2825,11 @@ Private-alpha command surface:
   smoke                          Mocked supervisor-plumbing smoke test (no real CLI)
   architecture regen|status|diff Codebase + plan snapshot + drift surface
   showcase regen                 Generate showcase artifacts for external repos
+  capabilities status            Inspect capability readiness vs. local env
+  capabilities setup             Plan or execute setup for one capability (--print-steps | --automate-safe --confirm)
+  reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
+  reconcile check                Compare current capability manifests against the install snapshot
+  dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
@@ -2778,6 +2914,23 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.showcase import showcase_main
 
         return showcase_main(raw[1:])
+    if raw and raw[0] == "capabilities":
+        sub = raw[1] if len(raw) > 1 else None
+        if sub == "setup":
+            from dontpanic_orchestrate.capabilities_setup import main as _capabilities_setup_main
+
+            return _capabilities_setup_main(raw[2:])
+        from dontpanic_orchestrate.capabilities_status import main as _capabilities_main
+
+        return _capabilities_main(raw[1:])
+    if raw and raw[0] == "reconcile":
+        from dontpanic_orchestrate.reconcile import reconcile_main as _reconcile_main
+
+        return _reconcile_main(raw[1:])
+    if raw and raw[0] == "dashboard":
+        from dontpanic_orchestrate.dashboard import main as _dashboard_main
+
+        return _dashboard_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

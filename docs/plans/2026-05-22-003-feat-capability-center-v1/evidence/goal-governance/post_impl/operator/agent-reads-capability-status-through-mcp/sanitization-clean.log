@@ -1,0 +1,5 @@
+Evidence: `python3 scripts/sanitization_check.py`.
+
+Sanitization passed during V1 close-out. Capability Center and
+`capabilities.get_status` expose missing secret/configuration names only, not
+secret values.

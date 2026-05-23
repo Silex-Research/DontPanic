@@ -1,0 +1,238 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Schema-additive `setup_steps[]` field + manifest backfill. Add `setup_steps[]` as an OPTIONAL array field to the existing `claude/shared/schemas/v1.0/capability.schema.json` (no new schema directory; no schema_version const change — the addition is backward-compatible so existing manifests continue to load unchanged). Per entry: `{id: string, what: string, automatable: bool, command_template: string|null, verify_probe: string|null, human_required_reason: string|null}`. Bump agent-conventions VERSION (minor) to flag the additive schema change in the upstream source of truth. Extend the existing `scripts/dontpanic_orchestrate/capabilities.py` module with a `SetupStep` Pydantic model and a `setup_steps: tuple[SetupStep, ...] = ()` field on `CapabilityManifest` (default-empty preserves load behavior for manifests without the field). Backfill `setup_steps[]` on the four checked-in manifests: firebase-dashboard ≥6 steps covering operator-Firebase blockers (firebase CLI install, gcloud auth, project select, rules deploy, Cloud Function deploy, MCP bridge run, smoke); linear ≥4 (PP binary emit, adapter register, token paste, mapping validate); discord-notify ≥2 (webhook URL configure, smoke test); agent-claude-cli ≥2 (install, auth). All `command_template` entries MUST use placeholders like `<YOUR_TOKEN>` — no real secrets in checked-in manifests. Do NOT create a new `capabilities/` package directory (would collide with the existing module). Do NOT create `claude/shared/schemas/v1.1/`.",
+      "steps": [
+        "Read scripts/dontpanic_orchestrate/capabilities.py + claude/shared/schemas/v1.0/capability.schema.json to confirm current shape.",
+        "Add optional `setup_steps[]` field to capability.schema.json: array of objects with required {id, what, automatable} and optional {command_template, verify_probe, human_required_reason}. `id` pattern `^[a-z0-9][a-z0-9_-]*$`. uniqueItems on id. NOT added to the schema's `required` array — additive only.",
+        "Bump agent-conventions VERSION minor (e.g. 1.X.0 -> 1.(X+1).0) with note that v1.0 capability schema gained additive optional `setup_steps[]` field; schema_version const stays 1.0.0 because the change is backward-compatible.",
+        "Extend capabilities.py: add `SetupStep` Pydantic model (extra=forbid, frozen, fields id+what+automatable required; command_template+verify_probe+human_required_reason optional with `str | None` default None). Add `setup_steps: tuple[SetupStep, ...] = ()` to `CapabilityManifest`. Update `__all__` to include `SetupStep`.",
+        "Backfill capabilities/firebase-dashboard.json with ≥6 setup_steps (operator-Firebase blockers concrete: install firebase CLI, install gcloud CLI, firebase login, gcloud auth login, target project select, deploy Firestore rules, deploy Cloud Functions, run MCP bridge, smoke). Backfill capabilities/linear.json with ≥4 (emit PP binary, register adapter, paste API token in ~/.dontpanic/adapters/linear.json, validate mapping). Backfill capabilities/discord-notify.json with ≥2 (configure webhook URL, smoke test). Backfill capabilities/agent-claude-cli.json with ≥2 (install claude CLI, authenticate). All command_template entries MUST use placeholders.",
+        "Verify existing tests in scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py still pass without modification (additive-only requirement).",
+        "Add fixture tests test_capabilities_setup_steps_f001.py: ≥10 cases covering load of manifest with setup_steps (happy path), load of manifest without setup_steps (backward-compat — defaults to empty tuple), schema rejection of malformed setup_step (missing required field, wrong automatable type, duplicate id), each of the four backfilled manifests parses, command_template placeholder regex check (no obvious-secret patterns like `sk-...`).",
+        "Run full orchestrator sweep + sanitization check."
+      ],
+      "acceptance": "(1) capability.schema.json gains optional `setup_steps[]` array field; `schema_version` const stays `1.0.0`. (2) Existing manifests (without setup_steps) continue to load with no test changes. (3) capabilities.py exposes `SetupStep` Pydantic model + `setup_steps` field on `CapabilityManifest`; `__all__` updated. (4) All four checked-in manifests have backfilled setup_steps[] with required minimums (Firebase ≥6, Linear ≥4, Discord ≥2, Claude ≥2). (5) agent-conventions VERSION bumped minor with changelog note. (6) Existing test_capabilities_f001.py passes unchanged. (7) New test_capabilities_setup_steps_f001.py has ≥10 cases. (8) Sanitization clean (no real secrets in command_template). (9) No new directory created (no `capabilities/` package; no `schemas/v1.1/`). (10) Full sweep at or above lock-time baseline.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:06:34Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/capability.schema.json",
+          "note": "Schema extended additively with optional setup_steps[]."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities.py",
+          "note": "Existing capability loader extended with SetupStep model and setup_steps field."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py",
+          "note": "F001 tests for setup_steps schema/model validation and manifest backfills."
+        },
+        {
+          "type": "file",
+          "uri": "../../../capabilities/firebase-dashboard.json",
+          "note": "Deepest setup_steps backfill for the current Firebase dashboard blocker."
+        },
+        {
+          "type": "file",
+          "uri": "../../../capabilities/linear.json",
+          "note": "Linear setup_steps backfill."
+        },
+        {
+          "type": "file",
+          "uri": "../../../capabilities/discord-notify.json",
+          "note": "Discord setup_steps backfill."
+        },
+        {
+          "type": "file",
+          "uri": "../../../capabilities/agent-claude-cli.json",
+          "note": "Claude CLI setup_steps backfill."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "note": "Iteration 1 implementer completion envelope after auditor i0 feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "note": "Auditor signed_off with no substantive findings."
+        },
+        {
+          "type": "file",
+          "uri": "audit/gate-state.json",
+          "note": "pre_impl auto-cleared and pre_merge operator-approved after signed_off verdict."
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "`dontpanic capabilities status` CLI + local cache + `ProbeStatus.PENDING`. New subcommand `dontpanic capabilities status [<id>] [--format=text|json] [--profile=<name>] [--no-cache-write]`. Reads manifests via the existing F001 loader (from V0a plan 2026-05-21-001 — already shipped), executes declared probes (using probe `capability_id` binding from V0a F002 where present; degrades gracefully when probes lack capability_id binding by treating unbound probes as informational). Adds `ProbeStatus.PENDING` enum value with semantics `needs_probe_implementation / unknown` — distinct from PASS/FAIL/WARN/ADVISORY and explicitly NOT a synonym for `blocked`. Per-capability status is computed from the CLOSED set `{ready, needs_setup, blocked, not_installed, optional}` — `pending` is NEVER a capability status (PENDING is a probe-state only). Output formats: text (table with ✓/✗/… badges, owner_boundary chip, configured/missing/next-actions lists) and JSON (stable agent-handoff shape with `automatable[]` + `human_required[]` arrays derived from `setup_steps[]`). Writes `~/.dontpanic/capabilities-status.json` cache on every run unless `--no-cache-write`. `--profile=<name>` filters to capabilities whose `default_in_profiles` contains <name> or that are required by manifests in the profile.",
+      "steps": [
+        "Add argparse subparser: `dontpanic capabilities status [<id>] [--format=text|json] [--profile=<name>] [--no-cache-write]`. Subcommand lives in a new sibling module `scripts/dontpanic_orchestrate/capabilities_status.py` (NOT a `capabilities/` package — would collide with the existing `capabilities.py` module).",
+        "Add `ProbeStatus.PENDING` enum value to the existing ProbeStatus type. Define semantics in code docstring + this plan's evidence: `PENDING = needs_probe_implementation / unknown — NOT a blocker; capability containing only PENDING probes can still be 'ready' if its requires resolve`.",
+        "Implement compute_capability_status(manifest, probe_results, requires_resolution) -> CapabilityStatus enum returning one of {ready, needs_setup, blocked, not_installed, optional}. Rule: `not_installed` if capability requires an adapter and no adapter registered. `optional` if not in any active profile. `blocked` if any non-PENDING probe FAILS. `needs_setup` if any `requires.{env,auth,files,config}` entry unresolved OR any non-PENDING probe WARNs. `ready` if all non-PENDING probes pass AND all requires resolve. PENDING probes alone NEVER produce `blocked`.",
+        "Implement text renderer: per-capability section with status badge + owner_boundary chips (core/adapter/operator), Configured list (resolved requires), Missing list (unresolved env/auth/files/config), Next actions list rendered from setup_steps[] (entries with automatable=true labeled `[automatable]`, automatable=false labeled `[human-required: <human_required_reason>]`). PENDING probes render as informational chip below the status badge: `probe pending: <probe_name> — <reason>`.",
+        "Implement JSON renderer: stable shape `{schema_version: '1.0.0', generated_at: ISO8601, capabilities: [{capability_id, status, owner_boundary, configured[], missing[], automatable[], human_required[], pending_probes[], next_actions[]}]}`. Document shape in `evidence/json-schema-doc.md`. Snapshot test pins shape.",
+        "Implement cache writer: `~/.dontpanic/capabilities-status.json` written after every status run unless --no-cache-write. Content identical to --format=json output. Cache file mode 0600 (operator-only).",
+        "Graceful degradation: if no probes have capability_id binding (V0a F002 not yet shipped), all capabilities still get computed status using requires-resolution alone + a single advisory note explaining the binding gap. Do NOT block on V0a F002 completion.",
+        "Add fixture tests test_capabilities_status_cli_f002.py: ≥10 cases covering all-ready, mixed-status (firebase-dashboard needs_setup + claude-cli ready), single-capability detail view (`status firebase-dashboard`), JSON shape stability via snapshot, profile filter, cache write, --no-cache-write flag, PENDING probe does NOT cause blocked status, PENDING probe renders as informational chip, automatable/human_required partition derives correctly from setup_steps, unknown capability_id positional arg exits non-zero with closest-match suggestion.",
+        "Run full orchestrator sweep + sanitization."
+      ],
+      "acceptance": "(1) `dontpanic capabilities status` runs against the four checked-in manifests + emits human-readable table. (2) `--format=json` emits stable JSON snapshot-pinned. (3) `dontpanic capabilities status firebase-dashboard` shows per-capability detail with ≥6 next_actions from setup_steps. (4) `ProbeStatus.PENDING` enum exists; capabilities with only PENDING probes still compute status `ready` (when requires resolve), NOT `blocked`. (5) PENDING probes render as informational chip in text output + `pending_probes[]` array in JSON. (6) `~/.dontpanic/capabilities-status.json` cache written after every run unless --no-cache-write; mode 0600. (7) `--profile=firebase-dashboard` filters to that profile's capabilities. (8) Unknown capability_id exits non-zero with closest-match suggestion. (9) Graceful degradation: works when V0a F002 (probe capability_id binding) not yet shipped. (10) ≥10 test cases. (11) Sanitization clean. (12) Sweep at or above baseline.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T17:36:34Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities_status.py",
+          "note": "Capability status CLI implementation; manual remediation included auth/config setup blockers and true profile filtering."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/prereq_registry.py",
+          "note": "ProbeStatus.PENDING enum semantics added as probe-state only, not capability status."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "Top-level dontpanic capabilities command routing."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py",
+          "note": "F002 tests cover status computation, cache mode, PENDING rendering, true profile filtering, and full JSON payload pinning."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/json-schema-doc.md",
+          "note": "Documented stable JSON handoff shape."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i1.json",
+          "note": "Second implementer iteration before stopped_no_progress terminal."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "Auditor identified three remaining findings that were remediated manually."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F002_iter2.json",
+          "note": "Stopped_no_progress classification; implementation_defect findings drove manual remediation."
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Plan-lock advisory required-capabilities sidecar. Add an OPTIONAL `requires_capabilities[]` array to the existing `claude/shared/schemas/v1.0/plan.schema.json` (additive — backward-compat for plans without it; absent or empty array = no advisory). `dontpanic plan lock` reads both `external_refs[]` (v1.10.0 substrate from plan 2026-05-20-001 F002, ALREADY landed in plan.schema.json with `kind`/`uri`/`sync` enum) AND the new `requires_capabilities[]`, validates each capability_id against the manifest registry (F001 loader), and emits `evidence/required-capabilities.json` summarizing per-capability readiness (sourced from the F002 capabilities-status cache or recomputed if cache absent). Lock output displays a warning chip when any required capability has status != `ready`. **Sidecar is advisory only — lock proceeds even when capabilities are not ready.** Unknown capability_id in `requires_capabilities[]` fails lock loud with closest-match suggestion (this IS a hard error — operator-introduced bad reference, not an environment state issue). This F003 depends MORE strictly on V0a F002+F003 substrate than F002 does because the sidecar binds capabilities to plans, which is the natural seam where probe + adapter capability_id binding pays off.",
+      "steps": [
+        "Add optional `requires_capabilities[]` field to claude/shared/schemas/v1.0/plan.schema.json. Items: string matching capability id pattern `^[a-z0-9][a-z0-9-]*$`. uniqueItems. NOT added to the schema's required array — additive only.",
+        "Bump agent-conventions VERSION minor again (or fold into F001's bump if delivered together) with changelog note.",
+        "Implement scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py: `emit_required_capabilities(plan_dir: Path, *, status_cache: Path | None = None) -> Path | None`. Reads plan frontmatter, extracts external_refs[] capability bindings (where the URI scheme maps to a registered adapter with capability_id) + requires_capabilities[], queries CapabilitiesStatus (F002 cache if present, else recomputes via load_capabilities + run_probes), writes evidence/required-capabilities.json with {plan_id, generated_at, required_capabilities: [{capability_id, status, missing[], next_actions[], owner_boundary, source: 'external_refs' | 'requires_capabilities'}]}. Returns Path to sidecar or None if plan has neither external_refs nor requires_capabilities.",
+        "Wire dontpanic plan lock CLI to call emit_required_capabilities after status flip. Validate each capability_id in requires_capabilities[] against the manifest registry BEFORE emitting sidecar; unknown id fails lock loud with closest-match suggestion.",
+        "Lock output displays warning chip when any required capability has status != ready: `WARN: plan requires N capabilities not ready (see required-capabilities.json)`. Lock proceeds regardless.",
+        "Sanitization: required-capabilities.json must NOT contain command_template strings from setup_steps (avoid leaking placeholder examples that look like secrets). Sidecar emits next_actions as human-readable summaries (`step.what` field), not raw commands.",
+        "Add fixture tests test_plan_lock_required_capabilities_f003.py: ≥8 cases including: (a) no external_refs and no requires_capabilities → no sidecar emitted, no warning. (b) requires_capabilities with ready capability → sidecar emitted, no warning. (c) requires_capabilities with not-ready capability → sidecar emitted, warning chip displayed, lock proceeds. (d) external_refs[].uri resolves to a registered adapter with capability_id → that capability_id pulled into sidecar with source='external_refs'. (e) Unknown capability_id in requires_capabilities → lock fails loud with closest-match suggestion. (f) Status cache absent → sidecar recomputes status. (g) Status cache present → sidecar reads from cache. (h) Plan with only external_refs whose URI doesn't map to a known adapter → sidecar emits empty required_capabilities array + advisory note.",
+        "Run full orchestrator sweep + sanitization."
+      ],
+      "acceptance": "(1) plan.schema.json supports optional `requires_capabilities[]`; backward-compat for plans without it. (2) Existing plans without requires_capabilities continue to lock without modification. (3) `dontpanic plan lock` validates each capability_id reference; unknown id fails loud with closest-match suggestion (this is a hard error). (4) `evidence/required-capabilities.json` emitted on every lock when plan has external_refs[] (with mapped adapters) OR requires_capabilities[]. (5) Lock output displays warning chip when any required capability has status != ready; lock proceeds (advisory only). (6) Sidecar JSON shape includes source field distinguishing external_refs vs requires_capabilities origin. (7) No raw command_template strings in sidecar output (sanitization invariant). (8) ≥8 test cases. (9) Sweep at or above baseline.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-22T19:05:20Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/plan.schema.json",
+          "note": "plan.schema.json gained optional requires_capabilities[] (additive)."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/schemas/v1.0/models/plan_model.py",
+          "note": "Pydantic mirror Plan.requires_capabilities field."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/VERSION",
+          "note": "agent-conventions bumped to 1.12.0."
+        },
+        {
+          "type": "file",
+          "uri": "../../../claude/shared/CHANGELOG.md",
+          "note": "1.12.0 changelog entry for additive requires_capabilities[]."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py",
+          "note": "emit_required_capabilities + validate_requires_capabilities; sanitized next_actions."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/external_refs_sync.py",
+          "note": "AdapterResolver.capability_id_for_uri() — scheme→capability_id helper for sidecar binding."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "_validate_requires_capabilities_at_lock pre-flight + _emit_required_capabilities_sidecar post-flip."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py",
+          "note": "14 fixture cases covering acceptance (a)–(h) plus CLI seam regressions."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "note": "Iteration 1 implementer completion envelope after auditor i0 feedback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "note": "Auditor signed_off with advisory-only environmental test reproduction note."
+        },
+        {
+          "type": "file",
+          "uri": "audit/terminal-state-iter1.json",
+          "note": "Terminal blocked only by patch-completeness after signed_off verdict."
+        }
+      ]
+    }
+  ]
+}

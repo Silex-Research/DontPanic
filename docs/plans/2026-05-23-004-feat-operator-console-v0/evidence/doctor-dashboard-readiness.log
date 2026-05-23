@@ -1,0 +1,38 @@
+[32m✓[0m python>=3.10           Python 3.10
+[32m✓[0m cli:gcloud             gcloud found
+[32m✓[0m cli:firebase           firebase found
+[32m✓[0m cli:jq                 jq found
+[32m✓[0m cli:git                git found
+[32m✓[0m target-project         environments.json dev=<firebase-project-id>
+[32m✓[0m secrets-dir            .secrets/ exists, gitignored
+[32m✓[0m sa-key-age             $HOME/.dontpanic/.secrets not present (no SA keys to age-check)
+[32m✓[0m py:pydantic            pydantic OK
+[32m✓[0m py:yaml                yaml OK
+[32m✓[0m py:firebase_admin      firebase_admin OK
+[32m✓[0m schemas                5 core schemas present at claude/shared/schemas/v1.0
+[32m✓[0m pydantic-models        plan/features/audit/environments/signoff models import clean
+[32m✓[0m parent-plan            parent orchestration plan validates
+[33m⚠[0m quota-caps:claude.max_20x.rolling_5h claude.max_20x.rolling_5h has signal (12689079 weighted_tokens_local_proxy) but no cap entry in $HOME/.jarvis/quota_caps.json
+  ↳ add to ~/.jarvis/quota_caps.json under "claude"."max_20x":
+        "rolling_5h": {
+          "cap": 100,
+          "unit": "percent_of_plan",
+          "_note": "requires `calibrate-claude --window rolling_5h --dashboard-pct N` before this cap is meaningful"
+        }
+[33m⚠[0m quota-caps:codex.plus.rolling_7d codex.plus.rolling_7d has signal (573930557 tokens_local_proxy) but no cap entry in $HOME/.jarvis/quota_caps.json
+  ↳ add to ~/.jarvis/quota_caps.json under "codex"."plus":
+        "rolling_7d": {
+          "cap": 717413196,
+          "unit": "tokens_local_proxy",
+          "_note": "tuned to ~1.25x observed rolling_7d; re-run `quota-caps init` to refresh"
+        }
+[33m⚠[0m quota-caps:calibration:claude.rolling_7d claude.rolling_7d calibration is stale (stamped 2026-04-30T23:22:17.495376+00:00, >7d old)
+  ↳ run: python -m dontpanic_orchestrate calibrate-claude --window rolling_7d --dashboard-pct N (sample claude.ai/settings/usage first)
+[32m✓[0m validate-plans-strict  58 locked plan(s) under docs/plans validate clean against plan.schema.json
+[33m⚠[0m architecture-drift     stale_major — 99/381 files differ (26.0%): added=79 removed=0 modified=20
+  ↳ python -m dontpanic_orchestrate architecture regen
+[32m✓[0m dashboard-files        static dashboard present at dashboard/index.html
+[32m✓[0m dashboard-cache        what-now cache present at $HOME/.dontpanic/dashboard/what-now.json
+[32m✓[0m dashboard-state        dashboard/state has state-snapshot.json + what-now.json
+
+[32m✓[0m 22/22 checks passed — DontPanic is ready (4 warnings)

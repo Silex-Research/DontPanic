@@ -1,0 +1,7 @@
+Evidence: read-only MCP `capabilities.get_status`.
+
+The MCP server registers `capabilities.get_status` using the dotted tool name
+from the feature acceptance contract. The tool returns the same JSON envelope
+shape as `dontpanic capabilities status --format=json`, supports optional
+`capability_id` narrowing, supports profile filtering, and returns a clear
+`unknown_capability` error for unknown ids.

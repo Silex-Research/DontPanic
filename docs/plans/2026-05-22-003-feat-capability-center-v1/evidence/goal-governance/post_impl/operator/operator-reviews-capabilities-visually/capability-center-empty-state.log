@@ -1,0 +1,6 @@
+Evidence: Capability Center empty state.
+
+When `dashboard/state/capabilities-status.json` is absent, the page renders a
+useful empty state rather than failing bootstrap. The empty state points the
+operator at `dontpanic capabilities status --format=json` and does not imply
+Firebase setup is required.

@@ -1,0 +1,6 @@
+Evidence: V0b F003 required-capabilities sidecar tests.
+
+Plans that declare neither `external_refs[]` nor `requires_capabilities[]` do
+not emit `evidence/required-capabilities.json`. This prevents false advisories
+on ordinary plans and keeps the sidecar opt-in through capability dependency
+metadata.

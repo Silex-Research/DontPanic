@@ -1,0 +1,227 @@
+<!doctype html><html><head><meta charset="utf-8"><title>status header — alpha-app (focused project view)</title></head><body><pre class="status-header-payload">{
+  "scope": "project",
+  "selected": "alpha-app",
+  "health_band": "advisory",
+  "warning_count": 1,
+  "data_age_seconds": 60,
+  "captured_at": "2026-05-23T00:00:00Z"
+}</pre>
+    <div class="wn-status-header" data-status-header="1" data-scope="project">
+      <span class="wn-status-chip wn-status-chip--scope">
+        
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  
+      </span>
+      <span class="wn-status-chip wn-status-chip--band wn-status-chip--yellow">
+        <span class="wn-status-chip-label">ADVISORY</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--warnings">
+        <span class="wn-status-chip-label">warnings</span>
+        <span class="wn-status-chip-value">1</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--age">
+        <span class="wn-status-chip-label">data age</span>
+        <span class="wn-status-chip-value">60s</span>
+      </span>
+    </div>
+  
+    <div class="wn-layout wn-layout--project">
+      
+    <div class="wn-status-header" data-status-header="1" data-scope="project">
+      <span class="wn-status-chip wn-status-chip--scope">
+        
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  
+      </span>
+      <span class="wn-status-chip wn-status-chip--band wn-status-chip--yellow">
+        <span class="wn-status-chip-label">ADVISORY</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--warnings">
+        <span class="wn-status-chip-label">warnings</span>
+        <span class="wn-status-chip-value">1</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--age">
+        <span class="wn-status-chip-label">data age</span>
+        <span class="wn-status-chip-value">60s</span>
+      </span>
+    </div>
+  
+      
+    <div class="wn-layout">
+      <section class="panel wn-header-panel">
+        <div class="wn-header-row">
+          <h2>What Now</h2>
+          <div class="wn-header-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </div>
+          <div class="wn-header-meta">
+    <span class="wn-meta-item"><span class="wn-meta-label">schema</span><span class="wn-meta-value">1.0.0</span></span>
+    <span class="wn-meta-item"><span class="wn-meta-label">captured</span><span class="wn-meta-value">2026-05-23T00:00:00Z</span></span>
+  </div>
+        </div>
+        <div class="wn-summary-strip">
+    <span class="wn-summary-chip wn-summary-chip--red">
+      <span class="wn-summary-chip-value">0</span>
+      <span class="wn-summary-chip-label">Needs action</span>
+    </span>
+  
+    <span class="wn-summary-chip wn-summary-chip--yellow">
+      <span class="wn-summary-chip-value">3</span>
+      <span class="wn-summary-chip-label">Advisory</span>
+    </span>
+  
+    <span class="wn-summary-chip wn-summary-chip--accent">
+      <span class="wn-summary-chip-value">1</span>
+      <span class="wn-summary-chip-label">Info</span>
+    </span>
+  
+    <span class="wn-summary-chip wn-summary-chip--green">
+      <span class="wn-summary-chip-value">0</span>
+      <span class="wn-summary-chip-label">Ready</span>
+    </span>
+  </div>
+      </section>
+      
+    <section class="panel wn-band-panel wn-band-panel--yellow" data-band="advisory">
+      <div class="wn-band-header">
+        <span class="wn-band-badge wn-band-badge--yellow">ADVISORY</span>
+        <span class="wn-band-count">3 items</span>
+        <span class="wn-band-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </span>
+      </div>
+      <div class="wn-cards">
+    <article class="wn-card wn-card--yellow"
+             data-action-id="reconcile:missing_snapshot"
+             data-source="reconcile"
+             data-band="advisory">
+      <header class="wn-card-header">
+        <span class="wn-source-chip wn-source-chip--reconcile">Reconcile</span>
+        <span class="wn-card-title">Install snapshot is missing</span>
+        <span class="wn-role-chip wn-role-chip--human" title="human-required — no baseline to compare against">human-required</span>
+      </header>
+      
+      
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic reconcile baseline --yes</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic reconcile baseline --yes" aria-label="Copy command to clipboard">copy</button>
+    </div>
+  
+      
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">&lt;HOME&gt;/install-snapshot.json</code>
+    </div>
+  
+      <footer class="wn-card-footer">
+        <span class="wn-card-id" title="reconcile:missing_snapshot">reconcile:missing_snapshot</span>
+        <span class="wn-card-updated">updated 2026-05-23T07:55:25Z</span>
+      </footer>
+    </article>
+  
+    <article class="wn-card wn-card--yellow"
+             data-action-id="architecture:absent"
+             data-source="architecture"
+             data-band="advisory">
+      <header class="wn-card-header">
+        <span class="wn-source-chip wn-source-chip--architecture">Architecture</span>
+        <span class="wn-card-title">Architecture snapshot is missing</span>
+        <span class="wn-role-chip wn-role-chip--auto" title="An agent or script can run this without human judgement">automatable</span>
+      </header>
+      
+      
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic architecture regen</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic architecture regen" aria-label="Copy command to clipboard">copy</button>
+    </div>
+  
+      
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">/private&lt;HOME&gt;/fixtures/alpha-app/docs/architecture/architecture.json</code>
+    </div>
+  
+      <footer class="wn-card-footer">
+        <span class="wn-card-id" title="architecture:absent">architecture:absent</span>
+        <span class="wn-card-updated">updated 2026-05-23T07:55:25Z</span>
+      </footer>
+    </article>
+  
+    <article class="wn-card wn-card--yellow"
+             data-action-id="architecture:build-warning:alpha-app:0"
+             data-source="architecture"
+             data-band="advisory">
+      <header class="wn-card-header">
+        <span class="wn-source-chip wn-source-chip--architecture">Architecture</span>
+        <span class="wn-card-title">Build warning (Alpha App)</span>
+        <span class="wn-role-chip wn-role-chip--human" title="human-required — review build warning">human-required</span>
+      </header>
+      <div class="wn-card-detail">capabilities status skipped: capabilities directory not found: /private&lt;HOME&gt;/fixtures/alpha-app/capabilities</div>
+      
+      
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">&lt;HOME&gt;/dashboard/projects/alpha-app/build-warnings.json</code>
+    </div>
+  
+      <footer class="wn-card-footer">
+        <span class="wn-card-id" title="architecture:build-warning:alpha-app:0">architecture:build-warning:alpha-app:0</span>
+        <span class="wn-card-updated">updated 2026-05-23T07:55:25Z</span>
+      </footer>
+    </article>
+  </div>
+    </section>
+  
+    <section class="panel wn-band-panel wn-band-panel--accent" data-band="info">
+      <div class="wn-band-header">
+        <span class="wn-band-badge wn-band-badge--accent">INFO</span>
+        <span class="wn-band-count">1 item</span>
+        <span class="wn-band-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </span>
+      </div>
+      <div class="wn-cards">
+    <article class="wn-card wn-card--accent"
+             data-action-id="supervisor:29534:2026-05-23-005-feat-dashboard-project-selector-v0"
+             data-source="supervisor"
+             data-band="info">
+      <header class="wn-card-header">
+        <span class="wn-source-chip wn-source-chip--supervisor">Supervisor</span>
+        <span class="wn-card-title">Supervisor active on 2026-05-23-005-feat-dashboard-project-selector-v0</span>
+        <span class="wn-role-chip wn-role-chip--auto" title="An agent or script can run this without human judgement">automatable</span>
+      </header>
+      <div class="wn-card-detail">started_at=2026-05-23T07:38:19Z, env=dev</div>
+      
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic ps</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic ps" aria-label="Copy command to clipboard">copy</button>
+    </div>
+  
+      
+      <footer class="wn-card-footer">
+        <span class="wn-card-id" title="supervisor:29534:2026-05-23-005-feat-dashboard-project-selector-v0">supervisor:29534:2026-05-23-005-feat-dashboard-project-selector-v0</span>
+        <span class="wn-card-updated">updated 2026-05-23T07:55:25Z</span>
+      </footer>
+    </article>
+  </div>
+    </section>
+  
+    </div>
+  
+    </div>
+  </body></html>

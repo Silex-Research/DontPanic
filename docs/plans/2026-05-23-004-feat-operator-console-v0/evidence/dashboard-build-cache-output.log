@@ -1,0 +1,25 @@
+dashboard build: state export skipping malformed plan 2026-05-03-002-infra-personal-openclaw-axiom-jarvis: target_env must be one of ['dev', 'prod', 'staging']; got 'local'
+dashboard build: state export skipping malformed plan 2026-05-06-001-infra-runtime-evidence-harness: plan.md missing required `## Target` section. Add a section like:
+
+## Target
+
+```yaml
+target_env: dev
+target_project: your-project-id
+```
+dashboard build: state export skipping malformed plan 2026-05-06-002-feat-post-impl-completion-audit: task_id 'post-impl-completion-audit' != plan id '2026-05-06-002-feat-post-impl-completion-audit'
+dashboard build: state export skipping malformed plan 2026-05-06-003-fix-live-cross-vendor-goal-audit-dogfood: task_id 'live-cross-vendor-goal-audit-dogfood' != plan id '2026-05-06-003-fix-live-cross-vendor-goal-audit-dogfood'
+dashboard build: state export skipping malformed plan 2026-05-07-001-fix-completion-dispatch-codex-stream-parser: task_id 'completion-dispatch-codex-stream-parser' != plan id '2026-05-07-001-fix-completion-dispatch-codex-stream-parser'
+dashboard build: state export skipping malformed plan 2026-05-07-002-fix-cross-vendor-dogfood-fixture-runtime-artifacts: task_id 'cross-vendor-dogfood-fixture-runtime-artifacts' != plan id '2026-05-07-002-fix-cross-vendor-dogfood-fixture-runtime-artifacts'
+dashboard build: state export skipping malformed plan 2026-05-11-001-infra-state-projection-adapters-meta: 1 validation error for Features
+features.2.evidence_refs.0.type
+  Input should be 'screenshot', 'log', 'test_output', 'diff', 'audit_json', 'commit', 'url' or 'file' [type=enum, input_value='external_plan', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+dashboard build: state export skipping malformed plan 2026-05-22-001-infra-external-capability-operations-roadmap-v0: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/features.json
+dashboard build: state export skipping malformed plan 2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/features.json
+dashboard build: state export skipping malformed plan 2026-05-23-003-infra-visual-operating-console-roadmap-v0: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/features.json
+wrote 9 state files to $HOME/Documents/GitHub/DontPanic/dashboard/state
+wrote what-now cache to $HOME/.dontpanic/dashboard/what-now.json
+wrote capabilities cache to $HOME/.dontpanic/capabilities-status.json
+wrote reconcile status to $HOME/Documents/GitHub/DontPanic/dashboard/state/reconcile-status.json
+wrote architecture status to $HOME/Documents/GitHub/DontPanic/dashboard/state/architecture-status.json

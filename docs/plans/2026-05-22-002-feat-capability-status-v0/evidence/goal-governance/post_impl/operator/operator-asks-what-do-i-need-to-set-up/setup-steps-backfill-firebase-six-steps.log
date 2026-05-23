@@ -1,0 +1,15 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+firebase-dashboard rendered nine setup steps:
+- install_firebase_cli
+- install_gcloud_cli
+- firebase_login
+- gcloud_auth_login
+- select_target_project
+- deploy_firestore_rules
+- deploy_cloud_functions
+- run_mcp_bridge
+- smoke_test
+
+This exceeds the objective contract requirement of at least six setup steps and
+includes the operator-owned Firebase blockers.

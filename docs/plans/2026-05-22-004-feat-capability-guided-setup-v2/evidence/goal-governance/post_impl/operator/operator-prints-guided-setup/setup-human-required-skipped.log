@@ -1,0 +1,9 @@
+Evidence: F001/F002 setup-runner behavior.
+
+The print-only surface labels `firebase_login`, `gcloud_auth_login`, and
+`smoke_test` as human-required and includes the manifest-provided reason text.
+
+The guarded runner preserves that boundary: human-required setup steps are
+reported as `skipped_human_required` and never passed to the command runner.
+Regression coverage lives in `test_capabilities_setup_runner_f002.py` and
+`test_capabilities_setup_evidence_f003.py`.

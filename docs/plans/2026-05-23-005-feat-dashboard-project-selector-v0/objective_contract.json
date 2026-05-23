@@ -1,0 +1,129 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The Visual Operating Console roadmap shipped a local operator dashboard for one active repo. This follow-on makes the same local dashboard usable across many registered repos/apps/platforms while preserving the command-emitter and no-mutation invariant.",
+  "user_journeys": [
+    {
+      "name": "operator-with-three-projects-opens-all-projects-dashboard",
+      "description": "An operator who has registered DontPanic, an app repo, and a backend repo opens the dashboard and sees All Projects as the default with grouped What Now actions and warning counts by project.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "three_projects_registered",
+        "dashboard_served",
+        "all_projects_selected",
+        "project_grouped_actions_visible"
+      ],
+      "acceptance_signals": [
+        "Fleet summary lists all registered project names and display names",
+        "Project selector defaults to All Projects when multiple projects exist",
+        "What Now groups actions by project",
+        "Status header identifies Fleet scope and warning counts"
+      ]
+    },
+    {
+      "name": "operator-selects-one-project-and-sees-scoped-state",
+      "description": "An operator selects one project from the dashboard selector and sees What Now and Status scoped to that project, with only relevant global blockers included.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "project_selected",
+        "project_actions_filtered",
+        "global_blockers_filtered",
+        "selection_persisted"
+      ],
+      "acceptance_signals": [
+        "Selected project survives reload through local browser state",
+        "Project view excludes unrelated project actions",
+        "Relevant global capability or install blockers still render",
+        "Visible sections declare Scope: Project or Scope: Global"
+      ]
+    },
+    {
+      "name": "agent-reads-fleet-summary-without-scraping-html",
+      "description": "An agent reads the fleet summary and project cache files to summarize which repo needs human work, without parsing the dashboard UI.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "fleet_summary_written",
+        "project_caches_written",
+        "agent_reads_json",
+        "no_secret_values"
+      ],
+      "acceptance_signals": [
+        "Fleet summary contains schema_version, project names, health bands, warning counts, and cache paths",
+        "Per-project what-now cache contains project_name fields",
+        "Cache files do not contain secret values",
+        "JSON shape is covered by snapshot or schema-style tests"
+      ]
+    },
+    {
+      "name": "operator-in-unregistered-single-repo-gets-current-behavior",
+      "description": "A user who installs DontPanic and runs the dashboard from one unregistered repo still gets a useful current-repo dashboard without first configuring a project registry.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "no_project_registry",
+        "dashboard_served",
+        "current_repo_mode",
+        "no_registry_blocker"
+      ],
+      "acceptance_signals": [
+        "Dashboard serve/build works when ~/.dontpanic/projects.json is absent",
+        "Selector does not force registration for single-repo use",
+        "The UI shows how to register the repo for future multi-project use",
+        "Doctor/init do not treat missing project registry as an error"
+      ]
+    },
+    {
+      "name": "operator-sees-malformed-project-warning-in-dashboard",
+      "description": "A project with a malformed plan or skipped state source no longer hides the problem in terminal output only; the dashboard Status and All Projects view show an actionable warning.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "project_has_build_warning",
+        "warning_persisted",
+        "status_header_warns",
+        "exact_remediation_visible"
+      ],
+      "acceptance_signals": [
+        "Build warning JSON persists skipped/malformed source details without secrets",
+        "Status header warning count increments",
+        "All Projects groups the warning under the affected project",
+        "The visible remediation includes an exact command when available"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "project-registry-tests.log",
+    "dashboard-project-cli-tests.log",
+    "project-selector-ui-tests.log",
+    "what-now-project-scope-tests.log",
+    "dashboard-build-warnings-tests.log",
+    "fleet-summary-snapshot.json",
+    "fleet-summary-8-project-snapshot.json",
+    "project-selector-all-projects-snapshot.html",
+    "project-selector-single-project-snapshot.html",
+    "single-repo-fallback-log.txt",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No Firebase realtime dependency",
+    "No remote approve or dispatch",
+    "No dashboard mutation of project registry or plan state",
+    "No inline configuration editing",
+    "No Architecture tab implementation",
+    "No Plans tab productization",
+    "No Evidence tab productization",
+    "No hosted dashboard or control plane",
+    "No generated dashboard files written into target repos by default",
+    "No secret values in cache, warnings, or UI"
+  ],
+  "completion_test": "With two fixture projects and the DontPanic repo registered, `dontpanic dashboard serve` defaults to All Projects unless cwd matches a registered project, renders a project selector, groups What Now actions by project, shows Fleet-scope Status with warning counts, and writes agent-readable fleet/project JSON caches. Selecting one project filters What Now and Status to that project while preserving relevant global blockers. An 8-project synthetic fleet exercises grouping and sorting. Running without a project registry still serves the current-repo dashboard. Firebase is not required and the dashboard does not mutate state."
+}

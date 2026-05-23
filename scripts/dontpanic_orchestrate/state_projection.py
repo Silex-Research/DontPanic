@@ -37,11 +37,15 @@ Filter semantics:
                 are scoped to that single plan; supervisors + quota
                 are global and unfiltered.
 
-Failure policy v0: fail-fast on malformed plans. plan_loader raises
-on invalid frontmatter / features; we let that bubble up. F004 CLI
-may add `--ignore-malformed` later. Missing optional artifacts
+Failure policy v0: fail-fast on malformed plans by default. plan_loader
+raises on invalid frontmatter / features; we let that bubble up so
+strict callers (CI gates, state_cli) see the failure. Callers that
+serve operator-local UX (dashboard build) may opt into per-plan
+tolerance via ``tolerate_malformed_plans=True`` — see the gather()
+signature — which skips offending plans with a callback so one bad
+plan never zeros out the entire snapshot. Missing optional artifacts
 (INBOX.md, decisions.jsonl, gate-state.json, quota_state.json) are
-handled gracefully — no error, just empty contributions.
+always handled gracefully — no error, just empty contributions.
 """
 
 from __future__ import annotations
@@ -50,7 +54,8 @@ import datetime as dt
 import json
 import logging
 import socket
-from collections.abc import Iterable
+import sys as _sys
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Final
 
@@ -61,8 +66,6 @@ from dontpanic_orchestrate import (
     inbox,
     plan_loader,
 )
-
-import sys as _sys
 
 # Pydantic models live in the agent-conventions subtree.
 _SUBTREE_MODELS = (
@@ -86,6 +89,8 @@ from state_snapshot_model import (  # noqa: E402
     RedactLevel,
     StateSnapshot,
     Streams,
+)
+from state_snapshot_model import (  # noqa: E402
     SupervisorEntry as SnapshotSupervisorEntry,
 )
 
@@ -142,18 +147,33 @@ def gather(
     captured_at: dt.datetime | None = None,
     dontpanic_version: str | None = None,
     quota_state_path: Path | None = None,
+    tolerate_malformed_plans: bool = False,
+    on_malformed_plan: Callable[[Path, Exception], None] | None = None,
 ) -> StateSnapshot:
     """Build a StateSnapshot from canonical local state.
 
     Pure-read: no writes. See module docstring for stream-by-stream
     source-of-truth.
 
+    Args (selected):
+        tolerate_malformed_plans: when True, plan_loader failures on a
+            single plan_dir are caught and that plan is skipped instead
+            of aborting the snapshot. Default False preserves the
+            strict CI/state_cli contract. Dashboard build opts in so
+            an unrelated bad plan (e.g. legacy ``target_env: local``)
+            cannot zero out the operator's state-snapshot.json.
+        on_malformed_plan: optional callback invoked as
+            ``on_malformed_plan(plan_dir, exc)`` whenever
+            ``tolerate_malformed_plans`` swallows a load failure.
+            Useful for surfacing the skipped plan as a build warning.
+
     Raises:
         ValueError: invalid redact_level or unknown stream name in
             `include`.
         FileNotFoundError / pydantic.ValidationError: when a plan
             directory contains malformed plan.md or features.json
-            (bubbled from plan_loader.load).
+            and ``tolerate_malformed_plans`` is False (bubbled from
+            plan_loader.load).
     """
     if redact_level not in _VALID_REDACT_LEVELS:
         raise ValueError(
@@ -186,7 +206,20 @@ def gather(
 
     if any(s in include_set for s in ("plans", "gates", "inbox", "decisions", "evidence_refs")):
         for plan_dir in plan_dirs:
-            loaded = plan_loader.load(plan_dir)
+            try:
+                loaded = plan_loader.load(plan_dir)
+            except Exception as exc:  # noqa: BLE001 — opt-in tolerance only
+                if not tolerate_malformed_plans:
+                    raise
+                if on_malformed_plan is not None:
+                    on_malformed_plan(plan_dir, exc)
+                else:
+                    _LOG.warning(
+                        "state_projection.gather skipping malformed plan %s: %s",
+                        plan_dir,
+                        exc,
+                    )
+                continue
             if "plans" in include_set:
                 plans_out.append(_project_plan(loaded))
             if "gates" in include_set:

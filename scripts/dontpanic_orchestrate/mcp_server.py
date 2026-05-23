@@ -5,7 +5,7 @@ runtime calls. The server speaks JSON-RPC 2.0 over stdio (default
 transport). Phase B is local-only by design (D003): no HTTP listener, no
 ``--remote`` flag, no authentication scaffolding.
 
-Tool surface (D002 — exactly 6 tools, NO ``intake``):
+Tool surface (D002 base surface plus later read-only projections; NO ``intake``):
 
   read-only
     list_projects   — wraps :func:`projects_registry.load_registry`
@@ -14,6 +14,10 @@ Tool surface (D002 — exactly 6 tools, NO ``intake``):
                       :func:`gate_pause.evaluate`
     read_evidence   — returns evidence file contents for a registered
                       plan + iteration. Refuses out-of-tree paths.
+    state_snapshot  — wraps the read-only state projection envelope.
+    state_stream    — wraps the read-only inbox/event stream projection.
+    capabilities.get_status
+                    — wraps the read-only capability status envelope.
 
   mutating (default to dry-run; require ``confirm: true``)
     dispatch        — wraps :func:`supervisor.dispatch_volley`
@@ -274,6 +278,18 @@ class StateStreamInput(_StrictModel):
     plan: str | None = None
 
 
+class CapabilitiesGetStatusInput(_StrictModel):
+    """Plan 2026-05-22-003 F002 — capabilities.get_status MCP tool input.
+
+    Read-only projection of the V0b capability status envelope. Both
+    fields are optional; ``capability_id`` narrows the envelope to a
+    single capability, ``profile`` mirrors the CLI ``--profile`` filter.
+    """
+
+    capability_id: str | None = None
+    profile: str | None = None
+
+
 # ──────────────────────────────  tool handlers  ──────────────────────────────
 
 
@@ -468,7 +484,7 @@ class ToolDef:
 
 
 def _build_tools() -> dict[str, ToolDef]:
-    """Construct the canonical 6-tool surface. The order is preserved in
+    """Construct the canonical MCP tool surface. The order is preserved in
     ``tools/list`` responses and used by tests as the documented surface."""
     return {
         td.name: td
@@ -552,6 +568,21 @@ def _build_tools() -> dict[str, ToolDef]:
                 ),
                 input_model=StateStreamInput,
                 handler=tool_state_stream,
+            ),
+            ToolDef(
+                name="capabilities.get_status",
+                description=(
+                    "Read-only. Return the V0b capability status envelope "
+                    "(same shape as `dontpanic capabilities status --format=json`) "
+                    "with optional `capability_id` narrowing and `profile` "
+                    "filtering. Mutates no local state, never writes the "
+                    "status cache, and never exposes secret values — only "
+                    "the *names* of unresolved env/auth/config tokens appear "
+                    "in the `missing` list. Setup/mutation actions are not "
+                    "exposed by this tool (v1 surface)."
+                ),
+                input_model=CapabilitiesGetStatusInput,
+                handler=tool_capabilities_get_status,
             ),
         )
     }
@@ -691,6 +722,61 @@ def tool_state_stream(args: dict[str, Any]) -> dict[str, Any]:
         "captured_at": captured_at.isoformat(),
         "events": events,
     }
+
+
+def tool_capabilities_get_status(args: dict[str, Any]) -> dict[str, Any]:
+    """Plan 2026-05-22-003 F002 — read-only capability status projection.
+
+    Wraps :func:`capabilities_status.run_status` to return the same
+    envelope shape the CLI emits for ``dontpanic capabilities status
+    --format=json``. Optional ``capability_id`` narrows the envelope to a
+    single capability (unknown ids return a structured ``unknown_capability``
+    error). Optional ``profile`` mirrors the CLI ``--profile`` filter.
+
+    Read-only invariant: this handler never writes the capability status
+    cache and never invokes any setup/mutation entry point. The envelope
+    surfaces only token *names* in its ``missing`` list — secret values
+    cannot reach the wire because :func:`capabilities_status.run_status`
+    never captures them in the first place (V0b design).
+    """
+    from dontpanic_orchestrate import capabilities_status as cs
+    from dontpanic_orchestrate.capabilities import (
+        CapabilityManifestError,
+        load_capabilities,
+    )
+
+    inp = CapabilitiesGetStatusInput.model_validate(args)
+
+    try:
+        capability_index = load_capabilities()
+    except CapabilityManifestError as exc:
+        raise MCPError(
+            ERR_INTERNAL,
+            f"failed to load capability manifests: {exc}",
+            {"reason": "manifest_load_failed"},
+        ) from exc
+
+    envelope = cs.run_status(
+        capability_index=capability_index,
+        profile=inp.profile,
+    )
+
+    if inp.capability_id is not None:
+        try:
+            envelope = cs.filter_for_capability(
+                envelope, inp.capability_id, capability_index
+            )
+        except CapabilityManifestError as exc:
+            raise MCPError(
+                ERR_INVALID_PARAMS,
+                str(exc),
+                {
+                    "reason": "unknown_capability",
+                    "capability_id": inp.capability_id,
+                },
+            ) from exc
+
+    return envelope.to_json_dict()
 
 
 TOOLS: dict[str, ToolDef] = _build_tools()
@@ -934,6 +1020,7 @@ def main(argv: list[str]) -> int:
 
 __all__ = [
     "ApproveGateInput",
+    "CapabilitiesGetStatusInput",
     "DispatchInput",
     "ERR_INTERNAL",
     "ERR_INVALID_PARAMS",
@@ -957,6 +1044,7 @@ __all__ = [
     "serve_main",
     "serve_stdio",
     "tool_approve_gate",
+    "tool_capabilities_get_status",
     "tool_dispatch",
     "tool_list_projects",
     "tool_read_evidence",

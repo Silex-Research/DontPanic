@@ -194,9 +194,31 @@
         "Add a fixture test that asserts a client-side direct write is rejected."
       ],
       "acceptance": "(1) `firestore.rules` deployed to <firebase-project-id>. (2) Authenticated reads work; client direct writes denied. (3) Fixture test enforces the deny.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-05-21T20:15:54Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../firestore.rules",
+          "note": "MOD — authenticated reads allowed; all client writes denied"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/firestore-rules.test.js",
+          "note": "NEW — regression test pins authenticated-read/client-write-deny policy"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f004-firestore-rules-verification.md",
+          "note": "F004 verification: dashboard tests, functions lint, and live deploy to <firebase-project-id>"
+        }
       ]
     },
     {

@@ -191,6 +191,16 @@
         }
       }
     },
+    "requires_capabilities": {
+      "type": "array",
+      "description": "v1.12.0 — optional advisory binding to capability manifests (capabilities/<id>.json). At lock time, `dontpanic plan lock` validates each id against the manifest registry (unknown id fails loud with closest-match suggestion) and emits evidence/required-capabilities.json summarizing per-capability readiness. The sidecar is advisory only — lock proceeds even when bound capabilities are not ready. Strictly additive — absent or empty array = no advisory.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$",
+        "description": "capability_id matching a checked-in capabilities/<id>.json manifest."
+      },
+      "uniqueItems": true
+    },
     "external_refs": {
       "type": "array",
       "description": "v1.10.0 — opt-in pointers to external entities the plan tracks (PM-tool issues, etc.). DontPanic plan lifecycle hooks (lock validates reachability, close pushes status) consult these via the category-adapter layer (scripts/dontpanic_orchestrate/integrations/). Strictly additive — absent or empty array = no external sync. Example: [{kind: 'pm_issue', uri: 'linear://issue/ABC-123', sync: 'push_status'}].",
@@ -210,6 +220,11 @@
           "sync": {
             "enum": ["none", "push_status"],
             "description": "Outbound sync opt-in. 'none' (default at semantic level) = ref is informational only; lock-time reachability failures DO NOT block lock. 'push_status' = plan close pushes DontPanic status flip to the external entity; lock-time reachability failures block lock loud."
+          },
+          "capability_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "Plan 2026-05-21-001 F004 — optional binding to a capabilities/<id>.json manifest. When set, lock-time validation resolves the ref to a registered adapter whose capability_id matches (not just by URI scheme) and requires the manifest category to match the ref kind ('pm_issue' requires category 'pm-tool'). Legacy refs without capability_id continue to resolve by URI scheme as before."
           }
         },
         "additionalProperties": false

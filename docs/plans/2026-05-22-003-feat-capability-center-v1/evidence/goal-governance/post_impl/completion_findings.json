@@ -1,0 +1,16 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-22T23:22:06.295132+00:00",
+  "plan_id": "2026-05-22-003-feat-capability-center-v1",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/operator/agent-reads-capability-status-through-mcp/mcp-capabilities-get-status.log",
+    "evidence/goal-governance/post_impl/operator/agent-reads-capability-status-through-mcp/mcp-capabilities-no-mutation.log",
+    "evidence/goal-governance/post_impl/operator/agent-reads-capability-status-through-mcp/python-tests-green.log",
+    "evidence/goal-governance/post_impl/operator/agent-reads-capability-status-through-mcp/sanitization-clean.log",
+    "evidence/goal-governance/post_impl/operator/operator-reviews-capabilities-visually/capability-center-empty-state.log",
+    "evidence/goal-governance/post_impl/operator/operator-reviews-capabilities-visually/capability-center-static-dashboard-render.log",
+    "evidence/goal-governance/post_impl/operator/operator-reviews-capabilities-visually/dashboard-tests-green.log"
+  ],
+  "findings": []
+}

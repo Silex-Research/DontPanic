@@ -1,0 +1,23 @@
+F003 operator verification — 2026-05-23
+
+Context:
+- DontPanic plan: 2026-05-23-005-feat-dashboard-project-selector-v0
+- Feature: F003 project selector UI and scope labels
+- Volley terminal: stopped_no_progress after two rounds
+- Latest auditor verdict: needs_changes
+
+Manual remediation:
+- Patched dashboard/core.js so setSelectedProject() re-renders the selector header as well as the active page.
+- Patched dashboard/core.js so _fleetFingerprint() includes display_name along with name and active state.
+- Added dashboard/tests/integration/project-selector.test.js regressions for stale selector scope and display-name refresh.
+
+Verification commands:
+- npx vitest run tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js
+  Result: 5 files passed, 167 tests passed.
+- npx vitest run
+  Result: 28 files passed, 644 tests passed.
+
+Notes:
+- Vite still emits the pre-existing dynamic import warning for core.js.
+- Firebase fallback tests intentionally log offline/static-fallback messages.
+- No Firebase setup was required.

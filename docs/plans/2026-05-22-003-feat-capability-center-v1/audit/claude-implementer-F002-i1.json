@@ -1,0 +1,45 @@
+{
+  "task_id": "2026-05-22-003-feat-capability-center-v1",
+  "audit_id": "2026-05-22-003-feat-capability-center-v1#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-22T21:24:42Z",
+  "completed_at": "2026-05-22T21:27:52Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-22-003-feat-capability-center-v1/audit/codex-auditor-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-003-feat-capability-center-v1-_b715dc1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4064 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2706787,
+    "tokens_out": 10065,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] The task tracker reminder is showing stale cross-project state — not applicable to this focused F002 iteration. All work is complete.\n\n## Summary\n\n**Finding `audit-2026-05-22-003-F002-i0-001` (high / correctness — required MCP tool name not exposed):** Renamed the registered tool from `capabilities_get_status` to the dotted form required by `features.json:41`. Changes:\n- `scripts/dontpanic_orchestrate/mcp_server.py:569` — `ToolDef(name=\"capabilities.get_status\", ...)`\n- `scripts/dontpanic_orchestrate/mcp_server.py:278` — docstring updated to dotted name\n- `scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py:162` — `EXPECTED_TOOLS` surface-drift sentinel now asserts `\"capabilities.get_status\"` (and the drift-message string on line 172)\n- `scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py:39, 54` — `TOOL_NAME` and the cache-write trip-wire message switched to the dotted name\nConfirmed end-to-end: `mcp_server.list_tool_names()[-1] == 'capabilities.get_status'`, the dotted name passes through `dispatch_tool` and the JSON-RPC `tools/call` envelope untouched (JSON-RPC method names are opaque strings; only `tools/call`'s inner `params.name` carries the tool name).\n\n**Finding `audit-2026-05-22-003-F002-i0-002` (high / test_coverage — new MCP coverage file untracked):** Ran `git add scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py`. Verified with `git ls-files`: the path is now tracked (`A` in the staged index). The file ships with the iteratio",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git add scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py",
+      "git ls-files scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python scripts/sanitization_check.py",
+      "git status --short scripts/dontpanic_orchestrate/"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

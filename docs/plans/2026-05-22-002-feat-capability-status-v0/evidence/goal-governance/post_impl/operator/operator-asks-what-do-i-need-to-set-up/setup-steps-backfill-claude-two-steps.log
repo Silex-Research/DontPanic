@@ -1,0 +1,8 @@
+Evidence: `dontpanic capabilities status --format=json --no-cache-write`
+
+agent-claude-cli rendered two setup steps:
+- install_claude_cli
+- authenticate_claude
+
+CLI installation is automatable; account authentication is human-required
+because the operator must approve scopes and manage secrets.

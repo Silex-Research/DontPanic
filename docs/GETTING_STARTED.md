@@ -107,6 +107,13 @@ dontpanic project config set runtime_evidence.web.base_url http://localhost:3000
 Runtime evidence defaults are project-local because base URLs, simulator
 targets, Android package names, and backend projects are project-specific.
 
+Operating multiple repos from one install (mobile app + backend + schema +
+DontPanic itself)? Register each with the command above. See
+[`DASHBOARD_PROJECT_SELECTOR.md`](./DASHBOARD_PROJECT_SELECTOR.md) for the
+fleet/project scope model, cache layout, and `dontpanic dashboard build|serve
+--project <name>|all` usage. Single-repo mode keeps working unchanged when
+no projects are registered.
+
 ## Run Readiness Checks
 
 ```bash

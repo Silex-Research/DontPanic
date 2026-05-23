@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-22-002-feat-capability-status-v0",
+  "audit_id": "2026-05-22-002-feat-capability-status-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-22T18:58:55Z",
+  "completed_at": "2026-05-22T19:02:21Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-22-002-feat-capability-status-v0/audit/codex-auditor-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-22-002-feat-capability-status-v0-o9pwy1uy target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3370 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1663401,
+    "tokens_out": 9717,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] All three audit findings addressed. Summary of changes:\n\n**Finding 1 (medium, correctness — `resolver` was required to be injected for external_refs URI mapping):** `emit_required_capabilities(plan_dir)` now lazy-loads the adapter resolver via `default_resolver(capability_index=...)` only when the plan has `external_refs[]` and the caller didn't inject one — preserving the documented public signature (`plan_dir` + optional `status_cache`) while keeping the dependency-injection seam available for tests. Added `test_emit_with_only_plan_dir_lazy_loads_dependencies` to lock in the contract (`scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:351`, `scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py:402`).\n\n**Finding 2 (medium, correctness — `source` widened to list on multi-origin):** `_entry_for_capability` now always emits `source` as a string union value with a fixed precedence rule (`requires_capabilities` wins over `external_refs` since explicit operator declarations are stronger than scheme-derived bindings). Multi-origin attribution surfaces via a separate `sources[]` array when present. Added `test_multi_origin_source_remains_string_with_sources_array` to enforce both the string shape and the sources[] array (`scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py:311`).\n\n**Finding 3 (low, correctness — chip filename wording):** The CLI's warning chip now prints `see required-capabilities.json` (bare filename matching acceptance §",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/ -q",
+      "python3 scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

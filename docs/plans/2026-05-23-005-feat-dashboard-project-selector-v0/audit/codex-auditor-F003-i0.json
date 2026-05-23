@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T06:49:16Z",
+  "completed_at": "2026-05-23T06:52:12Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-1iohaiex target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 241671 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1167321,
+    "tokens_out": 12900,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target context correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`. I did not see a listed forbidden command shape in `target_context.commands_run`.\n\nFINDING (medium, correctness): Missing fleet-summary UI omits the Add Project command-emission affordance. Evidence: `renderHeaderStripHTML()` returns only `renderMissingSummaryHTML()` when `envelope == null`, so `dontpanic projects add <name> <path>` is not shown in the missing/no-registry path. Recommendation: include the Add Project command row in the missing-summary state too.\n\nFINDING (medium, correctness): `refreshState()` cannot show the missing-summary command if `fleet-summary.json` disappears after a previous successful load. Evidence: `loadState()` only assigns `this.state.fleetSummary` on `resp.ok`; 404/fetch failure leaves the old summary intact, so the fingerprint stays stale and the missing banner never renders. Recommendation: reset nullable aliased files like `fleetSummary` to `null` on non-OK/fetch failure and add a present-to-missing refresh test.\n\nFINDING (medium, correctness): Scope labels are incomplete for V0 dashboard sections. Evidence: What Now only badges the header/empty state, while band panels render without scope labels; Capability Center badges the summary panel but not the capabilities cards panel. Plan text says every visible surface must declare Global, Project, or Fleet scope. Recommendation: rend",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npx vitest run tests/unit/project-selector-logic.test.js tests/integration/project-selector.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js tests/integration/what-now-page.test.js tests/integration/capabilities-page.test.js tests/integration/core-router.test.js",
+      "node --check core.js",
+      "node --check lib/project-selector-logic.js",
+      "node --check lib/what-now-logic.js",
+      "node --check lib/capabilities-logic.js",
+      "node --check tests/integration/project-selector.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Missing fleet-summary UI omits the Add Project command-emission affordance. Evidence: `renderHeaderStripHTML()` returns only `renderMissingSummaryHTML()` when `envelope == null`, so `dontpanic projects add <name> <path>` is not shown in the missing/no-registry path. Recommendation: include the Add Project command row in the missing-summary state too.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`refreshState()` cannot show the missing-summary command if `fleet-summary.json` disappears after a previous successful load. Evidence: `loadState()` only assigns `this.state.fleetSummary` on `resp.ok`; 404/fetch failure leaves the old summary intact, so the fingerprint stays stale and the missing banner never renders. Recommendation: reset nullable aliased files like `fleetSummary` to `null` on non-OK/fetch failure and add a present-to-missing refresh test.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Scope labels are incomplete for V0 dashboard sections. Evidence: What Now only badges the header/empty state, while band panels render without scope labels; Capability Center badges the summary panel but not the capabilities cards panel. Plan text says every visible surface must declare Global, Project, or Fleet scope. Recommendation: render scope badges consistently on each V0 section/panel or explicitly narrow the section boundary in tests/docs.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The selector integration tests duplicate core shell logic instead of exercising `dashboard/core.js`, so core loader/refresh defects can pass. Evidence: `tests/integration/project-selector.test.js` defines its own `createShell()` and `loadFleetSummary()`; `core-router.test.js` still omits `fleetSummary`, `whatNow`, and `selectedProject`. Recommendation: update the core-router fixture or add an actual core integration path covering initial load, refresh, present-to-missing, and scope-label placeme",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

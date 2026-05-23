@@ -589,6 +589,7 @@ def init_main(argv: list[str] | None = None) -> int:
     if walk_exit == EXIT_READY and not args.skip_smoke:
         import contextlib
         import io as _io
+
         from dontpanic_orchestrate import smoke as _smoke
 
         # When the operator wants structured output (--json or
@@ -652,6 +653,39 @@ def init_main(argv: list[str] | None = None) -> int:
         return walk_exit
     from dontpanic_orchestrate import smoke as _smoke
     if smoke_result.exit_code == _smoke.EXIT_PASS:
+        # Plan 2026-05-23-002 F001: write the install-snapshot anchor
+        # at ~/.dontpanic/install-snapshot.json now that the walk and
+        # smoke both passed. The snapshot is the reconciliation anchor
+        # F002 (`dontpanic reconcile check`) reads. Surface a write
+        # failure as install failure (EXIT_REMAINING) rather than
+        # silently swallowing it — operator must know the anchor is
+        # missing before relying on `reconcile check`.
+        try:
+            from dontpanic_orchestrate import install_snapshot as _snap
+
+            snapshot = _snap.build_snapshot(profile=args.profile)
+            written = _snap.write_snapshot(snapshot)
+            if not (args.non_interactive or args.json):
+                print(f"[install-snapshot] wrote {written} (mode 0600).")
+        except (_snap.CapabilityLoadError, OSError) as exc:
+            print(
+                f"[install-snapshot] BLOCKED: could not write snapshot ({exc}). "
+                "Re-run `dontpanic reconcile baseline --yes` after fixing the "
+                "underlying issue.",
+                file=sys.stderr,
+            )
+            return EXIT_REMAINING
+        # Plan 2026-05-23-004 F005: point successful operators at the
+        # local operator console. JSON / non-interactive callers parse
+        # the envelope and don't want the prose; only the human
+        # interactive path gets the hand-off line.
+        if not (args.non_interactive or args.json):
+            print(
+                "[dashboard] install ready. "
+                "Open the local operator console with `dontpanic dashboard open` "
+                "(or `dontpanic dashboard serve` for a localhost-only HTTP "
+                "session with live refresh)."
+            )
         return EXIT_READY
     if smoke_result.exit_code == _smoke.EXIT_ENV_BLOCKER:
         # Operator-actionable — doctor profile probes own the diag.

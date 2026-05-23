@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-22T21:31:22Z",
+  "feature_id": "F002",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "unknown",
+      "severity": "advisory",
+      "category": "documentation",
+      "issue_excerpt": "MCP server docs still describe the surface as “exactly 6 tools” even though the registered/tested surface is now 9 tools. Evidence: `scripts/dontpanic_orchestr…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

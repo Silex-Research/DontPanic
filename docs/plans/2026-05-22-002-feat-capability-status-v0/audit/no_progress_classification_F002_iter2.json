@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-22T17:29:27Z",
+  "feature_id": "F002",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [
+    "docs/plans/2026-05-22-002-feat-capability-status-v0/evidence/json-schema-doc.md"
+  ],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "unresolved `requires.auth` / `requires.config` can still compute `ready`. Evidence: [capabilities_status.py]($HOME/Documents/GitHub/DontPanic/scripts…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "`--profile=firebase-dashboard` does not filter to that profile’s capabilities. Evidence: [capabilities_status.py]($HOME/Documents/GitHub/DontPanic/sc…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "JSON “snapshot-pinned” acceptance is not actually snapshot-pinned. Evidence: [test_capabilities_status_cli_f002.py]($HOME/Documents/GitHub/DontPanic/…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

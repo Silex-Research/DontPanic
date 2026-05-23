@@ -1,0 +1,91 @@
+{
+  "task_id": "2026-05-22-004-feat-capability-guided-setup-v2",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "`dontpanic capabilities setup <id> --print-steps` planning surface. Reads the selected capability manifest and current status, then prints the ordered setup_steps[] with automatable/human-required labels, command templates, verification probes, and current readiness. No commands are executed in F001.",
+      "steps": [
+        "Add capabilities setup subcommand parser with required capability_id and --print-steps.",
+        "Render ordered steps from setup_steps[] with status context from V0b capabilities status.",
+        "Refuse unknown capability ids with closest-match suggestion.",
+        "Add tests for Firebase, Linear, empty setup_steps, unknown id, and no-command execution."
+      ],
+      "acceptance": "(1) `dontpanic capabilities setup firebase-dashboard --print-steps` renders all setup steps in order. (2) Human-required steps include reason text. (3) Automatable steps include command_template and verify_probe when present. (4) No commands execute. (5) Tests cover happy path and unknown id.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F001.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T22:09:09Z"
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "Governed automatable-step runner. `dontpanic capabilities setup <id> --automate-safe --confirm` executes only steps marked automatable=true and only when the command_template is allowlisted/safe. It skips human-required steps, records why, and re-runs verification probes after each attempted step.",
+      "steps": [
+        "Define an allowlist policy for automatable command templates; default deny anything with shell metacharacters or secret placeholders.",
+        "Require --confirm for command execution.",
+        "Execute automatable steps one at a time with captured stdout/stderr summaries.",
+        "Skip human-required steps without executing.",
+        "Re-run capability status/probes after attempted steps.",
+        "Add tests for allowlisted command, denied command, human-required skip, and confirm gate."
+      ],
+      "acceptance": "(1) --automate-safe requires --confirm. (2) Human-required steps never execute. (3) Unsafe command templates are denied with explanation. (4) Allowlisted automatable steps execute in tests via fixture command runner. (5) Probes/status re-run after attempted steps. (6) Tests cover deny/allow/skip/confirm.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T22:28:43Z"
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Setup evidence and roadmap close-out. Every setup run writes an operator-local evidence record summarizing attempted automatable steps, skipped human-required steps, statuses before/after, and next human actions. Parent roadmap is updated after V2 acceptance.",
+      "steps": [
+        "Write setup-run evidence JSON under an operator-local DontPanic state path or plan evidence path when invoked during a plan.",
+        "Ensure evidence contains no secret values, only names/placeholders.",
+        "Add tests for evidence shape and sanitization-sensitive fields.",
+        "Update parent roadmap D-entry after V2 completion."
+      ],
+      "acceptance": "(1) Setup run evidence records capability_id, attempted steps, skipped human-required steps, before/after status, and next actions. (2) No secret values are persisted. (3) Tests cover evidence shape. (4) Parent roadmap updated after V2 completion.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F003.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-22T23:15:42Z"
+    }
+  ]
+}

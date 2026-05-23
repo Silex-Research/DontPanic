@@ -311,6 +311,18 @@ class ExternalRef(BaseModel):
             "lock blocks loud if the URI is unreachable."
         ),
     )
+    capability_id: constr(pattern=r"^[a-z0-9][a-z0-9-]*$") | None = Field(
+        default=None,
+        description=(
+            "Plan 2026-05-21-001 F004 — optional binding to a "
+            "``capabilities/<id>.json`` manifest. When set, lock-time "
+            "validation resolves the ref to a registered adapter whose "
+            "capability_id matches (not just by URI scheme) and requires "
+            "the manifest category to match the ref kind ('pm_issue' "
+            "requires category 'pm-tool'). Legacy refs without "
+            "capability_id continue to resolve by URI scheme."
+        ),
+    )
 
 
 class Plan(BaseModel):
@@ -382,5 +394,15 @@ class Plan(BaseModel):
             "v1.10.0 — opt-in pointers to external entities the plan "
             "tracks. Lock validates reachability via the category-adapter "
             "layer; close pushes status to refs with sync='push_status'."
+        ),
+    )
+    requires_capabilities: list[constr(pattern=r"^[a-z0-9][a-z0-9-]*$")] | None = Field(
+        None,
+        description=(
+            "v1.12.0 — advisory binding to capability manifests. Lock "
+            "validates each id against the manifest registry (unknown id "
+            "fails loud) and emits evidence/required-capabilities.json. "
+            "Sidecar is advisory only — lock proceeds even when bound "
+            "capabilities are not ready."
         ),
     )

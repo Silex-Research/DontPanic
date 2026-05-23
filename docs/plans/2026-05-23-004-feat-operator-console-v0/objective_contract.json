@@ -1,0 +1,123 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Parent roadmap 2026-05-23-003 defines the visual operating console strategy. V0 is explicitly audience-locked to the operator actively driving DontPanic work and must answer 'what needs action now?' from governed local state without Firebase.",
+  "user_journeys": [
+    {
+      "name": "operator-with-stale-capabilities-opens-dashboard-sees-actionable-items",
+      "description": "An operator with incomplete or stale capability setup opens the local dashboard and sees a first-viewport action list naming the blocked/needs-setup capabilities, exact next commands, and human-required steps without configuring Firebase.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "dashboard_opened",
+        "capability_actions_visible",
+        "exact_commands_visible",
+        "firebase_not_required"
+      ],
+      "acceptance_signals": [
+        "What Now view renders capability ActionItems from the local capability status cache",
+        "Each item maps to one of the four status bands",
+        "Exact commands are copyable",
+        "No Firebase config or auth is needed"
+      ]
+    },
+    {
+      "name": "operator-runs-action-sees-dashboard-reflect-it-without-manual-rebuild",
+      "description": "An operator runs a DontPanic action in another terminal while `dontpanic dashboard serve` is running. The local console refreshes from files/cache without requiring a manual rebuild command.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "serve_running",
+        "source_state_changed",
+        "cache_rebuilt",
+        "dashboard_refreshed"
+      ],
+      "acceptance_signals": [
+        "`serve` binds localhost by default",
+        "State refresh happens through watch or periodic rebuild",
+        "The what-now cache changes after source state changes",
+        "No remote interface is exposed by default"
+      ]
+    },
+    {
+      "name": "operator-clicks-needs-setup-card-gets-copyable-commands",
+      "description": "An operator expands or reviews a needs-action card and sees a human-readable label plus the exact CLI command or setup command to run next.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "needs_action_card_visible",
+        "command_visible",
+        "copy_control_available",
+        "evidence_link_visible_when_present"
+      ],
+      "acceptance_signals": [
+        "ActionItem exact_command renders verbatim",
+        "Automatable and human-required labels are visible",
+        "Evidence URI renders when supplied",
+        "No command includes secret values"
+      ]
+    },
+    {
+      "name": "operator-with-zero-drift-sees-quiet-dashboard-not-noise",
+      "description": "An operator whose gates are clear, capabilities are ready or optional, reconcile is clean, and supervisors are healthy sees a quiet, restrained dashboard rather than a wall of empty warning cards.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "no_actions",
+        "quiet_state_visible",
+        "no_false_blockers"
+      ],
+      "acceptance_signals": [
+        "What Now view has a compact healthy state",
+        "Optional missing data does not render as a blocker",
+        "The four-band taxonomy has no red/needs_action items"
+      ]
+    },
+    {
+      "name": "agent-reads-dashboard-cache-and-gets-same-action-shape",
+      "description": "An agent reads the dashboard what-now cache file and receives the same ActionItem JSON shape that powers the dashboard, so it can summarize outstanding human work without scraping HTML.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "cache_written",
+        "agent_reads_json",
+        "action_shape_stable",
+        "no_secret_values"
+      ],
+      "acceptance_signals": [
+        "Cache file exists after dashboard build/serve",
+        "Cache contains schema_version and ActionItem array",
+        "Shape is snapshot-tested",
+        "No secret values appear in cache"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "what-now-action-provider-tests.log",
+    "dashboard-build-cache-output.log",
+    "dashboard-serve-localhost-safety.log",
+    "projection-view-adapter-tests.log",
+    "what-now-needs-action-snapshot.html",
+    "what-now-quiet-state-snapshot.html",
+    "doctor-dashboard-readiness.log",
+    "init-dashboard-message.log",
+    "agent-cache-shape-snapshot.json",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No Firebase realtime dependency",
+    "No remote approve or dispatch",
+    "No drag/drop mutation",
+    "No architecture page in V0",
+    "No plans/features roster in V0 beyond action context",
+    "No evidence browser in V0",
+    "No hosted dashboard or control plane",
+    "No secret storage or secret display"
+  ],
+  "completion_test": "A local operator runs `dontpanic dashboard serve`, opens the dashboard, and sees a first-viewport What Now view sourced from gates, capabilities, reconcile drift, and active supervisors. It refreshes after local state changes, displays exact copyable commands, renders a quiet healthy state when no actions exist, and writes an agent-readable cache with the same ActionItem shape. Doctor and init point to the dashboard. Firebase is not required."
+}

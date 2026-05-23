@@ -1,0 +1,36 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T06:32:57Z",
+  "completed_at": "2026-05-23T06:36:15Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-nirqw_ix target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 418837 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1917581,
+    "tokens_out": 12127,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. No findings. The implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, structured `target_context.env=dev`, `project=null`, and its recorded commands contain no forbidden command shapes. Source review confirms `dashboard build|serve --project <name>|all`, default resolution, unknown-name errors, registry fingerprinting during serve, loopback default, and no Firebase dependency in the changed F002 paths.\n\nChecks run:\n$ git status --short\n$ git diff HEAD~1 --stat\n$ git diff HEAD~1 -- .\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import dashboard, projects_dashboard; p=dashboard.build_parser(); build=p._subparsers._group_actions[0].choices['build']; serve=p._subparsers._group_actions[0].choices['serve']; print('--project' in build.format_help()); print('--project' in serve.format_help()); print(projects_dashboard.UnknownProjectError('gamma', known_names=('alpha','beta')))\"\n$ rg -n \"firebase|firebase_admin|firebase use|gcloud config|kubectl config use-context|gh auth switch|docker context use|npm config set|yarn config set|pnpm config set|git config --global\" ../scripts/dontpanic_orchestrate/dashboard.py ../scripts/dontpanic_orchestrate/projects_dashboard.py ../scripts/dontpanic_orchestrate/",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "git diff HEAD~1 -- .",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import dashboard, projects_dashboard; p=dashboard.build_parser(); build=p._subparsers._group_actions[0].choices['build']; serve=p._subparsers._group_actions[0].choices['serve']; print('--project' in build.format_help()); print('--project' in serve.format_help()); print(projects_dashboard.UnknownProjectError('gamma', known_names=('alpha','beta')))\"",
+      "rg -n \"firebase|firebase_admin|firebase use|gcloud config|kubectl config use-context|gh auth switch|docker context use|npm config set|yarn config set|pnpm config set|git config --global\" ../scripts/dontpanic_orchestrate/dashboard.py ../scripts/dontpanic_orchestrate/projects_dashboard.py ../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F002-i0.json"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

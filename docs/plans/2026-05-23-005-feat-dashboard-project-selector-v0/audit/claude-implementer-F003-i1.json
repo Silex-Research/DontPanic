@@ -1,0 +1,38 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-23T06:52:12Z",
+  "completed_at": "2026-05-23T06:58:06Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/codex-auditor-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-1iohaiex target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3455 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3948580,
+    "tokens_out": 26269,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F003] All 643 tests pass across the entire dashboard suite.\n\nSide-effect commands run:\n- `$ npx vitest run tests/integration/project-selector.test.js tests/integration/core-router.test.js tests/unit/project-selector-logic.test.js tests/unit/what-now-logic.test.js tests/unit/capabilities-logic.test.js`\n- `$ npx vitest run`\n\n**Findings addressed:**\n\n- **F003-i0 #1 (missing-summary lacks Add Project)** — `dashboard/lib/project-selector-logic.js:renderMissingSummaryHTML()` now appends `renderAddProjectHTML()` so the `dontpanic projects add <name> <path>` command-emission row is rendered whether the fleet summary is present or absent. The new `'still surfaces Add Project command-emission in the missing-summary state'` integration test pins this.\n\n- **F003-i0 #2 (`refreshState()` cannot transition present→missing)** — `dashboard/core.js:loadState()` now carries a `nullableMissing` flag on the aliased `fleetSummary` and `whatNow` entries; both reset to `null` on non-OK responses *and* fetch failures, so when an operator deletes the cache file the missing banner actually renders on the next refresh tick. New `'present→missing refresh surfaces the missing banner'` test exercises the loader path directly via `createJarvis()`.\n\n- **F003-i0 #3 (scope labels incomplete on V0 sections)** — `dashboard/lib/what-now-logic.js:renderBandSectionHTML()` now threads scope through and emits a scope chip on every band panel; `dashboard/lib/capabilities-logic.js:renderPopulatedHTML()` adds a `cap-cards-sco",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

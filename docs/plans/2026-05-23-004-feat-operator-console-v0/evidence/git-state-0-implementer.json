@@ -1,0 +1,62 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "dashboard/README.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/agent-cache-shape-snapshot.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/what-now-action-provider-tests.log",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/features.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_doctor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/init/__init__.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "dashboard/state/architecture-status.json",
+    "dashboard/state/capabilities-status.json",
+    "dashboard/state/reconcile-status.json",
+    "dashboard/state/what-now.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/dashboard-build-cache-output.log",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/dashboard-serve-localhost-safety.log",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/doctor-dashboard-readiness.log",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/init-dashboard-message.log",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/projection-view-adapter-tests.log",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/sanitization-clean.log",
+    "scripts/dontpanic_orchestrate/tests/test_doctor_dashboard_readiness_f005.py",
+    "scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T07:46:05Z",
+  "completed_at": "2026-05-23T07:48:52Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F005-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-baon9xzk target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1855133 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1738914,
+    "tokens_out": 11100,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: `needs_changes`. The implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` is valid with `env=dev`, `project=null`, `commands_run=[]`; no forbidden command shapes were present.\n\nFINDING (medium, test_coverage): Objective evidence does not actually capture the required cwd-matched default flow or real CLI output. Evidence: `_capture_evidence.py` only captures two-project fleet, 8-project fleet, single-repo fallback, and selector HTML; `dashboard-project-cli-tests.log` is only `24 passed`, with no cwd-match selection state or command transcript. Recommendation: add a captured artifact showing two registered projects, omitted `--project`, cwd inside one project, `selection.project_name`, `cwd_match=true`, and resulting dashboard state.\n\nFINDING (medium, test_coverage): Required status warning snapshots are missing. Evidence: evidence includes selector HTML and fleet-summary warning counts, but no rendered status header / warning-state snapshot proving selected scope, health band, warning count, and data age. Recommendation: add a status/What Now snapshot from the synthetic fleet or focused project state.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python3 -m pytest -p no:cacheprovider $HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python3 -m pytest -p no:cacheprovider $HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py $HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py $HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -q",
+      "npx vitest run tests/unit/project-selector-logic.test.js tests/integration/project-selector.test.js tests/unit/what-now-logic.test.js tests/integration/what-now-page.test.js",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "Objective evidence does not actually capture the required cwd-matched default flow or real CLI output. Evidence: `_capture_evidence.py` only captures two-project fleet, 8-project fleet, single-repo fallback, and selector HTML; `dashboard-project-cli-tests.log` is only `24 passed`, with no cwd-match selection state or command transcript. Recommendation: add a captured artifact showing two registered projects, omitted `--project`, cwd inside one project, `selection.project_name`, `cwd_match=true`,",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "Required status warning snapshots are missing. Evidence: evidence includes selector HTML and fleet-summary warning counts, but no rendered status header / warning-state snapshot proving selected scope, health band, warning count, and data age. Recommendation: add a status/What Now snapshot from the synthetic fleet or focused project state. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$HOME/Documents/GitHub/DontPanic/scripts python3 -m pytest -p no:cacheprovider $HOME/Do",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

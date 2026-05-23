@@ -1,0 +1,10 @@
+Evidence: static dashboard Capability Center.
+
+The dashboard nav registers `Capability Center` through the existing static
+router. The page reads `dashboard/state/capabilities-status.json` when present
+and renders capability cards with status badge, owner_boundary chips,
+configured/missing lists, pending probes, and next actions partitioned into
+automatable and human-required work.
+
+No Firebase Auth, Firestore, Cloud Functions, or Firebase realtime surface is
+required to render the page.

@@ -10,6 +10,42 @@ runtime.
 
 ---
 
+## V0 Operator Console (Plan 2026-05-23-004)
+
+For the operator-in-the-loop "what needs action now?" view, use the
+bundled CLI rather than the legacy export-dashboard incantation. The
+console is local-first, requires no Firebase, and writes an
+agent-readable cache alongside the rendered dashboard:
+
+```bash
+# One-shot build (export + cache + render)
+dontpanic dashboard build
+
+# Build, print local path/URL, best-effort GUI launch
+dontpanic dashboard open
+
+# Localhost-only HTTP server with file-watch refresh
+dontpanic dashboard serve
+```
+
+`serve` binds `127.0.0.1` by default and refuses non-loopback hosts
+unless the operator passes `--allow-remote`. The watch loop polls
+plan/dashboard sources on a 2s interval and rebuilds without a manual
+restart.
+
+Each invocation also writes the operator-readable what-now cache to
+`~/.dontpanic/dashboard/what-now.json` (or `$DONTPANIC_HOME` if set).
+The same `ActionItem` envelope powers the dashboard, MCP, and any
+headless agent — see `scripts/dontpanic_orchestrate/operator_console.py`
+for the schema.
+
+`dontpanic doctor` reports dashboard readiness (`dashboard-files`,
+`dashboard-cache`, `dashboard-state`) as advisory checks with exact
+remediation commands. `dontpanic init` prints the dashboard hand-off
+line after a successful walk.
+
+---
+
 ## Three deployment shapes
 
 ### 1. Local-only (`python -m http.server`)

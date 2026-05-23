@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-23T07:31:41Z",
+  "feature_id": "F004",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "The implementer audit is not a completion artifact. Evidence: `claude-implementer-F004-i1.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blo…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "The new browser-side F004 render/filter/status path has no direct tests. Evidence: `rg` found no test references for `renderFleetWhatNowHTML`, `renderProjectWh…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    },
+    {
+      "finding_index": 2,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "The synthetic 8-project fixture does not actually exercise the required state mix. Evidence: `test_dashboard_relevance_f004.py:574-633` registers 8 projects bu…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    },
+    {
+      "finding_index": 3,
+      "classification": "unknown",
+      "severity": "low",
+      "category": "style",
+      "issue_excerpt": "Ruff fails on the changed Python files. Evidence: `dashboard_relevance.py:37` has unused `typing.Any`, and `test_dashboard_relevance_f004.py:39` has an unsorte…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

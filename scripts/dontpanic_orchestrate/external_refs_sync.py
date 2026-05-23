@@ -28,7 +28,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from dontpanic_orchestrate.integrations.pm_tool_models import PMStatus
@@ -40,6 +40,16 @@ from dontpanic_orchestrate.integrations.pm_tool_sync import (
     make_pending_record,
     utcnow,
 )
+
+if TYPE_CHECKING:
+    from dontpanic_orchestrate.capabilities import CapabilityIndex
+
+# Plan 2026-05-21-001 F004 — ref-kind to capability-category mapping. v0
+# only ships ``pm_issue`` → ``pm-tool``; extending external_refs with a new
+# kind means extending this table, not editing the validator.
+EXTERNAL_REF_KIND_CATEGORY: dict[str, str] = {
+    "pm_issue": "pm-tool",
+}
 
 # Default DontPanic-side intended status for ``plan close``. The bridge
 # only flips status outbound at close time; a future feature may carry
@@ -75,6 +85,20 @@ class _ExternalRefShape:
     kind: str
     uri: str
     sync: str  # "none" | "push_status"
+    capability_id: str | None = None  # F004 — optional manifest binding
+
+
+class ExternalRefCapabilityBindingError(ExternalRefsSyncError):
+    """Raised when an ExternalRef's ``capability_id`` cannot be resolved.
+
+    Two failure modes:
+
+    * Unknown capability_id — the manifest index has no entry for the id
+      the ref declared. Operator typo or stale plan.
+    * Incompatible category — the manifest exists but its category does
+      not match the ref ``kind`` (e.g. a ``pm_issue`` ref pointing at a
+      ``dashboard-realtime`` capability).
+    """
 
 
 class AdapterResolver:
@@ -92,15 +116,32 @@ class AdapterResolver:
 
     def __init__(self) -> None:
         self._by_scheme: dict[str, PMToolSyncHook] = {}
+        # F004 — secondary index keyed by capability_id. A hook may be
+        # registered with capability_id=None (legacy / unbound mapping)
+        # in which case it only appears in ``_by_scheme``. Capability
+        # lookup falls back to ``AdapterUnavailable`` for those refs.
+        self._by_capability_id: dict[str, PMToolSyncHook] = {}
 
-    def register(self, hook: PMToolSyncHook) -> None:
+    def register(
+        self,
+        hook: PMToolSyncHook,
+        *,
+        capability_id: str | None = None,
+    ) -> None:
         scheme = hook.uri_scheme
         if scheme in self._by_scheme:
             raise ExternalRefsSyncError(
                 f"AdapterResolver already has a wrapper for uri_scheme="
                 f"{scheme!r}; refusing to re-register."
             )
+        if capability_id is not None and capability_id in self._by_capability_id:
+            raise ExternalRefsSyncError(
+                f"AdapterResolver already has a wrapper for capability_id="
+                f"{capability_id!r}; refusing to re-register."
+            )
         self._by_scheme[scheme] = hook
+        if capability_id is not None:
+            self._by_capability_id[capability_id] = hook
 
     def resolve(self, uri: str) -> PMToolSyncHook:
         scheme = _scheme_from_uri(uri)
@@ -113,8 +154,49 @@ class AdapterResolver:
                 f"during CLI bootstrap before this URI is locked or closed."
             ) from exc
 
+    def resolve_by_capability_id(self, capability_id: str) -> PMToolSyncHook:
+        """F004 — fetch a hook by capability_id. Raises
+        :class:`AdapterUnavailable` when no registered adapter declares
+        that capability_id."""
+
+        try:
+            return self._by_capability_id[capability_id]
+        except KeyError as exc:
+            raise AdapterUnavailable(
+                f"No PM-tool wrapper registered for capability_id="
+                f"{capability_id!r}. Register an adapter mapping that "
+                f"declares ``capability_id: {capability_id}`` in "
+                f"~/.dontpanic/adapters/<service>.json before this ref "
+                f"is locked or closed."
+            ) from exc
+
     def has(self, scheme: str) -> bool:
         return scheme in self._by_scheme
+
+    def has_capability_id(self, capability_id: str) -> bool:
+        return capability_id in self._by_capability_id
+
+    def capability_id_for_uri(self, uri: str) -> str | None:
+        """Plan 2026-05-22-002 F003 — map a URI to a capability_id when a
+        registered adapter exposes one. Returns None when the URI scheme
+        resolves to an unbound (legacy) adapter or when no adapter is
+        registered for the scheme. Used by the lock-time advisory sidecar
+        to pull external_refs[] entries into the per-capability summary
+        when the URI scheme maps to a registered, capability-bound
+        adapter; callers MUST treat None as "not advisory-relevant" rather
+        than as a validation failure (sidecar is advisory only)."""
+
+        try:
+            scheme = _scheme_from_uri(uri)
+        except ExternalRefsSyncError:
+            return None
+        hook = self._by_scheme.get(scheme)
+        if hook is None:
+            return None
+        for capability_id, candidate in self._by_capability_id.items():
+            if candidate is hook:
+                return capability_id
+        return None
 
 
 def _scheme_from_uri(uri: str) -> str:
@@ -130,10 +212,12 @@ def _scheme_from_uri(uri: str) -> str:
 # ──────────────────────────────  lock-time  ──────────────────────────────
 
 
-# Session-scoped cache for lock-time validation. Keyed by URI; a successful
-# read short-circuits repeat reads within the same process. Tests reset
+# Session-scoped cache for lock-time validation. Keyed by URI + optional
+# capability_id; a successful read short-circuits repeat reads within the
+# same process only for the same capability-binding context. Tests reset
 # this between cases via :func:`reset_read_cache`.
-_READ_CACHE: dict[str, Any] = {}
+_ReadCacheKey = tuple[str, str | None]
+_READ_CACHE: dict[_ReadCacheKey, Any] = {}
 
 
 def reset_read_cache() -> None:
@@ -144,11 +228,81 @@ def reset_read_cache() -> None:
     _READ_CACHE.clear()
 
 
+def validate_capability_bindings(
+    refs: Iterable[Any],
+    capability_index: CapabilityIndex,
+) -> None:
+    """F004 — validate every ref's ``capability_id`` against the manifest index.
+
+    Refs without ``capability_id`` are skipped (backward compatibility).
+    Otherwise the capability_id MUST exist in the index AND its manifest
+    category MUST match the ref kind via :data:`EXTERNAL_REF_KIND_CATEGORY`.
+    Lock-time callers invoke this before resolver lookups so an unknown or
+    miscategorized capability fails with an actionable error instead of
+    silently dropping through to scheme-based resolution.
+    """
+
+    for ref in refs:
+        shape = _normalize(ref)
+        if shape.capability_id is None:
+            continue
+        expected_category = EXTERNAL_REF_KIND_CATEGORY.get(shape.kind)
+        if expected_category is None:
+            raise ExternalRefCapabilityBindingError(
+                f"external_ref kind={shape.kind!r} has no category mapping; "
+                f"known kinds: {sorted(EXTERNAL_REF_KIND_CATEGORY)}. Update "
+                f"EXTERNAL_REF_KIND_CATEGORY when adding a new ref kind."
+            )
+        manifest = capability_index.get(shape.capability_id)
+        if manifest is None:
+            raise ExternalRefCapabilityBindingError(
+                f"external_ref uri={shape.uri!r} declares unknown "
+                f"capability_id {shape.capability_id!r}; check "
+                f"capabilities/<id>.json manifests."
+            )
+        if manifest.category != expected_category:
+            raise ExternalRefCapabilityBindingError(
+                f"external_ref uri={shape.uri!r} (kind={shape.kind!r}) "
+                f"binds to capability_id {shape.capability_id!r} but its "
+                f"manifest category is {manifest.category!r}; expected "
+                f"{expected_category!r}."
+            )
+
+
+def _resolve_for_ref(resolver: AdapterResolver, shape: _ExternalRefShape) -> PMToolSyncHook:
+    """F004 — prefer capability_id resolution when the ref declares one.
+
+    When ``shape.capability_id`` is set, look up the hook in the
+    resolver's capability_id index; if no adapter is registered with
+    that capability_id, raise :class:`AdapterUnavailable` (the caller
+    decides whether to honor the failure based on ``sync`` mode).
+
+    When ``shape.capability_id`` is None, fall through to the legacy
+    scheme-based ``resolve(uri)`` path.
+    """
+
+    if shape.capability_id is not None:
+        return resolver.resolve_by_capability_id(shape.capability_id)
+    return resolver.resolve(shape.uri)
+
+
+def _read_cache_key(shape: _ExternalRefShape) -> _ReadCacheKey:
+    """Cache scope for lock-time reads.
+
+    Capability-bound refs cannot reuse legacy same-URI reads because the
+    binding contract also proves a registered adapter implements the
+    declared capability_id.
+    """
+
+    return (shape.uri, shape.capability_id)
+
+
 def validate_refs_for_lock(
     refs: Iterable[Any],
     resolver: AdapterResolver,
     *,
     use_cache: bool = True,
+    capability_index: CapabilityIndex | None = None,
 ) -> None:
     """Lock-time validation hook. Calls ``read_issue`` on every ref to
     confirm reachability via the category-adapter layer.
@@ -161,19 +315,33 @@ def validate_refs_for_lock(
       * ``sync='none'`` AND read fails         → ignored (the ref is
         informational; logging belongs to the caller, not this module).
 
-    Cache: a successful read is cached per URI for the rest of the process
-    so re-locking the same plan doesn't re-hit the vendor.
+    F004: when ``capability_index`` is supplied, every ref's declared
+    ``capability_id`` is validated against the manifest index first
+    (unknown id or incompatible category raises
+    :class:`ExternalRefCapabilityBindingError` regardless of ``sync``
+    mode — config errors are loud at lock-time so operators see them
+    before close). Resolver lookups for refs with ``capability_id`` go
+    through the capability_id index rather than the URI scheme.
+
+    Cache: a successful read is cached per (URI, capability_id) for the
+    rest of the process so re-locking the same plan doesn't re-hit the
+    vendor, while capability-bound refs cannot inherit legacy same-URI
+    validation.
     """
 
-    for ref in refs:
+    refs_list = list(refs)
+    if capability_index is not None:
+        validate_capability_bindings(refs_list, capability_index)
+    for ref in refs_list:
         shape = _normalize(ref)
-        if use_cache and shape.uri in _READ_CACHE:
-            continue
         try:
-            hook = resolver.resolve(shape.uri)
+            hook = _resolve_for_ref(resolver, shape)
         except AdapterUnavailable:
             if shape.sync == "push_status":
                 raise
+            continue
+        cache_key = _read_cache_key(shape)
+        if use_cache and cache_key in _READ_CACHE:
             continue
         try:
             issue = hook.read_issue(shape.uri)
@@ -187,7 +355,7 @@ def validate_refs_for_lock(
                 ) from exc
             continue
         if use_cache:
-            _READ_CACHE[shape.uri] = issue
+            _READ_CACHE[cache_key] = issue
 
 
 # ──────────────────────────────  close-time  ──────────────────────────────
@@ -274,7 +442,7 @@ def run_close_push(
             continue
 
         try:
-            hook = resolver.resolve(shape.uri)
+            hook = _resolve_for_ref(resolver, shape)
         except AdapterUnavailable as exc:
             records.append(
                 make_failed_record(
@@ -455,6 +623,7 @@ def _normalize(ref: Any) -> _ExternalRefShape:
     kind = data.get("kind")
     uri = data.get("uri")
     sync = data.get("sync")
+    capability_id = data.get("capability_id")
     # Defensive: dict callers may hand us raw enums.
     if hasattr(kind, "value"):
         kind = kind.value  # type: ignore[union-attr]
@@ -464,7 +633,9 @@ def _normalize(ref: Any) -> _ExternalRefShape:
         raise ExternalRefsSyncError(
             f"external_ref missing required fields {{kind, uri, sync}}: {data!r}"
         )
-    return _ExternalRefShape(kind=kind, uri=uri, sync=sync)
+    if capability_id is not None and not isinstance(capability_id, str):
+        raise ExternalRefsSyncError(f"external_ref capability_id must be str or absent: {data!r}")
+    return _ExternalRefShape(kind=kind, uri=uri, sync=sync, capability_id=capability_id)
 
 
 __all__ = [
@@ -472,6 +643,8 @@ __all__ = [
     "AdapterUnavailable",
     "DEFAULT_CLOSE_INTENDED_STATUS",
     "EVIDENCE_RELPATH",
+    "EXTERNAL_REF_KIND_CATEGORY",
+    "ExternalRefCapabilityBindingError",
     "ExternalRefsSyncError",
     "ExternalSyncResult",
     "format_dry_run_preview",
@@ -479,6 +652,7 @@ __all__ = [
     "reset_read_cache",
     "run_close_push",
     "run_resync",
+    "validate_capability_bindings",
     "validate_refs_for_lock",
     "write_evidence",
 ]
