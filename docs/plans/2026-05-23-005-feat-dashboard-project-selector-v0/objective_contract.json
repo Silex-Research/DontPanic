@@ -16,7 +16,7 @@
         "project_grouped_actions_visible"
       ],
       "acceptance_signals": [
-        "Fleet summary lists all registered project IDs and display names",
+        "Fleet summary lists all registered project names and display names",
         "Project selector defaults to All Projects when multiple projects exist",
         "What Now groups actions by project",
         "Status header identifies Fleet scope and warning counts"
@@ -54,8 +54,8 @@
         "no_secret_values"
       ],
       "acceptance_signals": [
-        "Fleet summary contains schema_version, project IDs, health bands, warning counts, and cache paths",
-        "Per-project what-now cache contains project_id fields",
+        "Fleet summary contains schema_version, project names, health bands, warning counts, and cache paths",
+        "Per-project what-now cache contains project_name fields",
         "Cache files do not contain secret values",
         "JSON shape is covered by snapshot or schema-style tests"
       ]
@@ -107,6 +107,7 @@
     "what-now-project-scope-tests.log",
     "dashboard-build-warnings-tests.log",
     "fleet-summary-snapshot.json",
+    "fleet-summary-8-project-snapshot.json",
     "project-selector-all-projects-snapshot.html",
     "project-selector-single-project-snapshot.html",
     "single-repo-fallback-log.txt",
@@ -124,5 +125,5 @@
     "No generated dashboard files written into target repos by default",
     "No secret values in cache, warnings, or UI"
   ],
-  "completion_test": "With two fixture projects and the DontPanic repo registered, `dontpanic dashboard serve` defaults to All Projects, renders a project selector, groups What Now actions by project, shows Fleet-scope Status with warning counts, and writes agent-readable fleet/project JSON caches. Selecting one project filters What Now and Status to that project while preserving relevant global blockers. Running without a project registry still serves the current-repo dashboard. Firebase is not required and the dashboard does not mutate state."
+  "completion_test": "With two fixture projects and the DontPanic repo registered, `dontpanic dashboard serve` defaults to All Projects unless cwd matches a registered project, renders a project selector, groups What Now actions by project, shows Fleet-scope Status with warning counts, and writes agent-readable fleet/project JSON caches. Selecting one project filters What Now and Status to that project while preserving relevant global blockers. An 8-project synthetic fleet exercises grouping and sorting. Running without a project registry still serves the current-repo dashboard. Firebase is not required and the dashboard does not mutate state."
 }
