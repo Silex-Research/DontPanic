@@ -104,3 +104,84 @@ audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
 reason: verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
 
 ===
+---
+timestamp: 2026-05-23T02:52:00Z
+event: gate_hit
+plan_id: 2026-05-23-004-feat-operator-console-v0
+unmet_gates: breaker:environmental_blocker
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:environmental_blocker']
+Cleared gates : ['pre_impl']
+Awaiting      : ['breaker:environmental_blocker']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-23-004-feat-operator-console-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-23-004-feat-operator-console-v0 --all
+
+===
+---
+timestamp: 2026-05-23T02:52:12Z
+event: gate_cleared
+plan_id: 2026-05-23-004-feat-operator-console-v0
+gate: breaker:environmental_blocker
+---
+
+Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
+
+===
+---
+timestamp: 2026-05-23T02:52:18Z
+event: volley_start
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T02:52:18Z
+event: volley_start
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T03:10:22Z
+event: gate_hit
+plan_id: 2026-05-23-004-feat-operator-console-v0
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-23-004-feat-operator-console-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-23-004-feat-operator-console-v0 --all
+
+===
+---
+timestamp: 2026-05-23T03:11:03Z
+event: gate_cleared
+plan_id: 2026-05-23-004-feat-operator-console-v0
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===

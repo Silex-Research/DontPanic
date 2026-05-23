@@ -26,6 +26,10 @@
       "status": "M"
     },
     {
+      "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json",
       "status": "M"
     }
@@ -35,7 +39,10 @@
     "dashboard/tests/fixtures/state-snapshot.json",
     "dashboard/tests/unit/projection-adapter.test.js",
     "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/codex-auditor-F002-i0.json"
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/codex-auditor-F002-i1.json",
+    "docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-1-implementer.json"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

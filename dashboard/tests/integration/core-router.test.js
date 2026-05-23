@@ -7,6 +7,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupDOM, setupFetchMock, createMockState, setupChartMock } from '../helpers/setup.js';
 import { timeAgo, formatCurrency, formatNumber } from '../../lib/formatters.js';
+import {
+  mergeSnapshotIntoState,
+  mergePerStreamIntoState,
+  PER_STREAM_FILES,
+} from '../../lib/projection-adapter.js';
+
+import snapshotFixture from '../fixtures/state-snapshot.json' with { type: 'json' };
 
 // ── Router factory ────────────────────────────────────────────────────────────
 // Mirrors the Jarvis object literal from core.js exactly, minus the browser-
@@ -25,6 +32,17 @@ function createRouter() {
       // Mirrors core.js — capabilities defaults to null so the page can
       // render its empty-state when capabilities-status.json is absent.
       capabilities: null,
+      // F002 canonical projection keys. Empty / null until either the
+      // state-snapshot.json envelope is fetched and adapted, or the
+      // dashboard runs in legacy-only mode.
+      plans: [],
+      gates: [],
+      inbox: [],
+      supervisors: [],
+      quota: [],
+      decisions: [],
+      evidenceRefs: [],
+      snapshotMeta: null,
     },
 
     registerPage(config) {
@@ -99,6 +117,33 @@ function createRouter() {
           // file missing — keep default value
         }
       }));
+      // Mirrors core.js — try envelope first, then per-stream fallback.
+      let snapshotApplied = false;
+      try {
+        const snapResp = await fetch('state/state-snapshot.json');
+        if (snapResp.ok) {
+          const snap = await snapResp.json();
+          snapshotApplied = mergeSnapshotIntoState(this.state, snap);
+        }
+      } catch {
+        // Missing / malformed envelope — fall through to per-stream.
+      }
+
+      if (!snapshotApplied) {
+        const collected = {};
+        await Promise.all(PER_STREAM_FILES.map(async (name) => {
+          try {
+            const resp = await fetch(`state/${name}.json`);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (Array.isArray(data)) collected[name] = data;
+            }
+          } catch {
+            // Missing per-stream file — keep going.
+          }
+        }));
+        mergePerStreamIntoState(this.state, collected);
+      }
     },
 
     getPageEl(pageId) {
@@ -371,6 +416,301 @@ describe('loadState', () => {
     const urls = fetchSpy.mock.calls.map(call => call[0]);
     expect(urls).toContain('state/capabilities-status.json');
     expect(urls).not.toContain('state/capabilities.json');
+  });
+
+  // ── F002: projection-to-view adapter ──────────────────────────────────────
+
+  // Acceptance #1: V0 dashboard data loading accepts canonical
+  // state-snapshot.json and surfaces the projection streams under the
+  // canonical state keys (plans, gates, inbox, supervisors, ...).
+  it('F002 #1: populates canonical projection keys from state-snapshot.json', async () => {
+    setupFetchMock({ 'state-snapshot': snapshotFixture });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.plans).toHaveLength(2);
+    expect(router.state.gates).toHaveLength(1);
+    expect(router.state.inbox).toHaveLength(2);
+    expect(router.state.supervisors).toHaveLength(1);
+    expect(router.state.quota).toHaveLength(1);
+    expect(router.state.decisions).toHaveLength(1);
+    expect(router.state.evidenceRefs).toHaveLength(1);
+    expect(router.state.snapshotMeta).toMatchObject({
+      schema_version: '1.0',
+      captured_at:    '2026-05-23T03:15:00Z',
+      redact_level:   'operator',
+    });
+  });
+
+  // Acceptance #1 (continued): The adapter also reshapes the projection
+  // into the legacy task / agent / activity shapes the existing
+  // mission-control and command-center pages consume, so they keep
+  // rendering without a per-page rewrite.
+  it('F002 #1: adapts snapshot into legacy tasks / agents / activity shapes', async () => {
+    setupFetchMock({ 'state-snapshot': snapshotFixture });
+
+    const router = createRouter();
+    await router.loadState();
+
+    // Snapshot has two plans → two tasks; mission-control reads from tasks.
+    expect(router.state.tasks).toHaveLength(2);
+    expect(router.state.tasks[0]).toMatchObject({
+      id:     '2026-05-23-004-feat-operator-console-v0',
+      title:  'Operator console v0',
+      status: 'in_progress',
+      agent:  'claude',
+    });
+    // Snapshot has one supervisor → one agent row.
+    expect(router.state.agents).toHaveLength(1);
+    expect(router.state.agents[0]).toMatchObject({ id: 'claude', status: 'busy' });
+    // Snapshot has two inbox events → two activity entries.
+    expect(router.state.activity).toHaveLength(2);
+  });
+
+  // Acceptance #1 (continued): When both legacy fixtures and the
+  // snapshot are present, the projection wins.
+  it('F002 #1: snapshot overrides legacy demo files when both are present', async () => {
+    const mockState = createMockState();
+    setupFetchMock({
+      agents:           mockState.agents,
+      tasks:            mockState.tasks,
+      activity:         mockState.activity,
+      'state-snapshot': snapshotFixture,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.tasks.find(t => t.id === 't1')).toBeUndefined();
+    expect(router.state.tasks.find(t => t.id === '2026-05-23-004-feat-operator-console-v0'))
+      .toBeTruthy();
+  });
+
+  // Acceptance #2: Legacy dashboard/state demo files still render when
+  // no state-snapshot.json is on disk — the static showcase path stays
+  // working.
+  it('F002 #2: legacy demo files still render when state-snapshot.json is absent', async () => {
+    const mockState = createMockState();
+    setupFetchMock({
+      agents:   mockState.agents,
+      tasks:    mockState.tasks,
+      activity: mockState.activity,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.tasks).toEqual(mockState.tasks);
+    expect(router.state.agents).toEqual(mockState.agents);
+    expect(router.state.activity).toEqual(mockState.activity);
+    // No snapshot → canonical keys stay at their empty defaults.
+    expect(router.state.plans).toEqual([]);
+    expect(router.state.gates).toEqual([]);
+    expect(router.state.snapshotMeta).toBeNull();
+  });
+
+  // Acceptance #3: Capability Center reuse — loading a snapshot must
+  // not touch the capabilities envelope path; the page keeps reading
+  // capabilities-status.json through the existing aliased loader.
+  it('F002 #3: snapshot loading does not overwrite the capabilities envelope', async () => {
+    const capEnvelope = {
+      schema_version: '1.0.0',
+      generated_at:   '2026-05-22T12:00:00Z',
+      advisory_notes: [],
+      capabilities: [
+        { capability_id: 'agent-claude-cli', status: 'ready',
+          owner_boundary: { dontpanic_core: [], adapter: [], operator: [] },
+          configured: [], missing: [], automatable: [], human_required: [],
+          pending_probes: [], next_actions: [], advisory_notes: [] },
+      ],
+    };
+    setupFetchMock({
+      'capabilities-status': capEnvelope,
+      'state-snapshot':      snapshotFixture,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.capabilities).toEqual(capEnvelope);
+    // And the snapshot was still consumed.
+    expect(router.state.plans).toHaveLength(2);
+  });
+
+  // Acceptance #4: Missing projection files must produce a quiet empty
+  // state, never a bootstrap failure.
+  it('F002 #4: missing state-snapshot.json leaves canonical keys empty (no bootstrap failure)', async () => {
+    setupFetchMock({}); // every URL 404s, including state-snapshot.json
+
+    const router = createRouter();
+    await expect(router.loadState()).resolves.not.toThrow();
+    expect(router.state.plans).toEqual([]);
+    expect(router.state.snapshotMeta).toBeNull();
+  });
+
+  it('F002 #4: malformed state-snapshot.json is ignored (quiet, not crashing)', async () => {
+    setupFetchMock({ 'state-snapshot': { schema_version: '0.9', streams: 'not-an-object' } });
+
+    const router = createRouter();
+    await expect(router.loadState()).resolves.not.toThrow();
+    expect(router.state.plans).toEqual([]);
+    expect(router.state.snapshotMeta).toBeNull();
+  });
+
+  // ── F002 i1 audit follow-up: per-stream projection fallback ───────────
+  //
+  // `dontpanic state export-dashboard` writes both `state-snapshot.json`
+  // (envelope) AND seven per-stream files: plans.json, gates.json,
+  // inbox.json, supervisors.json, quota.json, decisions.json,
+  // evidence_refs.json. If a consumer hand-stages only the per-stream
+  // files (no envelope), the dashboard must still populate canonical +
+  // legacy keys from them. Auditor i0 high-severity finding.
+
+  it('F002 #1: per-stream files populate canonical keys when snapshot is absent', async () => {
+    const s = snapshotFixture.streams;
+    setupFetchMock({
+      // Each per-stream file is JUST that stream's array — no envelope.
+      plans:         s.plans,
+      gates:         s.gates,
+      inbox:         s.inbox,
+      supervisors:   s.supervisors,
+      quota:         s.quota,
+      decisions:     s.decisions,
+      evidence_refs: s.evidence_refs,
+      // Note: no 'state-snapshot' key → envelope fetch returns 404.
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.plans).toHaveLength(2);
+    expect(router.state.gates).toHaveLength(1);
+    expect(router.state.inbox).toHaveLength(2);
+    expect(router.state.supervisors).toHaveLength(1);
+    expect(router.state.quota).toHaveLength(1);
+    expect(router.state.decisions).toHaveLength(1);
+    expect(router.state.evidenceRefs).toHaveLength(1);
+    // No envelope → no capture-time metadata.
+    expect(router.state.snapshotMeta).toBeNull();
+  });
+
+  it('F002 #1: per-stream files populate adapted legacy tasks/agents/activity', async () => {
+    const s = snapshotFixture.streams;
+    setupFetchMock({
+      plans:         s.plans,
+      gates:         s.gates,
+      inbox:         s.inbox,
+      supervisors:   s.supervisors,
+      quota:         s.quota,
+      decisions:     s.decisions,
+      evidence_refs: s.evidence_refs,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.tasks).toHaveLength(2);
+    expect(router.state.tasks[0]).toMatchObject({
+      id:     '2026-05-23-004-feat-operator-console-v0',
+      title:  'Operator console v0',
+      status: 'in_progress',
+      agent:  'claude',
+    });
+    expect(router.state.agents).toHaveLength(1);
+    expect(router.state.agents[0]).toMatchObject({ id: 'claude', status: 'busy' });
+    expect(router.state.activity).toHaveLength(2);
+  });
+
+  it('F002 #1: per-stream projection overrides legacy demo files', async () => {
+    const mockState = createMockState();
+    const s = snapshotFixture.streams;
+    setupFetchMock({
+      agents:        mockState.agents,
+      tasks:         mockState.tasks,
+      activity:      mockState.activity,
+      plans:         s.plans,
+      supervisors:   s.supervisors,
+      inbox:         s.inbox,
+      gates:         s.gates,
+      quota:         s.quota,
+      decisions:     s.decisions,
+      evidence_refs: s.evidence_refs,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    // Legacy fixtures are stomped by the per-stream adapter.
+    expect(router.state.tasks.find(t => t.id === 't1')).toBeUndefined();
+    expect(router.state.tasks.find(t => t.id === '2026-05-23-004-feat-operator-console-v0'))
+      .toBeTruthy();
+  });
+
+  it('F002 #1: state-snapshot.json wins over per-stream files when both are present', async () => {
+    // Snapshot envelope must take precedence so the dashboard surfaces
+    // capture-time metadata even when per-stream files are also on disk
+    // (which is the normal `dontpanic state export-dashboard` output).
+    const s = snapshotFixture.streams;
+    setupFetchMock({
+      'state-snapshot': snapshotFixture,
+      plans:            [], // deliberately empty to detect if per-stream stomped envelope
+      gates:            [],
+      inbox:            [],
+      supervisors:      [],
+      quota:            [],
+      decisions:        [],
+      evidence_refs:    [],
+    });
+    // Reference s to keep the fixture import meaningful for readers.
+    expect(s.plans).toHaveLength(2);
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.plans).toHaveLength(2);
+    expect(router.state.snapshotMeta).not.toBeNull();
+  });
+
+  it('F002 #1: a partial per-stream input (only plans.json) still surfaces the projection', async () => {
+    setupFetchMock({ plans: snapshotFixture.streams.plans });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.plans).toHaveLength(2);
+    expect(router.state.tasks).toHaveLength(2);
+    // Streams without files stay at empty defaults.
+    expect(router.state.gates).toEqual([]);
+    expect(router.state.supervisors).toEqual([]);
+    expect(router.state.snapshotMeta).toBeNull();
+  });
+
+  it('F002 #3: per-stream loading does not overwrite the capabilities envelope', async () => {
+    const capEnvelope = {
+      schema_version: '1.0.0',
+      generated_at:   '2026-05-22T12:00:00Z',
+      advisory_notes: [],
+      capabilities: [
+        { capability_id: 'agent-claude-cli', status: 'ready',
+          owner_boundary: { dontpanic_core: [], adapter: [], operator: [] },
+          configured: [], missing: [], automatable: [], human_required: [],
+          pending_probes: [], next_actions: [], advisory_notes: [] },
+      ],
+    };
+    const s = snapshotFixture.streams;
+    setupFetchMock({
+      'capabilities-status': capEnvelope,
+      plans:                 s.plans,
+      supervisors:           s.supervisors,
+      inbox:                 s.inbox,
+    });
+
+    const router = createRouter();
+    await router.loadState();
+
+    expect(router.state.capabilities).toEqual(capEnvelope);
+    expect(router.state.plans).toHaveLength(2);
   });
 });
 

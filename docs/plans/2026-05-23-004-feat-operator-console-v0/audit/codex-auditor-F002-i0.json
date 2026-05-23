@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-23-004-feat-operator-console-v0",
+  "audit_id": "2026-05-23-004-feat-operator-console-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T03:00:28Z",
+  "completed_at": "2026-05-23T03:03:23Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-004-feat-operator-console-v0-y5nov48s target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 357630 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1874933,
+    "tokens_out": 10850,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`. Structured `target_context.commands_run` is empty, so no forbidden command shapes were present there.\n\nFINDING (high, correctness): The dashboard does not load canonical per-stream export files when `state-snapshot.json` is absent. Evidence: `state_cli.py` writes `plans.json`, `gates.json`, `inbox.json`, `supervisors.json`, `quota.json`, `decisions.json`, and `evidence_refs.json` as export outputs, but `dashboard/core.js:103-108` only fetches `state/state-snapshot.json`; the legacy loader only fetches `agents/tasks/activity/costs/security` plus `capabilities-status`. Recommendation: add a per-stream projection fallback, ideally snapshot > per-stream projection files > legacy demo files.\n\nFINDING (medium, test_coverage): Dashboard tests do not cover per-stream projection input. Evidence: added integration tests cover `state-snapshot.json`, legacy fallback, missing snapshot, malformed snapshot, and capabilities reuse, but no test supplies the seven canonical per-stream files without a snapshot. Recommendation: add unit/integration tests asserting per-stream files populate canonical keys and adapted legacy `tasks/agents/activity`.\n\nChecks run:\n$ npm test -- --reporter=default tests/unit/projection-adapter.test.js tests/integration/core-router.test.js\n$ npm test -- --configLoader runner --reporter=default tests/unit/projection-",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npm test -- --reporter=default tests/unit/projection-adapter.test.js tests/integration/core-router.test.js",
+      "npm test -- --configLoader runner --reporter=default tests/unit/projection-adapter.test.js tests/integration/core-router.test.js",
+      "node --check dashboard/lib/projection-adapter.js",
+      "node --check dashboard/core.js",
+      "node --check dashboard/tests/unit/projection-adapter.test.js",
+      "node --check dashboard/tests/integration/core-router.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "The dashboard does not load canonical per-stream export files when `state-snapshot.json` is absent. Evidence: `state_cli.py` writes `plans.json`, `gates.json`, `inbox.json`, `supervisors.json`, `quota.json`, `decisions.json`, and `evidence_refs.json` as export outputs, but `dashboard/core.js:103-108` only fetches `state/state-snapshot.json`; the legacy loader only fetches `agents/tasks/activity/costs/security` plus `capabilities-status`. Recommendation: add a per-stream projection fallback, idea",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Dashboard tests do not cover per-stream projection input. Evidence: added integration tests cover `state-snapshot.json`, legacy fallback, missing snapshot, malformed snapshot, and capabilities reuse, but no test supplies the seven canonical per-stream files without a snapshot. Recommendation: add unit/integration tests asserting per-stream files populate canonical keys and adapted legacy `tasks/agents/activity`. Checks run: $ npm test -- --reporter=default tests/unit/projection-adapter.test.js t",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

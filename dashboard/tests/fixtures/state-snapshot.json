@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-05-23T03:15:00Z",
+  "dontpanic_version": "0.5.0",
+  "redact_level": "operator",
+  "streams": {
+    "plans": [
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "status": "active",
+        "title": "Operator console v0",
+        "type": "feat",
+        "tier": "cross-cutting",
+        "goal_type": "new_feature",
+        "surfaces": ["ux", "infra"],
+        "features_summary": { "total": 5, "passing": 1 },
+        "target_env": "dev",
+        "target_project": null,
+        "agents_required": ["claude", "codex"],
+        "date": "2026-05-23"
+      },
+      {
+        "plan_id": "2026-05-01-003-fix-something-small",
+        "status": "completed",
+        "title": "Small bug fix",
+        "type": "fix",
+        "tier": "local",
+        "goal_type": "mechanical",
+        "surfaces": ["backend"],
+        "features_summary": { "total": 1, "passing": 1 },
+        "target_env": "dev",
+        "target_project": null,
+        "agents_required": [],
+        "date": "2026-05-01"
+      }
+    ],
+    "gates": [
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "gate_name": "pre_merge",
+        "kind": "pre_merge",
+        "stage": "pre_merge",
+        "reason": "operator review required",
+        "paused_at": "2026-05-23T03:00:00Z",
+        "approval_required": true,
+        "feature_id": "F002"
+      }
+    ],
+    "inbox": [
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "event": "volley_start",
+        "event_id": "2026-05-23-004-feat-operator-console-v0:volley_start:2026-05-23T02:52:18Z:F002",
+        "captured_at": "2026-05-23T02:52:18Z",
+        "feature_id": "F002",
+        "body": "Volley begins: claude (impl) + codex (aud)",
+        "headers": { "severity": "info" }
+      },
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "event": "breaker_tripped",
+        "event_id": "2026-05-23-004-feat-operator-console-v0:breaker_tripped:2026-05-23T02:48:08Z:F001",
+        "captured_at": "2026-05-23T02:48:08Z",
+        "feature_id": "F001",
+        "body": "Circuit breaker tripped: environmental_blocker",
+        "headers": { "severity": "warn", "breaker_kind": "environmental_blocker" }
+      }
+    ],
+    "supervisors": [
+      {
+        "supervisor_id": "42:2026-05-23T02:52:18Z",
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "feature_id": "F002",
+        "implementer_agent": "claude",
+        "auditor_agent": "codex",
+        "started_at": "2026-05-23T02:52:18Z",
+        "host": null,
+        "pid": null
+      }
+    ],
+    "quota": [
+      {
+        "vendor": "claude",
+        "window": "weekly",
+        "percent_of_cap": 42.5,
+        "percent_threshold": 90,
+        "status": "ok",
+        "captured_at": "2026-05-23T03:15:00Z"
+      }
+    ],
+    "decisions": [
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "decision_id": "D001",
+        "ts": "2026-05-23T02:00:00Z",
+        "by": "operator",
+        "title": "Lock plan for operator console v0",
+        "body": "Operator-approved scope cut to V0 console; V1/V2 trigger-gated."
+      }
+    ],
+    "evidence_refs": [
+      {
+        "plan_id": "2026-05-23-004-feat-operator-console-v0",
+        "feature_id": "F001",
+        "type": "audit_json",
+        "uri": "audit/claude-implementer-F001-i0.json",
+        "captured_at": "2026-05-23T02:48:00Z",
+        "captured_by": "claude",
+        "note": "implementer audit"
+      }
+    ]
+  }
+}

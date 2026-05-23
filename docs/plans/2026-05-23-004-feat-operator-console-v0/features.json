@@ -70,9 +70,52 @@
         "Add dashboard unit tests for projection-shaped inputs, legacy fallback, missing files, and capability-state reuse."
       ],
       "acceptance": "(1) V0 dashboard data loading accepts canonical `state-snapshot.json`/per-stream export files. (2) Legacy dashboard/state demo files still render. (3) Capability Center is reused, not duplicated. (4) Missing projection files produce quiet empty states, not bootstrap failure. (5) Dashboard tests cover projection input and legacy fallback.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T03:13:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../dashboard/lib/projection-adapter.js",
+          "note": "Projection adapter for state-snapshot and per-stream exports with legacy fallback."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/core.js",
+          "note": "Dashboard loader precedence: snapshot, per-stream projection files, legacy state files."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/unit/projection-adapter.test.js",
+          "note": "Adapter unit coverage for canonical projection inputs and fallback behavior."
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/tests/integration/core-router.test.js",
+          "note": "Dashboard integration coverage for projection input and legacy fallback."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i1.json",
+          "note": "Implementer remediation after iteration-0 auditor findings."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "Auditor signed off F002 after per-stream fallback remediation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "Operator verification: focused dashboard tests, full dashboard suite, Python regression, syntax checks, and sanitization."
+        }
       ]
     },
     {
