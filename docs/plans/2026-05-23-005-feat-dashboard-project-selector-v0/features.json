@@ -1,0 +1,105 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Project registry and per-project dashboard state substrate. Add or extend the existing project registry so a single DontPanic install can discover registered repos by stable ID, display name, root path, plans root, and optional architecture artifact path. Build per-project dashboard state into the operator-local dashboard cache and emit a fleet summary for All Projects.",
+      "steps": [
+        "Inventory existing project registry/setup code, dashboard build code, state projection code, and install reconcile cache paths.",
+        "Define a ProjectContext model with stable id, display_name, repo_root, plans_root, architecture_path, dashboard_cache_path, and last_seen fields.",
+        "Implement project registry read/write helpers for `~/.dontpanic/projects.json` while preserving current single-repo fallback behavior.",
+        "Implement per-project state build into `~/.dontpanic/dashboard/projects/<project-id>/` without writing generated files into target repos.",
+        "Implement fleet summary generation with registered projects, project health rollup, data age, warning counts, and cache paths.",
+        "Add tests for stable IDs, mutable paths, missing repos, single-repo fallback, multi-project cache layout, and secret-free state output."
+      ],
+      "acceptance": "(1) Registered projects load from a stable operator-local registry. (2) Dashboard state can be generated per project without writing generated files into the target repo. (3) A fleet summary JSON exists for All Projects. (4) Current single-repo dashboard behavior continues to work when no registry exists. (5) Tests cover stable IDs, missing repos, cache layout, fallback behavior, and no-secret output.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Dashboard CLI project selection. Extend `dontpanic projects` and `dontpanic dashboard build|serve` so humans and agents can register projects, list them, and build or serve the dashboard for either All Projects or one selected project. Unknown project IDs fail with a clear list of known IDs and the exact add command.",
+      "steps": [
+        "Add `dontpanic projects add <path> --id <id> [--name <name>] [--plans-root <path>]` and `dontpanic projects list` if the commands do not already exist.",
+        "Add `dontpanic dashboard build --project <id>|all` and `dontpanic dashboard serve --project <id>|all`.",
+        "Default dashboard serve to All Projects when multiple projects are registered, and to current-repo mode when none are registered.",
+        "Ensure `serve --project <id>` rebuilds only the selected project plus enough fleet metadata to populate the selector.",
+        "Make unknown project IDs fail loud with known IDs and the exact registration command shape.",
+        "Add tests for CLI help, default selection behavior, explicit project selection, All Projects selection, unknown ID failure, and no Firebase requirement."
+      ],
+      "acceptance": "(1) Operators can add/list projects from the CLI. (2) Dashboard build/serve accepts `--project <id>|all`. (3) Defaults are predictable for zero, one, and many registered projects. (4) Unknown IDs fail with actionable output. (5) The feature requires no Firebase setup and exposes no remote interface by default. (6) Tests cover CLI behavior and defaults.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "description": "Project selector UI and scope labels. Add a restrained selector to the local dashboard shell that reads the fleet summary, lets the operator switch between All Projects and individual projects, persists the selection locally, and labels each visible surface as Global, Project, or Fleet scoped.",
+      "steps": [
+        "Add a top-level project selector to the dashboard shell with All Projects and registered project options.",
+        "Persist the selected project in localStorage or URL state without mutating DontPanic project registry state.",
+        "Render `Scope: Global`, `Scope: Project`, or `Scope: Fleet` labels on dashboard sections included in this V0 slice.",
+        "Render Add Project as command-emission only, showing the exact `dontpanic projects add` command shape.",
+        "Handle stale/missing fleet summary with a clear `run dontpanic dashboard build --project all` command.",
+        "Add unit/integration tests for selector rendering, persistence, command-emission Add Project, missing summary, and scope labels."
+      ],
+      "acceptance": "(1) The dashboard shows a project selector with All Projects and registered projects. (2) Selection persists locally without mutating governed state. (3) V0 dashboard sections clearly label Global, Project, or Fleet scope. (4) Add Project emits a command rather than writing config. (5) Missing state produces an actionable command. (6) Tests cover selector states and scope labels.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "description": "Fleet/project-scoped What Now and Status. Make the existing What Now view and status header respect the selected project context. All Projects groups actions and warnings by project. Project view filters actions to the selected project while still showing global capability/install blockers that affect that project. Persist dashboard build warnings so skipped or malformed project state is visible in the UI.",
+      "steps": [
+        "Extend ActionItem output with project_id/project_name fields when built from project-scoped sources.",
+        "Render All Projects What Now as a grouped fleet view ordered by needs_action, advisory, info, then project name.",
+        "Render Project What Now as a filtered view with global blockers shown only when relevant to the selected project.",
+        "Persist dashboard build warnings per project and in the fleet summary, including malformed/skipped plans and missing optional artifacts.",
+        "Render status header data age, warning count, selected scope, and project health using the existing four-band taxonomy.",
+        "Add tests for fleet grouping, project filtering, global blocker relevance, build-warning persistence, stale cache, quiet state, and no-secret output."
+      ],
+      "acceptance": "(1) All Projects groups What Now actions by project. (2) Project selection filters What Now to the selected project. (3) Global blockers appear only when relevant to the selected project. (4) Skipped/malformed project warnings are persisted and visible in the dashboard. (5) Status header shows selected scope, health band, warning count, and data age. (6) Tests cover grouping, filtering, warnings, stale state, quiet state, and no-secret output.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "Multi-repo dashboard documentation and objective evidence. Document the project selector model, cache locations, scope labels, CLI commands, and external-repo usage. Capture objective-contract evidence with at least two fixture projects and one current-repo fallback run.",
+      "steps": [
+        "Document the one-global-dashboard model and why target repos do not receive generated dashboard assets by default.",
+        "Document project registration, project selection, All Projects behavior, cache paths, and scope labels.",
+        "Document security posture: local-only server, command-emitter dashboard, no secret values, no Firebase requirement, and no dashboard mutation.",
+        "Create fixture or temporary projects for objective evidence covering multi-project and single-repo fallback flows.",
+        "Capture CLI logs, dashboard state snapshots, selector UI snapshots, status warning snapshots, and sanitization output.",
+        "Update init/doctor messaging only if needed to mention project registration without making it a bootstrap blocker."
+      ],
+      "acceptance": "(1) Documentation explains how a human or agent registers projects and opens the multi-repo dashboard. (2) Docs distinguish Global, Project, and Fleet scope. (3) Security notes are explicit and match implementation. (4) Objective evidence covers two registered projects and one unregistered current-repo fallback. (5) Sanitization output is clean. (6) Init/doctor messaging remains non-blocking for users who only need single-repo mode.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ]
+    }
+  ]
+}
