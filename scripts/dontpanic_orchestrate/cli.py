@@ -2820,6 +2820,7 @@ Private-alpha command surface:
   capabilities status            Inspect capability readiness vs. local env
   capabilities setup             Plan or execute setup for one capability (--print-steps | --automate-safe --confirm)
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
+  reconcile check                Compare current capability manifests against the install snapshot
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch

@@ -79,9 +79,52 @@
         "Run targeted tests and sanitization."
       ],
       "acceptance": "(1) `dontpanic reconcile check --area=capabilities` exits 0 when current capabilities match the snapshot and cache is fresh. (2) Missing snapshot exits non-zero with exact baseline command. (3) New/removed/changed capabilities are reported by capability_id with old/current fingerprints where applicable. (4) Changed setup_step_ids are named. (5) Missing/stale capabilities-status cache is reported with exact `dontpanic capabilities status` command. (6) `--format=json` emits a stable envelope agents can parse. (7) Command never mutates files. (8) Tests cover at least the cases listed in steps. (9) Sanitization clean.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T01:43:15Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/reconcile.py",
+          "note": "F002 reconcile check implementation, drift vocabulary, JSON/text renderers, and CLI internals."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/cli.py",
+          "note": "Top-level help advertises reconcile check."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py",
+          "note": "F002 focused tests; local run passed with F001 tests, 34 passed total."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i1.json",
+          "note": "Implementer remediation iteration."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "Auditor signed off F002."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/terminal-state-iter1.json",
+          "note": "Supervisor terminal state records post-iteration PatchCompletenessError after signed-off auditor envelope."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "Operator verification after local Ruff/test/sanitization rerun."
+        }
       ]
     },
     {

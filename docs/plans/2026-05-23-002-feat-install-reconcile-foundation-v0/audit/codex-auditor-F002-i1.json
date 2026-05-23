@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+  "audit_id": "2026-05-23-002-feat-install-reconcile-foundation-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T01:37:58Z",
+  "completed_at": "2026-05-23T01:41:32Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-002-feat-install-reconcile-foundation-v0-8sohiam4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 472275 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1445026,
+    "tokens_out": 11556,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: signed_off. No findings. The implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; `target_context.commands_run` contains only `git add scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py`, which is not forbidden. Code inspection shows the required status vocabulary, JSON envelope, cache handling, snapshot-only baseline, CLI routing, and test coverage are present.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py -q -p no:cacheprovider\nFailed before collection: no usable temp directory in this sandbox.\n\n$ python -m ruff check --no-cache scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py\nFailed: `ruff` is not installed here.\n\n$ PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py\nPassed.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate import reconcile; from dontpanic_orchestrate import install_snapshot as snap; missing = reconcile.check_capabilities(snapshot_target_path=Path('/definitely/missing/install-snapshot.json'), now_iso='2026-05-23T00:00:00Z'); assert missing.status == 'missing_snapshot'; assert missing.next_commands == ('dontpanic reconcile baseline --ye",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py -q -p no:cacheprovider",
+      "python -m ruff check --no-cache scripts/dontpanic_orchestrate/reconcile.py scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate import reconcile; from dontpanic_orchestrate import install_snapshot as snap; missing = reconcile.check_capabilities(snapshot_target_path=Path('/definitely/missing/install-snapshot.json'), now_iso='2026-05-23T00:00:00Z'); assert missing.status == 'missing_snapshot'; assert missing.next_commands == ('dontpanic reconcile baseline --yes',); fake_index = type('I', (), {'all': ()})(); snapshot = snap.InstallSnapshot(schema_version=snap.SCHEMA_VERSION, generated_at='2026-05-23T00:00:00Z', dontpanic_version='0.0.0-test', profile='core', agent_manifest_schema_version='1.0', mcp_tool_names=(), capability_ids=(), capabilities=(), status_cache=None); cache_only = reconcile.check_capabilities(capability_index=fake_index, snapshot=snapshot, cache_path=Path('/definitely/missing/capabilities-status.json'), now_iso='2026-05-23T00:00:00Z'); assert cache_only.status == 'stale_status_cache'; assert cache_only.next_commands == ('dontpanic capabilities status',); print('direct reconcile contract checks passed')\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}
