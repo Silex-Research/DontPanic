@@ -2814,7 +2814,7 @@ def _print_top_level_help(*, file) -> None:
     print(
         """usage: dontpanic <command> [args]
 
-Private-alpha command surface:
+Public-alpha command surface:
   setup                         Preview or write global roles + project runtime defaults
   config show|set               Inspect or edit ~/.dontpanic/config.json
   project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
@@ -2830,6 +2830,7 @@ Private-alpha command surface:
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
   dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
+  state snapshot|export-dashboard Read-only state projection for dashboards, agents, and adapters
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
