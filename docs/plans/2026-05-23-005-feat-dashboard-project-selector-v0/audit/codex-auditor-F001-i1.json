@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+  "audit_id": "2026-05-23-005-feat-dashboard-project-selector-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-23T06:16:25Z",
+  "completed_at": "2026-05-23T06:18:51Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-005-feat-dashboard-project-selector-v0-edhhelf2 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1350767 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1191117,
+    "tokens_out": 10701,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains only pytest commands with no forbidden shapes.\n\nFINDING (medium, correctness): Per-project build warnings are double-counted. Evidence: `projects_dashboard.build_project_state()` appends warnings in the `warn` callback passed to `dashboard.build()` and then appends `build_report.warnings` again afterward at `scripts/dontpanic_orchestrate/projects_dashboard.py:280` and `:294`, so `build-warnings.json` and fleet `warning_count` can duplicate every dashboard warning. Recommendation: either let `dashboard.build()` own warning collection and only extend from `build_report.warnings`, or pass through warnings without appending locally.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py -q\n\nThat pytest command could not start because this read-only sandbox has no usable temporary directory. Read-only import sanity passed:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate import dashboard, projects_dashboard, projects_registry; print(projects_dashboard.FLEET_SUMMARY_SCHEMA_VERSION); print('display_name' in projects_registry.ProjectEntry.model_fields)\"",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate import dashboard, projects_dashboard, projects_registry; print(projects_dashboard.FLEET_SUMMARY_SCHEMA_VERSION); print('display_name' in projects_registry.ProjectEntry.model_fields)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Per-project build warnings are double-counted. Evidence: `projects_dashboard.build_project_state()` appends warnings in the `warn` callback passed to `dashboard.build()` and then appends `build_report.warnings` again afterward at `scripts/dontpanic_orchestrate/projects_dashboard.py:280` and `:294`, so `build-warnings.json` and fleet `warning_count` can duplicate every dashboard warning. Recommendation: either let `dashboard.build()` own warning collection and only extend from `build_report.warni",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

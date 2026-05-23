@@ -17,8 +17,56 @@
         "Add tests for stable names, mutable paths, missing repos, inactive projects, schema migration, same-version assumption, single-repo fallback, multi-project cache layout, and secret-free state output."
       ],
       "acceptance": "(1) Registered projects load through the existing operator-local registry and `ProjectEntry.name` remains the stable identity. (2) Dashboard state can be generated per project without writing generated files into the target repo. (3) A fleet summary JSON exists for All Projects. (4) Current single-repo dashboard behavior continues to work when no registry exists. (5) Older registry files without optional dashboard fields still load. (6) Tests cover stable names, missing repos, inactive projects, cache layout, fallback behavior, same-version assumption, and no-secret output.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T06:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "note": "Iteration-1 implementer signed off after remediating the iteration-0 auditor findings."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "note": "Iteration-1 auditor left one valid medium finding: per-project build warnings were double-counted."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "ProjectContext projection, per-project cache build, fleet summary generation, and manual double-count remediation."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_registry.py",
+          "note": "Additive optional dashboard selector fields on ProjectEntry."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "Optional cache-path overrides for project-scoped dashboard builds."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py",
+          "note": "F001 focused coverage including stable names, cache layout, legacy registry compatibility, same-version assumption, inactive/missing repos, no-secret scan, mutable paths, and warning double-count regression."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F001.md",
+          "note": "Operator close-out after stopped_no_progress and manual remediation."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F001.txt",
+          "note": "Verification summary: 24 focused tests, 124 related tests, 21 dashboard serve tests outside sandbox, py_compile, and sanitization."
+        }
+      ]
     },
     {
       "id": "F002",

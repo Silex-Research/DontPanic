@@ -157,6 +157,8 @@ def build(
     check_architecture: bool = True,
     repo_root: Path | None = None,
     warn: Callable[[str], None] | None = None,
+    capabilities_cache_path: Path | None = None,
+    what_now_cache_path_override: Path | None = None,
 ) -> BuildReport:
     """Compose every V0 dashboard surface into a single build pass.
 
@@ -166,6 +168,14 @@ def build(
     no install snapshot or no capability cache must still be able to run
     ``build`` and get a usable dashboard with what-now degraded
     gracefully.
+
+    ``capabilities_cache_path`` and ``what_now_cache_path_override``
+    redirect the operator-global write targets when set. Per-project
+    builds (``projects_dashboard.build_project_state``) pass per-project
+    paths so a fleet build cannot last-project-wins the global
+    single-repo caches at ``~/.dontpanic/capabilities-status.json`` and
+    ``~/.dontpanic/dashboard/what-now.json``. ``None`` preserves the
+    existing single-repo defaults.
     """
 
     plans_root = plans_root if plans_root is not None else default_plans_root()
@@ -202,9 +212,14 @@ def build(
                 capability_index=capability_index,
                 repo_root=repo_root,
             )
+            capability_cache_target = (
+                capabilities_cache_path
+                if capabilities_cache_path is not None
+                else global_config.dontpanic_home() / "capabilities-status.json"
+            )
             capability_cache_path = capabilities_status.write_cache(
                 capability_envelope,
-                path=global_config.dontpanic_home() / "capabilities-status.json",
+                path=capability_cache_target,
             )
             dashboard_capability_envelope = _scope_envelope_to_v0_local(
                 capability_envelope, capability_index
@@ -269,7 +284,10 @@ def build(
                 operator_console.render_json(items),
                 encoding="utf-8",
             )
-            what_now_cache_path = operator_console.write_cache(items)
+            what_now_cache_path = operator_console.write_cache(
+                items,
+                path=what_now_cache_path_override,
+            )
         except Exception as exc:  # noqa: BLE001
             msg = f"what-now cache skipped: {exc}"
             warnings.append(msg)

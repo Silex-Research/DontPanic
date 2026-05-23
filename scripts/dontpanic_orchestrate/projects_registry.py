@@ -61,6 +61,32 @@ class ProjectEntry(BaseModel):
     default_implementer: str | None = None
     default_auditor: str | None = None
     notes: str | None = None
+    # 2026-05-23-005 F001 — additive dashboard-selector fields. All
+    # optional so legacy registry files (no dashboard fields) keep loading
+    # unchanged; missing values default to None / True (for ``active``).
+    display_name: str | None = None
+    """Human-friendly label for the dashboard project selector. Defaults
+    to ``name`` at projection time when unset (see
+    :func:`projects_dashboard.project_context_from_entry`)."""
+
+    profile: str | None = None
+    """Free-form operator label (``mobile``, ``backend``, ``schema``, …).
+    Surfaced in the fleet summary so the selector can group / filter; not
+    interpreted by the supervisor."""
+
+    active: bool | None = None
+    """Whether this project participates in fleet builds. ``None`` means
+    "field absent" (legacy) and projects without the flag are treated as
+    active. The selector hides inactive projects from "All Projects"
+    rollups but they remain registered so the operator can re-enable
+    them without re-adding."""
+
+    dontpanic_version: str | None = None
+    """The DontPanic install version that last operated this project.
+    V0 assumes one install operates every registered project (see plan
+    §Schema Assumptions); the field is recorded for forward-compat with
+    a future cross-version selector but the V0 dashboard treats every
+    registered project as same-version."""
 
     @field_validator("name")
     @classmethod
@@ -150,6 +176,10 @@ def add_project(
     default_implementer: str | None = None,
     default_auditor: str | None = None,
     notes: str | None = None,
+    display_name: str | None = None,
+    profile: str | None = None,
+    active: bool | None = None,
+    dontpanic_version: str | None = None,
 ) -> ProjectEntry:
     """Register a project. Refuses on collision unless ``force=True``;
     refuses on non-existent path; refuses on bad-shape name (Pydantic
@@ -168,6 +198,10 @@ def add_project(
             default_implementer=default_implementer,
             default_auditor=default_auditor,
             notes=notes,
+            display_name=display_name,
+            profile=profile,
+            active=active,
+            dontpanic_version=dontpanic_version,
         )
     except Exception as exc:
         raise ProjectsRegistryError(str(exc)) from exc
