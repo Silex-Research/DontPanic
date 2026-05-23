@@ -41,11 +41,11 @@ Each integration is opt-in. None is installed automatically. The core
 vendored schemas, validators, MCP server, state projection, static
 dashboard/export, and docs/templates/examples.
 
-**Status:** private alpha. The repo is ready to share with a small trusted
-group that is comfortable with source installs, local agent CLIs, and
-plan-driven workflows. See [`docs/PRODUCT.md`](./docs/PRODUCT.md) for the
-plain-English product overview, [`docs/ROADMAP.md`](./docs/ROADMAP.md) for the
-current build plan, and [`docs/plans/`](./docs/plans/) for active work.
+**Status:** public alpha. DontPanic is ready for source installs by operators
+who are comfortable with local agent CLIs, plan-driven workflows, and
+preview-before-mutation commands. See [`docs/PRODUCT.md`](./docs/PRODUCT.md) for
+the plain-English product overview, [`docs/ROADMAP.md`](./docs/ROADMAP.md) for
+the current build plan, and [`docs/plans/`](./docs/plans/) for active work.
 
 ---
 
@@ -457,7 +457,13 @@ DontPanic/
 │       ├── audit/*.json             # per-agent audit reports
 │       └── evidence/                # small artifacts (large → Firebase Storage)
 │
-├── examples/plans/hello-dontpanic/   # safe private-alpha lifecycle sample
+├── capabilities/                    # external capability manifests + setup/verify contracts
+│   ├── agent-claude-cli.json         # agent CLI capability example
+│   ├── discord-notify.json           # notification sink
+│   ├── firebase-dashboard.json       # optional realtime dashboard adapter
+│   └── linear.json                   # PM-tool adapter reference
+│
+├── examples/plans/hello-dontpanic/   # safe lifecycle sample
 │
 ├── scripts/
 │   ├── dontpanic_orchestrate/        # supervisor runtime + CLI package
@@ -467,8 +473,10 @@ DontPanic/
 │   ├── sanitization_check.py         # sanitization regression guard
 │   └── quota_check.py                # LLM tokens → ~/.dontpanic/quota_state.json
 │
-├── dashboard/                       # Firebase Hosting static SPA
-│   └── state/                       # agents.json, tasks.json, …
+├── dashboard/                       # operator-local visual console + optional Firebase adapter
+│   ├── index.html                   # local dashboard shell
+│   ├── pages/                       # What Now, Status, Capabilities, Mission Control, …
+│   └── state/                       # generated projections: plans, gates, capabilities, costs, …
 │
 ├── .secrets/                        # gitignored — service account keys (created by bootstrap --create-key)
 ├── environments.json                # gitignored; generated from environments.json.example

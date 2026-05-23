@@ -52,11 +52,14 @@ Use this baseline when a runtime asks for an `mcp.json` block:
 
 ## GitHub Readiness
 
-- [ ] not yet submitted: repository topics include `mcp-server`.
-- [ ] not yet submitted: repository topics include `ai-orchestration`.
-- [ ] not yet submitted: repository topics include `multi-agent`.
-- [ ] not yet submitted: repository topics include `local-first`.
-- [ ] not yet submitted: repository topics include `code-review`.
+- [x] repository description uses the DontPanic safety-layer positioning.
+- [x] repository topics include `mcp-server`.
+- [x] repository topics include `agent-orchestration`.
+- [x] repository topics include `multi-agent`.
+- [x] repository topics include `local-first`.
+- [x] repository topics include `code-review`.
+- [x] repository topics include `ai-agents`, `claude-code`, `codex`,
+  `agent-governance`, and `ai-safety`.
 - [ ] not yet submitted: README badges reflect package, tests, and security
   posture.
 
