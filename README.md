@@ -1,127 +1,161 @@
 # DontPanic
 
-> The safety layer between “the agent says it’s done” and “you merge it.”
+> The safety layer between AI coding agents and production.
 
 ![DontPanic social preview](./docs/assets/dontpanic-social-preview.jpg)
 
-DontPanic turns AI coding from "one agent says it finished" into reviewed,
-tested, evidence-backed software delivery. It locks the work into a plan,
-runs implementer and auditor agents against that plan, pauses for human
-approval at declared gates, and leaves behind durable proof before you merge.
+**Plan-locked. Cross-model audited. Human approved.**
 
-## DontPanic is self-contained
+DontPanic turns vibe coding into governed software engineering. It locks AI
+coding work to an explicit plan, sends the work through a second model family
+for audit, pauses at human approval gates, and leaves an evidence trail before
+anything reaches production.
 
-Install DontPanic. It works by itself. The schemas it validates against
-are vendored under `claude/shared/`; no separate schema repo is required
-to install or run. The upstream `agent-conventions` repo exists for
-schema evolution and external tool authors — it is not a prerequisite
-for using DontPanic.
-
-**Optional ecosystem integrations** (only if you want them):
-
-| Integration | Kind | What it adds | When you need it |
-|---|---|---|---|
-| Hermes `/goal` pattern | Conceptual | Vocabulary + workflow primitives for orchestrator → builder → reviewer dispatches | You want a shared mental model with other agent-driven teams; cited in the Vocabulary section below |
-| OpenClaw | Runtime | Multi-channel agent UI (Telegram, Discord, Slack, WhatsApp, web chat) | Multi-channel agent UIs in front of DontPanic-orchestrated work |
-| Firebase / Axiom dashboard adapter | Runtime | Realtime team kanban | Multi-operator collaboration |
-| Printing Press adapters | Runtime | External service evidence providers | OpenAPI-shaped service wrapping |
-| agent-conventions (upstream) | Maintainer | Schema authoring + external validators | You're building tools that validate DontPanic artifacts outside DontPanic |
-
-Hermes and OpenClaw both interoperate with DontPanic but serve different
-needs: Hermes is a pattern (you read it, you adopt the vocabulary); OpenClaw
-is a runtime (you install it, it talks to your users). Use either, both, or
-neither — DontPanic stands on its own.
-
-Each integration is opt-in. None is installed automatically. The core
-`dontpanic` install includes the CLI, supervisor/dispatch, doctor/init/new,
-vendored schemas, validators, MCP server, state projection, static
-dashboard/export, and docs/templates/examples.
+It works with Claude Code, OpenClaw / Hermes-style workflows, Codex, Gemini,
+Grok, local models, and MCP-enabled tools.
 
 **Status:** public alpha. DontPanic is ready for source installs by operators
 who are comfortable with local agent CLIs, plan-driven workflows, and
-preview-before-mutation commands. See [`docs/PRODUCT.md`](./docs/PRODUCT.md) for
-the plain-English product overview, [`docs/ROADMAP.md`](./docs/ROADMAP.md) for
-the current build plan, and [`docs/plans/`](./docs/plans/) for active work.
+preview-before-mutation commands.
 
----
+## The Problem
 
-## What is DontPanic
+AI coding agents are powerful.
 
-DontPanic is a 4-layer hierarchy that lets multiple AI agents collaborate on
-real work without going off the rails:
+They are not trustworthy by default.
 
+AI agents can:
+
+- confidently ship broken code
+- approve their own work
+- miss edge cases and security assumptions
+- burn runaway token budgets
+- retry endlessly without converging
+- leave no durable audit trail
+- make production changes without clear accountability
+
+DontPanic exists for the moment between:
+
+> "The agent says it's done."
+
+and:
+
+> "Should we actually merge this?"
+
+## The Fix
+
+DontPanic adds trust infrastructure around AI coding:
+
+- **Immutable plans** — requirements and acceptance criteria are validated and locked before work starts.
+- **Cross-model verification** — one agent builds; a different model family audits code, tests, security, docs, architecture, and plan compliance.
+- **Human approval gates** — risky work pauses until a human sees the evidence and approves, requests changes, or rejects.
+- **Circuit breakers** — budget, iteration, no-progress, diminishing-return, convergence-collapse, wall-clock, and global breakers stop waste.
+- **Evidence trails** — transcripts, audit logs, artifacts, signoff, gate state, and INBOX entries stay on disk.
+- **Budget controls** — token and cost visibility prevents runaway agent loops.
+
+The core rule is simple:
+
+> Never let the same AI that wrote the code be the only AI that approves it.
+
+## Before / After
+
+**Without DontPanic**
+
+You ask an agent to add Stripe webhooks.
+
+The agent writes code, says tests pass, claims completion, and misses webhook
+signature verification. The change looks plausible, merges fast, and becomes a
+production security problem.
+
+**With DontPanic**
+
+The request becomes a locked plan. The implementer agent writes the code. A
+different model family audits the patch against the plan, tests, docs, security
+assumptions, and architecture. The auditor catches the missing signature
+verification. The run pauses. Evidence is packaged. A human approves the fix.
+Only then can the work proceed.
+
+## Who It Is For
+
+DontPanic is built for:
+
+- Claude Code and Codex power users who want production-grade guardrails
+- OpenClaw / Hermes-style operators routing work through AI agents
+- teams scaling AI coding without letting one model self-approve
+- enterprises adopting autonomous development with audit and approval needs
+- anyone burned by confident-but-wrong AI output
+
+## Why Not Just Claude Code?
+
+Claude Code, Codex, Gemini, Grok, and local models make coding faster.
+
+DontPanic makes AI-generated code trustworthy enough to ship.
+
+Model vendors optimize for autonomy, speed, and usage. DontPanic optimizes for
+verification, governance, accountability, auditability, and cost control.
+Different model families catch different mistakes, which is why DontPanic uses
+cross-model audits instead of self-approval.
+
+## See It In Action
+
+```text
+$ dontpanic dispatch-from-plan docs/plans/stripe-webhooks --confirm
+✓ Plan locked: plan.md + features.json
+✓ Dispatching to Claude Code (implementer)
+✓ Audit assigned to Codex (auditor)
+…
+⚠ Gate paused: audit findings ready
+  → INBOX.md updated
+  → evidence packaged
+  → waiting for your approval
 ```
-Identity & governance        ← SOUL.md, AGENTS.md, USER.md
-Routing & contracts          ← claude/RESOLVER.md, claude/shared/ (agent-conventions subtree)
-Execution units              ← claude/skills/, docs/plans/<id>/
-Multi-agent panel + bounds   ← Claude / Codex / Gemini / Grok / OSS  +  CAWP tiers + circuit breakers
-```
 
-Each layer's output becomes the next layer's contract. Plans live in `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `features.json` as inviolable machine-checkable ground truth. Different model families audit each other so no single vendor self-approves.
+As the run proceeds, DontPanic writes durable artifacts under the plan dir:
 
-The platform thesis is captured in [`docs/PLATFORM.md`](./docs/PLATFORM.md):
-DontPanic is portable trust infrastructure for bounded agent work. It routes intent
-through reusable skills and learned memory, turns non-trivial work into
-machine-checkable plans, executes those plans across model/vendor boundaries, and
-preserves proof through audits, evidence, signoff, and protected-path checks.
+| Path | What it is |
+|---|---|
+| `audit/<agent>-<role>-i<N>.json` | Per-iteration audit JSON with machine-checkable verdicts |
+| `audit/transcript.md` | Dispatch history: agent, role, tokens, verdict, audit link |
+| `audit/signoff-<plan-id>.json` | Terminal verdict: signoff, reason, next action |
+| `audit/gate-state.json` | Gate-clearance state and active breakers |
+| `INBOX.md` | Append-only operator log: gate pauses, breakers, signoff |
 
-DontPanic may use external service adapters when they improve intake or
-evidence quality. The planned Printing Press adapter work explicitly credits
-[CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) and the
-[Printing Press Library](https://github.com/mvanhorn/printing-press-library)
-for the agent-native CLI/MCP adapter pattern. Those tools remain external;
-DontPanic's responsibility is the allowlist, provenance, read-only policy,
-redaction, normalized evidence, and signoff boundary around any adapter it uses.
+## How DontPanic Works
 
----
+1. **Plan lock** — convert work into `plan.md`, `features.json`, and `decisions.jsonl`.
+2. **Build** — an implementer agent executes the plan inside guardrails.
+3. **Cross-model audit** — a different model family audits the work.
+4. **Human gate** — risky changes pause with evidence and a clear approval choice.
+5. **Approve** — only approved work can proceed toward merge.
 
-## Vocabulary (Hermes `/goal` mapping)
+## What You Get
 
-DontPanic implements the [Hermes `/goal` pattern](https://x.com/Saboo_Shubham_)
-— one orchestrator, one builder, one reviewer, one verifier loop. If you already
-know that pattern, this table maps the terminology directly:
+DontPanic is more than a dispatch command. The current platform gives humans
+and agents a shared operating surface:
 
-| Hermes term          | DontPanic term                                        |
-|----------------------|-------------------------------------------------------|
-| HERMES orchestrator  | `supervisor.dispatch_volley`                          |
-| `/goal` primitive    | Locked plan + `features.json` acceptance              |
-| CODEX builder        | Implementer role (typically Claude)                   |
-| CLAUDE CODE reviewer | Auditor role (typically Codex)                        |
-| Verifier checklist   | Audit envelope schema + finding taxonomy              |
-| "Done" criteria      | `features.json` acceptance + shell-verifiable commands |
+| Capability | What it solves | Command surface |
+|---|---|---|
+| Plan lifecycle | Turns vague work into a locked, auditable contract | `dontpanic plan lock`, `plan audit`, `plan close` |
+| Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
+| Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
+| Local dashboard | Shows What Now, status, capabilities, gates, warnings, and project scope | `dontpanic dashboard build`, `open`, `serve` |
+| Multi-repo registry | Lets one DontPanic install manage many projects | `dontpanic projects add`, `list`, `show`, `remove` |
+| Capability readiness | Shows which external integrations are ready, missing setup, or blocked | `dontpanic capabilities status`, `setup` |
+| Install reconciliation | Detects stale local setup after the platform evolves | `dontpanic reconcile baseline`, `reconcile check` |
+| Architecture map | Generates a visual map and detects drift after manual edits | `dontpanic architecture regen`, `status`, `diff` |
+| Agent access | Lets Claude Code, Cursor, OpenClaw, Codex, and MCP clients call DontPanic safely | `dontpanic manifest`, `mcp serve` |
+| State projection | Exposes read-only status for dashboards, agents, and adapters | `dontpanic state snapshot`, `state export-dashboard` |
 
-DontPanic is one implementation of this pattern, not a rebrand of Hermes.
+The default posture is local-first and preview-before-mutation. External
+systems such as Firebase, Discord, Linear, OpenClaw, and Printing Press are
+capabilities you opt into; they are not required for core use.
 
----
+## 60-Second Start
 
-## Prerequisites
+The preferred command is `dontpanic`. You need Python 3.10+, git, and at least
+one local agent CLI if you want to dispatch real work.
 
-Required:
-
-- **macOS** or Linux with **zsh** or **bash**
-- **Python 3.10+** with `pip`
-- **git**
-
-Optional (depending on which agents you wire):
-
-- **Claude Code / claude CLI** — common implementer
-- **Codex CLI** — common cross-vendor auditor
-- **gcloud SDK** / **firebase-tools** — only for Firebase-backed projects or backend evidence capture
-- **jq** — useful for inspecting JSON evidence
-- **ollama** — `brew install ollama` (local OSS models for safety/embeddings)
-- **gemini CLI** — multimodal review + 2M context
-- **terminal-notifier** — `brew install terminal-notifier` (INBOX async channel)
-
-The editable install pulls the runtime Python dependencies from `pyproject.toml`.
-Use the `dev` extra when you want to run tests and formatting locally.
-
----
-
-## Quickstart
-
-The preferred command is `dontpanic`.
-
-### 1. Install from source
+### 1. Install
 
 ```bash
 git clone https://github.com/Silex-Research/DontPanic.git
@@ -136,7 +170,7 @@ dontpanic --version
 dontpanic --help
 ```
 
-### 2. Configure roles and local defaults
+### 2. Configure Roles
 
 `dontpanic setup` is preview-only by default. It writes no secrets; it stores
 agent role names and project runtime pointers only.
@@ -168,7 +202,7 @@ dontpanic manifest show --json
 
 Agent CLIs authenticate themselves. DontPanic does not store API keys.
 
-### 3. Register a project
+### 3. Register A Project
 
 ```bash
 dontpanic projects add myapp /absolute/path/to/myapp --init-config
@@ -184,7 +218,7 @@ cd /absolute/path/to/myapp
 dontpanic project config set runtime_evidence.web.base_url http://localhost:3000
 ```
 
-### 4. Run the doctor
+### 4. Run The Doctor
 
 ```bash
 dontpanic doctor --skip-auth
@@ -200,7 +234,22 @@ firebase login
 dontpanic doctor
 ```
 
-### 5. Try the safe sample plan
+### 5. Open The Local Dashboard
+
+The dashboard is local-first. It does not require Firebase.
+
+```bash
+dontpanic dashboard build
+dontpanic dashboard open
+```
+
+For a live localhost view while you work:
+
+```bash
+dontpanic dashboard serve
+```
+
+### 6. Try A Safe Sample Plan
 
 This sample exercises the plan lifecycle without dispatching any paid agent
 call. It validates, locks, and closes an exempt infra plan.
@@ -216,16 +265,7 @@ dontpanic plan close "$tmp_plan"
 The sample copy avoids mutating your checkout. It does not dispatch agents and
 does not call any paid model API.
 
-### 6. Run tests
-
-```bash
-PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q
-ruff check scripts/
-ruff format --check scripts/
-python3 scripts/sanitization_check.py
-```
-
-### 7. Dispatch real work
+### 7. Dispatch Real Work
 
 New plans live under `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `plan.md`,
 `features.json`, and `decisions.jsonl`. Validate and lock before dispatch:
@@ -235,7 +275,7 @@ python3 claude/shared/schemas/v1.0/validate.py docs/plans/<plan-id>/
 dontpanic plan lock docs/plans/<plan-id>/
 ```
 
-Refresh quota state and preview dispatch:
+Preview dispatch:
 
 ```bash
 python3 scripts/quota_check.py
@@ -253,33 +293,102 @@ After you review the preview:
 dontpanic dispatch-from-plan <plan-id> --confirm
 ```
 
+Clear gates when prompted:
+
+```bash
+dontpanic ps
+dontpanic approve <plan-id> <gate>
+dontpanic resume <plan-id> --all
+```
+
 Close the plan after all features pass:
 
 ```bash
 dontpanic plan close docs/plans/<plan-id>/
 ```
 
-As the run proceeds, DontPanic writes durable artifacts under the plan dir:
+## Prerequisites
 
-| Path | What it is |
-|---|---|
-| `audit/<agent>-<role>-i<N>.json` | Per-iteration audit JSON (machine-checkable verdict) |
-| `audit/transcript.md` | One row per dispatch — agent, role, tokens in/out, verdict, audit link |
-| `audit/signoff-<plan-id>.json` | Volley-terminal verdict (signoff: true/false, reason, next_action) |
-| `audit/gate-state.json` | Gate-clearance state (cleared_gates, history, active_breakers) |
-| `INBOX.md` | Append-only operator log: gate_paused, breaker_tripped, signoff |
+Required:
 
-Clear gates when prompted:
+- **macOS** or Linux with **zsh** or **bash**
+- **Python 3.10+** with `pip`
+- **git**
+
+Optional, depending on which agents and evidence surfaces you wire:
+
+- **Claude Code / claude CLI** — common implementer
+- **Codex CLI** — common cross-vendor auditor
+- **gcloud SDK** / **firebase-tools** — only for Firebase-backed projects or backend evidence capture
+- **jq** — useful for inspecting JSON evidence
+- **ollama** — local OSS models for safety/embeddings
+- **gemini CLI** — multimodal review + long-context review
+- **terminal-notifier** — desktop pings; `INBOX.md` remains the durable channel
+
+The editable install pulls the runtime Python dependencies from `pyproject.toml`.
+Use the `dev` extra when you want to run tests and formatting locally.
+
+## Run Tests
 
 ```bash
-dontpanic ps                                  # active supervisors
-dontpanic approve <plan-id> <gate>            # clear one gate
-dontpanic resume <plan-id> --all              # explicit bulk clear
+PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q
+ruff check scripts/
+ruff format --check scripts/
+python3 scripts/sanitization_check.py
 ```
+
+## Self-Contained By Default
+
+Install DontPanic. It works by itself. The schemas it validates against are
+vendored under `claude/shared/`; no separate schema repo is required to install
+or run. External integrations are optional.
+
+| Integration | Kind | What it adds | When you need it |
+|---|---|---|---|
+| OpenClaw | Runtime | Multi-channel agent UI | Multi-channel surfaces in front of DontPanic-orchestrated work |
+| Hermes `/goal` pattern | Conceptual | Shared workflow vocabulary | You want a shared mental model with other agent-driven teams |
+| Firebase dashboard adapter | Runtime | Realtime team dashboard | Multi-operator collaboration |
+| Printing Press adapters | Runtime | External service evidence providers | OpenAPI-shaped service wrapping |
+| agent-conventions upstream | Maintainer | Schema authoring and external validators | You are building tools that validate DontPanic artifacts outside DontPanic |
+
+Each integration is opt-in. None is installed automatically. The core
+`dontpanic` install includes the CLI, supervisor/dispatch, doctor/init/new,
+vendored schemas, validators, MCP server, state projection, static dashboard,
+docs, templates, and examples.
+
+## Deeper Architecture
+
+DontPanic is portable trust infrastructure for bounded agent work. It routes
+intent through reusable skills and learned memory, turns non-trivial work into
+machine-checkable plans, executes those plans across model/vendor boundaries,
+and preserves proof through audits, evidence, signoff, and protected-path
+checks.
+
+The implementation has four layers:
+
+```
+Identity & governance        ← SOUL.md, AGENTS.md, USER.md
+Routing & contracts          ← claude/RESOLVER.md, claude/shared/
+Execution units              ← claude/skills/, docs/plans/<id>/
+Multi-agent panel + bounds   ← Claude / Codex / Gemini / Grok / OSS + circuit breakers
+```
+
+Each layer's output becomes the next layer's contract. Plans live in
+`docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `features.json` as machine-checkable
+ground truth. Different model families audit each other so no single vendor
+self-approves.
+
+The platform thesis is captured in [`docs/PLATFORM.md`](./docs/PLATFORM.md).
+The plain-English product overview is in [`docs/PRODUCT.md`](./docs/PRODUCT.md).
+The current build plan is in [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+
+## Vocabulary
 
 See [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) for a slower
 walkthrough and [`docs/AGENT_QUICKSTART.md`](./docs/AGENT_QUICKSTART.md) for
-the flow an AI caller should follow.
+the flow an AI caller should follow. If you already use Hermes-style `/goal`
+workflows, DontPanic maps that pattern to locked plans, implementer/auditor
+roles, audit envelopes, and human approval gates.
 
 ---
 
