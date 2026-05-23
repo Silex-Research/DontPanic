@@ -14,7 +14,36 @@
         "Add a short release-impact prompt that plan authors answer before lock."
       ],
       "acceptance": "(1) docs/AUTHORING_PLANS.md includes a roadmap-vs-plan decision table before the detailed examples. (2) The guidance covers plan, roadmap, investigation, operator setup, and design/product spec asks. (3) At least one example explicitly shows a roadmap parent with a child implementation plan. (4) The text says roadmaps track strategy; child plans ship code/docs. (5) The guidance names the release-impact prompt that F003 will formalize. (6) The guidance explicitly says V0 does not add schema-level plan_kind/investigation/design-spec enforcement. (7) Documentation remains ASCII and validates any embedded plan examples if they are marked as dontpanic-plan-example.",
-      "passes": false,
+      "passes": true,
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T23:13:13Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "claude",
+          "note": "F001 implementation summary; targeted examples test passed and full sweep reported 2608 passed, 7 skipped."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "codex",
+          "note": "Auditor signed off F001 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../docs/AUTHORING_PLANS.md",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "operator",
+          "note": "Authoring guidance now includes roadmap-vs-plan classification, roadmap/child examples, investigation and operator setup examples, release-impact prompt, and v0 schema-scope caveat."
+        }
+      ],
       "depends_on": []
     },
     {
