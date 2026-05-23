@@ -46,7 +46,7 @@ Optional layers (add as needed):
 |---|---|---|---|
 | **Solo dev, terminal only** | DontPanic core + agent CLIs | ~10 min | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) |
 | **Solo dev, want Discord notifications** | Above + receive-only Discord webhook (no broker) | +2 min | This doc → [`CONFIGURATION.md` § Notifications](./CONFIGURATION.md#notifications) |
-| **Personal-axiom (you + maybe friends, chat-channel surfaces)** | Above + OpenClaw as multi-channel router (Discord/Telegram/WhatsApp) with bidirectional commands | +1-2 days | This doc → plan `2026-05-03-002-infra-personal-openclaw-axiom-jarvis` |
+| **Personal multi-channel surface** | Above + OpenClaw as multi-channel router (Discord/Telegram/WhatsApp) with bidirectional commands | +1-2 days | This doc → OpenClaw adapter plan |
 | **Hosted-agent flow (Claude.ai managed agents)** | DontPanic events surfaced through Claude.ai's dashboard/email; approvals via Claude.ai chat → MCP | varies | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → operator-side wiring |
 | **AI agent integrating DontPanic interactively** (Claude Code, Cursor, Codex CLI, Continue) | DontPanic core + agent-manifest + MCP server. No broker needed — agents read state in your active session | ~5 min | [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → [`ECOSYSTEM.md`](./ECOSYSTEM.md) |
 
