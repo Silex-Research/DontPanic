@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 3 items
+
+scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py::test_interactive_prints_dashboard_handoff PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py::test_json_mode_suppresses_dashboard_handoff PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py::test_non_interactive_suppresses_dashboard_handoff PASSED [100%]
+
+============================== 3 passed in 0.04s ===============================
+
+## Source
+
+The exact dashboard hand-off line is emitted by
+`scripts/dontpanic_orchestrate/init/__init__.py` after the post-walk
+smoke + install-snapshot sequence completes successfully under the
+interactive path. The tests above pin both the presence (interactive
+mode) and absence (--json / --non-interactive) of the line.
+
+## Exact line emitted to stdout
+
+    [dashboard] install ready. Open the local operator console with
+    `dontpanic dashboard open` (or `dontpanic dashboard serve` for a
+    localhost-only HTTP session with live refresh).

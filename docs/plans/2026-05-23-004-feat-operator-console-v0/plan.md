@@ -8,7 +8,7 @@ description: |
   supervisor state. No Firebase, no architecture page, no drag/drop kanban.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-23"
 goal_type: new_feature
 surfaces:
