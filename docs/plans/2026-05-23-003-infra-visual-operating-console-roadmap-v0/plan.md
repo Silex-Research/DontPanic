@@ -10,7 +10,7 @@ description: |
   run next?"
 type: infra
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-23"
 goal_type: infra
 surfaces:
