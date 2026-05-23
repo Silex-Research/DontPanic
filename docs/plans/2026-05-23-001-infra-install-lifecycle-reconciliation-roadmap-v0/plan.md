@@ -8,7 +8,7 @@ description: |
   onboarded?" at any time, using an install snapshot as the comparison anchor.
 type: infra
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-23"
 goal_type: infra
 surfaces:
@@ -78,7 +78,7 @@ Scope:
   agent-manifest schema, MCP tool names, capability ids, and setup-step
   fingerprints.
 
-Status: active child, lockable now.
+Status: shipped via child F001 (commit 7fc3144). See D006.
 
 ### R1 — Capability Drift Reconciliation
 
@@ -91,7 +91,7 @@ Scope:
   missing `~/.dontpanic/capabilities-status.json`.
 - Text and JSON output for humans and agents.
 
-Status: active child, lockable after R0 in the same child plan.
+Status: shipped via child F002 (commit 3104e3e). See D006.
 
 ### R2 — Config and Agent Manifest Drift
 

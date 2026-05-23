@@ -139,10 +139,43 @@
         "Flip child features and parent roadmap status only after evidence is present."
       ],
       "acceptance": "(1) Parent roadmap decisions cite this child plan and shipped R0/R1 evidence. (2) This plan has close-out evidence covering snapshot + capability drift. (3) R2-R4 remain future trigger-gated milestones, not silently folded into v0. (4) Plan validation passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T01:55:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl",
+          "note": "Parent roadmap D006 cites R0/R1 shipped commits and re-states R2/R3/R4 trigger gates."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F001.md",
+          "note": "Snapshot primitive close-out (R0)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F002.md",
+          "note": "Capability drift close-out (R1)."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F003.md",
+          "note": "Roadmap close-out summary: shipped scope, verification commands, security posture, R2-R4 deferral."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i0.json",
+          "note": "Auditor signed off F003 roadmap close-out before post-iteration patch-completeness block."
+        }
       ]
     }
   ]

@@ -1,6 +1,30 @@
 {
   "schema_version": "1.0",
-  "status": "pass",
-  "findings": [],
-  "files": []
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl",
+        "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+        "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json",
+        "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl,docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json,docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/decisions.jsonl",
+    "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+    "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/INBOX.md",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/decisions.jsonl",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md"
+  ]
 }
