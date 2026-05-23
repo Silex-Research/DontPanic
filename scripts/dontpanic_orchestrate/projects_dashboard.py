@@ -86,6 +86,189 @@ malformed or skipped artifacts without making the operator scrape
 stderr."""
 
 
+ALL_PROJECTS_SENTINEL = "all"
+"""CLI value for ``--project all`` meaning "build every registered
+project plus the fleet summary"."""
+
+PROJECT_REGISTRY_FILENAME = projects_registry.REGISTRY_FILENAME
+"""Re-exported so the dashboard serve watcher can fingerprint the
+registry alongside its other source files."""
+
+
+# ── selection model + errors ────────────────────────────────────────────
+
+
+class UnknownProjectError(ValueError):
+    """Raised when ``--project <name>`` does not match any registered
+    project. Carries the unknown name, the list of known names (in
+    registry order), and a shell-ready add-command shape so the CLI can
+    print an actionable failure without re-deriving any of it.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        known_names: tuple[str, ...] = (),
+    ) -> None:
+        self.name = name
+        self.known_names = tuple(known_names)
+        super().__init__(self._format())
+
+    def add_command(self) -> str:
+        return f"dontpanic projects add {self.name} <path>"
+
+    def _format(self) -> str:
+        if self.known_names:
+            known = ", ".join(self.known_names)
+            known_line = f"known projects: {known}"
+        else:
+            known_line = "no projects are registered yet"
+        return (
+            f"unknown project {self.name!r}; {known_line}. "
+            f"register it with: {self.add_command()}"
+        )
+
+
+@dataclass(frozen=True)
+class ResolvedSelection:
+    """Outcome of :func:`resolve_selection`.
+
+    ``kind`` is one of:
+      * ``"current_repo"`` — no registry / fall back to single-repo
+        ``dashboard.build`` against ``<cwd>/docs/plans``.
+      * ``"all"`` — build every registered project and the fleet
+        summary.
+      * ``"project"`` — build the one project named by ``project_name``
+        plus the fleet summary so the selector still has every option.
+
+    ``is_default`` is True when the caller did not pass ``--project``
+    explicitly; the CLI uses it to decide whether to print the
+    "defaulted to X" advisory.
+
+    ``cwd_match`` is True when the default resolution found a registered
+    project containing the operator's cwd — the UI / CLI surfaces this
+    so the operator can see *why* a given project was selected.
+    """
+
+    kind: str
+    project_name: str | None = None
+    is_default: bool = False
+    cwd_match: bool = False
+    reason: str = ""
+
+
+def find_cwd_project_entry(
+    cwd: Path,
+    entries: Iterable[projects_registry.ProjectEntry],
+) -> projects_registry.ProjectEntry | None:
+    """Return the registry entry whose ``path`` contains ``cwd``.
+
+    Compares resolved absolute paths. Ties (cwd inside a nested project)
+    pick the deepest path so a subproject wins over its parent. Returns
+    None when no entry contains cwd.
+    """
+
+    try:
+        cwd_resolved = cwd.expanduser().resolve()
+    except OSError:
+        return None
+    best: projects_registry.ProjectEntry | None = None
+    best_depth = -1
+    for entry in entries:
+        try:
+            root = Path(entry.path).expanduser().resolve()
+        except OSError:
+            continue
+        if cwd_resolved == root or root in cwd_resolved.parents:
+            depth = len(root.parts)
+            if depth > best_depth:
+                best = entry
+                best_depth = depth
+    return best
+
+
+def resolve_selection(
+    requested: str | None,
+    *,
+    cwd: Path | None = None,
+    registry: projects_registry.Registry | None = None,
+) -> ResolvedSelection:
+    """Map a ``--project`` value (or absence) to a :class:`ResolvedSelection`.
+
+    Per plan §Command Shape:
+      * no registry → ``current_repo`` regardless of ``requested``
+        being absent (an explicit ``--project`` against an empty
+        registry is an error and surfaced by the CLI before reaching
+        here).
+      * explicit ``"all"`` → ``all``.
+      * explicit ``"<name>"`` → ``project`` if known, else
+        :class:`UnknownProjectError`.
+      * ``None`` (operator didn't pass ``--project``):
+          - cwd inside a registered project → that project (cwd_match)
+          - else exactly one project registered → that project
+          - else multi-project → ``all``
+          - else no projects → ``current_repo``
+    """
+
+    reg = registry if registry is not None else projects_registry.load_registry()
+    entries = list(reg.projects)
+    cwd = cwd if cwd is not None else Path.cwd()
+
+    if requested is not None:
+        if requested == ALL_PROJECTS_SENTINEL:
+            return ResolvedSelection(
+                kind="all",
+                is_default=False,
+                reason="explicit --project all",
+            )
+        match = next((e for e in entries if e.name == requested), None)
+        if match is None:
+            raise UnknownProjectError(
+                requested,
+                known_names=tuple(e.name for e in entries),
+            )
+        return ResolvedSelection(
+            kind="project",
+            project_name=match.name,
+            is_default=False,
+            reason=f"explicit --project {match.name}",
+        )
+
+    # Default resolution.
+    if not entries:
+        return ResolvedSelection(
+            kind="current_repo",
+            is_default=True,
+            reason="no registered projects; using current-repo mode",
+        )
+
+    cwd_entry = find_cwd_project_entry(cwd, entries)
+    if cwd_entry is not None:
+        return ResolvedSelection(
+            kind="project",
+            project_name=cwd_entry.name,
+            is_default=True,
+            cwd_match=True,
+            reason=f"cwd is inside registered project {cwd_entry.name!r}",
+        )
+
+    if len(entries) == 1:
+        only = entries[0]
+        return ResolvedSelection(
+            kind="project",
+            project_name=only.name,
+            is_default=True,
+            reason=f"only one project registered ({only.name!r})",
+        )
+
+    return ResolvedSelection(
+        kind="all",
+        is_default=True,
+        reason="multiple projects registered; defaulting to all",
+    )
+
+
 # ── ProjectContext projection ────────────────────────────────────────────
 
 
@@ -504,6 +687,218 @@ def _worst_band(current: str, candidate: str) -> str:
     return current
 
 
+# ── selection orchestrator (F002) ───────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SelectedBuildResult:
+    """Outcome of :func:`build_selected`.
+
+    Records both the resolved selection and the build outputs the CLI
+    needs to print or surface in the served dashboard tree:
+
+      * ``selection`` — the :class:`ResolvedSelection` that was acted on.
+      * ``current_repo_report`` — populated only when ``kind ==
+        "current_repo"`` (zero registered projects).
+      * ``project_reports`` — one :class:`ProjectBuildReport` per built
+        project. Always includes the focused project for
+        ``kind=="project"`` builds plus lightweight stub reports for the
+        rest of the registry so the fleet summary still surfaces every
+        registered project to the selector. Empty for
+        ``kind=="current_repo"``.
+      * ``fleet_summary_path`` — path written by
+        :func:`build_fleet_summary` (``None`` for ``current_repo``).
+    """
+
+    selection: ResolvedSelection
+    current_repo_report: dashboard.BuildReport | None = None
+    project_reports: tuple[ProjectBuildReport, ...] = field(default_factory=tuple)
+    fleet_summary_path: Path | None = None
+
+    def focused_project(self) -> ProjectBuildReport | None:
+        """The fully-built ProjectBuildReport for ``kind=="project"``.
+
+        Returns None when this build was ``all`` or ``current_repo``;
+        in those cases callers either iterate ``project_reports`` or use
+        ``current_repo_report``.
+        """
+
+        if self.selection.kind != "project" or not self.selection.project_name:
+            return None
+        for r in self.project_reports:
+            if r.context.name == self.selection.project_name and not r.skipped:
+                return r
+        return None
+
+
+def _stub_project_report(context: ProjectContext) -> ProjectBuildReport:
+    """Build a no-op :class:`ProjectBuildReport` for an unbuilt project.
+
+    Used when ``--project <name>`` is in focused mode: every other
+    project still needs a fleet-summary entry so the selector can render
+    it, but we don't want to re-run :func:`dashboard.build` for the
+    whole fleet on every focused refresh.
+
+    The stub writes only ``build-warnings.json`` (so the cache layout
+    invariant — every project dir has the warnings sibling — holds) and
+    annotates the warning so the UI can render "stale: focused build of
+    another project" without inventing the message client-side.
+    """
+
+    out_dir = context.dashboard_cache_path
+    out_dir.mkdir(parents=True, exist_ok=True)
+    warnings = [
+        f"project {context.name!r} not rebuilt this pass — focused build of another project",
+    ]
+    warnings_path = _write_build_warnings(
+        out_dir, context=context, warnings=warnings, skipped=True
+    )
+    return ProjectBuildReport(
+        context=context,
+        build_report=None,
+        build_warnings_path=warnings_path,
+        warnings=tuple(warnings),
+        skipped=True,
+        skipped_reason="not focused this pass",
+    )
+
+
+def build_selected(
+    requested: str | None,
+    *,
+    plans_root: Path | None = None,
+    out_dir: Path | None = None,
+    redact_level: str = "operator",
+    plan_id: str | None = None,
+    repo_root: Path | None = None,
+    warn: Callable[[str], None] | None = None,
+    cwd: Path | None = None,
+    dontpanic_version: str | None = None,
+) -> SelectedBuildResult:
+    """Resolve the ``--project`` selection and execute the matching build.
+
+    Behavior matrix:
+      * ``current_repo`` (zero registered projects) — defers to
+        :func:`dashboard.build` against ``plans_root`` / ``out_dir`` so
+        a fresh operator with no registry still gets a dashboard.
+      * ``all`` — builds every registered project and writes the fleet
+        summary.
+      * ``project`` — builds the focused project fully and emits
+        lightweight stub reports for the rest so the fleet summary
+        surfaces every registered project. The focused project's full
+        state is what the operator interacts with; the other entries
+        carry their existing snapshot's data age (or a "not focused"
+        warning if no snapshot has been built yet).
+
+    Raises :class:`UnknownProjectError` from
+    :func:`resolve_selection` when the operator passes
+    ``--project <name>`` for an unregistered name.
+    """
+
+    warn = warn if warn is not None else (lambda _msg: None)
+    registry = projects_registry.load_registry()
+    selection = resolve_selection(requested, cwd=cwd, registry=registry)
+
+    if selection.kind == "current_repo":
+        # Single-repo fallback — preserves the pre-F002 dashboard.build
+        # behavior exactly.
+        report = dashboard.build(
+            plans_root=plans_root,
+            out_dir=out_dir,
+            redact_level=redact_level,
+            plan_id=plan_id,
+            repo_root=repo_root,
+            warn=warn,
+        )
+        return SelectedBuildResult(
+            selection=selection,
+            current_repo_report=report,
+            project_reports=(),
+            fleet_summary_path=None,
+        )
+
+    # Registry-driven build.
+    contexts = [project_context_from_entry(e) for e in registry.projects]
+    project_reports: list[ProjectBuildReport] = []
+    if selection.kind == "all":
+        for ctx in contexts:
+            project_reports.append(
+                build_project_state(ctx, redact_level=redact_level, warn=warn)
+            )
+    else:  # selection.kind == "project"
+        focused = selection.project_name
+        for ctx in contexts:
+            if ctx.name == focused:
+                project_reports.append(
+                    build_project_state(
+                        ctx, redact_level=redact_level, warn=warn
+                    )
+                )
+            else:
+                project_reports.append(_stub_project_report(ctx))
+
+    summary_path = build_fleet_summary(
+        project_reports,
+        dontpanic_version=dontpanic_version,
+    )
+    return SelectedBuildResult(
+        selection=selection,
+        current_repo_report=None,
+        project_reports=tuple(project_reports),
+        fleet_summary_path=summary_path,
+    )
+
+
+def mirror_selection_into_state_dir(
+    result: SelectedBuildResult,
+    *,
+    state_out_dir: Path,
+) -> None:
+    """Copy the fleet summary and focused project state into the served tree.
+
+    The static dashboard reads ``state/`` from its served root, so the
+    serve command needs the fleet summary and the focused project's
+    state-snapshot / what-now / build-warnings available there. We
+    deliberately mirror — rather than symlink — so the served directory
+    works on every filesystem and the operator-local cache remains the
+    source of truth (the dashboard UI may also fetch it directly via
+    the cache path advertised in the fleet summary).
+
+    No-op for ``current_repo`` builds (the single-repo
+    :func:`dashboard.build` writes ``state_out_dir`` directly).
+    """
+
+    if result.selection.kind == "current_repo":
+        return
+    state_out_dir.mkdir(parents=True, exist_ok=True)
+
+    if result.fleet_summary_path is not None and result.fleet_summary_path.is_file():
+        (state_out_dir / FLEET_SUMMARY_FILENAME).write_text(
+            result.fleet_summary_path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    # Mirror per-project state into state_out_dir/projects/<name>/ so the
+    # selector can fetch ``projects/<name>/state-snapshot.json`` from
+    # the served root without leaking absolute $HOME paths into the
+    # browser. Each per-project mirror is a snapshot of the operator
+    # cache at this point in time; the next build pass refreshes it.
+    projects_root = state_out_dir / "projects"
+    for report in result.project_reports:
+        cache_dir = report.context.dashboard_cache_path
+        if not cache_dir.is_dir():
+            continue
+        target = projects_root / report.context.name
+        target.mkdir(parents=True, exist_ok=True)
+        for source in cache_dir.iterdir():
+            if not source.is_file():
+                continue
+            (target / source.name).write_text(
+                source.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+
 # ── small helpers ───────────────────────────────────────────────────────
 
 
@@ -518,16 +913,25 @@ def _iso(when: dt.datetime) -> str:
 
 
 __all__ = [
+    "ALL_PROJECTS_SENTINEL",
     "BUILD_WARNINGS_FILENAME",
     "FLEET_SUMMARY_FILENAME",
     "FLEET_SUMMARY_SCHEMA_VERSION",
     "PROJECTS_DASHBOARD_SUBDIR",
+    "PROJECT_REGISTRY_FILENAME",
     "ProjectBuildReport",
     "ProjectContext",
+    "ResolvedSelection",
+    "SelectedBuildResult",
+    "UnknownProjectError",
     "build_fleet_summary",
     "build_project_state",
+    "build_selected",
+    "find_cwd_project_entry",
     "fleet_summary_path",
     "load_project_contexts",
+    "mirror_selection_into_state_dir",
     "project_context_from_entry",
     "project_dashboard_dir",
+    "resolve_selection",
 ]

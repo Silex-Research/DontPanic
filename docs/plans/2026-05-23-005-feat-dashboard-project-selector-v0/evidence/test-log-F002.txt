@@ -1,0 +1,17 @@
+F002 verification summary
+
+Focused:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py -q
+=> 24 passed in 2.43s outside sandbox; sandbox run failed only on localhost socket bind PermissionError for serve tests.
+
+Adjacent dashboard/registry:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py scripts/dontpanic_orchestrate/tests/test_f002_projects_registry.py -q
+=> 98 passed in 11.76s outside sandbox.
+
+Other dashboard readiness/export/init:
+PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doctor_dashboard_readiness_f005.py scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py -q
+=> 19 passed in 0.22s
+
+Sanitization:
+python3 scripts/sanitization_check.py
+=> no campaign IDs or secret shapes in sanitized surface (1854 files scanned)

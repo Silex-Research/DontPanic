@@ -101,3 +101,84 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
 ===
+---
+timestamp: 2026-05-23T06:23:18Z
+event: gate_hit
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+unmet_gates: breaker:no_progress
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:no_progress']
+Cleared gates : ['pre_impl']
+Awaiting      : ['breaker:no_progress']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-23-005-feat-dashboard-project-selector-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-23-005-feat-dashboard-project-selector-v0 --all
+
+===
+---
+timestamp: 2026-05-23T06:23:24Z
+event: gate_cleared
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-23T06:23:28Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T06:23:28Z
+event: volley_start
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T06:36:15Z
+event: gate_hit
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-23-005-feat-dashboard-project-selector-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-23-005-feat-dashboard-project-selector-v0 --all
+
+===
+---
+timestamp: 2026-05-23T06:38:33Z
+event: gate_cleared
+plan_id: 2026-05-23-005-feat-dashboard-project-selector-v0
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===

@@ -83,9 +83,47 @@
         "Add tests for CLI help, cwd-match default behavior, explicit project selection, All Projects selection, unknown-name failure, registry refresh, and no Firebase requirement."
       ],
       "acceptance": "(1) Dashboard build/serve consumes projects registered through the existing CLI. (2) Dashboard build/serve accepts `--project <name>|all`. (3) Defaults are predictable for zero, one, cwd-matched, and many registered projects. (4) Unknown names fail with actionable output. (5) A running server refreshes selector data after registry changes. (6) The feature requires no Firebase setup and exposes no remote interface by default. (7) Tests cover CLI behavior and defaults.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": [
+        "claude_impl",
+        "codex_auditor",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T07:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/projects_dashboard.py",
+          "note": "ResolvedSelection / UnknownProjectError / resolve_selection / build_selected / mirror_selection_into_state_dir power the F002 CLI surface."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "build/open/serve CLI accept --project, route through build_selected, and the serve watcher fingerprints ~/.dontpanic/projects.json so registry changes refresh the fleet summary live."
+        },
+        {
+          "type": "file",
+          "uri": "../../../scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py",
+          "note": "24-test focused coverage: default resolution (zero/one/cwd-match/multi), explicit --project, unknown-name fail-loud (CLI + library), build/serve mirroring, registry refresh during serve, no Firebase imports, loopback-only default, CLI help mentions --project."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F002-i0.json",
+          "note": "Implementer signed off F002 in iteration 0."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "Auditor signed off F002 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/test-log-F002.txt",
+          "note": "Operator verification: F002 focused tests, adjacent dashboard/registry tests, readiness/export/init tests, and sanitization."
+        }
       ]
     },
     {

@@ -12,3 +12,5 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 **2026-05-23T06:18:51Z** — feature **F001** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-05-23T06:32:57Z | F002 | i0 | claude / implementer | signed_off | 9,919,607 / 40,159 | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-05-23T06:36:15Z | F002 | i0 | codex / auditor | signed_off | 1,917,581 / 12,127 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |

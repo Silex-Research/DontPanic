@@ -655,7 +655,15 @@ def _source_fingerprint(
     fires. The serve loop needs file-set semantics, so it tracks
     relative path, mtime_ns, and size for every watched source while
     still excluding generated dashboard state.
+
+    Also tracks the project registry at ``~/.dontpanic/projects.json``
+    (F002 acceptance 5: a newly-added project surfaces in the served
+    selector without manual restart). The registry path is enumerated
+    via :func:`projects_registry.registry_path` so a missing file is
+    still represented in the fingerprint when it later appears.
     """
+
+    from dontpanic_orchestrate import projects_registry as pr
 
     entries: list[tuple[str, int, int]] = []
     entries.extend(
@@ -668,6 +676,17 @@ def _source_fingerprint(
             _iter_static_dashboard_files(dashboard_dir, excluded_dir=state_out_dir),
         )
     )
+    # Registry file. Missing → ("absent", 0, 0) so the next presence
+    # change registers as a fingerprint diff.
+    reg_path = pr.registry_path()
+    if reg_path.is_file():
+        try:
+            stat = reg_path.stat()
+            entries.append(("registry/projects.json", stat.st_mtime_ns, stat.st_size))
+        except OSError:
+            entries.append(("registry/projects.json", 0, -1))
+    else:
+        entries.append(("registry/projects.json", 0, 0))
     return tuple(sorted(entries))
 
 
@@ -756,6 +775,7 @@ def serve_start(
     allow_remote: bool = False,
     repo_root: Path | None = None,
     warn: Callable[[str], None] | None = None,
+    project: str | None = None,
 ) -> ServeHandle:
     """Bind a localhost-only HTTP server and (optionally) start the watch
     loop. Returns immediately — tests/operator code can poll
@@ -763,6 +783,18 @@ def serve_start(
 
     Raises ``ValueError`` if the supplied host is not loopback and
     ``allow_remote`` was not set.
+
+    ``project`` controls which scope is served:
+      * ``None`` (default) — resolves via :func:`projects_dashboard.resolve_selection`
+        (cwd-match, then single-project default, else ``all`` or current
+        repo). This matches ``dashboard build``'s default behavior.
+      * ``"all"`` — serve the fleet view.
+      * registry project name — serve that one project. The fleet
+        summary still surfaces every registered project so the selector
+        UI in F003 can render them all.
+
+    Raises :class:`projects_dashboard.UnknownProjectError` for an
+    unknown name so the CLI can fail loud before binding the socket.
     """
 
     if not allow_remote and not _is_loopback_host(host):
@@ -778,12 +810,22 @@ def serve_start(
     warn = warn if warn is not None else (lambda _msg: None)
 
     # Always run an initial build so the first request sees fresh data.
-    build(
+    # Resolves --project up-front so an unknown name raises before we
+    # bind the socket (operators don't want a server they then have to
+    # tear down because of a typo).
+    from dontpanic_orchestrate import projects_dashboard
+
+    initial_result = projects_dashboard.build_selected(
+        project,
         plans_root=plans_root,
         out_dir=state_out_dir,
         repo_root=repo_root,
         warn=warn,
     )
+    if initial_result.selection.kind != "current_repo":
+        projects_dashboard.mirror_selection_into_state_dir(
+            initial_result, state_out_dir=state_out_dir
+        )
 
     server = _make_server(host=host, port=port, directory=dashboard_dir)
     bound_host, bound_port = server.server_address[:2]
@@ -816,6 +858,7 @@ def serve_start(
                 "state_out_dir": state_out_dir,
                 "repo_root": repo_root,
                 "warn": warn,
+                "project": project,
             },
             name="dontpanic-dashboard-watch",
             daemon=True,
@@ -835,11 +878,23 @@ def _watch_loop(
     state_out_dir: Path,
     repo_root: Path | None,
     warn: Callable[[str], None],
+    project: str | None = None,
 ) -> None:
     """Polling rebuild loop. Polling beats inotify here because the V0
     sources span $HOME (capability cache, install snapshot) and the repo,
     and the operator-facing latency is ``watch_interval`` seconds — well
-    inside human reaction time."""
+    inside human reaction time.
+
+    Re-enters :func:`projects_dashboard.build_selected` each tick so
+    registry edits (a new ``dontpanic projects add``) surface in the
+    served fleet summary without a manual server restart. An unknown
+    project name supplied at server start has already been rejected by
+    :func:`serve_start`; a project that *vanishes* from the registry
+    while the server is running degrades gracefully by falling back to
+    default resolution and logging a warning.
+    """
+
+    from dontpanic_orchestrate import projects_dashboard
 
     last_fingerprint = _source_fingerprint(
         plans_root=plans_root,
@@ -850,7 +905,8 @@ def _watch_loop(
         if stop_event.wait(timeout=interval):
             return
         # Re-enumerate each tick so newly-added plan source files (and
-        # newly-created plan dirs) are picked up without restart.
+        # newly-created plan dirs / project registry edits) are picked
+        # up without restart.
         current = _source_fingerprint(
             plans_root=plans_root,
             dashboard_dir=dashboard_dir,
@@ -858,12 +914,33 @@ def _watch_loop(
         )
         if current != last_fingerprint:
             try:
-                build(
-                    plans_root=plans_root,
-                    out_dir=state_out_dir,
-                    repo_root=repo_root,
-                    warn=warn,
-                )
+                effective_project = project
+                try:
+                    result = projects_dashboard.build_selected(
+                        effective_project,
+                        plans_root=plans_root,
+                        out_dir=state_out_dir,
+                        repo_root=repo_root,
+                        warn=warn,
+                    )
+                except projects_dashboard.UnknownProjectError as exc:
+                    # The previously-known project was removed from the
+                    # registry mid-run. Degrade to default selection.
+                    warn(
+                        f"project {project!r} no longer registered; "
+                        f"falling back to default selection ({exc})"
+                    )
+                    result = projects_dashboard.build_selected(
+                        None,
+                        plans_root=plans_root,
+                        out_dir=state_out_dir,
+                        repo_root=repo_root,
+                        warn=warn,
+                    )
+                if result.selection.kind != "current_repo":
+                    projects_dashboard.mirror_selection_into_state_dir(
+                        result, state_out_dir=state_out_dir
+                    )
             except Exception as exc:  # noqa: BLE001
                 warn(f"watch rebuild failed: {exc}")
             # Re-baseline AFTER the build using a fresh enumeration so
@@ -916,13 +993,26 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Restrict state export + action items to one plan id.",
     )
+    common_build.add_argument(
+        "--project",
+        dest="project",
+        default=None,
+        help=(
+            "Project to build (`all` for the fleet, or a registered project "
+            "name from `dontpanic projects list`). When omitted, the default "
+            "is the cwd-matched project if cwd is inside one, otherwise "
+            "`all` when more than one project is registered, otherwise the "
+            "current-repo single-project mode."
+        ),
+    )
 
     sub.add_parser(
         "build",
         parents=[common_build],
         help=(
             "Compose state-snapshot + capabilities cache + reconcile + "
-            "architecture + what-now cache into the dashboard state dir."
+            "architecture + what-now cache into the dashboard state dir. "
+            "Pass --project to switch between fleet and per-project builds."
         ),
     )
 
@@ -998,6 +1088,17 @@ def build_parser() -> argparse.ArgumentParser:
             "default; this flag exists strictly for explicit operator opt-in."
         ),
     )
+    serve_parser.add_argument(
+        "--project",
+        dest="project",
+        default=None,
+        help=(
+            "Project to serve (`all` for the fleet, or a registered project "
+            "name from `dontpanic projects list`). Defaults match "
+            "`dashboard build`: cwd-match if applicable, else `all` for "
+            "multi-project registries, else current-repo single-project."
+        ),
+    )
 
     return parser
 
@@ -1021,48 +1122,122 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _build_main(args: argparse.Namespace) -> int:
+    # Late import — projects_dashboard imports dashboard at module load,
+    # so a top-level import would deadlock during module init.
+    from dontpanic_orchestrate import projects_dashboard
+
     plans_root = Path(args.plans_root) if args.plans_root else default_plans_root()
     out_dir = Path(args.out_dir) if args.out_dir else default_state_out_dir()
+    requested = getattr(args, "project", None)
 
     def _warn(msg: str) -> None:
         print(f"dashboard build: {msg}", file=sys.stderr)
 
-    report = build(
-        plans_root=plans_root,
-        out_dir=out_dir,
-        redact_level=args.redact_level,
-        plan_id=args.plan_id,
-        warn=_warn,
+    try:
+        result = projects_dashboard.build_selected(
+            requested,
+            plans_root=plans_root,
+            out_dir=out_dir,
+            redact_level=args.redact_level,
+            plan_id=args.plan_id,
+            warn=_warn,
+        )
+    except projects_dashboard.UnknownProjectError as exc:
+        print(f"dashboard build: {exc}", file=sys.stderr)
+        return 2
+
+    if result.selection.kind == "current_repo":
+        report = result.current_repo_report
+        assert report is not None
+        print(f"wrote {len(report.state_files)} state files to {report.out_dir}")
+        if report.what_now_cache_path:
+            print(f"wrote what-now cache to {report.what_now_cache_path}")
+        if report.capability_cache_path:
+            print(f"wrote capabilities cache to {report.capability_cache_path}")
+        if report.reconcile_status_path:
+            print(f"wrote reconcile status to {report.reconcile_status_path}")
+        if report.architecture_status_path:
+            print(f"wrote architecture status to {report.architecture_status_path}")
+        return 0
+
+    # Project-scoped build (kind == "project" or "all"). Mirror into the
+    # served state dir so the static dashboard finds fleet-summary +
+    # per-project state without leaking absolute $HOME paths.
+    projects_dashboard.mirror_selection_into_state_dir(
+        result, state_out_dir=out_dir
     )
-    print(f"wrote {len(report.state_files)} state files to {report.out_dir}")
-    if report.what_now_cache_path:
-        print(f"wrote what-now cache to {report.what_now_cache_path}")
-    if report.capability_cache_path:
-        print(f"wrote capabilities cache to {report.capability_cache_path}")
-    if report.reconcile_status_path:
-        print(f"wrote reconcile status to {report.reconcile_status_path}")
-    if report.architecture_status_path:
-        print(f"wrote architecture status to {report.architecture_status_path}")
+    selection = result.selection
+    if selection.is_default:
+        print(f"dashboard build: defaulted to {_format_selection(selection)} ({selection.reason})")
+    else:
+        print(f"dashboard build: scope {_format_selection(selection)}")
+    print(f"wrote fleet summary to {result.fleet_summary_path}")
+    for r in result.project_reports:
+        if r.skipped:
+            continue
+        print(
+            f"wrote project {r.context.name!r} state to {r.context.dashboard_cache_path}"
+        )
     return 0
 
 
+def _format_selection(selection: Any) -> str:
+    """Human-readable label for a :class:`projects_dashboard.ResolvedSelection`."""
+
+    if selection.kind == "all":
+        return "All Projects"
+    if selection.kind == "project":
+        return f"project {selection.project_name!r}"
+    return "current repo"
+
+
 def _open_main(args: argparse.Namespace) -> int:
+    from dontpanic_orchestrate import projects_dashboard
+
     plans_root = Path(args.plans_root) if args.plans_root else default_plans_root()
     out_dir = Path(args.out_dir) if args.out_dir else default_state_out_dir()
     dashboard_dir = (
         Path(args.dashboard_dir) if args.dashboard_dir else default_dashboard_dir()
     )
+    requested = getattr(args, "project", None)
 
     def _warn(msg: str) -> None:
         print(f"dashboard open: {msg}", file=sys.stderr)
 
-    report = build(
-        plans_root=plans_root,
-        out_dir=out_dir,
-        redact_level=args.redact_level,
-        plan_id=args.plan_id,
-        warn=_warn,
-    )
+    try:
+        result = projects_dashboard.build_selected(
+            requested,
+            plans_root=plans_root,
+            out_dir=out_dir,
+            redact_level=args.redact_level,
+            plan_id=args.plan_id,
+            warn=_warn,
+        )
+    except projects_dashboard.UnknownProjectError as exc:
+        print(f"dashboard open: {exc}", file=sys.stderr)
+        return 2
+
+    # ``open_dashboard`` only needs the dashboard dir + a BuildReport for
+    # the path/what-now-cache lines it prints. For project-scoped builds
+    # we synthesize a minimal BuildReport pointing at the mirrored state
+    # so the displayed paths are accurate.
+    if result.selection.kind == "current_repo":
+        report = result.current_repo_report
+        assert report is not None
+    else:
+        projects_dashboard.mirror_selection_into_state_dir(
+            result, state_out_dir=out_dir
+        )
+        report = BuildReport(
+            out_dir=out_dir,
+            state_files=(),
+            what_now_cache_path=None,
+            capability_cache_path=None,
+            reconcile_status_path=None,
+            architecture_status_path=None,
+            warnings=(),
+        )
+
     launch = not args.no_launch and _gui_launch_is_safe()
     open_dashboard(
         build_report=report,
@@ -1089,6 +1264,8 @@ def _gui_launch_is_safe() -> bool:
 
 
 def _serve_main(args: argparse.Namespace) -> int:
+    from dontpanic_orchestrate import projects_dashboard
+
     plans_root = Path(args.plans_root) if args.plans_root else default_plans_root()
     dashboard_dir = (
         Path(args.dashboard_dir) if args.dashboard_dir else default_dashboard_dir()
@@ -1098,6 +1275,7 @@ def _serve_main(args: argparse.Namespace) -> int:
         if args.state_out_dir
         else dashboard_dir / DEFAULT_STATE_SUBDIR_NAME
     )
+    requested = getattr(args, "project", None)
 
     def _warn(msg: str) -> None:
         print(f"dashboard serve: {msg}", file=sys.stderr)
@@ -1113,7 +1291,11 @@ def _serve_main(args: argparse.Namespace) -> int:
             watch_interval=args.watch_interval,
             allow_remote=args.allow_remote,
             warn=_warn,
+            project=requested,
         )
+    except projects_dashboard.UnknownProjectError as exc:
+        print(f"dashboard serve: {exc}", file=sys.stderr)
+        return 2
     except ValueError as exc:
         print(f"dashboard serve: REFUSED: {exc}", file=sys.stderr)
         return 2

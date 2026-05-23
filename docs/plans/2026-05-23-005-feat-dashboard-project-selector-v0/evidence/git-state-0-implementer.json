@@ -2,27 +2,33 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/INBOX.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/audit/gate-state.json",
-      "status": "M"
-    },
-    {
       "path": "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/projects_registry.py",
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/dashboard.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/INBOX.md",
-    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/",
-    "scripts/dontpanic_orchestrate/projects_dashboard.py",
-    "scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py"
+    "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/audit/claude-implementer-F002-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
