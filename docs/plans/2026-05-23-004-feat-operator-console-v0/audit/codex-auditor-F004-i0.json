@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-05-23-004-feat-operator-console-v0",
+  "audit_id": "2026-05-23-004-feat-operator-console-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T03:59:15Z",
+  "completed_at": "2026-05-23T04:02:22Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-004-feat-operator-console-v0-4b7_nqoh target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 360116 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1955791,
+    "tokens_out": 12554,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nNo EC5 finding: implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and structured `target_context` has `env=dev`, `project=null`. No forbidden command shapes found.\n\nFINDING (high, correctness): Advisory-only ActionItems are hidden behind the quiet state, so stale/missing optional states and their exact commands are not explicit or copyable. Evidence: `dashboard/lib/what-now-logic.js:191` routes any envelope without `needs_action` to `renderQuietStateHTML`; a direct render check for `reconcile:missing_snapshot` returned `false` for both title and command visibility. Recommendation: render ActionItem cards whenever `items.length > 0`; reserve quiet state for an empty item list, styling advisory/info bands restrained.\n\nFINDING (medium, test_coverage): Tests lock in the incorrect advisory/info-only collapse behavior. Evidence: `dashboard/tests/unit/what-now-logic.test.js:283` and `dashboard/tests/integration/what-now-page.test.js:63` expect advisory/info-only envelopes to render no cards/commands. Recommendation: replace those assertions with coverage that advisory stale/missing items render non-alarming cards with visible/copyable commands.\n\nChecks run:\n$ git status --short\n$ git diff HEAD~1 --stat\n$ npx --prefix dashboard vitest run --root dashboard tests/unit/what-now-logic.test.js tests/integration/what-now-page.test.js\n$ npx --prefix dashboard vitest run --root dashb",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 --stat",
+      "npx --prefix dashboard vitest run --root dashboard tests/unit/what-now-logic.test.js tests/integration/what-now-page.test.js",
+      "npx --prefix dashboard vitest run --root dashboard --configLoader runner tests/unit/what-now-logic.test.js tests/integration/what-now-page.test.js",
+      "node --input-type=module -e \"import { renderWhatNowHTML } from './dashboard/lib/what-now-logic.js'; const html = renderWhatNowHTML({ schema_version: '1.0.0', captured_at: '2026-05-23T00:00:00Z', items: [{ id: 'reconcile:missing_snapshot', source: 'reconcile', band: 'advisory', title: 'Install snapshot is missing', detail: null, exact_command: 'dontpanic reconcile baseline --yes', automatable: false, human_required_reason: 'no baseline to compare against', evidence_uri: 'snapshot.json', updated_at: '2026-05-23T00:00:00Z' }] }); console.log(html.includes('Install snapshot is missing')); console.log(html.includes('dontpanic reconcile baseline --yes')); console.log(html);\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Advisory-only ActionItems are hidden behind the quiet state, so stale/missing optional states and their exact commands are not explicit or copyable. Evidence: `dashboard/lib/what-now-logic.js:191` routes any envelope without `needs_action` to `renderQuietStateHTML`; a direct render check for `reconcile:missing_snapshot` returned `false` for both title and command visibility. Recommendation: render ActionItem cards whenever `items.length > 0`; reserve quiet state for an empty item list, styling a",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "Tests lock in the incorrect advisory/info-only collapse behavior. Evidence: `dashboard/tests/unit/what-now-logic.test.js:283` and `dashboard/tests/integration/what-now-page.test.js:63` expect advisory/info-only envelopes to render no cards/commands. Recommendation: replace those assertions with coverage that advisory stale/missing items render non-alarming cards with visible/copyable commands. Checks run: $ git status --short $ git diff HEAD~1 --stat $ npx --prefix dashboard vitest run --root da",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

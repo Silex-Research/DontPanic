@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "captured_at": "2026-05-23T03:50:00Z",
+  "items": [
+    {
+      "id": "gate:2026-05-23-004-feat-operator-console-v0:pre_merge",
+      "source": "gate",
+      "band": "needs_action",
+      "title": "Gate pre_merge on 2026-05-23-004-feat-operator-console-v0 needs approval",
+      "detail": "declared gate not cleared; kind=pre_merge",
+      "exact_command": "dontpanic approve 2026-05-23-004-feat-operator-console-v0 pre_merge",
+      "automatable": false,
+      "human_required_reason": "gate approval",
+      "evidence_uri": "docs/plans/2026-05-23-004-feat-operator-console-v0/audit/gate-state.json",
+      "updated_at": "2026-05-23T03:49:55Z"
+    },
+    {
+      "id": "capability:firebase-dashboard",
+      "source": "capability",
+      "band": "needs_action",
+      "title": "Capability firebase-dashboard needs setup",
+      "detail": "missing: DONTPANIC_FIREBASE_PROJECT, firebase login",
+      "exact_command": "dontpanic capabilities status firebase-dashboard",
+      "automatable": false,
+      "human_required_reason": "capability setup incomplete",
+      "evidence_uri": "/home/op/.dontpanic/capabilities-status.json",
+      "updated_at": "2026-05-23T03:49:55Z"
+    },
+    {
+      "id": "reconcile:new_capabilities",
+      "source": "reconcile",
+      "band": "needs_action",
+      "title": "Reconcile drift: new capabilities since baseline",
+      "detail": null,
+      "exact_command": "dontpanic reconcile baseline --yes",
+      "automatable": false,
+      "human_required_reason": "capability set diverged from baseline",
+      "evidence_uri": "/home/op/.dontpanic/install-snapshot.json",
+      "updated_at": "2026-05-23T03:49:55Z"
+    },
+    {
+      "id": "architecture:stale",
+      "source": "architecture",
+      "band": "advisory",
+      "title": "Architecture snapshot is stale",
+      "detail": null,
+      "exact_command": "dontpanic architecture regen",
+      "automatable": true,
+      "human_required_reason": null,
+      "evidence_uri": "docs/architecture/CURRENT.md",
+      "updated_at": "2026-05-23T03:49:55Z"
+    },
+    {
+      "id": "supervisor:48211:2026-05-23-004-feat-operator-console-v0",
+      "source": "supervisor",
+      "band": "info",
+      "title": "Supervisor active on 2026-05-23-004-feat-operator-console-v0",
+      "detail": "started_at=2026-05-23T03:50:00Z, env=dev",
+      "exact_command": "dontpanic ps",
+      "automatable": true,
+      "human_required_reason": null,
+      "evidence_uri": null,
+      "updated_at": "2026-05-23T03:49:55Z"
+    }
+  ]
+}

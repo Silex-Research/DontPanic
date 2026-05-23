@@ -27,7 +27,7 @@ Project: (none)
 
 Verdict: needs_changes. The implementer audit summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`; structured `target_context` is valid (`env=dev`, `project=null`) and `commands_run` is empty, so I found no forbidden command shapes there.
 
-FINDING (medium, correctness): `dashboard serve` misses deletions of watched plan/dashboard source files, so the console can stay stale after a relevant source is removed. Evidence: `_watch_loop` rebuilds only when `_max_source_mtime(...)` returns a value greater than `last_mtime` at [dashboard.py:807](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontp...
+FINDING (medium, correctness): `dashboard serve` misses deletions of watched plan/dashboard source files, so the console can stay stale after a relevant source is removed. Evidence: `_watch_loop` rebuilds only when `_max_source_mtime(...)` returns a value greater than `last_mtime`; deleting `plan.md`, `INBOX.md`, an audit file, or a static dashboard file can lower or leave unchanged the max mtime, so no rebuild occurs.
 
 ## Rationale (operator — fill in)
 
@@ -37,7 +37,6 @@ Follow-up: no separate plan is needed. The corrective convention is captured in 
 
 ## Evidence references
 
-- `audit/signoff-2026-05-23-004-feat-operator-console-v0.json`
 - `audit/claude-implementer-F003-i0.json`
 - `audit/codex-auditor-F003-i0.json`
 - `audit/codex-auditor-F003-i1.json`

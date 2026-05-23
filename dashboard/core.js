@@ -32,6 +32,10 @@ const Jarvis = {
     decisions: [],
     evidenceRefs: [],
     snapshotMeta: null,
+    // F004 What Now cache (operator_console.render_envelope shape).
+    // Stays null when `dashboard/state/what-now.json` is absent — the
+    // page renders a non-alarming missing-cache state in that case.
+    whatNow: null,
   },
 
   // ── Page Registration ──
@@ -84,6 +88,10 @@ const Jarvis = {
     // not duplicated).
     const aliasedFiles = [
       { key: 'capabilities', file: 'capabilities-status.json' },
+      // F004 What Now cache — operator_console envelope. Loader treats
+      // a missing file as `null`; the page renders the missing-cache
+      // empty state in that case.
+      { key: 'whatNow',      file: 'what-now.json' },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
@@ -255,6 +263,9 @@ const Jarvis = {
 
 // Dynamically load all page modules
 const pageModules = [
+  // First-viewport operating surface for V0 — must register first so it
+  // is the default tab and answers "what needs action now?" on load.
+  'pages/what-now/what-now.js',
   'pages/command-center/command-center.js',
   'pages/cloud-costs/cloud-costs.js',
   'pages/financial/financial.js',

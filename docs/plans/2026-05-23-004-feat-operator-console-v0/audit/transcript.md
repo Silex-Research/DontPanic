@@ -21,3 +21,15 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 **2026-05-23T03:37:36Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-05-23T03:59:15Z | F004 | i0 | claude / implementer | signed_off | 11,322,764 / 40,084 | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |
+| 2026-05-23T04:02:23Z | F004 | i0 | codex / auditor | needs_changes | 1,955,791 / 12,554 | [codex-auditor-F004-i0.json](audit/codex-auditor-F004-i0.json) |
+| 2026-05-23T04:05:10Z | F004 | i1 | claude / implementer | signed_off | 1,417,030 / 11,156 | [claude-implementer-F004-i1.json](audit/claude-implementer-F004-i1.json) |
+| 2026-05-23T04:09:10Z | F004 | i1 | codex / auditor | signed_off | 1,699,536 / 14,316 | [codex-auditor-F004-i1.json](audit/codex-auditor-F004-i1.json) |
+
+**2026-05-23T04:09:10Z** — feature **F004** terminal: `signed_off` after 2 round(s) — auditor signed off
+
+
+**2026-05-23T04:09:11Z** — feature **F004** terminal: `blocked` after 2 round(s) — supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+

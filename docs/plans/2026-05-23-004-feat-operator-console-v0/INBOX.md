@@ -311,3 +311,101 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-23T03:50:00Z
+event: volley_start
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T03:50:00Z
+event: volley_start
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T04:09:10Z
+event: volley_terminal
+plan_id: 2026-05-23-004-feat-operator-console-v0
+final_status: signed_off
+rounds: 2
+feature_id: F004
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-23T04:09:11Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-23-004-feat-operator-console-v0
+report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-004-feat-operator-console-v0/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-23T04:09:11Z
+event: volley_crash_caught
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F004
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-23T04:09:11Z
+event: volley_terminal
+plan_id: 2026-05-23-004-feat-operator-console-v0
+final_status: blocked
+rounds: 2
+feature_id: F004
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: dashboard/core.js,dashboard/index.html,docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/events.jsonl,docs/plans/2026-05-23-004-feat-operator-console-v0/INBOX.md,docs/plans/2026-05-23-004-feat-operator-console-v0/audit/transcript.md,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-004-feat-operator-console-v0/evidence/git-state-0-implementer.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-23T04:10:15Z
+event: feature_operator_resolved
+plan_id: 2026-05-23-004-feat-operator-console-v0
+feature_id: F004
+reason_class: evidence_shape_disagreement
+---
+
+Operator closed feature F004 as operator_resolved (class=evidence_shape_disagreement).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-23-004-feat-operator-console-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
