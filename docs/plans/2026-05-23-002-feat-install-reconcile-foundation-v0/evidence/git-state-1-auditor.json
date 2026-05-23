@@ -1,0 +1,32 @@
+{
+  "staged": [
+    {
+      "path": "scripts/dontpanic_orchestrate/install_snapshot.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/reconcile.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py",
+      "status": "A"
+    }
+  ],
+  "unstaged_modified": [
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/init/__init__.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/",
+    "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

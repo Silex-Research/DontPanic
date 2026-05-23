@@ -1,0 +1,1 @@
+{"kind": "volley.spawn_child", "plan_id": "2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0", "ts": "2026-05-23T00:59:23Z", "parent_plan_id": "2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0", "child_plan_id": "2026-05-23-002-feat-install-reconcile-foundation-v0", "spawn_reason": "operator_manual", "finding_signature": null, "newly_armed": true}
