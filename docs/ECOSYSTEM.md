@@ -20,7 +20,7 @@ solved problems in mature systems like
 | Caller | How it reaches DontPanic | Why |
 |---|---|---|
 | OpenClaw | A small DontPanic skill / plugin in the OpenClaw workspace shells out to `dontpanic intake | dispatch | status | approve` | OpenClaw owns the chat / channel / session surface; DontPanic owns plan-locked delivery |
-| Claude Code | Claude reads `~/.dontpanic/agent-manifest.json` (Phase B; legacy `~/.jarvis` fallback) and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
+| Claude Code | Claude reads `~/.dontpanic/agent-manifest.json` and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
 | Codex CLI | Same pattern as Claude Code: read manifest, call CLI or MCP tools | Cross-vendor verification — Codex implements while Claude audits, or vice versa |
 | Cursor / IDE plugins | MCP client → `dontpanic mcp serve` localhost | IDE owns editing UX; DontPanic adds plan/audit/evidence rigor |
 | Claude-managed agents | Skill descriptor points at the global manifest; long-running tasks dispatched via `dontpanic dispatch-from-plan` | Managed agent owns scheduling + presence; DontPanic owns the delivery contract |
@@ -75,10 +75,9 @@ not a background deploy button.
   This is enough for any of
   the above callers.
 - **Project behavior stays in `<repo>/.dontpanic/dontpanic.json`.** The
-  per-project config that Phase A's F003 landed answers "how should
-  DontPanic operate in this project?" — committable, lives with the repo,
-  read by the supervisor at dispatch time. Legacy
-  `<repo>/.jarvis/jarvis.json` remains readable during migration.
+  per-project config answers "how should DontPanic operate in this project?"
+  — committable, lives with the repo, and is read by the supervisor at
+  dispatch time.
 - **No custom daemon until proven necessary.** Existing remote-agent
   infrastructure (Clawdbot-style runners, Claude dispatch, OpenClaw
   Gateway) already solves remote execution. DontPanic exposes a clean CLI
@@ -165,9 +164,8 @@ NotifyEvent emission. OpenClaw absorbs all per-channel knowledge
 routing policy. **The same broker pattern applies to Claude.ai managed
 agents** (read DontPanic state via MCP, surface in Anthropic's
 hosted-agent dashboards, approve via MCP) — different runtime, same
-data flow. The `personal-axiom` plan
-[`2026-05-03-002`](./plans/2026-05-03-002-infra-personal-openclaw-axiom-jarvis/)
-F006 is the OpenClaw-specific reference implementation.
+data flow. The OpenClaw adapter plan's F006 is the OpenClaw-specific
+reference implementation.
 
 **When to use which recipe:**
 - Caller (interactive) — operator at keyboard, agent reads state during
