@@ -15,7 +15,6 @@ Safety rule for every agent caller:
 - [x] The manifest advertises `dontpanic mcp serve` once the MCP server is
   importable.
 - [x] The manifest contains the safety rule above.
-- [x] Legacy `~/.jarvis/agent-manifest.json` can be read during migration.
 
 ## README Examples
 

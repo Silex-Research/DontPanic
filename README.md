@@ -2,18 +2,12 @@
 
 > The safety layer between “the agent says it’s done” and “you merge it.”
 
-![DontPanic social preview](./docs/assets/dontpanic-social-preview.png)
+![DontPanic social preview](./docs/assets/dontpanic-social-preview.jpg)
 
 DontPanic turns AI coding from "one agent says it finished" into reviewed,
 tested, evidence-backed software delivery. It locks the work into a plan,
 runs implementer and auditor agents against that plan, pauses for human
 approval at declared gates, and leaves behind durable proof before you merge.
-
-Formerly **Jarvis**. The repo and public product are now DontPanic.
-New installs use `dontpanic`, `dontpanic_orchestrate`, `~/.dontpanic`,
-and `<repo>/.dontpanic/dontpanic.json`. Legacy `jarvis`,
-`dontpanic_orchestrate`, `~/.jarvis`, and `<repo>/.jarvis/jarvis.json`
-remain compatibility aliases while the migration happens in stages.
 
 ## DontPanic is self-contained
 
@@ -125,7 +119,7 @@ Use the `dev` extra when you want to run tests and formatting locally.
 
 ## Quickstart
 
-The preferred command is `dontpanic`. The legacy `jarvis` alias still works.
+The preferred command is `dontpanic`.
 
 ### 1. Install from source
 
@@ -471,7 +465,6 @@ DontPanic/
 │   ├── dontpanic_orchestrate/        # supervisor runtime + CLI package
 │   ├── bootstrap.sh                  # optional GCP/Firebase setup
 │   ├── dontpanic_doctor.py           # preflight health checks
-│   ├── jarvis_doctor.py              # legacy doctor alias
 │   ├── sanitization_check.py         # sanitization regression guard
 │   └── quota_check.py                # LLM tokens → ~/.dontpanic/quota_state.json
 │
@@ -539,7 +532,7 @@ Supervisor + executor panel (shipped):
 - [x] Single-agent + volley dispatch (Claude / Codex / Gemini / Grok / Ollama executors)
 - [x] 7 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, global_circuit_breaker)
 - [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
-- [x] Operator caps + Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`; legacy `~/.jarvis` still readable)
+- [x] Operator caps + Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`)
 - [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)
 - [x] CLI surface: `dispatch-from-plan`, `quota-caps`, `calibrate-claude`, `approve`, `resume`, `ps`, `claude-touch`
 - [x] Goal Governance V1 lock/close gates (`dontpanic plan lock`, `dontpanic plan audit`, `dontpanic plan close`)
