@@ -1,6 +1,9 @@
-// ── Mission Control Page — Jarvis Dashboard ──
-// Kanban-style project management with agent sidebar and live feed.
-// Reads from Jarvis.state.tasks, .agents, .activity — no Firestore dependency.
+// ── Work Page — DontPanic Dashboard ──
+// Read-only kanban viewer of plan/feature lifecycle with agent sidebar and
+// live feed. Reads from Jarvis.state.tasks, .agents, .activity — no
+// Firestore dependency. Per plan 2026-05-24-001 F002 + D010, V0 Work is
+// read-only: no drag-to-mutate, no inline dispatch/approve. Future plans
+// may add drag-to-command as a non-mutating command-preview pattern.
 
 import {
   MC_COLUMNS,
@@ -10,7 +13,6 @@ import {
   AGENT_META,
   getAgentMeta,
   deriveColumn,
-  resolveDragIntent,
 } from '../../lib/mission-control-logic.js';
 
 const FEED_ICONS = {
@@ -66,12 +68,12 @@ function buildHTML() {
         </div>
       </aside>
 
-      <!-- ── Mission Queue (Center) ── -->
+      <!-- ── Work Queue (Center) ── -->
       <div class="mc-queue">
         <div class="mc-queue-header">
           <div class="mc-queue-title">
             <span class="mc-dot mc-dot--blue"></span>
-            MISSION QUEUE
+            WORK QUEUE
           </div>
           <div class="mc-queue-stats">
             <span id="mc-total-tasks">0</span> total
@@ -296,80 +298,12 @@ function renderBoard() {
 
     container.innerHTML = groups[col].map(t => renderCard(t)).join('');
 
-    // Bind card click → modal; drag start → carry task id + source column.
+    // Bind card click → modal. V0 Work is read-only — no drag handlers,
+    // no drop targets, no state mutation. (F002 + D010.)
     container.querySelectorAll('.mc-card').forEach(card => {
       card.addEventListener('click', () => openTaskModal(card.dataset.taskId));
-      card.addEventListener('dragstart', (ev) => {
-        if (!ev.dataTransfer) return;
-        ev.dataTransfer.effectAllowed = 'move';
-        ev.dataTransfer.setData('text/plain', JSON.stringify({
-          taskId: card.dataset.taskId,
-          sourceColumn: card.dataset.currentColumn,
-        }));
-      });
     });
-
-    bindColumnDropTarget(container, col);
   });
-}
-
-function bindColumnDropTarget(container, targetColumn) {
-  // dragover: must preventDefault so the drop event fires.
-  container.addEventListener('dragover', (ev) => {
-    ev.preventDefault();
-    if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
-  });
-  container.addEventListener('drop', async (ev) => {
-    ev.preventDefault();
-    let payload;
-    try {
-      payload = JSON.parse(ev.dataTransfer?.getData('text/plain') || '{}');
-    } catch {
-      return;
-    }
-    const { taskId, sourceColumn } = payload;
-    const intent = resolveDragIntent({ taskId, sourceColumn, targetColumn });
-    if (intent.action === 'noop') return;
-    if (intent.action === 'reject-local') {
-      reportRealtimeError('kanbanMove', { code: intent.code, message: intent.message });
-      return;
-    }
-    if (intent.action !== 'invoke') return;
-    const actions = getRealtimeActions();
-    if (!actions) {
-      reportRealtimeError('kanbanMove', {
-        code: 'realtime-actions-unavailable',
-        message:
-          'Realtime actions are not configured — load index-firebase.html with Firebase + Cloud Functions configured to enable kanban drag flips.',
-      });
-      return;
-    }
-    const result = await actions.kanbanMove({
-      planId: intent.planId,
-      currentColumn: intent.currentColumn,
-      newColumn: intent.newColumn,
-    });
-    if (!result.ok) {
-      reportRealtimeError('kanbanMove', result);
-    }
-  });
-}
-
-function getRealtimeActions() {
-  if (typeof window === 'undefined') return null;
-  const jarvis = window.Jarvis;
-  return (jarvis && jarvis.realtimeActions) || null;
-}
-
-function reportRealtimeError(action, result) {
-  if (typeof console !== 'undefined') {
-    console.warn(`[Jarvis mission-control] ${action} failed:`, result);
-  }
-  if (typeof window === 'undefined') return;
-  const jarvis = window.Jarvis;
-  if (jarvis && typeof jarvis.setSyncStatus === 'function') {
-    jarvis.setSyncStatus('error', `${action}: ${result.code || 'error'}`);
-  }
 }
 
 function renderCard(task) {
@@ -383,10 +317,11 @@ function renderCard(task) {
   const timeAgo    = Jarvis.timeAgo(task.created);
   const currentColumn = deriveColumn(task);
 
-  // draggable=true exposes HTML5 DnD; the drop handler resolves the
-  // landed column and fires the kanbanMove callable (plan F003 audit-i1).
+  // V0 Work is read-only — no `draggable` attribute. Drag-to-mutate is
+  // forbidden until a future plan ships drag-to-command as a non-mutating
+  // command-preview pattern (plan 2026-05-24-001 D010).
   return `
-    <div class="mc-card" data-task-id="${esc(task.id)}" data-current-column="${esc(currentColumn)}" draggable="true">
+    <div class="mc-card" data-task-id="${esc(task.id)}" data-current-column="${esc(currentColumn)}">
       <div class="mc-card-header-row">
         <span class="mc-card-project mc-card-project--${esc(projectKey)}">${esc(projectLabel)}</span>
         <span class="mc-priority-dot mc-priority-dot--${esc(priority)}" title="${esc(priority)} priority"></span>
@@ -544,64 +479,10 @@ function openTaskModal(taskId) {
         <div class="mc-modal-label">Created</div>
         <div class="mc-modal-value">${task.created ? new Date(task.created).toLocaleString() : '—'}</div>
       </div>
-    </div>
-    <div class="mc-modal-actions" data-task-id="${esc(task.id)}">
-      <button class="mc-action-btn mc-action-btn--dispatch" data-action="dispatch" data-feature-id="F001">
-        Dispatch F001
-      </button>
-      <button class="mc-action-btn mc-action-btn--approve" data-action="approve" data-gate-name="pre_merge">
-        Approve pre_merge gate
-      </button>
-      <div class="mc-action-status" data-action-status></div>
     </div>`;
 
   modal.classList.remove('hidden');
   modal.querySelector('.mc-modal-close').focus();
-  bindModalActionButtons(task.id);
-}
-
-function bindModalActionButtons(planId) {
-  const root = document.querySelector('.mc-modal-actions');
-  if (!root) return;
-  const statusEl = root.querySelector('[data-action-status]');
-  root.querySelectorAll('.mc-action-btn').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const actions = getRealtimeActions();
-      if (!actions) {
-        if (statusEl) {
-          statusEl.textContent =
-            'Realtime actions unavailable — open index-firebase.html with Firebase configured to enable mutations.';
-        }
-        return;
-      }
-      btn.disabled = true;
-      if (statusEl) statusEl.textContent = `${btn.dataset.action}…`;
-      let result;
-      try {
-        if (btn.dataset.action === 'dispatch') {
-          result = await actions.triggerDispatch({
-            planId,
-            featureId: btn.dataset.featureId || 'F001',
-          });
-        } else if (btn.dataset.action === 'approve') {
-          result = await actions.approveGate({
-            planId,
-            gateName: btn.dataset.gateName || 'pre_merge',
-          });
-        } else {
-          result = { ok: false, code: 'unknown-action', message: `unknown action ${btn.dataset.action}` };
-        }
-      } finally {
-        btn.disabled = false;
-      }
-      if (statusEl) {
-        statusEl.textContent = result.ok
-          ? `${btn.dataset.action} ok`
-          : `${btn.dataset.action} failed: ${result.code} — ${result.message}`;
-      }
-      if (!result.ok) reportRealtimeError(btn.dataset.action, result);
-    });
-  });
 }
 
 function closeTaskModal() {
@@ -640,7 +521,7 @@ function renderAll(state) {
 
 Jarvis.registerPage({
   id:    'mission-control',
-  label: 'Mission Control',
+  label: 'Work',
 
   init(state) {
     const el = Jarvis.getPageEl('mission-control');

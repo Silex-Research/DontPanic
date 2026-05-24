@@ -1,53 +1,12 @@
-// ── JARVIS — Settings Page Module ──
-// Renders: Harness Sync Status, Active Projects, Dashboard Config.
+// ── DontPanic — Preferences Page Module ──
+// UI-local preferences for this dashboard instance: appearance, refresh
+// cadence, and read-only pointers to where state files live on disk.
 //
-// Single-user, local-first. No team management, no channel tokens.
-// Harness sync reflects what `sync.sh status` would report by comparing
-// known harness IDs against agents present in state.agents.
-
-import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
+// Single-user, local-first. This page never edits DontPanic config,
+// secrets, or capability state — those live in `~/.dontpanic/` and are
+// surfaced through the Tools & Setup page when capability-backed.
 
 (() => {
-
-  // ── Active projects ──
-
-  const PROJECTS = [
-    {
-      id:    'styln',
-      label: 'Styln (Glam)',
-      path:  '~/Documents/GitHub/Glam',
-      stack: 'Swift / iOS',
-      color: '#a855f7',
-    },
-    {
-      id:    'spindine',
-      label: 'SpinDine',
-      path:  '~/Documents/GitHub/SpinDine',
-      stack: 'TypeScript / Next.js',
-      color: '#f97316',
-    },
-    {
-      id:    'quantre',
-      label: 'QuantRE',
-      path:  '~/Documents/GitHub/QuantRE',
-      stack: 'Python / FastAPI',
-      color: '#22c55e',
-    },
-    {
-      id:    'axiom',
-      label: 'Axiom',
-      path:  '~/Documents/GitHub/axiom-workspace',
-      stack: 'Node.js / Firebase',
-      color: '#3b82f6',
-    },
-    {
-      id:    'jarvis',
-      label: 'Jarvis',
-      path:  '~/Documents/GitHub/Jarvis',
-      stack: 'HTML / JS / Shell',
-      color: '#eab308',
-    },
-  ];
 
   // ── Refresh interval options ──
 
@@ -61,8 +20,7 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
 
   // ── Module state ──
 
-  let _el    = null;
-  let _state = null;
+  let _el = null;
 
   // ── Utilities ──
 
@@ -76,6 +34,10 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
   }
 
   // ── localStorage helpers ──
+  //
+  // The `jarvis_*` storage keys are intentionally retained for cache
+  // compatibility — older dashboards stored preferences under these
+  // names. The key prefix never appears in user-visible copy.
 
   function getTheme() {
     return localStorage.getItem('jarvis_theme') || 'dark';
@@ -109,37 +71,14 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
     return `
       <div class="stg-layout">
 
-        <!-- Harness Sync Status -->
-        <section class="panel stg-section">
-          <h2>Harness Sync Status</h2>
-          <p class="stg-section-desc">
-            Shows whether each agent harness config is present and tracked in state.
-            Run <code>sync.sh status</code> in the Jarvis repo to force a refresh.
-          </p>
-          <div class="stg-harness-list" id="stg-harness-list"></div>
-        </section>
-
-        <!-- Active Projects -->
-        <section class="panel stg-section">
-          <h2>Active Projects</h2>
-          <p class="stg-section-desc">Projects managed through the Jarvis harness.</p>
-          <div class="stg-project-list" id="stg-project-list">
-            ${PROJECTS.map(p => `
-              <div class="stg-project-row">
-                <div class="stg-project-dot" style="background: ${esc(p.color)}"></div>
-                <div class="stg-project-info">
-                  <div class="stg-project-label">${esc(p.label)}</div>
-                  <div class="stg-project-path">${esc(p.path)}</div>
-                </div>
-                <span class="stg-project-stack">${esc(p.stack)}</span>
-              </div>
-            `).join('')}
-          </div>
-        </section>
-
-        <!-- Dashboard Config -->
+        <!-- Dashboard Preferences -->
         <section class="panel stg-section stg-config-section">
-          <h2>Dashboard Config</h2>
+          <h2>Dashboard Preferences</h2>
+          <p class="stg-section-desc">
+            UI-local behavior for this dashboard instance. These preferences
+            live in your browser's localStorage and never touch
+            <code>~/.dontpanic/</code> or any DontPanic config file.
+          </p>
           <div class="stg-config-form">
 
             <!-- Theme toggle -->
@@ -174,69 +113,20 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
               <label class="stg-label">State files</label>
               <div class="stg-field-right">
                 <code class="stg-code">dashboard/state/*.json</code>
-                <span class="stg-field-hint">Written by Jarvis agents; read-only in dashboard</span>
+                <span class="stg-field-hint">Written by <code>dontpanic dashboard build</code>; read-only in dashboard</span>
               </div>
             </div>
 
           </div>
 
           <div class="stg-save-row">
-            <button class="stg-save-btn" id="stg-save-btn">Save Config</button>
+            <button class="stg-save-btn" id="stg-save-btn">Save preferences</button>
             <span class="stg-save-feedback" id="stg-save-feedback"></span>
           </div>
         </section>
 
       </div>
     `;
-  }
-
-  // ── Render: Harness Sync Status ──
-
-  function renderHarnesses(agents) {
-    const list = _el.querySelector('#stg-harness-list');
-    if (!list) return;
-
-    list.innerHTML = HARNESSES.map(h => {
-      const status = deriveSyncStatus(h.id, agents);
-
-      let syncStatus, syncLabel, syncColor;
-      if (status === 'in-sync') {
-        syncStatus = 'in-sync';
-        syncLabel  = 'in sync';
-        syncColor  = 'green';
-      } else if (status === 'stale') {
-        syncStatus = 'out-of-sync';
-        syncLabel  = 'stale';
-        syncColor  = 'yellow';
-      } else {
-        syncStatus = 'missing';
-        syncLabel  = 'missing';
-        syncColor  = 'red';
-      }
-
-      const agent      = agents ? agents.find(a => (a.id || '').toLowerCase() === h.id) : null;
-      const lastSeenEl = agent && agent.lastSeen
-        ? `<span class="stg-harness-lastseen">Last seen ${esc(Jarvis.timeAgo(agent.lastSeen))}</span>`
-        : '';
-
-      return `
-        <div class="stg-harness-row stg-harness-row--${syncStatus}">
-          <div class="stg-harness-dot stg-harness-dot--${syncColor}"></div>
-          <div class="stg-harness-info">
-            <div class="stg-harness-header">
-              <span class="stg-harness-label">${esc(h.label)}</span>
-              <span class="stg-harness-badge">${esc(h.badge)}</span>
-            </div>
-            <div class="stg-harness-desc">${esc(h.desc)}</div>
-            <div class="stg-harness-path">${esc(h.path)}</div>
-          </div>
-          <div class="stg-harness-right">
-            <span class="stg-sync-badge stg-sync-badge--${syncColor}">${esc(syncLabel)}</span>
-            ${lastSeenEl}
-          </div>
-        </div>
-      `;
-    }).join('');
   }
 
   // ── Wire config form events ──
@@ -273,20 +163,13 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
     }
   }
 
-  // ── Full render pass ──
-
-  function renderAll(state) {
-    _state = state;
-    renderHarnesses(state.agents || []);
-  }
-
-  // ── Jarvis Page Registration ──
+  // ── Page Registration ──
 
   Jarvis.registerPage({
     id: 'settings',
-    label: 'Settings',
+    label: 'Preferences',
 
-    init(state) {
+    init() {
       _el = Jarvis.getPageEl('settings');
       if (!_el) return;
 
@@ -295,13 +178,10 @@ import { HARNESSES, deriveSyncStatus } from '../../lib/settings-logic.js';
 
       // Apply saved theme on load
       applyTheme(getTheme());
-
-      renderAll(state);
     },
 
-    onActivate(state) {
-      if (!_el) return;
-      renderAll(state);
+    onActivate() {
+      // Preferences is UI-local only; nothing to re-render on state change.
     },
   });
 })();

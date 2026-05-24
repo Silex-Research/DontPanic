@@ -260,17 +260,19 @@ describe('capability center: real page module registration', () => {
     window.Jarvis = jarvisShim;
   });
 
-  it('registers a single Capability Center page with the router', () => {
+  it('registers a single Tools & Setup page with the router', () => {
     expect(jarvisShim.pages).toHaveLength(1);
     const page = registeredPage;
     expect(page.id).toBe('capabilities');
-    // Acceptance #1: nav label must say "Capability Center", not "Capabilities".
-    expect(page.label).toBe('Capability Center');
+    // F002 acceptance #2: V0 nav label must say "Tools & Setup", not
+    // "Capabilities" or "Capability Center". The page's internal id stays
+    // `capabilities` for route/cache compatibility.
+    expect(page.label).toBe('Tools & Setup');
     expect(typeof page.init).toBe('function');
     expect(typeof page.onActivate).toBe('function');
   });
 
-  it('nav label "Capability Center" renders into the DOM via buildNav', () => {
+  it('nav label "Tools & Setup" renders into the DOM via buildNav', () => {
     // Mirror core.js buildNav() against the registered pages.
     const nav = document.getElementById('view-nav');
     for (const page of jarvisShim.pages) {
@@ -283,7 +285,7 @@ describe('capability center: real page module registration', () => {
 
     const tab = nav.querySelector('[data-page="capabilities"]');
     expect(tab).not.toBeNull();
-    expect(tab.textContent).toBe('Capability Center');
+    expect(tab.textContent).toBe('Tools & Setup');
   });
 
   it('init() renders the empty-state when state.capabilities is null', () => {

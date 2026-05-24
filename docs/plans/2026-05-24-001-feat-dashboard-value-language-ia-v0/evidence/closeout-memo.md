@@ -2,12 +2,12 @@
 status: operator_resolved
 reason_class: operator_judgment
 plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
-feature_id: F001
-closed_at: 2026-05-24T06:11:15Z
+feature_id: F002
+closed_at: 2026-05-24T06:56:02Z
 latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-05-24-001-feat-dashboard-value-language-ia-v0 / F001
+# Closeout memo — 2026-05-24-001-feat-dashboard-value-language-ia-v0 / F002
 
 ## Operator decision
 
@@ -19,31 +19,25 @@ This feature was closed under class `operator_judgment` after operator review of
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 7 (see structured target_context.commands_run)
+- Command: 5 (see structured target_context.commands_run)
 
-[F001] Repo: DontPanic
+[F002] Repo: DontPanic
 Env: dev
 Project: (none)
 
-Verdict: signed_off. No findings. The implementer summary visibly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` matches `env=dev`, `project=null`. Their recorded command has no listed forbidden command shape.
+Overall verdict: signed_off. The implementer declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; structured `target_context` has `env=dev`, `project=null`, and empty `commands_run`, so I found no forbidden command shapes there. Code inspection shows the shell is DontPanic-branded, V0 nav is `Needs Attention | Work | Tools & Setup | Health | Preferences`, Financial/Cloud Costs are removed from core imports, Work mutation affordances were removed, and Architecture was not implemented.
 
-The F001 docs and static-check additions satisfy the requested contract: stable design intake, copy map, progressive disclosure, status taxonomy plus `optional`, audience expansion, drag-to-command, JSX-to-vanilla, fleet mode, no-go terms, and stale label/Jarvis-era static check scaffolding are present.
-
-Checks run:
-$ git status --short
-$ git diff --stat HEAD~1
-$ git...
+FINDING (advisory, documentation): implementer command provenance is internally inconsistent; evidence: the audit ...
 
 ## Rationale (operator)
 
-The latest auditor envelope is `signed_off` with no findings: the design
-intake location, copy map, progressive-disclosure rules, status taxonomy,
-drag-to-command decision, JSX-to-vanilla strategy, fleet expectations, and
-static label checks are present. The later terminal state was caused by
-concurrent architecture F001 files being dirty during a duplicate dispatch,
-not by an IA implementation defect. F001 is closed with the existing signoff;
-the remaining IA features should build on the committed copy map and static
-checks.
+The latest auditor envelope is `signed_off`; the only finding is advisory
+documentation friction around command provenance in the audit envelope. The
+dashboard shell/nav work itself satisfies F002: DontPanic branding is visible,
+the V0 core nav is value-first, demo/noise tabs are removed from core imports,
+Work is read-only, and Architecture remains deferred. No redispatch is
+warranted for F002; command-provenance consistency belongs in audit-writer
+hygiene rather than this dashboard IA feature.
 
 ## Evidence references
 

@@ -18,7 +18,7 @@ import { renderCapabilityCenterHTML } from '../../lib/capabilities-logic.js';
 
   Jarvis.registerPage({
     id: 'capabilities',
-    label: 'Capability Center',
+    label: 'Tools & Setup',
 
     init(state) {
       _el = Jarvis.getPageEl('capabilities');

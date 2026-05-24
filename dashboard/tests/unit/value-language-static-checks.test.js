@@ -39,20 +39,30 @@ const COPY_MAP_PATH = resolve(
 const SHELL_PATH = resolve(REPO_ROOT, 'dashboard/index.html');
 const FIREBASE_SHELL_PATH = resolve(REPO_ROOT, 'dashboard/index-firebase.html');
 
-// Page modules whose `registerPage({ label: ... })` field will be touched
-// by F002 to remove stale Jarvis-era nav labels. The list intentionally
-// covers the four labels the auditor named (What Now, Mission Control,
-// Command Center, Financial) plus the rest of the stale set in
-// copy-map.md §4.5 that currently ship a stale `label:` string. F002
-// will either rename each label to the V0 surface name or de-register
-// the page from V0 core nav.
-const STALE_LABEL_PAGE_MODULES = [
+// Page modules that participate in V0 core nav. After F002 the live
+// `registerPage({ label: ... })` of each module must NOT match a
+// FORBIDDEN_STALE_NAV_LABELS entry. Modules that were removed from V0
+// core nav (command-center, cloud-costs, financial) remain on disk but
+// are no longer imported by `dashboard/core.js`'s `pageModules` array —
+// see CORE_NAV_PAGE_MODULES below.
+const CORE_NAV_PAGE_MODULES = [
   'dashboard/pages/what-now/what-now.js',
   'dashboard/pages/mission-control/mission-control.js',
-  'dashboard/pages/command-center/command-center.js',
   'dashboard/pages/capabilities/capabilities.js',
-  'dashboard/pages/cloud-costs/cloud-costs.js',
-  'dashboard/pages/financial/financial.js',
+  'dashboard/pages/health/health.js',
+  'dashboard/pages/settings/settings.js',
+];
+
+const CORE_JS_PATH = resolve(REPO_ROOT, 'dashboard/core.js');
+
+// Page modules that F002 explicitly de-registered from V0 core nav.
+// Their files remain on disk for path stability, but `core.js` must not
+// import them — otherwise the runtime `<nav>` would re-surface them.
+const DEFERRED_PAGE_IMPORTS = [
+  'pages/command-center/command-center.js',
+  'pages/cloud-costs/cloud-costs.js',
+  'pages/financial/financial.js',
+  'pages/security/security.js',
 ];
 
 // ── First-read token scanner ─────────────────────────────────────────────────
@@ -320,61 +330,87 @@ describe('copy-map.md ↔ code contract', () => {
   });
 });
 
-// ── Audit trail: identify the Jarvis-era substrate F002 must clean ───────────
+// ── Post-F002 invariants: shell rebrand and V0 nav cleanup ──────────────────
 //
-// These tests document the CURRENT state of the live shell HTML so the
-// rebrand work in F002 has a clear before/after. F002 should invert each
-// `toContain` to a `not.toContain` (or replace with a forbidden-token scan
-// that returns an empty array) once the shell carries DontPanic branding.
+// F002 has landed. The live shell HTML must no longer carry Jarvis-era
+// brand phrases, every V0 core-nav page module must register a label
+// that does NOT match FORBIDDEN_STALE_NAV_LABELS, and `core.js` must not
+// import the deferred page modules.
 
-describe('audit trail: pre-F002 shell branding', () => {
-  it('dashboard/index.html currently carries Jarvis-era shell branding', () => {
+describe('F002: shell rebrand and V0 nav cleanup', () => {
+  it('dashboard/index.html user-visible shell text carries no Jarvis-era brand phrases', () => {
     const html = readFileSync(SHELL_PATH, 'utf8');
     const shellText = extractShellTextRegions(html);
     const violations = scanShellTextForViolations(shellText);
-    // Pre-F002: the live shell carries these brand phrases. This assertion
-    // proves they are present so F002 has an explicit before-state to
-    // remove. F002 must update or replace this test to assert
-    // `violations.length === 0` once the rebrand lands.
-    expect(violations.length).toBeGreaterThan(0);
-    const phrases = new Set(violations.map((v) => v.phrase));
-    expect(phrases.has('JARVIS')).toBe(true);
+    expect(
+      violations,
+      `index.html shell text still contains: ${violations.map((v) => v.phrase).join(', ')}`,
+    ).toEqual([]);
   });
 
-  it('dashboard/index-firebase.html currently carries Jarvis-era shell branding', () => {
+  it('dashboard/index.html shell text contains the DontPanic brand', () => {
+    const html = readFileSync(SHELL_PATH, 'utf8');
+    const shellText = extractShellTextRegions(html);
+    // The shell text must mention DontPanic — the rebrand replaces, it
+    // doesn't just delete.
+    expect(shellText).toMatch(/DontPanic/);
+  });
+
+  it('dashboard/index-firebase.html user-visible shell text carries no Jarvis-era brand phrases', () => {
     const html = readFileSync(FIREBASE_SHELL_PATH, 'utf8');
     const shellText = extractShellTextRegions(html);
     const violations = scanShellTextForViolations(shellText);
-    expect(violations.length).toBeGreaterThan(0);
+    expect(
+      violations,
+      `index-firebase.html shell text still contains: ${violations.map((v) => v.phrase).join(', ')}`,
+    ).toEqual([]);
   });
 
-  it('each stale-label page module still registers a forbidden nav label', () => {
-    // For every page in STALE_LABEL_PAGE_MODULES, read the source,
-    // extract the live `Jarvis.registerPage({ label: ... })` value,
-    // and assert it appears in FORBIDDEN_STALE_NAV_LABELS. This proves
-    // the scanner would catch a regression *today* and gives F002 the
-    // explicit before-state to flip: after the rebrand, the same
-    // assertion must invert to `scanForStaleNavLabels(label).length === 0`
-    // (or the page must be de-registered from V0 core nav entirely).
+  it('every V0 core-nav page module registers a non-stale nav label', () => {
+    // After F002, each core-nav module's `Jarvis.registerPage({ label: ... })`
+    // must be a value-language label that does NOT appear in
+    // FORBIDDEN_STALE_NAV_LABELS. Modules deferred from V0 nav are
+    // covered by the separate `core.js does not import deferred pages`
+    // assertion below.
     const liveLabels = [];
-    for (const rel of STALE_LABEL_PAGE_MODULES) {
+    for (const rel of CORE_NAV_PAGE_MODULES) {
       const src = readFileSync(resolve(REPO_ROOT, rel), 'utf8');
       const label = extractRegisteredPageLabel(src);
       expect(label, `${rel} must register a label`).not.toBeNull();
       liveLabels.push(label);
       const violations = scanForStaleNavLabels(label);
       expect(
-        violations.length,
-        `${rel} registers '${label}' which must match FORBIDDEN_STALE_NAV_LABELS`,
-      ).toBeGreaterThan(0);
+        violations,
+        `${rel} registers stale label '${label}'`,
+      ).toEqual([]);
     }
-    // Sanity: the audit-trail snapshot covers all four labels the
-    // auditor named explicitly (What Now, Mission Control, Command
-    // Center, Financial — the last matched via 'Financial Analysis').
+    // Spot-check the V0 surface labels we expect to see.
+    // F002 acceptance #2: Home/Needs Attention, Work, Tools & Setup or
+    // Connections, Health, and Preferences must all appear in V0 nav.
     const joined = liveLabels.join(' · ');
-    expect(joined).toContain('What Now');
-    expect(joined).toContain('Mission Control');
-    expect(joined).toContain('Command Center');
-    expect(joined).toMatch(/Financial/);
+    expect(joined).toContain('Needs Attention');
+    expect(joined).toContain('Work');
+    expect(joined).toMatch(/Tools & Setup|Connections/);
+    expect(joined).toContain('Health');
+    expect(joined).toContain('Preferences');
+  });
+
+  it('dashboard/core.js does not import deferred page modules into V0 core nav', () => {
+    // The deferred modules (command-center, cloud-costs, financial,
+    // security) remain on disk for path stability and may be brought
+    // back behind a capability gate in a future plan, but they must
+    // not be re-registered into V0 core nav by `core.js`.
+    const coreSrc = readFileSync(CORE_JS_PATH, 'utf8');
+    // We scan for the page-module path string with surrounding quotes
+    // and a slash to avoid matching the CSS link, comment, or doc
+    // references. The exact import-list entry in core.js is e.g.
+    //   'pages/command-center/command-center.js'
+    for (const rel of DEFERRED_PAGE_IMPORTS) {
+      const quoted = `'${rel}'`;
+      expect(
+        coreSrc.includes(quoted),
+        `core.js still imports deferred page module ${rel}`,
+      ).toBe(false);
+    }
   });
 });

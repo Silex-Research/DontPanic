@@ -1,0 +1,58 @@
+/* ── DontPanic Health — health.css ──
+   Honesty surface for install/setup/build health. V0 ships a minimal
+   missing-data scaffold; F003 lands the composed view.            */
+
+.hlth-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.hlth-empty-state {
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 760px;
+  margin: 24px auto;
+}
+
+.hlth-empty-state h2 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.hlth-empty-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.hlth-empty-cmd {
+  background: var(--bg-primary);
+  color: var(--green);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-family: var(--font);
+  overflow-x: auto;
+  margin: 0 0 12px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hlth-empty-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.hlth-empty-hint code {
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 10px;
+}

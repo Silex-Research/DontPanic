@@ -504,7 +504,7 @@ describe('what-now F004: fleet/project grouping and filtering', () => {
       now: Date.parse('2026-05-23T03:00:10Z'),
     });
     expect(html).toContain('data-status-header="1"');
-    expect(html).toContain('What Now — All Projects');
+    expect(html).toContain('Needs Attention — All Projects');
     expect(html).toContain('data-project="spindine"');
     expect(html).toContain('data-project="glam"');
   });

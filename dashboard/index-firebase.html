@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARVIS — Control Dashboard (Firebase realtime)</title>
+  <title>DontPanic — Local Operating Console (Firebase realtime)</title>
   <link rel="stylesheet" href="core.css">
   <link rel="stylesheet" href="pages/command-center/command-center.css">
   <link rel="stylesheet" href="pages/mission-control/mission-control.css">
   <link rel="stylesheet" href="pages/financial/financial.css">
   <link rel="stylesheet" href="pages/cloud-costs/cloud-costs.css">
   <link rel="stylesheet" href="pages/security/security.css">
+  <link rel="stylesheet" href="pages/capabilities/capabilities.css">
+  <link rel="stylesheet" href="pages/health/health.css">
   <link rel="stylesheet" href="pages/settings/settings.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
@@ -22,13 +24,13 @@
     fallback per plan 2026-05-09-003 F007. Operator drops their Firebase
     config into firebase-config.local.js (template: config-firebase.example.js).
   -->
-  <script src="firebase-config.local.js" onerror="console.info('[Jarvis] firebase-config.local.js absent — static-only mode')"></script>
+  <script src="firebase-config.local.js" onerror="console.info('[DontPanic] firebase-config.local.js absent — static-only mode')"></script>
 </head>
 <body>
   <header>
     <div class="header-left">
-      <h1>JARVIS</h1>
-      <span class="subtitle">Personal Control Dashboard — Realtime</span>
+      <h1>DontPanic</h1>
+      <span class="subtitle">Local Operating Console — Realtime</span>
     </div>
     <div class="header-right">
       <span id="sync-status" class="status-badge idle">Checking...</span>
@@ -40,7 +42,7 @@
   <div id="page-container"></div>
 
   <footer>
-    <span>JARVIS v1.0 — Silex Research</span>
+    <span>DontPanic dashboard v0 — local-first (Firebase realtime overlay)</span>
     <span id="last-sync">Last sync: --</span>
   </footer>
 

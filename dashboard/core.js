@@ -1,6 +1,8 @@
-// ── JARVIS Dashboard — Core Router & State Manager ──
+// ── DontPanic Dashboard — Core Router & State Manager ──
 // Local-first: reads state from JSON files, no Firebase dependency.
-// Pages register themselves via Jarvis.registerPage().
+// Pages register themselves via Jarvis.registerPage(). The `Jarvis`
+// JavaScript identifier and `jarvis_*` localStorage prefixes are retained
+// for cache compatibility but do not appear in any user-visible copy.
 
 import { timeAgo, formatCurrency, formatNumber } from './lib/formatters.js';
 import {
@@ -20,10 +22,11 @@ import {
 } from './lib/project-selector-logic.js';
 
 /**
- * Construct a fresh Jarvis shell object. Exported so integration tests
+ * Construct a fresh dashboard shell object. Exported so integration tests
  * can exercise the real loader / resolver / refresh logic without
  * triggering the page-module import chain or the window.Jarvis
- * assignment at the bottom of this file.
+ * assignment at the bottom of this file. The window-global identifier
+ * stays `Jarvis` for cache compatibility — see the file-level comment.
  */
 export function createJarvis() {
   return JARVIS_LITERAL();
@@ -428,17 +431,24 @@ function JARVIS_LITERAL() { return {
 // Each page module registers itself via Jarvis.registerPage()
 // ══════════════════════════════════════════════
 
-// Dynamically load all page modules
+// Dynamically load all page modules for the V0 core nav.
+//
+// Order is significant: the first-registered page is the default tab on
+// load. Per plan 2026-05-24-001 F002, V0 core nav is:
+//
+//   Needs Attention (what-now) → Work (mission-control) →
+//   Tools & Setup (capabilities) → Health → Preferences (settings)
+//
+// Surfaces removed from V0 core nav (page modules remain on disk for
+// path stability and may be brought back behind a capability gate or
+// future plan): command-center, cloud-costs, financial, security.
+// Health ships a minimal honest missing-data scaffold here; F003 will
+// compose it from existing readiness/security/build-warning substrate.
 const pageModules = [
-  // First-viewport operating surface for V0 — must register first so it
-  // is the default tab and answers "what needs action now?" on load.
   'pages/what-now/what-now.js',
-  'pages/command-center/command-center.js',
-  'pages/cloud-costs/cloud-costs.js',
-  'pages/financial/financial.js',
   'pages/mission-control/mission-control.js',
-  'pages/security/security.js',
   'pages/capabilities/capabilities.js',
+  'pages/health/health.js',
   'pages/settings/settings.js',
 ];
 

@@ -50,10 +50,21 @@
         "Add/update dashboard tests for V0 nav labels, absent demo tabs, and no user-visible Jarvis branding."
       ],
       "acceptance": "(1) The dashboard shell is DontPanic-branded. (2) V0 nav contains Home/Needs Attention, Work, Tools & Setup or Connections, Health, and Preferences unless a page is hidden behind a capability-backed integration group. (3) Financial and Cloud Costs are not presented as core DontPanic features. (4) Work is read-only in V0 or drag-to-command-only per the F001 decision. (5) Architecture is not implemented in this plan. (6) Tests or snapshots prove the new labels and absence of stale branding.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T06:56:02Z"
     },
     {
       "id": "F003",

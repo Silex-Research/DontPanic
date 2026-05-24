@@ -173,3 +173,72 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T06:29:34Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T06:29:34Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T06:39:35Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T06:54:16Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: signed_off
+rounds: 2
+feature_id: F002
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T06:56:02Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+reason_class: operator_judgment
+---
+
+Operator closed feature F002 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

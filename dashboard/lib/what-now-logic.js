@@ -295,7 +295,7 @@ function renderPopulatedHTML(envelope, scope = 'project') {
     <div class="wn-layout">
       <section class="panel wn-header-panel">
         <div class="wn-header-row">
-          <h2>What Now</h2>
+          <h2>Needs Attention</h2>
           <div class="wn-header-scope">${renderScopeBadgeHTML(scope)}</div>
           <div class="wn-header-meta">${renderMetaHTML(envelope)}</div>
         </div>
@@ -705,7 +705,7 @@ export function renderFleetWhatNowHTML(envelope, fleetSummary, opts = {}) {
       ${headerHTML}
       <section class="panel wn-header-panel">
         <div class="wn-header-row">
-          <h2>What Now — All Projects</h2>
+          <h2>Needs Attention — All Projects</h2>
           <div class="wn-header-scope">${renderScopeBadgeHTML('fleet')}</div>
           <div class="wn-header-meta">${renderMetaHTML(envelope)}</div>
         </div>

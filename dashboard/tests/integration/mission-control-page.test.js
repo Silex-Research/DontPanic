@@ -1,4 +1,4 @@
-// Integration tests for the Mission Control page module.
+// Integration tests for the Work (mission-control) page module.
 //
 // Strategy: inject the page's HTML template (built via buildHTML() from the
 // lib's MC_COLUMNS / MC_COLUMN_META constants), then call the same render
@@ -52,7 +52,7 @@ function buildHTML() {
         <div class="mc-queue-header">
           <div class="mc-queue-title">
             <span class="mc-dot mc-dot--blue"></span>
-            MISSION QUEUE
+            WORK QUEUE
           </div>
           <div class="mc-queue-stats">
             <span id="mc-total-tasks">0</span> total

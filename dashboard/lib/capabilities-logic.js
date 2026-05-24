@@ -229,7 +229,7 @@ export function renderEmptyStateHTML() {
       </div>
       <pre class="cap-empty-cmd">dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</pre>
       <div class="cap-empty-hint">
-        The Capability Center reads from a static JSON file on disk. No sign-in,
+        Tools &amp; Setup reads from a static JSON file on disk. No sign-in,
         no realtime sync, no Cloud Functions.
       </div>
     </div>
@@ -240,7 +240,7 @@ function renderPopulatedHTML(envelope) {
   return `
     <div class="cap-layout">
       <section class="panel cap-summary-panel">
-        <h2>Capability Center</h2>
+        <h2>Tools &amp; Setup</h2>
         <div class="cap-summary-scope">${renderScopeBadgeHTML('global')}</div>
         <div class="cap-summary-meta">${renderMetaHTML(envelope)}</div>
         <div class="cap-summary-grid" id="cap-summary-grid">${renderSummaryGridHTML(envelope)}</div>
@@ -249,7 +249,7 @@ function renderPopulatedHTML(envelope) {
 
       <section class="panel cap-cards-panel">
         <div class="cap-cards-header">
-          <h2>Capabilities</h2>
+          <h2>Connected tools</h2>
           <div class="cap-cards-scope">${renderScopeBadgeHTML('global')}</div>
         </div>
         <div class="cap-cards" id="cap-cards">${renderCardsHTML(envelope.capabilities)}</div>
