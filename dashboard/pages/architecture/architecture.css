@@ -873,6 +873,413 @@
   white-space: nowrap;
 }
 
+/* ── F004 summary cards */
+
+.arch-summary-panel {
+  padding: 10px 16px;
+}
+
+.arch-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.arch-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(148, 163, 184, 0.06);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.arch-summary-card-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.arch-summary-card-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.arch-summary-card-time,
+.arch-summary-card-fp {
+  font-size: 13px;
+  font-family: "SFMono-Regular", Menlo, monospace;
+}
+
+.arch-summary-card-state {
+  font-size: 14px;
+}
+
+.arch-summary-card-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* ── F004 derived insights panel */
+
+.arch-insights-detail-panel {
+  padding: 12px 16px;
+}
+
+.arch-insights-detail-header {
+  margin-bottom: 10px;
+}
+
+.arch-insights-detail-title {
+  margin: 0;
+  font-size: 15px;
+  color: #e2e8f0;
+}
+
+.arch-insights-detail-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+  max-width: 720px;
+}
+
+.arch-insights-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+
+.arch-insight-section {
+  padding: 10px 12px;
+  background: rgba(148, 163, 184, 0.05);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.arch-insight-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.arch-insight-section-title {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.arch-insight-section-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+}
+
+.arch-insight-section-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.arch-insight-section-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.arch-insight-section-overflow {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.arch-insight-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.arch-insight-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 3px;
+  min-width: 0;
+}
+
+.arch-insight-node {
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  color: #cbd5e1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arch-insight-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arch-insight-plan-id {
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 10.5px;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.arch-insight-plan-title {
+  color: #e2e8f0;
+  font-size: 11px;
+}
+
+.arch-insight-metric,
+.arch-insight-touches {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.arch-insight-metric-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.arch-insight-metric-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.arch-insight-touch {
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 10px;
+  color: #cbd5e1;
+  padding: 1px 4px;
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* ── F004 project context */
+
+.arch-project-context {
+  padding: 12px 16px;
+}
+
+.arch-project-context-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.arch-project-context-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.arch-project-context-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.arch-project-context-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arch-project-context-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+/* ── F004 fleet (All Projects) view */
+
+.arch-fleet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.arch-fleet-header-panel {
+  padding: 12px 16px;
+}
+
+.arch-fleet-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.arch-fleet-grid-panel {
+  padding: 12px 16px;
+}
+
+.arch-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.arch-fleet-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(148, 163, 184, 0.06);
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  min-width: 0;
+}
+
+.arch-fleet-card--empty {
+  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.arch-fleet-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.arch-fleet-card-name {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.arch-fleet-card-id {
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 10.5px;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.arch-fleet-card-headline {
+  margin: 0;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.arch-fleet-card-empty-body {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.arch-fleet-card-meta {
+  margin: 6px 0 0;
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+
+.arch-fleet-card-meta dt {
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.arch-fleet-card-meta dd {
+  margin: 0;
+  color: #e2e8f0;
+  font-family: "SFMono-Regular", Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+.arch-fleet-card-inactive {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #fde68a;
+  font-style: italic;
+}
+
+.arch-fleet-card-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.arch-fleet-open-btn {
+  padding: 5px 12px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.arch-fleet-open-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.arch-fleet-empty-panel {
+  padding: 16px;
+}
+
+.arch-fleet-empty-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: #e2e8f0;
+}
+
+.arch-fleet-empty-body {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
 /* ── Responsive */
 
 @media (max-width: 900px) {
@@ -890,6 +1297,40 @@
   }
   .arch-search-input {
     min-width: 140px;
+  }
+  .arch-summary-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .arch-insights-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .arch-fleet-grid {
+    grid-template-columns: 1fr;
+  }
+  .arch-header-row,
+  .arch-project-context-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .arch-project-context-meta {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .arch-summary-card-value {
+    font-size: 15px;
+  }
+  .arch-insight-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .arch-fleet-card-meta {
+    grid-template-columns: 1fr;
+  }
+  .arch-fleet-card-meta dt {
+    margin-top: 4px;
   }
 }
 

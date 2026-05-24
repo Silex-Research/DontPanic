@@ -107,11 +107,36 @@ export function resolveArchitectureEnvelope(opts = {}) {
   const byProject = opts.byProject && typeof opts.byProject === 'object'
     ? opts.byProject
     : null;
-  if (selected !== ALL_PROJECTS_VALUE && byProject != null) {
+  const hasPerProjectCache = byProject != null && Object.keys(byProject).length > 0;
+  if (selected !== ALL_PROJECTS_VALUE && hasPerProjectCache) {
     const scoped = byProject[selected];
     if (scoped != null) return scoped;
+    // F004 finding #1: when a concrete project is selected and a
+    // per-project cache is present but lacks that project, do NOT fall
+    // back to opts.single — that would render an unrelated repo's map.
+    // Return null so callers branch to an explicit missing-project state.
+    return null;
   }
   return opts.single != null ? opts.single : null;
+}
+
+/**
+ * True when a concrete project is selected and the per-project cache is
+ * present but does not have an entry for that project. Used by both
+ * `renderArchitectureHTML` and the page module to branch to a
+ * missing-project state instead of rendering another project's map.
+ */
+export function isMissingSelectedProject(opts = {}) {
+  const selected = typeof opts.selectedProject === 'string'
+    ? opts.selectedProject
+    : ALL_PROJECTS_VALUE;
+  if (selected === ALL_PROJECTS_VALUE) return false;
+  const byProject = opts.byProject && typeof opts.byProject === 'object'
+    ? opts.byProject
+    : null;
+  if (byProject == null) return false;
+  if (Object.keys(byProject).length === 0) return false;
+  return byProject[selected] == null;
 }
 
 function _normalizeFreshnessState(raw) {
@@ -429,6 +454,31 @@ export function renderArchitectureHTML(raw, opts = {}) {
     ? opts.selectedProject
     : ALL_PROJECTS_VALUE;
   const scope = selected === ALL_PROJECTS_VALUE ? 'fleet' : 'project';
+
+  // F004 — All Projects: when we have per-project caches, render a
+  // fleet card grid instead of merging unrelated repo graphs. Each card
+  // shows the project's own architecture freshness + an "open map"
+  // affordance that switches the selector to that project. Projects
+  // without an architecture artifact get an explicit empty card with
+  // the regen command for that repo.
+  const byProject = opts.byProject && typeof opts.byProject === 'object'
+    ? opts.byProject
+    : null;
+  const fleetSummary = opts.fleetSummary && typeof opts.fleetSummary === 'object'
+    ? opts.fleetSummary
+    : null;
+  if (selected === ALL_PROJECTS_VALUE && _fleetHasPerProjectData(byProject, fleetSummary)) {
+    return renderFleetArchitectureHTML({ byProject, fleetSummary });
+  }
+
+  // F004 finding #1: a concrete project is selected but byProject has
+  // no entry for it. Render an explicit missing-project state with the
+  // project's display name + regen instructions for that repo — never
+  // silently fall back to another project's map.
+  if (isMissingSelectedProject({ selectedProject: selected, byProject })) {
+    return renderMissingProjectStateHTML(selected, fleetSummary);
+  }
+
   const envelope = normalizeEnvelope(raw);
   if (envelope == null) {
     return renderMissingStateHTML(scope);
@@ -441,6 +491,18 @@ export function renderArchitectureHTML(raw, opts = {}) {
     return renderErrorStateHTML(scope, envelope);
   }
   return renderPopulatedHTML(envelope, scope, opts);
+}
+
+function _fleetHasPerProjectData(byProject, fleetSummary) {
+  if (byProject && typeof byProject === 'object'
+      && Object.keys(byProject).length > 0) {
+    return true;
+  }
+  if (fleetSummary && Array.isArray(fleetSummary.projects)
+      && fleetSummary.projects.length > 0) {
+    return true;
+  }
+  return false;
 }
 
 export function renderMissingStateHTML(scope = 'project', envelope = null) {
@@ -500,6 +562,76 @@ export function renderMissingStateHTML(scope = 'project', envelope = null) {
   `;
 }
 
+/**
+ * F004 finding #1: render an explicit missing-project state when a
+ * concrete project is selected but its view-state is not present in the
+ * per-project cache. Mentions the project by name + display name so the
+ * operator can see the dashboard did NOT silently fall back to another
+ * repo's architecture graph.
+ */
+export function renderMissingProjectStateHTML(projectName, fleetSummary = null) {
+  const safeName = typeof projectName === 'string' && projectName.length > 0
+    ? projectName
+    : '(unknown)';
+  let displayName = safeName;
+  if (fleetSummary && Array.isArray(fleetSummary.projects)) {
+    const entry = fleetSummary.projects.find(
+      (p) => p && typeof p === 'object' && p.name === safeName,
+    );
+    if (entry && typeof entry.display_name === 'string'
+        && entry.display_name.length > 0) {
+      displayName = entry.display_name;
+    }
+  }
+  return `
+    <div class="arch-layout" data-state="missing" data-missing-project="${esc(safeName)}">
+      <section class="panel arch-empty-card"
+               data-empty-state="missing-project"
+               data-missing-project="${esc(safeName)}"
+               data-freshness="absent">
+        <div class="arch-empty-scope">${renderScopeBadgeHTML('project')}</div>
+        <h2 class="arch-empty-title">No architecture snapshot for ${esc(displayName)}</h2>
+        <p class="arch-empty-impact">
+          This project does not have an architecture view-state cached
+          yet. The dashboard is not falling back to another project's
+          map — run the regen + dashboard build commands inside that
+          project's repo to populate this view.
+        </p>
+        <div class="arch-empty-meta">
+          <span class="arch-meta-row">
+            <span class="arch-meta-label">Project</span>
+            <code class="arch-meta-value">${esc(safeName)}</code>
+          </span>
+          <span class="arch-meta-row">
+            <span class="arch-meta-label">Source</span>
+            <code class="arch-meta-value">docs/architecture/architecture.json</code>
+          </span>
+        </div>
+        <div class="arch-empty-actions">
+          <p class="arch-empty-step">
+            1. Regenerate the architecture snapshot in the project's repo:
+          </p>
+          ${renderCommandHTML(ARCH_REFRESH)}
+          <p class="arch-empty-step">
+            2. Rebuild the dashboard state for this project:
+          </p>
+          ${renderCommandHTML(`dontpanic dashboard build --project ${safeName}`)}
+        </div>
+        <p class="arch-empty-note">
+          The dashboard is read-only. It will not run these commands for
+          you — copy each line and run it in your own terminal.
+        </p>
+      </section>
+      ${renderProvenanceFooterHTML({
+        source: ARCH_SOURCE,
+        lastUpdated: null,
+        refreshCommand: ARCH_BUILD,
+        note: 'No view-state cache for the selected project. Each project owns its own architecture snapshot — the dashboard does not merge unrelated repos.',
+      })}
+    </div>
+  `;
+}
+
 export function renderErrorStateHTML(scope, envelope) {
   const headline = FRESHNESS_HEADLINES.error;
   const impact = FRESHNESS_IMPACT.error;
@@ -553,8 +685,10 @@ function renderPopulatedHTML(envelope, scope, opts) {
   return `
     <div class="arch-layout arch-explorer" data-state="${esc(envelope.freshness.state)}">
       ${renderHeaderHTML(envelope, scope)}
+      ${renderProjectContextHTML(envelope, scope)}
       ${renderFreshnessBannerHTML(envelope)}
-      ${renderInsightsStripHTML(envelope)}
+      ${renderSummaryCardsHTML(envelope)}
+      ${renderInsightsPanelHTML(envelope)}
       ${renderValidationWarningsHTML(warnings)}
       ${renderExplorerHTML(envelope, layout)}
       ${renderNodeProvenanceHTML(envelope)}
@@ -627,6 +761,9 @@ function renderFreshnessBannerHTML(envelope) {
   `;
 }
 
+// Legacy insights strip — kept for backwards compatibility with any
+// caller that imports it directly. The populated render uses the
+// richer F004 summary-cards + insights-panel renderers below.
 function renderInsightsStripHTML(envelope) {
   const counts = (envelope.insights || []).filter((i) => i && i.kind === 'count');
   if (counts.length === 0) return '';
@@ -639,6 +776,651 @@ function renderInsightsStripHTML(envelope) {
   return `
     <section class="panel arch-insights-panel">
       <div class="arch-insights-strip">${chips}</div>
+    </section>
+  `;
+}
+
+// ─── F004 summary cards + derived insights ──────────────────────────
+
+/**
+ * Summary cards: module/plan/schema count, freshness state, generated
+ * timestamp, fingerprint, files_count. Every value comes from the
+ * envelope — no fabricated severity scores, no synthesized health
+ * percentages. Cards render only when their backing field is present.
+ *
+ * Pure given a normalized envelope.
+ */
+export function renderSummaryCardsHTML(envelope) {
+  if (envelope == null) return '';
+  const counts = new Map(
+    (envelope.insights || [])
+      .filter((i) => i && i.kind === 'count')
+      .map((i) => [String(i.id || ''), i]),
+  );
+  const fp = envelope.freshness || {};
+  const cards = [];
+
+  const moduleInsight = counts.get('insight:module-count');
+  if (moduleInsight) {
+    cards.push(_summaryCardHTML({
+      id: 'modules',
+      label: moduleInsight.title || 'Modules',
+      value: moduleInsight.value,
+      hint: 'Modules indexed in the snapshot.',
+    }));
+  }
+  const planInsight = counts.get('insight:plan-count');
+  if (planInsight) {
+    cards.push(_summaryCardHTML({
+      id: 'plans',
+      label: planInsight.title || 'Plans',
+      value: planInsight.value,
+      hint: 'Plans tracked in docs/plans.',
+    }));
+  }
+  const schemaInsight = counts.get('insight:schema-count');
+  if (schemaInsight) {
+    cards.push(_summaryCardHTML({
+      id: 'schemas',
+      label: schemaInsight.title || 'Schemas',
+      value: schemaInsight.value,
+      hint: 'Schemas governed by agent-conventions.',
+    }));
+  }
+
+  // Freshness card — qualitative state badge + impact, no score.
+  const state = fp.state || 'absent';
+  const color = FRESHNESS_COLORS[state] || 'muted';
+  const headline = FRESHNESS_HEADLINES[state] || 'Snapshot status';
+  cards.push(`
+    <article class="arch-summary-card arch-summary-card--freshness" data-card="freshness" data-freshness="${esc(state)}">
+      <span class="arch-summary-card-label">Snapshot</span>
+      <span class="arch-summary-card-value arch-summary-card-state">
+        <span class="arch-freshness-badge arch-freshness-badge--${esc(color)}">${esc(state.toUpperCase())}</span>
+      </span>
+      <span class="arch-summary-card-hint">${esc(headline)}</span>
+    </article>
+  `);
+
+  if (typeof fp.generated_at === 'string' && fp.generated_at.length > 0) {
+    cards.push(`
+      <article class="arch-summary-card" data-card="generated-at">
+        <span class="arch-summary-card-label">Generated</span>
+        <span class="arch-summary-card-value arch-summary-card-time">${esc(fp.generated_at)}</span>
+        <span class="arch-summary-card-hint">Snapshot timestamp.</span>
+      </article>
+    `);
+  }
+
+  if (typeof fp.fingerprint === 'string' && fp.fingerprint.length > 0) {
+    cards.push(`
+      <article class="arch-summary-card" data-card="fingerprint">
+        <span class="arch-summary-card-label">Fingerprint</span>
+        <code class="arch-summary-card-value arch-summary-card-fp">${esc(fp.fingerprint.slice(0, 12))}</code>
+        <span class="arch-summary-card-hint">First 12 of architecture.json fingerprint.</span>
+      </article>
+    `);
+  }
+
+  if (typeof fp.files_count === 'number' && fp.files_count >= 0) {
+    cards.push(`
+      <article class="arch-summary-card" data-card="files-count">
+        <span class="arch-summary-card-label">Files scanned</span>
+        <span class="arch-summary-card-value">${esc(String(fp.files_count))}</span>
+        <span class="arch-summary-card-hint">Files the crawler hashed for this snapshot.</span>
+      </article>
+    `);
+  }
+
+  if (cards.length === 0) return '';
+  return `
+    <section class="panel arch-summary-panel" data-summary="1">
+      <div class="arch-summary-grid">${cards.join('')}</div>
+    </section>
+  `;
+}
+
+function _summaryCardHTML({ id, label, value, hint }) {
+  const display = value == null ? '—' : String(value);
+  return `
+    <article class="arch-summary-card" data-card="${esc(id)}">
+      <span class="arch-summary-card-label">${esc(label)}</span>
+      <span class="arch-summary-card-value">${esc(display)}</span>
+      <span class="arch-summary-card-hint">${esc(hint)}</span>
+    </article>
+  `;
+}
+
+/**
+ * Evidence-backed derived insights. V1 surfaces:
+ *   - High-degree (import fan-out) modules — straight from
+ *     `insights[].kind === "ranking"` so we never invent a score.
+ *   - Plans touching modules — derived from edges whose endpoint is a
+ *     plan or module node, presented as a small directory rather than
+ *     a risk score.
+ *
+ * If an insight slot has no supporting data in the snapshot, the
+ * corresponding section is omitted (or labelled "No data"). We never
+ * fabricate a number to fill a card.
+ */
+export function renderInsightsPanelHTML(envelope) {
+  if (envelope == null) return '';
+  const sections = [];
+
+  const ranking = (envelope.insights || []).find(
+    (i) => i && i.id === 'insight:high-fan-out' && i.kind === 'ranking',
+  );
+  sections.push(_renderHighFanOutSectionHTML(ranking));
+
+  // F004 finding #2: surface evidence-backed freshness / changed-files
+  // insights from the data the view-state already carries. We never
+  // invent a "files changed" count — when the view-state has no
+  // recently-changed listing we say so explicitly.
+  sections.push(_renderFreshnessInsightSectionHTML(envelope));
+  sections.push(_renderChangedFilesSectionHTML(envelope));
+
+  const planLinks = collectPlanTouchpoints(envelope);
+  sections.push(_renderPlanTouchpointsSectionHTML(planLinks));
+
+  const visible = sections.filter((s) => s && s.length > 0);
+  if (visible.length === 0) return '';
+  return `
+    <section class="panel arch-insights-detail-panel" data-insights-detail="1">
+      <header class="arch-insights-detail-header">
+        <h3 class="arch-insights-detail-title">Architecture insights</h3>
+        <p class="arch-insights-detail-hint">
+          Evidence-backed signals derived from the current snapshot.
+          Counts and rankings come from architecture.json — the
+          dashboard does not invent unsupported health numbers beyond
+          available data.
+        </p>
+      </header>
+      <div class="arch-insights-detail-grid">${visible.join('')}</div>
+    </section>
+  `;
+}
+
+function _renderHighFanOutSectionHTML(insight) {
+  const rows = insight && Array.isArray(insight.value) ? insight.value : [];
+  if (rows.length === 0) {
+    return `
+      <article class="arch-insight-section" data-insight="high-fan-out">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">High-coupling areas</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          No import fan-out data in the snapshot. Run the regen command
+          to populate <code>insights[].high-fan-out</code>.
+        </p>
+      </article>
+    `;
+  }
+  const items = rows.map((row) => {
+    const node = (row && typeof row.node === 'string') ? row.node : '';
+    const count = (row && typeof row.imports === 'number') ? row.imports : 0;
+    return `
+      <li class="arch-insight-row" data-node-ref="${esc(node)}">
+        <code class="arch-insight-node">${esc(node)}</code>
+        <span class="arch-insight-metric">
+          <span class="arch-insight-metric-value">${esc(String(count))}</span>
+          <span class="arch-insight-metric-label">imports</span>
+        </span>
+      </li>
+    `;
+  }).join('');
+  return `
+    <article class="arch-insight-section" data-insight="high-fan-out">
+      <header class="arch-insight-section-header">
+        <span class="arch-insight-section-title">High-coupling areas</span>
+        <span class="arch-insight-section-tag">Top ${esc(String(rows.length))}</span>
+      </header>
+      <p class="arch-insight-section-hint">
+        Modules with the most outgoing imports. Counts come from the
+        snapshot's edge list — interpret qualitatively, not as a risk
+        score.
+      </p>
+      <ul class="arch-insight-list">${items}</ul>
+    </article>
+  `;
+}
+
+/**
+ * F004 finding #2 — Snapshot freshness insight. Surfaces qualitative
+ * state + fingerprint drift drawn directly from
+ * `envelope.freshness`. No fabricated severity scores: when state is
+ * fresh we say so; when stale we show the stored vs current fingerprint
+ * pair so an operator can verify drift without leaving the page.
+ */
+function _renderFreshnessInsightSectionHTML(envelope) {
+  const fp = (envelope && envelope.freshness) || {};
+  const state = typeof fp.state === 'string' ? fp.state : 'absent';
+  const headline = FRESHNESS_HEADLINES[state] || FRESHNESS_HEADLINES.absent;
+  const stored = typeof fp.stored_fingerprint === 'string' ? fp.stored_fingerprint : '';
+  const current = typeof fp.current_fingerprint === 'string' ? fp.current_fingerprint : '';
+  const generated = typeof fp.generated_at === 'string' ? fp.generated_at : '';
+  const filesCount = typeof fp.files_count === 'number' ? fp.files_count : null;
+  const message = typeof fp.message === 'string' ? fp.message : '';
+  const isDrift = state === 'stale' && stored.length > 0 && current.length > 0 && stored !== current;
+  const rows = [];
+  rows.push(`
+    <li class="arch-insight-row" data-freshness-field="state">
+      <span class="arch-insight-metric-label">State</span>
+      <span class="arch-freshness-badge arch-freshness-badge--${esc(FRESHNESS_COLORS[state] || 'muted')}">${esc(state.toUpperCase())}</span>
+    </li>
+  `);
+  if (generated.length > 0) {
+    rows.push(`
+      <li class="arch-insight-row" data-freshness-field="generated-at">
+        <span class="arch-insight-metric-label">Generated</span>
+        <code class="arch-insight-node">${esc(generated)}</code>
+      </li>
+    `);
+  }
+  if (filesCount != null && filesCount >= 0) {
+    rows.push(`
+      <li class="arch-insight-row" data-freshness-field="files-count">
+        <span class="arch-insight-metric-label">Files scanned</span>
+        <span class="arch-insight-metric-value">${esc(String(filesCount))}</span>
+      </li>
+    `);
+  }
+  if (isDrift) {
+    rows.push(`
+      <li class="arch-insight-row" data-freshness-field="stored-fingerprint">
+        <span class="arch-insight-metric-label">Stored fp</span>
+        <code class="arch-insight-node">${esc(stored.slice(0, 12))}</code>
+      </li>
+    `);
+    rows.push(`
+      <li class="arch-insight-row" data-freshness-field="current-fingerprint">
+        <span class="arch-insight-metric-label">Current fp</span>
+        <code class="arch-insight-node">${esc(current.slice(0, 12))}</code>
+      </li>
+    `);
+  }
+  const driftHint = isDrift
+    ? `Stored and current fingerprints diverge — the working tree has changed since the snapshot was generated. Run the regen command to refresh.`
+    : (state === 'fresh'
+      ? `The snapshot matches the working tree as of ${esc(generated || 'the last regen')}.`
+      : `Fingerprint comparison not available for this state.`);
+  return `
+    <article class="arch-insight-section" data-insight="snapshot-freshness">
+      <header class="arch-insight-section-header">
+        <span class="arch-insight-section-title">Snapshot freshness</span>
+        <span class="arch-insight-section-tag">${esc(headline)}</span>
+      </header>
+      <p class="arch-insight-section-hint">${driftHint}</p>
+      ${message ? `<p class="arch-insight-section-empty">${esc(message)}</p>` : ''}
+      <ul class="arch-insight-list">${rows.join('')}</ul>
+    </article>
+  `;
+}
+
+/**
+ * F004 finding #2 — Recently changed files insight. Renders a list when
+ * the view-state has an `insight:recently-changed` insight populated by
+ * the crawler; otherwise prints a "No data" tag explaining the snapshot
+ * does not carry a per-file diff yet (so we don't fabricate numbers).
+ */
+function _renderChangedFilesSectionHTML(envelope) {
+  const insight = (envelope && Array.isArray(envelope.insights))
+    ? envelope.insights.find(
+      (i) => i && (i.id === 'insight:recently-changed'
+        || i.id === 'insight:changed-files'),
+    )
+    : null;
+  const rows = insight && Array.isArray(insight.value) ? insight.value : [];
+  if (rows.length === 0) {
+    return `
+      <article class="arch-insight-section" data-insight="recently-changed">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">Recently changed files</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          The current snapshot does not carry a per-file diff. Snapshot
+          freshness above surfaces fingerprint drift; a fileset diff
+          will appear here once the crawler emits
+          <code>insights[].recently-changed</code>.
+        </p>
+      </article>
+    `;
+  }
+  const items = rows.slice(0, 8).map((row) => {
+    const path = (row && typeof row.path === 'string') ? row.path : '';
+    const change = (row && typeof row.change === 'string') ? row.change : '';
+    return `
+      <li class="arch-insight-row" data-change-path="${esc(path)}">
+        <code class="arch-insight-node">${esc(path)}</code>
+        ${change ? `<span class="arch-insight-metric-label">${esc(change)}</span>` : ''}
+      </li>
+    `;
+  }).join('');
+  const overflow = rows.length - 8;
+  return `
+    <article class="arch-insight-section" data-insight="recently-changed">
+      <header class="arch-insight-section-header">
+        <span class="arch-insight-section-title">Recently changed files</span>
+        <span class="arch-insight-section-tag">${esc(String(rows.length))} files</span>
+      </header>
+      <p class="arch-insight-section-hint">
+        Paths flagged by the crawler as added/modified/removed since the
+        prior snapshot. Sourced from the view-state's recently-changed
+        insight — no fabricated change scores.
+      </p>
+      <ul class="arch-insight-list">${items}</ul>
+      ${overflow > 0 ? `<p class="arch-insight-section-overflow">+${esc(String(overflow))} more (truncated for readability).</p>` : ''}
+    </article>
+  `;
+}
+
+/**
+ * Pure helper: walk edges to find plan nodes that touch a module or
+ * schema. Returns a list of `{ plan_id, plan_title, touches: [...] }`
+ * sorted by `plan_id`. Snapshot-driven, no fabricated severity.
+ */
+export function collectPlanTouchpoints(envelope) {
+  if (envelope == null) return [];
+  const nodesById = new Map(
+    (envelope.nodes || [])
+      .filter((n) => n && typeof n.id === 'string')
+      .map((n) => [n.id, n]),
+  );
+  const planTouches = new Map();
+  for (const edge of (envelope.edges || [])) {
+    if (!edge || typeof edge !== 'object') continue;
+    const from = nodesById.get(edge.from);
+    const to = nodesById.get(edge.to);
+    const planNode = from && from.type === 'plan' ? from : (to && to.type === 'plan' ? to : null);
+    const otherNode = planNode === from ? to : from;
+    if (!planNode || !otherNode) continue;
+    const key = planNode.id;
+    if (!planTouches.has(key)) {
+      planTouches.set(key, {
+        plan_id: planNode.id,
+        plan_title: planNode.title || planNode.id,
+        touches: [],
+      });
+    }
+    planTouches.get(key).touches.push({
+      node_id: otherNode.id,
+      title: otherNode.title || otherNode.id,
+      type: otherNode.type || 'other',
+    });
+  }
+  const out = [...planTouches.values()];
+  out.sort((a, b) => (a.plan_id < b.plan_id ? -1 : a.plan_id > b.plan_id ? 1 : 0));
+  return out;
+}
+
+function _renderPlanTouchpointsSectionHTML(planLinks) {
+  if (!Array.isArray(planLinks) || planLinks.length === 0) {
+    return `
+      <article class="arch-insight-section" data-insight="plans-touching">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">Plans touching selected modules</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          No plan↔module edges in this snapshot. Plan nodes appear
+          once the crawler links plan source paths to their modules.
+        </p>
+      </article>
+    `;
+  }
+  const visible = planLinks.slice(0, 8);
+  const overflow = planLinks.length - visible.length;
+  const rows = visible.map((plan) => {
+    const touchSummary = plan.touches.slice(0, 4)
+      .map((t) => `<code class="arch-insight-touch">${esc(t.title)}</code>`)
+      .join(' ');
+    return `
+      <li class="arch-insight-row" data-plan-id="${esc(plan.plan_id)}">
+        <span class="arch-insight-plan">
+          <code class="arch-insight-plan-id">${esc(plan.plan_id)}</code>
+          <span class="arch-insight-plan-title">${esc(plan.plan_title)}</span>
+        </span>
+        <span class="arch-insight-touches">
+          <span class="arch-insight-metric-value">${esc(String(plan.touches.length))}</span>
+          <span class="arch-insight-metric-label">touches</span>
+          ${touchSummary}
+        </span>
+      </li>
+    `;
+  }).join('');
+  return `
+    <article class="arch-insight-section" data-insight="plans-touching">
+      <header class="arch-insight-section-header">
+        <span class="arch-insight-section-title">Plans touching selected modules</span>
+        <span class="arch-insight-section-tag">${esc(String(planLinks.length))} plans</span>
+      </header>
+      <p class="arch-insight-section-hint">
+        Plan nodes connected to modules / schemas through the snapshot's
+        edges. Use this to spot which areas a plan reaches before
+        opening the map.
+      </p>
+      <ul class="arch-insight-list">${rows}</ul>
+      ${overflow > 0 ? `<p class="arch-insight-section-overflow">+${esc(String(overflow))} more plan touchpoints (truncated for readability).</p>` : ''}
+    </article>
+  `;
+}
+
+/**
+ * Project / fleet context block. For project scope, surfaces the
+ * project label, technical name, source path, and last-generated
+ * timestamp. For fleet scope (when shown inline above an aggregated
+ * single-repo envelope), explains that the active map is the local
+ * repo state. When `project.name` is null we render "(none)" honestly
+ * rather than implying a multi-project graph.
+ *
+ * Pure given a normalized envelope.
+ */
+export function renderProjectContextHTML(envelope, scope = 'project') {
+  if (envelope == null) return '';
+  const project = envelope.project || {};
+  const label = project.display_name || project.label || project.name || '(none)';
+  const name = project.name || '(none)';
+  const sourcePath = envelope.source_path || 'docs/architecture/architecture.json';
+  const lastGenerated = (envelope.freshness && envelope.freshness.generated_at) || '—';
+  const scopeText = scope === 'fleet'
+    ? 'Fleet selector falls back to single-repo state when no per-project cache is present.'
+    : 'Architecture data is scoped to this project only.';
+  return `
+    <section class="panel arch-project-context" data-project-context="1" data-scope="${esc(scope)}">
+      <div class="arch-project-context-row">
+        <div class="arch-project-context-label">
+          <span class="arch-meta-label">Project context</span>
+          <span class="arch-project-context-name">${esc(label)}</span>
+        </div>
+        <div class="arch-project-context-meta">
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">project_id</span>
+            <code class="arch-meta-value">${esc(name)}</code>
+          </span>
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">source</span>
+            <code class="arch-meta-value">${esc(sourcePath)}</code>
+          </span>
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">last generated</span>
+            <span class="arch-meta-value">${esc(lastGenerated)}</span>
+          </span>
+        </div>
+      </div>
+      <p class="arch-project-context-note">${esc(scopeText)}</p>
+    </section>
+  `;
+}
+
+// ─── F004 fleet (All Projects) view ─────────────────────────────────
+
+/**
+ * Render the All Projects view: a grid of project cards, each with
+ * the project's own architecture freshness and an "open map" button.
+ * Projects that have no architecture artifact (or no per-project
+ * cache yet) get an explicit empty card with the regen instructions
+ * for that repo. We never merge unrelated repo graphs into one canvas.
+ *
+ * Inputs:
+ *   - byProject: map of project_name → raw view-state envelope (or null)
+ *   - fleetSummary: normalized or raw fleet summary envelope (optional)
+ */
+export function renderFleetArchitectureHTML(opts = {}) {
+  const byProject = opts.byProject && typeof opts.byProject === 'object'
+    ? opts.byProject
+    : {};
+  const fleetSummary = opts.fleetSummary && typeof opts.fleetSummary === 'object'
+    ? opts.fleetSummary
+    : null;
+
+  // Build the deduped, sorted project list: union of byProject keys and
+  // fleet summary entries so an unbuilt project still shows up with an
+  // explicit "no architecture yet" card.
+  const seen = new Map();
+  const summaryProjects = Array.isArray(fleetSummary && fleetSummary.projects)
+    ? fleetSummary.projects
+    : [];
+  for (const p of summaryProjects) {
+    if (!p || typeof p.name !== 'string') continue;
+    seen.set(p.name, {
+      name: p.name,
+      display_name: typeof p.display_name === 'string' && p.display_name.length > 0
+        ? p.display_name
+        : p.name,
+      active: p.active !== false,
+    });
+  }
+  for (const name of Object.keys(byProject)) {
+    if (typeof name !== 'string' || name.length === 0) continue;
+    if (!seen.has(name)) {
+      const env = byProject[name];
+      const display = env && env.project && typeof env.project.display_name === 'string'
+        ? env.project.display_name
+        : name;
+      seen.set(name, { name, display_name: display, active: true });
+    }
+  }
+  const projects = [...seen.values()].sort(
+    (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+  );
+
+  const cards = projects.map((p) => {
+    const raw = byProject[p.name];
+    const env = normalizeEnvelope(raw);
+    if (env == null) {
+      return _renderFleetEmptyCardHTML(p);
+    }
+    return _renderFleetProjectCardHTML(p, env);
+  }).join('');
+
+  return `
+    <div class="arch-layout arch-fleet" data-state="fleet" data-fleet="1">
+      <section class="panel arch-fleet-header-panel">
+        <div class="arch-header-row">
+          <h2 class="arch-title">Architecture</h2>
+          <div class="arch-header-scope">${renderScopeBadgeHTML('fleet')}</div>
+          <div class="arch-header-question">All Projects view — each project keeps its own map.</div>
+        </div>
+        <p class="arch-fleet-note">
+          Each registered project has its own architecture snapshot.
+          Unrelated repos are never merged into a single graph. Pick a
+          project below to open its map.
+        </p>
+      </section>
+      ${projects.length === 0 ? _renderFleetEmptyAllHTML() : `
+        <section class="panel arch-fleet-grid-panel">
+          <div class="arch-fleet-grid">${cards}</div>
+        </section>
+      `}
+      ${renderProvenanceFooterHTML({
+        source: ARCH_SOURCE,
+        lastUpdated: null,
+        refreshCommand: ARCH_BUILD,
+        note: 'All Projects view enumerates per-project caches from the fleet summary. Open a project to see its full architecture map.',
+      })}
+    </div>
+  `;
+}
+
+function _renderFleetProjectCardHTML(projectInfo, envelope) {
+  const fp = envelope.freshness || {};
+  const state = fp.state || 'absent';
+  const color = FRESHNESS_COLORS[state] || 'muted';
+  const headline = FRESHNESS_HEADLINES[state] || 'Snapshot status';
+  const generated = fp.generated_at || '—';
+  const moduleInsight = (envelope.insights || []).find(
+    (i) => i && i.id === 'insight:module-count',
+  );
+  const planInsight = (envelope.insights || []).find(
+    (i) => i && i.id === 'insight:plan-count',
+  );
+  const moduleCount = moduleInsight && moduleInsight.value != null ? moduleInsight.value : (envelope.nodes || []).filter((n) => n && n.type === 'module').length;
+  const planCount = planInsight && planInsight.value != null ? planInsight.value : (envelope.nodes || []).filter((n) => n && n.type === 'plan').length;
+  const inactive = projectInfo.active === false;
+  return `
+    <article class="arch-fleet-card" data-fleet-card="${esc(projectInfo.name)}" data-fleet-state="${esc(state)}">
+      <header class="arch-fleet-card-header">
+        <span class="arch-fleet-card-name">${esc(projectInfo.display_name || projectInfo.name)}</span>
+        <span class="arch-freshness-badge arch-freshness-badge--${esc(color)}">${esc(state.toUpperCase())}</span>
+      </header>
+      <code class="arch-fleet-card-id">${esc(projectInfo.name)}</code>
+      <p class="arch-fleet-card-headline">${esc(headline)}</p>
+      <dl class="arch-fleet-card-meta">
+        <dt>Modules</dt><dd>${esc(String(moduleCount))}</dd>
+        <dt>Plans</dt><dd>${esc(String(planCount))}</dd>
+        <dt>Generated</dt><dd>${esc(generated)}</dd>
+      </dl>
+      ${inactive ? '<p class="arch-fleet-card-inactive">Marked inactive in the registry.</p>' : ''}
+      <div class="arch-fleet-card-actions">
+        <button type="button"
+                class="arch-fleet-open-btn"
+                data-arch-open-project="${esc(projectInfo.name)}">
+          Open map
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function _renderFleetEmptyCardHTML(projectInfo) {
+  return `
+    <article class="arch-fleet-card arch-fleet-card--empty"
+             data-fleet-card="${esc(projectInfo.name)}"
+             data-fleet-state="absent">
+      <header class="arch-fleet-card-header">
+        <span class="arch-fleet-card-name">${esc(projectInfo.display_name || projectInfo.name)}</span>
+        <span class="arch-freshness-badge arch-freshness-badge--muted">NO MAP</span>
+      </header>
+      <code class="arch-fleet-card-id">${esc(projectInfo.name)}</code>
+      <p class="arch-fleet-card-headline">No architecture snapshot for this project yet.</p>
+      <p class="arch-fleet-card-empty-body">
+        Run the regen command inside the project's repo, then rebuild
+        the dashboard state for this project:
+      </p>
+      ${renderCommandHTML(ARCH_REFRESH)}
+      ${renderCommandHTML(`dontpanic dashboard build --project ${projectInfo.name}`)}
+      <div class="arch-fleet-card-actions">
+        <button type="button"
+                class="arch-fleet-open-btn"
+                data-arch-open-project="${esc(projectInfo.name)}">
+          Switch selector
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function _renderFleetEmptyAllHTML() {
+  return `
+    <section class="panel arch-fleet-empty-panel" data-fleet-empty="1">
+      <h3 class="arch-fleet-empty-title">No registered projects yet</h3>
+      <p class="arch-fleet-empty-body">
+        The fleet summary has no registered projects, so there are no
+        architecture maps to list. Register a project with the
+        dontpanic CLI to populate this view.
+      </p>
+      ${renderCommandHTML('dontpanic projects add <name> <path>')}
     </section>
   `;
 }

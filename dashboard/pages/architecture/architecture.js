@@ -24,6 +24,7 @@ import {
   normalizeEnvelope,
   getFlowParticipants,
   layoutArchitectureGraph,
+  isMissingSelectedProject,
 } from '../../lib/architecture-logic.js';
 import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
@@ -50,14 +51,28 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     const selected = state && typeof state.selectedProject === 'string'
       ? state.selectedProject
       : ALL_PROJECTS_VALUE;
+    const byProject = state ? state.architectureViewStateByProject : null;
+    const fleetSummary = state ? state.fleetSummary : null;
     const raw = resolveArchitectureEnvelope({
       selectedProject: selected,
       single: state ? state.architectureViewState : null,
-      byProject: state ? state.architectureViewStateByProject : null,
+      byProject,
     });
-    _envelope = normalizeEnvelope(raw);
+    // F004 finding #1: when a concrete project is selected and the
+    // per-project cache is missing that entry, treat the envelope as
+    // absent so interactions (flow selection, node-detail, layout) do
+    // not fire against another project's data.
+    const missingForProject = isMissingSelectedProject({
+      selectedProject: selected,
+      byProject,
+    });
+    _envelope = missingForProject ? null : normalizeEnvelope(raw);
     _layout = _envelope ? layoutArchitectureGraph(_envelope) : null;
-    _el.innerHTML = renderArchitectureHTML(raw, { selectedProject: selected });
+    _el.innerHTML = renderArchitectureHTML(raw, {
+      selectedProject: selected,
+      byProject,
+      fleetSummary,
+    });
     // Reset interaction state — a new view-state envelope means the
     // previous selection/flow IDs are not guaranteed to exist anymore.
     _state = {
@@ -483,6 +498,25 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     // Detail panel close.
     if (t.closest('[data-arch-detail-close]')) {
       hideDetail();
+      return;
+    }
+
+    // F004 fleet view → open a project's map. The button updates the
+    // project selector via the existing shell helper (history + storage
+    // + active-page re-render) so the user lands on that project's
+    // architecture without us forcing a navigation.
+    const openBtn = t.closest('[data-arch-open-project]');
+    if (openBtn) {
+      const name = openBtn.dataset.archOpenProject || '';
+      if (name.length === 0) return;
+      const J = (typeof globalThis !== 'undefined' && globalThis.Jarvis) ? globalThis.Jarvis : null;
+      if (J && typeof J.setSelectedProject === 'function') {
+        J.setSelectedProject(name);
+      } else if (J && J.state) {
+        // Fallback: mutate state + re-render without the helper.
+        J.state.selectedProject = name;
+        render(J.state);
+      }
       return;
     }
 

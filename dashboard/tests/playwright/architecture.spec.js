@@ -133,4 +133,57 @@ test.describe('F003 Architecture explorer screenshots', () => {
       fullPage: true,
     });
   });
+
+  test('F004 responsive summary, insights, and fleet states do not overlap', async ({ page }, testInfo) => {
+    await page.goto(`${harnessURL}?variant=f004`);
+    await page.waitForFunction(() => window.__harnessReady === true);
+    await page.waitForSelector('[data-summary="1"]');
+    await page.waitForSelector('[data-insights-detail="1"]');
+
+    if (testInfo.project.name === 'mobile') {
+      const layout = await page.evaluate(() => {
+        const box = (selector) => {
+          const el = document.querySelector(selector);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+        };
+        return {
+          viewportWidth: window.innerWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          summary: box('[data-summary="1"]'),
+          insights: box('[data-insights-detail="1"]'),
+        };
+      });
+      expect(layout.summary).not.toBeNull();
+      expect(layout.insights).not.toBeNull();
+      expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth + 2);
+      expect(layout.summary.bottom).toBeLessThanOrEqual(layout.insights.top + 2);
+    }
+
+    await page.goto(`${harnessURL}?variant=fleet`);
+    await page.waitForFunction(() => window.__harnessReady === true);
+    await page.waitForSelector('[data-fleet="1"]');
+    await expect(page.locator('[data-fleet-card]')).toHaveCount(3);
+    await expect(page.locator('[data-fleet-card="unbuilt"]')).toBeVisible();
+
+    if (testInfo.project.name === 'mobile') {
+      const fleetLayout = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('[data-fleet-card]'))
+          .map((el) => {
+            const r = el.getBoundingClientRect();
+            return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+          });
+        return {
+          viewportWidth: window.innerWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          cards,
+        };
+      });
+      expect(fleetLayout.scrollWidth).toBeLessThanOrEqual(fleetLayout.viewportWidth + 2);
+      expect(fleetLayout.cards.length).toBe(3);
+      expect(fleetLayout.cards[0].bottom).toBeLessThanOrEqual(fleetLayout.cards[1].top + 2);
+      expect(fleetLayout.cards[1].bottom).toBeLessThanOrEqual(fleetLayout.cards[2].top + 2);
+    }
+  });
 });

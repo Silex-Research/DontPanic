@@ -116,10 +116,21 @@
         "Add tests/snapshots for insights, selected project context, fleet context, no-architecture project state, and responsive layout."
       ],
       "acceptance": "(1) Summary and insight panels render from real architecture data. (2) Insights are evidence-backed and do not fabricate scores. (3) Project/fleet context is visible. (4) All Projects behavior is explicit and does not merge unrelated repo maps. (5) Missing project architecture is handled clearly. (6) Responsive behavior is usable without text overlap. (7) Tests cover insights, project/fleet context, missing project state, and responsive layout.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T20:11:16Z"
     },
     {
       "id": "F005",
