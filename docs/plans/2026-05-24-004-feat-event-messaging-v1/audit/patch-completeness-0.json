@@ -1,50 +1,6 @@
 {
   "schema_version": "1.0",
   "status": "pass",
-  "findings": [
-    {
-      "mode": "unstaged_dirty_state",
-      "files": [
-        "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/gate-state.json",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/transcript.md",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-auditor.json",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-1-auditor.json",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-1-implementer.json",
-        "docs/plans/2026-05-24-004-feat-event-messaging-v1/features.json",
-        "scripts/dontpanic_orchestrate/dashboard.py",
-        "scripts/dontpanic_orchestrate/event_copy.py",
-        "scripts/dontpanic_orchestrate/inbox.py",
-        "scripts/dontpanic_orchestrate/notify.py",
-        "scripts/dontpanic_orchestrate/notify_discord.py",
-        "scripts/dontpanic_orchestrate/notify_event.py",
-        "scripts/dontpanic_orchestrate/operator_console.py",
-        "scripts/dontpanic_orchestrate/supervisor.py"
-      ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files.",
-      "severity": "info",
-      "recommendation": "Run: git add -u for files that should ride along; otherwise pass --unrelated-dirty-state-note <reason> at dispatch time."
-    }
-  ],
-  "files": [
-    "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/gate-state.json",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/transcript.md",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-1-auditor.json",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-1-implementer.json",
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/features.json",
-    "scripts/dontpanic_orchestrate/dashboard.py",
-    "scripts/dontpanic_orchestrate/event_copy.py",
-    "scripts/dontpanic_orchestrate/inbox.py",
-    "scripts/dontpanic_orchestrate/notify.py",
-    "scripts/dontpanic_orchestrate/notify_discord.py",
-    "scripts/dontpanic_orchestrate/notify_event.py",
-    "scripts/dontpanic_orchestrate/operator_console.py",
-    "scripts/dontpanic_orchestrate/supervisor.py"
-  ]
+  "findings": [],
+  "files": []
 }

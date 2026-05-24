@@ -36,3 +36,8 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 **2026-05-24T22:26:30Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
+| 2026-05-24T22:44:32Z | F004 | i0 | claude / implementer | signed_off | 9,296,380 / 30,788 | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |
+| 2026-05-24T22:48:41Z | F004 | i0 | codex / auditor | blocked | 1,211,620 / 19,295 | [codex-auditor-F004-i0.json](audit/codex-auditor-F004-i0.json) |
+
+**2026-05-24T22:48:41Z** — feature **F004** terminal: `stopped_environmental_blocker` after 1 round(s) — verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+

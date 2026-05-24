@@ -158,10 +158,24 @@ def append_rendered_annotation(
         )
 
     ts = timestamp or _now_iso()
-    title = getattr(rendered, "title", None) or "(rendered)"
-    detail = getattr(rendered, "detail", None) or ""
-    exact_command = getattr(rendered, "exact_command", None)
-    evidence_uri = getattr(rendered, "evidence_uri", None)
+
+    # Plan 2026-05-24-004 F004 (D011 + D020): substitute-mode sanitization
+    # at the live INBOX-annotation boundary. Secret-shaped substrings are
+    # replaced with [REDACTED]; this path must NEVER raise — INBOX
+    # annotation is a live render and the supervisor cannot fail-hard on
+    # a transient notification. The raise-mode boundary is the sidecar
+    # write (see operator_console.write_event_action_sidecar).
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    def _scrub(value: Any) -> Any:
+        if isinstance(value, str):
+            return scrub_secrets(value)
+        return value
+
+    title = _scrub(getattr(rendered, "title", None)) or "(rendered)"
+    detail = _scrub(getattr(rendered, "detail", None)) or ""
+    exact_command = _scrub(getattr(rendered, "exact_command", None))
+    evidence_uri = _scrub(getattr(rendered, "evidence_uri", None))
     band = getattr(rendered, "band", None) or ""
     tech = getattr(rendered, "technical_metadata", None) or {}
 
@@ -186,7 +200,8 @@ def append_rendered_annotation(
         parts.append("<details><summary>Technical details</summary>")
         parts.append("")
         for key in sorted(tech.keys()):
-            parts.append(f"- `{key}` = `{tech[key]}`")
+            value = _scrub(tech[key])
+            parts.append(f"- `{key}` = `{value}`")
         parts.append("")
         parts.append("</details>")
         parts.append("")

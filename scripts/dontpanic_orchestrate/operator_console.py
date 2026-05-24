@@ -761,8 +761,16 @@ def write_event_action_sidecar(
     the served ActionItem list.
 
     Returns the sidecar path, or None when ``rendered`` is None (no-op).
-    Never raises — sidecar write is best-effort; failure to write must not
-    crash the dispatch loop.
+
+    Plan 2026-05-24-004 F004 (D011 + D020): raise-mode sanitization. Any
+    secret-shaped substring in the projected entry triggers a ``ValueError``
+    via :func:`_assert_no_secret_shapes` and the write is rejected before
+    the sidecar file is touched. This is the operator-fixable boundary —
+    a leaked secret in a rendered ActionItem is a bug worth surfacing
+    immediately, since the sidecar is persisted (durable) state. The live
+    notification paths use substitute mode instead (see
+    :func:`state_projection.scrub_secrets`) so the supervisor never
+    fail-hards on a transient notification.
     """
     if rendered is None:
         return None
@@ -780,8 +788,11 @@ def write_event_action_sidecar(
         updated_at=_now_iso(captured_at),
     )
     # Per D011 + F004: the sidecar write is the raise-mode boundary for
-    # secret-shape leaks. F004 wires _assert_no_secret_shapes here as part
-    # of its sanitization sweep. F003 just appends the entry.
+    # secret-shape leaks. Failure here surfaces a ValueError to the caller
+    # so an operator can fix the rendered ActionItem rather than persisting
+    # the leak. Live notification paths use substitute mode (scrub_secrets)
+    # because the supervisor must not fail-hard on a transient dispatch.
+    _assert_no_secret_shapes(entry)
     line = json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n"
     with target.open("a", encoding="utf-8") as f:
         f.write(line)

@@ -252,7 +252,12 @@ def _format_content(event: "NotifyEvent") -> str:
     out = "\n".join(parts)
     if len(out) > _DISCORD_PAYLOAD_TOTAL_LIMIT - 200:
         out = out[: _DISCORD_PAYLOAD_TOTAL_LIMIT - 203] + "..."
-    return out
+    # Plan 2026-05-24-004 F004: substitute-mode sanitization on the legacy
+    # content path. Imported lazily to avoid pulling state_projection at
+    # module load time.
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    return scrub_secrets(out) or ""
 
 
 def _band_to_color(band: str | None) -> int:
@@ -312,28 +317,42 @@ def _build_payload(event: "NotifyEvent", rendered: Any | None = None) -> dict:
             "allowed_mentions": {"parse": []},
         }
 
-    title = _truncate(rendered.title, _DISCORD_TITLE_LIMIT)
-    description = _truncate(rendered.detail or "", _DISCORD_DESCRIPTION_LIMIT)
+    # Plan 2026-05-24-004 F004 (D011 + D020): substitute-mode sanitization
+    # for the live Discord embed path. Every operator-visible string is run
+    # through scrub_secrets before truncation / field-assembly so a
+    # secret-shaped substring renders as [REDACTED] without raising. The
+    # raise-mode boundary is the sidecar write path.
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    def _scrub(s: str | None) -> str | None:
+        return scrub_secrets(s) if isinstance(s, str) else s
+
+    title = _truncate(_scrub(rendered.title) or "", _DISCORD_TITLE_LIMIT)
+    description = _truncate(_scrub(rendered.detail) or "", _DISCORD_DESCRIPTION_LIMIT)
     fields: list[dict] = []
-    if rendered.exact_command:
+    scrubbed_command = _scrub(rendered.exact_command)
+    if scrubbed_command:
         # D022 + plan acceptance #6: never truncate exact_command. If it's
         # too long for one field, we still emit it whole and let Discord
         # complain — this is more honest than rendering a broken copy-paste.
         fields.append(
             {
                 "name": "Run",
-                "value": f"```\n{rendered.exact_command}\n```",
+                "value": f"```\n{scrubbed_command}\n```",
                 "inline": False,
             }
         )
     footer_parts: list[str] = []
-    if rendered.evidence_uri:
-        footer_parts.append(f"Evidence: {rendered.evidence_uri}")
+    scrubbed_evidence = _scrub(rendered.evidence_uri)
+    if scrubbed_evidence:
+        footer_parts.append(f"Evidence: {scrubbed_evidence}")
     feature_id = getattr(event, "feature_id", None)
     if feature_id:
         footer_parts.append(f"feature={feature_id}")
     footer_parts.append(f"plan={event.plan_id}")
-    footer_text = _truncate(" · ".join(footer_parts), _DISCORD_FIELD_VALUE_LIMIT)
+    footer_text = _truncate(
+        _scrub(" · ".join(footer_parts)) or "", _DISCORD_FIELD_VALUE_LIMIT
+    )
 
     embed: dict = {
         "title": title,

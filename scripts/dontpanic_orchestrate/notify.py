@@ -101,10 +101,21 @@ def notify_event(event: "NotifyEvent", rendered: Any | None = None) -> bool:
         message = (getattr(rendered, "headline", "") or "")[:140]
     else:
         message = event.body[:140] if event.body else ""
+
+    # Plan 2026-05-24-004 F004 (D011 + D020): substitute-mode sanitization
+    # at the terminal-notifier live boundary. Per D011 the terminal sink
+    # must NEVER fail-hard on a transient notification — scrub_secrets
+    # replaces matches with [REDACTED] in-place without raising. The
+    # raise-mode boundary lives at the sidecar write.
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    scrubbed_message = scrub_secrets(message) or ""
+    scrubbed_title = scrub_secrets(f"DontPanic [{event.plan_id}]") or ""
+    scrubbed_subtitle = scrub_secrets(event.kind) or ""
     return notify(
-        f"DontPanic [{event.plan_id}]",
-        message,
-        subtitle=event.kind,
+        scrubbed_title,
+        scrubbed_message,
+        subtitle=scrubbed_subtitle,
         group=event.plan_id,
     )
 
