@@ -35,3 +35,11 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
 | 2026-05-24T15:56:23Z | F002 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
 | 2026-05-24T16:00:56Z | F002 | i0 | codex / auditor | needs_changes | 2,852,500 / 14,338 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+| 2026-05-24T17:45:20Z | F003 | i0 | claude / implementer | signed_off | 2,343,043 / 5,635 | [claude-implementer-F003-i0.json](audit/claude-implementer-F003-i0.json) |
+| 2026-05-24T17:49:20Z | F003 | i0 | codex / auditor | needs_changes | 3,244,805 / 14,088 | [codex-auditor-F003-i0.json](audit/codex-auditor-F003-i0.json) |
+| 2026-05-24T17:55:23Z | F003 | i1 | claude / implementer | signed_off | 6,416,522 / 20,428 | [claude-implementer-F003-i1.json](audit/claude-implementer-F003-i1.json) |
+| 2026-05-24T17:59:05Z | F003 | i1 | codex / auditor | needs_changes | 1,794,816 / 14,101 | [codex-auditor-F003-i1.json](audit/codex-auditor-F003-i1.json) |
+
+**2026-05-24T17:59:06Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

@@ -2,45 +2,55 @@
 status: operator_resolved
 reason_class: implementation_defect
 plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
-feature_id: F002
-closed_at: 2026-05-24T16:11:42Z
+feature_id: F003
+closed_at: 2026-05-24T19:17:26Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-24-002-feat-dashboard-architecture-explorer-v1 / F002
+# Closeout memo — 2026-05-24-002-feat-dashboard-architecture-explorer-v1 / F003
 
 ## Operator decision
 
-This feature was closed under class `implementation_defect` after the F002 implementer timed out but left a useful patch and the auditor recorded concrete repair findings. Operator review applied the required repairs manually, staged the new architecture files, verified the focused and full dashboard suites, and confirmed the dashboard build/serve smoke paths. The close-out workflow wrote the signoff envelope and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `implementation_defect` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
 ## Target context
-- Repo: DontPanic
+- Repo: dontpanic-arch-f003-close
 - Env: dev
 - Project: (none)
-- Command: 7 (see structured target_context.commands_run)
+- Command: 8 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic
-Env: dev
+[F003] Repo: dontpanic-arch-f003-close  
+Env: dev  
 Project: (none)
-Command: audit verification commands
 
-Overall verdict: needs_changes. Implementer target declaration is correct in the summary (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command shapes were recorded.
+Overall verdict: needs_changes.
 
-FINDING (high, correctness): The patch is not self-contained because new dashboard files are untracked while tracked files import them. Evidence: `git status --short` shows `?? ../dashboard/pages/architecture/`, `?? ../dashboard/lib/architecture-logic.js`, and tests/fixtures untracked, while [core.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard...
+No EC5 target-context finding: the implementer summary declares `Repo: dontpanic-arch-f003-close`, `Env: dev`, and `Project: (none)`, and structured `target_context` is `env=dev`, `project=null`. I also found no forbidden command shapes in their reported `commands_run`.
+
+FINDING (high, test_coverage): Playwright screenshot tests are not executable in the audited dev environment. Evidence: `npx playwright test tests/playwright/architecture.spec.js --project=desktop --grep "neutral state" --reporter=list --output=/tmp/dontpanic-pw-audit` fails before ...
 
 ## Rationale (operator — fill in)
 
-The auditor's findings were valid implementation defects, not product-scope blockers: the patch had untracked architecture files, missing Layer 2 technical provenance, incomplete F001 freshness-state handling, and no project-scoped cache resolution in the page. Those defects were fixed manually by adding the provenance panel, F001 `absent/error` rendering, project-cache selection, CSS, and tests. A re-dispatch is not useful because the broad F002 implementer run already hit the 600s timeout; focused manual repair plus verification is lower risk for this shell feature.
+The latest auditor finding was valid when written: the Playwright screenshot
+path was not executable in the audited dev environment because Chromium was
+missing and the test harness still assumed direct file loading. Operator
+review fixed the evidence path by serving the architecture harness over
+localhost, aligning the mobile project with Chromium-based responsive evidence,
+installing Chromium, and rerunning the exact auditor command successfully.
+
+The feature does not need another implementer round because the remaining
+finding was an evidence-execution defect, not a product behavior defect, and the
+full desktop/mobile Playwright suite plus full dashboard Vitest suite now pass.
+Future Playwright evidence plans should state the browser-install/setup
+requirement explicitly and prefer local static-server harnesses over `file://`
+module loading.
 
 ## Evidence references
 
 - `audit/signoff-2026-05-24-002-feat-dashboard-architecture-explorer-v1.json`
-- `audit/claude-implementer-F002-i0.json`
-- `audit/codex-auditor-F002-i0.json`
-- `dashboard/tests/unit/architecture-logic.test.js`
-- `dashboard/tests/integration/architecture-page.test.js`
-- Full dashboard Vitest suite: 35 files / 809 tests passed
-- `dontpanic dashboard build`
-- `dontpanic dashboard serve --once --no-watch`
+- `audit/codex-auditor-F003-i1.json`
+- `dashboard/tests/playwright/architecture.spec.js`
+- `dashboard/playwright.config.js`
+- `evidence/screenshots/`

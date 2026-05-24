@@ -84,11 +84,22 @@
         "Add Playwright screenshots for neutral, selected-flow, node-detail, filtered, stale/missing, desktop, and mobile states."
       ],
       "acceptance": "(1) Swimlane map renders from architecture view-state, not demo data. (2) Selecting a flow highlights its nodes/edges and shows matching numbered steps. (3) Non-selected content dims rather than disappearing. (4) Flow panel includes clear-selection and scrollable steps. (5) Flow validation warnings are visible but non-fatal. (6) Search filters visible nodes. (7) At least three filters work. (8) Hover/click interactions expose detail without navigation loss. (9) Large graph navigation exists. (10) Layout is deterministic enough for regression snapshots. (11) Tests cover flow selection, steps, dimming, clear-selection, filters, and detail interactions. (12) Playwright screenshots prove the tab is nonblank, framed correctly, and usable on desktop/mobile.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T19:17:26Z"
     },
     {
       "id": "F004",

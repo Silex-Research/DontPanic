@@ -751,7 +751,7 @@ function renderExplorerHTML(envelope, layout) {
         </div>
       </div>
       <div class="arch-explorer-grid">
-        <div class="arch-explorer-canvas-wrap" data-canvas-wrap>
+        <div class="arch-explorer-canvas-wrap" data-canvas-wrap tabindex="0" role="application" aria-label="Architecture map (drag to pan, wheel to zoom, arrow keys to pan when focused)">
           ${renderArchitectureMapSVG(layout)}
           <aside class="arch-detail-panel" data-detail-panel hidden aria-live="polite">
             <button type="button" class="arch-detail-close" data-arch-detail-close aria-label="Close detail panel">×</button>

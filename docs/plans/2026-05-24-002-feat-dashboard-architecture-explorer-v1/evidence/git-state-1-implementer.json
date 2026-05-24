@@ -1,366 +1,51 @@
 {
-  "staged": [
+  "staged": [],
+  "unstaged_modified": [
     {
-      "path": ".gitignore",
+      "path": "dashboard/lib/architecture-logic.js",
       "status": "M"
     },
     {
-      "path": "dashboard/lib/value-language-static-checks.js",
-      "status": "A"
+      "path": "dashboard/package.json",
+      "status": "M"
     },
     {
-      "path": "dashboard/tests/unit/value-language-static-checks.test.js",
-      "status": "A"
+      "path": "dashboard/pages/architecture/architecture.css",
+      "status": "M"
     },
     {
-      "path": "docs/design/dashboard-architecture-explorer-v1/README.md",
-      "status": "A"
+      "path": "dashboard/pages/architecture/architecture.js",
+      "status": "M"
     },
     {
-      "path": "docs/design/dashboard-architecture-explorer-v1/claude-design-v3-manifest.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/README.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/DontPanic Dashboard.html",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/design-canvas.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-icons.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-arch-variants.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-architecture.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-caps.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-docs.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-fleet.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-health.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-home.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-plain.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-prefs.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-work-board.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-page-work.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-shell.jsx",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/dp-tokens.css",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/uploads/FinalDontPanic.png",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/uploads/Screenshot 2026-05-23 at 10.14.41 PM.png",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/uploads/Screenshot 2026-05-23 at 11.04.02 PM.png",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-platform-roadmap-v1/claude-design-v3/uploads/Screenshot 2026-05-23 at 11.04.13 PM.png",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-value-language-ia-v0/README.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/design/dashboard-value-language-ia-v0/copy-map.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/INBOX.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F001-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F001-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F001-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F001-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/gate-state.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/patch-completeness-0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/terminal-state-iter0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/transcript.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/decisions.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/events.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/applicable-skills.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-0-auditor.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-0-implementer.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-1-auditor.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-1-implementer.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/goal-governance/pre_impl/sufficiency-findings.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/features.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/objective_contract.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/plan.md",
-      "status": "A"
+      "path": "dashboard/tests/integration/architecture-explorer-dom.test.js",
+      "status": "M"
     },
     {
       "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F001-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F001-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/codex-auditor-F001-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/codex-auditor-F001-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/gate-state.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/no_progress_classification_F001_iter2.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/patch-completeness-0.json",
-      "status": "A"
+      "status": "M"
     },
     {
       "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/transcript.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/applicable-skills.json",
-      "status": "A"
+      "status": "M"
     },
     {
       "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-0-auditor.json",
-      "status": "A"
+      "status": "M"
     },
     {
       "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-0-implementer.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-1-auditor.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-1-implementer.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/goal-governance/pre_impl/sufficiency-findings.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/required-capabilities.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/objective_contract.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/plan.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/INBOX.md",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/audit/gate-state.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/decisions.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/evidence/required-capabilities.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/plan.md",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/architecture_view_state.py",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/dashboard.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py",
-      "status": "A"
-    }
-  ],
-  "unstaged_modified": [
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F001-i0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F001-i1.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/codex-auditor-F001-i0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/transcript.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-0-auditor.json",
       "status": "M"
     },
     {
       "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/architecture_view_state.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-24-004-feat-event-messaging-v1/"
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F003-i1.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/codex-auditor-F003-i0.json"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

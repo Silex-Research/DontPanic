@@ -381,6 +381,17 @@
   border-radius: 6px;
   overflow: hidden;
   min-height: 520px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.arch-explorer-canvas-wrap:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.6);
+  outline-offset: 2px;
+}
+
+.arch-explorer-canvas-wrap:active {
+  cursor: grabbing;
 }
 
 .arch-canvas {

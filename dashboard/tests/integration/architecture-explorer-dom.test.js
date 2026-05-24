@@ -256,6 +256,93 @@ describe('zoom + reset (acceptance #9)', () => {
   });
 });
 
+describe('pan navigation (acceptance #9 — large graph)', () => {
+  function parseViewBox(canvas) {
+    return canvas.getAttribute('viewBox').split(/\s+/).map(Number);
+  }
+
+  it('exposes the canvas wrap as a focusable pan target', () => {
+    const el = bootWithFixture();
+    const wrap = el.querySelector('[data-canvas-wrap]');
+    expect(wrap).not.toBeNull();
+    expect(wrap.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('mouse drag pans the viewBox', () => {
+    const el = bootWithFixture();
+    const wrap = el.querySelector('[data-canvas-wrap]');
+    const canvas = el.querySelector('[data-canvas]');
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 520, right: 800, bottom: 520, x: 0, y: 0, toJSON: () => '' });
+    const before = parseViewBox(canvas);
+
+    wrap.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 400, clientY: 260, button: 0 }));
+    wrap.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 200, button: 0 }));
+    wrap.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, clientX: 300, clientY: 200, button: 0 }));
+
+    const after = parseViewBox(canvas);
+    // Dragging cursor to the left (clientX decreased) should shift the
+    // viewBox X to the right (content scrolls left into view).
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[0]).toBeGreaterThan(before[0]);
+    expect(after[1]).toBeGreaterThan(before[1]);
+  });
+
+  it('drag swallows the trailing click so node detail does not open', () => {
+    const el = bootWithFixture();
+    const wrap = el.querySelector('[data-canvas-wrap]');
+    const node = el.querySelector('.arch-node');
+    const canvas = el.querySelector('[data-canvas]');
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 520, right: 800, bottom: 520, x: 0, y: 0, toJSON: () => '' });
+    expect(el.querySelector('[data-detail-panel]').hidden).toBe(true);
+
+    // Drag starts on the node, moves >> threshold, releases.
+    node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+    node.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 250, clientY: 180, button: 0 }));
+    node.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, clientX: 250, clientY: 180, button: 0 }));
+    // The browser fires a click after mouseup — simulate it on the node.
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 250, clientY: 180, button: 0 }));
+
+    expect(el.querySelector('[data-detail-panel]').hidden).toBe(true);
+  });
+
+  it('arrow keys pan the viewBox when the canvas wrap has focus', () => {
+    const el = bootWithFixture();
+    const wrap = el.querySelector('[data-canvas-wrap]');
+    const canvas = el.querySelector('[data-canvas]');
+    const before = parseViewBox(canvas);
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const right = parseViewBox(canvas);
+    expect(right[0]).toBeGreaterThan(before[0]);
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    const down = parseViewBox(canvas);
+    expect(down[1]).toBeGreaterThan(right[1]);
+  });
+
+  it('wheel zooms the viewBox (wheel up = zoom in)', () => {
+    const el = bootWithFixture();
+    const wrap = el.querySelector('[data-canvas-wrap]');
+    const canvas = el.querySelector('[data-canvas]');
+    const before = parseViewBox(canvas);
+    wrap.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -120 }));
+    const after = parseViewBox(canvas);
+    // Zoom in shrinks the viewBox dimensions.
+    expect(after[2]).toBeLessThan(before[2]);
+    expect(after[3]).toBeLessThan(before[3]);
+    expect(Number(canvas.dataset.zoom)).toBeGreaterThan(1);
+  });
+
+  it('arrow keys typed inside the search input do NOT pan the map', () => {
+    const el = bootWithFixture();
+    const search = el.querySelector('[data-arch-search]');
+    const canvas = el.querySelector('[data-canvas]');
+    const before = parseViewBox(canvas);
+    search.focus();
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const after = parseViewBox(canvas);
+    expect(after).toEqual(before);
+  });
+});
+
 describe('deterministic layout snapshot (acceptance #10)', () => {
   it('produces the same node positions across renders (regression snapshot ready)', () => {
     const el = bootWithFixture();

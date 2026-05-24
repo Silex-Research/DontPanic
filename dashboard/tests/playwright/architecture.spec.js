@@ -10,21 +10,66 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import url from 'node:url';
+import fs from 'node:fs/promises';
+import http from 'node:http';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const HARNESS = url.pathToFileURL(path.resolve(__dirname, 'architecture-harness.html')).toString();
+const DASHBOARD_ROOT = path.resolve(__dirname, '../../');
 const EVIDENCE_DIR = path.resolve(
   __dirname,
   '../../../docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/screenshots',
 );
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js':   'text/javascript; charset=utf-8',
+  '.mjs':  'text/javascript; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg':  'image/svg+xml',
+  '.png':  'image/png',
+};
+
+let server;
+let harnessURL;
 
 function screenshotPath(name, projectName) {
   return path.join(EVIDENCE_DIR, `${name}-${projectName}.png`);
 }
 
 test.describe('F003 Architecture explorer screenshots', () => {
+  test.beforeAll(async () => {
+    server = http.createServer(async (req, res) => {
+      try {
+        const reqPath = decodeURIComponent(req.url.split('?')[0]);
+        const rel = reqPath === '/' ? '/tests/playwright/architecture-harness.html' : reqPath;
+        const filePath = path.join(DASHBOARD_ROOT, rel);
+        if (!filePath.startsWith(DASHBOARD_ROOT)) {
+          res.writeHead(403).end('forbidden');
+          return;
+        }
+        const data = await fs.readFile(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream' });
+        res.end(data);
+      } catch (e) {
+        res.writeHead(404).end(String(e && e.message || e));
+      }
+    });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    harnessURL = `http://127.0.0.1:${server.address().port}/tests/playwright/architecture-harness.html`;
+  });
+
+  test.afterAll(async () => {
+    if (!server) return;
+    await new Promise((resolve) => server.close(resolve));
+  });
+
   test('neutral state (no flow selected)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=stale`);
+    await page.goto(`${harnessURL}?variant=stale`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.waitForSelector('[data-explorer="1"]');
     await page.screenshot({
@@ -35,7 +80,7 @@ test.describe('F003 Architecture explorer screenshots', () => {
   });
 
   test('selected-flow state (path highlighted, step inspector visible)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=stale`);
+    await page.goto(`${harnessURL}?variant=stale`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.locator('[data-arch-flow="flow:architecture-regen"]').click();
     await page.waitForTimeout(150); // let the DOM settle after selection
@@ -48,7 +93,7 @@ test.describe('F003 Architecture explorer screenshots', () => {
   });
 
   test('node-detail state (click-to-detail panel open)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=stale`);
+    await page.goto(`${harnessURL}?variant=stale`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.locator('.arch-node').first().click();
     await page.waitForSelector('[data-detail-panel]:not([hidden])');
@@ -59,7 +104,7 @@ test.describe('F003 Architecture explorer screenshots', () => {
   });
 
   test('filtered state (search narrowed)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=stale`);
+    await page.goto(`${harnessURL}?variant=stale`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.locator('[data-arch-search]').fill('supervisor');
     await page.waitForTimeout(150);
@@ -70,7 +115,7 @@ test.describe('F003 Architecture explorer screenshots', () => {
   });
 
   test('stale freshness banner (default fixture state)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=stale`);
+    await page.goto(`${harnessURL}?variant=stale`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.waitForSelector('[data-freshness="stale"]');
     await page.screenshot({
@@ -80,7 +125,7 @@ test.describe('F003 Architecture explorer screenshots', () => {
   });
 
   test('absent/missing state (empty card with regen command)', async ({ page }, testInfo) => {
-    await page.goto(`${HARNESS}?variant=absent`);
+    await page.goto(`${harnessURL}?variant=absent`);
     await page.waitForFunction(() => window.__harnessReady === true);
     await page.waitForSelector('[data-empty-state="missing"]');
     await page.screenshot({

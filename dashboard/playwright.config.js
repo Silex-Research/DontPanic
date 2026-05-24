@@ -13,8 +13,8 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
-    // Render against a file:// harness — the dashboard is static and
-    // the screenshot rig boots the page module from the local files.
+    // The spec serves a static harness over localhost so ES modules and
+    // fetch() behave like they do under the dashboard server.
     ignoreHTTPSErrors: true,
   },
   projects: [
@@ -24,7 +24,10 @@ export default defineConfig({
     },
     {
       name: 'mobile',
-      use: { ...devices['iPhone 14 Pro'] },
+      use: {
+        ...devices['iPhone 14 Pro'],
+        browserName: 'chromium',
+      },
     },
   ],
 });
