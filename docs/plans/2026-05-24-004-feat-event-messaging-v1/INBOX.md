@@ -721,3 +721,13 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T22:52:27Z
+event: gate_cleared
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+gate: breaker:environmental_blocker
+---
+
+Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
+
+===
