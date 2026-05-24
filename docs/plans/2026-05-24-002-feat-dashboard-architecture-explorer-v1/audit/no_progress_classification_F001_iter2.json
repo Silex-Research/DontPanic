@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T05:44:37Z",
+  "feature_id": "F001",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "Authored flow IDs can collide with derived flow IDs, and authored step IDs can duplicate within a flow without warning. Evidence: in-memory probes produced dup…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

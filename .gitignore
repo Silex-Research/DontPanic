@@ -80,9 +80,12 @@ dashboard/firebase-config.local.js
 # Keep the checked-in demo fixtures in dashboard/state tracked, but ignore
 # operator-local generated state from the V0 console.
 dashboard/state/architecture-status.json
+dashboard/state/architecture-view-state.json
 dashboard/state/capabilities-status.json
 dashboard/state/decisions.json
 dashboard/state/evidence_refs.json
+dashboard/state/fleet-summary.json
+dashboard/state/fleet-what-now.json
 dashboard/state/gates.json
 dashboard/state/inbox.json
 dashboard/state/manifest.json
@@ -92,6 +95,7 @@ dashboard/state/reconcile-status.json
 dashboard/state/state-snapshot.json
 dashboard/state/supervisors.json
 dashboard/state/what-now.json
+dashboard/state/projects/
 
 # Maintainer-private convenience scripts (campaign-specific billing queries,
 # personal cron wrappers, etc.) — clearly out of the OSS surface.

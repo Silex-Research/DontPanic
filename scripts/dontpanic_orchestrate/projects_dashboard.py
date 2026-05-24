@@ -484,6 +484,11 @@ def build_project_state(
             warn=warn,
             capabilities_cache_path=out_dir / "capabilities-required.json",
             what_now_cache_path_override=out_dir / "what-now-cache.json",
+            # Thread the project identity through so the architecture
+            # view-state cache labels per-project entries with the
+            # registered project name instead of the "(none)" sentinel.
+            project_name=context.name,
+            project_display_name=context.display_name,
         )
     except Exception as exc:  # noqa: BLE001 — surface to warnings, do not crash fleet
         msg = f"dashboard build failed for {context.name!r}: {exc}"
