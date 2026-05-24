@@ -1,6 +1,8 @@
-// ── JARVIS Dashboard — Core Router & State Manager ──
+// ── DontPanic Dashboard — Core Router & State Manager ──
 // Local-first: reads state from JSON files, no Firebase dependency.
-// Pages register themselves via Jarvis.registerPage().
+// Pages register themselves via Jarvis.registerPage(). The `Jarvis`
+// JavaScript identifier and `jarvis_*` localStorage prefixes are retained
+// for cache compatibility but do not appear in any user-visible copy.
 
 import { timeAgo, formatCurrency, formatNumber } from './lib/formatters.js';
 import {
@@ -20,10 +22,11 @@ import {
 } from './lib/project-selector-logic.js';
 
 /**
- * Construct a fresh Jarvis shell object. Exported so integration tests
+ * Construct a fresh dashboard shell object. Exported so integration tests
  * can exercise the real loader / resolver / refresh logic without
  * triggering the page-module import chain or the window.Jarvis
- * assignment at the bottom of this file.
+ * assignment at the bottom of this file. The window-global identifier
+ * stays `Jarvis` for cache compatibility — see the file-level comment.
  */
 export function createJarvis() {
   return JARVIS_LITERAL();
@@ -37,7 +40,10 @@ function JARVIS_LITERAL() { return {
     tasks: [],
     activity: [],
     costs: null,
-    security: [],
+    // `security` stays null when security.json is absent. Health uses null as
+    // the honest missing-data sentinel; a present empty array means "no
+    // security hook activity yet."
+    security: null,
     // `capabilities` stays null when capabilities-status.json is absent —
     // the Capability Center page uses null as the missing-state sentinel.
     capabilities: null,
@@ -70,6 +76,17 @@ function JARVIS_LITERAL() { return {
     // shell resolves this from URL → localStorage → default on init
     // and re-resolves whenever the selector is mutated.
     selectedProject: ALL_PROJECTS_VALUE,
+    // Plan 2026-05-24-002 F002 — architecture view-state cache produced
+    // by `dontpanic dashboard build`. Stays null when the cache is
+    // absent so the Architecture tab renders the missing-state empty
+    // card instead of pretending data exists.
+    architectureViewState: null,
+    // Per-project architecture caches: F001 project builds write
+    // `state/projects/<name>/architecture-view-state.json` through the
+    // per-project cache mirror. Keyed by project name; empty when no
+    // per-project builds have run. The page resolves the effective
+    // envelope at render time and falls back to single-repo state.
+    architectureViewStateByProject: {},
   },
 
   // ── Page Registration ──
@@ -207,7 +224,7 @@ function JARVIS_LITERAL() { return {
   // ── State Loading ──
   async loadState() {
     // Most state files are loaded by `state/<key>.json` convention.
-    const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
+    const simpleFiles = ['agents', 'tasks', 'activity', 'costs'];
     // Files whose on-disk name differs from the state key. The
     // Capability Center page reads `capabilities-status.json` directly
     // and is intentionally not part of the F002 projection adapter —
@@ -225,12 +242,21 @@ function JARVIS_LITERAL() { return {
       // (operator deletes the cache file) actually surfaces the missing
       // banner instead of holding stale registry rows.
       { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
+      // Security is nullable for the Health honesty surface. A missing file
+      // renders "no data yet"; a loaded [] renders "no hook activity yet."
+      { key: 'security',     file: 'security.json',      nullableMissing: true },
       // F004 fleet what-now envelope — feeds the All-Projects grouped
       // view and the project-filtered view. Missing → null; the what-now
       // page falls back to the single-repo `whatNow` payload in that
       // case so a fresh operator without `--project all` builds still
       // gets a usable view.
       { key: 'fleetWhatNow', file: 'fleet-what-now.json', nullableMissing: true },
+      // Plan 2026-05-24-002 F002 — architecture view-state cache. The
+      // Architecture tab renders an honest missing-state empty card
+      // when this file is absent; a fetch failure after a successful
+      // load resets to null so the missing banner surfaces on next
+      // refresh instead of holding stale view-state.
+      { key: 'architectureViewState', file: 'architecture-view-state.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
@@ -253,6 +279,14 @@ function JARVIS_LITERAL() { return {
         }
       }
     }));
+
+    // Plan 2026-05-24-002 F002 — load per-project architecture view-state
+    // caches. F001 project builds write
+    // `state/projects/<name>/architecture-view-state.json` through the
+    // per-project cache mirror; the page picks the per-project envelope
+    // when `selectedProject !== 'all'` and falls back honestly to the
+    // single-repo cache loaded above (or to the missing-state shell).
+    await this._loadArchitectureViewStatesByProject();
 
     // Projection load order (F002 acceptance #1, post-audit i0):
     //   1. state-snapshot.json envelope — preferred, carries metadata.
@@ -289,6 +323,42 @@ function JARVIS_LITERAL() { return {
       }));
       mergePerStreamIntoState(this.state, collected);
     }
+  },
+
+  /**
+   * Load per-project architecture view-state caches into
+   * `state.architectureViewStateByProject` (a map keyed by project
+   * name). Treats every fetch as nullable: a 404 / parse error means
+   * "no per-project build for this project yet" and the page falls
+   * back to single-repo state at render time.
+   *
+   * Project list comes from the fleet summary loaded above; when the
+   * fleet summary is absent there are no per-project caches to fetch
+   * and the map stays empty.
+   */
+  async _loadArchitectureViewStatesByProject() {
+    const byProject = {};
+    const envelope = normalizeFleetSummary(this.state.fleetSummary);
+    if (envelope == null) {
+      this.state.architectureViewStateByProject = byProject;
+      return;
+    }
+    await Promise.all(envelope.projects.map(async (project) => {
+      // Encode the project name segment so a registry entry with a
+      // path-traversal character ('..', '/', etc.) cannot escape the
+      // intended subdirectory at the fetcher layer. Names are governed
+      // by the projects.json registry, so this is defense-in-depth.
+      const segment = encodeURIComponent(project.name);
+      try {
+        const resp = await fetch(`state/projects/${segment}/architecture-view-state.json`);
+        if (resp.ok) {
+          byProject[project.name] = await resp.json();
+        }
+      } catch {
+        // Missing per-project cache — page falls back to single-repo state.
+      }
+    }));
+    this.state.architectureViewStateByProject = byProject;
   },
 
   async refreshState() {
@@ -428,17 +498,29 @@ function JARVIS_LITERAL() { return {
 // Each page module registers itself via Jarvis.registerPage()
 // ══════════════════════════════════════════════
 
-// Dynamically load all page modules
+// Dynamically load all page modules for the V0 core nav.
+//
+// Order is significant: the first-registered page is the default tab on
+// load. Per plan 2026-05-24-001 F002, V0 core nav is:
+//
+//   Needs Attention (what-now) → Work (mission-control) →
+//   Tools & Setup (capabilities) → Health → Preferences (settings)
+//
+// Surfaces removed from V0 core nav (page modules remain on disk for
+// path stability and may be brought back behind a capability gate or
+// future plan): command-center, cloud-costs, financial, security.
+// Health ships a minimal honest missing-data scaffold here; F003 will
+// compose it from existing readiness/security/build-warning substrate.
 const pageModules = [
-  // First-viewport operating surface for V0 — must register first so it
-  // is the default tab and answers "what needs action now?" on load.
   'pages/what-now/what-now.js',
-  'pages/command-center/command-center.js',
-  'pages/cloud-costs/cloud-costs.js',
-  'pages/financial/financial.js',
   'pages/mission-control/mission-control.js',
-  'pages/security/security.js',
+  // Plan 2026-05-24-002 F002 — Architecture tab shell, value-language
+  // copy, and empty states. Slotted between Work and Tools & Setup so
+  // operators reach it on the read path (after what-now / mission-control)
+  // before the setup path (capabilities / health / settings).
+  'pages/architecture/architecture.js',
   'pages/capabilities/capabilities.js',
+  'pages/health/health.js',
   'pages/settings/settings.js',
 ];
 

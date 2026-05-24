@@ -1,0 +1,258 @@
+{
+  "task_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Architecture dashboard view model. Derive a stable flow-aware graph/cache shape from existing architecture.json for dashboard and agent consumption without changing the architecture crawler.",
+      "steps": [
+        "Read architecture.json schema, architecture_html.py, dashboard build/cache code, project selector cache layout, and architecture status output.",
+        "Define an architecture view-state JSON shape with schema_version, project, generated_at, source_path, freshness, lanes, nodes, edges, flows, steps, filters, insights, and validation_warnings.",
+        "Add or consume `docs/architecture/flows.json` as an authored flow input; validate that flow steps reference stable architecture nodes or source paths.",
+        "Map existing modules, plans, schemas, dashboard pages, CLI commands, capabilities where available, external service references where available, and drift/fingerprint metadata into graph nodes and edges.",
+        "Derive a small initial set of real flows from local architecture state where possible, such as dashboard open/build, capability setup, plan dispatch, audit/signoff, architecture regen, or project selection.",
+        "Represent each flow as ordered steps that reference node IDs and edge IDs; do not emit demo flows disconnected from architecture.json.",
+        "Write the view-state cache during dashboard build for the selected project and All Projects where architecture data exists.",
+        "Add tests for stable IDs, flow input validation, missing architecture artifact, stale state, no-secret output, project-scoped cache layout, and graph shape snapshots."
+      ],
+      "acceptance": "(1) A stable architecture view-state JSON shape exists with lanes, nodes, edges, flows, steps, insights, and validation_warnings. (2) Authored flow input is supported and validated. (3) Dashboard build writes view-state without mutating architecture.json. (4) Missing/stale architecture is represented explicitly. (5) Nodes, edges, flows, and steps have stable IDs and types. (6) Any emitted flow is backed by local architecture state or authored flow references, not demo data. (7) Tests cover graph/flow shape, flow validation, project scope, missing/stale state, and no-secret output.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T06:10:33Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Architecture tab shell, value-language copy, and empty states. Add the Architecture nav/page directly to the local dashboard and render credible stale/missing/loading states with exact regen command emission.",
+      "steps": [
+        "Add Architecture to dashboard nav and shell as a first-class surface after the value-language IA shell/nav cleanup lands, or explicitly reconcile against the cleaned shell before merge.",
+        "Use value-first architecture labels in primary UI and keep module paths, plan IDs, capability IDs, fingerprints, and source paths in details/provenance.",
+        "Load architecture view-state cache from dashboard state with legacy/single-project fallback.",
+        "Render missing and stale states with plain-language explanation, source path, last generated timestamp where available, and exact `dontpanic architecture regen --with-html` command.",
+        "Preserve command-emitter invariant: no auto-regen and no hidden writes from the dashboard.",
+        "Add tests/snapshots for visible nav, missing state, stale state, flow validation warnings, and command copy rendering."
+      ],
+      "acceptance": "(1) Architecture tab exists and loads locally without waiting for the value-language IA plan. (2) Primary labels are understandable to non-technical reviewers while technical IDs remain visible in details. (3) Missing/stale states are honest and actionable. (4) Regen command is exact and copyable. (5) Dashboard does not auto-write architecture artifacts. (6) Tests cover the shell, labels, provenance, and empty states.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T16:11:42Z"
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "description": "Interactive architecture flow explorer. Render a Roundtable-style swimlane map with selectable flows, highlighted path edges, numbered steps, search/filter, hover detail, click drilldown, and deterministic layout.",
+      "steps": [
+        "Implement map rendering in the existing static dashboard runtime using vanilla SVG/DOM, canvas, or a documented local dependency; do not use a CDN.",
+        "Match the reference interaction quality: dark operator-console surface, large swimlane canvas, persistent legend, right-side flow rail, and scrollable step rail.",
+        "Render labeled swimlanes for architecture areas such as actors, client surfaces, orchestrator/runtime, data/evidence, capabilities/adapters, external services, or other groups derived from architecture data.",
+        "Render typed edges for imports, plan relationships, capability links, and other available relationship types.",
+        "Render a persistent legend for node/source categories.",
+        "Render a right-side flow list with selected state and clear-selection action.",
+        "Render validation warnings for flows whose references are missing, without crashing the page.",
+        "Selecting a flow highlights participating nodes/edges and dims, but does not hide, non-participating map content.",
+        "Render numbered step markers on the selected path and a scrollable right-side step inspector whose step order matches the highlighted markers.",
+        "Add search and at least three filters: modules, plans, changed/stale areas, high-coupling areas, or capabilities where data exists.",
+        "Add hover labels and click-to-detail side panel with related nodes, source metadata, and linked plans.",
+        "Support zoom/pan or equivalent large-graph navigation and a reset view control.",
+        "Add tests for graph render, search, filters, selection, reset, and deterministic layout snapshots.",
+        "Add Playwright screenshots for neutral, selected-flow, node-detail, filtered, stale/missing, desktop, and mobile states."
+      ],
+      "acceptance": "(1) Swimlane map renders from architecture view-state, not demo data. (2) Selecting a flow highlights its nodes/edges and shows matching numbered steps. (3) Non-selected content dims rather than disappearing. (4) Flow panel includes clear-selection and scrollable steps. (5) Flow validation warnings are visible but non-fatal. (6) Search filters visible nodes. (7) At least three filters work. (8) Hover/click interactions expose detail without navigation loss. (9) Large graph navigation exists. (10) Layout is deterministic enough for regression snapshots. (11) Tests cover flow selection, steps, dimming, clear-selection, filters, and detail interactions. (12) Playwright screenshots prove the tab is nonblank, framed correctly, and usable on desktop/mobile.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T19:17:26Z"
+    },
+    {
+      "id": "F004",
+      "category": "observability",
+      "phase": 4,
+      "description": "Architecture insights, project/fleet context, and endstate polish. Add value-first panels for changed areas, high-coupling areas, plans touching selected nodes, project/fleet provenance, and responsive polish without inventing unsupported risk scores.",
+      "steps": [
+        "Add summary cards for module count, plan count, changed/stale state, and generated_at/fingerprint.",
+        "Add derived insights only where architecture.json supports them: high-degree nodes, recently changed files, stale/missing map, plans touching selected modules.",
+        "Show selected project/fleet context and explain when a project has no architecture artifact.",
+        "Implement All Projects behavior: show project cards or project sections with architecture freshness and open-map affordances; do not pretend unrelated repos share one architecture graph.",
+        "Keep any risk language qualitative and evidence-backed; do not invent severity scores beyond available data.",
+        "Add responsive behavior for narrow screens: map remains inspectable through scroll/zoom, right rail stacks or collapses, and text does not overlap.",
+        "Add tests/snapshots for insights, selected project context, fleet context, no-architecture project state, and responsive layout."
+      ],
+      "acceptance": "(1) Summary and insight panels render from real architecture data. (2) Insights are evidence-backed and do not fabricate scores. (3) Project/fleet context is visible. (4) All Projects behavior is explicit and does not merge unrelated repo maps. (5) Missing project architecture is handled clearly. (6) Responsive behavior is usable without text overlap. (7) Tests cover insights, project/fleet context, missing project state, and responsive layout.",
+      "passes": true,
+      "depends_on": [
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T20:11:16Z"
+    },
+    {
+      "id": "F005",
+      "category": "test",
+      "phase": 5,
+      "description": "Architecture explorer evidence, docs, and closeout. Capture screenshots/snapshots, update docs, verify accessibility and sanitization, and close against the objective contract.",
+      "steps": [
+        "Capture required objective-contract snapshots for graph, node detail, filters, missing state, and view-state JSON.",
+        "Update dashboard docs with Architecture tab usage, regen command, project-scope behavior, and read-only guarantees.",
+        "Run focused dashboard tests, architecture view-model tests, graph interaction tests, and sanitization.",
+        "Check keyboard access for search/filter/detail controls and verify text does not overlap at desktop/mobile breakpoints where feasible.",
+        "Run `dontpanic dashboard build` and `dontpanic dashboard serve --once` or equivalent smoke checks to prove the shipped local dashboard can load the Architecture tab.",
+        "Update CHANGELOG.md and dashboard docs because this is a product-facing dashboard capability.",
+        "Package objective-contract evidence and prepare pre_merge audit."
+      ],
+      "acceptance": "(1) Required evidence files exist or named equivalents are recorded. (2) Docs explain the Architecture tab, flow map, project/fleet behavior, and no-auto-regen boundary. (3) Tests and sanitization pass. (4) Accessibility/responsive checks are recorded. (5) Local dashboard build/serve smoke evidence exists. (6) Product-facing changelog/docs are updated. (7) Plan is ready for pre_merge audit.",
+      "passes": true,
+      "depends_on": [
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/architecture-view-model-tests.log",
+          "note": "97/97 view-model + explorer + F004 unit tests green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-tab-render-tests.log",
+          "note": "47/47 integration render tests green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flow-definition-validation-tests.log",
+          "note": "Flow validation tests across unit + DOM suites (18 matching tests)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-full-vitest.log",
+          "note": "Full dashboard vitest sweep — 903/903 green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-architecture-build-serve-smoke.log",
+          "note": "dontpanic dashboard build + serve --once smoke; writes per-project architecture view-state cache"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-sanitization-clean.log",
+          "note": "No-secret scan across rendered HTML/JSON snapshots + state cache — clean"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-accessibility-responsive-checks.md",
+          "note": "Keyboard reachability + responsive (mobile/desktop) non-overlap evidence"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-graph-snapshot.html",
+          "note": "Neutral / unselected graph render"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flow-selected-snapshot.html",
+          "note": "Flow-selected render with step inspector"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-clear-selection-snapshot.html",
+          "note": "Clear-selection neutral state"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-node-detail-snapshot.html",
+          "note": "Click-to-detail panel for command:dontpanic-architecture-regen"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-filter-snapshot.html",
+          "note": "Filter+search snapshot (searchQuery=supervisor + module category)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-missing-state-snapshot.html",
+          "note": "Absent / missing-state empty card with regen command"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-fleet-state-snapshot.html",
+          "note": "All Projects fleet card grid"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-mobile-snapshot.html",
+          "note": "Mobile viewport render"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-view-state-snapshot.json",
+          "note": "Canonical agent-facing view-state shape"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flows-snapshot.json",
+          "note": "Flows + steps extract for agent consumption"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/screenshots/",
+          "note": "Playwright desktop + mobile screenshots for six explorer states"
+        },
+        {
+          "type": "file",
+          "uri": "../../../CHANGELOG.md",
+          "note": "2026-05-24 entry for Dashboard Architecture Explorer v1"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/README.md",
+          "note": "Architecture tab usage, project/fleet behavior, no-auto-regen boundary"
+        }
+      ]
+    }
+  ]
+}

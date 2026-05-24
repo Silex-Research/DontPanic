@@ -1,0 +1,148 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Visual Operating Console roadmap plus existing architecture-map substrate. This child plan turns the existing architecture.json output into a first-class local dashboard Architecture tab with an interactive flow map/explorer, not just a static iframe.",
+  "user_journeys": [
+    {
+      "name": "operator-opens-architecture-tab-and-understands-system-shape",
+      "description": "An operator opens the Architecture tab and sees a swimlane map of system areas, modules, plans, capabilities, and relationships with plain-language labels and source/provenance.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "architecture_tab_opened",
+        "flow_map_visible",
+        "swimlanes_visible",
+        "provenance_visible"
+      ],
+      "acceptance_signals": [
+        "Architecture tab appears in the dashboard without waiting for the broader value-language IA plan",
+        "Flow map renders from architecture.json without hardcoded demo data",
+        "Swimlanes and node labels are readable",
+        "Source path and generated_at are visible"
+      ]
+    },
+    {
+      "name": "operator-selects-flow-and-sees-path-light-up",
+      "description": "An operator chooses a flow such as dashboard open, capability setup, plan dispatch, audit/signoff, or architecture regen and the map highlights the relevant path with numbered steps.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "flow_selected",
+        "path_highlighted",
+        "steps_visible",
+        "non_path_dimmed",
+        "clear_selection_available"
+      ],
+      "acceptance_signals": [
+        "Flow list is visible",
+        "Selecting a flow highlights related nodes and edges",
+        "Numbered markers match the step inspector order",
+        "Step list is scrollable when the selected flow has many steps",
+        "Non-participating map content is visually de-emphasized without disappearing entirely",
+        "Clear selection returns the map to the neutral state"
+      ]
+    },
+    {
+      "name": "operator-searches-and-drills-into-a-module",
+      "description": "An operator searches for a module or file, selects it in the flow map, and sees related imports, plans, changed files, flow participation, and exact source metadata in a detail panel.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "search_entered",
+        "node_selected",
+        "detail_panel_visible"
+      ],
+      "acceptance_signals": [
+        "Search filters graph content",
+        "Clicking a node opens a detail panel",
+        "Detail panel includes related nodes and source metadata",
+        "Technical identifiers remain copyable or selectable"
+      ]
+    },
+    {
+      "name": "operator-filters-relationships-without-losing-context",
+      "description": "An operator filters to modules, plans, capabilities, changed areas, or high-coupling areas and can reset to the full map without losing project context.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "filter_selected",
+        "graph_filtered",
+        "filter_reset"
+      ],
+      "acceptance_signals": [
+        "At least three useful filters exist",
+        "Filtered state preserves selected project",
+        "Empty filter results have an honest empty state",
+        "Reset returns to the full graph"
+      ]
+    },
+    {
+      "name": "operator-sees-stale-or-missing-architecture-and-gets-exact-command",
+      "description": "When the architecture artifact is stale or missing, the tab explains the issue in plain language and emits the exact regen command instead of auto-mutating the repo.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "architecture_missing_or_stale",
+        "regen_command_visible",
+        "no_auto_regen"
+      ],
+      "acceptance_signals": [
+        "Stale/missing state is visible",
+        "Exact regen command is copyable",
+        "Dashboard does not auto-write architecture files",
+        "No secret values appear in the graph or empty state"
+      ]
+    },
+    {
+      "name": "agent-reads-architecture-view-state-without-scraping-html",
+      "description": "An agent can read a generated architecture-view JSON/cache shape for graph nodes, edges, filters, freshness, and selected project without scraping the visual DOM.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "view_state_written",
+        "agent_reads_json",
+        "shape_stable"
+      ],
+      "acceptance_signals": [
+        "Architecture view state JSON exists after dashboard build",
+        "Lanes, nodes, edges, flows, and steps include stable IDs and types",
+        "Freshness state is represented",
+        "Shape is snapshot-tested"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "architecture-view-model-tests.log",
+    "architecture-flow-definition-validation-tests.log",
+    "architecture-tab-render-tests.log",
+    "architecture-graph-snapshot.html",
+    "architecture-node-detail-snapshot.html",
+    "architecture-filter-snapshot.html",
+    "architecture-flow-selected-snapshot.html",
+    "architecture-clear-selection-snapshot.html",
+    "architecture-missing-state-snapshot.html",
+    "architecture-fleet-state-snapshot.html",
+    "architecture-mobile-snapshot.html",
+    "architecture-view-state-snapshot.json",
+    "architecture-flows-snapshot.json",
+    "dashboard-architecture-build-serve-smoke.log",
+    "architecture-accessibility-responsive-checks.md",
+    "dashboard-sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No architecture crawler rewrite",
+    "No auto-regeneration on dashboard open",
+    "No architecture editing",
+    "No Firebase realtime dependency",
+    "No hosted architecture product",
+    "No CDN dependency",
+    "No framework rewrite"
+  ],
+  "completion_test": "A local operator runs `dontpanic dashboard serve`, opens Architecture, and sees a production-quality interactive swimlane flow map sourced from architecture.json. They can select a flow, see the path light up with numbered steps, inspect step/node details, search, filter, inspect source/provenance, understand project/fleet architecture state, see stale/missing states, and copy the exact regen command. The dashboard remains read-only, writes an agent-readable architecture view-state cache, and passes desktop/mobile screenshot checks."
+}

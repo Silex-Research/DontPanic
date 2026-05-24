@@ -1,0 +1,61 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M"
+    },
+    {
+      "path": "dashboard/README.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "dashboard/tests/scripts/generate-architecture-snapshots.mjs",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/codex-auditor-F005-i0.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-accessibility-responsive-checks.md",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-clear-selection-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-filter-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-fleet-state-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-flow-definition-validation-tests.log",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-flow-selected-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-flows-snapshot.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-graph-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-missing-state-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-mobile-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-node-detail-snapshot.html",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-tab-render-tests.log",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-view-model-tests.log",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/architecture-view-state-snapshot.json",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/dashboard-architecture-build-serve-smoke.log",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/dashboard-full-vitest.log",
+    "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/dashboard-sanitization-clean.log"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

@@ -1,0 +1,178 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Three substrate inputs: (1) F001 inventory at docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/f001-inventory-draft.md documenting 27 INBOX event kinds, 6 NotifyEvent kinds, sink-rendering today, CLI parser feasibility, and sanitization pattern. (2) IA value-language copy map at docs/design/dashboard-value-language-ia-v0/copy-map.md establishing Layer 1 (value-first) and Layer 2 (technical disclosure) vocabulary the messaging translation table consumes. (3) Architectural commitments at docs/plans/2026-05-24-004-feat-event-messaging-v1/decisions.jsonl (D001-D016) locking sidecar-merge pattern, honest commands, brand-drift render-boundary translation, INBOX truth-of-record preservation, render-boundary sanitization, and translation disposition discipline.",
+  "user_journeys": [
+    {
+      "name": "non-technical-stakeholder-reads-discord-notification",
+      "description": "A product owner or non-technical stakeholder subscribed to the project Discord channel receives a notification when AI work needs human attention. The message leads with a value-first headline ('Approval needed for the auth feature'), explains why in plain language ('the AI finished work and is waiting for your green light before merging'), shows the exact CLI command, and preserves technical context (plan_id, feature_id, evidence_uri) in the embed footer.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "discord_message_received",
+        "headline_understood_without_internal_vocabulary",
+        "why_explains_operator_impact",
+        "exact_command_visible_and_copyable",
+        "technical_context_in_footer"
+      ],
+      "acceptance_signals": [
+        "Discord embed title uses Layer 1 vocabulary from copy-map.md (Approval needed, Blocked work, Setup drift, Active AI work, System warning, AI work finished, etc.)",
+        "Embed description is a single value-first sentence",
+        "Exact CLI command renders in a labeled embed field with dontpanic (not jarvis) brand",
+        "Footer carries plan_id, feature_id, evidence_uri, timestamp",
+        "Embed color matches the 4-band taxonomy using inline hex literals from the IA copy map (healthy/action/blocked/pending)",
+        "No internal nouns (volley_terminal, gate_hit, breaker_kind) leak into the title or first description sentence",
+        "Snapshot fixture pins the embed JSON shape per event kind"
+      ]
+    },
+    {
+      "name": "operator-gets-actionable-card-on-dashboard",
+      "description": "An operator running 'dontpanic dashboard serve' sees a new What Now card derived from a recent dispatch event. The card surfaces band (NEEDS_ACTION / ADVISORY / INFO), title (Layer 1 headline), detail (Layer 2 technical context), and an exact_command chip. The card was materialized by the event_copy render pipeline writing to ~/.dontpanic/dashboard/event-actions.jsonl and merged into what-now.json by the dashboard build alongside provider-derived ActionItems. The operator never observes what-now.json being mutated mid-flight by the notification system.",
+      "surfaces": [
+        "ux",
+        "infra"
+      ],
+      "states": [
+        "event_dispatched",
+        "sidecar_jsonl_appended",
+        "dashboard_build_merges_sidecar_into_what_now_json",
+        "what_now_card_renders_with_event_actionitem",
+        "no_direct_mutation_of_what_now_json_from_dispatch_event"
+      ],
+      "acceptance_signals": [
+        "Sidecar at ~/.dontpanic/dashboard/event-actions.jsonl appended per dispatched event with disposition live or dashboard_action",
+        "Dashboard build merge preserves provider-derived ActionItems on id conflict",
+        "Dashboard card title uses Layer 1 vocabulary; detail row carries plan_id + feature_id + evidence_uri",
+        "exact_command chip is copyable and verified by command_validation harness",
+        "what-now.json mtime is updated only by dashboard build, not by dispatch_event flow"
+      ]
+    },
+    {
+      "name": "agent-reads-inbox-with-rendering-and-raw-entry",
+      "description": "An agent (auditor or research) reads a plan's INBOX.md after a volley completes. INBOX contains both the raw event entry (truth-of-record, structured headers + body) AND a rendered markdown block with Layer 1 headline + Layer 2 technical metadata in a <details> fold. The raw entry retains its existing schema; the rendered block is additive. Agent can reconstruct both the operator-facing message and the underlying structured event from the same file.",
+      "surfaces": [
+        "infra",
+        "docs"
+      ],
+      "states": [
+        "inbox_append_event_writes_raw_entry_first",
+        "inbox_append_rendered_annotation_writes_rendered_block_second",
+        "raw_entry_schema_unchanged",
+        "rendered_block_includes_details_fold_with_technical_metadata"
+      ],
+      "acceptance_signals": [
+        "inbox.append_event() signature unchanged from pre-plan state",
+        "inbox.append_rendered_annotation() additive wrapper appends only the rendered block after the existing raw append_event() call",
+        "Raw entry retains existing schema (timestamp, event, plan_id, extra headers, body, ===)",
+        "Rendered block uses Layer 1 headline at top; <details>Technical details</details> contains plan_id, feature_id, evidence_uri, source path, timestamp",
+        "Existing read_events(plan_dir) parser tolerates the new rendered block (no schema break)",
+        "Agent reading INBOX recovers both layers"
+      ]
+    },
+    {
+      "name": "operator-runs-suggested-command-and-it-works",
+      "description": "An operator copies the exact_command chip from a Discord notification or dashboard card and pastes it into a terminal. The command parses cleanly against the real dontpanic CLI and executes the intended remediation. There are no fake commands: events where no canonical CLI exists (gate_state_reconciliation_failed, verdict_mismatch, generic error) render exact_command=None and surface explanation-only copy.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "rendered_event_carries_exact_command_or_none",
+        "command_validation_harness_verified_every_non_none_command_before_render",
+        "events_without_canonical_cli_render_exact_command_None",
+        "operator_copy_paste_succeeds_against_real_cli"
+      ],
+      "acceptance_signals": [
+        "event_copy.render() asserts validate_command_tokens() passes for any non-None exact_command before returning",
+        "Deliberately-wrong-command fixture proves validator catches malformed commands",
+        "gate_state_reconciliation_failed, verdict_mismatch, and generic error events render exact_command=None per D008",
+        "Snapshot fixtures show explanation-only copy for None-command events; no operator-facing 'run this' chip rendered for those events",
+        "Round-trip vocabulary test confirms every validator-approved subcommand is accepted by the real _<cmd>_main(argv)"
+      ]
+    },
+    {
+      "name": "plan-title-with-secret-substring-is-scrubbed-in-all-channels",
+      "description": "An operator authors a plan whose title accidentally contains a substring matching one of the 9 secret-shape regex patterns (e.g., a plan about debugging an API key incident). The plan title flows through the event_copy render pipeline into NotifyEvent body and feature_display_name. The dashboard sidecar write raises ValueError (operator-fixable failure before persistence). Live Discord, terminal, and INBOX rendered paths substitute [REDACTED] for the matched substring and continue dispatching without fail-hard.",
+      "surfaces": [
+        "infra"
+      ],
+      "states": [
+        "plan_title_contains_secret_shaped_substring",
+        "sidecar_write_raises_per_D011_raise_mode",
+        "live_notification_paths_substitute_REDACTED_per_D011_substitute_mode",
+        "supervisor_continues_dispatching_other_events"
+      ],
+      "acceptance_signals": [
+        "Sidecar write boundary calls operator_console._assert_no_secret_shapes in raise mode; secret-shaped content rejects the write",
+        "Live paths (Discord, terminal, INBOX rendered annotation) call state_projection.scrub_secrets in substitute mode; matched substring rendered as [REDACTED]; no exception propagates to supervisor",
+        "Test matrix covers all 9 regex patterns (AKIA, ghp_, gh[osur]_, sk-ant-, sk-T3BlbkFJ, xox, PEM, JWT, discord webhook) across all 4 rendered channels",
+        "Existing sanitization_check.py tests pass unchanged (no regex modifications)"
+      ]
+    },
+    {
+      "name": "translation-disposition-routes-events-correctly",
+      "description": "Each of the 27 INBOX event kinds has an explicit translation disposition (live, dashboard_action, inbox_only, audit_only). live kinds render to Discord + terminal + dashboard sidecar. dashboard_action kinds render to dashboard sidecar only. inbox_only kinds write to INBOX without live notification or dashboard surface. audit_only kinds write to INBOX as durable audit-trail with no operator-facing rendering. Disposition is data reviewed independent of rendering logic.",
+      "surfaces": [
+        "infra",
+        "ux"
+      ],
+      "states": [
+        "disposition_table_covers_all_27_kinds",
+        "live_kinds_route_to_three_sinks",
+        "dashboard_action_kinds_route_to_sidecar_only",
+        "inbox_only_kinds_skip_live_and_dashboard",
+        "audit_only_kinds_are_durable_record_with_no_operator_surface"
+      ],
+      "acceptance_signals": [
+        "F001 disposition table commits a verdict per kind; totality enforced by test",
+        "Routing tests prove live → Discord+terminal+sidecar, dashboard_action → sidecar only, inbox_only → INBOX only, audit_only → INBOX only with no rendering",
+        "Disposition is a column in the translation table data structure, not embedded in rendering control flow",
+        "Adding a new event kind requires committing a disposition; missing disposition fails the totality test"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "f001-inventory-applied.log",
+    "rendered-event-dataclass-tests.log",
+    "command-validation-rejects-bad-shape.log",
+    "validator-purity-no-handler-invocation.log",
+    "disposition-table-totality.log",
+    "notify-event-extension-tests.log",
+    "action-link-evidence-uri-alias-tests.log",
+    "six-new-emit-sites-fire-correctly.log",
+    "translation-table-references-copy-map.log",
+    "honest-commands-no-fakes.log",
+    "brand-drift-translated-at-render-boundary.log",
+    "breaker-patch-incomplete-internal-normalization.log",
+    "discord-embed-snapshot-per-event-kind.json",
+    "terminal-headline-snapshot-per-event-kind.txt",
+    "inbox-rendered-block-snapshot-per-event-kind.md",
+    "dashboard-sidecar-snapshot-per-event-kind.jsonl",
+    "sidecar-merge-preserves-provider-actionitems.log",
+    "inbox-additive-wrapper-preserves-raw-entry.log",
+    "render-boundary-sanitization-raise-mode-sidecar.log",
+    "render-boundary-sanitization-substitute-mode-live.log",
+    "secret-injection-matrix-9-patterns-4-channels.log",
+    "cross-channel-parity-snapshots-six-key-kinds.log",
+    "event-messaging-authoring-guide.md",
+    "changelog-entry-committed.log",
+    "sanitization-clean-over-all-fixtures.log",
+    "full-regression-sweep.log"
+  ],
+  "non_goals": [
+    "No new event kinds (only render existing ones better)",
+    "No capability live notifications (deferred per D014)",
+    "No cross-machine pull-from-INBOX rendering (V4)",
+    "No full per-subcommand parser-factory refactor (token validator only per D012)",
+    "No localization or YAML externalization of copy",
+    "No new channel sinks beyond Discord, INBOX, terminal-notifier, dashboard",
+    "No hosted notification delivery",
+    "No source-side fixes to brand drift in supervisor.py body strings (translation at render boundary per D010)",
+    "No fix for volley_start double-write bug at supervisor.py:1477+1532 (filed separately per D015)",
+    "No changes to inbox.append_event() signature (D013 additive wrapper only)",
+    "No direct mutation of ~/.dontpanic/dashboard/what-now.json from dispatch_event flow (D003 sidecar-merge only)",
+    "No dashboard HTML/JS/CSS edits (sidecar pattern keeps changes entirely Python-side)",
+    "No author-editable copy outside Python source until ≥3 non-engineer copy edits create real demand for YAML/i18n"
+  ],
+  "completion_test": "An operator dispatches a volley that pauses on a pre_impl gate. Within seconds: (1) Discord posts a rich embed titled 'Approval needed — Add auth feature' with description 'AI is waiting for your green light before starting work', a labeled 'Run this' field showing `dontpanic approve <plan-id> pre_impl`, embed color matching action band, and a footer with plan_id + feature_id + evidence_uri + timestamp. (2) macOS terminal-notifier shows 'DontPanic [<plan-id>]' as title with 'Approval needed — Add auth feature' as message body. (3) INBOX.md gains both the raw event entry (timestamp, event=gate_hit, plan_id, unmet_gates=pre_impl, feature_id, body, ===) AND a rendered markdown block with 'Approval needed' headline, why explanation, code-block command, and <details>Technical details</details> fold. (4) The dashboard sidecar at ~/.dontpanic/dashboard/event-actions.jsonl gains a new line; subsequent dashboard build merges it into what-now.json as an ActionItem with band=NEEDS_ACTION; what-now.json never mutated from dispatch_event flow. Operator copies the exact_command from any channel and it parses against the real dontpanic CLI. A separate plan whose title contains 'sk-ant-api03-xxxxxxxxxxAA' is dispatched: sidecar write rejects with ValueError; Discord/terminal/INBOX render [REDACTED] without crashing supervisor. An event with disposition=audit_only (e.g., gate_cleared) lands in INBOX with no Discord/terminal/dashboard surface. Snapshot fixtures pinned per (live or dashboard_action kind × rendering channel) including cross-channel parity for the six highest-value kinds. CHANGELOG entry documents the product-facing format change. Full regression sweep clean."
+}

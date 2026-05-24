@@ -1,0 +1,59 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "info",
+      "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 8293286,
+          "description": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Active AI work on 2026-05-24-004-feat-event-messaging-v1** _(band: info)_\n\nVolley begins with implementer `claude` and auditor `codex` (cap 3).\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `auditor` = `codex`\n- `feature_id` = `F005`\n- `implementer` = `claude`\n- `inbox_event` = `volley_start`\n- `iteration_count` = `3`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
+      "subtitle": "volley_start",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "volley_start",
+  "inbox_event_at_emit": "volley_start",
+  "rendered": {
+    "band": "info",
+    "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "auditor": "codex",
+      "feature_id": "F005",
+      "implementer": "claude",
+      "inbox_event": "volley_start",
+      "iteration_count": 3,
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1"
+  }
+}

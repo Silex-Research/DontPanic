@@ -253,10 +253,12 @@ describe('what-now: real page module registration', () => {
     window.Jarvis = jarvisShim;
   });
 
-  it('registers a single What Now page with the router', () => {
+  it('registers a single Needs Attention page with the router', () => {
     expect(jarvisShim.pages).toHaveLength(1);
     expect(registeredPage.id).toBe('what-now');
-    expect(registeredPage.label).toBe('What Now');
+    // F002 rebrand: the route id stays `what-now` for cache compatibility,
+    // but the user-visible nav label is `Needs Attention`.
+    expect(registeredPage.label).toBe('Needs Attention');
     expect(typeof registeredPage.init).toBe('function');
     expect(typeof registeredPage.onActivate).toBe('function');
   });
@@ -301,7 +303,7 @@ describe('what-now: real page module registration', () => {
     });
     const el = jarvisShim.getPageEl('what-now');
     expect(el.querySelector('[data-status-header="1"]')).not.toBeNull();
-    expect(el.textContent).toContain('What Now — All Projects');
+    expect(el.textContent).toContain('Needs Attention — All Projects');
     expect(el.querySelector('[data-project="spindine"]')).not.toBeNull();
     expect(el.querySelector('[data-project="glam"]')).not.toBeNull();
   });

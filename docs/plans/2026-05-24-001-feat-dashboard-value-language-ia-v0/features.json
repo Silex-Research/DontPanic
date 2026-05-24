@@ -1,0 +1,226 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "doc",
+      "phase": 1,
+      "description": "Design asset intake and dashboard value-language contract. Archive or reference the Claude Design output, define the value-first copy map, and document how primary business/user labels pair with secondary technical DontPanic substrate.",
+      "steps": [
+        "Create `docs/design/dashboard-value-language-ia-v0/` for Claude Design mockups, tokens, component notes, and copy deck inputs.",
+        "Write a dashboard copy map covering Needs Attention, Work, Tools & Setup, Health, Preferences, approvals, blocked work, running work, setup needs, budget guardrails, and source/provenance language.",
+        "Document the progressive-disclosure rule: value-first labels in primary UI, technical terms/IDs in metadata, detail rows, source footers, and exact command chips.",
+        "Document the four-band status taxonomy and the separate `optional` relevance chip rule.",
+        "Document the added non-technical reviewer persona and why OSS/product review requires value-first language on top of the existing operator-in-loop audience.",
+        "Document the drag-to-command decision: either keep it as command-preview only with no mutation, or remove drag affordances entirely.",
+        "Document the JSX-to-vanilla translation strategy for Claude Design assets.",
+        "Document Home/Needs Attention, Work, and Health fleet-mode expectations for All Projects.",
+        "Add a no-go list for terms that should not appear as first-read labels in V0: gate, supervisor, volley, manifest, quota, pre_impl, pre_merge, unless in technical details.",
+        "Add tests or static checks where practical for forbidden first-read Jarvis branding and stale tab labels."
+      ],
+      "acceptance": "(1) Claude Design assets have a stable docs/design intake location or reference. (2) A value-language copy map exists and covers all V0 surfaces. (3) The copy map preserves exact technical identifiers and commands as secondary details. (4) Status taxonomy and optional-chip rules are documented. (5) Audience expansion, drag-to-command, JSX-to-vanilla translation, and fleet-mode expectations are documented before implementation. (6) Jarvis-era and internal-first labels are identified before implementation.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T06:11:15Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Dashboard shell rebrand and V0 navigation cleanup. Replace Jarvis-era shell language with DontPanic and reorganize core navigation around value-first V0 surfaces without adding future tabs.",
+      "steps": [
+        "Update dashboard shell title, header, footer, labels, comments where user-visible, and page metadata from Jarvis to DontPanic.",
+        "Use Home as the sidebar route label only if the page title/first viewport clearly says Needs Attention; otherwise rename What Now presentation to Needs Attention while preserving existing route/cache compatibility unless a compatibility decision is recorded.",
+        "Rename Mission Control presentation to Work and remove drag/drop or mutation-signaling affordances unless F001 documents drag-to-command as command-preview only.",
+        "Rename Capability Center presentation to Tools & Setup or Connections while preserving capability_id disclosure in details; do not use Capabilities as the primary nav label.",
+        "Convert Settings presentation to Preferences and remove hardcoded demo project rows and Jarvis-era product rows.",
+        "Remove Financial from core nav; hide/defer Cloud Costs unless backed by a real capability; keep adapter-specific views out of core V0 nav.",
+        "If Architecture appears in nav, render it only as a muted future item that points at the separate Architecture Explorer plan or exact regen command; do not implement the Architecture tab here.",
+        "Add/update dashboard tests for V0 nav labels, absent demo tabs, and no user-visible Jarvis branding."
+      ],
+      "acceptance": "(1) The dashboard shell is DontPanic-branded. (2) V0 nav contains Home/Needs Attention, Work, Tools & Setup or Connections, Health, and Preferences unless a page is hidden behind a capability-backed integration group. (3) Financial and Cloud Costs are not presented as core DontPanic features. (4) Work is read-only in V0 or drag-to-command-only per the F001 decision. (5) Architecture is not implemented in this plan. (6) Tests or snapshots prove the new labels and absence of stale branding.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T06:56:02Z"
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "description": "Value-first page rewrites for V0 core surfaces. Apply the copy map and Claude Design assets to Needs Attention, Work, Tools & Setup, Health, and Preferences so each page explains user/business value before technical substrate.",
+      "steps": [
+        "Update Needs Attention cards so approvals, setup blockers, health warnings, and active work use plain-language titles and impact descriptions before technical IDs.",
+        "Update Work to show a coarse lifecycle using value-first labels and the planning-intelligence readiness substrate where already available.",
+        "Update Tools & Setup to frame capabilities as connected tools/integrations with setup readiness, human-required steps, and exact setup commands.",
+        "Update Health to show credible readiness/security/build-warning data when available and honest missing-data empty states when not.",
+        "Update Preferences to UI-local behavior only; do not imply full DontPanic configuration editing.",
+        "Apply design tokens/component styling from Claude Design where compatible with the existing static dashboard CSS.",
+        "Implement All Projects / fleet variants for Home, Work, and Health at the same fidelity as existing project selector substrate allows."
+      ],
+      "acceptance": "(1) Core V0 pages use value-first primary labels and impact copy. (2) Technical IDs, source files, timestamps, and exact commands remain visible as secondary details. (3) Health handles missing data honestly. (4) Preferences does not claim to edit DontPanic configuration. (5) Fleet mode has explicit Home, Work, and Health behavior. (6) The existing static dashboard architecture is preserved.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T07:32:22Z"
+    },
+    {
+      "id": "F004",
+      "category": "test",
+      "phase": 4,
+      "description": "Provenance, accessibility, and non-technical comprehension evidence. Standardize source/last-updated display, verify no secrets leak, and capture snapshots that prove the UI is understandable without internal DontPanic vocabulary.",
+      "steps": [
+        "Add a consistent per-page source/provenance treatment showing state source and last-updated timestamp without dominating first-read content.",
+        "Verify command chips and metadata preserve exact operator commands and technical identifiers.",
+        "Run dashboard tests and add focused snapshot/unit coverage for value-language labels, absent stale labels, optional-chip handling, and missing-data states.",
+        "Capture static HTML snapshots for Needs Attention, Tools & Setup, Health empty state, Preferences, and nav shell.",
+        "Run sanitization/no-secret checks over dashboard state, HTML snapshots, design docs, and copied assets.",
+        "Document accessibility checks performed for keyboard navigation, text contrast, readable density, and mobile/desktop non-overlap where feasible."
+      ],
+      "acceptance": "(1) Every V0 page has consistent source/provenance display. (2) Snapshot evidence covers the value-first shell and core pages. (3) Tests cover labels and hidden/deferred tabs. (4) Sanitization confirms no secret values in runtime state, docs, or snapshots. (5) Accessibility/design checks are recorded.",
+      "passes": true,
+      "depends_on": [
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T14:16:25Z"
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 5,
+      "description": "Dashboard documentation and objective closeout. Update dashboard docs so future surfaces inherit the value-language contract, then close the plan with objective-contract evidence.",
+      "steps": [
+        "Update dashboard README or design docs with the V0 navigation model, value-language rule, command-emitter invariant, and future-surface non-goals.",
+        "Record which Claude Design assets were used and which were deferred.",
+        "Document how future Architecture, Review/Evidence, Configuration, Agent Session Registry, and local executor plans should use the same language model.",
+        "Run focused dashboard tests, static checks, plan validation, and sanitization.",
+        "Populate objective-contract evidence paths and prepare closeout notes."
+      ],
+      "acceptance": "(1) Dashboard docs explain the value-language contract and V0 nav. (2) Future surfaces are explicitly deferred and governed by the same copy/design rules. (3) Evidence files required by objective_contract.json exist or are intentionally replaced with equivalent named artifacts. (4) Focused tests and sanitization pass. (5) Plan is ready for pre_merge audit.",
+      "passes": true,
+      "depends_on": [
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment) — F005 section"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/claude-design-v3-used-vs-deferred.md",
+          "note": "F005 step 2 — Claude Design v3 assets used vs. deferred"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/future-surfaces-contract.md",
+          "note": "F005 step 3 — future-surface inheritance contract"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-value-language-copy-map.md",
+          "note": "objective_contract required_evidence — copy-map pointer"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-core-nav-snapshot.html",
+          "note": "objective_contract required_evidence — core-nav snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-needs-attention-snapshot.html",
+          "note": "objective_contract required_evidence — Needs Attention snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-tools-setup-snapshot.html",
+          "note": "objective_contract required_evidence — Tools & Setup snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-health-empty-state-snapshot.html",
+          "note": "objective_contract required_evidence — Health empty-state snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-preferences-snapshot.html",
+          "note": "objective_contract required_evidence — Preferences snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-fleet-home-snapshot.html",
+          "note": "objective_contract required_evidence — fleet Home snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-fleet-health-snapshot.html",
+          "note": "objective_contract required_evidence — fleet Health snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-ui-tests.log",
+          "note": "F005 focused vitest sweep — 759 tests across 33 files"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-sanitization-clean.log",
+          "note": "F005 sanitization scan — no credential value-shapes"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/README.md",
+          "note": "V0 Value-Language Contract + future-surfaces table"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T14:40:00Z"
+    }
+  ]
+}

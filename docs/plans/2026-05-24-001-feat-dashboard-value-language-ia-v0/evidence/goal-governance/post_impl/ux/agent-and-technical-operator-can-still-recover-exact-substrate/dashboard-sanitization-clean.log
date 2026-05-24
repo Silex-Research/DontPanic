@@ -1,0 +1,61 @@
+# Dashboard sanitization scan — plan 2026-05-24-001
+# F004 origin: 2026-05-24T07:54:53Z; F005 re-run: 2026-05-24T14:30:00Z by F005
+# implementer (Claude Opus 4.7).
+
+## Scope
+We scan dashboard state on disk, the static HTML snapshots, plan
+evidence/docs, design intake docs, the upstream Claude Design v3 pack,
+and the dashboard README for credential value-shapes. Those are the
+artifacts that could be served, copied into review, or handed to an
+agent. We also report the count of value-word mentions (prose like
+'webhook secret cannot be provisioned by DontPanic') so the operator
+can sanity-check the absence.
+
+## Regex (value shapes — anything matching here would be a real leak)
+(sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|xox[abp]-[A-Za-z0-9-]{12,}|AKIA[0-9A-Z]{16}|-----BEGIN[ A-Z]+PRIVATE KEY-----|eyJ[A-Za-z0-9._-]{30,}|bearer[[:space:]]+[A-Za-z0-9._-]{20,}|(api[_-]?key|access[_-]?token|refresh[_-]?token|password|client[_-]?secret)[[:space:]]*[:=][[:space:]]*["']?[A-Za-z0-9._/+-]{12,})
+
+## Regex (word mentions — prose hits are allowed and expected)
+(api[_-]?key|secret|password|passwd|private[_-]?key|access[_-]?token|refresh[_-]?token)
+
+## Targets (F005 re-run)
+ - dashboard/state
+ - docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots
+ - docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0
+ - docs/design/dashboard-value-language-ia-v0
+ - docs/design/dashboard-platform-roadmap-v1/claude-design-v3
+ - dashboard/README.md   (added in F005 — V0 Value-Language Contract section)
+
+### value-shape scan: dashboard/state
+ (no value-shape matches — clean)
+
+### value-shape scan: docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots
+ (no value-shape matches — clean; 7 snapshots scanned: core-nav,
+  needs-attention, tools-setup, health-empty-state, preferences,
+  fleet-home, fleet-health)
+
+### value-shape scan: docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0
+ (no value-shape matches — clean; includes F005 closeout-memo refresh
+  and the new copy-map / future-surfaces / Claude-Design-used-vs-deferred
+  pointers landed for this feature)
+
+### value-shape scan: docs/design/dashboard-value-language-ia-v0
+ (no value-shape matches — clean)
+
+### value-shape scan: docs/design/dashboard-platform-roadmap-v1/claude-design-v3
+ (no value-shape matches — clean; no copied runtime feature assets outside the design intake bundle)
+
+### value-shape scan: dashboard/README.md
+ (no value-shape matches — clean; F005 added V0 contract section is
+  prose only, all command examples are exact `dontpanic …` CLI strings)
+
+
+## Word-mention counts (informational — prose only)
+ - dashboard/state: 68 prose mentions across files (capability-shaped
+   placeholders like "Slack bot needs OAuth secret"; no values)
+ - docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots: 2 prose mentions across files
+ - docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0: 13 prose mentions
+ - docs/design/dashboard-value-language-ia-v0: 3 prose mentions
+ - docs/design/dashboard-platform-roadmap-v1/claude-design-v3: 3 prose mentions
+ - dashboard/README.md: 0 prose mentions
+
+## Result: CLEAN (no credential value-shapes leaked to disk, snapshots, docs, or README)

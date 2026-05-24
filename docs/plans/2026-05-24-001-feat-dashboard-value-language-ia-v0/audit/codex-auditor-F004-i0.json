@@ -1,0 +1,86 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "audit_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T07:45:29Z",
+  "completed_at": "2026-05-24T07:48:50Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-001-feat-dashboard-value-language-ia-v0-jh7pyrr5 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 230944 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1682776,
+    "tokens_out": 12083,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 13 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer audit declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): The completion claim is not supported by the implementer audit. Evidence: `claude-implementer-F004-i0.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `commands_run: []`. Recommendation: rerun implementation and produce a successful audit summary with validation evidence.\n\nFINDING (high, correctness): Work is a V0 page but has no provenance footer. Evidence: `core.js` registers `pages/mission-control/mission-control.js` as `Work`, while `rg \"renderProvenanceFooterHTML|data-provenance\"` finds no provenance usage in Work/Mission Control. Recommendation: add the shared source/updated treatment to Work, using its real runtime sources.\n\nFINDING (high, test_coverage): Required static HTML snapshots are missing. Evidence: `objective_contract.json` requires `dashboard-core-nav-snapshot.html`, `dashboard-needs-attention-snapshot.html`, `dashboard-tools-setup-snapshot.html`, `dashboard-health-empty-state-snapshot.html`, and `dashboard-preferences-snapshot.html`, but `find` found no matching HTML snapshot artifacts. Recommendation: generate and store the required static snapshots.\n\nFINDING (medium, test_coverage): F004 provenance coverage omits Work and does not exercise the real Prefer",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1..HEAD",
+      "git diff --name-only HEAD~1..HEAD",
+      "npm test -- --run tests/unit/provenance.test.js tests/integration/value-language-page-evidence.test.js",
+      "./node_modules/.bin/vitest run --configLoader runner tests/unit/provenance.test.js tests/integration/value-language-page-evidence.test.js",
+      "node --check lib/provenance.js",
+      "node --check lib/what-now-logic.js",
+      "node --check lib/capabilities-logic.js",
+      "node --check lib/health-logic.js",
+      "node --check pages/settings/settings.js",
+      "node --check pages/mission-control/mission-control.js",
+      "find docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0 dashboard/tests dashboard/state docs/design -path '*node_modules*' -prune -o -type f \\( -name '*snapshot*.html' -o -name '*snapshot*.md' -o -name '*snapshot*.json' \\) -print",
+      "rg -n -i --glob '!dashboard/node_modules/**' --glob '!dashboard/functions/node_modules/**' --glob '!**/package-lock.json' --glob '!**/.git/**' \"(api[_-]?key|secret|password|passwd|private[_-]?key|access[_-]?token|refresh[_-]?token|bearer[[:space:]]+[A-Za-z0-9._-]{12,}|sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{20,})\" dashboard/state docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0 docs/design"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "The completion claim is not supported by the implementer audit. Evidence: `claude-implementer-F004-i0.json` says `[F004] DISPATCH TIMED OUT after 600s`, `audit_status: blocked`, and `commands_run: []`. Recommendation: rerun implementation and produce a successful audit summary with validation evidence.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Work is a V0 page but has no provenance footer. Evidence: `core.js` registers `pages/mission-control/mission-control.js` as `Work`, while `rg \"renderProvenanceFooterHTML|data-provenance\"` finds no provenance usage in Work/Mission Control. Recommendation: add the shared source/updated treatment to Work, using its real runtime sources.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "Required static HTML snapshots are missing. Evidence: `objective_contract.json` requires `dashboard-core-nav-snapshot.html`, `dashboard-needs-attention-snapshot.html`, `dashboard-tools-setup-snapshot.html`, `dashboard-health-empty-state-snapshot.html`, and `dashboard-preferences-snapshot.html`, but `find` found no matching HTML snapshot artifacts. Recommendation: generate and store the required static snapshots.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "F004 provenance coverage omits Work and does not exercise the real Preferences/nav shell render. Evidence: `value-language-page-evidence.test.js` covers Needs Attention, Tools & Setup, Health, and only a helper-rendered Preferences footer. Recommendation: add focused tests for Work provenance and real shell/preferences rendering.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F004",
+      "issue": "Sanitization evidence is incomplete because there is no sanitization log and no HTML snapshots to scan. Evidence: no `dashboard-sanitization-clean.log`; my regex scan found only policy/prose references, not a recorded clean result. Recommendation: run the no-secret scan after snapshots exist and save the clean log.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F004",
+      "issue": "Accessibility/design checks are not recorded. Evidence: searches found only F004 requirements/copy-map text, not performed checks for keyboard navigation, contrast, density, or responsive non-overlap. Recommendation: add an evidence note or log documenting the checks performed and any limitations. Checks run: $ git status --short $ git diff --stat HEAD~1..HEAD $ git diff --name-only HEAD~1..HEAD $ npm test -- --run tests/unit/provenance.test.js tests/integration/value-language-page-evidence.test",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

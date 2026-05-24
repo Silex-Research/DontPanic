@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T23:13:49Z",
+  "feature_id": "F005",
+  "aggregate": "environmental_reproduction_failure",
+  "blocking": false,
+  "recommended_action": "Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "saved_evidence_paths": [
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/transcript.md",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/codex-auditor-F005-i0.json",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json"
+  ],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "environmental_reproduction_failure",
+      "severity": "advisory",
+      "category": "test_coverage",
+      "issue_excerpt": "Full pytest regression could not be independently reproduced in this read-only audit sandbox. Evidence: pytest aborted before collection with `FileNotFoundErro…",
+      "rationale": "auditor reports a sandbox/host/auth blocker preventing reproduction; operator can run the verification locally."
+    }
+  ]
+}

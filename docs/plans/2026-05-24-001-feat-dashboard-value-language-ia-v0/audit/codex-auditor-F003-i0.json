@@ -1,0 +1,63 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "audit_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T07:12:02Z",
+  "completed_at": "2026-05-24T07:14:59Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-001-feat-dashboard-value-language-ia-v0-iiwv_r1n target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 490719 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1414733,
+    "tokens_out": 10605,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 11 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target context is acceptable: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`; structured `target_context` has `env=dev`, `project=null`, and empty `commands_run`, so no forbidden command shapes were present.\n\nFINDING (high, correctness): Health imports an untracked implementation file, so the feature is not safely captured in version control. Evidence: `dashboard/pages/health/health.js:11` imports `../../lib/health-logic.js`, while `git status --short` reports `?? ../dashboard/lib/health-logic.js`. Recommendation: add/track `dashboard/lib/health-logic.js` or move the logic into a tracked file before signoff.\n\nFINDING (high, correctness): Health does not surface available security data, despite acceptance requiring credible readiness/security/build-warning data. Evidence: `dashboard/core.js:43` and `core.js:213` define/load `state.security`, `dashboard/state/security.json` exists, and `dashboard/lib/security-logic.js` provides aggregation helpers, but `dashboard/lib/health-logic.js:41-47` renders only capabilities, what-now, quota, and fleet-summary cards. Recommendation: add a Health security card that handles present, empty, and missing security state honestly.\n\nFINDING (medium, test_coverage): The new Health behavior has no direct unit or integration coverage. Evidence: `rg \"Health|health-logic|renderHealth|hlth\" dashboard/tests` only finds static nav/copy-map checks, not assert",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npm test",
+      "node --check lib/health-logic.js",
+      "node --check pages/health/health.js",
+      "node --check pages/mission-control/mission-control.js",
+      "node --check pages/settings/settings.js",
+      "node --check lib/what-now-logic.js",
+      "node --check lib/capabilities-logic.js",
+      "node --check lib/mission-control-logic.js",
+      "node --check core.js",
+      "node --check pages/capabilities/capabilities.js",
+      "node --check pages/what-now/what-now.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Health imports an untracked implementation file, so the feature is not safely captured in version control. Evidence: `dashboard/pages/health/health.js:11` imports `../../lib/health-logic.js`, while `git status --short` reports `?? ../dashboard/lib/health-logic.js`. Recommendation: add/track `dashboard/lib/health-logic.js` or move the logic into a tracked file before signoff.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Health does not surface available security data, despite acceptance requiring credible readiness/security/build-warning data. Evidence: `dashboard/core.js:43` and `core.js:213` define/load `state.security`, `dashboard/state/security.json` exists, and `dashboard/lib/security-logic.js` provides aggregation helpers, but `dashboard/lib/health-logic.js:41-47` renders only capabilities, what-now, quota, and fleet-summary cards. Recommendation: add a Health security card that handles present, empty, an",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The new Health behavior has no direct unit or integration coverage. Evidence: `rg \"Health|health-logic|renderHealth|hlth\" dashboard/tests` only finds static nav/copy-map checks, not assertions for missing-data cards, security/readiness/build-warning composition, or fleet/project Health variants. Recommendation: add focused tests for `renderHealthHTML` and Health page registration/state rendering. Checks run: $ npm test $ node --check lib/health-logic.js $ node --check pages/health/health.js $ no",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

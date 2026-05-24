@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "audit_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T06:39:35Z",
+  "completed_at": "2026-05-24T06:42:45Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-001-feat-dashboard-value-language-ia-v0-mmlmltwe target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 208101 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1171680,
+    "tokens_out": 14392,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\nCommand: audit verification only; checks listed below\n\nVerdict: needs_changes. The implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context.commands_run` is empty, so no forbidden command-shape finding.\n\nFINDING (high, correctness): V0 nav omits required Health. Evidence: [dashboard/core.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/core.js:445) says Health is future work, and `pageModules` only registers Needs Attention, Work, Tools & Setup, Preferences. Recommendation: add a V0 Health nav surface or record an accepted capability-backed hiding decision.\n\nFINDING (high, correctness): Tools & Setup was renamed only in nav; the page still presents as Capability Center/Capabilities. Evidence: [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:232), [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:243), and [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:252). Recommendation: rename first-viewport headings/help copy to Tools & Setup or Connections while preserving `capability_id` disclosure in details.\n\nFINDING (medium, correctness): Core Work can still show stale Jarvis branding from bundled state. Evidence: [tasks.json](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/state/tasks.json:4) contains `Deplo",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "npx vitest run tests/unit/value-language-static-checks.test.js tests/integration/what-now-page.test.js tests/integration/mission-control-page.test.js tests/integration/capabilities-page.test.js",
+      "npx vitest run --configLoader runner tests/unit/value-language-static-checks.test.js tests/integration/what-now-page.test.js tests/integration/mission-control-page.test.js tests/integration/capabilities-page.test.js",
+      "node --check core.js && node --check lib/value-language-static-checks.js && node --check lib/what-now-logic.js && node --check pages/what-now/what-now.js && node --check pages/mission-control/mission-control.js && node --check pages/capabilities/capabilities.js && node --check pages/settings/settings.js && node --check tests/unit/value-language-static-checks.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "V0 nav omits required Health. Evidence: [dashboard/core.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/core.js:445) says Health is future work, and `pageModules` only registers Needs Attention, Work, Tools & Setup, Preferences. Recommendation: add a V0 Health nav surface or record an accepted capability-backed hiding decision.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Tools & Setup was renamed only in nav; the page still presents as Capability Center/Capabilities. Evidence: [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:232), [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:243), and [capabilities-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/capabilities-logic.js:252). Recommendation: rename first-viewport headings/help copy to T",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Core Work can still show stale Jarvis branding from bundled state. Evidence: [tasks.json](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/state/tasks.json:4) contains `Deploy Jarvis dashboard`, and Work renders `task.title` at [mission-control.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/pages/mission-control/mission-control.js:329). Recommendation: update/remove demo state rows or exclude demo fixtures from user-visible V0 state.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Tests are stale/incomplete for F002. Evidence: [capabilities-page.test.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/tests/integration/capabilities-page.test.js:268) and [capabilities-page.test.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/tests/integration/capabilities-page.test.js:286) still expect `Capability Center`, while [value-language-static-checks.test.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/tests/unit/value-language-static-checks.test.js:388) spot",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

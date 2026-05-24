@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Health — All Projects (fleet) — F004 snapshot</title>
+  <!--
+    Static F004 evidence snapshot. Pure-renderer output captured by
+    dashboard/tests/scripts/generate-f004-snapshots.mjs. Do not edit by
+    hand — regenerate by re-running the script. The snapshot intentionally
+    omits the dashboard's runtime CSS so it remains text-readable.
+  -->
+</head>
+<body>
+
+    <div class="hlth-layout" data-scope="fleet">
+
+    <section class="panel hlth-header-panel">
+      <div class="hlth-header-row">
+        <h2>Health</h2>
+        <div class="hlth-header-scope">
+    <span class="scope-badge scope-badge--fleet" data-scope="fleet">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Fleet</span>
+    </span>
+  </div>
+      </div>
+      <div class="hlth-header-subtitle">Is this DontPanic install safe and current enough to keep using?</div>
+      <div class="hlth-header-meta">3 projects tracked.</div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--muted" data-kind="install">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Install readiness — no data yet</span>
+        <span class="hlth-card-scope-chip">global</span>
+      </header>
+      <div class="hlth-card-impact">No data yet. The dashboard expects dashboard/state/capabilities-status.json on disk.</div>
+
+      <pre class="hlth-card-fix">dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</pre>
+      <div class="hlth-card-source">Source: <code>dashboard/state/capabilities-status.json</code></div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--muted" data-kind="reconcile">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Setup drift — no data yet</span>
+        <span class="hlth-card-scope-chip">global</span>
+      </header>
+      <div class="hlth-card-impact">No data yet. The dashboard expects dashboard/state/what-now.json on disk.</div>
+
+      <pre class="hlth-card-fix">dontpanic dashboard build</pre>
+      <div class="hlth-card-source">Source: <code>dashboard/state/what-now.json</code></div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--muted" data-kind="build_warnings">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Recent build warnings — no data yet</span>
+        <span class="hlth-card-scope-chip">fleet</span>
+      </header>
+      <div class="hlth-card-impact">No data yet. The dashboard expects dashboard/state/what-now.json on disk.</div>
+
+      <pre class="hlth-card-fix">dontpanic dashboard build</pre>
+      <div class="hlth-card-source">Source: <code>dashboard/state/what-now.json</code></div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--muted" data-kind="security">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Security hooks — no data yet</span>
+        <span class="hlth-card-scope-chip">global</span>
+      </header>
+      <div class="hlth-card-impact">No data yet. The dashboard expects dashboard/state/security.json on disk.</div>
+
+      <pre class="hlth-card-fix">dontpanic dashboard build</pre>
+      <div class="hlth-card-source">Source: <code>dashboard/state/security.json</code></div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--muted" data-kind="budget">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Budget guardrail — no data yet</span>
+        <span class="hlth-card-scope-chip">global</span>
+      </header>
+      <div class="hlth-card-impact">No data yet. The dashboard expects dashboard/state/quota.json on disk.</div>
+
+      <pre class="hlth-card-fix">dontpanic dashboard build</pre>
+      <div class="hlth-card-source">Source: <code>dashboard/state/quota.json</code></div>
+    </section>
+
+    <section class="panel hlth-card hlth-card--red" data-kind="fleet">
+      <header class="hlth-card-header">
+        <span class="hlth-card-kind">Fleet has open warnings</span>
+        <span class="hlth-card-scope-chip">fleet</span>
+      </header>
+      <div class="hlth-card-impact">1 warning across 3 projects. Switch the project selector to investigate.</div>
+
+    <ul class="hlth-card-rows">
+
+        <li>
+          <span class="hlth-row-label">Spin &amp; Dine</span>
+          <span class="hlth-row-value hlth-row-value--needs_action">0 warnings</span>
+        </li>
+
+        <li>
+          <span class="hlth-row-label">DontPanic</span>
+          <span class="hlth-row-value hlth-row-value--advisory">1 warning</span>
+        </li>
+
+        <li>
+          <span class="hlth-row-label">Old App</span>
+          <span class="hlth-row-value hlth-row-value--quiet">0 warnings</span>
+        </li>
+
+    </ul>
+
+
+      <div class="hlth-card-source">Source: <code>dashboard/state/fleet-summary.json</code></div>
+    </section>
+
+      <section class="panel hlth-footer-panel">
+        <div class="hlth-footer-line">
+          Health composes the install/setup/build-warning data already on disk.
+          Run <code>dontpanic dashboard build</code> after capability or
+          plan changes to refresh every card here.
+        </div>
+
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/*.json (composed: capabilities-status, what-now, security, fleet-summary, quota)</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">—</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+      <div class="pv-note">Each card declares its own per-source provenance above. This footer summarizes the page-level inputs.</div>
+    </div>
+
+      </section>
+    </div>
+
+</body>
+</html>

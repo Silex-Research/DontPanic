@@ -1,0 +1,5 @@
+
+# Append-only log files — auto-merge both sides instead of conflict
+docs/plans/**/events.jsonl merge=union
+docs/plans/**/INBOX.md merge=union
+docs/plans/**/decisions.jsonl merge=union

@@ -26,7 +26,9 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from dontpanic_orchestrate import architecture, inbox
+import datetime as dt
+
+from dontpanic_orchestrate import architecture, inbox, notify_event
 
 ARCHITECTURE_RELEVANT_GLOBS: tuple[str, ...] = (
     "scripts/dontpanic_orchestrate/*",
@@ -119,6 +121,7 @@ def maybe_regen_after_commit(
     feature_id: str,
     commit_policy_mode: str | None,
     repo_root: Path | None = None,
+    feature_display_name: str | None = None,
 ) -> dict[str, Any] | None:
     """Run architecture regen when an architecture-relevant file was just
     committed. Returns a result dict on regen, ``None`` on no-op.
@@ -159,6 +162,7 @@ def maybe_regen_after_commit(
             f"Error: {exc}\n"
             f"Matched files: {relevant}\n"
         )
+        inbox_written = False
         try:
             inbox.append_event(
                 plan_dir,
@@ -169,8 +173,42 @@ def maybe_regen_after_commit(
                 matched_files=",".join(relevant),
                 error_type=type(exc).__name__,
             )
+            inbox_written = True
         except Exception:  # noqa: BLE001 — INBOX is best-effort here
             pass
+        # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to ALL sinks
+        # + pass plan_dir so the rendered terminal + sidecar + INBOX-
+        # annotation paths fire for this LIVE-disposition event. INBOX
+        # write above is the truth-of-record; this dispatch is best-effort
+        # and never crashes the volley terminal. If the INBOX write
+        # failed, skip advisory dispatch so D013's truth-of-record
+        # invariant stays intact.
+        if inbox_written:
+            try:
+                notify_event.dispatch_event(
+                    notify_event.NotifyEvent(
+                        kind="architecture_regen_failed",
+                        severity=notify_event.SEVERITY_INFO,
+                        plan_id=plan_id,
+                        feature_id=feature_id,
+                        body=(
+                            f"**Architecture regen failed** — `{type(exc).__name__}` "
+                            f"after child_commit on {feature_id}. Map may be stale; "
+                            "operator can re-run `dontpanic architecture regen`."
+                        ),
+                        evidence_uri=str(plan_dir / "INBOX.md"),
+                        timestamp=dt.datetime.now(dt.timezone.utc),
+                        inbox_event="architecture_regen_failed",
+                        feature_display_name=feature_display_name,
+                        technical_metadata={
+                            "matched_files": ",".join(relevant),
+                            "error_type": type(exc).__name__,
+                        },
+                    ),
+                    plan_dir=plan_dir,
+                )
+            except Exception:  # noqa: BLE001 — sink failure must not crash hook
+                pass
         return None
 
     new_root, new_per_file, snap_data = _load_fingerprint(out_path)

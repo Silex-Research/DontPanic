@@ -1,0 +1,120 @@
+{
+  "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+  "cleared_gates": [
+    "pre_impl"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-24T14:26:13Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-24T14:26:13Z",
+      "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T14:48:15Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T17:14:09Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T17:41:46Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T20:45:02Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T21:16:01Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-24T21:52:56Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:no_progress"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T21:53:27Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T22:26:30Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-05-24T22:33:04Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-05-24T22:48:41Z",
+      "actor": "supervisor",
+      "reason": "verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-05-24T22:52:27Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-05-24T23:13:50Z",
+      "actor": "supervisor",
+      "reason": "verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-05-24T23:24:03Z",
+      "actor": "operator"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-05-24T14:26:13Z",
+      "cleared_by": "supervisor:plan_status_active"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl"
+  ]
+}

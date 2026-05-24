@@ -1,0 +1,62 @@
+# F005 evidence — dashboard architecture build/serve smoke
+# Date: 2026-05-24T20:22:37Z
+# Repo: dontpanic-arch-f003-close   Env: dev   Project: (none) (host-local)
+
+## (1) dontpanic dashboard build
+$ dontpanic dashboard build
+dashboard build: state export skipping malformed plan 2026-05-06-001-feat-vibe-mode-ux-hardening: 3 validation errors for Plan
+tier
+  Input should be 'trivial', 'local', 'cross-cutting', 'architectural' or 'p0' [type=enum, input_value='standard', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+human_gates.1
+  Input should be 'pre_impl', 'pre_merge', 'on_escalation', 'tier_promotion' or 'cost_trigger' [type=enum, input_value='post_phase_3', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+dependencies.0
+  Input should be a valid string [type=string_type, input_value=70636875, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+dashboard build: state export skipping malformed plan 2026-05-07-001-fix-foodie-rating-distribution: 3 validation errors for Plan
+tier
+  Input should be 'trivial', 'local', 'cross-cutting', 'architectural' or 'p0' [type=enum, input_value='high', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+status
+  Input should be 'draft', 'active', 'ready_for_audit', 'in_audit', 'completed', 'abandoned' or 'blocked' [type=enum, input_value='proposed', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+human_gates.1
+  Input should be 'pre_impl', 'pre_merge', 'on_escalation', 'tier_promotion' or 'cost_trigger' [type=enum, input_value='pre_backfill', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+dashboard build: capabilities status skipped: capabilities directory not found: /Users/bayesian/Documents/GitHub/SpinDineSwift/capabilities
+dashboard build: defaulted to project 'spindineswift' (only one project registered ('spindineswift'))
+wrote fleet summary to /Users/bayesian/.dontpanic/dashboard/fleet-summary.json
+wrote project 'spindineswift' state to /Users/bayesian/.dontpanic/dashboard/projects/spindineswift
+
+## (2) dontpanic dashboard serve --once (smoke)
+$ dontpanic dashboard serve --once --no-watch --port 0
+dashboard serve: state export skipping malformed plan 2026-05-06-001-feat-vibe-mode-ux-hardening: 3 validation errors for Plan
+tier
+  Input should be 'trivial', 'local', 'cross-cutting', 'architectural' or 'p0' [type=enum, input_value='standard', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+human_gates.1
+  Input should be 'pre_impl', 'pre_merge', 'on_escalation', 'tier_promotion' or 'cost_trigger' [type=enum, input_value='post_phase_3', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+dependencies.0
+  Input should be a valid string [type=string_type, input_value=70636875, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type
+dashboard serve: state export skipping malformed plan 2026-05-07-001-fix-foodie-rating-distribution: 3 validation errors for Plan
+tier
+  Input should be 'trivial', 'local', 'cross-cutting', 'architectural' or 'p0' [type=enum, input_value='high', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+status
+  Input should be 'draft', 'active', 'ready_for_audit', 'in_audit', 'completed', 'abandoned' or 'blocked' [type=enum, input_value='proposed', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+human_gates.1
+  Input should be 'pre_impl', 'pre_merge', 'on_escalation', 'tier_promotion' or 'cost_trigger' [type=enum, input_value='pre_backfill', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/enum
+dashboard serve: capabilities status skipped: capabilities directory not found: /Users/bayesian/Documents/GitHub/SpinDineSwift/capabilities
+dashboard serving at http://127.0.0.1:54955/
+  directory: /private/tmp/dontpanic-arch-f003-close/dashboard
+  state:     /private/tmp/dontpanic-arch-f003-close/dashboard/state
+ctrl-c to stop
+
+## (3) Architecture-tab fixture sanity
+Architecture view-state cache files written by build:
+dashboard/state/projects/spindineswift/architecture-view-state.json

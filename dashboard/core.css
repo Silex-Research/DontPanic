@@ -588,3 +588,57 @@ footer {
 .scope-badge--global  { border-color: var(--accent); }
 .scope-badge--project { border-color: var(--green); }
 .scope-badge--fleet   { border-color: var(--purple); }
+
+/* ── F004 Provenance footer (shared per-page source/timestamp) ── */
+
+.pv-footer {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.pv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pv-label {
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  min-width: 56px;
+}
+
+.pv-value,
+.pv-cmd {
+  color: var(--text-primary);
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.pv-cmd {
+  background: var(--bg-card);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.pv-note {
+  margin-top: 4px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted);
+}

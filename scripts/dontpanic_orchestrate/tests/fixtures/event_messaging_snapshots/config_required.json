@@ -1,0 +1,35 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:config_required:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota config required",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota config required** _(band: needs_action)_\n\nQuota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.\n\nRun:\n\n```\npython -m dontpanic_orchestrate quota-caps init\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `cause` = `no_cap_for_signal`\n- `feature_id` = `F005`\n- `inbox_event` = `config_required`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n"
+  },
+  "disposition": "dashboard_action",
+  "fixture": "config_required",
+  "inbox_event_at_emit": "config_required",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+    "technical_metadata": {
+      "cause": "no_cap_for_signal",
+      "feature_id": "F005",
+      "inbox_event": "config_required",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota config required"
+  }
+}

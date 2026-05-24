@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "audit_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "iteration": 0,
+  "started_at": "2026-05-24T07:02:02Z",
+  "completed_at": "2026-05-24T07:12:02Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-001-feat-dashboard-value-language-ia-v0-iiwv_r1n target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 0 bytes",
+    "subprocess_timeout_seconds=600",
+    "timeout_stdout_bytes=0",
+    "timeout_stderr_bytes=0",
+    "worktree_changed=unknown",
+    "grace_period_used=true"
+  ],
+  "quota_consumed": {
+    "api_calls": 0
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F003] DISPATCH TIMED OUT after 600s\n  captured stdout: 0 bytes\n  captured stderr: 0 bytes\n  worktree changed: unknown\n  grace period used: true",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "blocked"
+}

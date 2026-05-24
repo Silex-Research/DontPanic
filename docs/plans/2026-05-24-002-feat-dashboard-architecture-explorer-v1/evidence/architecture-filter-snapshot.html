@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>architecture-filter-snapshot</title>
+  <link rel="stylesheet" href="../../../../dashboard/core.css">
+  <link rel="stylesheet" href="../../../../dashboard/pages/architecture/architecture.css">
+  <style>body{background:#050912;color:#e2e8f0;font-family:-apple-system,system-ui,sans-serif;margin:0;padding:16px;}</style>
+</head>
+<body>
+  <main class="page-view active" id="page-architecture" data-snapshot-of="architecture-filter-snapshot">
+    <p class="arch-snapshot-note">Snapshot rendered with <code>searchQuery=&quot;supervisor&quot;</code> and the <code>module</code> category filter applied. Search/filter UI is interactive at runtime; the static snapshot captures the layer-1 markup the JS handlers narrow on.</p>
+    <div class="arch-layout arch-explorer" data-state="stale">
+      
+    <section class="panel arch-header-panel">
+      <div class="arch-header-row">
+        <h2 class="arch-title">Architecture</h2>
+        <div class="arch-header-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </div>
+        <div class="arch-header-question">How is this system put together, what changed, and where should I look first?</div>
+      </div>
+      <div class="arch-header-meta">
+        <span class="arch-meta-chip">
+          <span class="arch-meta-label">Project</span>
+          <span class="arch-meta-value">(none)</span>
+        </span>
+        <span class="arch-meta-chip">
+          <span class="arch-meta-label">Generated</span>
+          <span class="arch-meta-value">2026-05-24T06:08:41Z</span>
+        </span>
+        <span class="arch-meta-chip">
+          <span class="arch-meta-label">Fingerprint</span>
+          <code class="arch-meta-value">49ac32b330bc</code>
+        </span>
+        <span class="arch-meta-chip">
+          <span class="arch-meta-label">Source</span>
+          <code class="arch-meta-value">docs/architecture/architecture.json</code>
+        </span>
+      </div>
+    </section>
+  
+      
+    <section class="panel arch-project-context" data-project-context="1" data-scope="project">
+      <div class="arch-project-context-row">
+        <div class="arch-project-context-label">
+          <span class="arch-meta-label">Project context</span>
+          <span class="arch-project-context-name">(none)</span>
+        </div>
+        <div class="arch-project-context-meta">
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">project_id</span>
+            <code class="arch-meta-value">(none)</code>
+          </span>
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">source</span>
+            <code class="arch-meta-value">docs/architecture/architecture.json</code>
+          </span>
+          <span class="arch-meta-chip">
+            <span class="arch-meta-label">last generated</span>
+            <span class="arch-meta-value">2026-05-24T06:08:41Z</span>
+          </span>
+        </div>
+      </div>
+      <p class="arch-project-context-note">Architecture data is scoped to this project only.</p>
+    </section>
+  
+      
+    <section class="panel arch-freshness-banner arch-freshness-banner--yellow"
+             data-freshness="stale">
+      <div class="arch-freshness-header">
+        <span class="arch-freshness-badge arch-freshness-badge--yellow">STALE</span>
+        <span class="arch-freshness-headline">System map is out of date</span>
+      </div>
+      <p class="arch-freshness-impact">Files changed since the snapshot was generated. Run the regen command to refresh the map before relying on it for review.</p>
+      <p class="arch-freshness-message">architecture.json is stale relative to the working tree.</p>
+      
+        <div class="arch-freshness-actions">
+          <p class="arch-freshness-cmd-label">Refresh the snapshot:</p>
+          
+    <div class="arch-card-command">
+      <pre class="arch-cmd"><code>dontpanic architecture regen --with-html</code></pre>
+      <button type="button"
+              class="arch-copy-btn"
+              data-command="dontpanic architecture regen --with-html"
+              aria-label="Copy regen command to clipboard">copy</button>
+    </div>
+  
+        </div>
+      
+    </section>
+  
+      
+    <section class="panel arch-summary-panel" data-summary="1">
+      <div class="arch-summary-grid">
+    <article class="arch-summary-card" data-card="modules">
+      <span class="arch-summary-card-label">Modules</span>
+      <span class="arch-summary-card-value">102</span>
+      <span class="arch-summary-card-hint">Modules indexed in the snapshot.</span>
+    </article>
+  
+    <article class="arch-summary-card" data-card="plans">
+      <span class="arch-summary-card-label">Plans</span>
+      <span class="arch-summary-card-value">66</span>
+      <span class="arch-summary-card-hint">Plans tracked in docs/plans.</span>
+    </article>
+  
+    <article class="arch-summary-card arch-summary-card--freshness" data-card="freshness" data-freshness="stale">
+      <span class="arch-summary-card-label">Snapshot</span>
+      <span class="arch-summary-card-value arch-summary-card-state">
+        <span class="arch-freshness-badge arch-freshness-badge--yellow">STALE</span>
+      </span>
+      <span class="arch-summary-card-hint">System map is out of date</span>
+    </article>
+  
+      <article class="arch-summary-card" data-card="generated-at">
+        <span class="arch-summary-card-label">Generated</span>
+        <span class="arch-summary-card-value arch-summary-card-time">2026-05-24T06:08:41Z</span>
+        <span class="arch-summary-card-hint">Snapshot timestamp.</span>
+      </article>
+    
+      <article class="arch-summary-card" data-card="fingerprint">
+        <span class="arch-summary-card-label">Fingerprint</span>
+        <code class="arch-summary-card-value arch-summary-card-fp">49ac32b330bc</code>
+        <span class="arch-summary-card-hint">First 12 of architecture.json fingerprint.</span>
+      </article>
+    
+      <article class="arch-summary-card" data-card="files-count">
+        <span class="arch-summary-card-label">Files scanned</span>
+        <span class="arch-summary-card-value">402</span>
+        <span class="arch-summary-card-hint">Files the crawler hashed for this snapshot.</span>
+      </article>
+    </div>
+    </section>
+  
+      
+    <section class="panel arch-insights-detail-panel" data-insights-detail="1">
+      <header class="arch-insights-detail-header">
+        <h3 class="arch-insights-detail-title">Architecture insights</h3>
+        <p class="arch-insights-detail-hint">
+          Evidence-backed signals derived from the current snapshot.
+          Counts and rankings come from architecture.json — the
+          dashboard does not invent unsupported health numbers beyond
+          available data.
+        </p>
+      </header>
+      <div class="arch-insights-detail-grid">
+      <article class="arch-insight-section" data-insight="high-fan-out">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">High-coupling areas</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          No import fan-out data in the snapshot. Run the regen command
+          to populate <code>insights[].high-fan-out</code>.
+        </p>
+      </article>
+    
+    <article class="arch-insight-section" data-insight="snapshot-freshness">
+      <header class="arch-insight-section-header">
+        <span class="arch-insight-section-title">Snapshot freshness</span>
+        <span class="arch-insight-section-tag">System map is out of date</span>
+      </header>
+      <p class="arch-insight-section-hint">Stored and current fingerprints diverge — the working tree has changed since the snapshot was generated. Run the regen command to refresh.</p>
+      <p class="arch-insight-section-empty">architecture.json is stale relative to the working tree.</p>
+      <ul class="arch-insight-list">
+    <li class="arch-insight-row" data-freshness-field="state">
+      <span class="arch-insight-metric-label">State</span>
+      <span class="arch-freshness-badge arch-freshness-badge--yellow">STALE</span>
+    </li>
+  
+      <li class="arch-insight-row" data-freshness-field="generated-at">
+        <span class="arch-insight-metric-label">Generated</span>
+        <code class="arch-insight-node">2026-05-24T06:08:41Z</code>
+      </li>
+    
+      <li class="arch-insight-row" data-freshness-field="files-count">
+        <span class="arch-insight-metric-label">Files scanned</span>
+        <span class="arch-insight-metric-value">402</span>
+      </li>
+    
+      <li class="arch-insight-row" data-freshness-field="stored-fingerprint">
+        <span class="arch-insight-metric-label">Stored fp</span>
+        <code class="arch-insight-node">49ac32b330bc</code>
+      </li>
+    
+      <li class="arch-insight-row" data-freshness-field="current-fingerprint">
+        <span class="arch-insight-metric-label">Current fp</span>
+        <code class="arch-insight-node">ecc1f145e76e</code>
+      </li>
+    </ul>
+    </article>
+  
+      <article class="arch-insight-section" data-insight="recently-changed">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">Recently changed files</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          The current snapshot does not carry a per-file diff. Snapshot
+          freshness above surfaces fingerprint drift; a fileset diff
+          will appear here once the crawler emits
+          <code>insights[].recently-changed</code>.
+        </p>
+      </article>
+    
+      <article class="arch-insight-section" data-insight="plans-touching">
+        <header class="arch-insight-section-header">
+          <span class="arch-insight-section-title">Plans touching selected modules</span>
+          <span class="arch-insight-section-tag">No data</span>
+        </header>
+        <p class="arch-insight-section-empty">
+          No plan↔module edges in this snapshot. Plan nodes appear
+          once the crawler links plan source paths to their modules.
+        </p>
+      </article>
+    </div>
+    </section>
+  
+      
+    <section class="panel arch-warnings-panel" data-warnings="1">
+      <div class="arch-warnings-header">
+        <span class="arch-warnings-badge">FLOW WARNINGS</span>
+        <span class="arch-warnings-count">1 item</span>
+      </div>
+      <p class="arch-warnings-note">
+        These flow references do not resolve to a node or edge in the
+        current architecture snapshot. The map still renders — the listed
+        flows will show a warning instead of a path until the references
+        are repaired.
+      </p>
+      <ul class="arch-warnings-list">
+      <li class="arch-warning-row">
+        <span class="arch-warning-ref"><code>flow:authored-broken / step:bad:1</code></span>
+        <span class="arch-warning-message">node_ref does not resolve to a known node</span>
+      </li>
+    </ul>
+    </section>
+  
+      
+    <section class="panel arch-explorer-panel" data-explorer="1">
+      <div class="arch-explorer-header">
+        <h3 class="arch-map-title">System Map</h3>
+        <p class="arch-map-hint">
+          Select a flow to highlight its path. Non-selected nodes stay
+          visible but dimmed. Use search and filters to narrow the
+          canvas, or click any node for source detail.
+        </p>
+      </div>
+      <div class="arch-explorer-toolbar" role="toolbar" aria-label="Architecture explorer controls">
+        <label class="arch-search">
+          <span class="arch-search-label">Search</span>
+          <input
+            type="search"
+            class="arch-search-input"
+            data-arch-search
+            placeholder="Search modules, plans, capabilities…"
+            aria-label="Search nodes by title, id, or source path"
+          />
+        </label>
+        <div class="arch-filter-group" data-filter="type" role="group" aria-label="Type filters">
+          <span class="arch-filter-label">Type</span>
+          
+              <label class="arch-filter-chip" data-filter-kind="type" data-filter-value="command">
+                <input type="checkbox" data-arch-filter="type" value="command" checked />
+                <span class="arch-legend-dot" style="background:#fbbf24"></span>
+                <span class="arch-filter-chip-label">Command</span>
+              </label>
+            
+              <label class="arch-filter-chip" data-filter-kind="type" data-filter-value="module">
+                <input type="checkbox" data-arch-filter="type" value="module" checked />
+                <span class="arch-legend-dot" style="background:#60a5fa"></span>
+                <span class="arch-filter-chip-label">Module</span>
+              </label>
+            
+        </div>
+        <div class="arch-filter-group" data-filter="lane" role="group" aria-label="Lane filters">
+          <span class="arch-filter-label">Lane</span>
+          
+            <label class="arch-filter-chip" data-filter-kind="lane" data-filter-value="lane:client-surfaces">
+              <input type="checkbox" data-arch-filter="lane" value="lane:client-surfaces" checked />
+              <span class="arch-filter-chip-label">Client surfaces</span>
+            </label>
+          
+            <label class="arch-filter-chip" data-filter-kind="lane" data-filter-value="lane:orchestrator-runtime">
+              <input type="checkbox" data-arch-filter="lane" value="lane:orchestrator-runtime" checked />
+              <span class="arch-filter-chip-label">Orchestrator runtime</span>
+            </label>
+          
+            <label class="arch-filter-chip" data-filter-kind="lane" data-filter-value="lane:data-evidence">
+              <input type="checkbox" data-arch-filter="lane" value="lane:data-evidence" checked />
+              <span class="arch-filter-chip-label">Data &amp; evidence</span>
+            </label>
+          
+        </div>
+        <div class="arch-filter-group" data-filter="edge" role="group" aria-label="Edge filters">
+          <span class="arch-filter-label">Edge</span>
+          
+              <label class="arch-filter-chip" data-filter-kind="edge" data-filter-value="import">
+                <input type="checkbox" data-arch-filter="edge" value="import" checked />
+                <span class="arch-legend-dot arch-legend-dot--line" style="background:#3b82f6"></span>
+                <span class="arch-filter-chip-label">Import</span>
+              </label>
+            
+        </div>
+        <div class="arch-zoom-controls" role="group" aria-label="Zoom controls">
+          <button type="button" class="arch-zoom-btn" data-arch-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" class="arch-zoom-btn" data-arch-zoom="in" aria-label="Zoom in">+</button>
+          <button type="button" class="arch-zoom-btn arch-zoom-btn--reset" data-arch-reset aria-label="Reset view">Reset</button>
+        </div>
+      </div>
+      <div class="arch-explorer-grid">
+        <div class="arch-explorer-canvas-wrap" data-canvas-wrap tabindex="0" role="application" aria-label="Architecture map (drag to pan, wheel to zoom, arrow keys to pan when focused)">
+          
+    <svg class="arch-canvas"
+         data-canvas
+         viewBox="0 0 1436 322"
+         data-canvas-width="1436"
+         data-canvas-height="322"
+         role="img"
+         aria-label="Architecture swimlane map"
+         preserveAspectRatio="xMidYMid meet">
+      <g data-layer="lanes">
+    <g class="arch-lane" data-lane-id="lane:client-surfaces" data-lane-kind="client">
+      <rect class="arch-lane-bg" x="0" y="20" width="1436" height="94" rx="6" />
+      <text class="arch-lane-label" x="16" y="44">Client surfaces</text>
+      <text class="arch-lane-count" x="1420" y="44" text-anchor="end">1 nodes</text>
+    </g>
+  
+    <g class="arch-lane" data-lane-id="lane:orchestrator-runtime" data-lane-kind="runtime">
+      <rect class="arch-lane-bg" x="0" y="114" width="1436" height="94" rx="6" />
+      <text class="arch-lane-label" x="16" y="138">Orchestrator runtime</text>
+      <text class="arch-lane-count" x="1420" y="138" text-anchor="end">2 nodes</text>
+    </g>
+  
+    <g class="arch-lane" data-lane-id="lane:data-evidence" data-lane-kind="data">
+      <rect class="arch-lane-bg" x="0" y="208" width="1436" height="94" rx="6" />
+      <text class="arch-lane-label" x="16" y="232">Data &amp; evidence</text>
+      <text class="arch-lane-count" x="1420" y="232" text-anchor="end">0 nodes</text>
+    </g>
+  </g>
+      <g data-layer="edges"><path class="arch-edge" data-edge-id="edge:imports:1" data-edge-type="import" data-from="module:scripts/dontpanic_orchestrate/cli.py" data-to="module:scripts/dontpanic_orchestrate/supervisor.py" d="M 102 175 C 140.5 175, 217.5 175, 256 175" stroke="#3b82f6" fill="none" /></g>
+      <g data-layer="nodes">
+      <g class="arch-node" data-node-id="command:dontpanic-architecture-regen" data-node-type="command" data-node-category="command" data-lane-id="lane:client-surfaces" tabindex="0" role="button" aria-label="dontpanic architecture regen (Command)">
+        <title>dontpanic architecture regen — Regenerate architecture map.</title>
+        <rect class="arch-node-bg" x="32" y="64" width="140" height="34" rx="6" fill="#fbbf24" />
+        <text class="arch-node-label" x="42" y="85">dontpanic archite…</text>
+        <text class="arch-node-cat" x="162" y="85" text-anchor="end">cmd</text>
+      </g>
+    
+      <g class="arch-node" data-node-id="module:scripts/dontpanic_orchestrate/cli.py" data-node-type="module" data-node-category="module" data-lane-id="lane:orchestrator-runtime" tabindex="0" role="button" aria-label="dontpanic_orchestrate.cli (Module)">
+        <title>dontpanic_orchestrate.cli — CLI entry point.</title>
+        <rect class="arch-node-bg" x="32" y="158" width="140" height="34" rx="6" fill="#60a5fa" />
+        <text class="arch-node-label" x="42" y="179">dontpanic_orchest…</text>
+        <text class="arch-node-cat" x="162" y="179" text-anchor="end">mod</text>
+      </g>
+    
+      <g class="arch-node" data-node-id="module:scripts/dontpanic_orchestrate/supervisor.py" data-node-type="module" data-node-category="module" data-lane-id="lane:orchestrator-runtime" tabindex="0" role="button" aria-label="dontpanic_orchestrate.supervisor (Module)">
+        <title>dontpanic_orchestrate.supervisor — Volley supervisor.</title>
+        <rect class="arch-node-bg" x="186" y="158" width="140" height="34" rx="6" fill="#60a5fa" />
+        <text class="arch-node-label" x="196" y="179">dontpanic_orchest…</text>
+        <text class="arch-node-cat" x="316" y="179" text-anchor="end">mod</text>
+      </g>
+    </g>
+      <g data-layer="step-markers" data-step-markers></g>
+    </svg>
+  
+          <aside class="arch-detail-panel" data-detail-panel hidden aria-live="polite">
+            <button type="button" class="arch-detail-close" data-arch-detail-close aria-label="Close detail panel">×</button>
+            <div class="arch-detail-body" data-detail-body></div>
+          </aside>
+        </div>
+        <aside class="arch-flow-rail" data-flow-rail aria-label="Flow inspector">
+          
+    <div class="arch-flow-rail-header">
+      <h3 class="arch-flow-rail-title">Flows</h3>
+      <button type="button" class="arch-flow-clear" data-arch-flow-clear hidden>
+        Clear selection
+      </button>
+    </div>
+    <ul class="arch-flow-list" data-flow-list>
+      <li class="arch-flow-row">
+        <button type="button"
+                class="arch-flow-row-btn"
+                data-arch-flow="flow:architecture-regen"
+                data-has-warning="0"
+                aria-pressed="false">
+          <span class="arch-flow-row-title">Architecture regen</span>
+          <span class="arch-flow-source-chip">derived</span>
+          
+          <span class="arch-flow-row-summary">Operator runs regen; crawler walks source + plans.</span>
+          <span class="arch-flow-row-meta">
+            <span class="arch-flow-step-count">2 steps</span>
+            <code class="arch-flow-id">flow:architecture-regen</code>
+          </span>
+        </button>
+      </li>
+    
+      <li class="arch-flow-row">
+        <button type="button"
+                class="arch-flow-row-btn"
+                data-arch-flow="flow:authored-broken"
+                data-has-warning="1"
+                aria-pressed="false">
+          <span class="arch-flow-row-title">Authored flow with bad reference</span>
+          <span class="arch-flow-source-chip">authored</span>
+          <span class="arch-flow-warning-chip" title="this flow has step warnings">warning</span>
+          <span class="arch-flow-row-summary">Authored flow whose step points at a missing node.</span>
+          <span class="arch-flow-row-meta">
+            <span class="arch-flow-step-count">1 step</span>
+            <code class="arch-flow-id">flow:authored-broken</code>
+          </span>
+        </button>
+      </li>
+    </ul>
+    <div class="arch-step-inspector" data-step-inspector hidden>
+      <h4 class="arch-step-inspector-title">Steps</h4>
+      <ol class="arch-step-list" data-step-list></ol>
+    </div>
+  
+        </aside>
+      </div>
+      
+    <div class="arch-legend" data-legend>
+      <span class="arch-legend-section-label">Nodes</span>
+      
+          <span class="arch-legend-item" data-legend-type="command">
+            <span class="arch-legend-dot" style="background:#fbbf24"></span>
+            <span class="arch-legend-label">Command</span>
+          </span>
+        
+          <span class="arch-legend-item" data-legend-type="module">
+            <span class="arch-legend-dot" style="background:#60a5fa"></span>
+            <span class="arch-legend-label">Module</span>
+          </span>
+        
+      <span class="arch-legend-section-label">Edges</span>
+      
+          <span class="arch-legend-item" data-legend-edge="import">
+            <span class="arch-legend-dot arch-legend-dot--line" style="background:#3b82f6"></span>
+            <span class="arch-legend-label">Import</span>
+          </span>
+        
+    </div>
+  
+    </section>
+  
+      
+    <section class="panel arch-provenance-panel" data-provenance="1">
+      <div class="arch-provenance-header">
+        <h3 class="arch-provenance-title">Details &amp; Provenance</h3>
+        <span class="arch-provenance-hint">
+          Technical IDs and source paths for the nodes in the snapshot —
+          the references reviewers use to cross-check the value-first
+          labels above against the actual code.
+        </span>
+      </div>
+      <div class="arch-provenance-body">
+      <details class="arch-prov-section"
+               data-prov-type="module"
+               data-prov-count="2"
+               open>
+        <summary class="arch-prov-summary">
+          <span class="arch-prov-title">Modules</span>
+          <span class="arch-prov-count">2</span>
+        </summary>
+        <ul class="arch-prov-list">
+      <li class="arch-prov-row" data-node-id="module:scripts/dontpanic_orchestrate/cli.py" data-node-type="module">
+        <span class="arch-prov-title">dontpanic_orchestrate.cli</span>
+        <span class="arch-prov-id">
+          <span class="arch-prov-id-label">Module path</span>
+          <code class="arch-prov-id-value">module:scripts/dontpanic_orchestrate/cli.py</code>
+        </span>
+        
+          <span class="arch-prov-source">
+            <span class="arch-prov-id-label">Source path</span>
+            <code class="arch-prov-id-value">scripts/dontpanic_orchestrate/cli.py</code>
+          </span>
+        
+        
+      </li>
+    
+      <li class="arch-prov-row" data-node-id="module:scripts/dontpanic_orchestrate/supervisor.py" data-node-type="module">
+        <span class="arch-prov-title">dontpanic_orchestrate.supervisor</span>
+        <span class="arch-prov-id">
+          <span class="arch-prov-id-label">Module path</span>
+          <code class="arch-prov-id-value">module:scripts/dontpanic_orchestrate/supervisor.py</code>
+        </span>
+        
+          <span class="arch-prov-source">
+            <span class="arch-prov-id-label">Source path</span>
+            <code class="arch-prov-id-value">scripts/dontpanic_orchestrate/supervisor.py</code>
+          </span>
+        
+        
+      </li>
+    </ul>
+        
+      </details>
+    
+      <details class="arch-prov-section"
+               data-prov-type="command"
+               data-prov-count="1"
+               >
+        <summary class="arch-prov-summary">
+          <span class="arch-prov-title">Commands</span>
+          <span class="arch-prov-count">1</span>
+        </summary>
+        <ul class="arch-prov-list">
+      <li class="arch-prov-row" data-node-id="command:dontpanic-architecture-regen" data-node-type="command">
+        <span class="arch-prov-title">dontpanic architecture regen</span>
+        <span class="arch-prov-id">
+          <span class="arch-prov-id-label">Source</span>
+          <code class="arch-prov-id-value">command:dontpanic-architecture-regen</code>
+        </span>
+        
+        
+      </li>
+    </ul>
+        
+      </details>
+    </div>
+    </section>
+  
+      
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/architecture-view-state.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">2026-05-24T06:13:19Z</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+      <div class="pv-note">Architecture view-state is read from the dashboard state cache. The dashboard never auto-regenerates it.</div>
+    </div>
+  
+    </div>
+  
+  </main>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{
+  "task_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
+  "audit_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T19:39:23Z",
+  "completed_at": "2026-05-24T19:42:38Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-002-feat-dashboard-architecture-explorer-v1-l7lo5okp target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 484620 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3274685,
+    "tokens_out": 11936,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: dontpanic-arch-f003-close\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F004] Repo: dontpanic-arch-f003-close  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nNo EC5 finding: the implementer summary declares `Repo: dontpanic-arch-f003-close`, `Env: dev`, `Project: (none)`, and structured `target_context` has `env=dev`, `project=null`, `commands_run=[]`. No forbidden command shapes were present.\n\nFINDING (high, correctness): Selecting a project without an architecture artifact can render the wrong repo map instead of a missing-project state. Evidence: `resolveArchitectureEnvelope()` falls back to `opts.single` when `selectedProject !== all` and `byProject[selected]` is absent (`dashboard/lib/architecture-logic.js:103`), and the page passes that fallback into `renderArchitectureHTML()` (`dashboard/pages/architecture/architecture.js:55`). A direct check for selected `unbuilt` returned `data-explorer=\"1\"` and no missing-state copy. Recommendation: when a concrete project is selected and `architectureViewStateByProject` is present but lacks that project, render an explicit missing-project architecture state and cover it with a test.\n\nFINDING (medium, correctness): The F004 derived insights omit required changed-file and stale/missing-map insight sections. Evidence: `renderInsightsPanelHTML()` only renders high fan-out and plan touchpoints (`dashboard/lib/architecture-logic.js:803`), while `docs/architecture/architecture.json` contains `source_fingerprint.file_hashes` data that supports change/freshness evidence. Recommendation: surface changed",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "npm test -- architecture-f004.test.js architecture-f004-page.test.js",
+      "npx vitest run --configLoader runner architecture-f004.test.js architecture-f004-page.test.js",
+      "node --check lib/architecture-logic.js",
+      "node --check pages/architecture/architecture.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Selecting a project without an architecture artifact can render the wrong repo map instead of a missing-project state. Evidence: `resolveArchitectureEnvelope()` falls back to `opts.single` when `selectedProject !== all` and `byProject[selected]` is absent (`dashboard/lib/architecture-logic.js:103`), and the page passes that fallback into `renderArchitectureHTML()` (`dashboard/pages/architecture/architecture.js:55`). A direct check for selected `unbuilt` returned `data-explorer=\"1\"` and no missin",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "The F004 derived insights omit required changed-file and stale/missing-map insight sections. Evidence: `renderInsightsPanelHTML()` only renders high fan-out and plan touchpoints (`dashboard/lib/architecture-logic.js:803`), while `docs/architecture/architecture.json` contains `source_fingerprint.file_hashes` data that supports change/freshness evidence. Recommendation: surface changed-file/freshness insights only from available fingerprint/diff data, or add view-state fields for added/modified/re",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F004",
+      "issue": "Missing selected-project architecture state is not tested. Evidence: tests cover an unbuilt project card in All Projects (`dashboard/tests/unit/architecture-f004.test.js:204`, `dashboard/tests/integration/architecture-f004-page.test.js:104`) but do not cover selecting that unbuilt project and verifying the page does not fall back to another map. Recommendation: add unit/integration coverage for selected project absent from `architectureViewStateByProject`. Checks run: $ npm test -- architecture-",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

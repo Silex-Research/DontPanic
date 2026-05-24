@@ -54,6 +54,7 @@ from typing import Any
 from dontpanic_orchestrate import (
     active_supervisors,
     architecture,
+    architecture_view_state,
     capabilities,
     capabilities_status,
     global_config,
@@ -110,6 +111,7 @@ class BuildReport:
     capability_cache_path: Path | None
     reconcile_status_path: Path | None
     architecture_status_path: Path | None
+    architecture_view_state_path: Path | None = None
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -159,6 +161,8 @@ def build(
     warn: Callable[[str], None] | None = None,
     capabilities_cache_path: Path | None = None,
     what_now_cache_path_override: Path | None = None,
+    project_name: str | None = None,
+    project_display_name: str | None = None,
 ) -> BuildReport:
     """Compose every V0 dashboard surface into a single build pass.
 
@@ -252,6 +256,7 @@ def build(
     # 4. Architecture status (advisory only — V0 never blocks on it).
     architecture_status_path: Path | None = None
     arch_status: dict[str, Any] | None = None
+    architecture_view_state_path: Path | None = None
     if check_architecture:
         try:
             root = repo_root if repo_root is not None else Path.cwd()
@@ -263,6 +268,28 @@ def build(
             )
         except Exception as exc:  # noqa: BLE001
             msg = f"architecture status skipped: {exc}"
+            warnings.append(msg)
+            warn(msg)
+
+        # Plan 2026-05-24-002 F001 — derive the architecture view-state
+        # cache from the existing snapshot. Best-effort; missing/stale
+        # architecture is represented inside the view-state itself, not
+        # surfaced as a build error.
+        try:
+            root = repo_root if repo_root is not None else Path.cwd()
+            view_inputs = architecture_view_state.load_inputs(
+                root,
+                project_name=project_name,
+                project_display_name=project_display_name,
+            )
+            view_state = architecture_view_state.build_view_state(
+                view_inputs, repo_root=root
+            )
+            architecture_view_state_path = architecture_view_state.write_cache(
+                view_state, out_dir=out_dir
+            )
+        except Exception as exc:  # noqa: BLE001
+            msg = f"architecture view-state skipped: {exc}"
             warnings.append(msg)
             warn(msg)
 
@@ -280,13 +307,23 @@ def build(
                 arch_status=arch_status,
                 plan_id=plan_id,
             )
+            # Plan 2026-05-24-004 F003 (D003 + D019) — merge event-actions
+            # sidecar into provider-derived items BEFORE writing what-now.json
+            # to out_dir. Both write paths (dashboard.build's out_dir copy +
+            # operator_console.write_cache's home cache) must merge or the
+            # served dashboard state goes stale on whichever path skips.
+            merged_items = operator_console.merge_with_event_sidecar(items)
             (out_dir / "what-now.json").write_text(
-                operator_console.render_json(items),
+                operator_console.render_json(merged_items),
                 encoding="utf-8",
             )
+            # write_cache merges by default (merge_event_sidecar=True); pass
+            # the already-merged list and disable the inner merge to avoid
+            # double-application that would be a no-op anyway.
             what_now_cache_path = operator_console.write_cache(
-                items,
+                merged_items,
                 path=what_now_cache_path_override,
+                merge_event_sidecar=False,
             )
         except Exception as exc:  # noqa: BLE001
             msg = f"what-now cache skipped: {exc}"
@@ -300,6 +337,7 @@ def build(
         capability_cache_path=capability_cache_path,
         reconcile_status_path=reconcile_status_path,
         architecture_status_path=architecture_status_path,
+        architecture_view_state_path=architecture_view_state_path,
         warnings=tuple(warnings),
     )
 

@@ -1,7 +1,7 @@
 [
   {
     "id": "demo-1",
-    "title": "Deploy Jarvis dashboard",
+    "title": "Deploy DontPanic dashboard",
     "project": "infra",
     "status": "in_progress",
     "priority": "high",

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>architecture-fleet-state-snapshot</title>
+  <link rel="stylesheet" href="../../../../dashboard/core.css">
+  <link rel="stylesheet" href="../../../../dashboard/pages/architecture/architecture.css">
+  <style>body{background:#050912;color:#e2e8f0;font-family:-apple-system,system-ui,sans-serif;margin:0;padding:16px;}</style>
+</head>
+<body>
+  <main class="page-view active" id="page-architecture" data-snapshot-of="architecture-fleet-state-snapshot">
+    
+    <div class="arch-layout arch-fleet" data-state="fleet" data-fleet="1">
+      <section class="panel arch-fleet-header-panel">
+        <div class="arch-header-row">
+          <h2 class="arch-title">Architecture</h2>
+          <div class="arch-header-scope">
+    <span class="scope-badge scope-badge--fleet" data-scope="fleet">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Fleet</span>
+    </span>
+  </div>
+          <div class="arch-header-question">All Projects view — each project keeps its own map.</div>
+        </div>
+        <p class="arch-fleet-note">
+          Each registered project has its own architecture snapshot.
+          Unrelated repos are never merged into a single graph. Pick a
+          project below to open its map.
+        </p>
+      </section>
+      
+        <section class="panel arch-fleet-grid-panel">
+          <div class="arch-fleet-grid">
+    <article class="arch-fleet-card" data-fleet-card="projecta" data-fleet-state="stale">
+      <header class="arch-fleet-card-header">
+        <span class="arch-fleet-card-name">Project A</span>
+        <span class="arch-freshness-badge arch-freshness-badge--yellow">STALE</span>
+      </header>
+      <code class="arch-fleet-card-id">projecta</code>
+      <p class="arch-fleet-card-headline">System map is out of date</p>
+      <dl class="arch-fleet-card-meta">
+        <dt>Modules</dt><dd>102</dd>
+        <dt>Plans</dt><dd>66</dd>
+        <dt>Generated</dt><dd>2026-05-24T06:08:41Z</dd>
+      </dl>
+      
+      <div class="arch-fleet-card-actions">
+        <button type="button"
+                class="arch-fleet-open-btn"
+                data-arch-open-project="projecta">
+          Open map
+        </button>
+      </div>
+    </article>
+  
+    <article class="arch-fleet-card" data-fleet-card="projectb" data-fleet-state="fresh">
+      <header class="arch-fleet-card-header">
+        <span class="arch-fleet-card-name">Project B</span>
+        <span class="arch-freshness-badge arch-freshness-badge--green">FRESH</span>
+      </header>
+      <code class="arch-fleet-card-id">projectb</code>
+      <p class="arch-fleet-card-headline">System map is up to date</p>
+      <dl class="arch-fleet-card-meta">
+        <dt>Modules</dt><dd>102</dd>
+        <dt>Plans</dt><dd>66</dd>
+        <dt>Generated</dt><dd>2026-05-24T06:08:41Z</dd>
+      </dl>
+      
+      <div class="arch-fleet-card-actions">
+        <button type="button"
+                class="arch-fleet-open-btn"
+                data-arch-open-project="projectb">
+          Open map
+        </button>
+      </div>
+    </article>
+  
+    <article class="arch-fleet-card arch-fleet-card--empty"
+             data-fleet-card="unbuilt"
+             data-fleet-state="absent">
+      <header class="arch-fleet-card-header">
+        <span class="arch-fleet-card-name">Unbuilt repo</span>
+        <span class="arch-freshness-badge arch-freshness-badge--muted">NO MAP</span>
+      </header>
+      <code class="arch-fleet-card-id">unbuilt</code>
+      <p class="arch-fleet-card-headline">No architecture snapshot for this project yet.</p>
+      <p class="arch-fleet-card-empty-body">
+        Run the regen command inside the project's repo, then rebuild
+        the dashboard state for this project:
+      </p>
+      
+    <div class="arch-card-command">
+      <pre class="arch-cmd"><code>dontpanic architecture regen --with-html</code></pre>
+      <button type="button"
+              class="arch-copy-btn"
+              data-command="dontpanic architecture regen --with-html"
+              aria-label="Copy regen command to clipboard">copy</button>
+    </div>
+  
+      
+    <div class="arch-card-command">
+      <pre class="arch-cmd"><code>dontpanic dashboard build --project unbuilt</code></pre>
+      <button type="button"
+              class="arch-copy-btn"
+              data-command="dontpanic dashboard build --project unbuilt"
+              aria-label="Copy regen command to clipboard">copy</button>
+    </div>
+  
+      <div class="arch-fleet-card-actions">
+        <button type="button"
+                class="arch-fleet-open-btn"
+                data-arch-open-project="unbuilt">
+          Switch selector
+        </button>
+      </div>
+    </article>
+  </div>
+        </section>
+      
+      
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/architecture-view-state.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">—</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+      <div class="pv-note">All Projects view enumerates per-project caches from the fleet summary. Open a project to see its full architecture map.</div>
+    </div>
+  
+    </div>
+  
+  </main>
+</body>
+</html>

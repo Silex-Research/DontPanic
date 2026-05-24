@@ -16,6 +16,24 @@ import {
   ALL_PROJECTS_VALUE,
   renderScopeBadgeHTML,
 } from './project-selector-logic.js';
+import { renderProvenanceFooterHTML } from './provenance.js';
+
+// F004: per-page provenance — what-now state is rewritten by
+// `dontpanic dashboard build`. The fleet variant points at the
+// fleet-what-now envelope written by the same command.
+const WHAT_NOW_REFRESH = 'dontpanic dashboard build';
+const WHAT_NOW_SOURCE = 'dashboard/state/what-now.json';
+const FLEET_WHAT_NOW_SOURCE = 'dashboard/state/fleet-what-now.json';
+
+function buildWhatNowProvenance(envelope, { fleet = false } = {}) {
+  return renderProvenanceFooterHTML({
+    source: fleet ? FLEET_WHAT_NOW_SOURCE : WHAT_NOW_SOURCE,
+    lastUpdated: envelope && typeof envelope.captured_at === 'string' && envelope.captured_at.length > 0
+      ? envelope.captured_at
+      : null,
+    refreshCommand: WHAT_NOW_REFRESH,
+  });
+}
 
 /** Four-band taxonomy emitted by F001 providers — ordering reflects display priority. */
 export const BANDS = Object.freeze(['needs_action', 'advisory', 'info', 'ready']);
@@ -45,6 +63,46 @@ export const SOURCE_LABELS = Object.freeze({
   supervisor:   'Supervisor',
   architecture: 'Architecture',
 });
+
+// F003: value-first "kind" labels. Primary Layer-1 text rendered before
+// any technical noun. Pairs (source, band) → human-readable headline.
+// The internal SOURCE_LABELS (gate / capability / supervisor / …) stay
+// available as Layer-2 chips on each card.
+const VALUE_KIND_LABELS = Object.freeze({
+  'gate:needs_action':         'Approval needed',
+  'gate:advisory':             'Approval pending',
+  'gate:info':                 'Approval cleared',
+  'gate:ready':                'Approval cleared',
+  'capability:needs_action':   'Setup required',
+  'capability:advisory':       'Setup advisory',
+  'capability:info':           'Tool connected',
+  'capability:ready':          'Tool connected',
+  'reconcile:needs_action':    'Setup drift detected',
+  'reconcile:advisory':        'Setup drift advisory',
+  'reconcile:info':            'Setup change recorded',
+  'reconcile:ready':           'Install matches baseline',
+  'supervisor:needs_action':   'AI work needs help',
+  'supervisor:advisory':       'AI work warning',
+  'supervisor:info':           'Active AI work',
+  'supervisor:ready':          'AI work clear',
+  'architecture:needs_action': 'Architecture snapshot needs refresh',
+  'architecture:advisory':     'Architecture snapshot is stale',
+  'architecture:info':         'Architecture snapshot updated',
+  'architecture:ready':        'Architecture snapshot fresh',
+});
+
+/**
+ * Plain-language "kind" label derived from (source, band). Falls back
+ * to the source's SOURCE_LABEL when the pair is unknown.
+ * @param {string} source
+ * @param {string} band
+ * @returns {string}
+ */
+export function getValueKindLabel(source, band) {
+  const key = `${source}:${band}`;
+  if (VALUE_KIND_LABELS[key]) return VALUE_KIND_LABELS[key];
+  return SOURCE_LABELS[source] || String(source || '');
+}
 
 const BAND_PRIORITY = Object.freeze({
   needs_action: 0, advisory: 1, info: 2, ready: 3,
@@ -253,6 +311,12 @@ export function renderMissingStateHTML(scope = 'project') {
         Once the cache exists, this view will list gates, capabilities,
         reconcile drift, and active supervisors that need attention.
       </div>
+      ${renderProvenanceFooterHTML({
+        source: scope === 'fleet' ? FLEET_WHAT_NOW_SOURCE : WHAT_NOW_SOURCE,
+        lastUpdated: null,
+        refreshCommand: WHAT_NOW_REFRESH,
+        note: 'Cache absent — dashboard treats this as a missing-data state, not a blocker.',
+      })}
     </div>
   `;
 }
@@ -264,7 +328,7 @@ export function renderMissingStateHTML(scope = 'project') {
  * @param {object} envelope
  * @param {'project'|'fleet'} [scope]
  */
-export function renderQuietStateHTML(envelope, scope = 'project') {
+export function renderQuietStateHTML(envelope, scope = 'project', provenance = {}) {
   const summary = summarizeByBand(envelope.items);
   const advisoryLine = summary.advisory > 0
     ? `${summary.advisory} advisory item${summary.advisory === 1 ? '' : 's'} present.`
@@ -285,23 +349,25 @@ export function renderQuietStateHTML(envelope, scope = 'project') {
       <div class="wn-quiet-meta">
         ${renderMetaHTML(envelope)}
       </div>
+      ${buildWhatNowProvenance(envelope, { fleet: provenance.fleetSource === true || scope === 'fleet' })}
     </div>
   `;
 }
 
-function renderPopulatedHTML(envelope, scope = 'project') {
+function renderPopulatedHTML(envelope, scope = 'project', provenance = {}) {
   const groups = groupByBand(envelope.items);
   return `
     <div class="wn-layout">
       <section class="panel wn-header-panel">
         <div class="wn-header-row">
-          <h2>What Now</h2>
+          <h2>Needs Attention</h2>
           <div class="wn-header-scope">${renderScopeBadgeHTML(scope)}</div>
           <div class="wn-header-meta">${renderMetaHTML(envelope)}</div>
         </div>
         <div class="wn-summary-strip">${renderSummaryStripHTML(envelope.items)}</div>
       </section>
       ${groups.map((g) => renderBandSectionHTML(g, scope)).join('')}
+      ${buildWhatNowProvenance(envelope, { fleet: provenance.fleetSource === true || scope === 'fleet' })}
     </div>
   `;
 }
@@ -349,20 +415,30 @@ function renderBandSectionHTML(group, scope = 'project') {
 function renderActionCardHTML(item) {
   const badge = getBandBadge(item.band);
   const sourceLabel = getSourceLabel(item.source);
+  const kindLabel = getValueKindLabel(item.source, item.band);
+  const projectChip = item.display_name || item.project_name
+    ? `<span class="wn-project-chip" title="project">${esc(item.display_name || item.project_name)}</span>`
+    : '';
+  // Layer 1 ("what does this mean for me?") leads with the kind label.
+  // Layer 2 (the upstream provider title and ids) lives below in the
+  // technical-detail block so the non-technical reviewer reads value
+  // language first.
   return `
     <article class="wn-card wn-card--${esc(badge.color)}"
              data-action-id="${esc(item.id)}"
              data-source="${esc(item.source)}"
              data-band="${esc(item.band)}">
       <header class="wn-card-header">
-        <span class="wn-source-chip wn-source-chip--${esc(item.source)}">${esc(sourceLabel)}</span>
-        <span class="wn-card-title">${esc(item.title)}</span>
+        <span class="wn-card-kind">${esc(kindLabel)}</span>
+        ${projectChip}
         ${renderRoleChipHTML(item)}
       </header>
+      <div class="wn-card-impact">${esc(item.title || '')}</div>
       ${item.detail ? `<div class="wn-card-detail">${esc(item.detail)}</div>` : ''}
       ${renderCommandHTML(item.exact_command)}
       ${renderEvidenceHTML(item.evidence_uri)}
       <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--${esc(item.source)}" title="provider">${esc(sourceLabel)}</span>
         <span class="wn-card-id" title="${esc(item.id)}">${esc(item.id)}</span>
         ${item.updated_at ? `<span class="wn-card-updated">updated ${esc(item.updated_at)}</span>` : ''}
       </footer>
@@ -705,13 +781,14 @@ export function renderFleetWhatNowHTML(envelope, fleetSummary, opts = {}) {
       ${headerHTML}
       <section class="panel wn-header-panel">
         <div class="wn-header-row">
-          <h2>What Now — All Projects</h2>
+          <h2>Needs Attention — All Projects</h2>
           <div class="wn-header-scope">${renderScopeBadgeHTML('fleet')}</div>
           <div class="wn-header-meta">${renderMetaHTML(envelope)}</div>
         </div>
         <div class="wn-summary-strip">${renderSummaryStripHTML(items)}</div>
       </section>
       ${sections}
+      ${buildWhatNowProvenance(envelope, { fleet: true })}
     </div>
   `;
 }
@@ -792,12 +869,15 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
     return `
       <div class="wn-layout wn-layout--project">
         ${headerHTML}
-        ${renderQuietStateHTML(envelope, 'project')}
+        ${renderQuietStateHTML(envelope, 'project', { fleetSource: true })}
       </div>
     `;
   }
   // Reuse the existing populated renderer with a fabricated single-band
-  // payload — keep the per-card markup identical to legacy what-now.
+  // payload — keep the per-card markup identical to legacy what-now. The
+  // populated renderer attaches its own pv-footer using the single-repo
+  // source path; the fleet-scoped header chip already carries fleet
+  // context, so we don't double up here.
   const fabricatedEnvelope = {
     schema_version: envelope.schema_version,
     captured_at: envelope.captured_at,
@@ -806,7 +886,7 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
   return `
     <div class="wn-layout wn-layout--project">
       ${headerHTML}
-      ${renderPopulatedHTML(fabricatedEnvelope, 'project')}
+      ${renderPopulatedHTML(fabricatedEnvelope, 'project', { fleetSource: true })}
     </div>
   `;
 }

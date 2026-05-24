@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T01:11:10Z",
+  "generated_at": "2026-05-24T20:29:21Z",
   "modules": [
     {
       "imports": [],
@@ -180,6 +180,44 @@
         "maybe_regen_after_commit"
       ],
       "summary": "Plan 2026-05-19-004 F004 — supervisor post-commit architecture regen hook."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "json",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.architecture_view_state",
+      "path": "scripts/dontpanic_orchestrate/architecture_view_state.py",
+      "public_symbols": [
+        "BuildInputs",
+        "DEFAULT_FLOWS_REL",
+        "SCHEMA_VERSION",
+        "VIEW_STATE_FILENAME",
+        "build_view_state",
+        "calls_edge_id",
+        "capability_node_id",
+        "command_node_id",
+        "external_node_id",
+        "import_edge_id",
+        "load_inputs",
+        "metadata_node_id",
+        "module_node_id",
+        "page_node_id",
+        "plan_node_id",
+        "reads_edge_id",
+        "render_view_state",
+        "runs_edge_id",
+        "schema_node_id",
+        "write_cache",
+        "writes_edge_id"
+      ],
+      "summary": "Plan 2026-05-24-002 F001 — architecture dashboard view model."
     },
     {
       "imports": [
@@ -1724,6 +1762,7 @@
       "name": "dontpanic_orchestrate.planning_readiness",
       "path": "scripts/dontpanic_orchestrate/planning_readiness.py",
       "public_symbols": [
+        "GateStateReadError",
         "NotReadyItem",
         "ReadyItem",
         "RecommendationReport",
@@ -2937,6 +2976,24 @@
       "id": "2026-05-23-007-feat-plan-intake-readiness-v0",
       "status": "completed",
       "title": "Plan intake and readiness v0"
+    },
+    {
+      "features_count": 5,
+      "id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+      "status": "active",
+      "title": "Dashboard value-language IA v0"
+    },
+    {
+      "features_count": 5,
+      "id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
+      "status": "active",
+      "title": "Dashboard architecture explorer v1"
+    },
+    {
+      "features_count": 0,
+      "id": "2026-05-24-003-infra-dashboard-platform-roadmap-v1",
+      "status": "active",
+      "title": "Dashboard platform roadmap v1"
     }
   ],
   "schema_version": "1.0",
@@ -2998,7 +3055,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-24T01:11:10Z",
+    "computed_at": "2026-05-24T20:29:21Z",
     "file_hashes": {
       "claude/shared/VERSION": "c92df6bdde330be219d62f48ec6490b01889436f2f59027aab200e74de619168",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -3138,8 +3195,13 @@
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json": "693b0604c73c645a98badb9ecfe03a2596dbdc750a1ccf3d6e59e88f44335c2a",
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/plan.md": "8554a1fd541df1003e45c2f31711f25e4a8f2fecfff507581c1ff5667edf1706",
       "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "aa32fc481272776295ad7e7bf6359c21ff21b24649d7ae8002ec2632289fbe62",
-      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "148e8fab00b567044f0f7630f1474202fee589d85726209cbce04f9a160d8ce4",
+      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "81f9013cf6c5f282915859fd67f8f0852b68232e707b7ad4a0634eb04df750e3",
       "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "468e5462c551bf556cab443bfeff07baefb6183ea94fa70ab0eb20519e36b44b",
+      "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/features.json": "6b0f1b2f7e8dec06eddf5b07ed8c89217375a4416592237ef1022bbcc447daf6",
+      "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/plan.md": "71543f83338b5e5fa0d64967d867eb0f86e8b664d46454874d2410356ecb554f",
+      "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json": "f46019d7fec2627471a6f112437199d48da867b7e21e53b0b85ba76573a4189b",
+      "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/plan.md": "288545e7cc0a28ce32fccd6e4b7ffc3fea30afa7c9c4b5a73f9e9e3eed708e05",
+      "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/plan.md": "6e88f9c52fb5cc70b90e14e957c34bf6dbf038b91756018b5fc48c6f45a68f59",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
       "scripts/dontpanic_orchestrate/active_supervisors.py": "4e0a75b8435e0e0a99e5f5259dd75578f2c85a889474f101ed48262132fe5408",
@@ -3150,6 +3212,7 @@
       "scripts/dontpanic_orchestrate/architecture_hook.py": "25b3818a324444f5610ec7539ab560ce6ed47686a24ddf55f3167779fe763313",
       "scripts/dontpanic_orchestrate/architecture_html.py": "c00b3cd5dfd21ae7da189ba5c10058c03566eb7dcf6144cb1e20b411e00f8172",
       "scripts/dontpanic_orchestrate/architecture_regen_hook.py": "dd8d0fee7668209239004f5ff2df84b8cf251222098b90519d12787ad28452de",
+      "scripts/dontpanic_orchestrate/architecture_view_state.py": "5a28a3069fe8313e1b3b8a5f7c220bc48851333890b6d106d6cb2c71bb24b80e",
       "scripts/dontpanic_orchestrate/audit_writer.py": "5d1c762c312e8ae4a58ffc605fec79314922cb3775d184338f6bd4a5d6597480",
       "scripts/dontpanic_orchestrate/auditor_taxonomy.py": "91b2981203a0cd125dfed077d6e0dcc37137058b2e895c91e427c4d18df9a15a",
       "scripts/dontpanic_orchestrate/calibration_loader.py": "31b0cc76eb596bdde4ab9a189c543d78ace6bad8c1bcd76f60410d3385d00a96",
@@ -3173,7 +3236,7 @@
       "scripts/dontpanic_orchestrate/config/roles.py": "38dbc1a9c881fc4f9e734a3f00668dc44d5f3f1a8b29716b9354bb41914fff2f",
       "scripts/dontpanic_orchestrate/config/runtime_evidence.py": "742d8cd334740609547e5658812e7e5cdc6ff82de2061ba1ea3ef794e9c469a9",
       "scripts/dontpanic_orchestrate/config/setup.py": "84ed268320387c0f0ca3c99b34ce67f80368e1bfdcf0c54a38ff4cff5e7df156",
-      "scripts/dontpanic_orchestrate/dashboard.py": "ae0cd7994ea2e01abbcc1bc53c06b0602bdf5bd12f948d1bd49e4cec46465082",
+      "scripts/dontpanic_orchestrate/dashboard.py": "cd7a8f0d7692ff9a66747f1e1b982223ddb31da23ca1b5f35fd72daa7a02dadc",
       "scripts/dontpanic_orchestrate/dashboard_relevance.py": "f01fffe7ae31ed9eca5cac9ad261329ea71355f348f67b1b0c4f456772e0af87",
       "scripts/dontpanic_orchestrate/dogfood-validation-output.txt": "f352cfa67bfc258374f7af8812f431c6a66e6b14e0429f5ae89f3e00bfb37316",
       "scripts/dontpanic_orchestrate/ec5_classifier.py": "3a0c7df5c5e425d9768c63637ff0aff88419c0ddab759e09a40d00b14836947c",
@@ -3210,10 +3273,10 @@
       "scripts/dontpanic_orchestrate/patch_completeness_gate.py": "b9ceae360e4b279d729f2e56da7c7cee8c10577dde7254ab9bfa29a348a1ab87",
       "scripts/dontpanic_orchestrate/plan_loader.py": "de82d47c5938f6a817f1300d10aa598357909cafcdbb8ed3b287d8596408e0d3",
       "scripts/dontpanic_orchestrate/plan_target.py": "265bbcf0afa2c528836366a339e70aa616c33169eb347d7ed609152d2caa53f4",
-      "scripts/dontpanic_orchestrate/planning_readiness.py": "cb106e7f7c3351a81ab0ae8c3f0719704194d27bfc5798262e5b6248d0714d86",
+      "scripts/dontpanic_orchestrate/planning_readiness.py": "a3e8e7bbd7f3d8a5e0fc6ea70652ae65003c24997b18b294c6c921fa4f8a6373",
       "scripts/dontpanic_orchestrate/prereq_registry.py": "b1cae5c00b3448035d3f3d379ff22b4ef472de5832a02756a2fdf5537274d686",
       "scripts/dontpanic_orchestrate/project_config.py": "850da67eab73da49b3d129b1c693430376c4c4ed1e4e84e398afe5a8cb1f0bb1",
-      "scripts/dontpanic_orchestrate/projects_dashboard.py": "064f69df64e38df3f361be48981fdd2f30a1352da08987d6aa39c21c03962ff8",
+      "scripts/dontpanic_orchestrate/projects_dashboard.py": "27c0c5af8d7bff70e1bb6c7b72d2fd09977e5a656319c039d89bd34ef7d95c46",
       "scripts/dontpanic_orchestrate/projects_registry.py": "ec42395d8080526e18f4b6fb1014d0bd48008b170206f6e104690325910ab148",
       "scripts/dontpanic_orchestrate/prompts.py": "c763b581024f0bfb358005a0ddedfb4eb752b4bda88f677a56687eb0b502ab9e",
       "scripts/dontpanic_orchestrate/prompts/completion_audit_prompt.md": "e3ef72882da0160ba7b6882fb7c35442cb143294225a610698ae740461643e6b",
@@ -3248,7 +3311,7 @@
       "scripts/dontpanic_orchestrate/tests/fake_cli/fake-claude": "00a1582800802ae4fdd302210333a14d72724379829f61a8bde87df13c609f1c",
       "scripts/dontpanic_orchestrate/tests/fake_cli/fake-codex": "e35b1d92d2f2916401863fc7486d328bba00fe0bad892836a5c3033207e9e337",
       "scripts/dontpanic_orchestrate/tests/fake_cli/fake-pp-linear": "450a2764265748dc61a553c788e3d527a9e391faebf7cf17c3b78324e8c285b0",
-      "scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt": "31164fb2f47a458c5255e5d062cef6ab7be35f220073e7fa7c15bce637204111",
+      "scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt": "6c90c5996562cce15493d3fe2bae82310c8487c00ce982977631c6d412cb2df6",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_android/anr/traces.txt": "af691ceea4eda3b0c2baad42041a598babd122a47ed68140206d42d0708b5ceb",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_android/logcat/run.log": "27fe1599d470780495efe588cefa4df62a694c6da34455308ffdb023c90ea47d",
@@ -3270,6 +3333,7 @@
       "scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py": "be7dec5376363e7775ceb735af3d384464d2e0a097a361253a3d0301f322218e",
       "scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py": "7e2bba3031c1dc5c21c04cf48933649c1bd7f0c6366cdc67b1700acddf964c34",
       "scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py": "98492a10450039b4db118eb89e92165c86e245c8cf75832d0f489214cb495423",
+      "scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py": "fe66bc12b6800090310cdd241eed5ea951a44ebe63f1b5b3656635ff608df9f4",
       "scripts/dontpanic_orchestrate/tests/test_audit_envelope_timeout_evidence.py": "a4ece01031dbe0d28b8fc1c2fbefcb4d25e2f6f9c4b4a320c98378fc16e593f5",
       "scripts/dontpanic_orchestrate/tests/test_audit_filename_feature_id.py": "09b37753438d206b7d87726003239088c7118d5160ba2019de2b73027305788f",
       "scripts/dontpanic_orchestrate/tests/test_audit_writer_f002_supervisor_integration.py": "85be1fe00641655ada08cc4bcf8c929299fae7f270f248d75d85be92599c8e83",
@@ -3350,7 +3414,7 @@
       "scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py": "9662aa4405ff12af18ebd87e0a0ffc8dc2794ab9e5baa4c4a89e683196df20da",
       "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py": "8b4ea5a2b304dbe55c165dd9f9ecbdab5bd96ea0611597755f88a3af0eecfb1c",
       "scripts/dontpanic_orchestrate/tests/test_plan_target.py": "92680f1a90bda6448f0499934ef18f7eed3035941b34a2f1f84829a839f05f57",
-      "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py": "137faec7ccf0490fbf538efa89e9ce34e6029a9e30f9e42c578ebc3e2f068ca8",
+      "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py": "bdc244e3178a4c4a73ca991e5febcdf9b34d014bd831fccf4bef0aa72caadc63",
       "scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py": "65cdc5888014f0028e0bc2ba950609c5358518427607da09cd2dae086300b39e",
       "scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py": "600b81146cbad1050655db8bff859a0bff5b9b0b8a1c8f789e5070336f3d2671",
       "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py": "c349dc776146c892f6c3bb0b264b9bfee7ef0bbb8c39acd08f98d5fc3ed52bce",
@@ -3396,7 +3460,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "5344846f395a59eb25fa4589412004bc72812105abb865030602929e0941657b",
-    "files_count": 395
+    "file_hashes_root": "1c7005c3530e816aa4643ca1ba300c1a45277db999e1ff96e26ac248ec6dd113",
+    "files_count": 402
   }
 }

@@ -1,0 +1,60 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:gate_state_reconciliation_failed:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent** _(band: needs_action)_\n\nPersisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `contradiction_kind` = `stale_clearance`\n- `feature_id` = `F005`\n- `gate` = `pre_impl`\n- `inbox_event` = `gate_state_reconciliation_failed`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `stage` = `pre_impl`\n- `subtype` = `pre_impl`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent",
+      "subtitle": "gate_state_reconciliation_failed",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "gate_state_reconciliation_failed",
+  "inbox_event_at_emit": "gate_state_reconciliation_failed",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "contradiction_kind": "stale_clearance",
+      "feature_id": "F005",
+      "gate": "pre_impl",
+      "inbox_event": "gate_state_reconciliation_failed",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "stage": "pre_impl",
+      "subtype": "pre_impl"
+    },
+    "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent"
+  }
+}

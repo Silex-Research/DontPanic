@@ -28,6 +28,23 @@
   color: var(--accent);
 }
 
+.stg-source-footer {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.stg-source-footer code {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+
 /* ── Harness Sync List ── */
 
 .stg-harness-list {

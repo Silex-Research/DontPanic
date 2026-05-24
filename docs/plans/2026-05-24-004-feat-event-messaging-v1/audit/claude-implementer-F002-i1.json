@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-24-004-feat-event-messaging-v1",
+  "audit_id": "2026-05-24-004-feat-event-messaging-v1#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-24T17:29:48Z",
+  "completed_at": "2026-05-24T17:37:40Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/codex-auditor-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-004-feat-event-messaging-v1-a7wsm36k target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3686 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 4044747,
+    "tokens_out": 22211,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Clean — no whitespace warnings, only intended changes. The targeted F002 test file is green (30 passed). The closeout-memo trailing blank line is gone.\n\n## Summary of audit-finding resolution\n\n- **F1 (medium, correctness) — `architecture_regen_failed` missing `evidence_uri`**: Added `evidence_uri=str(plan_dir / \"INBOX.md\")` to the `NotifyEvent` constructor at `scripts/dontpanic_orchestrate/architecture_regen_hook.py:193`, exactly as the auditor recommended (matches the auditor's \"likely `str(plan_dir / \"INBOX.md\")`\" suggestion since `plan_dir` is the only path-typed value in scope at that point). The pre-existing `test_architecture_regen_failed_dispatches_info` test now also asserts `ev.evidence_uri == str(plan_dir / \"INBOX.md\")`, so regressions would fail loudly.\n\n- **F2 (medium, test_coverage) — four uncovered new dispatch sites**: Added `test_notify_event_f002.py:TestNewEmitSitesShape.test_{verdict_mismatch,verdict_blocked_reconciled,environmental_blocker_short_circuit,no_progress_classification}_shape_matches_supervisor_dispatch` — each builds the same `NotifyEvent` shape the production code at supervisor.py:1947/2251/2362/2509 builds, exercising the dataclass invariants against the real kwarg set. Added a parametrized `TestInboxBeforeDispatch.test_supervisor_source_inbox_precedes_dispatch` that proves the twin-channel ordering invariant by source inspection (`inbox.append_event(event=\"X\")` must precede `NotifyEvent(... inbox_event=\"X\")` in `supervisor.py`). Source inspec",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "pytest scripts/dontpanic_orchestrate/tests/test_notify_event_f002.py -q",
+      "git diff --check HEAD",
+      "git status --short scripts/dontpanic_orchestrate/ docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/closeout-memo.md"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

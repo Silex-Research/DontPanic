@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-05-24T19:30:00Z",
+  "source_path": "docs/architecture/architecture.json",
+  "project": {
+    "name": "dontpanic",
+    "display_name": "DontPanic",
+    "label": "DontPanic"
+  },
+  "freshness": {
+    "state": "stale",
+    "message": "architecture.json is stale relative to the working tree.",
+    "regen_command": "dontpanic architecture regen --with-html",
+    "generated_at": "2026-05-24T19:00:00Z",
+    "fingerprint": "abcdef0123456789aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "stored_fingerprint": "abcdef0123456789aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "current_fingerprint": "1234567890abcdefbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "files_count": 402
+  },
+  "lanes": [
+    { "id": "lane:orchestrator-runtime", "kind": "runtime", "order": 1, "title": "Orchestrator runtime" },
+    { "id": "lane:data-evidence", "kind": "data", "order": 2, "title": "Data & evidence" }
+  ],
+  "nodes": [
+    { "id": "module:scripts/dontpanic_orchestrate/cli.py", "lane_id": "lane:orchestrator-runtime", "source_path": "scripts/dontpanic_orchestrate/cli.py", "title": "dontpanic.cli", "type": "module", "summary": "CLI entry point." },
+    { "id": "module:scripts/dontpanic_orchestrate/supervisor.py", "lane_id": "lane:orchestrator-runtime", "source_path": "scripts/dontpanic_orchestrate/supervisor.py", "title": "dontpanic.supervisor", "type": "module", "summary": "Volley supervisor." },
+    { "id": "module:scripts/dontpanic_orchestrate/architecture_view_state.py", "lane_id": "lane:orchestrator-runtime", "source_path": "scripts/dontpanic_orchestrate/architecture_view_state.py", "title": "architecture.view-state", "type": "module" },
+    { "id": "plan:2026-05-24-002-arch-explorer", "lane_id": "lane:data-evidence", "source_path": "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/plan.md", "title": "Dashboard architecture explorer", "type": "plan" }
+  ],
+  "edges": [
+    { "id": "edge:imports:1", "type": "import", "from": "module:scripts/dontpanic_orchestrate/cli.py", "to": "module:scripts/dontpanic_orchestrate/supervisor.py" },
+    { "id": "edge:imports:2", "type": "import", "from": "module:scripts/dontpanic_orchestrate/cli.py", "to": "module:scripts/dontpanic_orchestrate/architecture_view_state.py" },
+    { "id": "edge:plan-touches:1", "type": "other", "from": "plan:2026-05-24-002-arch-explorer", "to": "module:scripts/dontpanic_orchestrate/architecture_view_state.py" }
+  ],
+  "flows": [],
+  "steps": [],
+  "filters": {},
+  "insights": [
+    { "id": "insight:module-count", "title": "Modules", "value": 102, "kind": "count" },
+    { "id": "insight:plan-count", "title": "Plans", "value": 66, "kind": "count" },
+    { "id": "insight:schema-count", "title": "Schemas", "value": 7, "kind": "count" },
+    {
+      "id": "insight:high-fan-out",
+      "title": "Highest import fan-out",
+      "kind": "ranking",
+      "value": [
+        { "node": "module:scripts/dontpanic_orchestrate/cli.py", "imports": 18 },
+        { "node": "module:scripts/dontpanic_orchestrate/supervisor.py", "imports": 12 },
+        { "node": "module:scripts/dontpanic_orchestrate/architecture_view_state.py", "imports": 9 }
+      ]
+    }
+  ],
+  "validation_warnings": []
+}

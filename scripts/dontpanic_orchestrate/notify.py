@@ -12,7 +12,7 @@ import os
 import shutil
 import subprocess
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dontpanic_orchestrate.notify_event import NotifyEvent
@@ -72,22 +72,50 @@ def notify(
     return proc.returncode == 0
 
 
-def notify_event(event: "NotifyEvent") -> bool:
+def notify_event(event: "NotifyEvent", rendered: Any | None = None) -> bool:
     """Plan 2026-05-01-002 F002 — project a NotifyEvent onto title/subtitle/
     message/group for the terminal-notifier sink.
 
-    Title: ``Jarvis [{plan_id}]`` (operator scans by plan).
-    Subtitle: ``{kind}`` (event kind verbatim, e.g. 'breaker_tripped').
-    Message: first 140 chars of ``event.body`` (notification UX limit).
-    Group: ``{plan_id}`` so a per-plan stack can be batch-cleared.
+    Plan 2026-05-24-004 F003 (D010): terminal brand fix — title is now
+    ``DontPanic [{plan_id}]`` (was ``Jarvis [{plan_id}]``). Message becomes
+    ``RenderedEvent.headline`` per plan.md § Implementation Strategy when a
+    rendered event is available.
 
-    Returns True iff the underlying notifier fired successfully.
+    F003 audit finding (i1) addendum: dispatch_event now passes the
+    RenderedEvent it already produced so this sink does NOT re-render. The
+    ``rendered`` kwarg is the canonical path; the no-argument fallback
+    re-renders via :func:`event_copy.render` so legacy direct callers (and
+    tests that call ``notify.notify_event(event)`` straight) keep working.
+
+    Subtitle: ``{kind}`` (event kind verbatim, e.g. 'breaker_tripped').
+    Group: ``{plan_id}`` so a per-plan stack can be batch-cleared.
     """
-    message = event.body[:140] if event.body else ""
+    if rendered is None:
+        try:
+            from dontpanic_orchestrate import event_copy
+
+            rendered = event_copy.render(event)
+        except Exception:  # noqa: BLE001 — terminal sink must never raise
+            rendered = None
+    if rendered is not None:
+        message = (getattr(rendered, "headline", "") or "")[:140]
+    else:
+        message = event.body[:140] if event.body else ""
+
+    # Plan 2026-05-24-004 F004 (D011 + D020): substitute-mode sanitization
+    # at the terminal-notifier live boundary. Per D011 the terminal sink
+    # must NEVER fail-hard on a transient notification — scrub_secrets
+    # replaces matches with [REDACTED] in-place without raising. The
+    # raise-mode boundary lives at the sidecar write.
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    scrubbed_message = scrub_secrets(message) or ""
+    scrubbed_title = scrub_secrets(f"DontPanic [{event.plan_id}]") or ""
+    scrubbed_subtitle = scrub_secrets(event.kind) or ""
     return notify(
-        f"Jarvis [{event.plan_id}]",
-        message,
-        subtitle=event.kind,
+        scrubbed_title,
+        scrubbed_message,
+        subtitle=scrubbed_subtitle,
         group=event.plan_id,
     )
 

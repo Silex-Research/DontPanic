@@ -1,0 +1,17 @@
+# F005 evidence — architecture flow definition validation tests
+# Date: 2026-05-24T20:21:58Z
+# Repo: dontpanic-arch-f003-close   Env: dev   Project: (none)
+# Cmd:  npx vitest run -t 'flow|validation_warnings|collectFlowWarnings' (architecture-logic, architecture-explorer, architecture-explorer-dom)
+
+
+ RUN  v3.2.4 /private/tmp/dontpanic-arch-f003-close/dashboard
+
+ ✓ tests/unit/architecture-explorer.test.js (29 tests | 23 skipped) 4ms
+ ✓ tests/unit/architecture-logic.test.js (36 tests | 31 skipped) 4ms
+ ✓ tests/integration/architecture-explorer-dom.test.js (25 tests | 18 skipped) 141ms
+
+ Test Files  3 passed (3)
+      Tests  18 passed | 72 skipped (90)
+   Start at  15:21:58
+   Duration  588ms (transform 85ms, setup 0ms, collect 152ms, tests 150ms, environment 507ms, prepare 105ms)
+

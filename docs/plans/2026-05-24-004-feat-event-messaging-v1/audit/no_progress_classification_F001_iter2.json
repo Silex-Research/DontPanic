@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T14:48:15Z",
+  "feature_id": "F001",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "`validate_command_tokens` still does not mirror the real CLI flag surfaces. Evidence: `command_validation.py` rejects real commands like `doctor --json`, `disp…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "the command-validation tests still pin mostly selected examples and top-level vocabulary, not the full per-subcommand flag map required by F001. Evidence: `tes…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

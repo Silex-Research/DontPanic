@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Preferences — F004 snapshot</title>
+  <!--
+    Static F004 evidence snapshot. Pure-renderer output captured by
+    dashboard/tests/scripts/generate-f004-snapshots.mjs. Do not edit by
+    hand — regenerate by re-running the script. The snapshot intentionally
+    omits the dashboard's runtime CSS so it remains text-readable.
+  -->
+</head>
+<body>
+
+    <div class="stg-layout">
+      <section class="panel stg-section stg-config-section">
+        <h2>Preferences</h2>
+        <p class="stg-section-desc">
+          How this dashboard behaves for you. These preferences live in
+          your browser's localStorage only — they do not edit DontPanic
+          configuration, secrets, or capability state. Anything under
+          <code>~/.dontpanic/</code> is managed through
+          <code>dontpanic</code> CLI commands surfaced in Tools &amp; Setup.
+        </p>
+        <div class="stg-config-form">
+          <div class="stg-field">
+            <label class="stg-label">Appearance</label>
+            <div class="stg-field-right">
+              <select class="stg-select"><option>Dark</option><option>Light</option></select>
+              <span class="stg-field-hint">Stored in localStorage</span>
+            </div>
+          </div>
+          <div class="stg-field">
+            <label class="stg-label">Auto-refresh</label>
+            <div class="stg-field-right">
+              <select class="stg-select"><option>30 seconds</option></select>
+              <span class="stg-field-hint">Takes effect on next page load</span>
+            </div>
+          </div>
+          <div class="stg-field">
+            <label class="stg-label">State files</label>
+            <div class="stg-field-right">
+              <code class="stg-code">dashboard/state/*.json</code>
+              <span class="stg-field-hint">Written by <code>dontpanic dashboard build</code>; read-only in dashboard</span>
+            </div>
+          </div>
+        </div>
+        <div class="stg-source-footer">
+          Source: <code>localStorage</code> (this browser only) ·
+          DontPanic config edits use the <code>dontpanic</code> CLI surfaced under Tools &amp; Setup.
+        </div>
+
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">localStorage (this browser only)</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">—</span></div>
+
+      <div class="pv-note">Preferences are browser-local. DontPanic config edits live under ~/.dontpanic/ and are managed via the dontpanic CLI from Tools &amp; Setup.</div>
+    </div>
+
+      </section>
+    </div>
+
+</body>
+</html>
