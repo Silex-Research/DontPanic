@@ -102,3 +102,21 @@ reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
 ===
+---
+timestamp: 2026-05-24T17:14:09Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+feature_id: F001
+reason_class: implementation_defect
+---
+
+Operator closed feature F001 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-004-feat-event-messaging-v1.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

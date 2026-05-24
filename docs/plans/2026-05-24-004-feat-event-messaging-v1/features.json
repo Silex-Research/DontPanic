@@ -15,8 +15,19 @@
         "Add tests covering: RenderedEvent frozen invariant, disposition-table totality (all 27 kinds present, no duplicates), validator rejects malformed shapes, validator-vocabulary purity (no subprocess calls, no module imports beyond stdlib + project local data)."
       ],
       "acceptance": "(1) scripts/dontpanic_orchestrate/event_copy.py exists with RenderedEvent dataclass; fields match the ActionItem subset documented in D002+D003. (2) scripts/dontpanic_orchestrate/command_validation.py exposes validate_command_tokens(...) with token-only validation; never invokes subcommand handlers; no _<cmd>_main round-trip per D021. (3) Translation disposition table covers all 27 INBOX event kinds with explicit verdict per kind; totality enforced by test. (4) Deliberately-wrong-command fixture passes (validator catches bad shapes). (5) Validator-purity test confirms no subprocess, no handler invocation, no side effects. (6) Tests pass; sanitization clean.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T17:14:09Z"
     },
     {
       "id": "F002",
