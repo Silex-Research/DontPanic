@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-20T04:16:23Z",
+  "generated_at": "2026-05-24T01:11:10Z",
   "modules": [
     {
       "imports": [],
@@ -38,6 +38,27 @@
         "unregister"
       ],
       "summary": "F023 EC13 — active-supervisor registry."
+    },
+    {
+      "imports": [],
+      "name": "dontpanic_orchestrate.adapters",
+      "path": "scripts/dontpanic_orchestrate/adapters/__init__.py",
+      "public_symbols": [],
+      "summary": "Printing-press-adapter wrappers, one module per dogfooded service."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dontpanic_orchestrate.integrations.linear_pp_adapter",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.adapters.linear_adapter",
+      "path": "scripts/dontpanic_orchestrate/adapters/linear_adapter.py",
+      "public_symbols": [
+        "call",
+        "get_process"
+      ],
+      "summary": "DontPanic-side adapter for the Linear MCP binary wrapped via Printing Press."
     },
     {
       "imports": [
@@ -247,6 +268,187 @@
     {
       "imports": [
         "__future__",
+        "collections",
+        "json",
+        "jsonschema",
+        "pathlib",
+        "pydantic",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.capabilities",
+      "path": "scripts/dontpanic_orchestrate/capabilities.py",
+      "public_symbols": [
+        "CapabilityIndex",
+        "CapabilityManifest",
+        "CapabilityManifestError",
+        "CapabilityMutationBoundary",
+        "CapabilityOwnerBoundary",
+        "CapabilityRequires",
+        "CapabilityVerify",
+        "SetupStep",
+        "load_capabilities",
+        "validate_capability_file"
+      ],
+      "summary": "Capability manifest loader."
+    },
+    {
+      "imports": [
+        "__future__",
+        "datetime",
+        "difflib",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.capabilities_status",
+        "dontpanic_orchestrate.external_refs_sync",
+        "dontpanic_orchestrate.integrations.adapter_registry",
+        "json",
+        "pathlib",
+        "typing",
+        "yaml"
+      ],
+      "name": "dontpanic_orchestrate.capabilities_lock_sidecar",
+      "path": "scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py",
+      "public_symbols": [
+        "RequiresCapabilityUnknownError",
+        "SCHEMA_VERSION",
+        "count_unready_capabilities",
+        "emit_required_capabilities",
+        "infer_advisory_capabilities",
+        "read_external_refs",
+        "read_requires_capabilities",
+        "validate_requires_capabilities"
+      ],
+      "summary": "Plan 2026-05-22-002 F003 — lock-time advisory required-capabilities sidecar."
+    },
+    {
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections.abc",
+        "difflib",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.capabilities_setup_evidence",
+        "dontpanic_orchestrate.capabilities_setup_runner",
+        "dontpanic_orchestrate.capabilities_status",
+        "pathlib",
+        "sys"
+      ],
+      "name": "dontpanic_orchestrate.capabilities_setup",
+      "path": "scripts/dontpanic_orchestrate/capabilities_setup.py",
+      "public_symbols": [
+        "build_parser",
+        "build_planning_status",
+        "build_runtime_status",
+        "main",
+        "render_print_steps",
+        "resolve_capability"
+      ],
+      "summary": "Plan 2026-05-22-004 F001/F003 — `dontpanic capabilities setup` CLI."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.capabilities_setup_runner",
+        "dontpanic_orchestrate.global_config",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "stat",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.capabilities_setup_evidence",
+      "path": "scripts/dontpanic_orchestrate/capabilities_setup_evidence.py",
+      "public_symbols": [
+        "DEFAULT_EVIDENCE_SUBDIR",
+        "EVIDENCE_DIR_MODE",
+        "EVIDENCE_FILE_MODE",
+        "EVIDENCE_SCHEMA_VERSION",
+        "SetupRunEvidence",
+        "build_evidence_record",
+        "default_evidence_dir",
+        "evidence_filename",
+        "write_evidence"
+      ],
+      "summary": "Plan 2026-05-22-004 F003 — setup-run evidence record."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.capabilities_status",
+        "re",
+        "shlex",
+        "subprocess",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.capabilities_setup_runner",
+      "path": "scripts/dontpanic_orchestrate/capabilities_setup_runner.py",
+      "public_symbols": [
+        "AllowlistDecision",
+        "AutomateSafeReport",
+        "CommandResult",
+        "CommandRunner",
+        "StatusProbe",
+        "StepOutcome",
+        "SubprocessRunner",
+        "evaluate_command_template",
+        "render_report",
+        "run_automate_safe"
+      ],
+      "summary": "Plan 2026-05-22-004 F002 — governed automatable-step runner."
+    },
+    {
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "difflib",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.prereq_registry",
+        "enum",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "stat",
+        "sys",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.capabilities_status",
+      "path": "scripts/dontpanic_orchestrate/capabilities_status.py",
+      "public_symbols": [
+        "CACHE_FILE_MODE",
+        "CapabilityStatus",
+        "CapabilityStatusResult",
+        "DEFAULT_CACHE_PATH",
+        "RequiresResolution",
+        "SCHEMA_VERSION",
+        "StatusEnvelope",
+        "adapter_installed",
+        "build_capability_result",
+        "build_parser",
+        "compute_capability_status",
+        "filter_for_capability",
+        "main",
+        "render_json",
+        "render_text",
+        "resolve_requires",
+        "run_status",
+        "write_cache"
+      ],
+      "summary": "Plan 2026-05-22-002 F002 — `dontpanic capabilities status` CLI."
+    },
+    {
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "datetime",
@@ -296,15 +498,28 @@
         "__future__",
         "argparse",
         "dontpanic_orchestrate",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.capabilities_setup",
+        "dontpanic_orchestrate.capabilities_status",
         "dontpanic_orchestrate.config",
+        "dontpanic_orchestrate.dashboard",
+        "dontpanic_orchestrate.init",
+        "dontpanic_orchestrate.integrations.adapter_registry",
         "dontpanic_orchestrate.patch_completeness_gate",
+        "dontpanic_orchestrate.reconcile",
+        "dontpanic_orchestrate.showcase",
+        "dontpanic_orchestrate.smoke",
         "dontpanic_orchestrate.supervisor",
         "jarvis_doctor",
         "json",
+        "models.plan_model",
         "os",
         "pathlib",
         "quota_check",
-        "sys"
+        "subprocess",
+        "sys",
+        "typing",
+        "yaml"
       ],
       "name": "dontpanic_orchestrate.cli",
       "path": "scripts/dontpanic_orchestrate/cli.py",
@@ -566,6 +781,71 @@
     {
       "imports": [
         "__future__",
+        "argparse",
+        "collections.abc",
+        "dataclasses",
+        "dontpanic_orchestrate",
+        "http.server",
+        "ipaddress",
+        "json",
+        "os",
+        "pathlib",
+        "platform",
+        "socket",
+        "socketserver",
+        "subprocess",
+        "sys",
+        "threading",
+        "time",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.dashboard",
+      "path": "scripts/dontpanic_orchestrate/dashboard.py",
+      "public_symbols": [
+        "BuildReport",
+        "DEFAULT_DASHBOARD_DIR_NAME",
+        "DEFAULT_HOST",
+        "DEFAULT_PORT",
+        "DEFAULT_STATE_SUBDIR_NAME",
+        "DEFAULT_WATCH_INTERVAL_SECONDS",
+        "ServeHandle",
+        "build",
+        "build_parser",
+        "default_dashboard_dir",
+        "default_plans_root",
+        "default_state_out_dir",
+        "local_what_now_cache_path",
+        "main",
+        "open_dashboard",
+        "serve_start"
+      ],
+      "summary": "Plan 2026-05-23-004 F003 — `dontpanic dashboard` CLI."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "dontpanic_orchestrate",
+        "logging",
+        "pathlib",
+        "yaml"
+      ],
+      "name": "dontpanic_orchestrate.dashboard_relevance",
+      "path": "scripts/dontpanic_orchestrate/dashboard_relevance.py",
+      "public_symbols": [
+        "ProjectDeclarations",
+        "build_warning_action_items",
+        "filter_items_for_project",
+        "is_global_doctor_blocker",
+        "is_item_relevant_to_project",
+        "load_project_declarations"
+      ],
+      "summary": "Plan 2026-05-23-005 F004 — typed relevance table for global blockers."
+    },
+    {
+      "imports": [
+        "__future__",
         "dontpanic_orchestrate.target_context_prelude",
         "re",
         "typing"
@@ -692,6 +972,38 @@
         "DEFAULT_BIN"
       ],
       "summary": "Codex CLI executor — invokes `codex exec --json`."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.integrations.pm_tool_models",
+        "dontpanic_orchestrate.integrations.pm_tool_sync",
+        "json",
+        "pathlib",
+        "typing",
+        "urllib.parse"
+      ],
+      "name": "dontpanic_orchestrate.external_refs_sync",
+      "path": "scripts/dontpanic_orchestrate/external_refs_sync.py",
+      "public_symbols": [
+        "AdapterResolver",
+        "AdapterUnavailable",
+        "ExternalRefCapabilityBindingError",
+        "ExternalRefsSyncError",
+        "ExternalSyncResult",
+        "format_dry_run_preview",
+        "load_evidence",
+        "reset_read_cache",
+        "run_close_push",
+        "run_resync",
+        "validate_capability_bindings",
+        "validate_refs_for_lock",
+        "write_evidence"
+      ],
+      "summary": "Plan 2026-05-20-001 F002 — external_refs lifecycle hooks."
     },
     {
       "imports": [
@@ -835,6 +1147,233 @@
     {
       "imports": [
         "__future__",
+        "argparse",
+        "collections.abc",
+        "contextlib",
+        "dataclasses",
+        "dontpanic_orchestrate",
+        "dontpanic_orchestrate.init.report_html",
+        "io",
+        "json",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.init",
+      "path": "scripts/dontpanic_orchestrate/init/__init__.py",
+      "public_symbols": [
+        "DEFAULT_PROFILE",
+        "EXIT_ABORTED",
+        "EXIT_BLOCKED",
+        "EXIT_READY",
+        "EXIT_REMAINING",
+        "OutputFn",
+        "ProbeRunnerFn",
+        "PromptFn",
+        "RegistryValidationError",
+        "SubprocessRunner",
+        "WalkAction",
+        "WalkResult",
+        "Walker",
+        "init_main",
+        "render_walk_json",
+        "render_walk_text",
+        "validate_registry"
+      ],
+      "summary": "Plan 2026-05-19-002 F002 — `dontpanic init` interactive installer."
+    },
+    {
+      "imports": [
+        "__future__",
+        "html",
+        "pathlib",
+        "shlex",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.init.report_html",
+      "path": "scripts/dontpanic_orchestrate/init/report_html.py",
+      "public_symbols": [
+        "DEFAULT_REPORT_REL",
+        "InstallReportError",
+        "render_install_report",
+        "write_install_report"
+      ],
+      "summary": "Plan 2026-05-19-002 F004 — HTML install report (Thariq pattern)."
+    },
+    {
+      "imports": [
+        "__future__",
+        "datetime",
+        "dontpanic_orchestrate",
+        "dontpanic_orchestrate.capabilities",
+        "hashlib",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "pydantic",
+        "stat",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.install_snapshot",
+      "path": "scripts/dontpanic_orchestrate/install_snapshot.py",
+      "public_symbols": [
+        "CapabilityFingerprint",
+        "CapabilityLoadError",
+        "InstallSnapshot",
+        "SCHEMA_VERSION",
+        "SNAPSHOT_DIR_MODE",
+        "SNAPSHOT_FILENAME",
+        "SNAPSHOT_FILE_MODE",
+        "StatusCacheMeta",
+        "build_snapshot",
+        "capability_fingerprint",
+        "discover_mcp_tool_names",
+        "load_snapshot",
+        "render_snapshot_json",
+        "render_snapshot_text",
+        "snapshot_path",
+        "write_snapshot"
+      ],
+      "summary": "Plan 2026-05-23-002 F001 — operator-local install snapshot."
+    },
+    {
+      "imports": [
+        "__future__"
+      ],
+      "name": "dontpanic_orchestrate.integrations",
+      "path": "scripts/dontpanic_orchestrate/integrations/__init__.py",
+      "public_symbols": [],
+      "summary": "PM-tool category contract + per-service wrappers."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.external_refs_sync",
+        "dontpanic_orchestrate.integrations.linear_pm_tool",
+        "dontpanic_orchestrate.integrations.linear_pp_adapter",
+        "dontpanic_orchestrate.integrations.pm_tool_mapping",
+        "json",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.integrations.adapter_registry",
+      "path": "scripts/dontpanic_orchestrate/integrations/adapter_registry.py",
+      "public_symbols": [
+        "AdapterCapabilityBindingError",
+        "default_resolver",
+        "logger",
+        "validate_adapter_capability_binding"
+      ],
+      "summary": "Plan 2026-05-20-001 F002 — operator-bootstrap adapter resolver."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dontpanic_orchestrate.integrations",
+        "dontpanic_orchestrate.integrations.linear_pp_adapter",
+        "dontpanic_orchestrate.integrations.pm_tool_mapping",
+        "dontpanic_orchestrate.integrations.pm_tool_models",
+        "json",
+        "pathlib"
+      ],
+      "name": "dontpanic_orchestrate.integrations.linear_pm_tool",
+      "path": "scripts/dontpanic_orchestrate/integrations/linear_pm_tool.py",
+      "public_symbols": [
+        "LinearPMTool"
+      ],
+      "summary": "Linear PM-tool wrapper: mapping config owns shape; PP adapter owns IO safety."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "dontpanic_orchestrate.global_config",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "subprocess",
+        "threading",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.integrations.linear_pp_adapter",
+      "path": "scripts/dontpanic_orchestrate/integrations/linear_pp_adapter.py",
+      "public_symbols": [
+        "LinearPPAdapter",
+        "MutationRejected",
+        "SanitizationFailed",
+        "SubprocessFactory",
+        "apply_redact",
+        "redact_and_sanitize",
+        "register_adapter",
+        "reject_if_mutating",
+        "sanitize_response"
+      ],
+      "summary": "DontPanic-side adapter for the Linear MCP binary wrapped via Printing Press."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections",
+        "dontpanic_orchestrate.integrations.pm_tool_models",
+        "pydantic",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.integrations.pm_tool_mapping",
+      "path": "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py",
+      "public_symbols": [
+        "PMToolMappingConfig",
+        "load_mapping_config"
+      ],
+      "summary": "Plan 2026-05-20-001 F001 — PM-tool semantic mapping config."
+    },
+    {
+      "imports": [
+        "__future__",
+        "datetime",
+        "enum",
+        "pydantic"
+      ],
+      "name": "dontpanic_orchestrate.integrations.pm_tool_models",
+      "path": "scripts/dontpanic_orchestrate/integrations/pm_tool_models.py",
+      "public_symbols": [
+        "PMComment",
+        "PMIssue",
+        "PMProject",
+        "PMStatus"
+      ],
+      "summary": "Plan 2026-05-20-001 F001 — abstract PM-tool category models."
+    },
+    {
+      "imports": [
+        "__future__",
+        "datetime",
+        "dontpanic_orchestrate.integrations.pm_tool_models",
+        "enum",
+        "pydantic",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.integrations.pm_tool_sync",
+      "path": "scripts/dontpanic_orchestrate/integrations/pm_tool_sync.py",
+      "public_symbols": [
+        "ExternalSyncRecord",
+        "ExternalSyncStatus",
+        "PMToolSyncHook",
+        "make_failed_record",
+        "make_pending_record",
+        "make_pushed_record",
+        "utcnow"
+      ],
+      "summary": "Plan 2026-05-20-001 F001 — sync hook interface + ExternalSyncRecord."
+    },
+    {
+      "imports": [
+        "__future__",
         "datetime",
         "json",
         "os",
@@ -859,6 +1398,7 @@
         "dataclasses",
         "datetime",
         "dontpanic_orchestrate",
+        "dontpanic_orchestrate.capabilities",
         "dontpanic_orchestrate.state_cli",
         "json",
         "logging",
@@ -872,6 +1412,7 @@
       "path": "scripts/dontpanic_orchestrate/mcp_server.py",
       "public_symbols": [
         "ApproveGateInput",
+        "CapabilitiesGetStatusInput",
         "DispatchInput",
         "ERR_INTERNAL",
         "ERR_INVALID_PARAMS",
@@ -896,6 +1437,7 @@
         "serve_main",
         "serve_stdio",
         "tool_approve_gate",
+        "tool_capabilities_get_status",
         "tool_dispatch",
         "tool_list_projects",
         "tool_read_evidence",
@@ -1039,6 +1581,50 @@
     {
       "imports": [
         "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "enum",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "sanitization_check",
+        "stat",
+        "sys",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.operator_console",
+      "path": "scripts/dontpanic_orchestrate/operator_console.py",
+      "public_symbols": [
+        "ActionItem",
+        "Band",
+        "CACHE_FILENAME",
+        "CACHE_FILE_MODE",
+        "CACHE_SUBDIR",
+        "SCHEMA_VERSION",
+        "SOURCE_ARCHITECTURE",
+        "SOURCE_CAPABILITY",
+        "SOURCE_GATE",
+        "SOURCE_RECONCILE",
+        "SOURCE_SUPERVISOR",
+        "aggregate",
+        "default_cache_path",
+        "provide_architecture_actions",
+        "provide_capability_actions",
+        "provide_gate_actions",
+        "provide_reconcile_actions",
+        "provide_supervisor_actions",
+        "render_envelope",
+        "render_json",
+        "write_cache"
+      ],
+      "summary": "Plan 2026-05-23-004 F001 — Operator console v0 ActionItem provider model."
+    },
+    {
+      "imports": [
+        "__future__",
         "ast",
         "dataclasses",
         "pathlib",
@@ -1082,6 +1668,7 @@
         "__future__",
         "dataclasses",
         "dontpanic_orchestrate.environments_loader",
+        "dontpanic_orchestrate.integrations.pm_tool_sync",
         "dontpanic_orchestrate.nested_orchestration",
         "dontpanic_orchestrate.plan_target",
         "json",
@@ -1126,6 +1713,74 @@
     {
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "json",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.planning_readiness",
+      "path": "scripts/dontpanic_orchestrate/planning_readiness.py",
+      "public_symbols": [
+        "NotReadyItem",
+        "ReadyItem",
+        "RecommendationReport",
+        "SCHEMA_VERSION",
+        "Warning",
+        "analyze_fleet",
+        "analyze_repo",
+        "render_json",
+        "render_text"
+      ],
+      "summary": "Plan 2026-05-23-007 F002 — read-only parallel-readiness recommender."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "concurrent.futures",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate.capabilities",
+        "enum",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "subprocess",
+        "sys",
+        "time",
+        "typing",
+        "urllib.error",
+        "urllib.request"
+      ],
+      "name": "dontpanic_orchestrate.prereq_registry",
+      "path": "scripts/dontpanic_orchestrate/prereq_registry.py",
+      "public_symbols": [
+        "ActivationCondition",
+        "ActivationContext",
+        "PrereqProbe",
+        "ProbeResult",
+        "ProbeStatus",
+        "ProfileRegistry",
+        "SCHEMA_VERSION",
+        "SeverityWhenInactive",
+        "SweepResult",
+        "build_activation_context",
+        "default_probes",
+        "default_profile_registry",
+        "envelope_for_sweep",
+        "render_sweep_text",
+        "run_sweep",
+        "validate_capability_bindings"
+      ],
+      "summary": "Plan 2026-05-19-002 F001 — Declarative prereq probe registry."
+    },
+    {
+      "imports": [
+        "__future__",
         "dontpanic_orchestrate",
         "dontpanic_orchestrate.config.roles",
         "dontpanic_orchestrate.config.runtime_evidence",
@@ -1160,6 +1815,49 @@
         "scaffold_empty_config"
       ],
       "summary": "Per-project config at ``<project>/.dontpanic/dontpanic.json``."
+    },
+    {
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "json",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.projects_dashboard",
+      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
+      "public_symbols": [
+        "ALL_PROJECTS_SENTINEL",
+        "BUILD_WARNINGS_FILENAME",
+        "FLEET_SUMMARY_FILENAME",
+        "FLEET_SUMMARY_SCHEMA_VERSION",
+        "FLEET_WHAT_NOW_FILENAME",
+        "FLEET_WHAT_NOW_SCHEMA_VERSION",
+        "PROJECTS_DASHBOARD_SUBDIR",
+        "PROJECT_REGISTRY_FILENAME",
+        "ProjectBuildReport",
+        "ProjectContext",
+        "ResolvedSelection",
+        "SelectedBuildResult",
+        "UnknownProjectError",
+        "build_fleet_summary",
+        "build_fleet_what_now",
+        "build_project_state",
+        "build_selected",
+        "find_cwd_project_entry",
+        "fleet_summary_path",
+        "fleet_what_now_path",
+        "load_project_contexts",
+        "mirror_selection_into_state_dir",
+        "project_context_from_entry",
+        "project_dashboard_dir",
+        "resolve_selection"
+      ],
+      "summary": "Plan 2026-05-23-005 F001 — multi-repo dashboard substrate."
     },
     {
       "imports": [
@@ -1269,6 +1967,64 @@
         "validate"
       ],
       "summary": "F004 — operator-editable per-vendor quota caps."
+    },
+    {
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate.capabilities",
+        "dontpanic_orchestrate.install_snapshot",
+        "json",
+        "logging",
+        "pathlib",
+        "sys",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.reconcile",
+      "path": "scripts/dontpanic_orchestrate/reconcile.py",
+      "public_symbols": [
+        "CHECK_SCHEMA_VERSION",
+        "CapabilityCheckResult",
+        "ChangedCapability",
+        "NewCapability",
+        "RemovedCapability",
+        "STATUS_CHANGED_CAPABILITIES",
+        "STATUS_CLEAN",
+        "STATUS_MISSING_SNAPSHOT",
+        "STATUS_NEW_CAPABILITIES",
+        "STATUS_REMOVED_CAPABILITIES",
+        "STATUS_STALE_STATUS_CACHE",
+        "StatusCacheState",
+        "check_capabilities",
+        "diff_capability_fingerprints",
+        "evaluate_status_cache",
+        "reconcile_main",
+        "render_check_json",
+        "render_check_text"
+      ],
+      "summary": "Plan 2026-05-23-002 — ``dontpanic reconcile`` subcommand surface."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "fnmatch",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.release_impact",
+      "path": "scripts/dontpanic_orchestrate/release_impact.py",
+      "public_symbols": [
+        "ReleaseImpactAdvisory",
+        "SurfaceSuggestion",
+        "analyze",
+        "analyze_paths",
+        "analyze_plan_intent",
+        "render_text"
+      ],
+      "summary": "Plan 2026-05-23-007 F003 — release-impact advisory checker."
     },
     {
       "imports": [],
@@ -1424,6 +2180,85 @@
     {
       "imports": [
         "__future__",
+        "argparse",
+        "dontpanic_orchestrate.showcase",
+        "dontpanic_orchestrate.showcase.config",
+        "dontpanic_orchestrate.showcase.generator",
+        "dontpanic_orchestrate.showcase.redactor",
+        "json",
+        "pathlib",
+        "sys"
+      ],
+      "name": "dontpanic_orchestrate.showcase",
+      "path": "scripts/dontpanic_orchestrate/showcase/__init__.py",
+      "public_symbols": [
+        "showcase_main"
+      ],
+      "summary": "dontpanic showcase — run DontPanic capabilities against external repos"
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "pathlib"
+      ],
+      "name": "dontpanic_orchestrate.showcase.config",
+      "path": "scripts/dontpanic_orchestrate/showcase/config.py",
+      "public_symbols": [
+        "SUPPORTED_ARTIFACT_KINDS",
+        "TargetSpec",
+        "default_showcase_config"
+      ],
+      "summary": "Showcase target configuration (Plan 2026-05-19-005 F001)."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "dontpanic_orchestrate",
+        "dontpanic_orchestrate.showcase",
+        "dontpanic_orchestrate.showcase.redactor",
+        "importlib.util",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "tempfile",
+        "time",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.showcase.generator",
+      "path": "scripts/dontpanic_orchestrate/showcase/generator.py",
+      "public_symbols": [
+        "ArtifactResult",
+        "ShowcaseRun",
+        "TargetResult",
+        "filter_targets",
+        "generate",
+        "render_json",
+        "render_text"
+      ],
+      "summary": "Showcase artifact generator (Plan 2026-05-19-005 F001)."
+    },
+    {
+      "imports": [
+        "__future__",
+        "pathlib",
+        "re"
+      ],
+      "name": "dontpanic_orchestrate.showcase.redactor",
+      "path": "scripts/dontpanic_orchestrate/showcase/redactor.py",
+      "public_symbols": [
+        "RedactorError",
+        "redact",
+        "redact_and_validate",
+        "validate"
+      ],
+      "summary": "Absolute-path redactor for showcase artifacts (Plan 2026-05-19-005 F001)."
+    },
+    {
+      "imports": [
+        "__future__",
         "datetime",
         "dontpanic_orchestrate.nested_orchestration",
         "json",
@@ -1469,6 +2304,52 @@
         "write_report"
       ],
       "summary": "Plan 2026-05-08-002 F002 — lock-time advisory skill-applicability matcher."
+    },
+    {
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections.abc",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "dontpanic_orchestrate.executors",
+        "dontpanic_orchestrate.executors.base",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "sys",
+        "tempfile",
+        "time",
+        "traceback",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.smoke",
+      "path": "scripts/dontpanic_orchestrate/smoke/__init__.py",
+      "public_symbols": [
+        "DEFERRED_MODES",
+        "EXIT_ENV_BLOCKER",
+        "EXIT_PASS",
+        "EXIT_SUPERVISOR_DEFECT",
+        "MockClaudeExecutor",
+        "MockCodexExecutor",
+        "SCHEMA_VERSION",
+        "SMOKE_FEATURE_ID",
+        "SUPPORTED_MODES",
+        "SYNTHETIC_PLAN_ID",
+        "SmokeEnvBlockerError",
+        "SmokeResult",
+        "SurfaceResult",
+        "SyntheticPlanFixture",
+        "WALL_CLOCK_LIMIT_S",
+        "render_smoke_text",
+        "run_smoke",
+        "smoke_main",
+        "synthetic_plan_fixture"
+      ],
+      "summary": "Plan 2026-05-19-002 F003 — `dontpanic smoke --mode=mocked` synthetic"
     },
     {
       "imports": [
@@ -1928,19 +2809,19 @@
     {
       "features_count": 3,
       "id": "2026-05-10-001-feat-printing-press-adapter-skill",
-      "status": "active",
+      "status": "completed",
       "title": "Printing Press adapter skill — DontPanic prescribes PP for external-API wrapping"
     },
     {
       "features_count": 4,
       "id": "2026-05-11-001-infra-state-projection-adapters-meta",
-      "status": "active",
+      "status": "completed",
       "title": "State-projection adapters meta — orchestrate plans 010 + 004 via DontPanic itself"
     },
     {
       "features_count": 4,
       "id": "2026-05-11-002-fix-harness-frictions-v3",
-      "status": "active",
+      "status": "completed",
       "title": "Harness frictions v3 — fixes from plan 2026-05-11-001 dogfood"
     },
     {
@@ -1958,20 +2839,104 @@
     {
       "features_count": 4,
       "id": "2026-05-19-002-feat-install-ux-hardening-v0",
-      "status": "draft",
+      "status": "completed",
       "title": "Install UX hardening v0 — doctor profiles + init + smoke test + HTML report"
     },
     {
       "features_count": 3,
       "id": "2026-05-19-003-fix-plan-schema-orchestration-fields",
-      "status": "active",
+      "status": "completed",
       "title": "Plan schema mismatch fix — orchestration / child_charter / commit_policy"
     },
     {
       "features_count": 5,
       "id": "2026-05-19-004-feat-architecture-map-with-drift-v0",
-      "status": "active",
+      "status": "completed",
       "title": "Architecture map with drift detection v0"
+    },
+    {
+      "features_count": 2,
+      "id": "2026-05-19-005-feat-dogfood-showcase-artifacts-v0",
+      "status": "completed",
+      "title": "Dogfood showcase artifacts v0 — visual architecture maps + plan validation + drift on our own repos"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+      "status": "active",
+      "title": "External integrations bridge v0 — PM-tool category contract + plan sync"
+    },
+    {
+      "features_count": 5,
+      "id": "2026-05-21-001-feat-capability-manifest-consumers-v0",
+      "status": "completed",
+      "title": "Capability manifest consumers v0 — make doctor, adapters, and plan refs read the manifest convention"
+    },
+    {
+      "features_count": 0,
+      "id": "2026-05-22-001-infra-external-capability-operations-roadmap-v0",
+      "status": "completed",
+      "title": "External Capability Operations Roadmap v0 — humans and agents configure and operate external integrations through a single discoverable surface"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-22-002-feat-capability-status-v0",
+      "status": "completed",
+      "title": "Capability Status v0b — setup_steps extension, status CLI, lock-time advisory sidecar"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-22-003-feat-capability-center-v1",
+      "status": "completed",
+      "title": "Capability Center v1 — static dashboard review surface and read-only MCP projection"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-22-004-feat-capability-guided-setup-v2",
+      "status": "completed",
+      "title": "Capability Guided Setup v2 — execute safe setup steps and hand off human-required work"
+    },
+    {
+      "features_count": 0,
+      "id": "2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0",
+      "status": "completed",
+      "title": "Install lifecycle reconciliation roadmap v0"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-23-002-feat-install-reconcile-foundation-v0",
+      "status": "completed",
+      "title": "Install reconcile foundation v0 — install snapshot and capability drift check"
+    },
+    {
+      "features_count": 0,
+      "id": "2026-05-23-003-infra-visual-operating-console-roadmap-v0",
+      "status": "completed",
+      "title": "Visual operating console roadmap v0"
+    },
+    {
+      "features_count": 5,
+      "id": "2026-05-23-004-feat-operator-console-v0",
+      "status": "completed",
+      "title": "Operator console v0 — local what-now dashboard"
+    },
+    {
+      "features_count": 5,
+      "id": "2026-05-23-005-feat-dashboard-project-selector-v0",
+      "status": "completed",
+      "title": "Dashboard project selector v0 — multi-repo operating console"
+    },
+    {
+      "features_count": 0,
+      "id": "2026-05-23-006-infra-planning-intelligence-roadmap-v0",
+      "status": "active",
+      "title": "Planning intelligence roadmap v0"
+    },
+    {
+      "features_count": 3,
+      "id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+      "status": "completed",
+      "title": "Plan intake and readiness v0"
     }
   ],
   "schema_version": "1.0",
@@ -1980,69 +2945,76 @@
       "name": "architecture-snapshot.schema",
       "path": "claude/shared/schemas/v1.0/architecture-snapshot.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "audit.schema",
       "path": "claude/shared/schemas/v1.0/audit.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
+    },
+    {
+      "name": "capability.schema",
+      "path": "claude/shared/schemas/v1.0/capability.schema.json",
+      "validator_present": true,
+      "version": "1.12.0"
     },
     {
       "name": "environments.schema",
       "path": "claude/shared/schemas/v1.0/environments.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "features.schema",
       "path": "claude/shared/schemas/v1.0/features.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "objective_contract.schema",
       "path": "claude/shared/schemas/v1.0/objective_contract.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "plan.schema",
       "path": "claude/shared/schemas/v1.0/plan.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "signoff.schema",
       "path": "claude/shared/schemas/v1.0/signoff.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     },
     {
       "name": "state-snapshot.schema",
       "path": "claude/shared/schemas/v1.0/state-snapshot.schema.json",
       "validator_present": true,
-      "version": "1.9.1"
+      "version": "1.12.0"
     }
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-20T04:16:23Z",
+    "computed_at": "2026-05-24T01:11:10Z",
     "file_hashes": {
-      "claude/shared/VERSION": "0ab4fa190ca1b1d1f630ac87cf34672bfbaf1395d0148c7568d38e58335b8d68",
+      "claude/shared/VERSION": "c92df6bdde330be219d62f48ec6490b01889436f2f59027aab200e74de619168",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
       "claude/shared/schemas/v1.0/audit.schema.json": "d3462cce08e4f731ab216410492e93d11ab14a4115caae0b77762edba5ed0abe",
+      "claude/shared/schemas/v1.0/capability.schema.json": "6bd3c7992c94242f868e7dd2582c553916377669d1c697d58b68ccccf5fcb2ce",
       "claude/shared/schemas/v1.0/environments.schema.json": "1e93c4a621dea5cffd3dd7e653baeb69efade7b5532ee0c6fb7673db3ce2460f",
       "claude/shared/schemas/v1.0/features.schema.json": "77c96c028def96da7e702fdac587e6dbf61f57c405a066acc59faf3f5672a6d2",
       "claude/shared/schemas/v1.0/models/audit_model.py": "a5b6fd43c5c02d10de90c571a9a48b1a1fb913f48e87411dcbada91b9431d8c4",
       "claude/shared/schemas/v1.0/models/environments_model.py": "7fa1a98bd0e90673ad7be3cd3953441db12c65be1930b5920be0d05289434bb9",
       "claude/shared/schemas/v1.0/models/features_model.py": "7a327754893ab679a23ae52ca40491f0786a2a364a53f37de4f94cb7613ef745",
       "claude/shared/schemas/v1.0/models/objective_contract_model.py": "50221e85c4be0e86d1ea5c6a59be2843557d2a13fd9fbcd6f126601515139a8f",
-      "claude/shared/schemas/v1.0/models/plan_model.py": "1bd0789899f9bac9715d47a733dfcaf44c16fc2f081637178b872407ab27de9b",
+      "claude/shared/schemas/v1.0/models/plan_model.py": "6f545c9dea92fed6f610fa5982bf33b1b26e2abb03bd679b365a7dfcd5a30c3c",
       "claude/shared/schemas/v1.0/models/signoff_model.py": "3fdeb3a0bad28c3127325902348012bbccd021e09dad1539b2461ceeafabf98c",
       "claude/shared/schemas/v1.0/models/state_snapshot_model.py": "0fed1a040bfffe24bb7caafe345e176165f68262f31a9f21bb95ad0bd9864f33",
       "claude/shared/schemas/v1.0/objective_contract.schema.json": "9d382fa2ffc5c0b12f42e61168c6af92b5b704d1a62bf815e838e373569557b6",
-      "claude/shared/schemas/v1.0/plan.schema.json": "43501d35962f1e731841fb46758dc672f88f6ea978e7f3dad13137d638c3f45c",
+      "claude/shared/schemas/v1.0/plan.schema.json": "0e05aafc9433a64db9e3e7623893b676ab11935d4c78cf494d6b024cf4facc3b",
       "claude/shared/schemas/v1.0/signoff.schema.json": "9110be52b08682341bf0aa34d850f5211f974231423bf5c5d7fa920548b6604a",
       "claude/shared/schemas/v1.0/state-snapshot.schema.json": "ba83815739e8aaee0c0f72e3a07c22084cc923754cc34c367fc9fd6e4e5a7e91",
       "claude/shared/schemas/v1.0/validate.py": "4f7b4ffce9fb20eba8547944a6907b99e3d95ebe76a20ba29ce45e9e928b02db",
@@ -2126,27 +3098,53 @@
       "docs/plans/2026-05-09-002-fix-verdict-status-environmental-frictions/plan.md": "f5d9f4712b345f8cbff296b1b519feddc1203bf5c039194405e1ef1a28d9cf99",
       "docs/plans/2026-05-09-003-feat-state-projection-v0/features.json": "09478fb3154c2aaa8e22a5261aebc39415d396ea0ade0e420c4929703579972b",
       "docs/plans/2026-05-09-003-feat-state-projection-v0/plan.md": "8542671d0503099f4a73907d97b3b03c8ef07b2de7da8e2b09d0fc8a55bfd90b",
-      "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/features.json": "a8c66c5b5a7efd227356191ea5fe3821a25deeaf314a55d965b669d090923f46",
+      "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/features.json": "3ae36ce4308f4bd3676051155d877ff9ba77a3e9fdb1cc6e840759633214a57e",
       "docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0/plan.md": "6ae7174a9caf26ebeb6068bfc3f9a0b44d18d9baee62a3884d6339b79de4ccf0",
-      "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/features.json": "1579939e2aff23de29a328057984b0495019813b6f2f78e2122ef4a8809dcf3d",
-      "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/plan.md": "f2ca3f9e71f1a73705a4d688531ce9c95617b60c9ac1f4ff00d06764b99e8f65",
-      "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/features.json": "f9eb9125b0d1b29b26d83f23a0675194af56872742f2b7d871af9852363d1b73",
-      "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/plan.md": "9f3838e3511e4ceca80bea105b8d3ce8968345c57e6c2ce5e720452c6e201fcc",
+      "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/features.json": "e34b16c81602fc2488d49c083e114981a54003df12a5a34703c9f96d99cfc877",
+      "docs/plans/2026-05-10-001-feat-printing-press-adapter-skill/plan.md": "e6e7750bdde63f8e450139c67a111457b518f5da571826c65133e8483ea16e29",
+      "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/features.json": "cf2d4a52c3a7e296f0f2bceabe77b5109abcec0f0fd0412f88803271517f19f8",
+      "docs/plans/2026-05-11-001-infra-state-projection-adapters-meta/plan.md": "5bdc3965cb6876fdc14fd0598f2cd0894f6c259b6d4596da05ee4f8282c52c60",
       "docs/plans/2026-05-11-002-fix-harness-frictions-v3/features.json": "42b569c3b740e38c0d30dbb325cd958aea04f93bfecb16ab9068e54c2f6d4c41",
-      "docs/plans/2026-05-11-002-fix-harness-frictions-v3/plan.md": "90107532b87cde22f3a3a858aed2488fe010fe194f15866faae2aad58a2d3aba",
+      "docs/plans/2026-05-11-002-fix-harness-frictions-v3/plan.md": "ebb66fd917511bc18fc69e06d76a8dffa1c4305750485db4e10a0b62e0fd7711",
       "docs/plans/2026-05-12-001-fix-harness-frictions-v4/features.json": "db9d2cb0ae6e9653e86b2cf204a671d7b7e16d0342bef845596e0f41faf2f11e",
       "docs/plans/2026-05-12-001-fix-harness-frictions-v4/plan.md": "67f4591231c4b5647e881117a4dcd86d819fd5a198b00550b6d4691c3b909c5b",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/features.json": "75a8448d89b7c5313f41200b1a4c1af976b988aacfd6833e6f7095cfa7cbde33",
       "docs/plans/2026-05-12-002-fix-harness-frictions-v4-1/plan.md": "8ec5179ed3d18eb018be9c244a54532f69819d1fc4c5b5924c462e9d379f6b03",
-      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/features.json": "ee5cab01d9d968f6a96f030ee2d227cbe25c16c02b36897dbaf4a893ff2270c8",
-      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/plan.md": "e0d49538d063292f5b444655195fb24abb1fc5c8eec9f94e98a3332285f29f28",
-      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "6523a79523f8538d5ba8e3db0f81af09b691b50b8cd18a437543dcc8d9d155ed",
-      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md": "60b89d82a76a55e3bdb5037f1a188f91c09850df546dde04d9034e960974359a",
+      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/features.json": "3ac63033435cad2d7e64e38cd5a249d6825df73b4e528b662ff503aaf3f526c8",
+      "docs/plans/2026-05-19-002-feat-install-ux-hardening-v0/plan.md": "5c26ff6af6b6d166dcdba4c356a4f98a43023660a8a401ec78f2babbd79e8b81",
+      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/features.json": "35f4c9dbc7402133caf044876cc9592fae1f25fea46721c940252b0db16d09ec",
+      "docs/plans/2026-05-19-003-fix-plan-schema-orchestration-fields/plan.md": "dc61f357c526f464fe575a771a2ac459fc03f93e5b4edd8a2c7641e63e5129a6",
       "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/features.json": "e6a6501307422a300b522df9b0d2fd441653f8df9617db928ef375ac5088da87",
-      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md": "344e84b174b1e35a48dc43a305bf338a460a9c949cc3957c4127869cc0c02aae",
+      "docs/plans/2026-05-19-004-feat-architecture-map-with-drift-v0/plan.md": "fb503fe580088555c1659fb1e2474dbee6d0534d0d94baa4a796b93cd01d7616",
+      "docs/plans/2026-05-19-005-feat-dogfood-showcase-artifacts-v0/features.json": "2a5e5566b2b509f5dcba52efff0497242f6650b9891b43edc798fe55c192fc62",
+      "docs/plans/2026-05-19-005-feat-dogfood-showcase-artifacts-v0/plan.md": "0155997b29a06594f36830435bf3dbcafeeee98c2e70f681362b41cbb47bce62",
+      "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/features.json": "b408872664b3fe51f1a151618573442b37fbb04b7a2241dd17568c0a67aa9ed7",
+      "docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0/plan.md": "fb4ca5449e863c7a0cb899c251d291233ce3eaaf6824c5a0e442e8524bf21e52",
+      "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/features.json": "2cc1b235aead7aafe56fa792407b8782c120eb9c80da1cbc0d90f55dd35dd41f",
+      "docs/plans/2026-05-21-001-feat-capability-manifest-consumers-v0/plan.md": "677ea403e01adf2da55cc2cd5b93bf19d5690e43c1139e2000623c4544666a1f",
+      "docs/plans/2026-05-22-001-infra-external-capability-operations-roadmap-v0/plan.md": "90d16b36d26280f8c8e1bc652dbee35dbe9f3515a959ca54636a1dd1ad8d1ca0",
+      "docs/plans/2026-05-22-002-feat-capability-status-v0/features.json": "c2f45928f6f1878420652aef937a62d34e5f8eddd80589c8053159fb73a61398",
+      "docs/plans/2026-05-22-002-feat-capability-status-v0/plan.md": "6d4bed93e4b8a2d3fadd133f6cb81244e5549eed4ebaba8092ac81e15ad4cc31",
+      "docs/plans/2026-05-22-003-feat-capability-center-v1/features.json": "f5fb7118c250f1d2ea753ac6ad99667322b4e6b6f0e7fe07e35ada72b556b4c8",
+      "docs/plans/2026-05-22-003-feat-capability-center-v1/plan.md": "c7d2f57fbee49c440178816456fdfeb66df86b139ada82f54703f99e8c18d53c",
+      "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/features.json": "730eeb59a18ddf71cd543704698c74f3bc62a2f3a7c3c0c75db2a207e31bdf45",
+      "docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/plan.md": "d35f4eef4413915faa1e4bdd580d9ef15af23bb15aaaa87bac140995c4a8f93b",
+      "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/plan.md": "f989b82ff9e925cd9da41e9b21e29e795c86d30e81a7abbe0fa90c4523378a3d",
+      "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/features.json": "55c007872e4cb6d51fbdb792a46d7a6bcd9810ce3e8baea44edbc21f891d4ba7",
+      "docs/plans/2026-05-23-002-feat-install-reconcile-foundation-v0/plan.md": "127f132918c3f78de04511da7927debd7d2055496b9c0c68fce1a9ba52280283",
+      "docs/plans/2026-05-23-003-infra-visual-operating-console-roadmap-v0/plan.md": "bc4cbfdad150b4a55047304d700d295ae76c54433daa716c5464097418b7d4c6",
+      "docs/plans/2026-05-23-004-feat-operator-console-v0/features.json": "4b2003cc9f005d75d7173b8aaf6992d4c3387f9236daba6cdc11f22acb3242f3",
+      "docs/plans/2026-05-23-004-feat-operator-console-v0/plan.md": "97497a7a4e4c0ee94f6f3b5e25d9dfdbc91e5b83656b2211061d1f6e00ea97d3",
+      "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json": "693b0604c73c645a98badb9ecfe03a2596dbdc750a1ccf3d6e59e88f44335c2a",
+      "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/plan.md": "8554a1fd541df1003e45c2f31711f25e4a8f2fecfff507581c1ff5667edf1706",
+      "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "aa32fc481272776295ad7e7bf6359c21ff21b24649d7ae8002ec2632289fbe62",
+      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "148e8fab00b567044f0f7630f1474202fee589d85726209cbce04f9a160d8ce4",
+      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "468e5462c551bf556cab443bfeff07baefb6183ea94fa70ab0eb20519e36b44b",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
       "scripts/dontpanic_orchestrate/active_supervisors.py": "4e0a75b8435e0e0a99e5f5259dd75578f2c85a889474f101ed48262132fe5408",
+      "scripts/dontpanic_orchestrate/adapters/__init__.py": "294d2e3ca920d18afff2cabf83b6aae5b7d846699abe3d468c30eec98c72dec8",
+      "scripts/dontpanic_orchestrate/adapters/linear_adapter.py": "d58a7f3e1b38cbd18e58a863f19f324264278551d4f8d8d9f61de3b9591754fc",
       "scripts/dontpanic_orchestrate/agent_manifest.py": "247cfefd2a5bc21c4904a24c6acb584b19e5d0096a2d989149fb3e0dd09bce8c",
       "scripts/dontpanic_orchestrate/architecture.py": "f1d1d68742d38c360ee60afcf831216133fbee83ad4a77961efbf3a2338564c1",
       "scripts/dontpanic_orchestrate/architecture_hook.py": "25b3818a324444f5610ec7539ab560ce6ed47686a24ddf55f3167779fe763313",
@@ -2155,8 +3153,14 @@
       "scripts/dontpanic_orchestrate/audit_writer.py": "5d1c762c312e8ae4a58ffc605fec79314922cb3775d184338f6bd4a5d6597480",
       "scripts/dontpanic_orchestrate/auditor_taxonomy.py": "91b2981203a0cd125dfed077d6e0dcc37137058b2e895c91e427c4d18df9a15a",
       "scripts/dontpanic_orchestrate/calibration_loader.py": "31b0cc76eb596bdde4ab9a189c543d78ace6bad8c1bcd76f60410d3385d00a96",
+      "scripts/dontpanic_orchestrate/capabilities.py": "3103174a8f1e66e43ef191083fcd1319c0e815143792c0381f0cece79a8c3f8a",
+      "scripts/dontpanic_orchestrate/capabilities_lock_sidecar.py": "a0a10c9353fc4144d383de9afd4a2084a5b83580d24f40efe5e43f8c7d2d75ca",
+      "scripts/dontpanic_orchestrate/capabilities_setup.py": "211d387a56f4463f58337aa5b907c64a3f9fad017586c0c93907be526b14d8d4",
+      "scripts/dontpanic_orchestrate/capabilities_setup_evidence.py": "6855f59ccf68be7f5a6d672ac007f9be4cfd4580dbdf1f4b42387901ed0accbc",
+      "scripts/dontpanic_orchestrate/capabilities_setup_runner.py": "8c9f4ef87aa1286652d3767815c5f6535301ae2948de06b8f37a5333b399d3d3",
+      "scripts/dontpanic_orchestrate/capabilities_status.py": "42abad2c8461667c20279d89c40b025e81ddda54562ab0881416a8ad2c466d9d",
       "scripts/dontpanic_orchestrate/circuit_breakers.py": "20b51629a021346516c349f44469509498d6d2cd21838407ede6efebd68369b3",
-      "scripts/dontpanic_orchestrate/cli.py": "b97e41d79b509773a31932c46a3d6450af5708cc43afbb2fd5e80f86b11eb553",
+      "scripts/dontpanic_orchestrate/cli.py": "96923360333a299bf68064c92b78b17a01e015a9eeb56752d697a10d098074f9",
       "scripts/dontpanic_orchestrate/closeout.py": "e0b4a65d5b05a1b6b1c2339add1b833366d98a0a8a5570a8c02fbf390a346752",
       "scripts/dontpanic_orchestrate/command_guard.py": "53ed08234b3c4472b12d4c468291151ffd0542b78f06405baa11482cdc0cb1d6",
       "scripts/dontpanic_orchestrate/completion_auditor.py": "5eaf04e6e95f9b222617bfb773ae58f3908db79db06acf5b234cebdb154cbe15",
@@ -2169,6 +3173,8 @@
       "scripts/dontpanic_orchestrate/config/roles.py": "38dbc1a9c881fc4f9e734a3f00668dc44d5f3f1a8b29716b9354bb41914fff2f",
       "scripts/dontpanic_orchestrate/config/runtime_evidence.py": "742d8cd334740609547e5658812e7e5cdc6ff82de2061ba1ea3ef794e9c469a9",
       "scripts/dontpanic_orchestrate/config/setup.py": "84ed268320387c0f0ca3c99b34ce67f80368e1bfdcf0c54a38ff4cff5e7df156",
+      "scripts/dontpanic_orchestrate/dashboard.py": "ae0cd7994ea2e01abbcc1bc53c06b0602bdf5bd12f948d1bd49e4cec46465082",
+      "scripts/dontpanic_orchestrate/dashboard_relevance.py": "f01fffe7ae31ed9eca5cac9ad261329ea71355f348f67b1b0c4f456772e0af87",
       "scripts/dontpanic_orchestrate/dogfood-validation-output.txt": "f352cfa67bfc258374f7af8812f431c6a66e6b14e0429f5ae89f3e00bfb37316",
       "scripts/dontpanic_orchestrate/ec5_classifier.py": "3a0c7df5c5e425d9768c63637ff0aff88419c0ddab759e09a40d00b14836947c",
       "scripts/dontpanic_orchestrate/environments_loader.py": "975e43d1a331e219919549f3fb5a4c8b391c465df0e23f769636bf1c47be6787",
@@ -2177,27 +3183,44 @@
       "scripts/dontpanic_orchestrate/executors/base.py": "3b12e96785112504ab7a8a02cc8089229e15db4e9800d4c72594b62d45bb98bc",
       "scripts/dontpanic_orchestrate/executors/claude_cli.py": "c5df9b8aa95939e2afb14eb329ddc4a7afcd3ad0c1e90151aa37c3f66eec314a",
       "scripts/dontpanic_orchestrate/executors/codex_cli.py": "b4740a11c011da9a18cb40a58614b0b8c0e4cd8a070d784ef86970f297d37a51",
+      "scripts/dontpanic_orchestrate/external_refs_sync.py": "8c3fc89ad5304fd14cbeac6a3d0f1e6fa287622c58f4c8a995cb6c6876b81637",
       "scripts/dontpanic_orchestrate/firebase_client.py": "90324f0496e9025e0641a0ab8b7f839986f2204c635570df12584d487218b0e9",
       "scripts/dontpanic_orchestrate/gate_pause.py": "dcd731b0f67ed2e9e5dc8cecf02b540913a6114c7acdd4cd7d39a5315f420eb2",
       "scripts/dontpanic_orchestrate/git_state.py": "1c764f65a16bbeeaf9814fa0ff25f7fc5bde0ccc5e08af9e529b8225f61db03b",
       "scripts/dontpanic_orchestrate/global_config.py": "8393898c726e05fdccc1138019fc293b63226a3eb0fb507e608acaeb3c5fa4ae",
       "scripts/dontpanic_orchestrate/inbox.py": "0924e2ca657c0c32a5113815396761e42c9ba53e8916e617ab4b79b7ec0ba7e2",
+      "scripts/dontpanic_orchestrate/init/__init__.py": "39666a63cb966885a1e4b5459700c79df9b0a0b1e4460a997275b9ad14b6183f",
+      "scripts/dontpanic_orchestrate/init/report_html.py": "1b3535f19353b87f353de7bc95b1265e8f8184ce07818f00d1616fc8b5d42936",
+      "scripts/dontpanic_orchestrate/install_snapshot.py": "cbf61b971bef0d621915422fe11b08eb3fb03f8bffc0caa2d73b031e2dc6dc8b",
+      "scripts/dontpanic_orchestrate/integrations/__init__.py": "4ef9444cc347b59d220de5ad60ecb22f3673e1ed233eea22bb308aa3b0c783f4",
+      "scripts/dontpanic_orchestrate/integrations/adapter_registry.py": "5b0d857104672a68f2afd9a6d660abce39a6f5ecec67987e9b7e9f20d7bfafc5",
+      "scripts/dontpanic_orchestrate/integrations/linear_pm_tool.py": "8a8ee349a896fb7c2c8fd6ddd69c6ca26353235a12e702fa162e8e094384ddde",
+      "scripts/dontpanic_orchestrate/integrations/linear_pp_adapter.py": "091fa83f19d3fe2af280fcf96ed51cd2dfa1dc196a997561e922e1974b4323ed",
+      "scripts/dontpanic_orchestrate/integrations/pm_tool_mapping.py": "c58ca0665fb61cc0336fbe1c6b55c9fa3d5ad0bae1ecc68c6e2cb506cf8ffa2f",
+      "scripts/dontpanic_orchestrate/integrations/pm_tool_models.py": "d4f8c262e5ce40afa73117141f46fed4afe2ea254b366d9330490500949fbdb9",
+      "scripts/dontpanic_orchestrate/integrations/pm_tool_sync.py": "123efb149f4d3dc78e095a836d19f18b117afb0012b6c21edb0e9f1c07c14a61",
       "scripts/dontpanic_orchestrate/interactive_state.py": "27a078f1a43e901dfe06a81d5bf7ab3ca071669bba0f7422a8f533257a53f051",
-      "scripts/dontpanic_orchestrate/mcp_server.py": "ab7c31cc9320d3eeb9e91ae3278a4557188d4c5a311dd4c6f128d7c9d9f587cd",
+      "scripts/dontpanic_orchestrate/mcp_server.py": "233d92ac58c77f39cbb6d4fba56ed118915bbbaf642d897193191ed2537bf8de",
       "scripts/dontpanic_orchestrate/nested_orchestration.py": "1da4a60b145bb5471ff16862db115dbd2959a455aaf6317f7345b4bfd493f699",
       "scripts/dontpanic_orchestrate/notify.py": "ea16456cb8c0e2a23af2af13f1c56ca140ab70a05e2c3d85a437958a04904b9d",
       "scripts/dontpanic_orchestrate/notify_discord.py": "a0ad66ced79ecc730d01c310acb9080c69cd51e31f94f55dc472eaba8c172c68",
       "scripts/dontpanic_orchestrate/notify_event.py": "42410b12d8230da601df2a9fe5799a0db8cda11049f84c832790583b73f3d420",
+      "scripts/dontpanic_orchestrate/operator_console.py": "e8b9ac4d15887b645650bdc9220bef5336111f9b5dfd85adf53df1330b280811",
       "scripts/dontpanic_orchestrate/patch_completeness.py": "3ddfb385aa33d5f2098cd9481301fb4672ad6d3fc1b437c810fd52dfc23fea18",
       "scripts/dontpanic_orchestrate/patch_completeness_gate.py": "b9ceae360e4b279d729f2e56da7c7cee8c10577dde7254ab9bfa29a348a1ab87",
-      "scripts/dontpanic_orchestrate/plan_loader.py": "49bc24206c5ac86de33fe5a24aeb256ce3d9099e9442e06fe12a39af792e6918",
+      "scripts/dontpanic_orchestrate/plan_loader.py": "de82d47c5938f6a817f1300d10aa598357909cafcdbb8ed3b287d8596408e0d3",
       "scripts/dontpanic_orchestrate/plan_target.py": "265bbcf0afa2c528836366a339e70aa616c33169eb347d7ed609152d2caa53f4",
+      "scripts/dontpanic_orchestrate/planning_readiness.py": "cb106e7f7c3351a81ab0ae8c3f0719704194d27bfc5798262e5b6248d0714d86",
+      "scripts/dontpanic_orchestrate/prereq_registry.py": "b1cae5c00b3448035d3f3d379ff22b4ef472de5832a02756a2fdf5537274d686",
       "scripts/dontpanic_orchestrate/project_config.py": "850da67eab73da49b3d129b1c693430376c4c4ed1e4e84e398afe5a8cb1f0bb1",
-      "scripts/dontpanic_orchestrate/projects_registry.py": "034fc598688458ae0ecdbb9341034c641939024a0e6c0b8f7ddec418da5337a4",
+      "scripts/dontpanic_orchestrate/projects_dashboard.py": "064f69df64e38df3f361be48981fdd2f30a1352da08987d6aa39c21c03962ff8",
+      "scripts/dontpanic_orchestrate/projects_registry.py": "ec42395d8080526e18f4b6fb1014d0bd48008b170206f6e104690325910ab148",
       "scripts/dontpanic_orchestrate/prompts.py": "c763b581024f0bfb358005a0ddedfb4eb752b4bda88f677a56687eb0b502ab9e",
       "scripts/dontpanic_orchestrate/prompts/completion_audit_prompt.md": "e3ef72882da0160ba7b6882fb7c35442cb143294225a610698ae740461643e6b",
       "scripts/dontpanic_orchestrate/quota_admission.py": "7f4606b4bc32618f5febadfcd6fb65d6cbd6ab61e0e0bb94d2f78b4e9d8aa515",
       "scripts/dontpanic_orchestrate/quota_caps_loader.py": "c2f988ca63c2c47486c3cd21567af7d6e48934dec9891a4541bf38bfa6cff78f",
+      "scripts/dontpanic_orchestrate/reconcile.py": "6ce81834719615ea483346783163c6549a72a20040e1fad12d57255fdc08e8b5",
+      "scripts/dontpanic_orchestrate/release_impact.py": "92f81b81a38d0ecbf29dd5e0dce3a777184069ee4f4087e4bb5beae72e92e46b",
       "scripts/dontpanic_orchestrate/roundtrip-output.txt": "02350c27823b353f3fd84c64c995cbcac6bc135eeeea9c57cceaa1fc7e8d1546",
       "scripts/dontpanic_orchestrate/runtime_evidence/__init__.py": "7e5e76bab8acab687379c3c70f446a748c51eae9cb4d2f18994cf07d6184284a",
       "scripts/dontpanic_orchestrate/runtime_evidence/android.py": "71295f16d285a055bac18fdf4d470d42f102b72a5cbab867bbd97e99ae1e6c70",
@@ -2205,11 +3228,16 @@
       "scripts/dontpanic_orchestrate/runtime_evidence/harness.py": "607b48f7d7b65de46b16ab505e23cd7ff9783cda94f10b32907d082e1174db7e",
       "scripts/dontpanic_orchestrate/runtime_evidence/ios.py": "7bfbe95d5d425699fe735a0a7a5818ef8655808fc10c825865eb23afe03accc6",
       "scripts/dontpanic_orchestrate/runtime_evidence/web.py": "fca007b35e7707c8561f5aa77ca7bdfa89f42a123a9a99c9cf72b1f4344119dd",
+      "scripts/dontpanic_orchestrate/showcase/__init__.py": "4b4d0f61160f2c0d275d7be3d7074e85e4165aa29bb905a4dbad4bb07d7313ec",
+      "scripts/dontpanic_orchestrate/showcase/config.py": "a0c4082ff30b3b1d00a5661f27074fe888cf69895075c593ce27c6cad0ba5e4a",
+      "scripts/dontpanic_orchestrate/showcase/generator.py": "362c97765fdae457d131efaaab0dd2c7a76e30ccac5faded5578804ed470510c",
+      "scripts/dontpanic_orchestrate/showcase/redactor.py": "cd585319909740accb5b76234c9d82cb73617ee074e97e7b278486b3e1363712",
       "scripts/dontpanic_orchestrate/signoff_writer.py": "cf414f8e4451e99bf576840493b065b2389c8ff571e51a6a5823688b9e2e00f4",
       "scripts/dontpanic_orchestrate/skill_applicability.py": "726bd23519dfcdd880034bc1b9bfeaf30a889a8120f22b4619a4f6c16aa6ef90",
+      "scripts/dontpanic_orchestrate/smoke/__init__.py": "3a9557e4bc842ab55029209b74b6062d63f9b60b059a5f317216ede17647aea6",
       "scripts/dontpanic_orchestrate/smoke_test_storage.py": "5bf9f17c8149051f69f174ae95bcd0e7d2857afb41b94a62cc28ce11b29c3db2",
       "scripts/dontpanic_orchestrate/state_cli.py": "2e1bb4dba8b4eb63e9e5c501f3c7fdcdb15a27a1320229409747a10191867ae3",
-      "scripts/dontpanic_orchestrate/state_projection.py": "ea9c7b53d0e0fc95775386bb16d29f532c5afdb4851621ff5f8801deba59d1d6",
+      "scripts/dontpanic_orchestrate/state_projection.py": "6aff5807f28c06e5de085da2a3e18ffa9dbb581176fbd2b82aa5ce5f3e62aa13",
       "scripts/dontpanic_orchestrate/subprocess_runner.py": "e37041d20ba2eed3514b2ad80d0da255ef6c7330bc190916f68bdb3d75cc6e60",
       "scripts/dontpanic_orchestrate/sufficiency_auditor.py": "e23dd476571ec458d3e4c898b9c6614ce629b4524e0c4a2352dc4a3e0240e3fc",
       "scripts/dontpanic_orchestrate/sufficiency_gate.py": "3b82b8e0292989f28bdaddee44b97aeeee4b46b8dd02d88ad4c526c63f08cb25",
@@ -2219,6 +3247,7 @@
       "scripts/dontpanic_orchestrate/tests/conftest.py": "97dd647ed31d8330793e2ed948e967d0a4b2811ea60eabacae00f4545f263b56",
       "scripts/dontpanic_orchestrate/tests/fake_cli/fake-claude": "00a1582800802ae4fdd302210333a14d72724379829f61a8bde87df13c609f1c",
       "scripts/dontpanic_orchestrate/tests/fake_cli/fake-codex": "e35b1d92d2f2916401863fc7486d328bba00fe0bad892836a5c3033207e9e337",
+      "scripts/dontpanic_orchestrate/tests/fake_cli/fake-pp-linear": "450a2764265748dc61a553c788e3d527a9e391faebf7cf17c3b78324e8c285b0",
       "scripts/dontpanic_orchestrate/tests/fixtures/codex_stream_dogfood_001.txt": "31164fb2f47a458c5255e5d062cef6ab7be35f220073e7fa7c15bce637204111",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_android/anr/traces.txt": "af691ceea4eda3b0c2baad42041a598babd122a47ed68140206d42d0708b5ceb",
@@ -2237,6 +3266,7 @@
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-console.txt": "db01aa8202c2f1a05e7f18435de4b8e3f9276516d56a5c03f4cfa28f6ee2d690",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-dom.html": "33d47ae50455893d7fbd6330d5bf3f2611f760d88df076509ce35b86bfe6b3a9",
       "scripts/dontpanic_orchestrate/tests/runtime_evidence/_fixture_web/sample-network.json": "ca5e712169f666b43010ec6062e3f811fe2a1269b20f7f18aca8a3c4c2a7f96c",
+      "scripts/dontpanic_orchestrate/tests/test_adapter_registry_capability_binding_f003.py": "023dbf8c351e5aa24f74abf1423ce453e02e6e287fb5618b0bde57de71c37c54",
       "scripts/dontpanic_orchestrate/tests/test_architecture_crawler_f001.py": "be7dec5376363e7775ceb735af3d384464d2e0a097a361253a3d0301f322218e",
       "scripts/dontpanic_orchestrate/tests/test_architecture_hook_f005.py": "7e2bba3031c1dc5c21c04cf48933649c1bd7f0c6366cdc67b1700acddf964c34",
       "scripts/dontpanic_orchestrate/tests/test_architecture_html_f002.py": "98492a10450039b4db118eb89e92165c86e245c8cf75832d0f489214cb495423",
@@ -2247,14 +3277,25 @@
       "scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_f003.py": "29ba2e25aa83237a87d054aacaa0316d955586751da9d1ae161b0a14e9b8a6d7",
       "scripts/dontpanic_orchestrate/tests/test_auditor_taxonomy_v3_f003.py": "b4f4e29abdae2f745c6bdee1d2f42c6f0fb9524c7f25206a53c20d135d38bb29",
       "scripts/dontpanic_orchestrate/tests/test_calibration_loader.py": "a4671e84917ffd50ae32148d5edd71664cc088aa78e5b3aa5f4967c7421314cd",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_f001.py": "1732a24919a38f349ca8750a88286303c68227295371d07538597d5a7e1d66ca",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_mcp_f002.py": "92805a5a07678c3947032d9fe31c87119246e1480bccd594e8e4a0f7889278c8",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_cli_f001.py": "5e28093a3eca9dcb1e71789572d268ff19eefa679d95fdbb0fff54c691933949",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py": "932f8d316ef73419429bc46f71c170d2146b039d5a0fd5c8712eb1f5b8bd448b",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_runner_f002.py": "25afcc81bb68f071b6d575432a48d384df9e7df68d4bebe9dbcdaf8d36d25c15",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_setup_steps_f001.py": "f0da30fc72a8b882ce3c5932dad6ffea0adf517c210f6add7d6cbfb43edbf398",
+      "scripts/dontpanic_orchestrate/tests/test_capabilities_status_cli_f002.py": "ced91b905fb4c4f624677b655712b2282e341829883d3caeda4df880461aa988",
       "scripts/dontpanic_orchestrate/tests/test_child_charter.py": "24abafa82a30167c86689faf48d8eed1332a669df9e4b1635b6f844504995252",
       "scripts/dontpanic_orchestrate/tests/test_cli_resume.py": "9766a31a665b402c69364765729bcf921060295ee781aefa482c82a7860b57ff",
       "scripts/dontpanic_orchestrate/tests/test_completion_auditor.py": "5dfab9e642739209e263b9dcd069baadbaebe4b69454a5f2e1d4f768126135f7",
       "scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py": "fca1e889ecf685956f68a6bfbf5e3f247bf0bc72b0ada54fea4d815f2e7e5ec5",
       "scripts/dontpanic_orchestrate/tests/test_completion_gate.py": "9a8d92b7dc73bf2707cdd02afbfbe5c2739b790578c8a83648ef4fd8feb4290b",
       "scripts/dontpanic_orchestrate/tests/test_conftest_global_config_isolation.py": "5b1477de9c43b4a25c4b5bc2faf056ac5e56d30007726fb1b60a9be9331745a0",
+      "scripts/dontpanic_orchestrate/tests/test_dashboard_cli_f003.py": "301eac38fdaf2521c8b751a63c012608b5a96de1e3b78071ee1434322b5b04d9",
+      "scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py": "190ef4141577483786881deb81d30061d8c80f4f14c353fb95db6c68feb8e450",
       "scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py": "144b68be1f0e0ba73bb71989a1f0985b7c9e186c65cd56ec0774e4855ca41ae5",
       "scripts/dontpanic_orchestrate/tests/test_doctor_architecture_drift_f003.py": "d35f69c0d57ec079360e2dd0746f922be671004463f9917e0987a7a0f8a485d6",
+      "scripts/dontpanic_orchestrate/tests/test_doctor_dashboard_readiness_f005.py": "9f2136239e0486afca0da3dc6a2462821fddbe6328995acbc6ac46f8b9201203",
+      "scripts/dontpanic_orchestrate/tests/test_doctor_profile_integration.py": "4647381839f4da3355ecfc2bb8b72e420573bcc17d155842f62ee3f1d18b8f76",
       "scripts/dontpanic_orchestrate/tests/test_doctor_quota_caps.py": "ff2e9c88e3cb1c482d8d71aa18c528d63bd0551fe130aab1ae476a4b348b735a",
       "scripts/dontpanic_orchestrate/tests/test_doctor_validate_plans_strict_f003.py": "868665e296a910708dfff14072025a69569c94dee725d69916ddb066831af2d3",
       "scripts/dontpanic_orchestrate/tests/test_ec11_cwd_firebaserc.py": "5dbf3de7086b637891b3b26b5810e678940c8f86d2a11bcfe31096cd63aebdae",
@@ -2265,14 +3306,16 @@
       "scripts/dontpanic_orchestrate/tests/test_environments_loader.py": "a769ce1cfeec1f8c4237e5f8788bab33e0e2becbf1c08222545e39b69bf9efe3",
       "scripts/dontpanic_orchestrate/tests/test_execution_environment.py": "81663837c9195aba80615fab92b4b56460b6e920305cab3f24c83be77ccffeb2",
       "scripts/dontpanic_orchestrate/tests/test_expansion_b_requires_gates.py": "363626f44eccf28e54421a459c40f99d9ed55b8c7a7d4933c9718648a6b9030d",
+      "scripts/dontpanic_orchestrate/tests/test_external_refs_sync_capability_binding_f004.py": "6c5fb80165d905fd6b5a13b259b84d9185a740cc9f251edbaafd34280c03cf4b",
+      "scripts/dontpanic_orchestrate/tests/test_external_refs_sync_f002.py": "28c7a67995d1b9db27fb4f1979562dae261018f11a6ef7e51e245b6ab74464dc",
       "scripts/dontpanic_orchestrate/tests/test_f001_agent_manifest.py": "8733eb17db2ec21400f6acc04696950aff880e9093d5ee2a78cd6d4f8d10df78",
       "scripts/dontpanic_orchestrate/tests/test_f001_packaging_and_global_config.py": "25e089ac73e4ab463964dacf6ad846e75be49907a2695dd5f2936bb8d54f12ce",
       "scripts/dontpanic_orchestrate/tests/test_f001_secret_shapes.py": "962639ae6862feea0732d92030bc47ccb5db28c1c52af377be38fb07bb595e67",
-      "scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py": "9984f3d705528054d09b367f157580a93f47e695db582601caa822cdaa017ed3",
+      "scripts/dontpanic_orchestrate/tests/test_f002_mcp_server.py": "7da5272f4e11b22833ecf592b7c08b481c4d42dcb555c15196b717bd07441e33",
       "scripts/dontpanic_orchestrate/tests/test_f002_projects_registry.py": "cd40ebec4c94efe4e73cadbab74cfe9a92f5ff7e4011136efd7e3bfc7a2007b6",
       "scripts/dontpanic_orchestrate/tests/test_f003_discoverability_docs.py": "eedaad6c2295dae20d1ce71d1a0097809a1dc4f950e56d97eb7d8a76bcc71444",
       "scripts/dontpanic_orchestrate/tests/test_f003_project_config.py": "8f847162ee299062b97db14900488e6a2c126d83641244640006c280858be36a",
-      "scripts/dontpanic_orchestrate/tests/test_f004_authoring_examples.py": "045d355dfa2dda5280ef65fc18afd3edc453aa149aaed7fd256a9f0059d3a816",
+      "scripts/dontpanic_orchestrate/tests/test_f004_authoring_examples.py": "d0431cb0dea6c79d28d1c76fad083dec87ffd57ec604b6c1551a3db750b97497",
       "scripts/dontpanic_orchestrate/tests/test_f005b_executor_argv.py": "d9880c6fe4c62de55393c2cee03a194b7acdd9357bf5ecde6fbc5b5e81be69c1",
       "scripts/dontpanic_orchestrate/tests/test_f005b_permission_policy.py": "91d29bad9d1feaaf271d12bf1ea1ce0da57d47625d935d6a7da448da8cd50aa3",
       "scripts/dontpanic_orchestrate/tests/test_f006_circuit_breakers.py": "62b0ff1e597630a8a487e1abbe9acb565cb1f3f6be4aa5eaaa169978289b476e",
@@ -2285,34 +3328,55 @@
       "scripts/dontpanic_orchestrate/tests/test_gate_state_reconciliation_f001.py": "4afec2a6b4adaa947d484732e8adc1650f0b09e6606faa6d72105d66555b0ad4",
       "scripts/dontpanic_orchestrate/tests/test_git_state.py": "ecafd173ffc9b2b9393a3dc1a7ea63756b074f1a196ead6d51d7249cdd8ba41a",
       "scripts/dontpanic_orchestrate/tests/test_goal_governance_config.py": "2e1011dab683fffd66e08f716066097bc2b712fae2cc4e35db1cd4ed0fadeba5",
+      "scripts/dontpanic_orchestrate/tests/test_init_cli_integration.py": "b67704a52323d24501dcab0eaabd8e7b8f8e7dbb34c1eb49f0416c1734ea7d69",
+      "scripts/dontpanic_orchestrate/tests/test_init_dashboard_message_f005.py": "6f1836a90fade7c0a458166af301d517f1f5df4273ee2f20cdcb9c68efda8e4e",
+      "scripts/dontpanic_orchestrate/tests/test_init_walker_f002.py": "4b0de0a2b91a289039b44b241ed4229fb3b528814904168091a98af8c2eb1eba",
+      "scripts/dontpanic_orchestrate/tests/test_install_report_html_f004.py": "a8de135e923f66b719d581c68f6db9ca0a886e37bc0b9c19be918f74ba8d9785",
+      "scripts/dontpanic_orchestrate/tests/test_install_snapshot_f001.py": "a7163d6824a38b5eff85282edf38680069678d6cb8c387f7ea906e25f6451f02",
       "scripts/dontpanic_orchestrate/tests/test_iter_checkpoint_f004.py": "340c28c975fbe5a200a1910bf02605774057b61908ee1e276614709dbcb48fee",
       "scripts/dontpanic_orchestrate/tests/test_legacy_shim_compatibility.py": "bdd05cc43171ee0eba691317b484ed96bdac2c793c7a3eb1ad8a20f2984ddd7c",
       "scripts/dontpanic_orchestrate/tests/test_lifecycle_staged_gates.py": "3e5602a030aaf5e203171c9125b40bcbfa741a307334256c541ada5feb48cbd4",
+      "scripts/dontpanic_orchestrate/tests/test_linear_adapter_smoke_f003.py": "7f404f14d719bea21f2b99657c19bc2bc693304d702db7cf922d41c5ba84259f",
       "scripts/dontpanic_orchestrate/tests/test_nested_orchestration.py": "62ab66b7714c751ce0fab43da030b9e6129143d7094467b9a23fda024c602c57",
       "scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py": "d0de0d2c70bb4755012ffb1a8eb0e6d12a91bb6e06ae198611181aa7b7b85523",
+      "scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py": "ac9d49d73c073e2ad8b8b1362bc0d7fe94946ceacebba5143422490425995ab7",
       "scripts/dontpanic_orchestrate/tests/test_parent_pause_protocol.py": "bc234c3dbfbfb69ce29981bf56823fd2a5186250ea3c43857afe2fcb4a0e9a29",
       "scripts/dontpanic_orchestrate/tests/test_patch_completeness.py": "792581d2a938e118951fafb0053241580a32b4f23802c155233c89a83021d0d1",
       "scripts/dontpanic_orchestrate/tests/test_patch_completeness_gate.py": "dc8d5dc0765a2b3d4ed35c7125e27236115f2d741f8ec74948a14da9cfb862b4",
       "scripts/dontpanic_orchestrate/tests/test_plan_cohesion_f001.py": "244db378e4bb9b7464e033c39fff786930076c641ce8d37bf52455187847dbee",
+      "scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f003.py": "624737c8fb7571c8d2020f0335255be7a8cff1edd331cf8d20d58555f061e474",
+      "scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py": "b9e57c92df1266450ce720b9429e3fffa74331783e637a1271a6e0d410adf0b5",
       "scripts/dontpanic_orchestrate/tests/test_plan_schema_v19_additive_orchestration_fields.py": "31066c01b119dd8c2267e57c4ff58ec1b97479a122a0c556433cf2edceac676f",
       "scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py": "9662aa4405ff12af18ebd87e0a0ffc8dc2794ab9e5baa4c4a89e683196df20da",
       "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py": "8b4ea5a2b304dbe55c165dd9f9ecbdab5bd96ea0611597755f88a3af0eecfb1c",
       "scripts/dontpanic_orchestrate/tests/test_plan_target.py": "92680f1a90bda6448f0499934ef18f7eed3035941b34a2f1f84829a839f05f57",
+      "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py": "137faec7ccf0490fbf538efa89e9ce34e6029a9e30f9e42c578ebc3e2f068ca8",
+      "scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py": "65cdc5888014f0028e0bc2ba950609c5358518427607da09cd2dae086300b39e",
       "scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py": "600b81146cbad1050655db8bff859a0bff5b9b0b8a1c8f789e5070336f3d2671",
+      "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py": "c349dc776146c892f6c3bb0b264b9bfee7ef0bbb8c39acd08f98d5fc3ed52bce",
+      "scripts/dontpanic_orchestrate/tests/test_prereq_registry_f001.py": "3954d1d4879e08d923def19939e7a758fe756745414f07231b0e411935154095",
+      "scripts/dontpanic_orchestrate/tests/test_projects_dashboard_cli_f002.py": "a48c1c06d1a76d7bef9f50eba893c7c785e70e627705fa4fccc7c44162a9d0c5",
+      "scripts/dontpanic_orchestrate/tests/test_projects_dashboard_f001.py": "ad85d46916128bdccfa5fb7b42cca487d0ef99163676e77b9325765dda2f8619",
       "scripts/dontpanic_orchestrate/tests/test_pyproject_security_carve_out.py": "9d8d60fdd7d455f3fedef2f5f80b98dda5ebfebbf39d7b8f8b59c9e83c1cb9d4",
       "scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py": "ed5f0891ee5c3694cf5ce2d4d70928f1cfbf734ca30583ffbeb8779b84b392e4",
       "scripts/dontpanic_orchestrate/tests/test_quota_check_v2.py": "02e8708eb0a9b7157a129ffe6f41143dd1e9a84e5048e324d919899b1ddc94bc",
+      "scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py": "68494579abed7310f16e948810d07f976309546ca38ada78beba179c922579db",
+      "scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py": "296abd1966138b1cfc761b2a01c127a93dbccef3f674d3070a82755295a8e0fa",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_android.py": "88ba8ed2755c8b5c07c350f3047a57c13ed73b4b932cf155cc8a9ee25583dacb",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_backend.py": "9b50c5999a5d4a980112cef02304f5041f2b782a5fccc51b39a785a22150897e",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_harness.py": "822d641c5558a54a5e21af0c9f9bd25187726f1a871cb880894d3b08d3e203a5",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_ios.py": "739aee30bdce9e63e84a75bc6f6185feb8c30b1e5618b1f66665e9d70efca224",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_web.py": "57907a0e67dd9e29b16ea83addf61fbbfc2f9e17427caf25f759f97630696bf5",
       "scripts/dontpanic_orchestrate/tests/test_shlex_safe_command_guard_f003.py": "ced647a3e0fab4f13e03a810a47473662f3a3b32529767bbd289db54746769dd",
+      "scripts/dontpanic_orchestrate/tests/test_showcase_cli_integration.py": "bcae8369adfe92b5dc189cd1eceac6520135b22a574b0b12d8b3e8d5a93e8e5b",
+      "scripts/dontpanic_orchestrate/tests/test_showcase_docs_f002.py": "eda392ddb05da7dc2a20265e5c7290ed320a3001a348fb627208dba35ca05403",
+      "scripts/dontpanic_orchestrate/tests/test_showcase_generator_f001.py": "a1e5c431c0b213508b9cb74738fcb608c1c0e15b40c72224593d37d219f8c695",
       "scripts/dontpanic_orchestrate/tests/test_skill_applicability.py": "756a92d49688d71bd4f9f3f149c31446f79d9b689bbe72b4a890360290d928d6",
+      "scripts/dontpanic_orchestrate/tests/test_smoke_harness_f003.py": "d5bbd155c6bbd472905051fadbab7713ecbc2eb27ab7e399735249d08ac6f416",
       "scripts/dontpanic_orchestrate/tests/test_state_cli_f004.py": "ce8f3a6a27b82e85bb29bcf896db09202413bb6dfb2af946fad3f6c7e7f115e3",
       "scripts/dontpanic_orchestrate/tests/test_state_export_dashboard_f007.py": "1099aa3e4b6532e287b36170f0e1ad3b17c185095e8ec68b23c5c2dd8b0d28bf",
       "scripts/dontpanic_orchestrate/tests/test_state_governance_doc_f006.py": "6187561123e49b162a14d8c00a1a63444945488c67d948becac547a8eb2c2322",
-      "scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py": "d51cf0c391469d57ac1bd126047ca0ef6c546a26d627fd2495224515b83fef8a",
+      "scripts/dontpanic_orchestrate/tests/test_state_mcp_f005.py": "8f5ae6b025b58d7df2522c0cc8b0cda7d3769d060bf0045bd6905940b3a50482",
       "scripts/dontpanic_orchestrate/tests/test_state_projection_f002.py": "8cce0d5ecf548467e454e8e3c508cf58b5513c145d1487303961b8a15907fb40",
       "scripts/dontpanic_orchestrate/tests/test_state_redaction_f003.py": "d36ac25cca07451e9d6ee17823fa9aff60e74097a2251bc982c64c971e3e1285",
       "scripts/dontpanic_orchestrate/tests/test_state_snapshot_schema_f001.py": "d1fbcc8be18d55d1c45d84590986cb2b4755768feb6e59a6d9a704c226c83827",
@@ -2332,7 +3396,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "9fbe3361f6943fd4ebec3519cd2f714b4bf6e6bbac26640fe55976566d49c016",
-    "files_count": 302
+    "file_hashes_root": "5344846f395a59eb25fa4589412004bc72812105abb865030602929e0941657b",
+    "files_count": 395
   }
 }

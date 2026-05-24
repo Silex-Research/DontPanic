@@ -1,0 +1,13 @@
+{
+  "fixture": "active-supervisor-overlap",
+  "schema_version": "1.0.0",
+  "warning_kind": "collision",
+  "behavior": "advisory_only",
+  "verified_by": "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py",
+  "verified_cases": [
+    "test_active_supervisor_same_plan_collision",
+    "test_different_plan_overlapping_paths_warns",
+    "test_different_plan_no_overlap_no_warning"
+  ],
+  "note": "The targeted F002 suite verifies that active-supervisor overlap produces precision-biased collision warnings without suppressing unrelated ready work."
+}

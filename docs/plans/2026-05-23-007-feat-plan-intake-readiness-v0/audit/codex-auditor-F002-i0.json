@@ -1,0 +1,72 @@
+{
+  "task_id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+  "audit_id": "2026-05-23-007-feat-plan-intake-readiness-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-23T23:32:16Z",
+  "completed_at": "2026-05-23T23:35:17Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-007-feat-plan-intake-readiness-v0-52vksg88 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 493058 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1575888,
+    "tokens_out": 13289,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. The implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): `dontpanic next` is not guaranteed read-only. Evidence: `planning_readiness.analyze_repo()` calls `active_supervisors.list_active()` with default `prune=True`, which rewrites `~/.jarvis/active_supervisors.jsonl`; `gate_pause.evaluate()` also uses `_read_state()`, which writes a `.corrupt.json` backup on corrupt gate state. Recommendation: use `list_active(prune=False)` and a truly read-only gate-state path for this command, then test stale/corrupt state.\n\nFINDING (high, test_coverage): required dogfood evidence is missing. Evidence: no `dontpanic-next-real-inventory-output.json` exists under the plan directory, despite acceptance item 11. Recommendation: run the command against the current DontPanic plan inventory and save that JSON evidence file.\n\nFINDING (medium, correctness): parent/child plan readiness is not implemented. Evidence: the analyzer only emits feature readiness for loaded plans; roadmap parents without `features.json` are load errors, and child-plan relationships are only used indirectly for `allowed_paths` collision tests. Recommendation: build a plan metadata index that can represent parent roadmaps and child-plan readiness without requiring every roadmap to have `features.json`",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff -- scripts/dontpanic_orchestrate/cli.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m dontpanic_orchestrate next --format=json --max-parallel 2",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m dontpanic_orchestrate next --format=text --max-parallel 2"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`dontpanic next` is not guaranteed read-only. Evidence: `planning_readiness.analyze_repo()` calls `active_supervisors.list_active()` with default `prune=True`, which rewrites `~/.jarvis/active_supervisors.jsonl`; `gate_pause.evaluate()` also uses `_read_state()`, which writes a `.corrupt.json` backup on corrupt gate state. Recommendation: use `list_active(prune=False)` and a truly read-only gate-state path for this command, then test stale/corrupt state.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "required dogfood evidence is missing. Evidence: no `dontpanic-next-real-inventory-output.json` exists under the plan directory, despite acceptance item 11. Recommendation: run the command against the current DontPanic plan inventory and save that JSON evidence file.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "parent/child plan readiness is not implemented. Evidence: the analyzer only emits feature readiness for loaded plans; roadmap parents without `features.json` are load errors, and child-plan relationships are only used indirectly for `allowed_paths` collision tests. Recommendation: build a plan metadata index that can represent parent roadmaps and child-plan readiness without requiring every roadmap to have `features.json`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "budget/quota readiness is not actually evaluated beyond global breaker history. Evidence: `_budget_state_warnings()` only calls `circuit_breakers.evaluate_global()` and never reads quota threshold/budget ceiling state via the existing quota/budget helpers. Recommendation: integrate the known read-only quota/budget checks and add a fixture for exhausted budget state.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "the implementer audit envelope itself is blocked, not a completion record. Evidence: `audit_status` is `blocked`, summary says `DISPATCH TIMED OUT after 600s`, and no implementer commands were captured. Recommendation: rerun/replace the implementer completion evidence after fixing the above. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff -- scripts/dontpanic_orchestrate/cli.py $ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/te",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

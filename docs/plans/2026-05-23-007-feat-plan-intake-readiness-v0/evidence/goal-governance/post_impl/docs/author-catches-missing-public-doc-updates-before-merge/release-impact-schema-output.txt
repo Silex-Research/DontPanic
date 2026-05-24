@@ -1,0 +1,12 @@
+Release impact schema case
+
+Input:
+  changed path: claude/shared/schemas/v1.0/plan.schema.json
+
+Expected advisory:
+  - shared_changelog
+  - schemas
+  - no root_changelog for pure schema-only changes
+
+Verified by:
+  scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py::test_schema_change_suggests_shared_changelog_and_schemas_only

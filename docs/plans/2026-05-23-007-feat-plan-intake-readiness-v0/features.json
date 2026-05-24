@@ -1,0 +1,161 @@
+{
+  "task_id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "doc",
+      "phase": 1,
+      "description": "Roadmap-vs-plan authoring guidance. Update DontPanic authoring guidance so humans and agents can classify an ask as an implementation plan, tracking roadmap, investigation, operator setup task, or design/product specification. Include concrete decision rules, examples, and anti-patterns. The guidance must explain that roadmaps are tracking parents and child plans are dispatchable work. V0 documents investigation and design/product-spec distinctions as authoring guidance only; first-class schema enforcement waits for the roadmap's V3 plan_kind work.",
+      "steps": [
+        "Update docs/AUTHORING_PLANS.md with a concise 'What should I create?' section near the top.",
+        "Add examples for one-plan implementation, roadmap with child plans, investigation, and operator setup.",
+        "Document the rule that future roadmap milestones need trigger conditions and should not be dispatched until unlocked.",
+        "Add a short release-impact prompt that plan authors answer before lock."
+      ],
+      "acceptance": "(1) docs/AUTHORING_PLANS.md includes a roadmap-vs-plan decision table before the detailed examples. (2) The guidance covers plan, roadmap, investigation, operator setup, and design/product spec asks. (3) At least one example explicitly shows a roadmap parent with a child implementation plan. (4) The text says roadmaps track strategy; child plans ship code/docs. (5) The guidance mentions release-impact checking in general terms; F003 formalizes the concrete advisory implementation. (6) The guidance explicitly says V0 does not add schema-level plan_kind/investigation/design-spec enforcement. (7) Documentation remains ASCII and validates any embedded plan examples if they are marked as dontpanic-plan-example.",
+      "passes": true,
+      "verified_by": [
+        "claude",
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-05-23T23:13:13Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i1.json",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "claude",
+          "note": "F001 implementation summary; targeted examples test passed and full sweep reported 2608 passed, 7 skipped."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i1.json",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "codex",
+          "note": "Auditor signed off F001 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../docs/AUTHORING_PLANS.md",
+          "captured_at": "2026-05-23T23:13:13Z",
+          "captured_by": "operator",
+          "note": "Authoring guidance now includes roadmap-vs-plan classification, roadmap/child examples, investigation and operator setup examples, release-impact prompt, and v0 schema-scope caveat."
+        }
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Read-only parallel-readiness recommender. Add `dontpanic next` with text and JSON output. It scans active/draft/completed plan directories, feature `depends_on`, plan frontmatter `dependencies`, `requires_gates[]`/gate state where available, budget/breaker state where available, `requires_capabilities[]`, `external_refs[]`, and active supervisors. It outputs ready-to-dispatch features or child plans with explanations, plus not-ready reasons and precision-biased substrate-overlap warnings based on same plan/feature, intersecting allowed_paths, path-like step tokens, and active supervisor metadata. Fleet scope aggregates per-project repo analyses; it is not a scheduler.",
+      "steps": [
+        "Add a small planning/readiness module that loads plan frontmatter and features.json without mutating files.",
+        "Compute feature readiness from feature depends_on and passes flags.",
+        "Compute plan readiness from frontmatter dependencies and parent/child relationships.",
+        "Read active supervisor state and warn when recommended work appears to overlap active work by same plan/feature or by intersecting allowed_paths plus path-like step tokens.",
+        "Read known gate, breaker, and budget state when available; mark work not-ready or warn when dispatch is likely to hit an existing pause condition.",
+        "Add `dontpanic next [--scope repo|fleet] [--max-parallel N] [--format text|json] [--include-not-ready]`.",
+        "Implement fleet mode as aggregation of per-project recommendations from the project registry; do not add cross-project scheduling.",
+        "For each recommendation, emit an exact candidate command or a reason no exact command can be formed.",
+        "Add tests for independent features, sequential features, blocked plan dependencies, active-supervisor overlap, budget/breaker warnings, fleet aggregation, malformed plan handling, and JSON shape.",
+        "Dogfood the command against the current DontPanic active plan inventory and save the JSON output as evidence."
+      ],
+      "acceptance": "(1) `dontpanic next --format=json` returns schema_version, generated_at, scope, ready[], not_ready[], warnings[], and candidate_commands[]. (2) A fixture plan with F001/F002 independent features recommends both when max-parallel >=2. (3) A fixture plan with F002 depends_on F001 does not recommend F002 until F001 passes true. (4) A plan whose frontmatter dependencies point at an incomplete plan is not ready and explains the dependency. (5) Active-supervisor/path-overlap fixtures produce precision-biased advisory collision warnings without suppressing unrelated ready work. (6) Known gate/breaker/budget state surfaces as a warning or not-ready reason when available. (7) Fleet scope aggregates per-project recommendations and labels project identity; it does not claim cross-project scheduling. (8) Text output is human-readable and includes exact next commands. (9) The command never writes files. (10) Tests cover at least 10 readiness cases. (11) Evidence includes `dontpanic-next-real-inventory-output.json` generated against the current DontPanic plan inventory.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-real-inventory-output.json",
+          "note": "Real DontPanic inventory dogfood output from `dontpanic next --format=json`."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py",
+          "note": "Targeted readiness recommender tests passed: 22 passed."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-23T23:58:00Z"
+    },
+    {
+      "id": "F003",
+      "category": "doc",
+      "phase": 3,
+      "description": "Release and documentation impact checklist. Add a root-level product changelog convention plus an advisory impact checker used primarily by `dontpanic next` and secondarily by plan-lock messaging when lock-time git diff is available. The checklist distinguishes internal implementation changes from public/user-facing changes and asks whether README, onboarding, architecture map, dashboard, capability manifests, CLI help, schemas, and changelog/release notes need updates. Draft-time advice uses plan intent (`surfaces`, `allowed_paths`, feature step path tokens); lock-time advice may use git diff for precision.",
+      "steps": [
+        "Add or update root CHANGELOG.md for public/product-facing DontPanic changes, distinct from claude/shared/CHANGELOG.md.",
+        "Document when root CHANGELOG.md is required and when claude/shared/CHANGELOG.md is sufficient, using an explicit path/surface pattern table.",
+        "Add a release-impact checklist template to docs/AUTHORING_PLANS.md or a linked docs file.",
+        "Add a lightweight advisory checker or helper that maps draft-time plan intent and lock-time git diff (when available) to suggested docs/release updates; advisory only.",
+        "Ensure architecture/onboarding/dashboard/README/capability-manifest update prompts are visible in plan authoring guidance.",
+        "Add tests or golden-output fixtures for at least CLI/schema/dashboard/docs-only impact scenarios."
+      ],
+      "acceptance": "(1) Root CHANGELOG.md exists and explains its relationship to claude/shared/CHANGELOG.md. (2) Authoring docs include a release-impact checklist covering README, onboarding/getting-started, architecture map, dashboard, capability manifests, CLI help, schemas, and public metadata/social preview. (3) A path/surface pattern table distinguishes root-CHANGELOG-required, shared-CHANGELOG-sufficient, and usually-no-changelog changes. (4) An advisory helper/checker maps representative changed paths and plan-intent signals to suggested update surfaces without blocking. (5) `dontpanic next` is the primary advisory output surface; plan-lock messaging is secondary when git diff is available; no v0 sidecar is required. (6) Tests or golden fixtures cover docs-only, schema, CLI, dashboard, capability-manifest, social-preview, and internal-only changes. (7) No secret values are read or written.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "claude",
+          "note": "Implementer reports both auditor findings addressed and targeted F003/F002 tests passing."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "codex",
+          "note": "Auditor signed off F003 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../docs/RELEASE_IMPACT.md",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Canonical release-impact checklist and path/surface pattern table."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../CHANGELOG.md",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Root product changelog convention and planning-intelligence v0 entry."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/release-impact-real-inventory-output.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Real DontPanic inventory output showing release_impact advisory warnings in `dontpanic next`."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Targeted F003+F002 tests passed: 54 passed."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T00:36:10Z"
+    }
+  ]
+}

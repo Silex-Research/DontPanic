@@ -1,0 +1,20 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-24T01:05:29.709414+00:00",
+  "plan_id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/docs/author-catches-missing-public-doc-updates-before-merge/release-impact-dashboard-output.txt",
+    "evidence/goal-governance/post_impl/docs/author-catches-missing-public-doc-updates-before-merge/release-impact-docs-output.txt",
+    "evidence/goal-governance/post_impl/docs/author-catches-missing-public-doc-updates-before-merge/release-impact-schema-output.txt",
+    "evidence/goal-governance/post_impl/docs/author-catches-missing-public-doc-updates-before-merge/root-changelog-entry.md",
+    "evidence/goal-governance/post_impl/docs/new-user-turns-broad-ask-into-roadmap/authoring-guidance-diff.md",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-collision-output.json",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-ready-output.json",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-ready-output.txt",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-real-inventory-output.json",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/pytest-planning-readiness.log",
+    "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/sanitization-clean.log"
+  ],
+  "findings": []
+}

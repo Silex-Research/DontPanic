@@ -69,6 +69,7 @@ from dontpanic_orchestrate import (
     projects_registry,
     quota_admission,
     quota_caps_loader,
+    release_impact,
     skill_applicability,
     sufficiency_gate,
     supervisor,
@@ -2124,7 +2125,143 @@ def _plan_lock_main(argv: list[str]) -> int:
             file=sys.stderr,
         )
 
+    # Plan 2026-05-23-007 F003 — release-impact advisory (secondary surface).
+    # Combines draft-time plan intent (surfaces, allowed_paths, step path
+    # tokens) with lock-time git diff paths when available. Writes NOTHING:
+    # output goes to stdout only, no v0 sidecar. Failure is a one-line
+    # warning that never blocks lock.
+    try:
+        _emit_plan_lock_release_impact_advisory(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory must never block lock
+        print(
+            f"[release-impact] WARN: advisory failed ({exc!r}); lock succeeded — "
+            "no advisory printed",
+            file=sys.stderr,
+        )
+
     return 0
+
+
+def _emit_plan_lock_release_impact_advisory(plan_dir: Path) -> None:
+    """F003 secondary surface — print a release-impact advisory at lock time.
+
+    Best-effort and non-blocking. The advisory is rendered to stdout under a
+    ``[release-impact]`` prefix; nothing is written to disk. Inputs:
+      - lock-time ``git diff --name-only HEAD`` paths (+ untracked files),
+        captured if a git repo is available in an ancestor of ``plan_dir``.
+        Failures to read git are silent.
+      - draft-time plan intent: ``surfaces``, charter ``allowed_paths``,
+        and feature-step path tokens (same shape as the draft-time advisory
+        emitted by :mod:`planning_readiness`).
+    """
+    diff_paths = _git_changed_paths_for_lock(plan_dir)
+    plan_obj = plan_loader.load(plan_dir)
+
+    raw_surfaces = getattr(plan_obj.plan, "surfaces", None) or []
+    plan_surfaces: list[str] = []
+    for s in raw_surfaces:
+        s_val = s.value if hasattr(s, "value") else str(s)
+        if s_val:
+            plan_surfaces.append(s_val)
+
+    charter = getattr(plan_obj, "child_charter", None)
+    allowed_paths: list[str] = []
+    if charter is not None:
+        for p in getattr(charter, "allowed_paths", None) or []:
+            allowed_paths.append(str(p))
+
+    step_tokens: list[str] = []
+    seen: set[str] = set()
+    for feature in getattr(plan_obj.features, "features", []) or []:
+        if getattr(feature, "passes", False):
+            continue
+        for step in getattr(feature, "steps", None) or []:
+            for raw in str(step).split():
+                cleaned = raw.strip(".,;:()[]`\"'")
+                if "/" not in cleaned:
+                    continue
+                if cleaned.startswith(("http://", "https://")):
+                    continue
+                normalized = cleaned.replace("\\", "/")
+                while normalized.startswith("./"):
+                    normalized = normalized[2:]
+                if normalized and normalized not in seen:
+                    seen.add(normalized)
+                    step_tokens.append(normalized)
+
+    advisory = release_impact.analyze(
+        changed_paths=diff_paths,
+        plan_surfaces=plan_surfaces,
+        allowed_paths=allowed_paths,
+        step_path_tokens=step_tokens,
+    )
+
+    # No inputs and no surfaces → nothing useful to say. Avoid noise.
+    if not advisory.surfaces and not advisory.internal_only:
+        return
+
+    source_bits: list[str] = []
+    if diff_paths:
+        source_bits.append(f"{len(diff_paths)} git-diff path(s)")
+    if plan_surfaces:
+        source_bits.append(f"surfaces={plan_surfaces}")
+    if allowed_paths:
+        source_bits.append(f"allowed_paths={len(allowed_paths)}")
+    source_summary = ", ".join(source_bits) if source_bits else "intent-only"
+    print(
+        f"[release-impact] advisory (no sidecar written; inputs: {source_summary}):"
+    )
+    for line in release_impact.render_text(advisory).split("\n"):
+        print(f"  {line}")
+
+
+def _git_changed_paths_for_lock(plan_dir: Path) -> list[str]:
+    """Best-effort lock-time path scan. Returns the union of staged+unstaged
+    diff paths (``git diff --name-only HEAD``) and untracked-but-not-ignored
+    files. Any git failure (missing binary, not a repo, timeout) returns an
+    empty list — the advisory still has draft-time intent inputs."""
+    import subprocess  # noqa: PLC0415 — keep optional dependency local
+
+    repo_root: Path | None = None
+    for ancestor in [plan_dir, *plan_dir.parents]:
+        if (ancestor / ".git").exists():
+            repo_root = ancestor
+            break
+    if repo_root is None:
+        return []
+
+    paths: list[str] = []
+    seen: set[str] = set()
+
+    def _run(cmd: list[str]) -> str:
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            return ""
+        if result.returncode != 0:
+            return ""
+        return result.stdout
+
+    for line in _run(["git", "diff", "--name-only", "HEAD"]).splitlines():
+        s = line.strip()
+        if s and s not in seen:
+            seen.add(s)
+            paths.append(s)
+    for line in _run(
+        ["git", "ls-files", "--others", "--exclude-standard"]
+    ).splitlines():
+        s = line.strip()
+        if s and s not in seen:
+            seen.add(s)
+            paths.append(s)
+    return paths
 
 
 def _resolve_skills_dir(plan_dir: Path) -> Path | None:
@@ -2810,6 +2947,107 @@ def _setup_main(argv: list[str]) -> int:
     return 0
 
 
+def _next_main(argv: list[str]) -> int:
+    """Plan 2026-05-23-007 F002 — read-only parallel-readiness recommender.
+
+    Scans active/draft plan directories (single repo or every registered
+    project under fleet scope), classifies each not-yet-passing feature as
+    ready or not-ready, and prints either a human-readable text summary
+    or the JSON envelope agents consume.
+
+    The command never writes files. ``--include-not-ready`` is on by
+    default so operators see the blockers next to the unblocked work;
+    pass ``--ready-only`` to suppress the not-ready section.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic next",
+        description=(
+            "Recommend ready-to-dispatch features (read-only). Repo scope "
+            "analyzes one plans root; fleet scope aggregates per-project "
+            "analyses from the project registry."
+        ),
+    )
+    parser.add_argument(
+        "--scope",
+        choices=["repo", "fleet"],
+        default="repo",
+        help="repo (default) analyzes a single plans root; fleet aggregates "
+        "every active registered project.",
+    )
+    parser.add_argument(
+        "--plans-root",
+        type=Path,
+        default=None,
+        help="(repo scope) override the plans root; defaults to "
+        "<cwd-project>/docs/plans or ./docs/plans.",
+    )
+    parser.add_argument(
+        "--max-parallel",
+        type=int,
+        default=0,
+        help="cap on candidate_commands[]. 0 (default) = include every "
+        "ready item.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="output format; text is human-readable, json is the agent "
+        "handoff shape.",
+    )
+    parser.add_argument(
+        "--include-not-ready",
+        dest="include_not_ready",
+        action="store_true",
+        default=True,
+        help="(default) include the not-ready list and the reasons.",
+    )
+    parser.add_argument(
+        "--ready-only",
+        dest="include_not_ready",
+        action="store_false",
+        help="suppress the not-ready section.",
+    )
+    args = parser.parse_args(argv)
+
+    # Imported here so the planning_readiness module is only loaded when
+    # the command is invoked (it pulls in plan_loader's schema discovery).
+    from dontpanic_orchestrate import planning_readiness
+
+    if args.scope == "fleet":
+        report = planning_readiness.analyze_fleet(
+            max_parallel=args.max_parallel,
+            include_not_ready=args.include_not_ready,
+        )
+    else:
+        if args.plans_root is not None:
+            plans_root = args.plans_root.expanduser().resolve()
+        else:
+            # Resolve cwd-project plans_dir, else fall back to ./docs/plans.
+            cwd = Path.cwd().resolve()
+            cwd_project = project_config.find_project_for_plan_dir(cwd)
+            if cwd_project is not None:
+                proj_path = cwd_project[0]
+                cfg = project_config.load_project_config(proj_path)
+                plans_dir = (
+                    cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+                )
+                plans_root = (proj_path / plans_dir).resolve()
+            else:
+                plans_root = (cwd / "docs" / "plans").resolve()
+        report = planning_readiness.analyze_repo(
+            plans_root,
+            max_parallel=args.max_parallel,
+            include_not_ready=args.include_not_ready,
+        )
+
+    if args.format == "json":
+        print(planning_readiness.render_json(report))
+    else:
+        print(planning_readiness.render_text(report), end="")
+    return 0
+
+
 def _print_top_level_help(*, file) -> None:
     print(
         """usage: dontpanic <command> [args]
@@ -2830,6 +3068,7 @@ Public-alpha command surface:
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
   dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
+  next                          Read-only parallel-readiness recommender (text/JSON, repo|fleet)
   state snapshot|export-dashboard Read-only state projection for dashboards, agents, and adapters
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
@@ -2932,6 +3171,8 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.dashboard import main as _dashboard_main
 
         return _dashboard_main(raw[1:])
+    if raw and raw[0] == "next":
+        return _next_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

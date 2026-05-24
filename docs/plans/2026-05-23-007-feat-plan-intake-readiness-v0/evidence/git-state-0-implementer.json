@@ -1,0 +1,31 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/AUTHORING_PLANS.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/planning_readiness.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "CHANGELOG.md",
+    "docs/RELEASE_IMPACT.md",
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/release-impact-real-inventory-output.json",
+    "scripts/dontpanic_orchestrate/release_impact.py",
+    "scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}
