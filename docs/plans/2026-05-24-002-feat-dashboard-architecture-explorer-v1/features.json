@@ -147,9 +147,111 @@
         "Package objective-contract evidence and prepare pre_merge audit."
       ],
       "acceptance": "(1) Required evidence files exist or named equivalents are recorded. (2) Docs explain the Architecture tab, flow map, project/fleet behavior, and no-auto-regen boundary. (3) Tests and sanitization pass. (4) Accessibility/responsive checks are recorded. (5) Local dashboard build/serve smoke evidence exists. (6) Product-facing changelog/docs are updated. (7) Plan is ready for pre_merge audit.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/architecture-view-model-tests.log",
+          "note": "97/97 view-model + explorer + F004 unit tests green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-tab-render-tests.log",
+          "note": "47/47 integration render tests green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flow-definition-validation-tests.log",
+          "note": "Flow validation tests across unit + DOM suites (18 matching tests)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-full-vitest.log",
+          "note": "Full dashboard vitest sweep — 903/903 green"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-architecture-build-serve-smoke.log",
+          "note": "dontpanic dashboard build + serve --once smoke; writes per-project architecture view-state cache"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-sanitization-clean.log",
+          "note": "No-secret scan across rendered HTML/JSON snapshots + state cache — clean"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-accessibility-responsive-checks.md",
+          "note": "Keyboard reachability + responsive (mobile/desktop) non-overlap evidence"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-graph-snapshot.html",
+          "note": "Neutral / unselected graph render"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flow-selected-snapshot.html",
+          "note": "Flow-selected render with step inspector"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-clear-selection-snapshot.html",
+          "note": "Clear-selection neutral state"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-node-detail-snapshot.html",
+          "note": "Click-to-detail panel for command:dontpanic-architecture-regen"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-filter-snapshot.html",
+          "note": "Filter+search snapshot (searchQuery=supervisor + module category)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-missing-state-snapshot.html",
+          "note": "Absent / missing-state empty card with regen command"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-fleet-state-snapshot.html",
+          "note": "All Projects fleet card grid"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-mobile-snapshot.html",
+          "note": "Mobile viewport render"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-view-state-snapshot.json",
+          "note": "Canonical agent-facing view-state shape"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/architecture-flows-snapshot.json",
+          "note": "Flows + steps extract for agent consumption"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/screenshots/",
+          "note": "Playwright desktop + mobile screenshots for six explorer states"
+        },
+        {
+          "type": "file",
+          "uri": "../../../CHANGELOG.md",
+          "note": "2026-05-24 entry for Dashboard Architecture Explorer v1"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/README.md",
+          "note": "Architecture tab usage, project/fleet behavior, no-auto-regen boundary"
+        }
       ]
     }
   ]

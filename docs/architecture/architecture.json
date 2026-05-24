@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T06:08:41Z",
+  "generated_at": "2026-05-24T20:29:21Z",
   "modules": [
     {
       "imports": [],
@@ -3055,7 +3055,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-24T06:08:41Z",
+    "computed_at": "2026-05-24T20:29:21Z",
     "file_hashes": {
       "claude/shared/VERSION": "c92df6bdde330be219d62f48ec6490b01889436f2f59027aab200e74de619168",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -3197,9 +3197,9 @@
       "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "aa32fc481272776295ad7e7bf6359c21ff21b24649d7ae8002ec2632289fbe62",
       "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "81f9013cf6c5f282915859fd67f8f0852b68232e707b7ad4a0634eb04df750e3",
       "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "468e5462c551bf556cab443bfeff07baefb6183ea94fa70ab0eb20519e36b44b",
-      "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/features.json": "f351d156b4803d0faf23f031d1eee80bfdbc37d256ed0c1e7d9802badf599f58",
+      "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/features.json": "6b0f1b2f7e8dec06eddf5b07ed8c89217375a4416592237ef1022bbcc447daf6",
       "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/plan.md": "71543f83338b5e5fa0d64967d867eb0f86e8b664d46454874d2410356ecb554f",
-      "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json": "92b2ad4a38891bff0005fbe3f3de6a4e4bff6a5a93c9f03efd83139896e1b526",
+      "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json": "f46019d7fec2627471a6f112437199d48da867b7e21e53b0b85ba76573a4189b",
       "docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/plan.md": "288545e7cc0a28ce32fccd6e4b7ffc3fea30afa7c9c4b5a73f9e9e3eed708e05",
       "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/plan.md": "6e88f9c52fb5cc70b90e14e957c34bf6dbf038b91756018b5fc48c6f45a68f59",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
@@ -3460,7 +3460,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "49ac32b330bc9e25e499288723b798fee66798403aa91fa7627f842897ed9a6d",
+    "file_hashes_root": "1c7005c3530e816aa4643ca1ba300c1a45277db999e1ff96e26ac248ec6dd113",
     "files_count": 402
   }
 }

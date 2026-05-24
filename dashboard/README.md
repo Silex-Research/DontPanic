@@ -54,7 +54,7 @@ extended to cover the new Layer-1 selectors:
 
 | Surface | V0 disposition | Future plan reference |
 |---|---|---|
-| Architecture Explorer | muted future nav affordance only (D014); page is not implemented in V0 | `docs/design/dashboard-architecture-explorer-v1/` |
+| Architecture Explorer | **Shipped in plan 2026-05-24-002** as a first-class tab (see "Architecture tab" below) | `docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/` |
 | Review / Evidence | not in V0 nav; auditor signoffs live on disk under `docs/plans/<plan>/audit/` | tracked by parent roadmap `2026-05-24-003` |
 | Configuration editor | not in V0; Preferences is browser-local only — DontPanic config still edits via `dontpanic` CLI surfaced in Tools & Setup | tracked by parent roadmap `2026-05-24-003` |
 | Agent Session Registry | not in V0; `dontpanic ps` remains the supervisor inspection seam | tracked by parent roadmap `2026-05-24-003` |
@@ -79,6 +79,88 @@ The Claude Design v3 pack referenced in
 [`docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md`](../docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md)
 is visual specification and design-token input only. Treat the JSX as a
 mockup; the shipped dashboard stays vanilla HTML/CSS/JS (D012).
+
+---
+
+## Architecture tab (Plan 2026-05-24-002)
+
+The Architecture tab is a first-class operator surface that turns
+`docs/architecture/architecture.json` into a Roundtable-style interactive
+swimlane map. It is read-only and command-emitter only — opening the tab
+never auto-regenerates the architecture artifact.
+
+### Usage
+
+```bash
+# Refresh the architecture snapshot the dashboard reads from.
+dontpanic architecture regen --with-html
+
+# Rebuild the dashboard state cache so the Architecture tab can read the
+# new map.
+dontpanic dashboard build
+
+# Open the dashboard locally; the Architecture tab is in the primary nav.
+dontpanic dashboard serve
+```
+
+`dontpanic dashboard build` writes a per-project view-state cache at
+`dashboard/state/projects/<project>/architecture-view-state.json` plus an
+`All Projects` fleet variant where data exists. The cache shape is the
+canonical agent-facing contract (see
+`scripts/dontpanic_orchestrate/architecture_view_state.py`):
+`schema_version`, `project`, `generated_at`, `source_path`, `freshness`,
+`lanes`, `nodes`, `edges`, `flows`, `steps`, `filters`, `insights`,
+`validation_warnings`. Agents should read this JSON instead of scraping
+the DOM.
+
+### What the tab shows
+
+- Deterministic swimlane map keyed by module/plan/capability/command
+  category, with a persistent legend.
+- Right-side flow rail — selecting a flow highlights participating nodes
+  and edges, dims unrelated map content, and numbers the steps in a
+  scrollable step inspector. Clear-selection returns to the neutral map.
+- Search and three or more filters (category, lane, edge type) narrow
+  the visible graph without losing project context.
+- Click-to-detail panel exposes source path, lane, fingerprint, related
+  edges, and flows touching the node — technical identifiers stay
+  copyable for agents and reviewers.
+- Stale / missing / absent freshness states render an explicit empty
+  card with the exact `dontpanic architecture regen --with-html` command
+  rather than auto-mutating the repo. No secret values appear in any
+  state (see `dashboard-sanitization-clean.log` in the plan evidence).
+
+### Project / fleet behavior
+
+- A concrete project selection renders that project's view-state cache.
+- `All Projects` renders a project-card grid with per-project freshness
+  badges and "open map" affordances — DontPanic never merges
+  architecture from unrelated repos into one graph (D010).
+- A selected project without a cached architecture artifact renders an
+  explicit empty card with the regen command for that repo rather than
+  silently falling back to another project's map.
+
+### Boundary: no auto-regen
+
+The Architecture tab and `dontpanic dashboard build` both refuse to write
+into `docs/architecture/**` on their own. The operator runs
+`dontpanic architecture regen --with-html` from their own terminal; the
+dashboard only emits the command and surfaces freshness. This preserves
+the V0 command-emitter invariant (D004).
+
+### Tests and evidence
+
+- View-model: `dashboard/tests/unit/architecture-logic.test.js`,
+  `dashboard/tests/unit/architecture-explorer.test.js`,
+  `dashboard/tests/unit/architecture-f004.test.js`.
+- Tab render / DOM interactions:
+  `dashboard/tests/integration/architecture-page.test.js`,
+  `dashboard/tests/integration/architecture-explorer-dom.test.js`,
+  `dashboard/tests/integration/architecture-f004-page.test.js`.
+- Screenshots + responsive checks:
+  `dashboard/tests/playwright/architecture.spec.js` and its harness.
+- Objective-contract evidence and the per-iteration audit envelopes live
+  under `docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/`.
 
 ---
 

@@ -681,3 +681,114 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T20:16:29Z
+event: volley_start
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F005
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T20:16:29Z
+event: volley_start
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T20:29:22Z
+event: architecture_regenerated
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F005
+prior_fingerprint: 49ac32b330bc9e25e499288723b798fee66798403aa91fa7627f842897ed9a6d
+new_fingerprint: 1c7005c3530e816aa4643ca1ba300c1a45277db999e1ff96e26ac248ec6dd113
+files_added: 0
+files_removed: 0
+files_modified: 2
+total_modules: 102
+total_plans: 66
+state_transition: stale->fresh
+---
+
+Architecture map regenerated after child_commit on F005.
+
+state: stale->fresh
+prior_fingerprint: 49ac32b330bc9e25e499288723b798fee66798403aa91fa7627f842897ed9a6d
+new_fingerprint: 1c7005c3530e816aa4643ca1ba300c1a45277db999e1ff96e26ac248ec6dd113
+files_added: 0
+files_removed: 0
+files_modified: 2
+total_modules: 102
+total_plans: 66
+
+The supervisor does NOT auto-commit architecture.json. Inspect
+`git status` and decide whether to amend, commit separately, or
+discard.
+
+===
+---
+timestamp: 2026-05-24T20:29:22Z
+event: volley_terminal
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+final_status: signed_off
+rounds: 1
+feature_id: F005
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T20:29:22Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+report_path: /private/tmp/dontpanic-arch-f003-close/docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/audit/patch-completeness-0.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-24T20:29:22Z
+event: volley_crash_caught
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F005
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T20:29:22Z
+event: volley_terminal
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+final_status: blocked
+rounds: 1
+feature_id: F005
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===

@@ -46,6 +46,46 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-05-24 — Dashboard Architecture Explorer v1 (plan 2026-05-24-002)
+
+### Added
+- Local dashboard now ships a first-class **Architecture** tab — an
+  interactive swimlane flow map sourced from
+  `docs/architecture/architecture.json`. The tab renders modules, plans,
+  capabilities, dashboard pages, CLI commands, and authored / derived
+  flows on a deterministic SVG canvas with a right-side flow rail,
+  numbered step inspector, persistent legend, search + at-least-three
+  filters, hover labels, click-to-detail provenance panel, and zoom/pan.
+- `dontpanic dashboard build` writes a stable, agent-readable
+  architecture view-state cache per project at
+  `dashboard/state/projects/<project>/architecture-view-state.json` plus
+  an All Projects fleet variant. The shape (lanes, nodes, edges, flows,
+  steps, filters, insights, validation_warnings) is the canonical
+  agent-facing contract — no DOM scraping required.
+- Authored flow input: optional `docs/architecture/flows.json` whose
+  steps reference architecture-graph node IDs. Missing references render
+  as visible validation warnings on the tab rather than silent
+  omissions.
+- Honest stale / missing / absent / per-project-missing freshness
+  states. Each renders an explicit empty card with plain-language
+  explanation, source path, last `generated_at`, and the exact
+  `dontpanic architecture regen --with-html` command — copyable by the
+  operator. The dashboard never auto-regenerates the architecture
+  artifact.
+- All Projects mode renders a project-card grid with per-project
+  freshness badges and "open map" affordances; DontPanic does not merge
+  unrelated repo graphs into one architecture map.
+
+### Changed
+- Dashboard nav promotes Architecture from the V0 "future surfaces" row
+  to a first-class tab; `dashboard/README.md` documents the tab's usage,
+  command-emitter / no-auto-regen boundary, project/fleet behavior, and
+  test/evidence map.
+
+Surfaces affected: dashboard (new Architecture tab + nav), CLI help
+(`dontpanic dashboard build` writes architecture view-state cache),
+public dashboard documentation (`dashboard/README.md`).
+
 ## 2026-05-23 — Planning intelligence v0 (plan 2026-05-23-007)
 
 ### Added

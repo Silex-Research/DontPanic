@@ -48,6 +48,8 @@ mobile layout or non-overlap.
 
 ## Return Condition
 
+status: satisfied
+
 Return to implementation only if a follow-up audit shows the new F004
 responsive checks are flaky in CI, or if the fleet/missing-project state still
 renders another repository's architecture map for a selected project without a

@@ -51,3 +51,13 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 **2026-05-24T19:56:22Z** — feature **F004** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
 
+| 2026-05-24T20:25:45Z | F005 | i0 | claude / implementer | signed_off | 13,019,125 / 31,457 | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-05-24T20:29:21Z | F005 | i0 | codex / auditor | signed_off | 1,885,707 / 15,163 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |
+
+**2026-05-24T20:29:21Z** — feature **F005** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+
+**2026-05-24T20:29:22Z** — feature **F005** terminal: `blocked` after 1 round(s) — supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,dashboard/README.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/INBOX.md,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/decisions.jsonl,docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/features.json,docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
