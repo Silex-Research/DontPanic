@@ -10,6 +10,11 @@
 
 import { esc } from './html-escape.js';
 import { renderScopeBadgeHTML } from './project-selector-logic.js';
+import { renderProvenanceFooterHTML } from './provenance.js';
+
+// F004: per-page provenance pointers.
+const CAP_SOURCE = 'dashboard/state/capabilities-status.json';
+const CAP_REFRESH = 'dontpanic capabilities status --format=json > dashboard/state/capabilities-status.json';
 
 /** Closed set of per-capability status values (mirrors V0b). */
 export const CAPABILITY_STATUSES = Object.freeze([
@@ -258,6 +263,12 @@ export function renderEmptyStateHTML() {
         Tools &amp; Setup reads from a static JSON file on disk. No sign-in,
         no realtime sync, no Cloud Functions.
       </div>
+      ${renderProvenanceFooterHTML({
+        source: CAP_SOURCE,
+        lastUpdated: null,
+        refreshCommand: CAP_REFRESH,
+        note: 'Snapshot absent — run the refresh command above to populate this view.',
+      })}
     </div>
   `;
 }
@@ -287,6 +298,11 @@ function renderPopulatedHTML(envelope) {
         </div>
         <div class="cap-cards" id="cap-cards">${renderCardsHTML(envelope.capabilities)}</div>
       </section>
+      ${renderProvenanceFooterHTML({
+        source: CAP_SOURCE,
+        lastUpdated: envelope.generated_at || null,
+        refreshCommand: CAP_REFRESH,
+      })}
     </div>
   `;
 }

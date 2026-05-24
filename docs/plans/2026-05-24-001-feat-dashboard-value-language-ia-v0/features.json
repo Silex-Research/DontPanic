@@ -112,10 +112,21 @@
         "Document accessibility checks performed for keyboard navigation, text contrast, readable density, and mobile/desktop non-overlap where feasible."
       ],
       "acceptance": "(1) Every V0 page has consistent source/provenance display. (2) Snapshot evidence covers the value-first shell and core pages. (3) Tests cover labels and hidden/deferred tabs. (4) Sanitization confirms no secret values in runtime state, docs, or snapshots. (5) Accessibility/design checks are recorded.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T14:16:25Z"
     },
     {
       "id": "F005",

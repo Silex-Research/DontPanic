@@ -16,6 +16,24 @@ import {
   ALL_PROJECTS_VALUE,
   renderScopeBadgeHTML,
 } from './project-selector-logic.js';
+import { renderProvenanceFooterHTML } from './provenance.js';
+
+// F004: per-page provenance — what-now state is rewritten by
+// `dontpanic dashboard build`. The fleet variant points at the
+// fleet-what-now envelope written by the same command.
+const WHAT_NOW_REFRESH = 'dontpanic dashboard build';
+const WHAT_NOW_SOURCE = 'dashboard/state/what-now.json';
+const FLEET_WHAT_NOW_SOURCE = 'dashboard/state/fleet-what-now.json';
+
+function buildWhatNowProvenance(envelope, { fleet = false } = {}) {
+  return renderProvenanceFooterHTML({
+    source: fleet ? FLEET_WHAT_NOW_SOURCE : WHAT_NOW_SOURCE,
+    lastUpdated: envelope && typeof envelope.captured_at === 'string' && envelope.captured_at.length > 0
+      ? envelope.captured_at
+      : null,
+    refreshCommand: WHAT_NOW_REFRESH,
+  });
+}
 
 /** Four-band taxonomy emitted by F001 providers — ordering reflects display priority. */
 export const BANDS = Object.freeze(['needs_action', 'advisory', 'info', 'ready']);
@@ -293,6 +311,12 @@ export function renderMissingStateHTML(scope = 'project') {
         Once the cache exists, this view will list gates, capabilities,
         reconcile drift, and active supervisors that need attention.
       </div>
+      ${renderProvenanceFooterHTML({
+        source: scope === 'fleet' ? FLEET_WHAT_NOW_SOURCE : WHAT_NOW_SOURCE,
+        lastUpdated: null,
+        refreshCommand: WHAT_NOW_REFRESH,
+        note: 'Cache absent — dashboard treats this as a missing-data state, not a blocker.',
+      })}
     </div>
   `;
 }
@@ -304,7 +328,7 @@ export function renderMissingStateHTML(scope = 'project') {
  * @param {object} envelope
  * @param {'project'|'fleet'} [scope]
  */
-export function renderQuietStateHTML(envelope, scope = 'project') {
+export function renderQuietStateHTML(envelope, scope = 'project', provenance = {}) {
   const summary = summarizeByBand(envelope.items);
   const advisoryLine = summary.advisory > 0
     ? `${summary.advisory} advisory item${summary.advisory === 1 ? '' : 's'} present.`
@@ -325,11 +349,12 @@ export function renderQuietStateHTML(envelope, scope = 'project') {
       <div class="wn-quiet-meta">
         ${renderMetaHTML(envelope)}
       </div>
+      ${buildWhatNowProvenance(envelope, { fleet: provenance.fleetSource === true || scope === 'fleet' })}
     </div>
   `;
 }
 
-function renderPopulatedHTML(envelope, scope = 'project') {
+function renderPopulatedHTML(envelope, scope = 'project', provenance = {}) {
   const groups = groupByBand(envelope.items);
   return `
     <div class="wn-layout">
@@ -342,6 +367,7 @@ function renderPopulatedHTML(envelope, scope = 'project') {
         <div class="wn-summary-strip">${renderSummaryStripHTML(envelope.items)}</div>
       </section>
       ${groups.map((g) => renderBandSectionHTML(g, scope)).join('')}
+      ${buildWhatNowProvenance(envelope, { fleet: provenance.fleetSource === true || scope === 'fleet' })}
     </div>
   `;
 }
@@ -762,6 +788,7 @@ export function renderFleetWhatNowHTML(envelope, fleetSummary, opts = {}) {
         <div class="wn-summary-strip">${renderSummaryStripHTML(items)}</div>
       </section>
       ${sections}
+      ${buildWhatNowProvenance(envelope, { fleet: true })}
     </div>
   `;
 }
@@ -842,12 +869,15 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
     return `
       <div class="wn-layout wn-layout--project">
         ${headerHTML}
-        ${renderQuietStateHTML(envelope, 'project')}
+        ${renderQuietStateHTML(envelope, 'project', { fleetSource: true })}
       </div>
     `;
   }
   // Reuse the existing populated renderer with a fabricated single-band
-  // payload — keep the per-card markup identical to legacy what-now.
+  // payload — keep the per-card markup identical to legacy what-now. The
+  // populated renderer attaches its own pv-footer using the single-repo
+  // source path; the fleet-scoped header chip already carries fleet
+  // context, so we don't double up here.
   const fabricatedEnvelope = {
     schema_version: envelope.schema_version,
     captured_at: envelope.captured_at,
@@ -856,7 +886,7 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
   return `
     <div class="wn-layout wn-layout--project">
       ${headerHTML}
-      ${renderPopulatedHTML(fabricatedEnvelope, 'project')}
+      ${renderPopulatedHTML(fabricatedEnvelope, 'project', { fleetSource: true })}
     </div>
   `;
 }

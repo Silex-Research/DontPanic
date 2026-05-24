@@ -8,10 +8,10 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F003-i0.json",
-    "audit/codex-auditor-F003-i0.json",
-    "audit/claude-implementer-F003-i1.json",
-    "audit/codex-auditor-F003-i1.json"
+    "audit/claude-implementer-F004-i0.json",
+    "audit/codex-auditor-F004-i0.json",
+    "audit/claude-implementer-F004-i1.json",
+    "audit/codex-auditor-F004-i1.json"
   ],
   "vote_summary": {
     "signed_off_count": 1,
@@ -22,5 +22,5 @@
   "signoff": true,
   "signoff_reason": "operator_resolved (class=implementation_defect): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
   "next_action": "merge",
-  "decided_at": "2026-05-24T07:32:22Z"
+  "decided_at": "2026-05-24T14:16:25Z"
 }

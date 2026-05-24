@@ -6,6 +6,8 @@
 // secrets, or capability state — those live in `~/.dontpanic/` and are
 // surfaced through the Tools & Setup page when capability-backed.
 
+import { renderProvenanceFooterHTML } from '../../lib/provenance.js';
+
 (() => {
 
   // ── Refresh interval options ──
@@ -130,6 +132,11 @@
             Source: <code>localStorage</code> (this browser only) ·
             DontPanic config edits use the <code>dontpanic</code> CLI surfaced under Tools &amp; Setup.
           </div>
+          ${renderProvenanceFooterHTML({
+            source: 'localStorage (this browser only)',
+            lastUpdated: null,
+            note: 'Preferences are browser-local. DontPanic config edits live under ~/.dontpanic/ and are managed via the dontpanic CLI from Tools & Setup.',
+          })}
         </section>
 
       </div>

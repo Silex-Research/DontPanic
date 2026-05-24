@@ -2,31 +2,19 @@
   "staged": [],
   "unstaged_modified": [
     {
+      "path": "dashboard/core.css",
+      "status": "M"
+    },
+    {
       "path": "dashboard/lib/capabilities-logic.js",
       "status": "M"
     },
     {
-      "path": "dashboard/lib/mission-control-logic.js",
+      "path": "dashboard/lib/health-logic.js",
       "status": "M"
     },
     {
       "path": "dashboard/lib/what-now-logic.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/health/health.css",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/health/health.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/mission-control/mission-control.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/settings/settings.css",
       "status": "M"
     },
     {
@@ -43,8 +31,10 @@
     }
   ],
   "untracked": [
-    "dashboard/lib/health-logic.js",
-    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F003-i0.json",
+    "dashboard/lib/provenance.js",
+    "dashboard/tests/integration/value-language-page-evidence.test.js",
+    "dashboard/tests/unit/provenance.test.js",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F004-i0.json",
     "docs/plans/2026-05-24-004-feat-event-messaging-v1/"
   ],
   "deleted_staged": [],

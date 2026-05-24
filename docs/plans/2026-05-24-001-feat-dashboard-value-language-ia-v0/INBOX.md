@@ -355,3 +355,117 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T07:35:28Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T07:35:28Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T07:45:29Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T08:01:18Z
+event: no_progress_classification
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F004
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F004
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Project-filtered Needs Attention provenance reports the wrong state source. Evidence: `pages/what-now/what-now.js:37-45` routes project views through `renderPr…
+  - [spec_ambiguity] severity=low, category=documentation: The accessibility evidence overclaims Tools & Setup keyboard affordances. Evidence: `dashboard-accessibility-checks.md:30` says command chips render as `<code>…
+  - [spec_ambiguity] severity=low, category=documentation: Implementer sanitization evidence does not cover the full required scope. Evidence: `dashboard-sanitization-clean.log:17-25` lists only `dashboard/state` and `…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-24-001-feat-dashboard-value-language-ia-v0 F004 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-24T08:01:18Z
+event: breaker_tripped
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+breaker_kind: no_progress
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-24-001-feat-dashboard-value-language-ia-v0 breaker:no_progress` or `jarvis resume 2026-05-24-001-feat-dashboard-value-language-ia-v0 --all`.
+
+===
+---
+timestamp: 2026-05-24T08:01:19Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F004
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-24T14:16:25Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+reason_class: implementation_defect
+---
+
+Operator closed feature F004 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

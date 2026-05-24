@@ -14,6 +14,7 @@ import {
   AGENT_META,
   getAgentMeta,
   deriveColumn,
+  renderWorkProvenanceHTML,
 } from '../../lib/mission-control-logic.js';
 import {
   ALL_PROJECTS_VALUE,
@@ -134,11 +135,8 @@ function buildHTML() {
           ${colsHTML}
         </div>
 
-        <div class="mc-queue-source">
-          Source: <code>dashboard/state/tasks.json</code>,
-          <code>dashboard/state/agents.json</code>,
-          <code>dashboard/state/activity.json</code> ·
-          Refresh: <code>dontpanic dashboard build</code>
+        <div class="mc-queue-source" id="mc-queue-source">
+          <!-- F004: standardized provenance footer rendered into here on every render. -->
         </div>
       </div>
 
@@ -411,6 +409,20 @@ function renderScope() {
   el.innerHTML = renderScopeBadgeHTML(scope);
 }
 
+// F004: Per-page provenance footer for Work. The pure renderer in
+// mission-control-logic.js owns the HTML so the F004 evidence test can
+// exercise it directly without going through dynamic page imports.
+function renderProvenance() {
+  const page = Jarvis.getPageEl('mission-control');
+  const el = page.querySelector('#mc-queue-source');
+  if (!el) return;
+  el.innerHTML = renderWorkProvenanceHTML({
+    tasks: mcTasks,
+    agents: mcAgents,
+    activity: mcActivity,
+  });
+}
+
 // ── Render: Live Feed ──
 
 function renderFeed() {
@@ -589,6 +601,7 @@ function renderAll(state) {
   renderBoard();
   renderFeedFilters();
   renderFeed();
+  renderProvenance();
 }
 
 // ── Page Registration ──

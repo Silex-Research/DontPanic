@@ -1,6 +1,8 @@
 // ── Mission Control Logic — Pure, DOM-free business logic ──
 // Extracted from pages/mission-control/mission-control.js for testability.
 
+import { renderProvenanceFooterHTML } from './provenance.js';
+
 export const MC_COLUMNS = ['backlog', 'todo', 'in_progress', 'review', 'done'];
 
 // V0 lifecycle labels per copy-map.md §2.3. Primary labels speak value
@@ -142,4 +144,60 @@ export function resolveDragIntent({ taskId, sourceColumn, targetColumn }) {
       'for other status changes.'
     ),
   };
+}
+
+// ── F004: Work-page provenance footer ──
+// The Work page reads three state files written together by
+// `dontpanic dashboard build`; we summarise them as one source line and
+// derive the freshest task / activity / agent timestamp as "updated".
+
+/**
+ * Pick the freshest ISO-8601 timestamp across the Work page's three
+ * input arrays. Returns null when no candidate carries a string
+ * timestamp — the provenance footer renders "—" in that case.
+ *
+ * @param {object} [state]
+ * @param {Array<object>} [state.tasks]
+ * @param {Array<object>} [state.agents]
+ * @param {Array<object>} [state.activity]
+ * @returns {string|null}
+ */
+export function deriveWorkLastUpdated({ tasks, agents, activity } = {}) {
+  let best = '';
+  const consider = (ts) => {
+    if (typeof ts !== 'string' || ts.length === 0) return;
+    if (ts > best) best = ts;
+  };
+  if (Array.isArray(tasks)) {
+    for (const t of tasks) {
+      consider(t && t.updated_at);
+      consider(t && t.created);
+    }
+  }
+  if (Array.isArray(activity)) {
+    for (const a of activity) consider(a && a.timestamp);
+  }
+  if (Array.isArray(agents)) {
+    for (const ag of agents) consider(ag && ag.lastSeen);
+  }
+  return best.length > 0 ? best : null;
+}
+
+/**
+ * Render the Work-page provenance footer. Pure: returns the canonical
+ * pv-footer HTML; the page module simply pipes it into the
+ * #mc-queue-source slot. Matches the shared per-page treatment so the
+ * F004 evidence test ("every V0 page renders a provenance footer")
+ * passes for Work.
+ *
+ * @param {object} [state]
+ * @returns {string}
+ */
+export function renderWorkProvenanceHTML(state = {}) {
+  return renderProvenanceFooterHTML({
+    source: 'dashboard/state/tasks.json + agents.json + activity.json',
+    lastUpdated: deriveWorkLastUpdated(state),
+    refreshCommand: 'dontpanic dashboard build',
+    note: 'Work is read-only — cards reflect what the local cache already knows.',
+  });
 }

@@ -22,6 +22,7 @@ import {
 import { normalizeEnvelope as normalizeWhatNow } from './what-now-logic.js';
 import { normalizeEnvelope as normalizeCapabilities } from './capabilities-logic.js';
 import { aggregateStats } from './security-logic.js';
+import { renderProvenanceFooterHTML } from './provenance.js';
 
 /**
  * Build all Health page sections from the dashboard state.
@@ -59,9 +60,32 @@ export function renderHealthHTML(state) {
           Run <code>dontpanic dashboard build</code> after capability or
           plan changes to refresh every card here.
         </div>
+        ${renderProvenanceFooterHTML({
+          source: 'dashboard/state/*.json (composed: capabilities-status, what-now, security, fleet-summary, quota)',
+          lastUpdated: deriveLatestCaptured(state),
+          refreshCommand: 'dontpanic dashboard build',
+          note: 'Each card declares its own per-source provenance above. This footer summarizes the page-level inputs.',
+        })}
       </section>
     </div>
   `;
+}
+
+function deriveLatestCaptured(state) {
+  // Health composes several sources; surface the freshest envelope timestamp
+  // so the operator can tell "when did anything on this page last refresh?"
+  const candidates = [];
+  const caps = normalizeCapabilities(state.capabilities);
+  if (caps && typeof caps.generated_at === 'string' && caps.generated_at.length > 0) {
+    candidates.push(caps.generated_at);
+  }
+  const wn = normalizeWhatNow(state.whatNow);
+  if (wn && typeof wn.captured_at === 'string' && wn.captured_at.length > 0) {
+    candidates.push(wn.captured_at);
+  }
+  if (candidates.length === 0) return null;
+  // Lexicographic max works for ISO-8601 timestamps.
+  return candidates.reduce((best, ts) => (ts > best ? ts : best));
 }
 
 function renderHeaderHTML(scope, selected, fleetSummary) {
