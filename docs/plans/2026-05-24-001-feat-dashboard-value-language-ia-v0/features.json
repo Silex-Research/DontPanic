@@ -81,11 +81,22 @@
         "Implement All Projects / fleet variants for Home, Work, and Health at the same fidelity as existing project selector substrate allows."
       ],
       "acceptance": "(1) Core V0 pages use value-first primary labels and impact copy. (2) Technical IDs, source files, timestamps, and exact commands remain visible as secondary details. (3) Health handles missing data honestly. (4) Preferences does not claim to edit DontPanic configuration. (5) Fleet mode has explicit Home, Work, and Health behavior. (6) The existing static dashboard architecture is preserved.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T07:32:22Z"
     },
     {
       "id": "F004",

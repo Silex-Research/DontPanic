@@ -1,58 +1,190 @@
 /* ── DontPanic Health — health.css ──
-   Honesty surface for install/setup/build health. V0 ships a minimal
-   missing-data scaffold; F003 lands the composed view.            */
+   Honesty surface for install/setup/build health. Composed view per
+   plan 2026-05-24-001 F003. Cards never render as "OK" without a
+   credible source — missing data shows the source file + fix command. */
 
 .hlth-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  padding: 4px 0;
 }
 
-.hlth-empty-state {
-  background: var(--bg-secondary);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 32px;
-  max-width: 760px;
-  margin: 24px auto;
+@media (min-width: 960px) {
+  .hlth-layout {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .hlth-header-panel,
+  .hlth-footer-panel {
+    grid-column: 1 / -1;
+  }
 }
 
-.hlth-empty-state h2 {
-  margin: 0 0 12px 0;
+.hlth-header-panel {
+  padding: 16px 20px;
+}
+
+.hlth-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.hlth-header-row h2 {
+  margin: 0;
   font-size: 18px;
   color: var(--text-primary);
 }
 
-.hlth-empty-body {
+.hlth-header-subtitle {
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 12px;
   line-height: 1.5;
 }
 
-.hlth-empty-cmd {
+.hlth-header-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font);
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+
+.hlth-card {
+  padding: 14px 16px;
+  border-left: 3px solid var(--border);
+}
+
+.hlth-card--red    { border-left-color: var(--red, #f25555); }
+.hlth-card--yellow { border-left-color: var(--yellow, #f5a623); }
+.hlth-card--green  { border-left-color: var(--green, #3dd68c); }
+.hlth-card--accent { border-left-color: var(--accent, #8b6fff); }
+.hlth-card--muted  { border-left-color: var(--text-muted, #7a869f); }
+
+.hlth-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hlth-card-kind {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hlth-card-scope-chip {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.hlth-card-impact {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.hlth-card-rows {
+  list-style: none;
+  margin: 6px 0 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.hlth-card-rows li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.hlth-row-label { color: var(--text-muted); }
+.hlth-row-value { font-family: var(--font); color: var(--text-primary); }
+
+.hlth-row-value--needs_action { color: var(--red, #f25555); }
+.hlth-row-value--advisory    { color: var(--yellow, #f5a623); }
+.hlth-row-value--ready       { color: var(--green, #3dd68c); }
+
+.hlth-finding-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hlth-finding {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.hlth-finding-title {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.hlth-finding-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.hlth-finding-cmd,
+.hlth-card-fix {
   background: var(--bg-primary);
-  color: var(--green);
-  padding: 10px 12px;
+  color: var(--accent, #8b6fff);
+  padding: 6px 8px;
   border-radius: var(--radius);
   font-size: 11px;
   font-family: var(--font);
   overflow-x: auto;
-  margin: 0 0 12px 0;
+  margin: 6px 0 0 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.hlth-empty-hint {
+.hlth-card-source {
+  margin-top: 8px;
   font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font);
+}
+.hlth-card-source code {
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 0;
+  background: transparent;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+
+.hlth-footer-panel {
+  padding: 10px 14px;
+}
+.hlth-footer-line {
+  font-size: 11px;
   color: var(--text-muted);
   line-height: 1.5;
 }
-
-.hlth-empty-hint code {
+.hlth-footer-line code {
+  color: var(--text-secondary);
   background: var(--bg-primary);
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 3px;
-  color: var(--accent);
-  font-size: 10px;
+  font-family: var(--font);
 }

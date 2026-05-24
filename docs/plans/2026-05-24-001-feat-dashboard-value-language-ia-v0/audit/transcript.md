@@ -24,3 +24,10 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 | 2026-05-24T06:54:16Z | F002 | i1 | codex / auditor | signed_off | 1,860,391 / 13,513 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
 
 **2026-05-24T06:54:16Z** — feature **F002** terminal: `signed_off` after 2 round(s) — auditor signed off
+| 2026-05-24T07:12:02Z | F003 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F003-i0.json](audit/claude-implementer-F003-i0.json) |
+| 2026-05-24T07:15:00Z | F003 | i0 | codex / auditor | needs_changes | 1,414,733 / 10,605 | [codex-auditor-F003-i0.json](audit/codex-auditor-F003-i0.json) |
+| 2026-05-24T07:20:09Z | F003 | i1 | claude / implementer | signed_off | 4,494,512 / 17,429 | [claude-implementer-F003-i1.json](audit/claude-implementer-F003-i1.json) |
+| 2026-05-24T07:23:48Z | F003 | i1 | codex / auditor | needs_changes | 2,356,543 / 13,634 | [codex-auditor-F003-i1.json](audit/codex-auditor-F003-i1.json) |
+
+**2026-05-24T07:23:48Z** — feature **F003** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.

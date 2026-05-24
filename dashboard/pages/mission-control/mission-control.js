@@ -8,12 +8,17 @@
 import {
   MC_COLUMNS,
   MC_COLUMN_META,
+  MC_COLUMN_IMPACT,
   STATUS_TO_COLUMN,
   PROJECT_NAMES,
   AGENT_META,
   getAgentMeta,
   deriveColumn,
 } from '../../lib/mission-control-logic.js';
+import {
+  ALL_PROJECTS_VALUE,
+  renderScopeBadgeHTML,
+} from '../../lib/project-selector-logic.js';
 
 const FEED_ICONS = {
   deploy: '▲',
@@ -28,6 +33,8 @@ const FEED_ICONS = {
 let mcTasks = [];
 let mcAgents = [];
 let mcActivity = [];
+let mcSelectedProject = ALL_PROJECTS_VALUE;
+let mcFleetSummary = null;
 
 let mcActiveAgent  = 'all';
 let mcActiveStatus = 'all';
@@ -39,6 +46,7 @@ let mcFeedAgent    = 'all';
 function buildHTML() {
   const colsHTML = MC_COLUMNS.map(col => {
     const { label, dotClass } = MC_COLUMN_META[col];
+    const impact = MC_COLUMN_IMPACT[col] || '';
     return `
       <div class="mc-column" data-column="${col}">
         <div class="mc-column-header">
@@ -46,6 +54,7 @@ function buildHTML() {
           <span class="mc-col-title">${label}</span>
           <span class="mc-col-count" id="mc-count-${col}">0</span>
         </div>
+        ${impact ? `<div class="mc-column-impact">${impact}</div>` : ''}
         <div class="mc-cards" data-column="${col}"></div>
       </div>`;
   }).join('');
@@ -71,14 +80,22 @@ function buildHTML() {
       <!-- ── Work Queue (Center) ── -->
       <div class="mc-queue">
         <div class="mc-queue-header">
-          <div class="mc-queue-title">
-            <span class="mc-dot mc-dot--blue"></span>
-            WORK QUEUE
+          <div class="mc-queue-title-row">
+            <div class="mc-queue-title">
+              <span class="mc-dot mc-dot--blue"></span>
+              Work
+            </div>
+            <div class="mc-queue-scope" id="mc-queue-scope">
+              ${renderScopeBadgeHTML('fleet')}
+            </div>
+          </div>
+          <div class="mc-queue-subtitle">
+            What work is planned, running, or done. Read-only.
           </div>
           <div class="mc-queue-stats">
             <span id="mc-total-tasks">0</span> total
             &middot;
-            <span id="mc-active-tasks">0</span> active
+            <span id="mc-active-tasks">0</span> running
           </div>
         </div>
 
@@ -88,19 +105,19 @@ function buildHTML() {
             <span class="mc-pill-count" data-count="all">0</span>
           </button>
           <button class="mc-pill" data-status="backlog">
-            <span class="mc-dot mc-dot--purple"></span> Inbox
+            <span class="mc-dot mc-dot--purple"></span> Planned
             <span class="mc-pill-count" data-count="backlog">0</span>
           </button>
           <button class="mc-pill" data-status="todo">
-            <span class="mc-dot mc-dot--blue"></span> Assigned
+            <span class="mc-dot mc-dot--blue"></span> Ready to run
             <span class="mc-pill-count" data-count="todo">0</span>
           </button>
           <button class="mc-pill" data-status="in_progress">
-            <span class="mc-dot mc-dot--green"></span> Active
+            <span class="mc-dot mc-dot--green"></span> Running
             <span class="mc-pill-count" data-count="in_progress">0</span>
           </button>
           <button class="mc-pill" data-status="review">
-            <span class="mc-dot mc-dot--yellow"></span> Review
+            <span class="mc-dot mc-dot--yellow"></span> Waiting on approval
             <span class="mc-pill-count" data-count="review">0</span>
           </button>
           <button class="mc-pill" data-status="done">
@@ -110,16 +127,18 @@ function buildHTML() {
         </div>
 
         <div class="mc-project-filters" id="mc-project-filters">
-          <button class="mc-proj-filter active" data-project="all">All</button>
-          <button class="mc-proj-filter" data-project="styln">Styln</button>
-          <button class="mc-proj-filter" data-project="spindine">Spin &amp; Dine</button>
-          <button class="mc-proj-filter" data-project="quantre">quantRE</button>
-          <button class="mc-proj-filter" data-project="ibkr">IBKR</button>
-          <button class="mc-proj-filter" data-project="infra">Infra</button>
+          <!-- Populated by JS from the project selector + tasks state -->
         </div>
 
         <div class="mc-board" id="mc-board">
           ${colsHTML}
+        </div>
+
+        <div class="mc-queue-source">
+          Source: <code>dashboard/state/tasks.json</code>,
+          <code>dashboard/state/agents.json</code>,
+          <code>dashboard/state/activity.json</code> ·
+          Refresh: <code>dontpanic dashboard build</code>
         </div>
       </div>
 
@@ -229,6 +248,14 @@ function renderBoard() {
   // Apply filters
   let filtered = mcTasks.map(t => ({ ...t, column: deriveColumn(t) }));
 
+  // Fleet scoping (D013 / copy-map §4.4): if the operator has the project
+  // selector pinned to a specific project, only show tasks tagged with
+  // that project name. The fleet view (`all`) keeps the tactical
+  // project pills available beneath the queue header.
+  if (mcSelectedProject && mcSelectedProject !== ALL_PROJECTS_VALUE) {
+    filtered = filtered.filter(t => (t.project || '').toLowerCase() === String(mcSelectedProject).toLowerCase());
+  }
+
   if (mcActiveProject !== 'all') {
     filtered = filtered.filter(t => (t.project || '').toLowerCase() === mcActiveProject);
   }
@@ -292,7 +319,6 @@ function renderBoard() {
 
     if (!groups[col].length) {
       container.innerHTML = '<div class="mc-empty">No tasks</div>';
-      bindColumnDropTarget(container, col);
       return;
     }
 
@@ -316,6 +342,13 @@ function renderCard(task) {
   const priority   = task.priority || 'medium';
   const timeAgo    = Jarvis.timeAgo(task.created);
   const currentColumn = deriveColumn(task);
+  // Layer 2: surface plan/feature ids when the task carries them so a
+  // technical operator can recover the lifecycle target.
+  const planId = task.plan_id || task.planId || '';
+  const featureId = task.feature_id || task.featureId || '';
+  const idsLine = (planId || featureId)
+    ? `<div class="mc-card-ids" title="plan_id / feature_id">${esc([planId, featureId].filter(Boolean).join(' · '))}</div>`
+    : '';
 
   // V0 Work is read-only — no `draggable` attribute. Drag-to-mutate is
   // forbidden until a future plan ships drag-to-command as a non-mutating
@@ -327,12 +360,55 @@ function renderCard(task) {
         <span class="mc-priority-dot mc-priority-dot--${esc(priority)}" title="${esc(priority)} priority"></span>
       </div>
       <div class="mc-card-title">${esc(task.title || task.id)}</div>
+      ${idsLine}
       <div class="mc-card-footer">
         <div class="mc-card-avatar" style="background:${meta.color}">${meta.initials}</div>
         <span class="mc-card-assignee">${esc(agentName)}</span>
         <span class="mc-card-time">${esc(timeAgo)}</span>
       </div>
     </div>`;
+}
+
+function renderProjectFilters() {
+  const page = Jarvis.getPageEl('mission-control');
+  const wrap = page.querySelector('#mc-project-filters');
+  if (!wrap) return;
+  // Collect project keys from tasks (lowercased) + the friendly label map
+  // so operators see only projects that actually have tasks today, never
+  // a hardcoded Styln / Spin & Dine / IBKR list.
+  const projectKeys = new Set();
+  for (const t of mcTasks) {
+    const key = String(t.project || '').toLowerCase();
+    if (key) projectKeys.add(key);
+  }
+  const ordered = Array.from(projectKeys).sort();
+  const allActive = mcActiveProject === 'all' ? ' active' : '';
+  const buttons = [
+    `<button class="mc-proj-filter${allActive}" data-project="all">All</button>`,
+    ...ordered.map(key => {
+      const label = PROJECT_NAMES[key] || key;
+      const active = mcActiveProject === key ? ' active' : '';
+      return `<button class="mc-proj-filter${active}" data-project="${esc(key)}">${esc(label)}</button>`;
+    }),
+  ];
+  wrap.innerHTML = buttons.join('');
+  // Re-bind because innerHTML wipes listeners.
+  wrap.querySelectorAll('.mc-proj-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('.mc-proj-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mcActiveProject = btn.dataset.project;
+      renderBoard();
+    });
+  });
+}
+
+function renderScope() {
+  const page = Jarvis.getPageEl('mission-control');
+  const el = page.querySelector('#mc-queue-scope');
+  if (!el) return;
+  const scope = mcSelectedProject === ALL_PROJECTS_VALUE ? 'fleet' : 'project';
+  el.innerHTML = renderScopeBadgeHTML(scope);
 }
 
 // ── Render: Live Feed ──
@@ -422,15 +498,7 @@ function bindFilters() {
     });
   });
 
-  // Project filters
-  page.querySelectorAll('.mc-proj-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      page.querySelectorAll('.mc-proj-filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      mcActiveProject = btn.dataset.project;
-      renderBoard();
-    });
-  });
+  // Project filters are bound dynamically by renderProjectFilters().
 }
 
 // ── Task Detail Modal ──
@@ -510,7 +578,13 @@ function renderAll(state) {
   mcTasks    = (state.tasks    || []);
   mcAgents   = (state.agents   || []);
   mcActivity = (state.activity || []);
+  mcSelectedProject = (state && typeof state.selectedProject === 'string')
+    ? state.selectedProject
+    : ALL_PROJECTS_VALUE;
+  mcFleetSummary = state ? state.fleetSummary : null;
 
+  renderScope();
+  renderProjectFilters();
   renderAgentSidebar();
   renderBoard();
   renderFeedFilters();

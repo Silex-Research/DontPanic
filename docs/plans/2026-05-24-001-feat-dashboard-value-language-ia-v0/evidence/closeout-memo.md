@@ -1,17 +1,17 @@
 ---
 status: operator_resolved
-reason_class: operator_judgment
+reason_class: implementation_defect
 plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
-feature_id: F002
-closed_at: 2026-05-24T06:56:02Z
-latest_audit_status: signed_off
+feature_id: F003
+closed_at: 2026-05-24T07:32:22Z
+latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-24-001-feat-dashboard-value-language-ia-v0 / F002
+# Closeout memo — 2026-05-24-001-feat-dashboard-value-language-ia-v0 / F003
 
 ## Operator decision
 
-This feature was closed under class `operator_judgment` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `implementation_defect` after operator review of a `stopped_no_progress` terminal. The latest auditor findings were real defects, not false positives; the operator patched them directly, reran focused dashboard tests, verified the dashboard build/serve path, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,25 +19,19 @@ This feature was closed under class `operator_judgment` after operator review of
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 5 (see structured target_context.commands_run)
+- Command: 8 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic
+[F003] Repo: DontPanic
 Env: dev
 Project: (none)
 
-Overall verdict: signed_off. The implementer declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; structured `target_context` has `env=dev`, `project=null`, and empty `commands_run`, so I found no forbidden command shapes there. Code inspection shows the shell is DontPanic-branded, V0 nav is `Needs Attention | Work | Tools & Setup | Health | Preferences`, Financial/Cloud Costs are removed from core imports, Work mutation affordances were removed, and Architecture was not implemented.
+Verdict: needs_changes. The implementer correctly declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and their structured `commands_run` contains no forbidden command shapes.
 
-FINDING (advisory, documentation): implementer command provenance is internally inconsistent; evidence: the audit ...
+FINDING (high, correctness): Work can crash on normal empty-column renders. Evidence: [mission-control.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/pages/mission-control/mission-control.js:322) calls undefined `bindColumnDropTarget(...)`; the JSDOM smoke with empty tasks throws `ReferenceError: bindColumnDropTarget is not defined`. Recommendation: remove the stale drop-target call or replace it with a defined read-only/n...
 
 ## Rationale (operator)
 
-The latest auditor envelope is `signed_off`; the only finding is advisory
-documentation friction around command provenance in the audit envelope. The
-dashboard shell/nav work itself satisfies F002: DontPanic branding is visible,
-the V0 core nav is value-first, demo/noise tabs are removed from core imports,
-Work is read-only, and Architecture remains deferred. No redispatch is
-warranted for F002; command-provenance consistency belongs in audit-writer
-hygiene rather than this dashboard IA feature.
+The stopped-no-progress terminal was valid: iteration 1 still had two high/correctness findings. Both were narrow implementation defects and were patched without broadening the feature scope: Work no longer calls the removed `bindColumnDropTarget(...)` drag/drop helper on empty columns, and `security.json` now uses `null` as the missing-file sentinel so Health can distinguish "not generated" from "present but empty." Focused verification passed after the patch: 276 dashboard tests across Home, Work, Tools & Setup, Health, router, and value-language surfaces; `dontpanic dashboard build`; and `dontpanic dashboard serve --once --no-watch`. No re-dispatch was needed because the defects were concrete, locally corrected, and covered by new/updated Health and Work tests.
 
 ## Evidence references
 

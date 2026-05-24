@@ -2,15 +2,11 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "dashboard/core.js",
+      "path": "dashboard/lib/capabilities-logic.js",
       "status": "M"
     },
     {
-      "path": "dashboard/index-firebase.html",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/index.html",
+      "path": "dashboard/lib/mission-control-logic.js",
       "status": "M"
     },
     {
@@ -18,7 +14,11 @@
       "status": "M"
     },
     {
-      "path": "dashboard/pages/capabilities/capabilities.js",
+      "path": "dashboard/pages/health/health.css",
+      "status": "M"
+    },
+    {
+      "path": "dashboard/pages/health/health.js",
       "status": "M"
     },
     {
@@ -26,27 +26,11 @@
       "status": "M"
     },
     {
+      "path": "dashboard/pages/settings/settings.css",
+      "status": "M"
+    },
+    {
       "path": "dashboard/pages/settings/settings.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/what-now/what-now.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/integration/mission-control-page.test.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/integration/what-now-page.test.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/unit/value-language-static-checks.test.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/tests/unit/what-now-logic.test.js",
       "status": "M"
     },
     {
@@ -67,8 +51,9 @@
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F002-i0.json",
+    "dashboard/lib/health-logic.js",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F003-i0.json",
     "docs/plans/2026-05-24-004-feat-event-messaging-v1/"
   ],
   "deleted_staged": [],

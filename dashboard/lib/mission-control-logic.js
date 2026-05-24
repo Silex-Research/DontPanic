@@ -3,12 +3,27 @@
 
 export const MC_COLUMNS = ['backlog', 'todo', 'in_progress', 'review', 'done'];
 
+// V0 lifecycle labels per copy-map.md §2.3. Primary labels speak value
+// ("Planned", "Ready to run", "Running", "Waiting on approval", "Done")
+// instead of kanban-internal vocabulary. Plan/feature ids and gate names
+// stay visible as Layer 2 metadata on each card and in the detail modal.
 export const MC_COLUMN_META = {
-  backlog:     { label: 'INBOX',       dotClass: 'mc-dot--purple' },
-  todo:        { label: 'ASSIGNED',    dotClass: 'mc-dot--blue'   },
-  in_progress: { label: 'IN PROGRESS', dotClass: 'mc-dot--green'  },
-  review:      { label: 'REVIEW',      dotClass: 'mc-dot--yellow' },
-  done:        { label: 'DONE',        dotClass: 'mc-dot--gray'   },
+  backlog:     { label: 'PLANNED',            dotClass: 'mc-dot--purple' },
+  todo:        { label: 'READY TO RUN',       dotClass: 'mc-dot--blue'   },
+  in_progress: { label: 'RUNNING',            dotClass: 'mc-dot--green'  },
+  review:      { label: 'WAITING ON APPROVAL', dotClass: 'mc-dot--yellow' },
+  done:        { label: 'DONE',               dotClass: 'mc-dot--gray'   },
+};
+
+// One-sentence value-first impact line per lifecycle column. Rendered
+// under the column header so non-technical reviewers can answer
+// "what does this state mean?" without learning the internal vocabulary.
+export const MC_COLUMN_IMPACT = {
+  backlog:     'Planned work not yet ready to start.',
+  todo:        'Ready for an agent or operator to pick up.',
+  in_progress: 'An agent or operator is actively working on this.',
+  review:      'Waiting for human approval before it can move on.',
+  done:        'Completed work, kept for reference.',
 };
 
 // Status field on task → kanban column

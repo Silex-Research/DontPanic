@@ -73,11 +73,13 @@
 
         <!-- Dashboard Preferences -->
         <section class="panel stg-section stg-config-section">
-          <h2>Dashboard Preferences</h2>
+          <h2>Preferences</h2>
           <p class="stg-section-desc">
-            UI-local behavior for this dashboard instance. These preferences
-            live in your browser's localStorage and never touch
-            <code>~/.dontpanic/</code> or any DontPanic config file.
+            How this dashboard behaves for you. These preferences live in
+            your browser's localStorage only — they do not edit DontPanic
+            configuration, secrets, or capability state. Anything under
+            <code>~/.dontpanic/</code> is managed through
+            <code>dontpanic</code> CLI commands surfaced in Tools &amp; Setup.
           </p>
           <div class="stg-config-form">
 
@@ -122,6 +124,11 @@
           <div class="stg-save-row">
             <button class="stg-save-btn" id="stg-save-btn">Save preferences</button>
             <span class="stg-save-feedback" id="stg-save-feedback"></span>
+          </div>
+
+          <div class="stg-source-footer">
+            Source: <code>localStorage</code> (this browser only) ·
+            DontPanic config edits use the <code>dontpanic</code> CLI surfaced under Tools &amp; Setup.
           </div>
         </section>
 

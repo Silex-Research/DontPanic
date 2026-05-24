@@ -40,7 +40,10 @@ function JARVIS_LITERAL() { return {
     tasks: [],
     activity: [],
     costs: null,
-    security: [],
+    // `security` stays null when security.json is absent. Health uses null as
+    // the honest missing-data sentinel; a present empty array means "no
+    // security hook activity yet."
+    security: null,
     // `capabilities` stays null when capabilities-status.json is absent —
     // the Capability Center page uses null as the missing-state sentinel.
     capabilities: null,
@@ -210,7 +213,7 @@ function JARVIS_LITERAL() { return {
   // ── State Loading ──
   async loadState() {
     // Most state files are loaded by `state/<key>.json` convention.
-    const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
+    const simpleFiles = ['agents', 'tasks', 'activity', 'costs'];
     // Files whose on-disk name differs from the state key. The
     // Capability Center page reads `capabilities-status.json` directly
     // and is intentionally not part of the F002 projection adapter —
@@ -228,6 +231,9 @@ function JARVIS_LITERAL() { return {
       // (operator deletes the cache file) actually surfaces the missing
       // banner instead of holding stale registry rows.
       { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
+      // Security is nullable for the Health honesty surface. A missing file
+      // renders "no data yet"; a loaded [] renders "no hook activity yet."
+      { key: 'security',     file: 'security.json',      nullableMissing: true },
       // F004 fleet what-now envelope — feeds the All-Projects grouped
       // view and the project-filtered view. Missing → null; the what-now
       // page falls back to the single-repo `whatNow` payload in that

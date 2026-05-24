@@ -237,11 +237,9 @@ describe('mission-control: kanban columns', () => {
 
   it('column headers show the correct labels from MC_COLUMN_META', () => {
     const titles = [...pageEl.querySelectorAll('.mc-col-title')].map(el => el.textContent.trim());
-    expect(titles).toContain('INBOX');
-    expect(titles).toContain('ASSIGNED');
-    expect(titles).toContain('IN PROGRESS');
-    expect(titles).toContain('REVIEW');
-    expect(titles).toContain('DONE');
+    for (const col of MC_COLUMNS) {
+      expect(titles).toContain(MC_COLUMN_META[col].label);
+    }
   });
 
   it('tasks appear in the correct column based on their status', () => {

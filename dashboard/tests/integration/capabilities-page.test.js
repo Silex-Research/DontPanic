@@ -78,7 +78,7 @@ describe('capability center: populated render', () => {
   });
 
   it('each fixture capability shows up as a card title', () => {
-    const titles = [...pageEl.querySelectorAll('.cap-card-title')].map(el => el.textContent.trim());
+    const titles = [...pageEl.querySelectorAll('.cap-card-id')].map(el => el.textContent.trim());
     for (const cap of fixture.capabilities) {
       expect(titles).toContain(cap.capability_id);
     }
@@ -142,7 +142,7 @@ describe('capability center: populated render', () => {
   });
 
   it('orders attention-needing capabilities ahead of ready ones', () => {
-    const titles = [...pageEl.querySelectorAll('.cap-card-title')].map(el => el.textContent.trim());
+    const titles = [...pageEl.querySelectorAll('.cap-card-id')].map(el => el.textContent.trim());
     // agent-claude-cli (ready) is last; discord-notify (blocked) is first.
     expect(titles[titles.length - 1]).toBe('agent-claude-cli');
     expect(titles[0]).toBe('discord-notify');

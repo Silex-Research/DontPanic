@@ -46,6 +46,46 @@ export const SOURCE_LABELS = Object.freeze({
   architecture: 'Architecture',
 });
 
+// F003: value-first "kind" labels. Primary Layer-1 text rendered before
+// any technical noun. Pairs (source, band) → human-readable headline.
+// The internal SOURCE_LABELS (gate / capability / supervisor / …) stay
+// available as Layer-2 chips on each card.
+const VALUE_KIND_LABELS = Object.freeze({
+  'gate:needs_action':         'Approval needed',
+  'gate:advisory':             'Approval pending',
+  'gate:info':                 'Approval cleared',
+  'gate:ready':                'Approval cleared',
+  'capability:needs_action':   'Setup required',
+  'capability:advisory':       'Setup advisory',
+  'capability:info':           'Tool connected',
+  'capability:ready':          'Tool connected',
+  'reconcile:needs_action':    'Setup drift detected',
+  'reconcile:advisory':        'Setup drift advisory',
+  'reconcile:info':            'Setup change recorded',
+  'reconcile:ready':           'Install matches baseline',
+  'supervisor:needs_action':   'AI work needs help',
+  'supervisor:advisory':       'AI work warning',
+  'supervisor:info':           'Active AI work',
+  'supervisor:ready':          'AI work clear',
+  'architecture:needs_action': 'Architecture snapshot needs refresh',
+  'architecture:advisory':     'Architecture snapshot is stale',
+  'architecture:info':         'Architecture snapshot updated',
+  'architecture:ready':        'Architecture snapshot fresh',
+});
+
+/**
+ * Plain-language "kind" label derived from (source, band). Falls back
+ * to the source's SOURCE_LABEL when the pair is unknown.
+ * @param {string} source
+ * @param {string} band
+ * @returns {string}
+ */
+export function getValueKindLabel(source, band) {
+  const key = `${source}:${band}`;
+  if (VALUE_KIND_LABELS[key]) return VALUE_KIND_LABELS[key];
+  return SOURCE_LABELS[source] || String(source || '');
+}
+
 const BAND_PRIORITY = Object.freeze({
   needs_action: 0, advisory: 1, info: 2, ready: 3,
 });
@@ -349,20 +389,30 @@ function renderBandSectionHTML(group, scope = 'project') {
 function renderActionCardHTML(item) {
   const badge = getBandBadge(item.band);
   const sourceLabel = getSourceLabel(item.source);
+  const kindLabel = getValueKindLabel(item.source, item.band);
+  const projectChip = item.display_name || item.project_name
+    ? `<span class="wn-project-chip" title="project">${esc(item.display_name || item.project_name)}</span>`
+    : '';
+  // Layer 1 ("what does this mean for me?") leads with the kind label.
+  // Layer 2 (the upstream provider title and ids) lives below in the
+  // technical-detail block so the non-technical reviewer reads value
+  // language first.
   return `
     <article class="wn-card wn-card--${esc(badge.color)}"
              data-action-id="${esc(item.id)}"
              data-source="${esc(item.source)}"
              data-band="${esc(item.band)}">
       <header class="wn-card-header">
-        <span class="wn-source-chip wn-source-chip--${esc(item.source)}">${esc(sourceLabel)}</span>
-        <span class="wn-card-title">${esc(item.title)}</span>
+        <span class="wn-card-kind">${esc(kindLabel)}</span>
+        ${projectChip}
         ${renderRoleChipHTML(item)}
       </header>
+      <div class="wn-card-impact">${esc(item.title || '')}</div>
       ${item.detail ? `<div class="wn-card-detail">${esc(item.detail)}</div>` : ''}
       ${renderCommandHTML(item.exact_command)}
       ${renderEvidenceHTML(item.evidence_uri)}
       <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--${esc(item.source)}" title="provider">${esc(sourceLabel)}</span>
         <span class="wn-card-id" title="${esc(item.id)}">${esc(item.id)}</span>
         ${item.updated_at ? `<span class="wn-card-updated">updated ${esc(item.updated_at)}</span>` : ''}
       </footer>
