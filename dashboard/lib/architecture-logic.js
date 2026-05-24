@@ -1,27 +1,25 @@
 // ── Architecture Logic — Pure HTML builders for the Architecture tab ──
-// Plan: 2026-05-24-002-feat-dashboard-architecture-explorer-v1 (F002 shell).
+// Plan: 2026-05-24-002-feat-dashboard-architecture-explorer-v1.
 //
-// Consumes the F001 architecture view-state envelope produced by
-// `scripts/dontpanic_orchestrate/architecture_view_state.py` and persisted
-// at `dashboard/state/architecture-view-state.json`. The envelope shape:
+// F001 wrote `dashboard/state/architecture-view-state.json` with lanes,
+// nodes, edges, flows, steps, filters, insights, and validation_warnings.
+// F002 owned the shell (nav, value-first copy, empty states, regen copy
+// button). F003 (this module) owns the *interactive flow explorer*:
 //
-//   {
-//     schema_version, project: {name, display_name, label},
-//     generated_at, source_path,
-//     freshness: { state, message, regen_command, generated_at, ... },
-//     lanes: [...], nodes: [...], edges: [...], flows: [...], steps: [...],
-//     filters: {...}, insights: [...], validation_warnings: [...]
-//   }
-//
-// F002 owns the *shell*: nav-visible tab, value-first labels, missing /
-// stale / loading empty states, validation-warning rendering, and the
-// exact `dontpanic architecture regen --with-html` command emission with
-// a copy affordance. The interactive flow-map canvas, step inspector, and
-// filters land in F003 — the shell renders a "Map preview coming in F003"
-// placeholder so the tab is non-blank without faking data.
+//   - deterministic swimlane SVG layout (rows = lanes, nodes sorted by id)
+//   - typed edges (import / runs / calls / writes)
+//   - persistent legend by node category
+//   - right-side flow list with selected state + clear-selection
+//   - numbered step markers on the selected flow path
+//   - scrollable step inspector matching the highlighted markers
+//   - search + lane + type + edge-type filters
+//   - click-to-detail panel with related nodes, source metadata, plans
+//   - hover labels (title attributes on every node) and zoom/pan/reset
+//   - validation warnings are visible but non-fatal
 //
 // All exports are pure: same input → same string output, no DOM access.
-// DOM wiring lives in `pages/architecture/architecture.js`.
+// DOM wiring (selection state, search input, zoom transform, copy
+// button) lives in `pages/architecture/architecture.js`.
 
 import { esc } from './html-escape.js';
 import {
@@ -30,20 +28,10 @@ import {
 } from './project-selector-logic.js';
 import { renderProvenanceFooterHTML } from './provenance.js';
 
-// Per-page provenance pointers (Layer 2). Layer 1 stays value-first.
 const ARCH_SOURCE = 'dashboard/state/architecture-view-state.json';
 const ARCH_REFRESH = 'dontpanic architecture regen --with-html';
 const ARCH_BUILD = 'dontpanic dashboard build';
 
-/**
- * Closed set of freshness states surfaced by the shell.
- *
- * F001 emits four states: `fresh|stale|absent|error`. `missing` is a
- * JS-only synonym for `absent` retained for callers that already pass
- * it; both render the same empty card. Dropping unknown values would
- * silently swallow F001's actionable error/absent messaging — instead
- * we accept the full set and let the renderer route each one.
- */
 export const FRESHNESS_STATES = Object.freeze([
   'fresh',
   'stale',
@@ -52,7 +40,6 @@ export const FRESHNESS_STATES = Object.freeze([
   'missing',
 ]);
 
-/** Plain-language headline per freshness state (Layer 1, value-first). */
 export const FRESHNESS_HEADLINES = Object.freeze({
   fresh:   'System map is up to date',
   stale:   'System map is out of date',
@@ -61,7 +48,6 @@ export const FRESHNESS_HEADLINES = Object.freeze({
   error:   'System map could not be read',
 });
 
-/** One-liner explaining what each state means for the operator. */
 export const FRESHNESS_IMPACT = Object.freeze({
   fresh:
     'The architecture snapshot matches the working tree. Modules, plans, '
@@ -81,7 +67,6 @@ export const FRESHNESS_IMPACT = Object.freeze({
     + 'inspect and regenerate the file.',
 });
 
-/** Color tokens — same vocabulary used by other V0 pages. */
 export const FRESHNESS_COLORS = Object.freeze({
   fresh:   'green',
   stale:   'yellow',
@@ -90,23 +75,31 @@ export const FRESHNESS_COLORS = Object.freeze({
   error:   'red',
 });
 
-/**
- * Resolve the effective architecture view-state envelope given the
- * operator's current selection. Plan F001 writes per-project caches at
- * `state/projects/<name>/architecture-view-state.json`; the page must
- * read the project-scoped cache when a specific project is selected
- * and fall back honestly to the single-repo envelope (or null) when
- * the per-project cache has not been built yet.
- *
- * Inputs are raw envelope values — this helper does not normalize.
- *
- * @param {object} opts
- * @param {string} [opts.selectedProject] 'all' or a project name
- * @param {unknown} [opts.single] raw `architectureViewState`
- * @param {Record<string, unknown>|null|undefined} [opts.byProject]
- *   per-project raw view-state map
- * @returns {unknown} raw envelope to feed `renderArchitectureHTML`
- */
+// Closed set of node categories the legend understands. Any node type
+// not in this map falls through to the "other" bucket so the legend
+// stays honest when F001 emits something new.
+export const NODE_CATEGORIES = Object.freeze({
+  module:     { label: 'Module',     color: '#60a5fa', short: 'mod' },
+  plan:       { label: 'Plan',       color: '#a78bfa', short: 'plan' },
+  capability: { label: 'Capability', color: '#34d399', short: 'cap' },
+  command:    { label: 'Command',    color: '#fbbf24', short: 'cmd' },
+  schema:     { label: 'Schema',     color: '#22d3ee', short: 'schm' },
+  page:       { label: 'Page',       color: '#f472b6', short: 'page' },
+  external:   { label: 'External',   color: '#f87171', short: 'ext' },
+  metadata:   { label: 'Metadata',   color: '#94a3b8', short: 'meta' },
+  other:      { label: 'Other',      color: '#cbd5e1', short: 'other' },
+});
+
+export const EDGE_TYPES = Object.freeze({
+  import:  { label: 'Import',  color: '#3b82f6' },
+  runs:    { label: 'Runs',    color: '#facc15' },
+  calls:   { label: 'Calls',   color: '#10b981' },
+  writes:  { label: 'Writes',  color: '#f43f5e' },
+  other:   { label: 'Other',   color: '#94a3b8' },
+});
+
+// ─── Envelope resolution + normalization ─────────────────────────────
+
 export function resolveArchitectureEnvelope(opts = {}) {
   const selected = typeof opts.selectedProject === 'string'
     ? opts.selectedProject
@@ -129,12 +122,6 @@ function _normalizeFreshnessState(raw) {
   return 'absent';
 }
 
-/**
- * True iff the view-state cache is absent or unusable — no top-level
- * object, or the object is missing the F001 substrate keys.
- * @param {unknown} envelope
- * @returns {boolean}
- */
 export function isMissingState(envelope) {
   if (envelope == null) return true;
   if (typeof envelope !== 'object') return true;
@@ -143,12 +130,6 @@ export function isMissingState(envelope) {
   return false;
 }
 
-/**
- * Coerce raw JSON into a normalized view-state envelope. Returns `null`
- * when the input does not look like an F001 view-state cache, so the
- * page can render the missing state without throwing.
- * @param {unknown} raw
- */
 export function normalizeEnvelope(raw) {
   if (isMissingState(raw)) return null;
   const project = raw.project && typeof raw.project === 'object'
@@ -167,12 +148,6 @@ export function normalizeEnvelope(raw) {
       label:        typeof project.label === 'string' ? project.label : null,
     },
     freshness: {
-      // Normalize the JS-only `missing` alias to F001's canonical `absent`
-      // so downstream consumers branch on the same closed set the F001
-      // schema documents. Unknown values clamp to `absent` (vs. `error`)
-      // because `absent` represents the safe "no data, run regen" path —
-      // surfacing a synthetic `error` would imply a parser fault that
-      // isn't actually there.
       state:           _normalizeFreshnessState(freshness.state),
       message:         typeof freshness.message === 'string' ? freshness.message : '',
       regen_command:   typeof freshness.regen_command === 'string' && freshness.regen_command.length > 0
@@ -195,13 +170,6 @@ export function normalizeEnvelope(raw) {
   };
 }
 
-/**
- * Collect every step-level warning across the envelope's flows.
- * F001 attaches warnings per step; F002 surfaces them on the shell so a
- * malformed authored flow does not crash the page.
- * @param {object} envelope normalized envelope
- * @returns {Array<{flow_id: string, step_id: string, message: string}>}
- */
 export function collectFlowWarnings(envelope) {
   if (envelope == null) return [];
   const out = [];
@@ -244,8 +212,6 @@ export function collectFlowWarnings(envelope) {
       }
     }
   }
-  // Also include envelope-level validation_warnings — F001 may surface
-  // build-level issues here (missing schemas, invalid flow input).
   for (const w of envelope.validation_warnings || []) {
     if (w && typeof w === 'object' && typeof w.message === 'string') {
       out.push({
@@ -260,21 +226,204 @@ export function collectFlowWarnings(envelope) {
   return out;
 }
 
+// ─── Graph layout (deterministic) ────────────────────────────────────
+
+const LAYOUT_DEFAULTS = Object.freeze({
+  nodeWidth:   140,
+  nodeHeight:  34,
+  nodeGapX:    14,
+  nodeGapY:    10,
+  cols:        9,
+  laneHeader:  44,
+  lanePadY:    16,
+  paddingX:    32,
+  paddingTop:  20,
+});
+
+function categoryFor(nodeType) {
+  if (NODE_CATEGORIES[nodeType]) return nodeType;
+  return 'other';
+}
+
 /**
- * Top-level Architecture page renderer.
+ * Compute a deterministic SVG layout for the architecture view-state.
+ * Lanes are stacked vertically in `order` then `id`. Nodes within each
+ * lane are sorted by id and wrapped into a fixed-column grid so the
+ * same envelope produces the same coordinates every render (required
+ * for layout snapshot tests).
  *
- * Branches:
- *   - raw is null / not an envelope → missing-state empty card
- *   - envelope.freshness.state === 'absent' (or 'missing') → missing card
- *   - envelope.freshness.state === 'error' → error card with F001 message
- *   - envelope.freshness.state === 'stale' → populated shell + stale banner
- *   - otherwise → populated shell + fresh banner
- *
- * @param {unknown} raw raw `state.architectureViewState` value
- * @param {object} [opts]
- * @param {string} [opts.selectedProject] selected project name or 'all'
- * @returns {string} innerHTML
+ * Returns: { width, height, lanes, nodesById, edges, paths } where:
+ *   - lanes[]: {id, title, kind, y, height, nodes: [...]}
+ *   - nodesById: Map<id, {id, x, y, w, h, lane_id, category, ...}>
+ *   - edges[]: {id, from, to, type, x1, y1, x2, y2, color, missing}
+ *   - paths: layout metadata for tests
  */
+export function layoutArchitectureGraph(envelope, opts = {}) {
+  const cfg = { ...LAYOUT_DEFAULTS, ...opts };
+  if (envelope == null) {
+    return { width: 0, height: 0, lanes: [], nodesById: new Map(), edges: [] };
+  }
+  const lanes = [...(envelope.lanes || [])]
+    .filter((l) => l && typeof l === 'object' && typeof l.id === 'string')
+    .sort((a, b) => {
+      const ao = typeof a.order === 'number' ? a.order : 99;
+      const bo = typeof b.order === 'number' ? b.order : 99;
+      if (ao !== bo) return ao - bo;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+
+  // Bucket nodes by lane_id (sorted deterministically by id within lane).
+  const byLane = new Map();
+  const orphans = [];
+  for (const node of (envelope.nodes || [])) {
+    if (!node || typeof node !== 'object' || typeof node.id !== 'string') continue;
+    const laneId = typeof node.lane_id === 'string' ? node.lane_id : '';
+    if (!laneId || !lanes.some((l) => l.id === laneId)) {
+      orphans.push(node);
+      continue;
+    }
+    if (!byLane.has(laneId)) byLane.set(laneId, []);
+    byLane.get(laneId).push(node);
+  }
+  for (const arr of byLane.values()) {
+    arr.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+  // Stash orphans into a virtual "(unlaned)" lane so the page does not
+  // silently drop nodes whose lane_id was lost in a schema mismatch.
+  if (orphans.length > 0) {
+    lanes.push({ id: 'lane:_unlaned', title: 'Unlaned', kind: 'other', order: 999 });
+    byLane.set('lane:_unlaned', orphans.sort((a, b) => (a.id < b.id ? -1 : 1)));
+  }
+
+  const cols = cfg.cols;
+  const totalWidth = cfg.paddingX * 2 + cols * cfg.nodeWidth + (cols - 1) * cfg.nodeGapX;
+
+  const nodesById = new Map();
+  const laidOutLanes = [];
+  let cursorY = cfg.paddingTop;
+
+  for (const lane of lanes) {
+    const laneNodes = byLane.get(lane.id) || [];
+    const rows = Math.max(1, Math.ceil(laneNodes.length / cols));
+    const laneHeight = cfg.laneHeader + rows * cfg.nodeHeight + (rows - 1) * cfg.nodeGapY + cfg.lanePadY;
+    const laneOut = {
+      id: lane.id,
+      title: typeof lane.title === 'string' ? lane.title : lane.id,
+      kind: typeof lane.kind === 'string' ? lane.kind : 'other',
+      y: cursorY,
+      height: laneHeight,
+      rows,
+      nodes: [],
+    };
+    laneNodes.forEach((node, idx) => {
+      const row = Math.floor(idx / cols);
+      const col = idx % cols;
+      const x = cfg.paddingX + col * (cfg.nodeWidth + cfg.nodeGapX);
+      const y = cursorY + cfg.laneHeader + row * (cfg.nodeHeight + cfg.nodeGapY);
+      const out = {
+        id: node.id,
+        title: typeof node.title === 'string' && node.title.length > 0
+          ? node.title
+          : node.id,
+        type: typeof node.type === 'string' ? node.type : 'other',
+        category: categoryFor(typeof node.type === 'string' ? node.type : 'other'),
+        lane_id: lane.id,
+        source_path: typeof node.source_path === 'string' ? node.source_path : '',
+        summary: typeof node.summary === 'string' ? node.summary : '',
+        fingerprint: typeof node.fingerprint === 'string' ? node.fingerprint : '',
+        x,
+        y,
+        w: cfg.nodeWidth,
+        h: cfg.nodeHeight,
+      };
+      nodesById.set(node.id, out);
+      laneOut.nodes.push(out);
+    });
+    laidOutLanes.push(laneOut);
+    cursorY += laneHeight;
+  }
+
+  // Edges connect node centers. Missing endpoints (filtered or absent)
+  // get `missing: true` so the SVG can omit them deterministically.
+  const edgesOut = [];
+  for (const edge of (envelope.edges || [])) {
+    if (!edge || typeof edge !== 'object' || typeof edge.id !== 'string') continue;
+    const from = nodesById.get(edge.from);
+    const to = nodesById.get(edge.to);
+    if (!from || !to) {
+      edgesOut.push({
+        id: edge.id,
+        from: typeof edge.from === 'string' ? edge.from : '',
+        to: typeof edge.to === 'string' ? edge.to : '',
+        type: typeof edge.type === 'string' ? edge.type : 'other',
+        missing: true,
+      });
+      continue;
+    }
+    edgesOut.push({
+      id: edge.id,
+      from: edge.from,
+      to: edge.to,
+      type: typeof edge.type === 'string' ? edge.type : 'other',
+      x1: from.x + from.w / 2,
+      y1: from.y + from.h / 2,
+      x2: to.x + to.w / 2,
+      y2: to.y + to.h / 2,
+      missing: false,
+    });
+  }
+  edgesOut.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+  return {
+    width: totalWidth,
+    height: cursorY + cfg.paddingTop,
+    lanes: laidOutLanes,
+    nodesById,
+    edges: edgesOut,
+    cfg,
+  };
+}
+
+/**
+ * Collect every node and edge ID that participates in `flowId`. Used by
+ * the renderer to apply selection highlighting and dimming. Returns a
+ * `{ nodeIds: Set, edgeIds: Set, stepRefs: [...] }` envelope where
+ * `stepRefs` is the ordered step descriptors for the inspector.
+ */
+export function getFlowParticipants(envelope, flowId) {
+  const empty = { nodeIds: new Set(), edgeIds: new Set(), stepRefs: [], flow: null };
+  if (envelope == null || typeof flowId !== 'string' || flowId.length === 0) {
+    return empty;
+  }
+  const flow = (envelope.flows || []).find((f) => f && f.id === flowId);
+  if (!flow) return empty;
+  const nodeIds = new Set();
+  const edgeIds = new Set();
+  const stepRefs = [];
+  const steps = Array.isArray(flow.steps) ? flow.steps : [];
+  steps.forEach((step, idx) => {
+    if (!step || typeof step !== 'object') return;
+    const order = typeof step.order === 'number' ? step.order : idx + 1;
+    const nodeRef = typeof step.node_ref === 'string' ? step.node_ref : '';
+    const edgeRef = typeof step.edge_ref === 'string' ? step.edge_ref : '';
+    if (nodeRef) nodeIds.add(nodeRef);
+    if (edgeRef) edgeIds.add(edgeRef);
+    stepRefs.push({
+      id: typeof step.id === 'string' ? step.id : `step:${order}`,
+      title: typeof step.title === 'string' ? step.title : `Step ${order}`,
+      node_ref: nodeRef,
+      edge_ref: edgeRef,
+      order,
+      warnings: Array.isArray(step.warnings) ? step.warnings : [],
+      summary: typeof step.summary === 'string' ? step.summary : '',
+    });
+  });
+  stepRefs.sort((a, b) => a.order - b.order);
+  return { nodeIds, edgeIds, stepRefs, flow };
+}
+
+// ─── Top-level renderer ──────────────────────────────────────────────
+
 export function renderArchitectureHTML(raw, opts = {}) {
   const selected = typeof opts.selectedProject === 'string'
     ? opts.selectedProject
@@ -291,24 +440,9 @@ export function renderArchitectureHTML(raw, opts = {}) {
   if (state === 'error') {
     return renderErrorStateHTML(scope, envelope);
   }
-  return renderPopulatedHTML(envelope, scope);
+  return renderPopulatedHTML(envelope, scope, opts);
 }
 
-/**
- * Missing-state shell. Honest about what is absent and emits the exact
- * regen + build commands the operator needs to run. The shell tab still
- * renders so the operator can land on Architecture and discover the
- * setup path without flipping back to a docs page.
- *
- * Renders even when `envelope` is null — used both for "no view-state
- * cache at all" and "view-state present but freshness.state in
- * {absent, missing}". `data-empty-state="missing"` is preserved as the
- * legacy hook; new callers can branch on `data-freshness` for the F001
- * canonical state.
- *
- * @param {'project'|'fleet'} [scope]
- * @param {object|null} [envelope] normalized envelope when available
- */
 export function renderMissingStateHTML(scope = 'project', envelope = null) {
   const freshState = envelope && envelope.freshness && envelope.freshness.state
     ? envelope.freshness.state
@@ -366,17 +500,6 @@ export function renderMissingStateHTML(scope = 'project', envelope = null) {
   `;
 }
 
-/**
- * Error-state shell. F001's `error` state fires when architecture.json
- * exists but failed to parse — distinct from `absent`. We surface the
- * F001 message verbatim, list the source path so the operator can
- * inspect it, and keep the regen command available. The page never
- * crashes on `error` — the populated shell only renders when there is
- * something to draw.
- *
- * @param {'project'|'fleet'} scope
- * @param {object} envelope normalized envelope (non-null)
- */
 export function renderErrorStateHTML(scope, envelope) {
   const headline = FRESHNESS_HEADLINES.error;
   const impact = FRESHNESS_IMPACT.error;
@@ -424,16 +547,16 @@ export function renderErrorStateHTML(scope, envelope) {
   `;
 }
 
-function renderPopulatedHTML(envelope, scope) {
+function renderPopulatedHTML(envelope, scope, opts) {
   const warnings = collectFlowWarnings(envelope);
+  const layout = layoutArchitectureGraph(envelope);
   return `
-    <div class="arch-layout" data-state="${esc(envelope.freshness.state)}">
+    <div class="arch-layout arch-explorer" data-state="${esc(envelope.freshness.state)}">
       ${renderHeaderHTML(envelope, scope)}
       ${renderFreshnessBannerHTML(envelope)}
       ${renderInsightsStripHTML(envelope)}
       ${renderValidationWarningsHTML(warnings)}
-      ${renderMapPlaceholderHTML(envelope)}
-      ${renderDetailsTableHTML(envelope)}
+      ${renderExplorerHTML(envelope, layout)}
       ${renderNodeProvenanceHTML(envelope)}
       ${buildProvenance(envelope, scope)}
     </div>
@@ -484,9 +607,6 @@ function renderFreshnessBannerHTML(envelope) {
   const impact = FRESHNESS_IMPACT[state] || '';
   const message = envelope.freshness.message || '';
   const regen = envelope.freshness.regen_command || ARCH_REFRESH;
-  // Only stale/missing surface the regen command in the banner. Fresh
-  // banners stay quiet — the command is still present in the missing
-  // state and in the per-card details for operators who want it.
   const showCommand = state !== 'fresh';
   return `
     <section class="panel arch-freshness-banner arch-freshness-banner--${esc(color)}"
@@ -554,59 +674,183 @@ function renderValidationWarningsHTML(warnings) {
   `;
 }
 
-function renderMapPlaceholderHTML(envelope) {
-  // F002 owns the shell only. F003 will replace this placeholder with
-  // the swimlane SVG canvas and right-rail flow inspector. The shell
-  // intentionally renders something credible — lane titles and a count
-  // of mapped nodes/edges — so the tab is not blank, but does not fake
-  // graph rendering.
-  const laneRows = (envelope.lanes || []).map((lane) => {
-    if (!lane || typeof lane !== 'object') return '';
-    const laneId = typeof lane.id === 'string' ? lane.id : '';
-    const title = typeof lane.title === 'string' ? lane.title : laneId;
-    const laneNodeCount = (envelope.nodes || []).filter((n) => n && n.lane_id === laneId).length;
-    return `
-      <li class="arch-lane-row" data-lane-id="${esc(laneId)}">
-        <span class="arch-lane-title">${esc(title)}</span>
-        <code class="arch-lane-id">${esc(laneId)}</code>
-        <span class="arch-lane-count">${esc(String(laneNodeCount))} node${laneNodeCount === 1 ? '' : 's'}</span>
-      </li>
-    `;
-  }).join('');
-  const flowCount = (envelope.flows || []).length;
-  const edgeCount = (envelope.edges || []).length;
+// ─── F003 interactive explorer ───────────────────────────────────────
+
+function renderExplorerHTML(envelope, layout) {
+  const types = Array.from(new Set((envelope.nodes || [])
+    .map((n) => (n && typeof n.type === 'string') ? n.type : null)
+    .filter((t) => t != null))).sort();
+  const lanes = (envelope.lanes || []).map((l) => ({
+    id: l && typeof l.id === 'string' ? l.id : '',
+    title: l && typeof l.title === 'string' ? l.title : l && l.id,
+  })).filter((l) => l.id);
+  const edgeTypes = Array.from(new Set((envelope.edges || [])
+    .map((e) => (e && typeof e.type === 'string') ? e.type : null)
+    .filter((t) => t != null))).sort();
   return `
-    <section class="panel arch-map-panel" data-map-state="shell">
-      <div class="arch-map-header">
+    <section class="panel arch-explorer-panel" data-explorer="1">
+      <div class="arch-explorer-header">
         <h3 class="arch-map-title">System Map</h3>
-        <span class="arch-map-hint">Interactive flow map ships in the next iteration. The shell below proves the view-state loaded.</span>
+        <p class="arch-map-hint">
+          Select a flow to highlight its path. Non-selected nodes stay
+          visible but dimmed. Use search and filters to narrow the
+          canvas, or click any node for source detail.
+        </p>
       </div>
-      <div class="arch-map-summary">
-        <span class="arch-map-summary-chip">${esc(String((envelope.nodes || []).length))} mapped nodes</span>
-        <span class="arch-map-summary-chip">${esc(String(edgeCount))} relationships</span>
-        <span class="arch-map-summary-chip">${esc(String(flowCount))} flow${flowCount === 1 ? '' : 's'}</span>
+      <div class="arch-explorer-toolbar" role="toolbar" aria-label="Architecture explorer controls">
+        <label class="arch-search">
+          <span class="arch-search-label">Search</span>
+          <input
+            type="search"
+            class="arch-search-input"
+            data-arch-search
+            placeholder="Search modules, plans, capabilities…"
+            aria-label="Search nodes by title, id, or source path"
+          />
+        </label>
+        <div class="arch-filter-group" data-filter="type" role="group" aria-label="Type filters">
+          <span class="arch-filter-label">Type</span>
+          ${types.map((t) => {
+            const cat = categoryFor(t);
+            const meta = NODE_CATEGORIES[cat] || NODE_CATEGORIES.other;
+            return `
+              <label class="arch-filter-chip" data-filter-kind="type" data-filter-value="${esc(t)}">
+                <input type="checkbox" data-arch-filter="type" value="${esc(t)}" checked />
+                <span class="arch-legend-dot" style="background:${esc(meta.color)}"></span>
+                <span class="arch-filter-chip-label">${esc(meta.label)}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+        <div class="arch-filter-group" data-filter="lane" role="group" aria-label="Lane filters">
+          <span class="arch-filter-label">Lane</span>
+          ${lanes.map((l) => `
+            <label class="arch-filter-chip" data-filter-kind="lane" data-filter-value="${esc(l.id)}">
+              <input type="checkbox" data-arch-filter="lane" value="${esc(l.id)}" checked />
+              <span class="arch-filter-chip-label">${esc(l.title)}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div class="arch-filter-group" data-filter="edge" role="group" aria-label="Edge filters">
+          <span class="arch-filter-label">Edge</span>
+          ${edgeTypes.map((t) => {
+            const meta = EDGE_TYPES[t] || EDGE_TYPES.other;
+            return `
+              <label class="arch-filter-chip" data-filter-kind="edge" data-filter-value="${esc(t)}">
+                <input type="checkbox" data-arch-filter="edge" value="${esc(t)}" checked />
+                <span class="arch-legend-dot arch-legend-dot--line" style="background:${esc(meta.color)}"></span>
+                <span class="arch-filter-chip-label">${esc(meta.label)}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+        <div class="arch-zoom-controls" role="group" aria-label="Zoom controls">
+          <button type="button" class="arch-zoom-btn" data-arch-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" class="arch-zoom-btn" data-arch-zoom="in" aria-label="Zoom in">+</button>
+          <button type="button" class="arch-zoom-btn arch-zoom-btn--reset" data-arch-reset aria-label="Reset view">Reset</button>
+        </div>
       </div>
-      <ul class="arch-lane-list">${laneRows}</ul>
+      <div class="arch-explorer-grid">
+        <div class="arch-explorer-canvas-wrap" data-canvas-wrap>
+          ${renderArchitectureMapSVG(layout)}
+          <aside class="arch-detail-panel" data-detail-panel hidden aria-live="polite">
+            <button type="button" class="arch-detail-close" data-arch-detail-close aria-label="Close detail panel">×</button>
+            <div class="arch-detail-body" data-detail-body></div>
+          </aside>
+        </div>
+        <aside class="arch-flow-rail" data-flow-rail aria-label="Flow inspector">
+          ${renderFlowRailHTML(envelope)}
+        </aside>
+      </div>
+      ${renderLegendHTML(envelope)}
     </section>
   `;
 }
 
-function renderDetailsTableHTML(envelope) {
+/**
+ * Render the deterministic SVG canvas. Pure given a layout object, so
+ * the same envelope always produces the same SVG string (snapshot-safe).
+ */
+export function renderArchitectureMapSVG(layout) {
+  if (!layout || !Array.isArray(layout.lanes) || layout.lanes.length === 0) {
+    return '<svg class="arch-canvas" data-canvas viewBox="0 0 100 60" role="img" aria-label="Architecture map (empty)" preserveAspectRatio="xMidYMid meet"></svg>';
+  }
+  const { width, height, lanes, edges } = layout;
+  // Group edges by type for layering (imports under runs/calls/writes).
+  const edgePaths = edges
+    .filter((e) => !e.missing && Number.isFinite(e.x1))
+    .map((edge) => {
+      const meta = EDGE_TYPES[edge.type] || EDGE_TYPES.other;
+      const dx = (edge.x2 - edge.x1) * 0.25;
+      // Cubic bezier with horizontal control points keeps edges legible
+      // even when source and target sit on the same row.
+      const cx1 = edge.x1 + dx;
+      const cx2 = edge.x2 - dx;
+      const d = `M ${edge.x1} ${edge.y1} C ${cx1} ${edge.y1}, ${cx2} ${edge.y2}, ${edge.x2} ${edge.y2}`;
+      return `<path class="arch-edge" data-edge-id="${esc(edge.id)}" data-edge-type="${esc(edge.type)}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" d="${d}" stroke="${esc(meta.color)}" fill="none" />`;
+    }).join('');
+  const laneShapes = lanes.map((lane) => `
+    <g class="arch-lane" data-lane-id="${esc(lane.id)}" data-lane-kind="${esc(lane.kind)}">
+      <rect class="arch-lane-bg" x="0" y="${lane.y}" width="${width}" height="${lane.height}" rx="6" />
+      <text class="arch-lane-label" x="16" y="${lane.y + 24}">${esc(lane.title)}</text>
+      <text class="arch-lane-count" x="${width - 16}" y="${lane.y + 24}" text-anchor="end">${esc(String(lane.nodes.length))} nodes</text>
+    </g>
+  `).join('');
+  const nodeShapes = lanes.flatMap((lane) => lane.nodes).map((node) => {
+    const meta = NODE_CATEGORIES[node.category] || NODE_CATEGORIES.other;
+    const titleAttr = node.summary && node.summary.length > 0
+      ? `${node.title} — ${node.summary}`
+      : node.title;
+    const label = truncateLabel(node.title, 18);
+    return `
+      <g class="arch-node" data-node-id="${esc(node.id)}" data-node-type="${esc(node.type)}" data-node-category="${esc(node.category)}" data-lane-id="${esc(node.lane_id)}" tabindex="0" role="button" aria-label="${esc(node.title)} (${esc(meta.label)})">
+        <title>${esc(titleAttr)}</title>
+        <rect class="arch-node-bg" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="6" fill="${esc(meta.color)}" />
+        <text class="arch-node-label" x="${node.x + 10}" y="${node.y + node.h / 2 + 4}">${esc(label)}</text>
+        <text class="arch-node-cat" x="${node.x + node.w - 10}" y="${node.y + node.h / 2 + 4}" text-anchor="end">${esc(meta.short)}</text>
+      </g>
+    `;
+  }).join('');
+  return `
+    <svg class="arch-canvas"
+         data-canvas
+         viewBox="0 0 ${width} ${height}"
+         data-canvas-width="${width}"
+         data-canvas-height="${height}"
+         role="img"
+         aria-label="Architecture swimlane map"
+         preserveAspectRatio="xMidYMid meet">
+      <g data-layer="lanes">${laneShapes}</g>
+      <g data-layer="edges">${edgePaths}</g>
+      <g data-layer="nodes">${nodeShapes}</g>
+      <g data-layer="step-markers" data-step-markers></g>
+    </svg>
+  `;
+}
+
+function truncateLabel(text, max) {
+  if (typeof text !== 'string') return '';
+  const s = text.replace(/^module:|^plan:|^capability:|^command:|^schema:|^page:|^external:/, '');
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + '…';
+}
+
+function renderFlowRailHTML(envelope) {
   const flows = envelope.flows || [];
   if (flows.length === 0) {
     return `
-      <section class="panel arch-flows-panel" data-flows-state="empty">
-        <h3 class="arch-flows-title">Flows</h3>
-        <p class="arch-flows-empty">
+      <div class="arch-flow-rail-empty" data-flow-rail-empty>
+        <h3 class="arch-flow-rail-title">Flows</h3>
+        <p class="arch-flow-rail-empty-msg">
           No flows resolved against the current snapshot. Authored flow
-          input lives at <code>docs/architecture/flows.json</code>; derived
-          flows depend on plans + capability data being present in the
-          architecture snapshot.
+          input lives at <code>docs/architecture/flows.json</code>;
+          derived flows depend on plans + capability data being present
+          in the architecture snapshot.
         </p>
-      </section>
+      </div>
     `;
   }
-  const rows = flows.map((flow) => {
+  const items = flows.map((flow) => {
     const id = typeof flow.id === 'string' ? flow.id : '';
     const title = typeof flow.title === 'string' && flow.title.length > 0
       ? flow.title
@@ -614,56 +858,177 @@ function renderDetailsTableHTML(envelope) {
     const summary = typeof flow.summary === 'string' ? flow.summary : '';
     const source = typeof flow.source === 'string' ? flow.source : '';
     const stepCount = Array.isArray(flow.steps) ? flow.steps.length : 0;
-    const hasWarning = Array.isArray(flow.warnings) && flow.warnings.length > 0
+    const hasWarning = (Array.isArray(flow.warnings) && flow.warnings.length > 0)
       || (Array.isArray(flow.steps) && flow.steps.some((s) => Array.isArray(s?.warnings) && s.warnings.length > 0));
     return `
-      <article class="arch-flow-card" data-flow-id="${esc(id)}" data-has-warning="${hasWarning ? '1' : '0'}">
-        <header class="arch-flow-header">
-          <span class="arch-flow-title">${esc(title)}</span>
-          ${source ? `<span class="arch-flow-source-chip" title="flow source">${esc(source)}</span>` : ''}
+      <li class="arch-flow-row">
+        <button type="button"
+                class="arch-flow-row-btn"
+                data-arch-flow="${esc(id)}"
+                data-has-warning="${hasWarning ? '1' : '0'}"
+                aria-pressed="false">
+          <span class="arch-flow-row-title">${esc(title)}</span>
+          ${source ? `<span class="arch-flow-source-chip">${esc(source)}</span>` : ''}
           ${hasWarning ? `<span class="arch-flow-warning-chip" title="this flow has step warnings">warning</span>` : ''}
-        </header>
-        ${summary ? `<p class="arch-flow-summary">${esc(summary)}</p>` : ''}
-        <footer class="arch-flow-meta">
-          <span class="arch-flow-step-count">${esc(String(stepCount))} step${stepCount === 1 ? '' : 's'}</span>
-          <code class="arch-flow-id">${esc(id)}</code>
-        </footer>
-      </article>
+          ${summary ? `<span class="arch-flow-row-summary">${esc(summary)}</span>` : ''}
+          <span class="arch-flow-row-meta">
+            <span class="arch-flow-step-count">${esc(String(stepCount))} step${stepCount === 1 ? '' : 's'}</span>
+            <code class="arch-flow-id">${esc(id)}</code>
+          </span>
+        </button>
+      </li>
     `;
   }).join('');
   return `
-    <section class="panel arch-flows-panel" data-flows-state="populated">
-      <div class="arch-flows-header">
-        <h3 class="arch-flows-title">Flows</h3>
-        <span class="arch-flows-count">${esc(String(flows.length))} flow${flows.length === 1 ? '' : 's'}</span>
-      </div>
-      <div class="arch-flows-grid">${rows}</div>
-    </section>
+    <div class="arch-flow-rail-header">
+      <h3 class="arch-flow-rail-title">Flows</h3>
+      <button type="button" class="arch-flow-clear" data-arch-flow-clear hidden>
+        Clear selection
+      </button>
+    </div>
+    <ul class="arch-flow-list" data-flow-list>${items}</ul>
+    <div class="arch-step-inspector" data-step-inspector hidden>
+      <h4 class="arch-step-inspector-title">Steps</h4>
+      <ol class="arch-step-list" data-step-list></ol>
+    </div>
+  `;
+}
+
+function renderLegendHTML(envelope) {
+  const types = Array.from(new Set((envelope.nodes || [])
+    .map((n) => (n && typeof n.type === 'string') ? n.type : null)
+    .filter(Boolean))).sort();
+  const edgeTypes = Array.from(new Set((envelope.edges || [])
+    .map((e) => (e && typeof e.type === 'string') ? e.type : null)
+    .filter(Boolean))).sort();
+  return `
+    <div class="arch-legend" data-legend>
+      <span class="arch-legend-section-label">Nodes</span>
+      ${types.map((t) => {
+        const cat = categoryFor(t);
+        const meta = NODE_CATEGORIES[cat] || NODE_CATEGORIES.other;
+        return `
+          <span class="arch-legend-item" data-legend-type="${esc(t)}">
+            <span class="arch-legend-dot" style="background:${esc(meta.color)}"></span>
+            <span class="arch-legend-label">${esc(meta.label)}</span>
+          </span>
+        `;
+      }).join('')}
+      <span class="arch-legend-section-label">Edges</span>
+      ${edgeTypes.map((t) => {
+        const meta = EDGE_TYPES[t] || EDGE_TYPES.other;
+        return `
+          <span class="arch-legend-item" data-legend-edge="${esc(t)}">
+            <span class="arch-legend-dot arch-legend-dot--line" style="background:${esc(meta.color)}"></span>
+            <span class="arch-legend-label">${esc(meta.label)}</span>
+          </span>
+        `;
+      }).join('')}
+    </div>
   `;
 }
 
 /**
- * Layer-2 details/provenance panel. Acceptance #2 requires technical
- * IDs (module paths, plan IDs, capability IDs, fingerprints) to remain
- * visible alongside the value-first headlines. We group F001 nodes by
- * type and surface `id` + `source_path` (the module/plan/capability
- * path) for each — these are the IDs reviewers need to cross-reference
- * the source files. Lane and flow IDs are already in the map preview
- * and the freshness header carries the fingerprint; this panel covers
- * the remaining node-level identity surface.
- *
- * Renders nothing when the envelope has no nodes (empty fixture).
- *
- * @param {object} envelope normalized envelope
+ * Build the click-detail panel body for a given node id. Returns the
+ * innerHTML for `[data-detail-body]` so `architecture.js` can swap it
+ * in on click without re-rendering the entire page.
  */
+export function renderNodeDetailHTML(envelope, nodeId) {
+  if (envelope == null || typeof nodeId !== 'string' || nodeId.length === 0) {
+    return '';
+  }
+  const node = (envelope.nodes || []).find((n) => n && n.id === nodeId);
+  if (!node) {
+    return `<p class="arch-detail-empty">No detail available for <code>${esc(nodeId)}</code>.</p>`;
+  }
+  const cat = categoryFor(typeof node.type === 'string' ? node.type : 'other');
+  const meta = NODE_CATEGORIES[cat] || NODE_CATEGORIES.other;
+  const incoming = (envelope.edges || []).filter((e) => e && e.to === nodeId);
+  const outgoing = (envelope.edges || []).filter((e) => e && e.from === nodeId);
+  const linkedPlans = (envelope.flows || [])
+    .filter((f) => Array.isArray(f.steps) && f.steps.some((s) => s && (s.node_ref === nodeId)))
+    .map((f) => ({
+      id: typeof f.id === 'string' ? f.id : '',
+      title: typeof f.title === 'string' ? f.title : f.id,
+    }));
+  const relatedRows = (relType, list) => {
+    if (list.length === 0) return '';
+    return `
+      <details class="arch-detail-section" open>
+        <summary>${esc(relType)} (${esc(String(list.length))})</summary>
+        <ul class="arch-detail-list">
+          ${list.slice(0, 12).map((e) => `
+            <li class="arch-detail-list-row">
+              <code class="arch-detail-id">${esc(relType === 'Incoming' ? e.from : e.to)}</code>
+              <span class="arch-detail-edge-type">${esc(e.type || 'other')}</span>
+            </li>
+          `).join('')}
+          ${list.length > 12 ? `<li class="arch-detail-overflow">+${esc(String(list.length - 12))} more</li>` : ''}
+        </ul>
+      </details>
+    `;
+  };
+  return `
+    <header class="arch-detail-header">
+      <span class="arch-detail-dot" style="background:${esc(meta.color)}"></span>
+      <span class="arch-detail-cat">${esc(meta.label)}</span>
+      <h3 class="arch-detail-title">${esc(node.title || node.id)}</h3>
+    </header>
+    ${node.summary ? `<p class="arch-detail-summary">${esc(node.summary)}</p>` : ''}
+    <dl class="arch-detail-meta">
+      <dt>Node ID</dt><dd><code>${esc(node.id)}</code></dd>
+      <dt>Lane</dt><dd><code>${esc(node.lane_id || '—')}</code></dd>
+      ${node.source_path ? `<dt>Source path</dt><dd><code>${esc(node.source_path)}</code></dd>` : ''}
+      ${node.fingerprint ? `<dt>Fingerprint</dt><dd><code>${esc(String(node.fingerprint).slice(0, 16))}</code></dd>` : ''}
+    </dl>
+    ${relatedRows('Incoming', incoming)}
+    ${relatedRows('Outgoing', outgoing)}
+    ${linkedPlans.length > 0 ? `
+      <details class="arch-detail-section" open>
+        <summary>Flows touching this (${esc(String(linkedPlans.length))})</summary>
+        <ul class="arch-detail-list">
+          ${linkedPlans.map((p) => `
+            <li class="arch-detail-list-row">
+              <code class="arch-detail-id">${esc(p.id)}</code>
+              <span class="arch-detail-flow-title">${esc(p.title)}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </details>
+    ` : ''}
+  `;
+}
+
+/**
+ * Build the inner HTML for the step inspector when a flow is selected.
+ */
+export function renderStepInspectorHTML(envelope, flowId) {
+  const { stepRefs, flow } = getFlowParticipants(envelope, flowId);
+  if (flow == null) return '';
+  return stepRefs.map((step) => {
+    const node = (envelope.nodes || []).find((n) => n && n.id === step.node_ref);
+    const nodeTitle = node && node.title ? node.title : (step.node_ref || '—');
+    const warnings = Array.isArray(step.warnings) ? step.warnings : [];
+    const warningRow = warnings.length > 0
+      ? `<span class="arch-step-warning">${esc(warnings.map((w) => typeof w === 'string' ? w : (w && w.message) || '').filter(Boolean).join('; '))}</span>`
+      : '';
+    return `
+      <li class="arch-step-row" data-step-id="${esc(step.id)}" data-step-order="${esc(String(step.order))}" data-node-ref="${esc(step.node_ref || '')}">
+        <span class="arch-step-num">${esc(String(step.order))}</span>
+        <span class="arch-step-body">
+          <span class="arch-step-title">${esc(step.title)}</span>
+          <span class="arch-step-node">${esc(nodeTitle)}</span>
+          ${step.node_ref ? `<code class="arch-step-noderef">${esc(step.node_ref)}</code>` : ''}
+          ${warningRow}
+        </span>
+      </li>
+    `;
+  }).join('');
+}
+
 export function renderNodeProvenanceHTML(envelope) {
   const nodes = (envelope && Array.isArray(envelope.nodes)) ? envelope.nodes : [];
   if (nodes.length === 0) return '';
-  // F001 node `type` is the closed set used by the crawler: module,
-  // schema, plan, capability, command, page, external, metadata.
-  // We surface the four that carry the technical IDs reviewers most
-  // commonly need (acceptance #2); other types fall through to a
-  // generic "other" bucket so the panel stays honest about coverage.
   const groups = {
     module:     { title: 'Modules',     idLabel: 'Module path',     nodes: [] },
     plan:       { title: 'Plans',       idLabel: 'Plan ID',         nodes: [] },
@@ -713,8 +1078,6 @@ export function renderNodeProvenanceHTML(envelope) {
   const sections = [];
   for (const [type, group] of Object.entries(groups)) {
     if (group.nodes.length === 0) continue;
-    // Cap visible rows so a 400-module repo does not blow up the page;
-    // the count chip remains honest about the full size.
     const visible = group.nodes.slice(0, 10);
     const rows = visible.map((n) => renderRow(n, group.idLabel)).join('');
     const overflow = group.nodes.length - visible.length;
@@ -764,9 +1127,6 @@ export function renderNodeProvenanceHTML(envelope) {
 }
 
 function renderCommandHTML(command) {
-  // Mirror the what-now command + copy-button shape so the operator copy
-  // affordance is identical across pages. The dashboard never runs the
-  // command for the operator (acceptance #5).
   return `
     <div class="arch-card-command">
       <pre class="arch-cmd"><code>${esc(command)}</code></pre>
