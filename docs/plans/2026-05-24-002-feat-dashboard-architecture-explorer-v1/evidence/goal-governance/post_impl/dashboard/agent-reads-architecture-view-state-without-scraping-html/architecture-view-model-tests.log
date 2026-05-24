@@ -1,0 +1,17 @@
+# F005 evidence — architecture view-model tests
+# Date: 2026-05-24T20:21:44Z
+# Repo: dontpanic-arch-f003-close   Env: dev   Project: (none)
+# Cmd:  npx vitest run tests/unit/architecture-logic.test.js tests/unit/architecture-explorer.test.js tests/unit/architecture-f004.test.js
+
+
+ RUN  v3.2.4 /private/tmp/dontpanic-arch-f003-close/dashboard
+
+ ✓ tests/unit/architecture-explorer.test.js (29 tests) 7ms
+ ✓ tests/unit/architecture-f004.test.js (32 tests) 7ms
+ ✓ tests/unit/architecture-logic.test.js (36 tests) 7ms
+
+ Test Files  3 passed (3)
+      Tests  97 passed (97)
+   Start at  15:21:44
+   Duration  472ms (transform 85ms, setup 0ms, collect 179ms, tests 21ms, environment 494ms, prepare 116ms)
+

@@ -1,0 +1,28 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-24T20:36:58.364220+00:00",
+  "plan_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/dashboard/agent-reads-architecture-view-state-without-scraping-html/architecture-flow-definition-validation-tests.log",
+    "evidence/goal-governance/post_impl/dashboard/agent-reads-architecture-view-state-without-scraping-html/architecture-flows-snapshot.json",
+    "evidence/goal-governance/post_impl/dashboard/agent-reads-architecture-view-state-without-scraping-html/architecture-view-model-tests.log",
+    "evidence/goal-governance/post_impl/dashboard/agent-reads-architecture-view-state-without-scraping-html/architecture-view-state-snapshot.json",
+    "evidence/goal-governance/post_impl/dashboard/operator-filters-relationships-without-losing-context/architecture-clear-selection-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-filters-relationships-without-losing-context/architecture-filter-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-opens-architecture-tab-and-understands-system-shape/architecture-accessibility-responsive-checks.md",
+    "evidence/goal-governance/post_impl/dashboard/operator-opens-architecture-tab-and-understands-system-shape/architecture-graph-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-opens-architecture-tab-and-understands-system-shape/architecture-tab-render-tests.log",
+    "evidence/goal-governance/post_impl/dashboard/operator-opens-architecture-tab-and-understands-system-shape/dashboard-architecture-build-serve-smoke.log",
+    "evidence/goal-governance/post_impl/dashboard/operator-searches-and-drills-into-a-module/architecture-filter-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-searches-and-drills-into-a-module/architecture-node-detail-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-sees-stale-or-missing-architecture-and-gets-exact-command/architecture-fleet-state-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-sees-stale-or-missing-architecture-and-gets-exact-command/architecture-missing-state-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-sees-stale-or-missing-architecture-and-gets-exact-command/architecture-mobile-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-sees-stale-or-missing-architecture-and-gets-exact-command/dashboard-sanitization-clean.log",
+    "evidence/goal-governance/post_impl/dashboard/operator-selects-flow-and-sees-path-light-up/architecture-clear-selection-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-selects-flow-and-sees-path-light-up/architecture-flow-selected-snapshot.html",
+    "evidence/goal-governance/post_impl/dashboard/operator-selects-flow-and-sees-path-light-up/architecture-flows-snapshot.json"
+  ],
+  "findings": []
+}

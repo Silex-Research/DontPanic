@@ -1,0 +1,17 @@
+# F005 evidence — architecture tab render / DOM interaction tests
+# Date: 2026-05-24T20:22:05Z
+# Repo: dontpanic-arch-f003-close   Env: dev   Project: (none)
+# Cmd:  npx vitest run tests/integration/architecture-page.test.js tests/integration/architecture-explorer-dom.test.js tests/integration/architecture-f004-page.test.js
+
+
+ RUN  v3.2.4 /private/tmp/dontpanic-arch-f003-close/dashboard
+
+ ✓ tests/integration/architecture-f004-page.test.js (8 tests) 101ms
+ ✓ tests/integration/architecture-page.test.js (14 tests) 141ms
+ ✓ tests/integration/architecture-explorer-dom.test.js (25 tests) 334ms
+
+ Test Files  3 passed (3)
+      Tests  47 passed (47)
+   Start at  15:22:05
+   Duration  771ms (transform 81ms, setup 0ms, collect 129ms, tests 576ms, environment 491ms, prepare 113ms)
+
