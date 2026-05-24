@@ -376,6 +376,14 @@ def _feature_dependency_state(
     return reasons
 
 
+class GateStateReadError(RuntimeError):
+    """Raised when an existing gate-state file cannot be safely parsed."""
+
+    def __init__(self, state_path: Path, reason: str):
+        self.state_path = state_path
+        super().__init__(f"{state_path}: {reason}")
+
+
 def _read_gate_state_strictly(plan_dir: Path) -> dict[str, Any]:
     """Strictly read-only gate-state.json read.
 
@@ -385,24 +393,24 @@ def _read_gate_state_strictly(plan_dir: Path) -> dict[str, Any]:
     effect is unsafe for a read-only recommender, so this command
     intentionally uses its own loader.
 
-    Returns the parsed JSON dict on success, an empty dict on missing /
-    malformed / unreadable files. Corruption is reflected by an empty
-    dict (i.e. "no state available") — the caller can still emit a
-    warning, but the on-disk artifact is never touched."""
+    Returns the parsed JSON dict on success and an empty dict when the
+    file is absent. Existing but unreadable/malformed files raise
+    GateStateReadError so the recommender can surface a warning instead
+    of quietly treating the substrate as available. The on-disk artifact
+    is never touched."""
     state_path = plan_dir / "audit" / gate_pause.GATE_STATE_FILENAME
     if not state_path.is_file():
         return {}
     try:
         raw = state_path.read_text()
     except OSError as exc:  # pragma: no cover — defensive
-        _LOG.debug("gate-state read failed for %s: %s", plan_dir, exc)
-        return {}
+        raise GateStateReadError(state_path, str(exc)) from exc
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
         # Corrupt JSON. Do NOT write a .corrupt.json backup — that's
         # the production gate_pause helper's job, not ours.
-        return {}
+        raise GateStateReadError(state_path, f"malformed JSON: {exc}") from exc
     return data if isinstance(data, dict) else {}
 
 
@@ -988,7 +996,26 @@ def analyze_repo(
             plan_index,
             parent_plan_id=parent_plan_id,
         )
-        gate_summary = _gate_state_summary(loaded.plan_dir, loaded)
+        try:
+            gate_summary = _gate_state_summary(loaded.plan_dir, loaded)
+        except GateStateReadError as exc:
+            warnings.append(
+                Warning(
+                    kind="gate",
+                    subject=plan_id,
+                    message=f"could not read gate-state: {exc}",
+                    project_name=project_name,
+                )
+            )
+            declared_gates = [
+                g.value if hasattr(g, "value") else str(g)
+                for g in (getattr(loaded.plan, "human_gates", None) or [])
+            ]
+            gate_summary = {
+                "unmet": [*declared_gates, "gate_state_unreadable"],
+                "active_breakers": [],
+                "active_defers": [],
+            }
 
         # Plan-level gate/breaker/defer warnings carry the plan id as the
         # subject so the CLI can scope them correctly.
@@ -1309,7 +1336,7 @@ def render_text(report: RecommendationReport) -> str:
         lines.append("")
 
     lines.append(
-        f"CANDIDATE COMMANDS"
+        "CANDIDATE COMMANDS"
         + (f" (max_parallel={report.max_parallel})" if report.max_parallel else "")
         + ":"
     )

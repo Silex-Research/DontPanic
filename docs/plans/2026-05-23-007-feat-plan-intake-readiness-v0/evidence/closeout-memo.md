@@ -33,7 +33,7 @@ FINDING (high, test_coverage): required dogfood evidence is still ...
 
 ## Rationale (operator — fill in)
 
-The `stopped_no_progress` terminal was caused by an implementer timeout plus two concrete audit findings, not by an unresolved design dispute. The malformed-plan fixture was corrected to use genuinely invalid frontmatter, roadmap-parent fallback received an explicit regression test, and active parent roadmaps no longer block their own child plans. The required real-inventory dogfood output is recorded at `evidence/dontpanic-next-real-inventory-output.json`; targeted verification passed with `22 passed` for `scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py`, and plan schema validation passed.
+The `stopped_no_progress` terminal was caused by an implementer timeout plus two concrete audit findings, not by an unresolved design dispute. The malformed-plan fixture was corrected to use genuinely invalid frontmatter, roadmap-parent fallback received an explicit regression test, and active parent roadmaps no longer block their own child plans. The required real-inventory dogfood output is recorded at `evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-real-inventory-output.json`; targeted verification passed with `22 passed` for `scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py`, and plan schema validation passed.
 
 ## Return Condition
 
@@ -43,5 +43,5 @@ F002 is accepted when `dontpanic next` is read-only, emits text and JSON readine
 
 - `audit/signoff-2026-05-23-007-feat-plan-intake-readiness-v0.json`
 - `audit/codex-auditor-F002-i1.json`
-- `evidence/dontpanic-next-real-inventory-output.json`
+- `evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-real-inventory-output.json`
 - `scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py`

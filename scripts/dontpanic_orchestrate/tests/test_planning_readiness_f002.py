@@ -21,6 +21,7 @@ Coverage matrix (the plan's acceptance #10 asks for ≥10 readiness cases):
  15. Fleet aggregation labels per-project + interleaves commands.
  16. Frontmatter dependency points at unknown plan id → not ready with
      "not in inventory" reason.
+ 17. Malformed gate-state warns and blocks instead of being treated as clear.
 """
 
 from __future__ import annotations
@@ -467,6 +468,20 @@ class TestBreakerAndGateState:
         report = planning_readiness.analyze_repo(plans_root, active_entries=[])
         nr = next(n for n in report.not_ready if n.plan_id == plan_id)
         assert any("pre_impl" in r for r in nr.reasons)
+
+    def test_malformed_gate_state_warns_and_blocks(self, tmp_path: Path) -> None:
+        plans_root = tmp_path / "docs" / "plans"
+        plan_id = "2026-05-23-132-feat-bad-gate-state"
+        plan_dir = _write_plan(plans_root, plan_id, features=[_feature("F001")])
+        audit_dir = plan_dir / "audit"
+        audit_dir.mkdir()
+        (audit_dir / gate_pause.GATE_STATE_FILENAME).write_text("{bad json")
+
+        report = planning_readiness.analyze_repo(plans_root, active_entries=[])
+
+        assert any(w.kind == "gate" and w.subject == plan_id for w in report.warnings)
+        nr = next(n for n in report.not_ready if n.plan_id == plan_id)
+        assert any("gate_state_unreadable" in r for r in nr.reasons)
 
 
 class TestMalformedAndErrorHandling:

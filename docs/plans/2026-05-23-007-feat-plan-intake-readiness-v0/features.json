@@ -13,7 +13,7 @@
         "Document the rule that future roadmap milestones need trigger conditions and should not be dispatched until unlocked.",
         "Add a short release-impact prompt that plan authors answer before lock."
       ],
-      "acceptance": "(1) docs/AUTHORING_PLANS.md includes a roadmap-vs-plan decision table before the detailed examples. (2) The guidance covers plan, roadmap, investigation, operator setup, and design/product spec asks. (3) At least one example explicitly shows a roadmap parent with a child implementation plan. (4) The text says roadmaps track strategy; child plans ship code/docs. (5) The guidance names the release-impact prompt that F003 will formalize. (6) The guidance explicitly says V0 does not add schema-level plan_kind/investigation/design-spec enforcement. (7) Documentation remains ASCII and validates any embedded plan examples if they are marked as dontpanic-plan-example.",
+      "acceptance": "(1) docs/AUTHORING_PLANS.md includes a roadmap-vs-plan decision table before the detailed examples. (2) The guidance covers plan, roadmap, investigation, operator setup, and design/product spec asks. (3) At least one example explicitly shows a roadmap parent with a child implementation plan. (4) The text says roadmaps track strategy; child plans ship code/docs. (5) The guidance mentions release-impact checking in general terms; F003 formalizes the concrete advisory implementation. (6) The guidance explicitly says V0 does not add schema-level plan_kind/investigation/design-spec enforcement. (7) Documentation remains ASCII and validates any embedded plan examples if they are marked as dontpanic-plan-example.",
       "passes": true,
       "verified_by": [
         "claude",
@@ -76,7 +76,7 @@
         },
         {
           "type": "file",
-          "uri": "evidence/dontpanic-next-real-inventory-output.json",
+          "uri": "evidence/goal-governance/post_impl/infra/operator-finds-parallel-work-without-reading-every-plan/dontpanic-next-real-inventory-output.json",
           "note": "Real DontPanic inventory dogfood output from `dontpanic next --format=json`."
         },
         {

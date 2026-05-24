@@ -84,5 +84,5 @@
     "No visual regression enforcement",
     "No multi-stakeholder approval workflow"
   ],
-  "completion_test": "`dontpanic next --format=json` recommends independent ready work, suppresses dependency-blocked work with reasons, warns on active overlap without mutating state, and emits exact candidate commands where possible. A new user reading docs/AUTHORING_PLANS.md can distinguish roadmap vs plan vs investigation vs setup. Root CHANGELOG.md and release-impact guidance explain which documentation, onboarding, architecture, dashboard, CLI, schema, and social/discoverability surfaces need review for public-facing changes."
+  "completion_test": "1. `dontpanic next --format=json` recommends independent ready work, suppresses dependency-blocked work with reasons, warns on active overlap without mutating state, and emits exact candidate commands where possible.\n2. A new user reading docs/AUTHORING_PLANS.md can distinguish roadmap vs plan vs investigation vs setup.\n3. Root CHANGELOG.md and release-impact guidance explain which documentation, onboarding, architecture, dashboard, CLI, schema, and social/discoverability surfaces need review for public-facing changes."
 }

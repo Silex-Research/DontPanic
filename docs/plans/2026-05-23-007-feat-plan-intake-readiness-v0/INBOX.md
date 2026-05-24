@@ -144,7 +144,7 @@ reason: auditor signed off
 timestamp: 2026-05-23T23:04:39Z
 event: breaker:patch_incomplete
 plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
-report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-0.json
+report_path: <repo>/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-0.json
 ---
 
 Patch incomplete — signoff blocked.
@@ -475,7 +475,7 @@ reason: auditor signed off
 timestamp: 2026-05-24T00:27:16Z
 event: breaker:patch_incomplete
 plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
-report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-1.json
+report_path: <repo>/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-1.json
 ---
 
 Patch incomplete — signoff blocked.
