@@ -1,0 +1,66 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Volley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Volley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress** _(band: needs_action)_\n\nVolley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.\n\nRun:\n\n```\ndontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `feature_id` = `F005`\n- `final_status` = `stopped_no_progress`\n- `inbox_event` = `volley_terminal`\n- `iteration_count` = `3`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `rounds` = `3`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress",
+      "subtitle": "volley_terminal",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "volley_terminal_blocked",
+  "inbox_event_at_emit": "volley_terminal",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Volley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+    "technical_metadata": {
+      "feature_id": "F005",
+      "final_status": "stopped_no_progress",
+      "inbox_event": "volley_terminal",
+      "iteration_count": 3,
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "rounds": 3
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress"
+  }
+}

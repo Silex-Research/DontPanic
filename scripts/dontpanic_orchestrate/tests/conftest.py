@@ -47,9 +47,50 @@ redirected paths.
 
 from __future__ import annotations
 
+import os
 import re
 
 import pytest
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register `--snapshot-update` so pinned-fixture suites (currently the
+    F005 cross-channel event-messaging snapshots) can be regenerated via the
+    pytest CLI instead of an env var. Mirrors the convention used by snapshot
+    plugins like syrupy / pytest-snapshot so the authoring workflow matches
+    standard pytest muscle memory.
+
+    The legacy `DONTPANIC_SNAPSHOT_UPDATE=1` env var still works (see
+    :func:`snapshot_update`) so any in-flight scripts continue to function.
+    """
+    group = parser.getgroup("dontpanic", "DontPanic test options")
+    group.addoption(
+        "--snapshot-update",
+        action="store_true",
+        default=False,
+        dest="snapshot_update",
+        help=(
+            "Regenerate pinned snapshot fixtures (writes JSON to "
+            "tests/fixtures/event_messaging_snapshots/). Review the diff "
+            "in code review before committing the new pin."
+        ),
+    )
+
+
+@pytest.fixture(scope="session")
+def snapshot_update(request: pytest.FixtureRequest) -> bool:
+    """True when snapshot regeneration is requested, via either:
+
+      - `pytest --snapshot-update` (preferred), or
+      - `DONTPANIC_SNAPSHOT_UPDATE=1` env var (legacy, kept for
+        scripts already wired to the old name).
+
+    Tests should branch on this fixture (not read the env var directly)
+    so both invocation styles stay in sync.
+    """
+    if request.config.getoption("snapshot_update"):
+        return True
+    return os.environ.get("DONTPANIC_SNAPSHOT_UPDATE") == "1"
 
 
 # Plan 2026-05-09-002 F001 — keep test envelope summaries consistent with

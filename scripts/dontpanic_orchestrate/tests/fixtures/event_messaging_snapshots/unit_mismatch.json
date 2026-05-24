@@ -1,0 +1,38 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Quota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:unit_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota cap unit mismatch",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota cap unit mismatch** _(band: needs_action)_\n\nQuota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `agent` = `claude`\n- `cap_unit` = `tokens`\n- `feature_id` = `F005`\n- `inbox_event` = `unit_mismatch`\n- `observed_unit` = `messages`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `window` = `7d`\n\n</details>\n\n===\n"
+  },
+  "disposition": "dashboard_action",
+  "fixture": "unit_mismatch",
+  "inbox_event_at_emit": "unit_mismatch",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Quota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "agent": "claude",
+      "cap_unit": "tokens",
+      "feature_id": "F005",
+      "inbox_event": "unit_mismatch",
+      "observed_unit": "messages",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "window": "7d"
+    },
+    "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota cap unit mismatch"
+  }
+}

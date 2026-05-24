@@ -1,0 +1,65 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:no_progress_classification:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy** _(band: needs_action)_\n\nAuditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.\n\nRun:\n\n```\ndontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `aggregate_class` = `implementation_defect`\n- `blocking` = `True`\n- `feature_id` = `F005`\n- `inbox_event` = `no_progress_classification`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy",
+      "subtitle": "no_progress_classification",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "no_progress_classification",
+  "inbox_event_at_emit": "no_progress_classification",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+    "technical_metadata": {
+      "aggregate_class": "implementation_defect",
+      "blocking": true,
+      "feature_id": "F005",
+      "inbox_event": "no_progress_classification",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy"
+  }
+}

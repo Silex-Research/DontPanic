@@ -41,3 +41,5 @@ taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the tax
 
 **2026-05-24T22:48:41Z** — feature **F004** terminal: `stopped_environmental_blocker` after 1 round(s) — verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
 
+| 2026-05-24T23:02:39Z | F005 | i0 | claude / implementer | signed_off | 8,102,258 / 27,956 | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-05-24T23:05:34Z | F005 | i0 | codex / auditor | needs_changes | 1,000,726 / 11,770 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |

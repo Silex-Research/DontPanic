@@ -1,0 +1,67 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Approval needed on 2026-05-24-004-feat-event-messaging-v1",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Approval needed on 2026-05-24-004-feat-event-messaging-v1"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Approval needed on 2026-05-24-004-feat-event-messaging-v1** _(band: needs_action)_\n\nSupervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.\n\nRun:\n\n```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `feature_id` = `F005`\n- `gate` = `pre_impl`\n- `inbox_event` = `gate_hit`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `stage` = `pre_impl`\n- `subtype` = `pre_impl`\n- `target_env` = `dev`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Approval needed on 2026-05-24-004-feat-event-messaging-v1",
+      "subtitle": "gate_paused",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "gate_hit",
+  "inbox_event_at_emit": "gate_hit",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl",
+    "technical_metadata": {
+      "feature_id": "F005",
+      "gate": "pre_impl",
+      "inbox_event": "gate_hit",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "stage": "pre_impl",
+      "subtype": "pre_impl",
+      "target_env": "dev"
+    },
+    "title": "Approval needed on 2026-05-24-004-feat-event-messaging-v1"
+  }
+}

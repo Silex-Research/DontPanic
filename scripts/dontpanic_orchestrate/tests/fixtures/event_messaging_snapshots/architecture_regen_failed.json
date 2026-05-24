@@ -1,0 +1,64 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "advisory",
+      "detail": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic architecture regen",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:architecture_regen_failed:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 16098851,
+          "description": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic architecture regen\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale** _(band: advisory)_\n\nPost-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.\n\nRun:\n\n```\ndontpanic architecture regen\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `error_type` = `GitInvocationError`\n- `feature_id` = `F005`\n- `inbox_event` = `architecture_regen_failed`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale",
+      "subtitle": "architecture_regen_failed",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "architecture_regen_failed",
+  "inbox_event_at_emit": "architecture_regen_failed",
+  "rendered": {
+    "band": "advisory",
+    "detail": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic architecture regen",
+    "technical_metadata": {
+      "error_type": "GitInvocationError",
+      "feature_id": "F005",
+      "inbox_event": "architecture_regen_failed",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale"
+  }
+}

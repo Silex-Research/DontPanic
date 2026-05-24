@@ -1,0 +1,37 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "advisory",
+      "detail": "Quota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:quota_warn:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Budget guardrail on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota soft warn",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Budget guardrail on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota soft warn** _(band: advisory)_\n\nQuota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `agent` = `claude`\n- `feature_id` = `F005`\n- `inbox_event` = `quota_warn`\n- `percent_weekly` = `80`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `threshold` = `75`\n\n</details>\n\n===\n"
+  },
+  "disposition": "dashboard_action",
+  "fixture": "quota_warn",
+  "inbox_event_at_emit": "quota_warn",
+  "rendered": {
+    "band": "advisory",
+    "detail": "Quota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "agent": "claude",
+      "feature_id": "F005",
+      "inbox_event": "quota_warn",
+      "percent_weekly": 80,
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "threshold": 75
+    },
+    "title": "Budget guardrail on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota soft warn"
+  }
+}

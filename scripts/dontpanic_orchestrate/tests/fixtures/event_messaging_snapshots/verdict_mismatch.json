@@ -1,0 +1,60 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:verdict_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch** _(band: needs_action)_\n\nAuditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `audit_path` = `/tmp/audit/envelope.json`\n- `feature_id` = `F005`\n- `inbox_event` = `verdict_mismatch`\n- `iteration_count` = `1`\n- `narrative_verdict` = `signed_off`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `structured_status` = `needs_changes`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch",
+      "subtitle": "verdict_mismatch",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "verdict_mismatch",
+  "inbox_event_at_emit": "verdict_mismatch",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "audit_path": "/tmp/audit/envelope.json",
+      "feature_id": "F005",
+      "inbox_event": "verdict_mismatch",
+      "iteration_count": 1,
+      "narrative_verdict": "signed_off",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "structured_status": "needs_changes"
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch"
+  }
+}

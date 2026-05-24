@@ -731,3 +731,25 @@ gate: breaker:environmental_blocker
 Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
 
 ===
+---
+timestamp: 2026-05-24T22:52:52Z
+event: volley_start
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+feature_id: F005
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T22:52:52Z
+event: volley_start
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===

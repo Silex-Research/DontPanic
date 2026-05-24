@@ -1,0 +1,64 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped** _(band: needs_action)_\n\nCircuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.\n\nRun:\n\n```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `breaker_kind` = `no_progress`\n- `feature_id` = `F005`\n- `inbox_event` = `breaker_tripped`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped",
+      "subtitle": "breaker_tripped",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "breaker_tripped",
+  "inbox_event_at_emit": "breaker_tripped",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress",
+    "technical_metadata": {
+      "breaker_kind": "no_progress",
+      "feature_id": "F005",
+      "inbox_event": "breaker_tripped",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped"
+  }
+}
