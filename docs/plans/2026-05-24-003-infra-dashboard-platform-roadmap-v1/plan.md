@@ -10,7 +10,7 @@ description: |
   one sequenced roadmap with explicit trigger conditions.
 type: infra
 tier: architectural
-status: active
+status: completed
 date: "2026-05-24"
 goal_type: infra
 surfaces:
