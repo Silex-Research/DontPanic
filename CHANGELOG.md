@@ -64,5 +64,10 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - `docs/AUTHORING_PLANS.md`: now links to `docs/RELEASE_IMPACT.md` from the
   release-impact prompt and from the roadmap-vs-plan guidance.
 
-Surfaces affected: CLI help (`dontpanic next` output), authoring docs,
+### Changed
+- README "What You Get" and dispatch workflow now mention `dontpanic next` and
+  release-impact advisory behavior so the public docs reflect the planning
+  intelligence surface.
+
+Surfaces affected: CLI help (`dontpanic next` output), README, authoring docs,
 release-impact docs, root changelog convention.
