@@ -10,6 +10,78 @@ runtime.
 
 ---
 
+## V0 Value-Language Contract (Plan 2026-05-24-001)
+
+The local dashboard is a **value-first operator console**. First-read labels
+describe user/business intent; the exact DontPanic substrate (gates,
+capabilities, supervisors, plan/feature ids, source files, commands) sits
+one layer below in metadata rows, source/provenance footers, and command
+chips. The contract is canonical:
+
+- **Copy map:** [`docs/design/dashboard-value-language-ia-v0/copy-map.md`](../docs/design/dashboard-value-language-ia-v0/copy-map.md)
+  is the source of truth for V0 first-read labels, the forbidden first-read
+  token list, the four-band status taxonomy, the optional relevance chip,
+  fleet-mode expectations, and the drag-to-command rule.
+- **Static check:** `dashboard/lib/value-language-static-checks.js` plus
+  `dashboard/tests/unit/value-language-static-checks.test.js` enforce the
+  forbidden first-read tokens against every Layer-1 selector. Add new
+  surfaces to the registry there, not by hand-grepping.
+- **Visible V0 nav:** Needs Attention (route may be `Home`), Work, Tools &
+  Setup (or `Connections`), Health, Preferences. Demo / non-core tabs
+  (`Financial`, `Cloud Costs`, adapter-specific views) are hidden or gated.
+- **Command-emitter invariant:** the dashboard renders exact CLI commands
+  inside `<pre>` / `<code>` blocks the operator can copy and run in their
+  own terminal. There is no in-page mutation, no inline approve/reject,
+  no embedded executor, no Firebase realtime write. Drag affordances are
+  command-preview only (D010 in
+  [`decisions.jsonl`](../docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/decisions.jsonl)).
+- **Fleet mode:** Needs Attention, Work, and Health each render an
+  `All Projects` variant from `dashboard/state/fleet-what-now.json` and
+  `dashboard/state/fleet-summary.json`. Project filtering pins the
+  `__global__` reconcile/doctor band so cross-project blockers stay
+  visible (D013).
+- **Provenance:** every page footer renders `Source: …`, `Last updated:
+  …`, and the refresh command (`dontpanic dashboard build`) via
+  `dashboard/lib/provenance.js`. New pages MUST go through that helper.
+
+### Future surfaces (non-goals for V0)
+
+These are explicit non-goals for V0 and are deferred to future child
+plans. When those plans land they MUST inherit the value-language
+contract above — first-read labels in business terms, exact substrate
+disclosed in metadata, no in-page mutation, value-language static check
+extended to cover the new Layer-1 selectors:
+
+| Surface | V0 disposition | Future plan reference |
+|---|---|---|
+| Architecture Explorer | muted future nav affordance only (D014); page is not implemented in V0 | `docs/design/dashboard-architecture-explorer-v1/` |
+| Review / Evidence | not in V0 nav; auditor signoffs live on disk under `docs/plans/<plan>/audit/` | tracked by parent roadmap `2026-05-24-003` |
+| Configuration editor | not in V0; Preferences is browser-local only — DontPanic config still edits via `dontpanic` CLI surfaced in Tools & Setup | tracked by parent roadmap `2026-05-24-003` |
+| Agent Session Registry | not in V0; `dontpanic ps` remains the supervisor inspection seam | tracked by parent roadmap `2026-05-24-003` |
+| Local executor / inline approve | non-goal — the command-emitter invariant is permanent | (no plan; would require a roadmap-level lock) |
+
+Each future plan MUST:
+
+1. Reference the copy map and add its surface's first-read labels to it
+   before implementation begins.
+2. Add the new surface's Layer-1 selectors to
+   `dashboard/lib/value-language-static-checks.js` so the forbidden-token
+   scan covers it.
+3. Reuse `dashboard/lib/provenance.js` for source/last-updated/refresh
+   command rendering.
+4. Reuse the four-band status taxonomy
+   (`needs_action`/`advisory`/`ready`/`quiet`) and the optional
+   relevance chip; no new health bands.
+5. Honor fleet mode by routing through the existing `project-selector`
+   logic so `All Projects` and project-filtered views remain coherent.
+
+The Claude Design v3 pack referenced in
+[`docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md`](../docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md)
+is visual specification and design-token input only. Treat the JSX as a
+mockup; the shipped dashboard stays vanilla HTML/CSS/JS (D012).
+
+---
+
 ## V0 Operator Console (Plan 2026-05-23-004)
 
 For the operator-in-the-loop "what needs action now?" view, use the

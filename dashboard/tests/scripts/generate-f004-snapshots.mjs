@@ -1,4 +1,4 @@
-// F004 snapshot generator (plan 2026-05-24-001).
+// F004 / F005 snapshot generator (plan 2026-05-24-001).
 //
 // Produces the static HTML snapshots required by objective_contract.json:
 //   - dashboard-core-nav-snapshot.html
@@ -6,6 +6,8 @@
 //   - dashboard-tools-setup-snapshot.html
 //   - dashboard-health-empty-state-snapshot.html
 //   - dashboard-preferences-snapshot.html
+//   - dashboard-fleet-home-snapshot.html       (F005 — Needs Attention, All Projects)
+//   - dashboard-fleet-health-snapshot.html     (F005 — Health, All Projects)
 //
 // The snapshots are intentionally fragment-level: each one is the inner
 // HTML emitted by the corresponding pure renderer (or the Preferences
@@ -19,7 +21,10 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { renderWhatNowHTML } from '../../lib/what-now-logic.js';
+import {
+  renderWhatNowHTML,
+  renderFleetWhatNowHTML,
+} from '../../lib/what-now-logic.js';
 import { renderCapabilityCenterHTML } from '../../lib/capabilities-logic.js';
 import { renderHealthHTML } from '../../lib/health-logic.js';
 import { renderWorkProvenanceHTML } from '../../lib/mission-control-logic.js';
@@ -40,6 +45,38 @@ mkdirSync(outDir, { recursive: true });
 const fixturesDir = resolve(here, '..', 'fixtures');
 const whatNow = JSON.parse(readFileSync(resolve(fixturesDir, 'what-now.json'), 'utf8'));
 const capabilities = JSON.parse(readFileSync(resolve(fixturesDir, 'capabilities-status.json'), 'utf8'));
+const fleetSummary = JSON.parse(readFileSync(resolve(fixturesDir, 'fleet-summary.json'), 'utf8'));
+
+// Synthesize a fleet what-now envelope by tagging the single-project
+// fixture items across the fleet-summary projects. The fleet renderer
+// groups by `project_name`; a single global item is left untagged so
+// reviewers see the `__global__` band the renderer pins at the top.
+const fleetWhatNow = (() => {
+  const items = Array.isArray(whatNow.items) ? whatNow.items : [];
+  const activeProjects = (fleetSummary.projects || []).filter((p) => p && p.active);
+  const tagged = [];
+  items.forEach((item, idx) => {
+    if (item.id === 'reconcile:new_capabilities') {
+      // Global / fleet-wide reconcile blocker — no project_name.
+      tagged.push({ ...item });
+      return;
+    }
+    const project = activeProjects[idx % Math.max(1, activeProjects.length)];
+    if (!project) {
+      tagged.push({ ...item });
+      return;
+    }
+    tagged.push({
+      ...item,
+      project_name: project.name,
+      display_name: project.display_name,
+    });
+  });
+  return {
+    ...whatNow,
+    items: tagged,
+  };
+})();
 
 function wrap(title, body) {
   return `<!doctype html>
@@ -177,5 +214,36 @@ writeFileSync(
   `),
 );
 
+// 6. Fleet Home — Needs Attention in All Projects mode. Drives
+//    objective-contract evidence `dashboard-fleet-home-snapshot.html`.
+//    The renderer groups items per project and pins a `__global__`
+//    section for reconcile/doctor blockers; a fleet provenance footer
+//    points at `dashboard/state/fleet-what-now.json` (D013).
+writeFileSync(
+  resolve(outDir, 'dashboard-fleet-home-snapshot.html'),
+  wrap('Needs Attention — All Projects (fleet)', renderFleetWhatNowHTML(
+    fleetWhatNow,
+    fleetSummary,
+    { now: new Date('2026-05-23T03:50:30Z') },
+  )),
+);
+
+// 7. Fleet Health — Health page in All Projects mode. Drives
+//    objective-contract evidence `dashboard-fleet-health-snapshot.html`.
+//    Captures the fleet warnings card, the honest empty/missing-data
+//    states for capability / security / quota inputs, and the
+//    page-level provenance footer (D013).
+writeFileSync(
+  resolve(outDir, 'dashboard-fleet-health-snapshot.html'),
+  wrap('Health — All Projects (fleet)', renderHealthHTML({
+    capabilities: null,
+    whatNow: null,
+    security: null,
+    quota: null,
+    fleetSummary,
+    selectedProject: 'all',
+  })),
+);
+
 // stdout receipt for the operator running the script.
-console.log(`Wrote 5 F004 snapshots to ${outDir}`);
+console.log(`Wrote 7 dashboard snapshots to ${outDir}`);

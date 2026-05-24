@@ -1,0 +1,72 @@
+## F005 vitest run: 2026-05-24T14:27:11Z
+
+## Targets
+ - dashboard/ (33 test files, 759 tests)
+ - dashboard/functions/ (auth, callables, mcp-bridge, column-mapping)
+
+## Command
+$ cd dashboard && npx vitest run
+
+
+ RUN  v3.2.4 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+9:27:13 AM [vite] (client) warning: invalid import "./${src}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: /Users/bayesian/Documents/GitHub/DontPanic/dashboard/core.js
+stdout | tests/integration/firebase-adapter.test.js > static-first contract (acceptance 1, 2) > loads legacy state from JSON when no Firebase config is present
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+ ✓ tests/integration/cloud-costs-page.test.js (13 tests) 48ms
+ ✓ tests/integration/command-center-page.test.js (18 tests) 62ms
+ ✓ tests/integration/mission-control-page.test.js (16 tests) 118ms
+ ✓ tests/integration/firebase-adapter.test.js (7 tests) 62ms
+ ✓ tests/integration/security-page.test.js (19 tests) 110ms
+ ✓ tests/integration/health-page.test.js (7 tests) 155ms
+ ✓ tests/integration/project-selector.test.js (19 tests) 113ms
+ ✓ tests/integration/core-router.test.js (36 tests) 133ms
+ ✓ tests/integration/what-now-page.test.js (20 tests) 236ms
+ ✓ tests/integration/value-language-page-evidence.test.js (26 tests) 196ms
+ ✓ tests/integration/capabilities-page.test.js (26 tests) 293ms
+ ✓ tests/unit/value-language-static-checks.test.js (34 tests) 8ms
+ ✓ tests/unit/command-center-logic.test.js (27 tests) 20ms
+stdout | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when no config is wired up — static fallback preserved
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stderr | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when sdkLoader rejects (offline / SDK fetch failed)
+[Jarvis] Firebase SDK load failed — falling back to static state. Error: offline
+    at /Users/bayesian/Documents/GitHub/DontPanic/dashboard/tests/unit/config-firebase.test.js:345:49
+    at file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///Users/bayesian/Documents/GitHub/DontPanic/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ ✓ tests/unit/config-firebase.test.js (30 tests) 15ms
+ ✓ tests/unit/what-now-logic.test.js (51 tests) 18ms
+ ✓ tests/unit/financial-logic.test.js (78 tests) 21ms
+ ✓ tests/unit/formatters.test.js (27 tests) 4ms
+ ✓ tests/unit/capabilities-logic.test.js (26 tests) 12ms
+ ✓ tests/unit/provenance.test.js (9 tests) 11ms
+ ✓ tests/unit/project-selector-logic.test.js (41 tests) 11ms
+ ✓ functions/tests/mcp-bridge.test.js (12 tests) 7ms
+ ✓ tests/unit/projection-adapter.test.js (41 tests) 6ms
+ ✓ tests/unit/cloud-costs-logic.test.js (32 tests) 8ms
+ ✓ functions/tests/callables.test.js (12 tests) 4ms
+ ✓ tests/unit/mission-control-logic.test.js (29 tests) 3ms
+ ✓ tests/unit/html-escape.test.js (8 tests) 2ms
+ ✓ functions/tests/auth.test.js (10 tests) 3ms
+ ✓ functions/tests/column-mapping.test.js (11 tests) 3ms
+ ✓ tests/unit/realtime-actions.test.js (8 tests) 4ms
+ ✓ tests/unit/security-logic.test.js (20 tests) 7ms
+ ✓ tests/unit/health-logic.test.js (31 tests) 5ms
+ ✓ tests/unit/settings-logic.test.js (12 tests) 6ms
+ ✓ tests/unit/firestore-rules.test.js (3 tests) 1ms
+
+ Test Files  33 passed (33)
+      Tests  759 passed (759)
+   Start at  09:27:12
+   Duration  2.46s (transform 582ms, setup 0ms, collect 1.62s, tests 1.70s, environment 12.21s, prepare 1.95s)

@@ -15,10 +15,18 @@
       "at": "2026-05-24T04:54:33Z",
       "actor": "supervisor",
       "reason": "child '2026-05-24-001-feat-dashboard-value-language-ia-v0' dispatched"
+    },
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-24-004-feat-event-messaging-v1",
+      "at": "2026-05-24T14:26:13Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-24-004-feat-event-messaging-v1' dispatched"
     }
   ],
   "active_pre_resume_after_children": [
     "pre_resume_after_child:2026-05-24-002-feat-dashboard-architecture-explorer-v1",
-    "pre_resume_after_child:2026-05-24-001-feat-dashboard-value-language-ia-v0"
+    "pre_resume_after_child:2026-05-24-001-feat-dashboard-value-language-ia-v0",
+    "pre_resume_after_child:2026-05-24-004-feat-event-messaging-v1"
   ]
 }

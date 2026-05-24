@@ -141,10 +141,86 @@
         "Populate objective-contract evidence paths and prepare closeout notes."
       ],
       "acceptance": "(1) Dashboard docs explain the value-language contract and V0 nav. (2) Future surfaces are explicitly deferred and governed by the same copy/design rules. (3) Evidence files required by objective_contract.json exist or are intentionally replaced with equivalent named artifacts. (4) Focused tests and sanitization pass. (5) Plan is ready for pre_merge audit.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment) — F005 section"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/claude-design-v3-used-vs-deferred.md",
+          "note": "F005 step 2 — Claude Design v3 assets used vs. deferred"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/future-surfaces-contract.md",
+          "note": "F005 step 3 — future-surface inheritance contract"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-value-language-copy-map.md",
+          "note": "objective_contract required_evidence — copy-map pointer"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-core-nav-snapshot.html",
+          "note": "objective_contract required_evidence — core-nav snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-needs-attention-snapshot.html",
+          "note": "objective_contract required_evidence — Needs Attention snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-tools-setup-snapshot.html",
+          "note": "objective_contract required_evidence — Tools & Setup snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-health-empty-state-snapshot.html",
+          "note": "objective_contract required_evidence — Health empty-state snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-preferences-snapshot.html",
+          "note": "objective_contract required_evidence — Preferences snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-fleet-home-snapshot.html",
+          "note": "objective_contract required_evidence — fleet Home snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/snapshots/dashboard-fleet-health-snapshot.html",
+          "note": "objective_contract required_evidence — fleet Health snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-ui-tests.log",
+          "note": "F005 focused vitest sweep — 759 tests across 33 files"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dashboard-sanitization-clean.log",
+          "note": "F005 sanitization scan — no credential value-shapes"
+        },
+        {
+          "type": "file",
+          "uri": "../../../dashboard/README.md",
+          "note": "V0 Value-Language Contract + future-surfaces table"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T14:40:00Z"
     }
   ]
 }

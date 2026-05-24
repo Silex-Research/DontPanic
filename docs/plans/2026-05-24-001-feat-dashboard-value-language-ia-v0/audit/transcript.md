@@ -38,3 +38,14 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 
 **2026-05-24T08:01:18Z** — feature **F004** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+| 2026-05-24T14:31:11Z | F005 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-05-24T14:34:22Z | F005 | i0 | codex / auditor | needs_changes | 1,216,508 / 13,649 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |
+| 2026-05-24T14:38:26Z | F005 | i1 | claude / implementer | signed_off | 3,295,337 / 14,037 | [claude-implementer-F005-i1.json](audit/claude-implementer-F005-i1.json) |
+| 2026-05-24T14:41:08Z | F005 | i1 | codex / auditor | signed_off | 813,848 / 11,016 | [codex-auditor-F005-i1.json](audit/codex-auditor-F005-i1.json) |
+
+**2026-05-24T14:41:08Z** — feature **F005** terminal: `signed_off` after 2 round(s) — auditor signed off
+
+
+**2026-05-24T14:41:08Z** — feature **F005** terminal: `blocked` after 2 round(s) — supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py,scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
