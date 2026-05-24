@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture explorer harness — Playwright</title>
+  <link rel="stylesheet" href="../../core.css">
+  <link rel="stylesheet" href="../../pages/architecture/architecture.css">
+  <style>
+    body { background: #050912; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; }
+    header { padding: 12px 20px; background: #0b1220; border-bottom: 1px solid rgba(148, 163, 184, 0.15); }
+    header h1 { margin: 0; font-size: 16px; }
+    #page-container { padding: 12px 20px; }
+    /* Force-show the architecture page since we skip the router. */
+    .page-view { display: block; }
+  </style>
+</head>
+<body>
+  <header><h1>DontPanic — Architecture explorer (Playwright harness)</h1></header>
+  <nav class="view-nav" id="view-nav"></nav>
+  <div id="project-selector-container"></div>
+  <div id="page-container"><div id="page-architecture" class="page-view active"></div></div>
+
+  <script type="module">
+    // Minimal Jarvis shim so the page module can register itself.
+    const jarvisShim = {
+      pages: [],
+      state: { architectureViewState: null, selectedProject: 'all' },
+      registerPage(config) { this.pages.push(config); },
+      getPageEl(id) { return document.getElementById(`page-${id}`); },
+    };
+    window.Jarvis = jarvisShim;
+
+    // Fixture-mode: when ?stale=1, swap freshness state to stale (default
+    // for the fixture); when ?absent=1, render the missing-state card so
+    // the playwright spec can capture stale/missing evidence.
+    const params = new URLSearchParams(location.search);
+    const variant = params.get('variant') || 'stale';
+
+    const fixtureURL = variant === 'f004' || variant === 'fleet'
+      ? '../fixtures/architecture-view-state-f004.json'
+      : '../fixtures/architecture-view-state.json';
+    const res = await fetch(fixtureURL);
+    const fixture = await res.json();
+    let envelope = fixture;
+    const projectA = {
+      ...fixture,
+      project: { name: 'projecta', display_name: 'Project A', label: 'Project A' },
+    };
+    const projectB = {
+      ...fixture,
+      project: { name: 'projectb', display_name: 'Project B', label: 'Project B' },
+      freshness: { ...fixture.freshness, state: 'fresh' },
+    };
+    if (variant === 'absent') {
+      envelope = {
+        ...fixture,
+        lanes: [], nodes: [], edges: [], flows: [], steps: [],
+        freshness: {
+          ...fixture.freshness,
+          state: 'absent',
+          message: 'architecture.json was not found. Run the regen command to generate it.',
+        },
+      };
+    } else if (variant === 'fresh') {
+      envelope = {
+        ...fixture,
+        freshness: { ...fixture.freshness, state: 'fresh', message: 'Snapshot matches working tree.' },
+      };
+    } else if (variant === 'fleet') {
+      envelope = null;
+      jarvisShim.state.selectedProject = 'all';
+      jarvisShim.state.architectureViewStateByProject = {
+        projecta: projectA,
+        projectb: projectB,
+      };
+      jarvisShim.state.fleetSummary = {
+        projects: [
+          { name: 'projecta', display_name: 'Project A', active: true },
+          { name: 'projectb', display_name: 'Project B', active: true },
+          { name: 'unbuilt', display_name: 'Unbuilt repo', active: true },
+        ],
+      };
+    }
+    jarvisShim.state.architectureViewState = envelope;
+
+    await import('../../pages/architecture/architecture.js');
+    const page = jarvisShim.pages[0];
+    page.init(jarvisShim.state);
+
+    // Expose for the spec to drive interactions deterministically.
+    window.__archHarness = { jarvisShim, page };
+    window.__harnessReady = true;
+  </script>
+</body>
+</html>

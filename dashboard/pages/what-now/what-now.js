@@ -88,7 +88,7 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
   Jarvis.registerPage({
     id: 'what-now',
-    label: 'What Now',
+    label: 'Needs Attention',
 
     init(state) {
       _el = Jarvis.getPageEl('what-now');

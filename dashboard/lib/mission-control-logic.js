@@ -1,14 +1,31 @@
 // ── Mission Control Logic — Pure, DOM-free business logic ──
 // Extracted from pages/mission-control/mission-control.js for testability.
 
+import { renderProvenanceFooterHTML } from './provenance.js';
+
 export const MC_COLUMNS = ['backlog', 'todo', 'in_progress', 'review', 'done'];
 
+// V0 lifecycle labels per copy-map.md §2.3. Primary labels speak value
+// ("Planned", "Ready to run", "Running", "Waiting on approval", "Done")
+// instead of kanban-internal vocabulary. Plan/feature ids and gate names
+// stay visible as Layer 2 metadata on each card and in the detail modal.
 export const MC_COLUMN_META = {
-  backlog:     { label: 'INBOX',       dotClass: 'mc-dot--purple' },
-  todo:        { label: 'ASSIGNED',    dotClass: 'mc-dot--blue'   },
-  in_progress: { label: 'IN PROGRESS', dotClass: 'mc-dot--green'  },
-  review:      { label: 'REVIEW',      dotClass: 'mc-dot--yellow' },
-  done:        { label: 'DONE',        dotClass: 'mc-dot--gray'   },
+  backlog:     { label: 'PLANNED',            dotClass: 'mc-dot--purple' },
+  todo:        { label: 'READY TO RUN',       dotClass: 'mc-dot--blue'   },
+  in_progress: { label: 'RUNNING',            dotClass: 'mc-dot--green'  },
+  review:      { label: 'WAITING ON APPROVAL', dotClass: 'mc-dot--yellow' },
+  done:        { label: 'DONE',               dotClass: 'mc-dot--gray'   },
+};
+
+// One-sentence value-first impact line per lifecycle column. Rendered
+// under the column header so non-technical reviewers can answer
+// "what does this state mean?" without learning the internal vocabulary.
+export const MC_COLUMN_IMPACT = {
+  backlog:     'Planned work not yet ready to start.',
+  todo:        'Ready for an agent or operator to pick up.',
+  in_progress: 'An agent or operator is actively working on this.',
+  review:      'Waiting for human approval before it can move on.',
+  done:        'Completed work, kept for reference.',
 };
 
 // Status field on task → kanban column
@@ -127,4 +144,60 @@ export function resolveDragIntent({ taskId, sourceColumn, targetColumn }) {
       'for other status changes.'
     ),
   };
+}
+
+// ── F004: Work-page provenance footer ──
+// The Work page reads three state files written together by
+// `dontpanic dashboard build`; we summarise them as one source line and
+// derive the freshest task / activity / agent timestamp as "updated".
+
+/**
+ * Pick the freshest ISO-8601 timestamp across the Work page's three
+ * input arrays. Returns null when no candidate carries a string
+ * timestamp — the provenance footer renders "—" in that case.
+ *
+ * @param {object} [state]
+ * @param {Array<object>} [state.tasks]
+ * @param {Array<object>} [state.agents]
+ * @param {Array<object>} [state.activity]
+ * @returns {string|null}
+ */
+export function deriveWorkLastUpdated({ tasks, agents, activity } = {}) {
+  let best = '';
+  const consider = (ts) => {
+    if (typeof ts !== 'string' || ts.length === 0) return;
+    if (ts > best) best = ts;
+  };
+  if (Array.isArray(tasks)) {
+    for (const t of tasks) {
+      consider(t && t.updated_at);
+      consider(t && t.created);
+    }
+  }
+  if (Array.isArray(activity)) {
+    for (const a of activity) consider(a && a.timestamp);
+  }
+  if (Array.isArray(agents)) {
+    for (const ag of agents) consider(ag && ag.lastSeen);
+  }
+  return best.length > 0 ? best : null;
+}
+
+/**
+ * Render the Work-page provenance footer. Pure: returns the canonical
+ * pv-footer HTML; the page module simply pipes it into the
+ * #mc-queue-source slot. Matches the shared per-page treatment so the
+ * F004 evidence test ("every V0 page renders a provenance footer")
+ * passes for Work.
+ *
+ * @param {object} [state]
+ * @returns {string}
+ */
+export function renderWorkProvenanceHTML(state = {}) {
+  return renderProvenanceFooterHTML({
+    source: 'dashboard/state/tasks.json + agents.json + activity.json',
+    lastUpdated: deriveWorkLastUpdated(state),
+    refreshCommand: 'dontpanic dashboard build',
+    note: 'Work is read-only — cards reflect what the local cache already knows.',
+  });
 }

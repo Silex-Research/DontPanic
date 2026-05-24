@@ -574,12 +574,18 @@ def _parse_iso(s: str | None) -> dt.datetime | None:
         return None
 
 
-def _scrub_secrets(s: str | None) -> str | None:
-    """Replace every secret-shape match in `s` with `[REDACTED]`.
+def scrub_secrets(s: str | None) -> str | None:
+    """Replace every secret-shape match in ``s`` with ``[REDACTED]``.
 
     Single source-of-truth: SECRET_REGEXES from scripts/
     sanitization_check.py. New patterns added there propagate here
     automatically. Returns the input unchanged when no match.
+
+    Plan 2026-05-24-004 F004 (D020): promoted from the private
+    ``_scrub_secrets`` to a public symbol so the live notification
+    sinks (Discord / terminal-notifier / INBOX rendered annotation)
+    can bind to this helper without coupling to a private name. The
+    private alias below is retained for any pre-F004 callers.
     """
     if not s:
         return s
@@ -587,6 +593,10 @@ def _scrub_secrets(s: str | None) -> str | None:
     for rx in _SECRET_REGEXES:
         out = rx.sub(_REDACT_PLACEHOLDER, out)
     return out
+
+
+# Backward-compat alias for callers that bound to the pre-D020 private name.
+_scrub_secrets = scrub_secrets
 
 
 def _redact_plan(p: PlanSummary) -> PlanSummary:
@@ -685,4 +695,5 @@ __all__ = [
     "DECISIONS_DEFAULT_LIMIT",
     "gather",
     "redact_to_level",
+    "scrub_secrets",
 ]

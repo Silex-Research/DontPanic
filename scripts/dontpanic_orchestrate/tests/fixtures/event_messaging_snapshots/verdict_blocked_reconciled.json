@@ -1,0 +1,67 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Auditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Auditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled** _(band: needs_action)_\n\nAuditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.\n\nRun:\n\n```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `aggregate_class` = `environmental_reproduction_failure`\n- `blocking` = `False`\n- `feature_id` = `F005`\n- `inbox_event` = `verdict_blocked_reconciled`\n- `iteration_count` = `1`\n- `original_verdict` = `blocked`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled",
+      "subtitle": "verdict_blocked_reconciled",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "verdict_blocked_reconciled",
+  "inbox_event_at_emit": "verdict_blocked_reconciled",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Auditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+    "technical_metadata": {
+      "aggregate_class": "environmental_reproduction_failure",
+      "blocking": false,
+      "feature_id": "F005",
+      "inbox_event": "verdict_blocked_reconciled",
+      "iteration_count": 1,
+      "original_verdict": "blocked",
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled"
+  }
+}

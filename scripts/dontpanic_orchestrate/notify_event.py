@@ -28,7 +28,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 from dontpanic_orchestrate import notify, notify_discord
@@ -76,11 +76,33 @@ class NotifyEvent:
       plan_id: the plan whose volley emitted the event.
       feature_id: optional — None for plan-level events.
       body: markdown content rendered directly by all sinks.
-      action_link: optional file path / file:// URL pointing to where
-        the operator should look (INBOX.md, signoff.json, etc.).
-        REQUIRED when severity == 'escalation' — emit sites without a
-        link are caller bugs.
+      action_link: DEPRECATED alias for ``evidence_uri`` (plan 2026-05-24-004
+        D005). Optional file path / file:// URL pointing to where the
+        operator should look (INBOX.md, signoff.json, etc.). REQUIRED when
+        severity == 'escalation' — emit sites without a link are caller
+        bugs. New code should populate ``evidence_uri`` instead; both names
+        read the same underlying storage and remain in lock-step.
       timestamp: tz-aware UTC datetime.
+      inbox_event: the INBOX ``event=`` value used at the paired
+        :func:`inbox.append_event` call (plan 2026-05-24-004 D017). Acts as
+        the translation-table key for ``event_copy``. Populated at every
+        new emit site; existing emit sites populate where the INBOX event
+        name is known.
+      subtype, breaker_kind, iteration_count, feature_display_name,
+      aggregate_class, blocking, target_env, target_project: optional
+        first-class metadata fields (plan 2026-05-24-004 D004). All
+        default to ``None`` so existing emit sites continue to work
+        without populating them.
+      evidence_uri: preferred name for ``action_link`` (plan 2026-05-24-004
+        D005). Aliases ``action_link``; both fields read the same storage.
+      technical_metadata: long-tail kind-specific data per plan
+        2026-05-24-004 D017 — kept out of the first-class field set when
+        the value is only meaningful to one kind (verdict_mismatch's
+        ``narrative_verdict``/``structured_status``/``audit_path``;
+        defer_tripped's ``defer_gate``/``dispatch_class``;
+        volley_terminal's ``final_status``/``rounds``;
+        gate_state_reconciliation_failed's ``persisted_state_path``;
+        etc.). Empty dict by default.
     """
 
     kind: str
@@ -88,10 +110,42 @@ class NotifyEvent:
     plan_id: str
     feature_id: str | None
     body: str
-    action_link: str | None
-    timestamp: dt.datetime
+    action_link: str | None = None
+    timestamp: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
+    inbox_event: str | None = None
+    subtype: str | None = None
+    breaker_kind: str | None = None
+    iteration_count: int | None = None
+    feature_display_name: str | None = None
+    aggregate_class: str | None = None
+    blocking: bool | None = None
+    target_env: str | None = None
+    target_project: str | None = None
+    evidence_uri: str | None = None
+    technical_metadata: dict[str, str | int | bool | None] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
+        # D005 alias reconciliation: action_link and evidence_uri are two
+        # names for the same value. If both are provided they must agree;
+        # otherwise the unset side is back-filled so downstream sinks can
+        # read either name and get the same answer.
+        if self.action_link is not None and self.evidence_uri is not None:
+            if self.action_link != self.evidence_uri:
+                raise ValueError(
+                    "NotifyEvent: action_link and evidence_uri were both "
+                    f"provided with different values ({self.action_link!r} "
+                    f"!= {self.evidence_uri!r}). Pass only one — they are "
+                    "aliases for the same field."
+                )
+        elif self.evidence_uri is not None:
+            object.__setattr__(self, "action_link", self.evidence_uri)
+        elif self.action_link is not None:
+            object.__setattr__(self, "evidence_uri", self.action_link)
+
         if self.severity not in _VALID_SEVERITIES:
             raise ValueError(
                 f"NotifyEvent.severity must be one of {sorted(_VALID_SEVERITIES)}; "
@@ -151,6 +205,7 @@ def dispatch_event(
     event: NotifyEvent,
     *,
     sinks: tuple[str, ...] = ALL_SINKS,
+    plan_dir=None,
 ) -> dict[str, bool]:
     """Fan ``event`` to the named sinks honoring the level filter.
 
@@ -160,6 +215,13 @@ def dispatch_event(
     title (transitional pattern while supervisor emit sites keep their
     existing :func:`notify.notify` calls; once those are removed, every
     emit site goes back to the default).
+
+    Plan 2026-05-24-004 F003: when the event's ``inbox_event`` maps to a
+    ``live`` or ``dashboard_action`` disposition, the event_copy renderer
+    produces a RenderedEvent that drives a sidecar JSONL append and an
+    optional INBOX rendered-annotation block (when ``plan_dir`` is in
+    scope). Both writes are best-effort — failures suppress and never
+    crash supervisor flow.
 
     Returns a dict naming each sink's outcome — useful for tests and for
     operator diagnostics. Never raises: a sink that throws is captured
@@ -171,26 +233,146 @@ def dispatch_event(
     truth-of-record; live notifications are advisory and may be silenced
     or fail without affecting plan progress.
     """
-    out = {"terminal": False, "discord": False}
+    out: dict[str, bool] = {
+        "terminal": False,
+        "discord": False,
+        "sidecar": False,
+        "inbox_annotation": False,
+    }
     if not _allowed_at_level(event):
-        return out
+        # Even when filtered out for live sinks, render for sidecar so the
+        # dashboard still reflects the event. The level filter governs the
+        # noisy live channels (Discord + terminal) but the sidecar / INBOX
+        # annotation are durable surfaces the operator browses on demand —
+        # no reason to silence them on quiet-level.
+        pass
 
-    if SINK_TERMINAL in sinks:
+    # Resolve disposition once via event_copy.render(); a None return means
+    # the event doesn't render (inbox_only / audit_only / unknown).
+    rendered = None
+    known_disposition: str | None = None
+    try:
+        from dontpanic_orchestrate import event_copy
+
+        rendered = event_copy.render(event)
+        # When render() returns None we still want to know whether the
+        # inbox_event is a *known* non-rendered kind (inbox_only / audit_only)
+        # versus an unknown / legacy kind. Suppressing live sinks for the
+        # former is required by F003 acceptance #10 + audit finding (i0).
+        inbox_event_key = (
+            getattr(event, "inbox_event", None) or getattr(event, "kind", None)
+        )
+        if inbox_event_key:
+            # D009 normalization: collapse the one authorized legacy
+            # colon-key (breaker:patch_incomplete) to breaker_tripped
+            # before the table lookup. Any other breaker:<unknown>
+            # value falls through unrendered (its DISPOSITION_TABLE
+            # lookup misses), so an unknown breaker kind never reaches
+            # live sinks via this path.
+            if inbox_event_key == "breaker:patch_incomplete":
+                inbox_event_key = "breaker_tripped"
+            disp = event_copy.DISPOSITION_TABLE.get(inbox_event_key)
+            if disp is not None:
+                known_disposition = disp.value
+    except Exception as exc:  # noqa: BLE001 — render failures must not crash
+        print(
+            f"[notify_event] event_copy.render raised {type(exc).__name__}; suppressed.",
+            file=sys.stderr,
+        )
+        rendered = None
+        known_disposition = None
+
+    level_allows_live = _allowed_at_level(event)
+    disposition = getattr(rendered, "disposition", None) if rendered is not None else None
+    # event_copy.Disposition values: "live", "dashboard_action", "inbox_only",
+    # "audit_only". Compare by .value to avoid an import-time coupling to
+    # event_copy here.
+    disp_value = disposition.value if disposition is not None else known_disposition
+    is_live = disp_value == "live"
+    is_dashboard_action = disp_value == "dashboard_action"
+    # A *known* non-rendered disposition (inbox_only / audit_only) must NOT
+    # fan out to terminal / Discord — the legacy fallback path below only
+    # fires when the disposition is genuinely unknown (e.g. ad-hoc test
+    # events without an entry in DISPOSITION_TABLE).
+    is_known_non_live = disp_value in {"inbox_only", "audit_only"}
+
+    if SINK_TERMINAL in sinks and level_allows_live and is_live:
         try:
-            out["terminal"] = bool(notify.notify_event(event))
+            # F003 audit finding (i1): pass the already-produced
+            # RenderedEvent so the terminal sink does not re-render.
+            out["terminal"] = bool(notify.notify_event(event, rendered=rendered))
         except Exception as exc:  # noqa: BLE001 — sinks must never propagate.
             print(
                 f"[notify_event] terminal sink raised {type(exc).__name__}; suppressed.",
                 file=sys.stderr,
             )
-    if SINK_DISCORD in sinks:
+    if SINK_DISCORD in sinks and level_allows_live and is_live:
         try:
-            out["discord"] = bool(notify_discord.notify(event))
+            # F003 audit finding (i1): pass the already-produced
+            # RenderedEvent so the Discord sink does not re-render.
+            out["discord"] = bool(notify_discord.notify(event, rendered=rendered))
         except Exception as exc:  # noqa: BLE001 — sinks must never propagate.
             print(
                 f"[notify_event] discord sink raised {type(exc).__name__}; suppressed.",
                 file=sys.stderr,
             )
+
+    # Sidecar + INBOX annotation: fire for both live AND dashboard_action.
+    # Per plan.md § Implementation Strategy + D003 + D018:
+    #   live              → discord + terminal + sidecar + INBOX annotation
+    #   dashboard_action  → sidecar + INBOX annotation only
+    if rendered is not None and (is_live or is_dashboard_action):
+        try:
+            from dontpanic_orchestrate import operator_console
+
+            operator_console.write_event_action_sidecar(rendered)
+            out["sidecar"] = True
+        except Exception as exc:  # noqa: BLE001 — sidecar write is best-effort
+            print(
+                f"[notify_event] sidecar write raised {type(exc).__name__}; suppressed.",
+                file=sys.stderr,
+            )
+        if plan_dir is not None:
+            try:
+                from dontpanic_orchestrate import inbox
+
+                inbox.append_rendered_annotation(
+                    plan_dir,
+                    plan_id=event.plan_id,
+                    rendered=rendered,
+                )
+                out["inbox_annotation"] = True
+            except Exception as exc:  # noqa: BLE001 — annotation is best-effort
+                print(
+                    f"[notify_event] INBOX annotation raised {type(exc).__name__}; suppressed.",
+                    file=sys.stderr,
+                )
+
+    # Legacy compatibility: when the renderer returned None *and* the
+    # inbox_event is genuinely unknown (no DISPOSITION_TABLE entry), still
+    # honor the original sink fan-out so existing tests / direct callers
+    # without a translation entry keep working. Known non-rendered
+    # dispositions (inbox_only / audit_only) MUST NOT reach live sinks per
+    # F003 acceptance + plan.md § Translation Disposition.
+    if rendered is None and level_allows_live and not is_known_non_live:
+        if SINK_TERMINAL in sinks and not out["terminal"]:
+            try:
+                out["terminal"] = bool(notify.notify_event(event))
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"[notify_event] terminal sink (legacy path) raised "
+                    f"{type(exc).__name__}; suppressed.",
+                    file=sys.stderr,
+                )
+        if SINK_DISCORD in sinks and not out["discord"]:
+            try:
+                out["discord"] = bool(notify_discord.notify(event))
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"[notify_event] discord sink (legacy path) raised "
+                    f"{type(exc).__name__}; suppressed.",
+                    file=sys.stderr,
+                )
     return out
 
 

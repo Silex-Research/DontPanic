@@ -1,0 +1,25 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/event-messaging-authoring-guide.md",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/claude-implementer-F005-i0.json",
+    "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/",
+    "scripts/dontpanic_orchestrate/tests/test_event_messaging_snapshots_f005.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

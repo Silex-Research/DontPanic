@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T08:01:18Z",
+  "feature_id": "F004",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Project-filtered Needs Attention provenance reports the wrong state source. Evidence: `pages/what-now/what-now.js:37-45` routes project views through `renderPr…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "spec_ambiguity",
+      "severity": "low",
+      "category": "documentation",
+      "issue_excerpt": "The accessibility evidence overclaims Tools & Setup keyboard affordances. Evidence: `dashboard-accessibility-checks.md:30` says command chips render as `<code>…",
+      "rationale": "severity=low, category=documentation — finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    },
+    {
+      "finding_index": 2,
+      "classification": "spec_ambiguity",
+      "severity": "low",
+      "category": "documentation",
+      "issue_excerpt": "Implementer sanitization evidence does not cover the full required scope. Evidence: `dashboard-sanitization-clean.log:17-25` lists only `dashboard/state` and `…",
+      "rationale": "severity=low, category=documentation — finding sits on a documentation/naming/convention/placement surface where the spec is the disputed thing, not the code. Patch the spec then resume, or accept the implementer's reading."
+    }
+  ]
+}

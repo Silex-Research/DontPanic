@@ -83,7 +83,7 @@ import json
 import os
 import re
 import stat
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -116,6 +116,10 @@ SCHEMA_VERSION = "1.0.0"
 CACHE_FILENAME = "what-now.json"
 CACHE_SUBDIR = "dashboard"
 CACHE_FILE_MODE = 0o600
+
+# Plan 2026-05-24-004 F003 (D003) — sidecar file for event-derived ActionItems.
+# Per-line JSON for append-safety; one ActionItem-shaped dict per line.
+EVENT_SIDECAR_FILENAME = "event-actions.jsonl"
 
 
 class Band(str, Enum):
@@ -662,14 +666,233 @@ def default_cache_path() -> Path:
     return _gc.dontpanic_home() / CACHE_SUBDIR / CACHE_FILENAME
 
 
+def default_event_sidecar_path() -> Path:
+    """``<dontpanic_home>/dashboard/event-actions.jsonl``.
+
+    Plan 2026-05-24-004 F003 (D003) — sidecar file the event_copy renderer
+    appends to via :func:`write_event_action_sidecar`. The dashboard build
+    (and write_cache) merge the sidecar into the served what-now via
+    :func:`merge_with_event_sidecar`.
+    """
+
+    return _gc.dontpanic_home() / CACHE_SUBDIR / EVENT_SIDECAR_FILENAME
+
+
+def _rendered_to_action_item_dict(
+    rendered: Any,
+    *,
+    source: str,
+    updated_at: str,
+) -> dict[str, Any]:
+    """Project a :class:`event_copy.RenderedEvent` into ActionItem-dict shape.
+
+    Used for the sidecar JSONL file so that `merge_with_event_sidecar` can
+    rehydrate the entry into an ActionItem alongside provider-derived items.
+
+    Per D003 the sidecar carries ActionItem-shaped entries, NOT raw
+    NotifyEvent payloads — agents consuming what-now.json should see one
+    uniform contract regardless of provenance.
+
+    Per plan.md § Implementation Strategy this projection is dispatch-driven
+    (notification flow), so the resulting items are:
+      - automatable=False (operator action), with human_required_reason
+        derived from the band (needs_action items need approval/remediation;
+        advisory/info/ready never reach the sidecar — those dispositions
+        skip rendering).
+      - id prefixed with ``supervisor:`` per the existing source vocabulary
+        + the inbox_event so the dashboard dedupes against re-fires of the
+        same event for the same plan/feature.
+    """
+    plan_id = ""
+    feature_id: str | None = None
+    inbox_event = ""
+    tech = getattr(rendered, "technical_metadata", None) or {}
+    if isinstance(tech, Mapping):
+        plan_id = tech.get("plan_id", "") or ""
+        feature_id = tech.get("feature_id") or None
+        inbox_event = tech.get("inbox_event", "") or ""
+    band_value = getattr(rendered, "band", None) or "advisory"
+    item_id_parts = [SOURCE_SUPERVISOR, inbox_event or "event"]
+    if plan_id:
+        item_id_parts.append(plan_id)
+    if feature_id:
+        item_id_parts.append(feature_id)
+    item_id = ":".join(item_id_parts)
+
+    human_reason: str | None
+    if band_value == "ready":
+        # ready band wouldn't normally reach the sidecar (renderer would
+        # return None for inbox_only/audit_only and live ready items don't
+        # demand human action) but stay defensive.
+        automatable = True
+        human_reason = None
+    else:
+        automatable = False
+        human_reason = "operator action surfaced by dispatch_event"
+
+    return {
+        "id": item_id,
+        "source": source,
+        "band": band_value,
+        "title": getattr(rendered, "title", "") or "(rendered event)",
+        "detail": getattr(rendered, "detail", None),
+        "exact_command": getattr(rendered, "exact_command", None),
+        "automatable": automatable,
+        "human_required_reason": human_reason,
+        "evidence_uri": getattr(rendered, "evidence_uri", None),
+        "updated_at": updated_at,
+        "project_name": tech.get("target_project") if isinstance(tech, Mapping) else None,
+        "display_name": None,
+    }
+
+
+def write_event_action_sidecar(
+    rendered: Any,
+    *,
+    source: str = SOURCE_SUPERVISOR,
+    path: Path | None = None,
+    captured_at: _dt.datetime | None = None,
+) -> Path | None:
+    """Plan 2026-05-24-004 F003 (D003) — append a sidecar ActionItem entry.
+
+    The sidecar is per-line JSON (JSONL) so the writer can append safely
+    without locking the whole what-now.json. The dashboard build / write_cache
+    call :func:`merge_with_event_sidecar` to fold the sidecar entries into
+    the served ActionItem list.
+
+    Returns the sidecar path, or None when ``rendered`` is None (no-op).
+
+    Plan 2026-05-24-004 F004 (D011 + D020): raise-mode sanitization. Any
+    secret-shaped substring in the projected entry triggers a ``ValueError``
+    via :func:`_assert_no_secret_shapes` and the write is rejected before
+    the sidecar file is touched. This is the operator-fixable boundary —
+    a leaked secret in a rendered ActionItem is a bug worth surfacing
+    immediately, since the sidecar is persisted (durable) state. The live
+    notification paths use substitute mode instead (see
+    :func:`state_projection.scrub_secrets`) so the supervisor never
+    fail-hards on a transient notification.
+    """
+    if rendered is None:
+        return None
+
+    target = path if path is not None else default_event_sidecar_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(target.parent, 0o700)
+    except OSError:
+        pass
+
+    entry = _rendered_to_action_item_dict(
+        rendered,
+        source=source,
+        updated_at=_now_iso(captured_at),
+    )
+    # Per D011 + F004: the sidecar write is the raise-mode boundary for
+    # secret-shape leaks. Failure here surfaces a ValueError to the caller
+    # so an operator can fix the rendered ActionItem rather than persisting
+    # the leak. Live notification paths use substitute mode (scrub_secrets)
+    # because the supervisor must not fail-hard on a transient dispatch.
+    _assert_no_secret_shapes(entry)
+    line = json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n"
+    with target.open("a", encoding="utf-8") as f:
+        f.write(line)
+    try:
+        os.chmod(target, CACHE_FILE_MODE)
+    except OSError:
+        pass
+    return target
+
+
+def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | None:
+    """Best-effort rehydrate of a sidecar entry into an ActionItem.
+
+    Returns None when fields are malformed — sidecar entries are advisory
+    and a malformed line must not crash the merge path.
+    """
+    try:
+        band_str = entry.get("band") or "advisory"
+        band = Band(band_str)
+        return ActionItem(
+            id=entry["id"],
+            source=entry.get("source") or SOURCE_SUPERVISOR,
+            band=band,
+            title=entry.get("title") or "(event)",
+            detail=entry.get("detail"),
+            exact_command=entry.get("exact_command"),
+            automatable=bool(entry.get("automatable", False)),
+            human_required_reason=entry.get("human_required_reason"),
+            evidence_uri=entry.get("evidence_uri"),
+            updated_at=entry.get("updated_at") or _now_iso(),
+            project_name=entry.get("project_name"),
+            display_name=entry.get("display_name"),
+        )
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def merge_with_event_sidecar(
+    provider_items: Sequence[ActionItem] | Iterable[ActionItem],
+    *,
+    sidecar_path: Path | None = None,
+) -> tuple[ActionItem, ...]:
+    """Plan 2026-05-24-004 F003 (D003 + D019) — merge sidecar entries.
+
+    Reads the event-actions sidecar (JSONL) and returns a deduplicated,
+    sorted tuple combining ``provider_items`` with sidecar-derived items.
+    Provider-derived items WIN on id conflicts — the sidecar is advisory.
+
+    Called from BOTH dashboard.build() (before render_json writes the
+    out_dir copy of what-now.json) AND operator_console.write_cache()
+    (before writing the home dashboard cache) per D019; either site
+    skipping the merge would leave the served dashboard state stale.
+    """
+    target = sidecar_path if sidecar_path is not None else default_event_sidecar_path()
+    provider_list = list(provider_items)
+    provider_ids = {item.id for item in provider_list}
+    if not target.is_file():
+        return _sort(provider_list)
+    sidecar_items: list[ActionItem] = []
+    try:
+        raw = target.read_text(encoding="utf-8")
+    except OSError:
+        return _sort(provider_list)
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _action_item_from_sidecar_dict(entry)
+        if item is None:
+            continue
+        if item.id in provider_ids:
+            # Provider items win on conflict — sidecar is advisory.
+            continue
+        # Dedupe within the sidecar itself (re-fires of the same event
+        # append additional lines; keep the most recent).
+        sidecar_items = [si for si in sidecar_items if si.id != item.id]
+        sidecar_items.append(item)
+    return _sort(provider_list + sidecar_items)
+
+
 def write_cache(
     items: Sequence[ActionItem],
     *,
     path: Path | None = None,
     captured_at: _dt.datetime | None = None,
+    merge_event_sidecar: bool = True,
 ) -> Path:
     """Write the JSON envelope to the operator-local cache file (mode
     0o600, parent dir 0o700). Returns the path written.
+
+    Plan 2026-05-24-004 F003 (D003 + D019): merges event-actions.jsonl
+    sidecar into the provider-derived items by default. Pass
+    ``merge_event_sidecar=False`` for tests that need to assert pure
+    provider output.
     """
 
     target = path if path is not None else default_cache_path()
@@ -678,7 +901,12 @@ def write_cache(
         os.chmod(target.parent, 0o700)
     except OSError:
         pass
-    payload = render_json(items, captured_at=captured_at)
+    final_items: Sequence[ActionItem]
+    if merge_event_sidecar:
+        final_items = merge_with_event_sidecar(items)
+    else:
+        final_items = items
+    payload = render_json(final_items, captured_at=captured_at)
     target.write_text(payload, encoding="utf-8")
     os.chmod(target, CACHE_FILE_MODE)
     mode_bits = stat.S_IMODE(target.stat().st_mode)
@@ -727,6 +955,7 @@ __all__ = [
     "CACHE_FILENAME",
     "CACHE_FILE_MODE",
     "CACHE_SUBDIR",
+    "EVENT_SIDECAR_FILENAME",
     "SCHEMA_VERSION",
     "SOURCE_ARCHITECTURE",
     "SOURCE_CAPABILITY",
@@ -735,6 +964,8 @@ __all__ = [
     "SOURCE_SUPERVISOR",
     "aggregate",
     "default_cache_path",
+    "default_event_sidecar_path",
+    "merge_with_event_sidecar",
     "provide_architecture_actions",
     "provide_capability_actions",
     "provide_gate_actions",
@@ -743,4 +974,5 @@ __all__ = [
     "render_envelope",
     "render_json",
     "write_cache",
+    "write_event_action_sidecar",
 ]

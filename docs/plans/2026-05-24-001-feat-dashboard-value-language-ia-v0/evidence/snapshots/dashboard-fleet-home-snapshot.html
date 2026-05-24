@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Needs Attention — All Projects (fleet) — F004 snapshot</title>
+  <!--
+    Static F004 evidence snapshot. Pure-renderer output captured by
+    dashboard/tests/scripts/generate-f004-snapshots.mjs. Do not edit by
+    hand — regenerate by re-running the script. The snapshot intentionally
+    omits the dashboard's runtime CSS so it remains text-readable.
+  -->
+</head>
+<body>
+
+    <div class="wn-layout wn-layout--fleet">
+
+    <div class="wn-status-header" data-status-header="1" data-scope="fleet">
+      <span class="wn-status-chip wn-status-chip--scope">
+
+    <span class="scope-badge scope-badge--fleet" data-scope="fleet">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Fleet</span>
+    </span>
+
+      </span>
+      <span class="wn-status-chip wn-status-chip--band wn-status-chip--red">
+        <span class="wn-status-chip-label">NEEDS ACTION</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--warnings">
+        <span class="wn-status-chip-label">warnings</span>
+        <span class="wn-status-chip-value">1</span>
+      </span>
+      <span class="wn-status-chip wn-status-chip--age">
+        <span class="wn-status-chip-label">data age</span>
+        <span class="wn-status-chip-value">30s</span>
+      </span>
+    </div>
+
+      <section class="panel wn-header-panel">
+        <div class="wn-header-row">
+          <h2>Needs Attention — All Projects</h2>
+          <div class="wn-header-scope">
+    <span class="scope-badge scope-badge--fleet" data-scope="fleet">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Fleet</span>
+    </span>
+  </div>
+          <div class="wn-header-meta">
+    <span class="wn-meta-item"><span class="wn-meta-label">schema</span><span class="wn-meta-value">1.0.0</span></span>
+    <span class="wn-meta-item"><span class="wn-meta-label">captured</span><span class="wn-meta-value">2026-05-23T03:50:00Z</span></span>
+  </div>
+        </div>
+        <div class="wn-summary-strip">
+    <span class="wn-summary-chip wn-summary-chip--red">
+      <span class="wn-summary-chip-value">3</span>
+      <span class="wn-summary-chip-label">Needs action</span>
+    </span>
+
+    <span class="wn-summary-chip wn-summary-chip--yellow">
+      <span class="wn-summary-chip-value">1</span>
+      <span class="wn-summary-chip-label">Advisory</span>
+    </span>
+
+    <span class="wn-summary-chip wn-summary-chip--accent">
+      <span class="wn-summary-chip-value">1</span>
+      <span class="wn-summary-chip-label">Info</span>
+    </span>
+
+    <span class="wn-summary-chip wn-summary-chip--green">
+      <span class="wn-summary-chip-value">0</span>
+      <span class="wn-summary-chip-label">Ready</span>
+    </span>
+  </div>
+      </section>
+
+    <section class="panel wn-project-panel wn-project-panel--red"
+             data-project="__global__">
+      <div class="wn-project-header">
+        <h3 class="wn-project-title">Global</h3>
+        <span class="wn-project-band wn-project-band--red">NEEDS ACTION</span>
+        <span class="wn-project-scope">
+    <span class="scope-badge scope-badge--global" data-scope="global">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Global</span>
+    </span>
+  </span>
+        <span class="wn-project-count">1 item</span>
+      </div>
+      <div class="wn-cards">
+    <article class="wn-card wn-card--red"
+             data-action-id="reconcile:new_capabilities"
+             data-source="reconcile"
+             data-band="needs_action">
+      <header class="wn-card-header">
+        <span class="wn-card-kind">Setup drift detected</span>
+
+        <span class="wn-role-chip wn-role-chip--human" title="human-required — capability set diverged from baseline">human-required</span>
+      </header>
+      <div class="wn-card-impact">Reconcile drift: new capabilities since baseline</div>
+
+
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic reconcile baseline --yes</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic reconcile baseline --yes" aria-label="Copy command to clipboard">copy</button>
+    </div>
+
+
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">/home/op/.dontpanic/install-snapshot.json</code>
+    </div>
+
+      <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--reconcile" title="provider">Reconcile</span>
+        <span class="wn-card-id" title="reconcile:new_capabilities">reconcile:new_capabilities</span>
+        <span class="wn-card-updated">updated 2026-05-23T03:49:55Z</span>
+      </footer>
+    </article>
+  </div>
+    </section>
+
+    <section class="panel wn-project-panel wn-project-panel--red"
+             data-project="dontpanic">
+      <div class="wn-project-header">
+        <h3 class="wn-project-title">DontPanic</h3>
+        <span class="wn-project-band wn-project-band--red">NEEDS ACTION</span>
+        <span class="wn-project-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </span>
+        <span class="wn-project-count">2 items</span>
+      </div>
+      <div class="wn-cards">
+    <article class="wn-card wn-card--red"
+             data-action-id="capability:firebase-dashboard"
+             data-source="capability"
+             data-band="needs_action">
+      <header class="wn-card-header">
+        <span class="wn-card-kind">Setup required</span>
+        <span class="wn-project-chip" title="project">DontPanic</span>
+        <span class="wn-role-chip wn-role-chip--human" title="human-required — capability setup incomplete">human-required</span>
+      </header>
+      <div class="wn-card-impact">Capability firebase-dashboard needs setup</div>
+      <div class="wn-card-detail">missing: DONTPANIC_FIREBASE_PROJECT, firebase login</div>
+
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic capabilities status firebase-dashboard</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic capabilities status firebase-dashboard" aria-label="Copy command to clipboard">copy</button>
+    </div>
+
+
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">/home/op/.dontpanic/capabilities-status.json</code>
+    </div>
+
+      <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--capability" title="provider">Capability</span>
+        <span class="wn-card-id" title="capability:firebase-dashboard">capability:firebase-dashboard</span>
+        <span class="wn-card-updated">updated 2026-05-23T03:49:55Z</span>
+      </footer>
+    </article>
+
+    <article class="wn-card wn-card--yellow"
+             data-action-id="architecture:stale"
+             data-source="architecture"
+             data-band="advisory">
+      <header class="wn-card-header">
+        <span class="wn-card-kind">Architecture snapshot is stale</span>
+        <span class="wn-project-chip" title="project">DontPanic</span>
+        <span class="wn-role-chip wn-role-chip--auto" title="An agent or script can run this without human judgement">automatable</span>
+      </header>
+      <div class="wn-card-impact">Architecture snapshot is stale</div>
+
+
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic architecture regen</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic architecture regen" aria-label="Copy command to clipboard">copy</button>
+    </div>
+
+
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">docs/architecture/CURRENT.md</code>
+    </div>
+
+      <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--architecture" title="provider">Architecture</span>
+        <span class="wn-card-id" title="architecture:stale">architecture:stale</span>
+        <span class="wn-card-updated">updated 2026-05-23T03:49:55Z</span>
+      </footer>
+    </article>
+  </div>
+    </section>
+
+    <section class="panel wn-project-panel wn-project-panel--red"
+             data-project="spindine">
+      <div class="wn-project-header">
+        <h3 class="wn-project-title">Spin &amp; Dine</h3>
+        <span class="wn-project-band wn-project-band--red">NEEDS ACTION</span>
+        <span class="wn-project-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </span>
+        <span class="wn-project-count">2 items</span>
+      </div>
+      <div class="wn-cards">
+    <article class="wn-card wn-card--red"
+             data-action-id="gate:2026-05-23-004-feat-operator-console-v0:pre_merge"
+             data-source="gate"
+             data-band="needs_action">
+      <header class="wn-card-header">
+        <span class="wn-card-kind">Approval needed</span>
+        <span class="wn-project-chip" title="project">Spin &amp; Dine</span>
+        <span class="wn-role-chip wn-role-chip--human" title="human-required — gate approval">human-required</span>
+      </header>
+      <div class="wn-card-impact">Gate pre_merge on 2026-05-23-004-feat-operator-console-v0 needs approval</div>
+      <div class="wn-card-detail">declared gate not cleared; kind=pre_merge</div>
+
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic approve 2026-05-23-004-feat-operator-console-v0 pre_merge</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic approve 2026-05-23-004-feat-operator-console-v0 pre_merge" aria-label="Copy command to clipboard">copy</button>
+    </div>
+
+
+    <div class="wn-card-evidence">
+      <span class="wn-evidence-label">evidence</span>
+      <code class="wn-evidence-uri">docs/plans/2026-05-23-004-feat-operator-console-v0/audit/gate-state.json</code>
+    </div>
+
+      <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--gate" title="provider">Gate</span>
+        <span class="wn-card-id" title="gate:2026-05-23-004-feat-operator-console-v0:pre_merge">gate:2026-05-23-004-feat-operator-console-v0:pre_merge</span>
+        <span class="wn-card-updated">updated 2026-05-23T03:49:55Z</span>
+      </footer>
+    </article>
+
+    <article class="wn-card wn-card--accent"
+             data-action-id="supervisor:48211:2026-05-23-004-feat-operator-console-v0"
+             data-source="supervisor"
+             data-band="info">
+      <header class="wn-card-header">
+        <span class="wn-card-kind">Active AI work</span>
+        <span class="wn-project-chip" title="project">Spin &amp; Dine</span>
+        <span class="wn-role-chip wn-role-chip--auto" title="An agent or script can run this without human judgement">automatable</span>
+      </header>
+      <div class="wn-card-impact">Supervisor active on 2026-05-23-004-feat-operator-console-v0</div>
+      <div class="wn-card-detail">started_at=2026-05-23T03:50:00Z, env=dev</div>
+
+    <div class="wn-card-command">
+      <pre class="wn-cmd"><code>dontpanic ps</code></pre>
+      <button type="button" class="wn-copy-btn" data-command="dontpanic ps" aria-label="Copy command to clipboard">copy</button>
+    </div>
+
+
+      <footer class="wn-card-footer">
+        <span class="wn-source-chip wn-source-chip--supervisor" title="provider">Supervisor</span>
+        <span class="wn-card-id" title="supervisor:48211:2026-05-23-004-feat-operator-console-v0">supervisor:48211:2026-05-23-004-feat-operator-console-v0</span>
+        <span class="wn-card-updated">updated 2026-05-23T03:49:55Z</span>
+      </footer>
+    </article>
+  </div>
+    </section>
+
+
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/fleet-what-now.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">2026-05-23T03:50:00Z</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+
+    </div>
+
+    </div>
+
+</body>
+</html>

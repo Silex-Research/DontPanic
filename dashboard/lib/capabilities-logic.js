@@ -10,6 +10,11 @@
 
 import { esc } from './html-escape.js';
 import { renderScopeBadgeHTML } from './project-selector-logic.js';
+import { renderProvenanceFooterHTML } from './provenance.js';
+
+// F004: per-page provenance pointers.
+const CAP_SOURCE = 'dashboard/state/capabilities-status.json';
+const CAP_REFRESH = 'dontpanic capabilities status --format=json > dashboard/state/capabilities-status.json';
 
 /** Closed set of per-capability status values (mirrors V0b). */
 export const CAPABILITY_STATUSES = Object.freeze([
@@ -27,6 +32,32 @@ export const STATUS_LABELS = Object.freeze({
   not_installed: 'NOT INSTALLED',
   optional:      'OPTIONAL',
 });
+
+// F003: value-first headline per status. Plain language for non-technical
+// reviewers. The `capability_id` and underlying tokens stay visible as
+// Layer 2 metadata on each card.
+export const STATUS_HEADLINES = Object.freeze({
+  ready:         'Connected',
+  needs_setup:   'Setup required',
+  blocked:       'Blocked',
+  not_installed: 'Not installed',
+  optional:      'Optional for this project',
+});
+
+// Value-first one-liner explaining what each status means. Lives under
+// the headline before any technical tokens render.
+export const STATUS_IMPACT = Object.freeze({
+  ready:         'This tool is connected and ready to use.',
+  needs_setup:   'Finish setup to make this tool available.',
+  blocked:       'A precondition is failing. Resolve the listed issue to unblock.',
+  not_installed: 'Install the binary or sign in to enable this tool.',
+  optional:      'Not required for the selected project. Available if you opt in.',
+});
+
+/** True iff this status is the relevance-chip variant, not a health band. */
+export function isRelevanceStatus(status) {
+  return status === 'optional';
+}
 
 /** Maps to the same color tokens used elsewhere in core.css. */
 export const STATUS_COLORS = Object.freeze({
@@ -229,9 +260,15 @@ export function renderEmptyStateHTML() {
       </div>
       <pre class="cap-empty-cmd">dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</pre>
       <div class="cap-empty-hint">
-        The Capability Center reads from a static JSON file on disk. No sign-in,
+        Tools &amp; Setup reads from a static JSON file on disk. No sign-in,
         no realtime sync, no Cloud Functions.
       </div>
+      ${renderProvenanceFooterHTML({
+        source: CAP_SOURCE,
+        lastUpdated: null,
+        refreshCommand: CAP_REFRESH,
+        note: 'Snapshot absent — run the refresh command above to populate this view.',
+      })}
     </div>
   `;
 }
@@ -240,20 +277,32 @@ function renderPopulatedHTML(envelope) {
   return `
     <div class="cap-layout">
       <section class="panel cap-summary-panel">
-        <h2>Capability Center</h2>
+        <h2>Tools &amp; Setup</h2>
+        <div class="cap-summary-subtitle">
+          Which integrations are connected and which still need setup.
+        </div>
         <div class="cap-summary-scope">${renderScopeBadgeHTML('global')}</div>
         <div class="cap-summary-meta">${renderMetaHTML(envelope)}</div>
         <div class="cap-summary-grid" id="cap-summary-grid">${renderSummaryGridHTML(envelope)}</div>
         <div class="cap-advisory-list" id="cap-advisory-list">${renderAdvisoryListHTML(envelope.advisory_notes)}</div>
+        <div class="cap-summary-source">
+          Source: <code>dashboard/state/capabilities-status.json</code> ·
+          Refresh: <code>dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</code>
+        </div>
       </section>
 
       <section class="panel cap-cards-panel">
         <div class="cap-cards-header">
-          <h2>Capabilities</h2>
+          <h2>Connected tools and integrations</h2>
           <div class="cap-cards-scope">${renderScopeBadgeHTML('global')}</div>
         </div>
         <div class="cap-cards" id="cap-cards">${renderCardsHTML(envelope.capabilities)}</div>
       </section>
+      ${renderProvenanceFooterHTML({
+        source: CAP_SOURCE,
+        lastUpdated: envelope.generated_at || null,
+        refreshCommand: CAP_REFRESH,
+      })}
     </div>
   `;
 }
@@ -309,19 +358,37 @@ function renderCapabilityCardHTML(cap) {
   const badge = getStatusBadge(cap.status);
   const chips = buildOwnerBoundaryChips(cap.owner_boundary);
   const { automatable, humanRequired } = partitionNextActions(cap);
-
+  const headline = STATUS_HEADLINES[cap.status] || badge.label;
+  const impact = STATUS_IMPACT[cap.status] || '';
+  const relevance = isRelevanceStatus(cap.status);
+  // For the relevance variant we render a neutral "Optional for this
+  // project" chip instead of a status pill so the four-band status
+  // taxonomy is not implicitly extended into a fifth color band
+  // (copy-map.md §3.1 / D003).
+  const statusPill = relevance
+    ? `<span class="cap-relevance-chip" title="relevance, not status">${esc(STATUS_HEADLINES.optional)}</span>`
+    : `<span class="cap-status-badge cap-status-badge--${esc(badge.color)}">${esc(badge.label)}</span>`;
+  // Layer 1: value-first headline + impact sentence.
+  // Layer 2: capability_id, owner_boundary, missing tokens, exact commands.
   return `
     <article class="cap-card cap-card--${esc(badge.color)}" data-capability-id="${esc(cap.capability_id)}" data-status="${esc(cap.status)}">
       <header class="cap-card-header">
-        <div class="cap-card-title">${esc(cap.capability_id)}</div>
-        <span class="cap-status-badge cap-status-badge--${esc(badge.color)}">${esc(badge.label)}</span>
+        <div class="cap-card-headline">
+          <span class="cap-card-kind">${esc(headline)}</span>
+          ${statusPill}
+        </div>
+        <div class="cap-card-id" title="capability_id">${esc(cap.capability_id)}</div>
       </header>
+      ${impact ? `<div class="cap-card-impact">${esc(impact)}</div>` : ''}
       ${chips.length > 0 ? renderOwnerBoundaryHTML(chips) : ''}
       ${renderListBlockHTML('Configured', cap.configured, 'cap-list-configured')}
       ${renderListBlockHTML('Missing',    cap.missing,    'cap-list-missing')}
       ${renderPendingProbesHTML(cap.pending_probes)}
       ${renderNextActionsHTML(automatable, humanRequired)}
       ${renderAdvisoryListHTML(cap.advisory_notes)}
+      <footer class="cap-card-footer">
+        <span class="cap-card-source">Source: <code>dashboard/state/capabilities-status.json</code></span>
+      </footer>
     </article>
   `;
 }

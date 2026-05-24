@@ -1,0 +1,583 @@
+# INBOX — 2026-05-24-001-feat-dashboard-value-language-ia-v0
+
+Operator-facing event log written by the supervisor.
+
+---
+timestamp: 2026-05-24T04:54:33Z
+event: pre_impl_status_synced
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+status: active
+feature_id: F001
+---
+
+Supervisor implicitly cleared the `pre_impl` lifecycle gate because plan.md status is `active`.
+
+Plan: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+Status: active
+Feature: F001
+
+An operator who flips status to `active` (with a lock D-entry in decisions.jsonl) is signaling that the plan is ready for implementer dispatch. The supervisor treats the status flip as the authorizing action — no separate `dontpanic approve <plan> pre_impl` is required.
+
+Manual approve/resume semantics for every other gate (`pre_merge`, `on_escalation`, `breaker:*`, `defer:*`) are unchanged. Only `pre_impl` is in scope for this implicit clearance, and only when status is exactly `active`.
+
+===
+---
+timestamp: 2026-05-24T04:54:33Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T04:54:33Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T05:10:24Z
+event: gate_hit
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+unmet_gates: pre_merge
+stage: pre_merge
+target_env: dev
+target_project: (none)
+feature_id: F001
+---
+
+Supervisor paused at lifecycle stage 'pre_merge' after auditor signoff and before success-signoff write.
+
+Awaiting: ['pre_merge']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-05-24-001-feat-dashboard-value-language-ia-v0 <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-05-24-001-feat-dashboard-value-language-ia-v0 --all
+
+===
+---
+timestamp: 2026-05-24T05:11:14Z
+event: gate_cleared
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===
+---
+timestamp: 2026-05-24T05:11:53Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T05:11:53Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T05:15:25Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: signed_off
+rounds: 1
+feature_id: F001
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T05:15:26Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+report_path: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/patch-completeness-0.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py
+  unstaged_dirty_state | block | scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-24T05:15:26Z
+event: volley_crash_caught
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py
+  unstaged_dirty_state | block | scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T05:15:26Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: blocked
+rounds: 1
+feature_id: F001
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py
+  unstaged_dirty_state | block | scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T06:11:15Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F001
+reason_class: operator_judgment
+---
+
+Operator closed feature F001 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
+---
+timestamp: 2026-05-24T06:29:34Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T06:29:34Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T06:39:35Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T06:54:16Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: signed_off
+rounds: 2
+feature_id: F002
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T06:56:02Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F002
+reason_class: operator_judgment
+---
+
+Operator closed feature F002 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
+---
+timestamp: 2026-05-24T07:02:02Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T07:02:02Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T07:12:02Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F003
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T07:23:48Z
+event: no_progress_classification
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Work can crash on normal empty-column renders. Evidence: [mission-control.js]($HOME/Documents/GitHub/DontPanic/dashboard/pages/mission-control/missio…
+  - [implementation_defect] severity=high, category=correctness: Health still misrepresents missing security data as “No security hook activity yet” in the real loader path. Evidence: [core.js]($HOME/Documents/GitH…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-24-001-feat-dashboard-value-language-ia-v0 F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-24T07:23:48Z
+event: breaker_tripped
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-24-001-feat-dashboard-value-language-ia-v0 breaker:no_progress` or `jarvis resume 2026-05-24-001-feat-dashboard-value-language-ia-v0 --all`.
+
+===
+---
+timestamp: 2026-05-24T07:23:49Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-24T07:32:22Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F003
+reason_class: implementation_defect
+---
+
+Operator closed feature F003 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
+---
+timestamp: 2026-05-24T07:35:28Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T07:35:28Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T07:45:29Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T08:01:18Z
+event: no_progress_classification
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F004
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F004
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Project-filtered Needs Attention provenance reports the wrong state source. Evidence: `pages/what-now/what-now.js:37-45` routes project views through `renderPr…
+  - [spec_ambiguity] severity=low, category=documentation: The accessibility evidence overclaims Tools & Setup keyboard affordances. Evidence: `dashboard-accessibility-checks.md:30` says command chips render as `<code>…
+  - [spec_ambiguity] severity=low, category=documentation: Implementer sanitization evidence does not cover the full required scope. Evidence: `dashboard-sanitization-clean.log:17-25` lists only `dashboard/state` and `…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-24-001-feat-dashboard-value-language-ia-v0 F004 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-24T08:01:18Z
+event: breaker_tripped
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+breaker_kind: no_progress
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-24-001-feat-dashboard-value-language-ia-v0 breaker:no_progress` or `jarvis resume 2026-05-24-001-feat-dashboard-value-language-ia-v0 --all`.
+
+===
+---
+timestamp: 2026-05-24T08:01:19Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F004
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-24T14:16:25Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F004
+reason_class: implementation_defect
+---
+
+Operator closed feature F004 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: True
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
+---
+timestamp: 2026-05-24T14:21:10Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F005
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T14:21:10Z
+event: volley_start
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T14:31:11Z
+event: error
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F005
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T14:41:08Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: signed_off
+rounds: 2
+feature_id: F005
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T14:41:08Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+report_path: $HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py,scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py
+
+===
+---
+timestamp: 2026-05-24T14:41:08Z
+event: volley_crash_caught
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F005
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py,scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T14:41:08Z
+event: volley_terminal
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+final_status: blocked
+rounds: 2
+feature_id: F005
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py,scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T14:41:32Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-001-feat-dashboard-value-language-ia-v0
+feature_id: F005
+reason_class: operator_judgment
+---
+
+Operator closed feature F005 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-001-feat-dashboard-value-language-ia-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: False
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

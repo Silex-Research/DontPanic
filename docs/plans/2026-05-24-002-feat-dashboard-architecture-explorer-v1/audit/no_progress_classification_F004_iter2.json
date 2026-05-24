@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T19:56:22Z",
+  "feature_id": "F004",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "The new F004 unit tests are internally inconsistent and would fail in a writable environment. Evidence: `renderInsightsPanelHTML()` renders visible text contai…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "Responsive coverage is mostly static CSS/markup presence, not an automated usable-layout check. Evidence: F004 tests grep for breakpoint rules and structural c…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>architecture-missing-state-snapshot</title>
+  <link rel="stylesheet" href="../../../../dashboard/core.css">
+  <link rel="stylesheet" href="../../../../dashboard/pages/architecture/architecture.css">
+  <style>body{background:#050912;color:#e2e8f0;font-family:-apple-system,system-ui,sans-serif;margin:0;padding:16px;}</style>
+</head>
+<body>
+  <main class="page-view active" id="page-architecture" data-snapshot-of="architecture-missing-state-snapshot">
+    
+    <div class="arch-layout" data-state="missing">
+      <section class="panel arch-empty-card"
+               data-empty-state="missing"
+               data-freshness="absent">
+        <div class="arch-empty-scope">
+    <span class="scope-badge scope-badge--project" data-scope="project">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Project</span>
+    </span>
+  </div>
+        <h2 class="arch-empty-title">No system map yet</h2>
+        <p class="arch-empty-impact">The dashboard does not have an architecture snapshot to read. Run the regen command, then rebuild the dashboard state.</p>
+        <p class="arch-empty-message">architecture.json was not found. Run the regen command to generate it.</p>
+        <div class="arch-empty-meta">
+          <span class="arch-meta-row">
+            <span class="arch-meta-label">Source</span>
+            <code class="arch-meta-value">docs/architecture/architecture.json</code>
+          </span>
+          <span class="arch-meta-row">
+            <span class="arch-meta-label">Last generated</span>
+            <span class="arch-meta-value">2026-05-24T06:08:41Z</span>
+          </span>
+        </div>
+        <div class="arch-empty-actions">
+          <p class="arch-empty-step">
+            1. Regenerate the architecture snapshot:
+          </p>
+          
+    <div class="arch-card-command">
+      <pre class="arch-cmd"><code>dontpanic architecture regen --with-html</code></pre>
+      <button type="button"
+              class="arch-copy-btn"
+              data-command="dontpanic architecture regen --with-html"
+              aria-label="Copy regen command to clipboard">copy</button>
+    </div>
+  
+          <p class="arch-empty-step">
+            2. Rebuild the dashboard state so this tab can read the new map:
+          </p>
+          
+    <div class="arch-card-command">
+      <pre class="arch-cmd"><code>dontpanic dashboard build</code></pre>
+      <button type="button"
+              class="arch-copy-btn"
+              data-command="dontpanic dashboard build"
+              aria-label="Copy regen command to clipboard">copy</button>
+    </div>
+  
+        </div>
+        <p class="arch-empty-note">
+          The dashboard is read-only. It will not run these commands for
+          you — copy each line and run it in your own terminal.
+        </p>
+      </section>
+      
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/architecture-view-state.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">2026-05-24T06:13:19Z</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+      <div class="pv-note">Architecture view-state is read from the dashboard state cache. The dashboard never auto-regenerates it.</div>
+    </div>
+  
+    </div>
+  
+  </main>
+</body>
+</html>

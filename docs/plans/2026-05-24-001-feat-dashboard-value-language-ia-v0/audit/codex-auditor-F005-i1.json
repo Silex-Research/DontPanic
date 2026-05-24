@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "audit_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-24T14:38:26Z",
+  "completed_at": "2026-05-24T14:41:08Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F005-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-001-feat-dashboard-value-language-ia-v0-db2ygwj4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 131638 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 813848,
+    "tokens_out": 11016,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. The implementer’s target declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}`, and `target_context.commands_run` contains only edit markers, with no forbidden command shapes. Claimed F005 evidence resolves, README/future-surface docs cover the required contract, and read-only plan validation plus sanitization passed.\n\nFINDING (advisory, test_coverage): Live focused Vitest rerun was blocked by the read-only audit sandbox, not by a test failure; evidence: Vitest attempted to write under `dashboard/node_modules/.vite-temp` and then `/var/folders/.../T/...`, both denied with `EPERM`, while the stored evidence log records 759/759 passing; recommendation: rerun Vitest in a writable dev shell if the supervisor requires fresh live execution.\n\nChecks run:\n$ ./node_modules/.bin/vitest run tests/unit/value-language-static-checks.test.js tests/integration/value-language-page-evidence.test.js\n$ ./node_modules/.bin/vitest run --configLoader runner tests/unit/value-language-static-checks.test.js tests/integration/value-language-page-evidence.test.js\n$ node --input-type=module -e \"import fs from 'node:fs'; import path from 'node:path'; const plan='plans/2026-05-24-001-feat-dashboard-value-language-ia-v0'; const features=JSON.parse(fs.readFileSync(path.join(plan,'features.json'),'utf8')); const obj=JSON.parse(fs.readFileSync(path.join(plan,'objective_contract.json'),'utf8')); const f=features.features.find(x=>x.i",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "./node_modules/.bin/vitest run tests/unit/value-language-static-checks.test.js tests/integration/value-language-page-evidence.test.js",
+      "./node_modules/.bin/vitest run --configLoader runner tests/unit/value-language-static-checks.test.js tests/integration/value-language-page-evidence.test.js",
+      "node --input-type=module -e \"import fs from 'node:fs'; import path from 'node:path'; const plan='plans/2026-05-24-001-feat-dashboard-value-language-ia-v0'; const features=JSON.parse(fs.readFileSync(path.join(plan,'features.json'),'utf8')); const obj=JSON.parse(fs.readFileSync(path.join(plan,'objective_contract.json'),'utf8')); const f=features.features.find(x=>x.id==='F005'); if(!f?.passes) throw new Error('F005 not passing'); const refs=new Set((f.evidence_refs||[]).map(r=>r.uri)); const missing=[]; for (const name of obj.required_evidence) { const candidates=[path.join(plan,'evidence',name), path.join(plan,'evidence/snapshots',name)]; if(!candidates.some(p=>fs.existsSync(p))) missing.push(name); } for (const ref of refs) { const p=path.normalize(path.join(plan, ref)); if(!fs.existsSync(p)) missing.push('ref:'+ref); } if(missing.length) throw new Error('missing '+missing.join(',')); console.log('plan validation ok: F005 passes and objective evidence/refs resolve');\"",
+      "! rg -n -e 'sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|xox[abp]-[A-Za-z0-9-]{12,}|AKIA[0-9A-Z]{16}|-----BEGIN[ A-Z]+PRIVATE KEY-----|eyJ[A-Za-z0-9._-]{30,}|bearer[[:space:]]+[A-Za-z0-9._-]{20,}|(api[_-]?key|access[_-]?token|refresh[_-]?token|password|client[_-]?secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9._/+-]{12,}' dashboard/state docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0 docs/design/dashboard-value-language-ia-v0 docs/design/dashboard-platform-roadmap-v1/claude-design-v3 dashboard/README.md"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "Live focused Vitest rerun was blocked by the read-only audit sandbox, not by a test failure; evidence: Vitest attempted to write under `dashboard/node_modules/.vite-temp` and then `/var/folders/.../T/...`, both denied with `EPERM`, while the stored evidence log records 759/759 passing; recommendation: rerun Vitest in a writable dev shell if the supervisor requires fresh live execution. Checks run: $ ./node_modules/.bin/vitest run tests/unit/value-language-static-checks.test.js tests/integration/",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

@@ -10,6 +10,160 @@ runtime.
 
 ---
 
+## V0 Value-Language Contract (Plan 2026-05-24-001)
+
+The local dashboard is a **value-first operator console**. First-read labels
+describe user/business intent; the exact DontPanic substrate (gates,
+capabilities, supervisors, plan/feature ids, source files, commands) sits
+one layer below in metadata rows, source/provenance footers, and command
+chips. The contract is canonical:
+
+- **Copy map:** [`docs/design/dashboard-value-language-ia-v0/copy-map.md`](../docs/design/dashboard-value-language-ia-v0/copy-map.md)
+  is the source of truth for V0 first-read labels, the forbidden first-read
+  token list, the four-band status taxonomy, the optional relevance chip,
+  fleet-mode expectations, and the drag-to-command rule.
+- **Static check:** `dashboard/lib/value-language-static-checks.js` plus
+  `dashboard/tests/unit/value-language-static-checks.test.js` enforce the
+  forbidden first-read tokens against every Layer-1 selector. Add new
+  surfaces to the registry there, not by hand-grepping.
+- **Visible V0 nav:** Needs Attention (route may be `Home`), Work, Tools &
+  Setup (or `Connections`), Health, Preferences. Demo / non-core tabs
+  (`Financial`, `Cloud Costs`, adapter-specific views) are hidden or gated.
+- **Command-emitter invariant:** the dashboard renders exact CLI commands
+  inside `<pre>` / `<code>` blocks the operator can copy and run in their
+  own terminal. There is no in-page mutation, no inline approve/reject,
+  no embedded executor, no Firebase realtime write. Drag affordances are
+  command-preview only (D010 in
+  [`decisions.jsonl`](../docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/decisions.jsonl)).
+- **Fleet mode:** Needs Attention, Work, and Health each render an
+  `All Projects` variant from `dashboard/state/fleet-what-now.json` and
+  `dashboard/state/fleet-summary.json`. Project filtering pins the
+  `__global__` reconcile/doctor band so cross-project blockers stay
+  visible (D013).
+- **Provenance:** every page footer renders `Source: …`, `Last updated:
+  …`, and the refresh command (`dontpanic dashboard build`) via
+  `dashboard/lib/provenance.js`. New pages MUST go through that helper.
+
+### Future surfaces (non-goals for V0)
+
+These are explicit non-goals for V0 and are deferred to future child
+plans. When those plans land they MUST inherit the value-language
+contract above — first-read labels in business terms, exact substrate
+disclosed in metadata, no in-page mutation, value-language static check
+extended to cover the new Layer-1 selectors:
+
+| Surface | V0 disposition | Future plan reference |
+|---|---|---|
+| Architecture Explorer | **Shipped in plan 2026-05-24-002** as a first-class tab (see "Architecture tab" below) | `docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/` |
+| Review / Evidence | not in V0 nav; auditor signoffs live on disk under `docs/plans/<plan>/audit/` | tracked by parent roadmap `2026-05-24-003` |
+| Configuration editor | not in V0; Preferences is browser-local only — DontPanic config still edits via `dontpanic` CLI surfaced in Tools & Setup | tracked by parent roadmap `2026-05-24-003` |
+| Agent Session Registry | not in V0; `dontpanic ps` remains the supervisor inspection seam | tracked by parent roadmap `2026-05-24-003` |
+| Local executor / inline approve | non-goal — the command-emitter invariant is permanent | (no plan; would require a roadmap-level lock) |
+
+Each future plan MUST:
+
+1. Reference the copy map and add its surface's first-read labels to it
+   before implementation begins.
+2. Add the new surface's Layer-1 selectors to
+   `dashboard/lib/value-language-static-checks.js` so the forbidden-token
+   scan covers it.
+3. Reuse `dashboard/lib/provenance.js` for source/last-updated/refresh
+   command rendering.
+4. Reuse the four-band status taxonomy
+   (`needs_action`/`advisory`/`ready`/`quiet`) and the optional
+   relevance chip; no new health bands.
+5. Honor fleet mode by routing through the existing `project-selector`
+   logic so `All Projects` and project-filtered views remain coherent.
+
+The Claude Design v3 pack referenced in
+[`docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md`](../docs/design/dashboard-value-language-ia-v0/claude-design-v3-manifest.md)
+is visual specification and design-token input only. Treat the JSX as a
+mockup; the shipped dashboard stays vanilla HTML/CSS/JS (D012).
+
+---
+
+## Architecture tab (Plan 2026-05-24-002)
+
+The Architecture tab is a first-class operator surface that turns
+`docs/architecture/architecture.json` into a Roundtable-style interactive
+swimlane map. It is read-only and command-emitter only — opening the tab
+never auto-regenerates the architecture artifact.
+
+### Usage
+
+```bash
+# Refresh the architecture snapshot the dashboard reads from.
+dontpanic architecture regen --with-html
+
+# Rebuild the dashboard state cache so the Architecture tab can read the
+# new map.
+dontpanic dashboard build
+
+# Open the dashboard locally; the Architecture tab is in the primary nav.
+dontpanic dashboard serve
+```
+
+`dontpanic dashboard build` writes a per-project view-state cache at
+`dashboard/state/projects/<project>/architecture-view-state.json` plus an
+`All Projects` fleet variant where data exists. The cache shape is the
+canonical agent-facing contract (see
+`scripts/dontpanic_orchestrate/architecture_view_state.py`):
+`schema_version`, `project`, `generated_at`, `source_path`, `freshness`,
+`lanes`, `nodes`, `edges`, `flows`, `steps`, `filters`, `insights`,
+`validation_warnings`. Agents should read this JSON instead of scraping
+the DOM.
+
+### What the tab shows
+
+- Deterministic swimlane map keyed by module/plan/capability/command
+  category, with a persistent legend.
+- Right-side flow rail — selecting a flow highlights participating nodes
+  and edges, dims unrelated map content, and numbers the steps in a
+  scrollable step inspector. Clear-selection returns to the neutral map.
+- Search and three or more filters (category, lane, edge type) narrow
+  the visible graph without losing project context.
+- Click-to-detail panel exposes source path, lane, fingerprint, related
+  edges, and flows touching the node — technical identifiers stay
+  copyable for agents and reviewers.
+- Stale / missing / absent freshness states render an explicit empty
+  card with the exact `dontpanic architecture regen --with-html` command
+  rather than auto-mutating the repo. No secret values appear in any
+  state (see `dashboard-sanitization-clean.log` in the plan evidence).
+
+### Project / fleet behavior
+
+- A concrete project selection renders that project's view-state cache.
+- `All Projects` renders a project-card grid with per-project freshness
+  badges and "open map" affordances — DontPanic never merges
+  architecture from unrelated repos into one graph (D010).
+- A selected project without a cached architecture artifact renders an
+  explicit empty card with the regen command for that repo rather than
+  silently falling back to another project's map.
+
+### Boundary: no auto-regen
+
+The Architecture tab and `dontpanic dashboard build` both refuse to write
+into `docs/architecture/**` on their own. The operator runs
+`dontpanic architecture regen --with-html` from their own terminal; the
+dashboard only emits the command and surfaces freshness. This preserves
+the V0 command-emitter invariant (D004).
+
+### Tests and evidence
+
+- View-model: `dashboard/tests/unit/architecture-logic.test.js`,
+  `dashboard/tests/unit/architecture-explorer.test.js`,
+  `dashboard/tests/unit/architecture-f004.test.js`.
+- Tab render / DOM interactions:
+  `dashboard/tests/integration/architecture-page.test.js`,
+  `dashboard/tests/integration/architecture-explorer-dom.test.js`,
+  `dashboard/tests/integration/architecture-f004-page.test.js`.
+- Screenshots + responsive checks:
+  `dashboard/tests/playwright/architecture.spec.js` and its harness.
+- Objective-contract evidence and the per-iteration audit envelopes live
+  under `docs/plans/2026-05-24-002-feat-dashboard-architecture-explorer-v1/evidence/`.
+
+---
+
 ## V0 Operator Console (Plan 2026-05-23-004)
 
 For the operator-in-the-loop "what needs action now?" view, use the

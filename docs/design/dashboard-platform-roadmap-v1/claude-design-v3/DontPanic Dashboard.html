@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DontPanic — Operator Console</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="dp-tokens.css">
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #060912; color: #E6EAF3; font-family: 'Inter', sans-serif; }
+    .dp-cover {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 30px 40px;
+      background: linear-gradient(180deg, #0A0E17 0%, #060912 100%);
+      border-bottom: 1px solid #1A2233;
+    }
+    .dp-cover h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; margin: 0; }
+    .dp-cover .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7A869F; }
+    .dp-cover .brand { display: flex; align-items: center; gap: 12px; }
+    .dp-cover .pill {
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(139,111,255,0.13); color: #B69CFF;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      border: 1px solid rgba(139,111,255,0.3);
+    }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="dp-cover">
+    <div class="brand">
+      <div class="dp-mark" style="width:30px;height:30px;border-radius:7px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l8 4v6c0 4.5-3.5 7-8 8-4.5-1-8-3.5-8-8V7l8-4z"/>
+          <path d="m9 12 2.2 2.2L15.5 10"/>
+        </svg>
+      </div>
+      <div>
+        <h1>DontPanic — Operator Console</h1>
+        <div class="meta">Dashboard IA · post-review pass · architecture explorer · fleet variants · plain-language</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span class="pill">Read-only · Command-emitter only</span>
+      <span class="meta">drag to pan · scroll to zoom · double-click an artboard to focus</span>
+    </div>
+  </div>
+
+  <div id="canvas-root"></div>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="dp-icons.jsx"></script>
+  <script type="text/babel" src="dp-shell.jsx"></script>
+  <script type="text/babel" src="dp-page-home.jsx"></script>
+  <script type="text/babel" src="dp-page-work.jsx"></script>
+  <script type="text/babel" src="dp-page-caps.jsx"></script>
+  <script type="text/babel" src="dp-page-health.jsx"></script>
+  <script type="text/babel" src="dp-page-prefs.jsx"></script>
+  <script type="text/babel" src="dp-page-docs.jsx"></script>
+  <script type="text/babel" src="dp-page-plain.jsx"></script>
+  <script type="text/babel" src="dp-page-work-board.jsx"></script>
+  <script type="text/babel" src="dp-page-architecture.jsx"></script>
+  <script type="text/babel" src="dp-page-arch-variants.jsx"></script>
+  <script type="text/babel" src="dp-page-fleet.jsx"></script>
+
+  <script type="text/babel">
+    const App = () => (
+      <DesignCanvas storageKey="dp-ia-v0" background="#060912">
+
+        {/* SECTION 1 — Primary surfaces with all foundation fixes applied */}
+        <DCSection id="primary" title="Primary surfaces (post-review)" subtitle="Glossary applied · sidebar renamed · top strip copy · plain volley titles">
+          <DCArtboard id="home" label="01 · Home" width={1440} height={900}>
+            <PageHome />
+          </DCArtboard>
+          <DCArtboard id="work" label="02 · Work — list" width={1440} height={900}>
+            <PageWork />
+          </DCArtboard>
+          <DCArtboard id="caps" label="03 · Tools & Setup" width={1440} height={900}>
+            <PageCaps />
+          </DCArtboard>
+          <DCArtboard id="health" label="04 · Health" width={1440} height={900}>
+            <PageHealth />
+          </DCArtboard>
+          <DCArtboard id="prefs" label="05 · Preferences" width={1440} height={900}>
+            <PagePrefs />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 2 — Architecture Explorer (now a full set per the brief) */}
+        <DCSection id="architecture" title="Architecture Explorer" subtitle="Trust-boundaries view default · multiple flows · click-to-detail · empty states · fleet · mobile · module-category variant">
+          <DCArtboard id="arch-main" label="01 · Default · cross-model audit flow highlighted" width={1440} height={1200}>
+            <PageArchitecture />
+          </DCArtboard>
+          <DCArtboard id="arch-neutral" label="02 · Neutral · nothing selected" width={1440} height={1100}>
+            <PageArchNeutral />
+          </DCArtboard>
+          <DCArtboard id="arch-click" label="03 · Click-to-detail node panel · Builder agent" width={1440} height={1100}>
+            <PageArchClickDetail />
+          </DCArtboard>
+          <DCArtboard id="arch-stale" label="04 · Stale-map banner" width={1440} height={1100}>
+            <PageArchStale />
+          </DCArtboard>
+          <DCArtboard id="arch-empty" label="05 · Empty · never generated" width={1440} height={900}>
+            <PageArchEmptyNever />
+          </DCArtboard>
+          <DCArtboard id="arch-fleet" label="06 · Fleet · pick a project to open its map" width={1440} height={1000}>
+            <PageArchFleet />
+          </DCArtboard>
+          <DCArtboard id="arch-mobile" label="07 · Mobile · narrow viewport (414×896)" width={414} height={896}>
+            <PageArchMobile />
+          </DCArtboard>
+          <DCArtboard id="arch-modules" label="08 · Variant · Module-category swimlanes (3.1)" width={1440} height={1100}>
+            <PageArchModuleSwim />
+          </DCArtboard>
+          <DCArtboard id="arch-notes" label="09 · Design rationale · milestones" width={1440} height={780}>
+            <PageArchitectureNotes />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 3 — Fleet variants for the rest of the surfaces */}
+        <DCSection id="fleet" title="Fleet variants — All projects" subtitle="Home / Work / Tools & Setup when the project selector is set to All projects">
+          <DCArtboard id="home-fleet" label="01 · Home — grouped by project" width={1440} height={1240}>
+            <PageHomeFleet />
+          </DCArtboard>
+          <DCArtboard id="work-fleet" label="02 · Work — list grouped by project" width={1440} height={1100}>
+            <PageWorkFleet />
+          </DCArtboard>
+          <DCArtboard id="caps-fleet" label="03 · Tools & Setup — readiness matrix" width={1440} height={1000}>
+            <PageCapsFleet />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 4 — Work board view (kanban + drag-to-command) */}
+        <DCSection id="work-board" title="Work — board view" subtitle="Drag-to-command pattern · dashboard never mutates · CLI owns state transitions">
+          <DCArtboard id="work-board-readonly" label="01 · Read-only board" width={1440} height={1100}>
+            <PageWorkBoard />
+          </DCArtboard>
+          <DCArtboard id="work-board-drag" label="02 · Drag-to-command (chosen pattern)" width={1440} height={1100}>
+            <PageWorkBoardDrag />
+          </DCArtboard>
+          <DCArtboard id="work-board-notes" label="03 · Pattern documentation" width={1440} height={760}>
+            <PageWorkBoardNotes />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 5 — Plain-language reference */}
+        <DCSection id="plain" title="Plain-language pass · reference" subtitle="Value strips · vocabulary translation · writing rules (carried forward into all surfaces above)">
+          <DCArtboard id="home-plain" label="01 · Home — annotated plain version" width={1440} height={1180}>
+            <PageHomePlain />
+          </DCArtboard>
+          <DCArtboard id="value-strips" label="02 · Value-strip variants A / B / C" width={1440} height={900}>
+            <PageValueStrips />
+          </DCArtboard>
+          <DCArtboard id="glossary" label="03 · Vocabulary translation table" width={1440} height={1500}>
+            <PageGlossary />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 6 — Empty states */}
+        <DCSection id="empty" title="Empty states" subtitle="Honest handling of missing data · one variant per cause">
+          <DCArtboard id="empties" label="01 · Empty-state library" width={1440} height={900}>
+            <PageEmpty />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION 7 — Design system reference */}
+        <DCSection id="system" title="Design system" subtitle="Components · tokens · implementation guide">
+          <DCArtboard id="inventory" label="01 · Component inventory" width={1440} height={1380}>
+            <PageInventory />
+          </DCArtboard>
+          <DCArtboard id="tokens" label="02 · Design tokens" width={1440} height={1480}>
+            <PageTokens />
+          </DCArtboard>
+          <DCArtboard id="impl" label="03 · Implementation notes" width={1440} height={1780}>
+            <PageImpl />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+
+    ReactDOM.createRoot(document.getElementById('canvas-root')).render(<App />);
+  </script>
+</body>
+</html>

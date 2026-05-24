@@ -162,6 +162,10 @@ class TestPayloadShape:
         return captured
 
     def test_payload_has_username_and_content(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Plan 2026-05-24-004 F003 (D010): username flips to ``DontPanic``;
+        when the event kind has no F003 translation table entry (e.g.
+        ``signoff``), the legacy ``content`` payload is emitted with the
+        feature_id in scope."""
         captured = self._capture_post(monkeypatch)
         event = notify_event.NotifyEvent(
             kind="signoff",
@@ -173,7 +177,7 @@ class TestPayloadShape:
             timestamp=dt.datetime.now(dt.timezone.utc),
         )
         notify_discord.notify(event)
-        assert captured["body"]["username"] == "Jarvis"
+        assert captured["body"]["username"] == "DontPanic"
         assert "F001" in captured["body"]["content"]
 
     def test_user_agent_header_is_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -409,7 +413,8 @@ class TestLevelMatrix:
 
 class TestDispatchEvent:
     """dispatch_event fans to both sinks honoring level matrix; never raises;
-    returns {terminal: bool, discord: bool}."""
+    returns {terminal, discord, sidecar, inbox_annotation} per F003 (plan
+    2026-05-24-004 § Implementation Strategy)."""
 
     def test_returns_per_sink_result(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Silence terminal sink by making the binary unfindable.
@@ -426,7 +431,14 @@ class TestDispatchEvent:
                 body="x", action_link=None, timestamp=dt.datetime.now(dt.timezone.utc),
             )
             result = notify_event.dispatch_event(ev)
-            assert result == {"terminal": False, "discord": True}
+            # signoff is an unknown inbox_event (no DISPOSITION_TABLE entry),
+            # so dispatch falls through the legacy path: Discord fires,
+            # sidecar/inbox_annotation stay False because there's no rendered
+            # event to project into the sidecar.
+            assert result["terminal"] is False
+            assert result["discord"] is True
+            assert result["sidecar"] is False
+            assert result["inbox_annotation"] is False
 
     def test_global_disable_silences_both_sinks(
         self, monkeypatch: pytest.MonkeyPatch
@@ -442,7 +454,8 @@ class TestDispatchEvent:
                 body="x", action_link=None, timestamp=dt.datetime.now(dt.timezone.utc),
             )
             result = notify_event.dispatch_event(ev)
-            assert result == {"terminal": False, "discord": False}
+            assert result["terminal"] is False
+            assert result["discord"] is False
             assert mock_urlopen.call_count == 0
 
     def test_filtered_event_calls_no_sinks(
@@ -456,7 +469,8 @@ class TestDispatchEvent:
                 body="x", action_link=None, timestamp=dt.datetime.now(dt.timezone.utc),
             )
             result = notify_event.dispatch_event(ev)
-            assert result == {"terminal": False, "discord": False}
+            assert result["terminal"] is False
+            assert result["discord"] is False
             assert mock_urlopen.call_count == 0
 
     def test_does_not_raise_on_sink_error(
@@ -464,7 +478,7 @@ class TestDispatchEvent:
     ) -> None:
         monkeypatch.setenv("DONTPANIC_NOTIFY_LEVEL", "verbose")
 
-        def boom(_: notify_event.NotifyEvent) -> bool:
+        def boom(_: notify_event.NotifyEvent, **__: Any) -> bool:
             raise RuntimeError("sink crashed")
 
         monkeypatch.setattr(notify_event.notify_discord, "notify", boom)
@@ -473,7 +487,8 @@ class TestDispatchEvent:
             body="x", action_link=None, timestamp=dt.datetime.now(dt.timezone.utc),
         )
         result = notify_event.dispatch_event(ev)
-        assert result == {"terminal": False, "discord": False}
+        assert result["terminal"] is False
+        assert result["discord"] is False
 
 
 # ───────────────────────── 8. Terminal-shim regression (F002) ─────────────────────────
@@ -481,7 +496,10 @@ class TestDispatchEvent:
 
 class TestTerminalShim:
     """notify.notify_event(event) projects NotifyEvent onto title/subtitle/
-    message/group consistent with F002 acceptance item 11."""
+    message/group consistent with F002 acceptance item 11. Plan
+    2026-05-24-004 F003 (D010): title now starts with ``DontPanic [...]``
+    (terminal brand fix); when no RenderedEvent is available, message
+    falls back to the raw event body."""
 
     def test_projection(self, monkeypatch: pytest.MonkeyPatch) -> None:
         captured: dict[str, Any] = {}
@@ -492,16 +510,19 @@ class TestTerminalShim:
             return True
 
         monkeypatch.setattr(notify, "notify", capture)
+        # kind="breaker_tripped" without inbox_event / breaker_kind would
+        # fail the breaker_tripped template format. Use a kind that has no
+        # F003 translation entry so the legacy raw-body path renders.
         ev = notify_event.NotifyEvent(
-            kind="breaker_tripped", severity="escalation", plan_id="2026-05-01-002",
-            feature_id="F001", body="Cap reached on F001", action_link="/tmp/INBOX.md",
+            kind="signoff", severity="info", plan_id="2026-05-01-002",
+            feature_id="F001", body="Signoff landed for F001", action_link=None,
             timestamp=dt.datetime.now(dt.timezone.utc),
         )
         notify.notify_event(ev)
-        assert captured["args"][0] == "Jarvis [2026-05-01-002]"
-        assert captured["kwargs"]["subtitle"] == "breaker_tripped"
+        assert captured["args"][0] == "DontPanic [2026-05-01-002]"
+        assert captured["kwargs"]["subtitle"] == "signoff"
         assert captured["kwargs"]["group"] == "2026-05-01-002"
-        assert "Cap reached on F001" in captured["args"][1]
+        assert "Signoff landed for F001" in captured["args"][1]
 
 
 # ───────────────────────── 9. F004 sink matrix ─────────────────────────

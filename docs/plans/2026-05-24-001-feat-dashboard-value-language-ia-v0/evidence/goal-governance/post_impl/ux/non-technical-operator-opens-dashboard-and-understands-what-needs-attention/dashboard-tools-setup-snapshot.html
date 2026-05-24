@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tools & Setup — F004 snapshot</title>
+  <!--
+    Static F004 evidence snapshot. Pure-renderer output captured by
+    dashboard/tests/scripts/generate-f004-snapshots.mjs. Do not edit by
+    hand — regenerate by re-running the script. The snapshot intentionally
+    omits the dashboard's runtime CSS so it remains text-readable.
+  -->
+</head>
+<body>
+
+    <div class="cap-layout">
+      <section class="panel cap-summary-panel">
+        <h2>Tools &amp; Setup</h2>
+        <div class="cap-summary-subtitle">
+          Which integrations are connected and which still need setup.
+        </div>
+        <div class="cap-summary-scope">
+    <span class="scope-badge scope-badge--global" data-scope="global">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Global</span>
+    </span>
+  </div>
+        <div class="cap-summary-meta">
+    <span class="cap-summary-meta-item">
+      <span class="cap-summary-meta-label">schema</span>
+      <span class="cap-summary-meta-value">1.0.0</span>
+    </span>
+    <span class="cap-summary-meta-item">
+      <span class="cap-summary-meta-label">generated</span>
+      <span class="cap-summary-meta-value">2026-05-22T12:00:00Z</span>
+    </span>
+  </div>
+        <div class="cap-summary-grid" id="cap-summary-grid">
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--accent">4</div>
+      <div class="cap-summary-label">Total</div>
+    </div>
+
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--green">1</div>
+      <div class="cap-summary-label">Ready</div>
+    </div>
+
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--yellow">1</div>
+      <div class="cap-summary-label">Needs Setup</div>
+    </div>
+
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--red">1</div>
+      <div class="cap-summary-label">Blocked</div>
+    </div>
+
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--muted">1</div>
+      <div class="cap-summary-label">Not Installed</div>
+    </div>
+
+    <div class="cap-summary-card">
+      <div class="cap-summary-value cap-summary-value--accent">0</div>
+      <div class="cap-summary-label">Optional</div>
+    </div>
+  </div>
+        <div class="cap-advisory-list" id="cap-advisory-list"><div class="cap-advisory">advisory: No probes declare capability_id bindings — capability status is computed from requires-resolution alone.</div></div>
+        <div class="cap-summary-source">
+          Source: <code>dashboard/state/capabilities-status.json</code> ·
+          Refresh: <code>dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</code>
+        </div>
+      </section>
+
+      <section class="panel cap-cards-panel">
+        <div class="cap-cards-header">
+          <h2>Connected tools and integrations</h2>
+          <div class="cap-cards-scope">
+    <span class="scope-badge scope-badge--global" data-scope="global">
+      <span class="scope-badge-label">Scope:</span>
+      <span class="scope-badge-value">Global</span>
+    </span>
+  </div>
+        </div>
+        <div class="cap-cards" id="cap-cards">
+    <article class="cap-card cap-card--red" data-capability-id="discord-notify" data-status="blocked">
+      <header class="cap-card-header">
+        <div class="cap-card-headline">
+          <span class="cap-card-kind">Blocked</span>
+          <span class="cap-status-badge cap-status-badge--red">BLOCKED</span>
+        </div>
+        <div class="cap-card-id" title="capability_id">discord-notify</div>
+      </header>
+      <div class="cap-card-impact">A precondition is failing. Resolve the listed issue to unblock.</div>
+
+    <div class="cap-owner-boundary">
+      <span class="cap-owner-label">owner_boundary</span>
+
+        <span class="cap-owner-chip cap-owner-chip--dontpanic_core" title="notification dispatch">
+          core
+          <span class="cap-owner-chip-count">1</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--operator" title="Discord webhook">
+          operator
+          <span class="cap-owner-chip-count">1</span>
+        </span>
+
+    </div>
+
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Missing</div>
+      <ul class="cap-list cap-list-missing">
+        <li>DISCORD_WEBHOOK_URL</li>
+      </ul>
+    </div>
+
+
+
+    <div class="cap-next-actions">
+      <div class="cap-list-title">Next actions</div>
+
+
+    <div class="cap-action-group cap-action-group--human">
+      <div class="cap-action-group-label">human-required</div>
+      <ul class="cap-action-list">
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Set DISCORD_WEBHOOK_URL in shell env</div>
+            <pre class="cap-action-cmd">export DISCORD_WEBHOOK_URL=&lt;your_webhook&gt;</pre>
+            <div class="cap-action-reason">Webhook secret cannot be provisioned by DontPanic.</div>
+          </li>
+
+      </ul>
+    </div>
+
+    </div>
+
+      <div class="cap-advisory">advisory: Last delivery attempt failed: 401 unauthorized</div>
+      <footer class="cap-card-footer">
+        <span class="cap-card-source">Source: <code>dashboard/state/capabilities-status.json</code></span>
+      </footer>
+    </article>
+
+    <article class="cap-card cap-card--yellow" data-capability-id="firebase-dashboard" data-status="needs_setup">
+      <header class="cap-card-header">
+        <div class="cap-card-headline">
+          <span class="cap-card-kind">Setup required</span>
+          <span class="cap-status-badge cap-status-badge--yellow">NEEDS SETUP</span>
+        </div>
+        <div class="cap-card-id" title="capability_id">firebase-dashboard</div>
+      </header>
+      <div class="cap-card-impact">Finish setup to make this tool available.</div>
+
+    <div class="cap-owner-boundary">
+      <span class="cap-owner-label">owner_boundary</span>
+
+        <span class="cap-owner-chip cap-owner-chip--dontpanic_core" title="state projection, bundled static dashboard export">
+          core
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--adapter" title="Firestore mirror schema, sync daemon">
+          adapter
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--operator" title="Firebase project ownership, Firebase Auth configuration">
+          operator
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+    </div>
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Configured</div>
+      <ul class="cap-list cap-list-configured">
+        <li>firebase</li><li>gcloud</li>
+      </ul>
+    </div>
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Missing</div>
+      <ul class="cap-list cap-list-missing">
+        <li>DONTPANIC_FIREBASE_PROJECT</li><li>firebase login</li><li>Firebase web app config for dashboard</li>
+      </ul>
+    </div>
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Pending probes</div>
+      <ul class="cap-list cap-list-probes">
+
+          <li>
+            <span class="cap-probe-name">firebase_dashboard_config</span>
+            <span class="cap-probe-reason">Awaiting deployed config; probe will activate after firebase deploy runs.</span>
+          </li>
+
+      </ul>
+    </div>
+
+
+    <div class="cap-next-actions">
+      <div class="cap-list-title">Next actions</div>
+
+    <div class="cap-action-group cap-action-group--auto">
+      <div class="cap-action-group-label">automatable</div>
+      <ul class="cap-action-list">
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Install the Firebase CLI so the operator can deploy rules and Cloud Functions.</div>
+            <pre class="cap-action-cmd">npm install -g firebase-tools</pre>
+
+          </li>
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Point the local Firebase config at the operator's target Firebase project.</div>
+            <pre class="cap-action-cmd">firebase use --add --project &lt;YOUR_FIREBASE_PROJECT_ID&gt;</pre>
+
+          </li>
+
+      </ul>
+    </div>
+
+
+    <div class="cap-action-group cap-action-group--human">
+      <div class="cap-action-group-label">human-required</div>
+      <ul class="cap-action-list">
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Authenticate the Firebase CLI against the operator's Google account.</div>
+            <pre class="cap-action-cmd">firebase login</pre>
+            <div class="cap-action-reason">Requires interactive browser sign-in with the operator's Google account; DontPanic cannot proxy this consent.</div>
+          </li>
+
+      </ul>
+    </div>
+
+    </div>
+
+
+      <footer class="cap-card-footer">
+        <span class="cap-card-source">Source: <code>dashboard/state/capabilities-status.json</code></span>
+      </footer>
+    </article>
+
+    <article class="cap-card cap-card--muted" data-capability-id="linear" data-status="not_installed">
+      <header class="cap-card-header">
+        <div class="cap-card-headline">
+          <span class="cap-card-kind">Not installed</span>
+          <span class="cap-status-badge cap-status-badge--muted">NOT INSTALLED</span>
+        </div>
+        <div class="cap-card-id" title="capability_id">linear</div>
+      </header>
+      <div class="cap-card-impact">Install the binary or sign in to enable this tool.</div>
+
+    <div class="cap-owner-boundary">
+      <span class="cap-owner-label">owner_boundary</span>
+
+        <span class="cap-owner-chip cap-owner-chip--dontpanic_core" title="PM-tool category contract, external_refs[] plan binding">
+          core
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--adapter" title="Printing Press generated Linear CLI">
+          adapter
+          <span class="cap-owner-chip-count">1</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--operator" title="Linear workspace access, API token">
+          operator
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+    </div>
+
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Missing</div>
+      <ul class="cap-list cap-list-missing">
+        <li>linear-pp-cli</li><li>~/.dontpanic/adapters/linear.json</li>
+      </ul>
+    </div>
+
+
+
+    <div class="cap-next-actions">
+      <div class="cap-list-title">Next actions</div>
+
+    <div class="cap-action-group cap-action-group--auto">
+      <div class="cap-action-group-label">automatable</div>
+      <ul class="cap-action-list">
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Generate the Printing Press Linear adapter binary the operator will register with DontPanic.</div>
+            <pre class="cap-action-cmd">printing-press emit --target linear --out &lt;YOUR_ADAPTER_BIN_PATH&gt;</pre>
+
+          </li>
+
+      </ul>
+    </div>
+
+
+    <div class="cap-action-group cap-action-group--human">
+      <div class="cap-action-group-label">human-required</div>
+      <ul class="cap-action-list">
+
+          <li class="cap-action-item">
+            <div class="cap-action-what">Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate.</div>
+
+            <div class="cap-action-reason">Operator must mint and paste their own Linear API token; DontPanic does not provision Linear credentials on the operator's behalf.</div>
+          </li>
+
+      </ul>
+    </div>
+
+    </div>
+
+
+      <footer class="cap-card-footer">
+        <span class="cap-card-source">Source: <code>dashboard/state/capabilities-status.json</code></span>
+      </footer>
+    </article>
+
+    <article class="cap-card cap-card--green" data-capability-id="agent-claude-cli" data-status="ready">
+      <header class="cap-card-header">
+        <div class="cap-card-headline">
+          <span class="cap-card-kind">Connected</span>
+          <span class="cap-status-badge cap-status-badge--green">READY</span>
+        </div>
+        <div class="cap-card-id" title="capability_id">agent-claude-cli</div>
+      </header>
+      <div class="cap-card-impact">This tool is connected and ready to use.</div>
+
+    <div class="cap-owner-boundary">
+      <span class="cap-owner-label">owner_boundary</span>
+
+        <span class="cap-owner-chip cap-owner-chip--dontpanic_core" title="agent dispatch, supervisor wiring">
+          core
+          <span class="cap-owner-chip-count">2</span>
+        </span>
+
+        <span class="cap-owner-chip cap-owner-chip--operator" title="Anthropic billing">
+          operator
+          <span class="cap-owner-chip-count">1</span>
+        </span>
+
+    </div>
+
+
+    <div class="cap-list-block">
+      <div class="cap-list-title">Configured</div>
+      <ul class="cap-list cap-list-configured">
+        <li>claude</li>
+      </ul>
+    </div>
+
+
+
+
+
+      <footer class="cap-card-footer">
+        <span class="cap-card-source">Source: <code>dashboard/state/capabilities-status.json</code></span>
+      </footer>
+    </article>
+  </div>
+      </section>
+
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/capabilities-status.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">2026-05-22T12:00:00Z</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</code></div>
+
+    </div>
+
+    </div>
+
+</body>
+</html>

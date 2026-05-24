@@ -1,0 +1,47 @@
+{
+  "task_id": "2026-05-24-004-feat-event-messaging-v1",
+  "audit_id": "2026-05-24-004-feat-event-messaging-v1#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-05-24T22:23:19Z",
+  "completed_at": "2026-05-24T22:26:29Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-004-feat-event-messaging-v1-co1ux1eq target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 448112 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1841902,
+    "tokens_out": 12817,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}` and their recorded commands contain no forbidden command shapes.\n\nFINDING (high, correctness): Signed-off volley terminal renders as blocked work with a resume command. Evidence: [event_copy.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/event_copy.py:363) says signed-off should branch, but render only changes band at line 738; spot-check output was `ready`, `Blocked work on p1 — signed off`, `dontpanic resume p1 --all`. Recommendation: special-case `final_status == \"signed_off\"` to use “AI work finished” copy and no remediation/resume command.\n\nFINDING (medium, test_coverage): F003 tests do not cover `volley_terminal` + `final_status=signed_off` rendering. Evidence: `rg signed_off` in the F003 render tests only hits verdict-mismatch fixtures, not signed-off volley rendering. Recommendation: add a regression asserting signed-off title/detail/action across renderer and sinks.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py scripts/dontpanic_orchestrate/tests/test_notify_event_f002.py scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py -q -p no:cacheprovider\nThis could not start in the read-only sandbox: Python reported ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py scripts/dontpanic_orchestrate/tests/test_notify_event_f002.py scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'import datetime as dt; from dontpanic_orchestrate import event_copy, notify_event; ev=notify_event.NotifyEvent(kind=\"volley_terminal\", severity=\"info\", plan_id=\"p1\", feature_id=\"F003\", body=\"done\", evidence_uri=\"/tmp/signoff.json\", timestamp=dt.datetime.now(dt.timezone.utc), inbox_event=\"volley_terminal\", technical_metadata={\"final_status\":\"signed_off\",\"rounds\":1}); r=event_copy.render(ev); print(r.band); print(r.title); print(r.detail); print(r.exact_command)'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Signed-off volley terminal renders as blocked work with a resume command. Evidence: [event_copy.py]($HOME/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/event_copy.py:363) says signed-off should branch, but render only changes band at line 738; spot-check output was `ready`, `Blocked work on p1 — signed off`, `dontpanic resume p1 --all`. Recommendation: special-case `final_status == \"signed_off\"` to use “AI work finished” copy and no remediation/resume command.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "F003 tests do not cover `volley_terminal` + `final_status=signed_off` rendering. Evidence: `rg signed_off` in the F003 render tests only hits verdict-mismatch fixtures, not signed-off volley rendering. Recommendation: add a regression asserting signed-off title/detail/action across renderer and sinks. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py scripts/dontpanic_orchestrate/tests/test_notify_discor",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -1,0 +1,59 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": true,
+      "band": "ready",
+      "detail": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": null,
+      "human_required_reason": null,
+      "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "AI work finished on 2026-05-24-004-feat-event-messaging-v1",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 4052620,
+          "description": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "AI work finished on 2026-05-24-004-feat-event-messaging-v1"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**AI work finished on 2026-05-24-004-feat-event-messaging-v1** _(band: ready)_\n\nVolley completed after 2 round(s) with `signed_off`. No action needed.\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `feature_id` = `F005`\n- `final_status` = `signed_off`\n- `inbox_event` = `volley_terminal`\n- `iteration_count` = `2`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n- `rounds` = `2`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "AI work finished on 2026-05-24-004-feat-event-messaging-v1",
+      "subtitle": "volley_terminal",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "volley_terminal_signed_off",
+  "inbox_event_at_emit": "volley_terminal",
+  "rendered": {
+    "band": "ready",
+    "detail": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": null,
+    "technical_metadata": {
+      "feature_id": "F005",
+      "final_status": "signed_off",
+      "inbox_event": "volley_terminal",
+      "iteration_count": 2,
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1",
+      "rounds": 2
+    },
+    "title": "AI work finished on 2026-05-24-004-feat-event-messaging-v1"
+  }
+}

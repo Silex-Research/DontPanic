@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Core nav shell — F004 snapshot</title>
+  <!--
+    Static F004 evidence snapshot. Pure-renderer output captured by
+    dashboard/tests/scripts/generate-f004-snapshots.mjs. Do not edit by
+    hand — regenerate by re-running the script. The snapshot intentionally
+    omits the dashboard's runtime CSS so it remains text-readable.
+  -->
+</head>
+<body>
+
+    <header>
+      <div class="header-left"><h1>DontPanic</h1></div>
+      <div class="header-right">
+        <span class="status-badge online">Ready</span>
+        <span id="project-selector-container"></span>
+      </div>
+    </header>
+    <nav class="view-nav" id="view-nav">
+      <button class="view-tab active" data-page="what-now">Needs Attention</button>
+      <button class="view-tab" data-page="mission-control">Work</button>
+      <button class="view-tab" data-page="capabilities">Tools &amp; Setup</button>
+      <button class="view-tab" data-page="health">Health</button>
+      <button class="view-tab" data-page="settings">Preferences</button>
+    </nav>
+    <div id="page-container">
+      <div id="page-work-preview" class="page-view">
+        <h2>Work</h2>
+        <p>Read-only kanban of plan / feature lifecycle. The full surface
+        is captured in the per-tab snapshots; this shell preview shows
+        the standardized provenance treatment Work now carries.</p>
+
+    <div class="pv-footer" data-provenance="1">
+      <div class="pv-row pv-row--source"><span class="pv-label">Source</span><code class="pv-value">dashboard/state/tasks.json + agents.json + activity.json</code></div>
+      <div class="pv-row pv-row--updated"><span class="pv-label">Updated</span><span class="pv-value">2026-05-23T04:05:00Z</span></div>
+      <div class="pv-row pv-row--refresh"><span class="pv-label">Refresh</span><code class="pv-cmd">dontpanic dashboard build</code></div>
+      <div class="pv-note">Work is read-only — cards reflect what the local cache already knows.</div>
+    </div>
+
+      </div>
+    </div>
+    <footer>
+      <span>DontPanic dashboard (V0 nav)</span>
+      <span id="last-sync">Last sync: 2026-05-23 04:05Z</span>
+    </footer>
+
+</body>
+</html>

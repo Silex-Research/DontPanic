@@ -1,0 +1,23 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-05-24T14:30:51.767594+00:00",
+  "plan_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/docs/future-dashboard-work-has-a-copy-and-design-contract/claude-design-v3-used-vs-deferred.md",
+    "evidence/goal-governance/post_impl/docs/future-dashboard-work-has-a-copy-and-design-contract/dashboard-value-language-copy-map.md",
+    "evidence/goal-governance/post_impl/docs/future-dashboard-work-has-a-copy-and-design-contract/future-surfaces-contract.md",
+    "evidence/goal-governance/post_impl/ux/agent-and-technical-operator-can-still-recover-exact-substrate/dashboard-accessibility-checks.md",
+    "evidence/goal-governance/post_impl/ux/agent-and-technical-operator-can-still-recover-exact-substrate/dashboard-sanitization-clean.log",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-fleet-health-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-fleet-home-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-health-empty-state-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-needs-attention-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-preferences-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-tools-setup-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/non-technical-operator-opens-dashboard-and-understands-what-needs-attention/dashboard-ui-tests.log",
+    "evidence/goal-governance/post_impl/ux/operator-navigates-core-dashboard-without-demo-noise/dashboard-core-nav-snapshot.html",
+    "evidence/goal-governance/post_impl/ux/operator-sees-business-value-before-implementation-detail/business-value-evidence-pointer.md"
+  ],
+  "findings": []
+}

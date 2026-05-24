@@ -1,0 +1,66 @@
+{
+  "channels": {
+    "dashboard_sidecar": {
+      "automatable": false,
+      "band": "needs_action",
+      "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+      "display_name": null,
+      "evidence_uri": "/tmp/INBOX.md",
+      "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+      "human_required_reason": "operator action surfaced by dispatch_event",
+      "id": "supervisor:environmental_blocker_short_circuit:2026-05-24-004-feat-event-messaging-v1:F005",
+      "project_name": null,
+      "source": "supervisor",
+      "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker",
+      "updated_at": "2026-05-24T00:00:00Z"
+    },
+    "discord_embed": {
+      "allowed_mentions": {
+        "parse": []
+      },
+      "embeds": [
+        {
+          "color": 15881557,
+          "description": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+          "fields": [
+            {
+              "inline": false,
+              "name": "Run",
+              "value": "```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker\n```"
+            }
+          ],
+          "footer": {
+            "text": "Evidence: /tmp/INBOX.md \u00b7 feature=F005 \u00b7 plan=2026-05-24-004-feat-event-messaging-v1"
+          },
+          "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker"
+        }
+      ],
+      "username": "DontPanic"
+    },
+    "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker** _(band: needs_action)_\n\nEvery auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.\n\nRun:\n\n```\ndontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `aggregate_class` = `environmental_reproduction_failure`\n- `blocking` = `False`\n- `feature_id` = `F005`\n- `inbox_event` = `environmental_blocker_short_circuit`\n- `iteration_count` = `1`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n",
+    "terminal_payload": {
+      "group": "2026-05-24-004-feat-event-messaging-v1",
+      "message": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker",
+      "subtitle": "environmental_blocker_short_circuit",
+      "title": "DontPanic [2026-05-24-004-feat-event-messaging-v1]"
+    }
+  },
+  "disposition": "live",
+  "fixture": "environmental_blocker_short_circuit",
+  "inbox_event_at_emit": "environmental_blocker_short_circuit",
+  "rendered": {
+    "band": "needs_action",
+    "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+    "evidence_uri": "/tmp/INBOX.md",
+    "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+    "technical_metadata": {
+      "aggregate_class": "environmental_reproduction_failure",
+      "blocking": false,
+      "feature_id": "F005",
+      "inbox_event": "environmental_blocker_short_circuit",
+      "iteration_count": 1,
+      "plan_id": "2026-05-24-004-feat-event-messaging-v1"
+    },
+    "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker"
+  }
+}

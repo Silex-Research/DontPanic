@@ -1,0 +1,124 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Parent roadmap 2026-05-23-003 defines the local-first visual operating console. This child plan integrates design assets and value-first language into the existing V0 dashboard without adding new mutation surfaces or future V1 tabs.",
+  "user_journeys": [
+    {
+      "name": "non-technical-operator-opens-dashboard-and-understands-what-needs-attention",
+      "description": "A non-technical operator opens the local dashboard and can identify approvals, blocked work, setup needs, and health warnings without first learning DontPanic's internal vocabulary.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "dashboard_opened",
+        "needs_attention_visible",
+        "plain_language_labels_visible",
+        "technical_details_available"
+      ],
+      "acceptance_signals": [
+        "Default landing label uses value-first language rather than internal-only nouns",
+        "Approval, setup, blocked, running, and health states have plain-language labels",
+        "Technical IDs remain available in secondary metadata or detail rows",
+        "A static snapshot shows no Jarvis-era branding",
+        "Home, Work, and Health have credible All Projects / fleet-mode behavior"
+      ]
+    },
+    {
+      "name": "operator-sees-business-value-before-implementation-detail",
+      "description": "A product owner or founder reviewing DontPanic sees why a warning matters before seeing the underlying gate, capability, or supervisor identifier.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "warning_visible",
+        "impact_label_visible",
+        "technical_source_visible"
+      ],
+      "acceptance_signals": [
+        "Warning cards include business/user impact phrasing",
+        "Command chips still show exact commands",
+        "Source/provenance is visible without dominating the first read",
+        "The four-band status taxonomy is preserved"
+      ]
+    },
+    {
+      "name": "operator-navigates-core-dashboard-without-demo-noise",
+      "description": "An operator sees a restrained V0 navigation focused on Needs Attention, Work, Tools & Setup, Health, and Preferences, without Financial or Cloud Costs appearing as core DontPanic functionality.",
+      "surfaces": [
+        "ux"
+      ],
+      "states": [
+        "nav_visible",
+        "core_tabs_visible",
+        "demo_tabs_absent_or_gated"
+      ],
+      "acceptance_signals": [
+        "Visible V0 nav matches the plan's surface table",
+        "Financial is removed from core nav",
+        "Cloud Costs is absent or clearly deferred unless backed by a real capability",
+        "Capability-backed adapter views are not shown as core tabs"
+      ]
+    },
+    {
+      "name": "agent-and-technical-operator-can-still-recover-exact-substrate",
+      "description": "An agent or technical operator can inspect the same page and recover plan IDs, feature IDs, capability IDs, source files, timestamps, and exact commands without scraping prose.",
+      "surfaces": [
+        "ux",
+        "docs"
+      ],
+      "states": [
+        "technical_metadata_visible",
+        "source_visible",
+        "command_visible",
+        "no_secret_values"
+      ],
+      "acceptance_signals": [
+        "Action cards retain exact CLI commands",
+        "Technical identifiers are visible in metadata/details",
+        "Every rendered page has a consistent source/provenance pattern",
+        "No secret values are added to HTML, state cache, screenshots, or docs"
+      ]
+    },
+    {
+      "name": "future-dashboard-work-has-a-copy-and-design-contract",
+      "description": "A future implementer adding Architecture, Review, Configuration, or Agent Session views has a documented dashboard language and component contract instead of inventing labels per page.",
+      "surfaces": [
+        "docs"
+      ],
+      "states": [
+        "copy_contract_written",
+        "component_contract_written",
+        "future_surfaces_deferred"
+      ],
+      "acceptance_signals": [
+        "Dashboard README or design notes document value-first labels and technical disclosure rules",
+        "Status taxonomy and optional relevance chip rules are documented",
+        "Future surfaces are named as non-goals, not placeholder tabs",
+        "Claude Design assets are referenced or archived without becoming runtime dependencies"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "dashboard-value-language-copy-map.md",
+    "dashboard-core-nav-snapshot.html",
+    "dashboard-needs-attention-snapshot.html",
+    "dashboard-tools-setup-snapshot.html",
+    "dashboard-health-empty-state-snapshot.html",
+    "dashboard-preferences-snapshot.html",
+    "dashboard-fleet-home-snapshot.html",
+    "dashboard-fleet-health-snapshot.html",
+    "dashboard-ui-tests.log",
+    "dashboard-sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No Architecture tab implementation",
+    "No Review/Evidence tab implementation",
+    "No Configuration editor",
+    "No Agent Session Registry",
+    "No local executor or inline mutation path",
+    "No embedded terminals",
+    "No Firebase realtime dependency",
+    "No new status health band beyond the existing four-band taxonomy",
+    "No framework rewrite"
+  ],
+  "completion_test": "A local operator runs `dontpanic dashboard serve`, opens the dashboard, and sees a DontPanic-branded value-first operator console with V0 navigation: Needs Attention, Work, Tools & Setup, Health, and Preferences. The first-read language is understandable to a non-technical reviewer, demo/noise tabs are removed or gated, exact commands and technical IDs remain available, provenance is visible, and the page remains read-only/command-emitter only."
+}

@@ -1,0 +1,75 @@
+# F005 evidence — full dashboard vitest sweep
+# Date: 2026-05-24T20:22:13Z
+# Repo: dontpanic-arch-f003-close   Env: dev   Project: (none)
+# Cmd:  npx vitest run
+
+
+ RUN  v3.2.4 /private/tmp/dontpanic-arch-f003-close/dashboard
+
+3:22:14 PM [vite] (client) warning: invalid import "./${src}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: /private/tmp/dontpanic-arch-f003-close/dashboard/core.js
+ ✓ tests/integration/health-page.test.js (7 tests) 154ms
+ ✓ tests/integration/core-router.test.js (36 tests) 99ms
+ ✓ tests/integration/project-selector.test.js (19 tests) 106ms
+ ✓ tests/integration/security-page.test.js (19 tests) 130ms
+ ✓ tests/integration/what-now-page.test.js (20 tests) 142ms
+ ✓ tests/integration/mission-control-page.test.js (16 tests) 187ms
+ ✓ tests/integration/architecture-f004-page.test.js (8 tests) 200ms
+ ✓ tests/integration/value-language-page-evidence.test.js (26 tests) 156ms
+ ✓ tests/integration/capabilities-page.test.js (26 tests) 302ms
+ ✓ tests/integration/architecture-page.test.js (14 tests) 340ms
+ ✓ tests/integration/architecture-explorer-dom.test.js (25 tests) 685ms
+ ✓ tests/unit/cloud-costs-logic.test.js (32 tests) 8ms
+ ✓ tests/unit/capabilities-logic.test.js (26 tests) 28ms
+ ✓ tests/unit/command-center-logic.test.js (27 tests) 23ms
+stdout | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when no config is wired up — static fallback preserved
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stdout | tests/integration/firebase-adapter.test.js > static-first contract (acceptance 1, 2) > loads legacy state from JSON when no Firebase config is present
+[Jarvis] Firebase realtime not configured — static state loader only.
+
+stderr | tests/unit/config-firebase.test.js > initFirebaseRealtime > returns null when sdkLoader rejects (offline / SDK fetch failed)
+[Jarvis] Firebase SDK load failed — falling back to static state. Error: offline
+    at /private/tmp/dontpanic-arch-f003-close/dashboard/tests/unit/config-firebase.test.js:345:49
+    at file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///private/tmp/dontpanic-arch-f003-close/dashboard/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ ✓ tests/unit/financial-logic.test.js (78 tests) 23ms
+ ✓ tests/integration/command-center-page.test.js (18 tests) 81ms
+ ✓ tests/unit/config-firebase.test.js (30 tests) 11ms
+ ✓ tests/integration/firebase-adapter.test.js (7 tests) 34ms
+ ✓ tests/integration/cloud-costs-page.test.js (13 tests) 87ms
+ ✓ tests/unit/what-now-logic.test.js (51 tests) 24ms
+ ✓ functions/tests/mcp-bridge.test.js (12 tests) 9ms
+ ✓ tests/unit/projection-adapter.test.js (41 tests) 6ms
+ ✓ tests/unit/project-selector-logic.test.js (41 tests) 6ms
+ ✓ tests/unit/value-language-static-checks.test.js (34 tests) 8ms
+ ✓ tests/unit/architecture-f004.test.js (32 tests) 7ms
+ ✓ functions/tests/callables.test.js (12 tests) 4ms
+ ✓ tests/unit/formatters.test.js (27 tests) 8ms
+ ✓ tests/unit/architecture-logic.test.js (36 tests) 8ms
+ ✓ tests/unit/architecture-explorer.test.js (29 tests) 8ms
+ ✓ tests/unit/health-logic.test.js (31 tests) 4ms
+ ✓ tests/unit/mission-control-logic.test.js (29 tests) 3ms
+ ✓ tests/unit/security-logic.test.js (20 tests) 5ms
+ ✓ functions/tests/auth.test.js (10 tests) 2ms
+ ✓ functions/tests/column-mapping.test.js (11 tests) 3ms
+ ✓ tests/unit/realtime-actions.test.js (8 tests) 3ms
+ ✓ tests/unit/settings-logic.test.js (12 tests) 3ms
+ ✓ tests/unit/provenance.test.js (9 tests) 2ms
+ ✓ tests/unit/html-escape.test.js (8 tests) 2ms
+ ✓ tests/unit/firestore-rules.test.js (3 tests) 1ms
+
+ Test Files  39 passed (39)
+      Tests  903 passed (903)
+   Start at  15:22:13
+   Duration  2.46s (transform 593ms, setup 0ms, collect 1.75s, tests 2.91s, environment 10.16s, prepare 1.97s)
+

@@ -123,6 +123,95 @@ def append_event(
     )
 
 
+def append_rendered_annotation(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    rendered: Any,
+    timestamp: str | None = None,
+) -> None:
+    """Plan 2026-05-24-004 F003 (D013 + D018) — append ONLY the rendered block.
+
+    The raw truth-of-record entry is written by ``append_event()`` at the
+    emit site; this additive wrapper appends only a human-readable rendered
+    markdown block (with a ``<details>`` fold for technical metadata) after
+    the raw entry. Does NOT call ``append_event()`` — calling it again would
+    write a duplicate raw header per D018.
+
+    The rendered argument is a ``dontpanic_orchestrate.event_copy.RenderedEvent``
+    instance; we duck-type it so this module avoids importing event_copy at
+    module load (event_copy in turn imports nothing from inbox; the seam is
+    clean either way, but keeping the wrapper free of the import means a
+    failure in event_copy doesn't take inbox writes down with it).
+    """
+    if rendered is None:
+        return
+    path = inbox_path(plan_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Initialize the INBOX file if missing — append_event handles this for
+    # raw entries; this wrapper is sometimes called before any append_event
+    # has fired (defensive) but in practice the existing emit-site invariant
+    # ensures append_event() runs first.
+    if not path.is_file():
+        path.write_text(
+            f"# INBOX — {plan_id}\n\nOperator-facing event log written by the supervisor.\n\n"
+        )
+
+    ts = timestamp or _now_iso()
+
+    # Plan 2026-05-24-004 F004 (D011 + D020): substitute-mode sanitization
+    # at the live INBOX-annotation boundary. Secret-shaped substrings are
+    # replaced with [REDACTED]; this path must NEVER raise — INBOX
+    # annotation is a live render and the supervisor cannot fail-hard on
+    # a transient notification. The raise-mode boundary is the sidecar
+    # write (see operator_console.write_event_action_sidecar).
+    from dontpanic_orchestrate.state_projection import scrub_secrets
+
+    def _scrub(value: Any) -> Any:
+        if isinstance(value, str):
+            return scrub_secrets(value)
+        return value
+
+    title = _scrub(getattr(rendered, "title", None)) or "(rendered)"
+    detail = _scrub(getattr(rendered, "detail", None)) or ""
+    exact_command = _scrub(getattr(rendered, "exact_command", None))
+    evidence_uri = _scrub(getattr(rendered, "evidence_uri", None))
+    band = getattr(rendered, "band", None) or ""
+    tech = getattr(rendered, "technical_metadata", None) or {}
+
+    parts: list[str] = []
+    parts.append(f"<!-- rendered annotation {ts} -->")
+    parts.append(f"**{title}** _(band: {band})_")
+    parts.append("")
+    if detail:
+        parts.append(detail)
+        parts.append("")
+    if exact_command:
+        parts.append("Run:")
+        parts.append("")
+        parts.append("```")
+        parts.append(exact_command)
+        parts.append("```")
+        parts.append("")
+    if evidence_uri:
+        parts.append(f"Evidence: `{evidence_uri}`")
+        parts.append("")
+    if tech:
+        parts.append("<details><summary>Technical details</summary>")
+        parts.append("")
+        for key in sorted(tech.keys()):
+            value = _scrub(tech[key])
+            parts.append(f"- `{key}` = `{value}`")
+        parts.append("")
+        parts.append("</details>")
+        parts.append("")
+    parts.append(_BODY_TERMINATOR)
+    parts.append("")
+    chunk = "\n".join(parts)
+    with path.open("a") as f:
+        f.write(chunk)
+
+
 def read_events(plan_dir: Path) -> list[InboxEntry]:
     """Parse INBOX.md and return all entries in append order. Tolerant of
     operator-added body content and missing trailing terminators."""
@@ -191,6 +280,7 @@ __all__ = [
     "INBOX_FILENAME",
     "InboxEntry",
     "append_event",
+    "append_rendered_annotation",
     "inbox_path",
     "latest_event",
     "read_events",

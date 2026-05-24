@@ -1,0 +1,18 @@
+{
+  "audit_paths": [
+    "$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F001-i0.json",
+    "$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F001-i0.json"
+  ],
+  "exception_class": "PatchCompletenessError",
+  "exception_message": "Patch incomplete \u2014 signoff blocked.\nPass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:\n  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py | A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py\n  unstaged_dirty_state | block | scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/projects_dashboard.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.",
+  "feature_id": "F001",
+  "iteration": 0,
+  "last_good_audit_path": "$HOME/Documents/GitHub/DontPanic/docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F001-i0.json",
+  "plan_id": "2026-05-24-001-feat-dashboard-value-language-ia-v0",
+  "recommended_command": "dontpanic close --operator-resolved 2026-05-24-001-feat-dashboard-value-language-ia-v0 F001 --reason environmental_reproduction_failure",
+  "recommended_recovery": "dontpanic close --operator-resolved 2026-05-24-001-feat-dashboard-value-language-ia-v0 F001 --reason environmental_reproduction_failure",
+  "recovery_notes": "F004 broad-Exception backstop fired during stage='post_iter'. The iter loop raised PatchCompletenessError after 2 audit envelope(s) landed; the last entry in ``audit_paths`` is the most recent successful write (e.g. the orphaned implementer envelope when stage==auditor). Use the recommended close-out command to clear breaker:no_progress and flip features.json.",
+  "schema": "terminal-state.v0",
+  "stage": "post_iter",
+  "written_at": "2026-05-24T05:15:26Z"
+}

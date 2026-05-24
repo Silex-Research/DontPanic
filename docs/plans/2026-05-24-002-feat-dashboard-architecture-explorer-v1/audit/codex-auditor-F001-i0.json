@@ -1,0 +1,45 @@
+{
+  "task_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
+  "audit_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T05:52:35Z",
+  "completed_at": "2026-05-24T05:59:20Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-002-feat-dashboard-architecture-explorer-v1-fsh17es8 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 515061 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 6215777,
+    "tokens_out": 21185,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (medium, architecture): CLI command mapping is incomplete despite the plan requiring existing CLI commands to be mapped into the graph. Evidence: `_COMMAND_CATALOG` in `scripts/dontpanic_orchestrate/architecture_view_state.py` only includes five commands, while `scripts/dontpanic_orchestrate/cli.py` exposes many more top-level/subcommand surfaces in help/dispatch (`setup`, `config`, `project`, `manifest`, `doctor`, `init`, `smoke`, `showcase`, `reconcile`, `state`, `plan`, `close`, `dispatch-from-plan`, `approve`, `resume`, `ps`, `next`, `mcp`, etc.). Recommendation: derive command nodes from the existing CLI registry/help surface or expand the catalog and tests so the graph represents the actual local command surface, not just a curated subset.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import architecture_view_state as a; print(a.SCHEMA_VERSION)\"\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; from do",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import architecture_view_state as a; print(a.SCHEMA_VERSION)\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; from dontpanic_orchestrate import architecture_view_state as avs; repo=Path('$HOME/Documents/GitHub/DontPanic'); inputs=avs.load_inputs(repo); vs=avs.build_view_state(inputs, repo_root=repo); node_ids={n['id'] for n in vs['nodes']}; print(vs['schema_version'], vs['project']['label'], vs['freshness']['state']); print(len(vs['lanes']), len(vs['nodes']), len(vs['edges']), len(vs['flows']), len(vs['steps']), len(vs['validation_warnings'])); print(','.join(f['id'] for f in vs['flows'])); print(sorted(set(n['type'] for n in vs['nodes']))); print(all(s.get('node_ref') in node_ids for f in vs['flows'] if f.get('source')=='derived' for s in f.get('steps', [])))\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; from dontpanic_orchestrate import architecture_view_state as avs; arch={'generated_at':'2026-05-24T00:00:00Z','source_fingerprint':{'file_hashes_root':'x','files_count':1},'modules':[{'path':'scripts/dontpanic_orchestrate/dashboard.py','name':'dontpanic_orchestrate.dashboard','imports':[]},{'path':'scripts/dontpanic_orchestrate/architecture.py','name':'dontpanic_orchestrate.architecture','imports':[]},{'path':'scripts/dontpanic_orchestrate/state_projection.py','name':'dontpanic_orchestrate.state_projection','imports':[]},{'path':'scripts/dontpanic_orchestrate/operator_console.py','name':'dontpanic_orchestrate.operator_console','imports':[]},{'path':'scripts/dontpanic_orchestrate/architecture_html.py','name':'dontpanic_orchestrate.architecture_html','imports':[]}], 'schemas':[], 'plans':[]}; flows={'flows':[{'id':'custom','steps':[{'id':'s1','node_ref':'module:missing.py'}]}]}; inputs=avs.BuildInputs(None,None,Path('/no/architecture.json'),arch,flows,None,{'state':'fresh'}); vs=avs.build_view_state(inputs, repo_root=Path('$HOME/Documents/GitHub/DontPanic')); print([w['code'] for w in vs['validation_warnings']]); print([f for f in vs['flows'] if f['source']=='authored'][0]['steps'][0]['valid'])\"",
+      "git diff --check HEAD~1 -- scripts/dontpanic_orchestrate/architecture_view_state.py scripts/dontpanic_orchestrate/dashboard.py scripts/dontpanic_orchestrate/projects_dashboard.py scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; p=Path('scripts/dontpanic_orchestrate/architecture_view_state.py'); compile(p.read_text(encoding='utf-8'), str(p), 'exec'); print('compile ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F001",
+      "issue": "CLI command mapping is incomplete despite the plan requiring existing CLI commands to be mapped into the graph. Evidence: `_COMMAND_CATALOG` in `scripts/dontpanic_orchestrate/architecture_view_state.py` only includes five commands, while `scripts/dontpanic_orchestrate/cli.py` exposes many more top-level/subcommand surfaces in help/dispatch (`setup`, `config`, `project`, `manifest`, `doctor`, `init`, `smoke`, `showcase`, `reconcile`, `state`, `plan`, `close`, `dispatch-from-plan`, `approve`, `res",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
