@@ -37,10 +37,21 @@
     const params = new URLSearchParams(location.search);
     const variant = params.get('variant') || 'stale';
 
-    const fixtureURL = '../fixtures/architecture-view-state.json';
+    const fixtureURL = variant === 'f004' || variant === 'fleet'
+      ? '../fixtures/architecture-view-state-f004.json'
+      : '../fixtures/architecture-view-state.json';
     const res = await fetch(fixtureURL);
     const fixture = await res.json();
     let envelope = fixture;
+    const projectA = {
+      ...fixture,
+      project: { name: 'projecta', display_name: 'Project A', label: 'Project A' },
+    };
+    const projectB = {
+      ...fixture,
+      project: { name: 'projectb', display_name: 'Project B', label: 'Project B' },
+      freshness: { ...fixture.freshness, state: 'fresh' },
+    };
     if (variant === 'absent') {
       envelope = {
         ...fixture,
@@ -55,6 +66,20 @@
       envelope = {
         ...fixture,
         freshness: { ...fixture.freshness, state: 'fresh', message: 'Snapshot matches working tree.' },
+      };
+    } else if (variant === 'fleet') {
+      envelope = null;
+      jarvisShim.state.selectedProject = 'all';
+      jarvisShim.state.architectureViewStateByProject = {
+        projecta: projectA,
+        projectb: projectB,
+      };
+      jarvisShim.state.fleetSummary = {
+        projects: [
+          { name: 'projecta', display_name: 'Project A', active: true },
+          { name: 'projectb', display_name: 'Project B', active: true },
+          { name: 'unbuilt', display_name: 'Unbuilt repo', active: true },
+        ],
       };
     }
     jarvisShim.state.architectureViewState = envelope;

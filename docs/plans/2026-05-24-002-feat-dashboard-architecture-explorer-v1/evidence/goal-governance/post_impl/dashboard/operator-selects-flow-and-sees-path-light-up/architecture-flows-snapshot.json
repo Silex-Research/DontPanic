@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "project": {
+    "display_name": null,
+    "label": "(none)",
+    "name": null
+  },
+  "generated_at": "2026-05-24T06:13:19Z",
+  "flows": [
+    {
+      "category": "operator",
+      "id": "flow:architecture-regen",
+      "source": "derived",
+      "steps": [
+        {
+          "edge_ref": null,
+          "id": "step:regen:invoke",
+          "node_ref": "command:dontpanic-architecture-regen",
+          "order": 1,
+          "title": "Operator invokes regen",
+          "type": "step",
+          "warnings": []
+        },
+        {
+          "edge_ref": "edge:imports:1",
+          "id": "step:regen:crawl",
+          "node_ref": "module:scripts/dontpanic_orchestrate/cli.py",
+          "order": 2,
+          "title": "Crawler walks source",
+          "type": "step",
+          "warnings": []
+        }
+      ],
+      "summary": "Operator runs regen; crawler walks source + plans.",
+      "title": "Architecture regen",
+      "type": "flow",
+      "warnings": []
+    },
+    {
+      "category": "operator",
+      "id": "flow:authored-broken",
+      "source": "authored",
+      "steps": [
+        {
+          "edge_ref": null,
+          "id": "step:bad:1",
+          "node_ref": "module:does/not/exist.py",
+          "order": 1,
+          "title": "Bad step",
+          "type": "step",
+          "warnings": [
+            {
+              "message": "node_ref does not resolve to a known node"
+            }
+          ]
+        }
+      ],
+      "summary": "Authored flow whose step points at a missing node.",
+      "title": "Authored flow with bad reference",
+      "type": "flow",
+      "warnings": []
+    }
+  ],
+  "steps": [],
+  "validation_warnings": []
+}

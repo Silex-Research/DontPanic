@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T17:59:05Z",
+  "feature_id": "F003",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "Playwright screenshot tests are not executable in the audited dev environment. Evidence: `npx playwright test tests/playwright/architecture.spec.js --project=d…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

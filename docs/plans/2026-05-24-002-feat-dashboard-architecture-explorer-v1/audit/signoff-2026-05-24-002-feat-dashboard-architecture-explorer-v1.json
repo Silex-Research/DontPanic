@@ -1,24 +1,26 @@
 {
   "task_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
-  "signoff_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1#signoff#0",
-  "iteration": 0,
+  "signoff_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1#signoff#1",
+  "iteration": 1,
   "tier": "cross-cutting",
   "agents_in_panel": [
     "claude",
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F002-i0.json",
-    "audit/codex-auditor-F002-i0.json"
+    "audit/claude-implementer-F004-i0.json",
+    "audit/codex-auditor-F004-i0.json",
+    "audit/claude-implementer-F004-i1.json",
+    "audit/codex-auditor-F004-i1.json"
   ],
   "vote_summary": {
     "signed_off_count": 0,
-    "needs_changes_count": 1,
-    "blocked_count": 1,
+    "needs_changes_count": 2,
+    "blocked_count": 2,
     "inconclusive_count": 0
   },
   "signoff": true,
   "signoff_reason": "operator_resolved (class=implementation_defect): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
   "next_action": "merge",
-  "decided_at": "2026-05-24T16:11:42Z"
+  "decided_at": "2026-05-24T20:11:16Z"
 }

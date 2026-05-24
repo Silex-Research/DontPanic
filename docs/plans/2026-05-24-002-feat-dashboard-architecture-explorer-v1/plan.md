@@ -10,7 +10,7 @@ description: |
   flow/step inspector, freshness/provenance, and command-emitter regen.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-24"
 goal_type: new_feature
 surfaces:

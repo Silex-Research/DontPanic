@@ -2,45 +2,63 @@
 status: operator_resolved
 reason_class: implementation_defect
 plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
-feature_id: F002
-closed_at: 2026-05-24T16:11:42Z
+feature_id: F004
+closed_at: 2026-05-24T20:11:16Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-24-002-feat-dashboard-architecture-explorer-v1 / F002
+# Closeout memo — 2026-05-24-002-feat-dashboard-architecture-explorer-v1 / F004
 
 ## Operator decision
 
-This feature was closed under class `implementation_defect` after the F002 implementer timed out but left a useful patch and the auditor recorded concrete repair findings. Operator review applied the required repairs manually, staged the new architecture files, verified the focused and full dashboard suites, and confirmed the dashboard build/serve smoke paths. The close-out workflow wrote the signoff envelope and flipped `features.json` `passes: true` for this feature.
+This feature was closed under class `implementation_defect` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
 ## Target context
-- Repo: DontPanic
+- Repo: dontpanic-arch-f003-close
 - Env: dev
 - Project: (none)
-- Command: 7 (see structured target_context.commands_run)
+- Command: 4 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic
-Env: dev
+[F004] Repo: dontpanic-arch-f003-close  
+Env: dev  
 Project: (none)
-Command: audit verification commands
 
-Overall verdict: needs_changes. Implementer target declaration is correct in the summary (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command shapes were recorded.
+Overall verdict: needs_changes. Implementer target declaration is correct in the audit summary (`Repo`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command shapes were present.
 
-FINDING (high, correctness): The patch is not self-contained because new dashboard files are untracked while tracked files import them. Evidence: `git status --short` shows `?? ../dashboard/pages/architecture/`, `?? ../dashboard/lib/architecture-logic.js`, and tests/fixtures untracked, while [core.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard...
+FINDING (high, test_coverage): The new F004 unit tests are internally inconsistent and would fail in a writable environment. Evidence: `renderInsightsPanelHTML()` renders visible text containing “severity scores”, while `dashboard/tests/unit/architecture-f004.test.js` asserts the insights HTML does not contain `severity`; direct Node check confirmed `hasSeveri...
 
 ## Rationale (operator — fill in)
 
-The auditor's findings were valid implementation defects, not product-scope blockers: the patch had untracked architecture files, missing Layer 2 technical provenance, incomplete F001 freshness-state handling, and no project-scoped cache resolution in the page. Those defects were fixed manually by adding the provenance panel, F001 `absent/error` rendering, project-cache selection, CSS, and tests. A re-dispatch is not useful because the broad F002 implementer run already hit the 600s timeout; focused manual repair plus verification is lower risk for this shell feature.
+The latest auditor findings were implementation/test-contract defects, not
+architecture blockers: the UI copy said "severity scores" while the tests
+correctly required no severity-score language, and responsive coverage only
+checked CSS statically. Operator review removed the conflicting copy, added a
+real Playwright mobile/desktop responsive check for summary, insights, and
+fleet cards, fixed the selected-project missing-state/fallback boundary, and
+reran the focused and full dashboard suites.
+
+No additional dispatch is warranted because the concrete findings are now
+addressed with passing evidence: focused architecture/F004 Vitest, the full
+dashboard Vitest suite, the full architecture Playwright suite, and dashboard
+build/serve smoke all pass. Future F004-like UI evidence should include at
+least one browser-level responsive assertion when the feature acceptance names
+mobile layout or non-overlap.
+
+## Return Condition
+
+status: satisfied
+
+Return to implementation only if a follow-up audit shows the new F004
+responsive checks are flaky in CI, or if the fleet/missing-project state still
+renders another repository's architecture map for a selected project without a
+cached architecture artifact.
 
 ## Evidence references
 
 - `audit/signoff-2026-05-24-002-feat-dashboard-architecture-explorer-v1.json`
-- `audit/claude-implementer-F002-i0.json`
-- `audit/codex-auditor-F002-i0.json`
-- `dashboard/tests/unit/architecture-logic.test.js`
-- `dashboard/tests/integration/architecture-page.test.js`
-- Full dashboard Vitest suite: 35 files / 809 tests passed
-- `dontpanic dashboard build`
-- `dontpanic dashboard serve --once --no-watch`
+- `audit/codex-auditor-F004-i1.json`
+- `dashboard/tests/unit/architecture-f004.test.js`
+- `dashboard/tests/integration/architecture-f004-page.test.js`
+- `dashboard/tests/playwright/architecture.spec.js`

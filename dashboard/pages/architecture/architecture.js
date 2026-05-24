@@ -24,6 +24,7 @@ import {
   normalizeEnvelope,
   getFlowParticipants,
   layoutArchitectureGraph,
+  isMissingSelectedProject,
 } from '../../lib/architecture-logic.js';
 import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
@@ -40,20 +41,38 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     detailNodeId: null,
   };
   let _delegateBound = false;
+  let _drag = null; // active pan-drag: { startX, startY, startPanX, startPanY, vbW, vbH, rectW, rectH, moved }
+  let _suppressNextClick = false;
+  const PAN_KEY_STEP = 60; // viewBox units per arrow-key press
+  const DRAG_THRESHOLD_PX = 3;
 
   function render(state) {
     if (!_el) return;
     const selected = state && typeof state.selectedProject === 'string'
       ? state.selectedProject
       : ALL_PROJECTS_VALUE;
+    const byProject = state ? state.architectureViewStateByProject : null;
+    const fleetSummary = state ? state.fleetSummary : null;
     const raw = resolveArchitectureEnvelope({
       selectedProject: selected,
       single: state ? state.architectureViewState : null,
-      byProject: state ? state.architectureViewStateByProject : null,
+      byProject,
     });
-    _envelope = normalizeEnvelope(raw);
+    // F004 finding #1: when a concrete project is selected and the
+    // per-project cache is missing that entry, treat the envelope as
+    // absent so interactions (flow selection, node-detail, layout) do
+    // not fire against another project's data.
+    const missingForProject = isMissingSelectedProject({
+      selectedProject: selected,
+      byProject,
+    });
+    _envelope = missingForProject ? null : normalizeEnvelope(raw);
     _layout = _envelope ? layoutArchitectureGraph(_envelope) : null;
-    _el.innerHTML = renderArchitectureHTML(raw, { selectedProject: selected });
+    _el.innerHTML = renderArchitectureHTML(raw, {
+      selectedProject: selected,
+      byProject,
+      fleetSummary,
+    });
     // Reset interaction state — a new view-state envelope means the
     // previous selection/flow IDs are not guaranteed to exist anymore.
     _state = {
@@ -246,6 +265,87 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     canvas.dataset.zoom = String(z);
   }
 
+  function currentViewBoxDims() {
+    if (!_el) return null;
+    const canvas = _el.querySelector('[data-canvas]');
+    if (!canvas) return null;
+    const orig = canvas.getAttribute('data-original-viewbox') || canvas.getAttribute('viewBox');
+    if (!orig) return null;
+    const parts = orig.split(/\s+/).map(Number);
+    if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) return null;
+    const [, , w, h] = parts;
+    const z = _state.zoom || 1;
+    return { canvas, baseW: w, baseH: h, vbW: w / z, vbH: h / z };
+  }
+
+  function panBy(dxViewBox, dyViewBox) {
+    const dims = currentViewBoxDims();
+    if (!dims) return;
+    _state.pan = {
+      x: _state.pan.x + dxViewBox,
+      y: _state.pan.y + dyViewBox,
+    };
+    applyZoom();
+  }
+
+  function startDrag(ev) {
+    const dims = currentViewBoxDims();
+    if (!dims) return;
+    const rect = dims.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    _drag = {
+      startX: ev.clientX,
+      startY: ev.clientY,
+      startPanX: _state.pan.x,
+      startPanY: _state.pan.y,
+      vbW: dims.vbW,
+      vbH: dims.vbH,
+      rectW: rect.width,
+      rectH: rect.height,
+      moved: false,
+    };
+  }
+
+  function continueDrag(ev) {
+    if (!_drag) return;
+    const dx = ev.clientX - _drag.startX;
+    const dy = ev.clientY - _drag.startY;
+    if (!_drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    _drag.moved = true;
+    // Drag right → content shifts right → viewBox x decreases.
+    const vbDx = -dx * (_drag.vbW / _drag.rectW);
+    const vbDy = -dy * (_drag.vbH / _drag.rectH);
+    _state.pan = {
+      x: _drag.startPanX + vbDx,
+      y: _drag.startPanY + vbDy,
+    };
+    applyZoom();
+    if (typeof ev.preventDefault === 'function') ev.preventDefault();
+  }
+
+  function endDrag() {
+    if (!_drag) return;
+    if (_drag.moved) _suppressNextClick = true;
+    _drag = null;
+  }
+
+  function onWheel(ev) {
+    if (!_el) return;
+    const canvas = _el.querySelector('[data-canvas]');
+    if (!canvas) return;
+    const wrap = ev.target && typeof ev.target.closest === 'function'
+      ? ev.target.closest('[data-canvas-wrap]')
+      : null;
+    if (!wrap) return;
+    if (typeof ev.preventDefault === 'function') ev.preventDefault();
+    const dy = typeof ev.deltaY === 'number' ? ev.deltaY : 0;
+    if (dy === 0) return;
+    const factor = dy < 0 ? 1.1 : 1 / 1.1;
+    const next = _state.zoom * factor;
+    _state.zoom = Math.max(0.5, Math.min(4, next));
+    applyZoom();
+  }
+
   function resetView() {
     _state.zoom = 1;
     _state.pan = { x: 0, y: 0 };
@@ -253,6 +353,8 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     _state.search = '';
     _state.filters = { type: null, lane: null, edge: null };
     _state.detailNodeId = null;
+    _drag = null;
+    _suppressNextClick = false;
     if (_el) {
       const searchInput = _el.querySelector('[data-arch-search]');
       if (searchInput) searchInput.value = '';
@@ -297,12 +399,49 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     _el.addEventListener('keydown', onKeydown);
     _el.addEventListener('input', onInput);
     _el.addEventListener('change', onChange);
+    _el.addEventListener('mousedown', onMouseDown);
+    _el.addEventListener('mousemove', onMouseMove);
+    _el.addEventListener('mouseup', onMouseUp);
+    _el.addEventListener('mouseleave', onMouseUp);
+    _el.addEventListener('wheel', onWheel, { passive: false });
     _delegateBound = true;
+  }
+
+  function onMouseDown(ev) {
+    const t = ev.target;
+    if (!t || typeof t.closest !== 'function') return;
+    // Only drag-pan from the canvas wrap area. Allow drags that start on
+    // empty SVG, lane backgrounds, edges, or nodes — the click-suppress
+    // flag protects node click-to-detail from being triggered by a drag.
+    if (!t.closest('[data-canvas-wrap]')) return;
+    // Skip interactive controls inside the wrap (e.g. detail close).
+    if (t.closest('[data-detail-panel]') || t.closest('button')) return;
+    if (typeof ev.button === 'number' && ev.button !== 0) return;
+    startDrag(ev);
+  }
+
+  function onMouseMove(ev) {
+    if (!_drag) return;
+    continueDrag(ev);
+  }
+
+  function onMouseUp() {
+    endDrag();
   }
 
   function onClick(ev) {
     const t = ev.target;
     if (!t || typeof t.closest !== 'function') return;
+
+    // If the user just finished a drag-pan, swallow the synthetic click
+    // so it does not also open the detail panel for the node under the
+    // cursor.
+    if (_suppressNextClick) {
+      _suppressNextClick = false;
+      if (typeof ev.preventDefault === 'function') ev.preventDefault();
+      if (typeof ev.stopPropagation === 'function') ev.stopPropagation();
+      return;
+    }
 
     // Copy command (preserve F002 behavior).
     const copyBtn = t.closest('.arch-copy-btn');
@@ -362,6 +501,25 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       return;
     }
 
+    // F004 fleet view → open a project's map. The button updates the
+    // project selector via the existing shell helper (history + storage
+    // + active-page re-render) so the user lands on that project's
+    // architecture without us forcing a navigation.
+    const openBtn = t.closest('[data-arch-open-project]');
+    if (openBtn) {
+      const name = openBtn.dataset.archOpenProject || '';
+      if (name.length === 0) return;
+      const J = (typeof globalThis !== 'undefined' && globalThis.Jarvis) ? globalThis.Jarvis : null;
+      if (J && typeof J.setSelectedProject === 'function') {
+        J.setSelectedProject(name);
+      } else if (J && J.state) {
+        // Fallback: mutate state + re-render without the helper.
+        J.state.selectedProject = name;
+        render(J.state);
+      }
+      return;
+    }
+
     // Node click → detail panel.
     const nodeG = t.closest('.arch-node');
     if (nodeG) {
@@ -372,9 +530,38 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
   }
 
   function onKeydown(ev) {
-    if (ev.key !== 'Enter' && ev.key !== ' ') return;
     const t = ev.target;
     if (!t || typeof t.closest !== 'function') return;
+
+    // Arrow-key pan when the canvas wrap (or anything inside it that is
+    // not a focusable control) has focus. Skip if the user is typing in
+    // the search box or interacting with checkboxes/buttons.
+    if (
+      ev.key === 'ArrowUp'
+      || ev.key === 'ArrowDown'
+      || ev.key === 'ArrowLeft'
+      || ev.key === 'ArrowRight'
+    ) {
+      const wrap = t.closest('[data-canvas-wrap]');
+      if (!wrap) return;
+      const tag = (t.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'button') return;
+      const dims = currentViewBoxDims();
+      if (!dims) return;
+      const stepX = PAN_KEY_STEP * (dims.vbW / dims.baseW);
+      const stepY = PAN_KEY_STEP * (dims.vbH / dims.baseH);
+      let dx = 0;
+      let dy = 0;
+      if (ev.key === 'ArrowLeft') dx = -stepX;
+      else if (ev.key === 'ArrowRight') dx = stepX;
+      else if (ev.key === 'ArrowUp') dy = -stepY;
+      else if (ev.key === 'ArrowDown') dy = stepY;
+      ev.preventDefault();
+      panBy(dx, dy);
+      return;
+    }
+
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
     const nodeG = t.closest('.arch-node');
     if (nodeG) {
       ev.preventDefault();
