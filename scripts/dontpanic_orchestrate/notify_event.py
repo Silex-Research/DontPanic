@@ -28,7 +28,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 from dontpanic_orchestrate import notify, notify_discord
@@ -76,11 +76,33 @@ class NotifyEvent:
       plan_id: the plan whose volley emitted the event.
       feature_id: optional — None for plan-level events.
       body: markdown content rendered directly by all sinks.
-      action_link: optional file path / file:// URL pointing to where
-        the operator should look (INBOX.md, signoff.json, etc.).
-        REQUIRED when severity == 'escalation' — emit sites without a
-        link are caller bugs.
+      action_link: DEPRECATED alias for ``evidence_uri`` (plan 2026-05-24-004
+        D005). Optional file path / file:// URL pointing to where the
+        operator should look (INBOX.md, signoff.json, etc.). REQUIRED when
+        severity == 'escalation' — emit sites without a link are caller
+        bugs. New code should populate ``evidence_uri`` instead; both names
+        read the same underlying storage and remain in lock-step.
       timestamp: tz-aware UTC datetime.
+      inbox_event: the INBOX ``event=`` value used at the paired
+        :func:`inbox.append_event` call (plan 2026-05-24-004 D017). Acts as
+        the translation-table key for ``event_copy``. Populated at every
+        new emit site; existing emit sites populate where the INBOX event
+        name is known.
+      subtype, breaker_kind, iteration_count, feature_display_name,
+      aggregate_class, blocking, target_env, target_project: optional
+        first-class metadata fields (plan 2026-05-24-004 D004). All
+        default to ``None`` so existing emit sites continue to work
+        without populating them.
+      evidence_uri: preferred name for ``action_link`` (plan 2026-05-24-004
+        D005). Aliases ``action_link``; both fields read the same storage.
+      technical_metadata: long-tail kind-specific data per plan
+        2026-05-24-004 D017 — kept out of the first-class field set when
+        the value is only meaningful to one kind (verdict_mismatch's
+        ``narrative_verdict``/``structured_status``/``audit_path``;
+        defer_tripped's ``defer_gate``/``dispatch_class``;
+        volley_terminal's ``final_status``/``rounds``;
+        gate_state_reconciliation_failed's ``persisted_state_path``;
+        etc.). Empty dict by default.
     """
 
     kind: str
@@ -88,10 +110,42 @@ class NotifyEvent:
     plan_id: str
     feature_id: str | None
     body: str
-    action_link: str | None
-    timestamp: dt.datetime
+    action_link: str | None = None
+    timestamp: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
+    inbox_event: str | None = None
+    subtype: str | None = None
+    breaker_kind: str | None = None
+    iteration_count: int | None = None
+    feature_display_name: str | None = None
+    aggregate_class: str | None = None
+    blocking: bool | None = None
+    target_env: str | None = None
+    target_project: str | None = None
+    evidence_uri: str | None = None
+    technical_metadata: dict[str, str | int | bool | None] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
+        # D005 alias reconciliation: action_link and evidence_uri are two
+        # names for the same value. If both are provided they must agree;
+        # otherwise the unset side is back-filled so downstream sinks can
+        # read either name and get the same answer.
+        if self.action_link is not None and self.evidence_uri is not None:
+            if self.action_link != self.evidence_uri:
+                raise ValueError(
+                    "NotifyEvent: action_link and evidence_uri were both "
+                    f"provided with different values ({self.action_link!r} "
+                    f"!= {self.evidence_uri!r}). Pass only one — they are "
+                    "aliases for the same field."
+                )
+        elif self.evidence_uri is not None:
+            object.__setattr__(self, "action_link", self.evidence_uri)
+        elif self.action_link is not None:
+            object.__setattr__(self, "evidence_uri", self.action_link)
+
         if self.severity not in _VALID_SEVERITIES:
             raise ValueError(
                 f"NotifyEvent.severity must be one of {sorted(_VALID_SEVERITIES)}; "

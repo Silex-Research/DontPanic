@@ -304,6 +304,32 @@ def _reconcile_gate_state_or_raise(
             message=f"{exc.kind}: {exc.gate or exc.stage or 'see INBOX'}",
             subtitle=feature_id,
         )
+        # Plan 2026-05-24-004 F002 — Discord sink for the contradiction so
+        # cross-machine operators see the escalation. INBOX write above is
+        # the truth-of-record; this is advisory and fail-soft.
+        notify_event.dispatch_event(
+            notify_event.NotifyEvent(
+                kind="gate_state_reconciliation_failed",
+                severity=notify_event.SEVERITY_ESCALATION,
+                plan_id=plan_id,
+                feature_id=feature_id,
+                body=(
+                    f"**Gate-state contradiction** — `{exc.kind}` "
+                    f"(gate=`{exc.gate or '-'}`, stage=`{exc.stage or '-'}`). "
+                    f"See INBOX for full reconciliation report."
+                ),
+                evidence_uri=str(exc.persisted_state_path),
+                timestamp=dt.datetime.now(dt.timezone.utc),
+                inbox_event="gate_state_reconciliation_failed",
+                subtype=exc.kind,
+                technical_metadata={
+                    "gate": exc.gate or "",
+                    "stage": exc.stage or "",
+                    "persisted_state_path": str(exc.persisted_state_path),
+                },
+            ),
+            sinks=(notify_event.SINK_DISCORD,),
+        )
         raise
 
 
@@ -356,8 +382,10 @@ def _trip_breaker(
             plan_id=plan_id,
             feature_id=feature_id,
             body=f"**Breaker** `{kind.value}` — {reason[:300]}",
-            action_link=str(plan_dir / "INBOX.md"),
+            evidence_uri=str(plan_dir / "INBOX.md"),
             timestamp=dt.datetime.now(dt.timezone.utc),
+            inbox_event="breaker_tripped",
+            breaker_kind=kind.value,
         ),
         sinks=(notify_event.SINK_DISCORD,),
     )
@@ -370,6 +398,8 @@ def _emit_gate_paused_discord(
     *,
     pending_gates: list[str],
     stage: str = "general",
+    target_env: str | None = None,
+    target_project: str | None = None,
 ) -> None:
     """Plan 2026-05-01-002 F003 — Discord-only emit at every gate-pause site.
 
@@ -378,7 +408,12 @@ def _emit_gate_paused_discord(
     pause'). This helper adds the parallel Discord post so cross-machine
     operators see the same event. Always action_required severity (pauses
     are by definition operator-actionable). action_link points at the
-    plan's INBOX.md so operators can drill down."""
+    plan's INBOX.md so operators can drill down.
+
+    Plan 2026-05-24-004 F002: populates ``inbox_event='gate_hit'`` (the
+    INBOX event= value all gate-pause call sites use) and threads
+    ``subtype`` (stage), ``target_env``, ``target_project`` so the
+    translation table can render structured copy."""
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="gate_paused",
@@ -391,8 +426,12 @@ def _emit_gate_paused_discord(
                 f"Clear: `dontpanic approve {plan_id} <gate>` or "
                 f"`dontpanic resume {plan_id} --all`"
             ),
-            action_link=str(plan_dir / "INBOX.md"),
+            evidence_uri=str(plan_dir / "INBOX.md"),
             timestamp=dt.datetime.now(dt.timezone.utc),
+            inbox_event="gate_hit",
+            subtype=stage,
+            target_env=target_env,
+            target_project=target_project,
         ),
         sinks=(notify_event.SINK_DISCORD,),
     )
@@ -580,8 +619,13 @@ def _emit_budget_kind_specific_event(
                     f"`python -m dontpanic_orchestrate calibrate-claude "
                     f"--window {bd_result.window} --dashboard-pct N`."
                 ),
-                action_link=str(plan_dir / "INBOX.md"),
+                evidence_uri=str(plan_dir / "INBOX.md"),
                 timestamp=dt.datetime.now(dt.timezone.utc),
+                inbox_event="calibration_required",
+                technical_metadata={
+                    "agent": bd_result.agent or "",
+                    "window": bd_result.window or "",
+                },
             ),
             sinks=(notify_event.SINK_DISCORD,),
         )
@@ -997,6 +1041,8 @@ def dispatch_single_agent(
             feature_id,
             pending_gates=list(gate_check.unmet),
             stage="general",
+            target_env=effective_env,
+            target_project=effective_project,
         )
         raise PausedOnGate(
             f"single-agent paused on gates {gate_check.unmet}; "
@@ -1127,6 +1173,12 @@ def _emit_volley_terminal(
         if result.final_status == "signed_off"
         else notify_event.SEVERITY_ACTION_REQUIRED
     )
+    try:
+        _signoff_display_name = (
+            loaded.feature(feature_id).get("description", "") if feature_id else ""
+        )
+    except KeyError:
+        _signoff_display_name = ""
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="signoff" if result.final_status == "signed_off" else "volley_terminal",
@@ -1134,8 +1186,15 @@ def _emit_volley_terminal(
             plan_id=loaded.plan_id,
             feature_id=feature_id,
             body=(f"**{result.final_status}** — {result.reason[:300]}\nrounds: {result.rounds}"),
-            action_link=str(plan_dir / "signoff.json"),
+            evidence_uri=str(plan_dir / "signoff.json"),
             timestamp=dt.datetime.now(dt.timezone.utc),
+            inbox_event="volley_terminal",
+            feature_display_name=_signoff_display_name or None,
+            iteration_count=result.rounds,
+            technical_metadata={
+                "final_status": result.final_status,
+                "rounds": result.rounds,
+            },
         ),
         sinks=(notify_event.SINK_DISCORD,),
     )
@@ -1458,6 +1517,8 @@ def dispatch_volley(
             feature_id,
             pending_gates=list(gate_check.unmet),
             stage="upfront",
+            target_env=effective_env,
+            target_project=effective_project,
         )
         print(f"[volley] PAUSED on gates: {gate_check.unmet}")
         return VolleyResult(
@@ -1538,6 +1599,10 @@ def dispatch_volley(
             implementer=impl_name,
             auditor=aud_name,
         )
+        try:
+            _vs_display_name = loaded.feature(feature_id).get("description", "") or None
+        except KeyError:
+            _vs_display_name = None
         notify_event.dispatch_event(
             notify_event.NotifyEvent(
                 kind="volley_start",
@@ -1547,6 +1612,15 @@ def dispatch_volley(
                 body=(f"**Volley start** — `{impl_name}` (impl) + `{aud_name}` (aud), cap={cap}"),
                 action_link=None,
                 timestamp=volley_start,
+                inbox_event="volley_start",
+                iteration_count=cap,
+                feature_display_name=_vs_display_name,
+                target_env=effective_env,
+                target_project=effective_project,
+                technical_metadata={
+                    "implementer": impl_name,
+                    "auditor": aud_name,
+                },
             ),
         )
 
@@ -1680,6 +1754,8 @@ def dispatch_volley(
                                 feature_id,
                                 pending_gates=list(pre_impl_info.pending),
                                 stage="pre_impl",
+                                target_env=effective_env,
+                                target_project=effective_project,
                             )
                             print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
                             return VolleyResult(
@@ -1857,6 +1933,41 @@ def dispatch_volley(
                         ),
                         subtitle=feature_id,
                     )
+                    # Plan 2026-05-24-004 F002 — Discord sink advisory before the
+                    # supervisor re-raises VerdictMismatchError. INBOX write
+                    # above is the truth-of-record.
+                    try:
+                        _vm_display_name = (
+                            loaded.feature(feature_id).get("description", "") or None
+                        )
+                    except KeyError:
+                        _vm_display_name = None
+                    notify_event.dispatch_event(
+                        notify_event.NotifyEvent(
+                            kind="verdict_mismatch",
+                            severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                            plan_id=loaded.plan_id,
+                            feature_id=feature_id,
+                            body=(
+                                f"**Verdict mismatch** — narrative=`{mismatch.narrative_verdict}` "
+                                f"vs structured=`{mismatch.structured_status}` "
+                                f"(iter {iteration})."
+                            ),
+                            evidence_uri=str(mismatch.audit_path),
+                            timestamp=dt.datetime.now(dt.timezone.utc),
+                            inbox_event="verdict_mismatch",
+                            subtype=mismatch.structured_status,
+                            iteration_count=iteration,
+                            feature_display_name=_vm_display_name,
+                            technical_metadata={
+                                "narrative_verdict": mismatch.narrative_verdict,
+                                "structured_status": mismatch.structured_status,
+                                "audit_path": str(mismatch.audit_path),
+                                "iteration": iteration,
+                            },
+                        ),
+                        sinks=(notify_event.SINK_DISCORD,),
+                    )
                     raise mismatch
 
                 print(f"[volley] iter={iteration} auditor verdict: {aud_status}")
@@ -1920,6 +2031,8 @@ def dispatch_volley(
                             feature_id,
                             pending_gates=list(pre_merge_info.pending),
                             stage="pre_merge",
+                            target_env=effective_env,
+                            target_project=effective_project,
                         )
                         print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
                         return VolleyResult(
@@ -1951,6 +2064,12 @@ def dispatch_volley(
                             architecture_regen_hook as _arch_regen_hook,
                         )
 
+                        try:
+                            _arch_display_name = (
+                                loaded.feature(feature_id).get("description", "") or None
+                            )
+                        except KeyError:
+                            _arch_display_name = None
                         _arch_regen_hook.maybe_regen_after_commit(
                             plan_dir=loaded.plan_dir,
                             plan_id=loaded.plan_id,
@@ -1961,6 +2080,7 @@ def dispatch_volley(
                                 else None
                             ),
                             repo_root=registry_repo_root,
+                            feature_display_name=_arch_display_name,
                         )
                     except Exception as _arch_exc:  # noqa: BLE001 — never crash terminal
                         print(f"[volley] architecture regen hook skipped: {_arch_exc}")
@@ -2118,6 +2238,41 @@ def dispatch_volley(
                             iteration=str(iteration + 1),
                             original_verdict="blocked",
                         )
+                        # Plan 2026-05-24-004 F002 — Discord sink for the
+                        # reconciliation. INBOX above is the truth-of-record.
+                        try:
+                            _vbr_display_name = (
+                                loaded.feature(feature_id).get("description", "") or None
+                            )
+                        except KeyError:
+                            _vbr_display_name = None
+                        notify_event.dispatch_event(
+                            notify_event.NotifyEvent(
+                                kind="verdict_blocked_reconciled",
+                                severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                                plan_id=loaded.plan_id,
+                                feature_id=feature_id,
+                                body=(
+                                    "**Verdict reconciled** — auditor said "
+                                    f"`blocked` but findings classify as "
+                                    f"`{classification.aggregate.value}` "
+                                    f"(blocking={classification.blocking}). "
+                                    "Promoted to "
+                                    "`stopped_environmental_blocker`."
+                                ),
+                                evidence_uri=str(loaded.plan_dir / "INBOX.md"),
+                                timestamp=dt.datetime.now(dt.timezone.utc),
+                                inbox_event="verdict_blocked_reconciled",
+                                aggregate_class=classification.aggregate.value,
+                                blocking=bool(classification.blocking),
+                                iteration_count=iteration + 1,
+                                feature_display_name=_vbr_display_name,
+                                technical_metadata={
+                                    "original_verdict": "blocked",
+                                },
+                            ),
+                            sinks=(notify_event.SINK_DISCORD,),
+                        )
                         transcript.append_terminal(
                             loaded.plan_dir,
                             feature_id,
@@ -2192,6 +2347,38 @@ def dispatch_volley(
                             blocking=str(env_classification.blocking).lower(),
                             feature_id=feature_id,
                             iteration=str(iteration + 1),
+                        )
+                        # Plan 2026-05-24-004 F002 — Discord sink for the
+                        # environmental short-circuit. INBOX above is the
+                        # truth-of-record.
+                        try:
+                            _eb_display_name = (
+                                loaded.feature(feature_id).get("description", "") or None
+                            )
+                        except KeyError:
+                            _eb_display_name = None
+                        notify_event.dispatch_event(
+                            notify_event.NotifyEvent(
+                                kind="environmental_blocker_short_circuit",
+                                severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                                plan_id=loaded.plan_id,
+                                feature_id=feature_id,
+                                body=(
+                                    "**Environmental blocker** — all round "
+                                    f"{iteration + 1} findings classify as "
+                                    "`environmental_reproduction_failure`. "
+                                    "Volley terminating without another paid "
+                                    "implementer round."
+                                ),
+                                evidence_uri=str(loaded.plan_dir / "INBOX.md"),
+                                timestamp=dt.datetime.now(dt.timezone.utc),
+                                inbox_event="environmental_blocker_short_circuit",
+                                aggregate_class=env_classification.aggregate.value,
+                                blocking=bool(env_classification.blocking),
+                                iteration_count=iteration + 1,
+                                feature_display_name=_eb_display_name,
+                            ),
+                            sinks=(notify_event.SINK_DISCORD,),
                         )
                         env_reason = (
                             f"environmental blocker — round {iteration + 1} auditor "
@@ -2308,6 +2495,35 @@ def dispatch_volley(
                         aggregate=classification.aggregate.value,
                         blocking=str(classification.blocking).lower(),
                         feature_id=feature_id,
+                    )
+                    # Plan 2026-05-24-004 F002 — Discord sink advisory. INBOX
+                    # above is the truth-of-record.
+                    try:
+                        _np_display_name = (
+                            loaded.feature(feature_id).get("description", "") or None
+                        )
+                    except KeyError:
+                        _np_display_name = None
+                    notify_event.dispatch_event(
+                        notify_event.NotifyEvent(
+                            kind="no_progress_classification",
+                            severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                            plan_id=loaded.plan_id,
+                            feature_id=feature_id,
+                            body=(
+                                "**No-progress taxonomy** — aggregate=`"
+                                f"{classification.aggregate.value}` "
+                                f"(blocking={classification.blocking}). "
+                                f"Recommended: {classification.recommended_action}"
+                            ),
+                            evidence_uri=str(loaded.plan_dir / "INBOX.md"),
+                            timestamp=dt.datetime.now(dt.timezone.utc),
+                            inbox_event="no_progress_classification",
+                            aggregate_class=classification.aggregate.value,
+                            blocking=bool(classification.blocking),
+                            feature_display_name=_np_display_name,
+                        ),
+                        sinks=(notify_event.SINK_DISCORD,),
                     )
                     np_reason = (
                         f"{np_reason}\n"
