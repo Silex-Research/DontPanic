@@ -102,7 +102,8 @@ Scope:
   dashboard, architecture, README, and changelog updates are not left to memory.
 - Produce JSON output for agents and text output for humans.
 
-Status: lockable after operator review.
+Status: completed by child plan
+`2026-05-23-007-feat-plan-intake-readiness-v0` on 2026-05-24.
 
 ### V1 — Operator Decision Queue
 

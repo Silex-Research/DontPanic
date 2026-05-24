@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T01:08:23Z",
+  "generated_at": "2026-05-24T01:11:10Z",
   "modules": [
     {
       "imports": [],
@@ -2998,7 +2998,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-24T01:08:23Z",
+    "computed_at": "2026-05-24T01:11:10Z",
     "file_hashes": {
       "claude/shared/VERSION": "c92df6bdde330be219d62f48ec6490b01889436f2f59027aab200e74de619168",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -3137,7 +3137,7 @@
       "docs/plans/2026-05-23-004-feat-operator-console-v0/plan.md": "97497a7a4e4c0ee94f6f3b5e25d9dfdbc91e5b83656b2211061d1f6e00ea97d3",
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json": "693b0604c73c645a98badb9ecfe03a2596dbdc750a1ccf3d6e59e88f44335c2a",
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/plan.md": "8554a1fd541df1003e45c2f31711f25e4a8f2fecfff507581c1ff5667edf1706",
-      "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "3ff1e1a75bfa1a7d08c44293912525e109de54e9e6065a2f5113dbe9fbc344d4",
+      "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "aa32fc481272776295ad7e7bf6359c21ff21b24649d7ae8002ec2632289fbe62",
       "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "148e8fab00b567044f0f7630f1474202fee589d85726209cbce04f9a160d8ce4",
       "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "468e5462c551bf556cab443bfeff07baefb6183ea94fa70ab0eb20519e36b44b",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
@@ -3396,7 +3396,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "1590ade7972c158e457c8924c183e98a15064c265caac3dead1589004a4b1230",
+    "file_hashes_root": "5344846f395a59eb25fa4589412004bc72812105abb865030602929e0941657b",
     "files_count": 395
   }
 }
