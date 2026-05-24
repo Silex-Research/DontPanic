@@ -1,0 +1,5 @@
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py -q
+
+Result:
+
+55 passed in 0.32s

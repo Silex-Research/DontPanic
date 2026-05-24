@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+  "audit_id": "2026-05-23-007-feat-plan-intake-readiness-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T00:13:42Z",
+  "completed_at": "2026-05-24T00:16:31Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-23-007-feat-plan-intake-readiness-v0-b6houl64 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 170987 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1003228,
+    "tokens_out": 12154,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is structurally correct: summary says `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` has `env=dev`, `project=null`, `commands_run=[]`; no forbidden command shapes were present.\n\nFINDING (high, correctness): plan-lock secondary messaging is not implemented. Evidence: `release_impact.analyze(... changed_paths=...)` exists, but `_plan_lock_main` in `scripts/dontpanic_orchestrate/cli.py:2020` through `:2127` never calls it or gathers git diff paths; `rg` found release-impact wiring only in `planning_readiness.py` / `dontpanic next`. Recommendation: add best-effort, non-blocking `dontpanic plan lock` output that uses git diff paths when available, without writing a v0 sidecar.\n\nFINDING (medium, correctness): glob-style draft intent misses representative docs paths. Evidence: `analyze_plan_intent(allowed_paths=[\"docs/**\"])` returned no surfaces and `internal_only=True`, despite the test matrix claiming `Allowed_paths=docs/** -> root_changelog + readme suggestions`; the code passes globs straight into `analyze_paths` at `release_impact.py:443-455`. Recommendation: normalize/expand broad `allowed_paths` globs through explicit intent rules, and add an assertion for `docs/**`.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-status HEAD~1\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpa",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-status HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import release_impact; cases={'scripts/dontpanic_orchestrate/cli.py':('root_changelog','cli_help'),'claude/shared/schemas/v1.0/plan.schema.json':('shared_changelog','schemas'),'dashboard/index.html':('root_changelog','dashboard'),'capabilities/agent-claude-cli.json':('root_changelog','capability_manifest'),'.github/social-preview.png':('root_changelog','public_metadata')}; [(__import__('builtins').setattr(__import__('builtins'), '_ids', release_impact.analyze_paths([p]).surface_ids()), all(s in _ids for s in expected) or (_ for _ in ()).throw(AssertionError((p, expected, _ids)))) for p, expected in cases.items()]; assert release_impact.analyze_paths(['scripts/dontpanic_orchestrate/circuit_breakers.py']).internal_only; print('release_impact direct checks passed')\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate.cli next --scope repo --plans-root docs/plans --format json --ready-only"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "plan-lock secondary messaging is not implemented. Evidence: `release_impact.analyze(... changed_paths=...)` exists, but `_plan_lock_main` in `scripts/dontpanic_orchestrate/cli.py:2020` through `:2127` never calls it or gathers git diff paths; `rg` found release-impact wiring only in `planning_readiness.py` / `dontpanic next`. Recommendation: add best-effort, non-blocking `dontpanic plan lock` output that uses git diff paths when available, without writing a v0 sidecar.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "glob-style draft intent misses representative docs paths. Evidence: `analyze_plan_intent(allowed_paths=[\"docs/**\"])` returned no surfaces and `internal_only=True`, despite the test matrix claiming `Allowed_paths=docs/** -> root_changelog + readme suggestions`; the code passes globs straight into `analyze_paths` at `release_impact.py:443-455`. Recommendation: normalize/expand broad `allowed_paths` globs through explicit intent rules, and add an assertion for `docs/**`. Checks run: $ git status --",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

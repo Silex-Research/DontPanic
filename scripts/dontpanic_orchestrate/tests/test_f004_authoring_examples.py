@@ -19,6 +19,15 @@ def _doc_text() -> str:
     return AUTHORING.read_text(encoding="utf-8")
 
 
+def _discover_example_names() -> list[str]:
+    names = re.findall(
+        r"<!-- dontpanic-plan-example: ([a-z0-9-]+) -->",
+        _doc_text(),
+    )
+    assert names, "no dontpanic-plan-example markers found in AUTHORING_PLANS.md"
+    return names
+
+
 def _extract_example(name: str) -> dict[str, str]:
     pattern = (
         rf"<!-- dontpanic-plan-example: {re.escape(name)} -->\n"
@@ -62,7 +71,8 @@ def test_authoring_doc_has_required_sections_and_non_goal() -> None:
 
 
 def test_examples_extract_and_load_with_plan_loader(tmp_path: Path) -> None:
-    for name in ["minimum-valid", "feature-add", "bug-fix"]:
+    names = _discover_example_names()
+    for name in names:
         plan_dir = _materialize(tmp_path, name)
         loaded = plan_loader.load(plan_dir)
         assert loaded.plan_id == plan_dir.name
@@ -70,7 +80,7 @@ def test_examples_extract_and_load_with_plan_loader(tmp_path: Path) -> None:
 
 
 def test_example_decisions_are_valid_json_lines() -> None:
-    for name in ["minimum-valid", "feature-add", "bug-fix"]:
+    for name in _discover_example_names():
         files = _extract_example(name)
         decisions = files["decisions.jsonl"].strip().splitlines()
         assert decisions

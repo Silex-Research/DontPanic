@@ -1,0 +1,6 @@
+Sanitization evidence for plan 2026-05-23-007.
+
+No secret values are captured in the release-impact advisory artifacts. The
+F003 test `test_no_secret_values_in_advisory_text` verifies advisory output
+does not include common secret prefixes such as sk-, AIzaSy, AKIA, ghp_, or
+Bearer.

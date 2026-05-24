@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-23T23:48:36Z",
+  "feature_id": "F002",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "the supplied implementer audit does not substantiate completion. Evidence: `claude-implementer-F002-i1.json` says `DISPATCH TIMED OUT after 600s`, captured 0 b…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "required dogfood evidence is still missing. Evidence: no `dontpanic-next-real-inventory-output.json` exists under the plan directory, while acceptance item 11…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "test_coverage",
+      "issue_excerpt": "the new malformed-plan test appears internally inconsistent and should fail once runnable. Evidence: the test expects a no-`features.json` plan to emit `load_e…",
+      "rationale": "severity=high, category=test_coverage — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

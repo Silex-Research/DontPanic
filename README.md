@@ -186,6 +186,7 @@ and agents a shared operating surface:
 | Capability | What it solves | Command surface |
 |---|---|---|
 | Plan lifecycle | Turns vague work into a locked, auditable contract | `dontpanic plan lock`, `plan audit`, `plan close` |
+| Planning readiness | Shows which plans/features are ready, blocked, or risky to run in parallel | `dontpanic next` |
 | Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
 | Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
 | Local dashboard | Shows What Now, status, capabilities, gates, warnings, and project scope | `dontpanic dashboard build`, `open`, `serve` |
@@ -193,6 +194,7 @@ and agents a shared operating surface:
 | Capability readiness | Shows which external integrations are ready, missing setup, or blocked | `dontpanic capabilities status`, `setup` |
 | Install reconciliation | Detects stale local setup after the platform evolves | `dontpanic reconcile baseline`, `reconcile check` |
 | Architecture map | Generates a visual map and detects drift after manual edits | `dontpanic architecture regen`, `status`, `diff` |
+| Release impact advisory | Warns when public docs, changelog, schemas, dashboards, or onboarding may need updates | `dontpanic next`, `dontpanic plan lock` |
 | Agent access | Lets Claude Code, Cursor, OpenClaw, Codex, and MCP clients call DontPanic safely | `dontpanic manifest`, `mcp serve` |
 | State projection | Exposes read-only status for dashboards, agents, and adapters | `dontpanic state snapshot`, `state export-dashboard` |
 
@@ -324,6 +326,19 @@ New plans live under `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `plan.md`,
 python3 claude/shared/schemas/v1.0/validate.py docs/plans/<plan-id>/
 dontpanic plan lock docs/plans/<plan-id>/
 ```
+
+Before you dispatch, ask DontPanic what is actually ready:
+
+```bash
+dontpanic next
+dontpanic next --format=json
+```
+
+`dontpanic next` reads plan dependencies, feature dependencies, gate state,
+capability requirements, active supervisors, and release-impact signals. It
+does not dispatch anything. It explains which work is ready, which work is
+blocked, where parallel work may collide, and which public docs or changelog
+surfaces may need attention before merge.
 
 Preview dispatch:
 
