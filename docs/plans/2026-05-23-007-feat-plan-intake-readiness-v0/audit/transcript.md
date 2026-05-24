@@ -23,3 +23,11 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 
 **2026-05-23T23:12:17Z** — feature **F001** terminal: `signed_off` after 1 round(s) — auditor signed off
 
+| 2026-05-23T23:32:16Z | F002 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-05-23T23:35:17Z | F002 | i0 | codex / auditor | needs_changes | 1,575,888 / 13,289 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+| 2026-05-23T23:45:17Z | F002 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |
+| 2026-05-23T23:48:36Z | F002 | i1 | codex / auditor | needs_changes | 1,615,823 / 12,959 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
+
+**2026-05-23T23:48:36Z** — feature **F002** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

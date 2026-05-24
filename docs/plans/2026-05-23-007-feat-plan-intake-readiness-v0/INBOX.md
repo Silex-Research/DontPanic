@@ -251,3 +251,141 @@ audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
 reason: auditor signed off
 
 ===
+---
+timestamp: 2026-05-23T23:22:15Z
+event: volley_start
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-23T23:22:15Z
+event: volley_start
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-23T23:32:16Z
+event: error
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-23T23:45:17Z
+event: error
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+agent: claude
+role: implementer
+iteration: 1
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 1 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-23T23:48:36Z
+event: no_progress_classification
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F002
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: the supplied implementer audit does not substantiate completion. Evidence: `claude-implementer-F002-i1.json` says `DISPATCH TIMED OUT after 600s`, captured 0 b…
+  - [implementation_defect] severity=high, category=test_coverage: required dogfood evidence is still missing. Evidence: no `dontpanic-next-real-inventory-output.json` exists under the plan directory, while acceptance item 11…
+  - [implementation_defect] severity=high, category=test_coverage: the new malformed-plan test appears internally inconsistent and should fail once runnable. Evidence: the test expects a no-`features.json` plan to emit `load_e…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-23-007-feat-plan-intake-readiness-v0 F002 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+---
+timestamp: 2026-05-23T23:48:36Z
+event: breaker_tripped
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-23-007-feat-plan-intake-readiness-v0 breaker:no_progress` or `jarvis resume 2026-05-23-007-feat-plan-intake-readiness-v0 --all`.
+
+===
+---
+timestamp: 2026-05-23T23:48:37Z
+event: volley_terminal
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+---
+timestamp: 2026-05-23T23:56:21Z
+event: gate_cleared
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-05-23T23:58:00Z
+event: feature_operator_resolved
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F002
+reason_class: operator_judgment
+---
+
+Operator closed feature F002 as operator_resolved (class=operator_judgment).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-23-007-feat-plan-intake-readiness-v0.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

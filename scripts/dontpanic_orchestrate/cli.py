@@ -2810,6 +2810,107 @@ def _setup_main(argv: list[str]) -> int:
     return 0
 
 
+def _next_main(argv: list[str]) -> int:
+    """Plan 2026-05-23-007 F002 — read-only parallel-readiness recommender.
+
+    Scans active/draft plan directories (single repo or every registered
+    project under fleet scope), classifies each not-yet-passing feature as
+    ready or not-ready, and prints either a human-readable text summary
+    or the JSON envelope agents consume.
+
+    The command never writes files. ``--include-not-ready`` is on by
+    default so operators see the blockers next to the unblocked work;
+    pass ``--ready-only`` to suppress the not-ready section.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic next",
+        description=(
+            "Recommend ready-to-dispatch features (read-only). Repo scope "
+            "analyzes one plans root; fleet scope aggregates per-project "
+            "analyses from the project registry."
+        ),
+    )
+    parser.add_argument(
+        "--scope",
+        choices=["repo", "fleet"],
+        default="repo",
+        help="repo (default) analyzes a single plans root; fleet aggregates "
+        "every active registered project.",
+    )
+    parser.add_argument(
+        "--plans-root",
+        type=Path,
+        default=None,
+        help="(repo scope) override the plans root; defaults to "
+        "<cwd-project>/docs/plans or ./docs/plans.",
+    )
+    parser.add_argument(
+        "--max-parallel",
+        type=int,
+        default=0,
+        help="cap on candidate_commands[]. 0 (default) = include every "
+        "ready item.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="output format; text is human-readable, json is the agent "
+        "handoff shape.",
+    )
+    parser.add_argument(
+        "--include-not-ready",
+        dest="include_not_ready",
+        action="store_true",
+        default=True,
+        help="(default) include the not-ready list and the reasons.",
+    )
+    parser.add_argument(
+        "--ready-only",
+        dest="include_not_ready",
+        action="store_false",
+        help="suppress the not-ready section.",
+    )
+    args = parser.parse_args(argv)
+
+    # Imported here so the planning_readiness module is only loaded when
+    # the command is invoked (it pulls in plan_loader's schema discovery).
+    from dontpanic_orchestrate import planning_readiness
+
+    if args.scope == "fleet":
+        report = planning_readiness.analyze_fleet(
+            max_parallel=args.max_parallel,
+            include_not_ready=args.include_not_ready,
+        )
+    else:
+        if args.plans_root is not None:
+            plans_root = args.plans_root.expanduser().resolve()
+        else:
+            # Resolve cwd-project plans_dir, else fall back to ./docs/plans.
+            cwd = Path.cwd().resolve()
+            cwd_project = project_config.find_project_for_plan_dir(cwd)
+            if cwd_project is not None:
+                proj_path = cwd_project[0]
+                cfg = project_config.load_project_config(proj_path)
+                plans_dir = (
+                    cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+                )
+                plans_root = (proj_path / plans_dir).resolve()
+            else:
+                plans_root = (cwd / "docs" / "plans").resolve()
+        report = planning_readiness.analyze_repo(
+            plans_root,
+            max_parallel=args.max_parallel,
+            include_not_ready=args.include_not_ready,
+        )
+
+    if args.format == "json":
+        print(planning_readiness.render_json(report))
+    else:
+        print(planning_readiness.render_text(report), end="")
+    return 0
+
+
 def _print_top_level_help(*, file) -> None:
     print(
         """usage: dontpanic <command> [args]
@@ -2830,6 +2931,7 @@ Public-alpha command surface:
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
   dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
+  next                          Read-only parallel-readiness recommender (text/JSON, repo|fleet)
   state snapshot|export-dashboard Read-only state projection for dashboards, agents, and adapters
   plan lock|audit|close          Goal-governed plan lifecycle gates
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
@@ -2932,6 +3034,8 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.dashboard import main as _dashboard_main
 
         return _dashboard_main(raw[1:])
+    if raw and raw[0] == "next":
+        return _next_main(raw[1:])
 
     p = argparse.ArgumentParser(prog="dontpanic", description=__doc__)
     p.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path")

@@ -64,10 +64,31 @@
         "Dogfood the command against the current DontPanic active plan inventory and save the JSON output as evidence."
       ],
       "acceptance": "(1) `dontpanic next --format=json` returns schema_version, generated_at, scope, ready[], not_ready[], warnings[], and candidate_commands[]. (2) A fixture plan with F001/F002 independent features recommends both when max-parallel >=2. (3) A fixture plan with F002 depends_on F001 does not recommend F002 until F001 passes true. (4) A plan whose frontmatter dependencies point at an incomplete plan is not ready and explains the dependency. (5) Active-supervisor/path-overlap fixtures produce precision-biased advisory collision warnings without suppressing unrelated ready work. (6) Known gate/breaker/budget state surfaces as a warning or not-ready reason when available. (7) Fleet scope aggregates per-project recommendations and labels project identity; it does not claim cross-project scheduling. (8) Text output is human-readable and includes exact next commands. (9) The command never writes files. (10) Tests cover at least 10 readiness cases. (11) Evidence includes `dontpanic-next-real-inventory-output.json` generated against the current DontPanic plan inventory.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/dontpanic-next-real-inventory-output.json",
+          "note": "Real DontPanic inventory dogfood output from `dontpanic next --format=json`."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py",
+          "note": "Targeted readiness recommender tests passed: 22 passed."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-23T23:58:00Z"
     },
     {
       "id": "F003",

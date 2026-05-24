@@ -2,23 +2,45 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "docs/AUTHORING_PLANS.md",
+      "path": "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/test_f004_authoring_examples.py",
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/INBOX.md",
-    "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/audit/",
-    "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl",
-    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md",
-    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/",
-    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json",
-    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-1-implementer.json"
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/codex-auditor-F002-i1.json",
+    "scripts/dontpanic_orchestrate/planning_readiness.py",
+    "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
