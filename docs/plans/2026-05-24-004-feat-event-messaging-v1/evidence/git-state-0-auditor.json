@@ -1,0 +1,89 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "dashboard/README.md",
+      "status": "M"
+    },
+    {
+      "path": "dashboard/tests/scripts/generate-f004-snapshots.mjs",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/closeout-memo.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/dashboard-sanitization-clean.log",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-core-nav-snapshot.html",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-health-empty-state-snapshot.html",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-needs-attention-snapshot.html",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-preferences-snapshot.html",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-tools-setup-snapshot.html",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-24-003-infra-dashboard-platform-roadmap-v1/events.jsonl",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/audit/codex-auditor-F005-i0.json",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/claude-design-v3-used-vs-deferred.md",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/dashboard-ui-tests.log",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/dashboard-value-language-copy-map.md",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/future-surfaces-contract.md",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/goal-governance/post_impl/",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-fleet-health-snapshot.html",
+    "docs/plans/2026-05-24-001-feat-dashboard-value-language-ia-v0/evidence/snapshots/dashboard-fleet-home-snapshot.html",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/command_validation.py",
+    "scripts/dontpanic_orchestrate/event_copy.py",
+    "scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
+    "scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

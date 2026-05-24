@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-24-004-feat-event-messaging-v1",
+  "audit_id": "2026-05-24-004-feat-event-messaging-v1#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-7[1m]",
+  "iteration": 1,
+  "started_at": "2026-05-24T14:37:23Z",
+  "completed_at": "2026-05-24T14:44:35Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/codex-auditor-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-004-feat-event-messaging-v1-aen4gz6k target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4046 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 4611358,
+    "tokens_out": 23513,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F001] All twelve cases now match the real CLI behavior. Each finding is addressed:\n\n**Finding 1 (high, correctness — bare `resume` + missing `--child`)**: Added `mutex_required` field to `SubcommandSpec` so `resume <plan>` now fails without `--gate` or `--all` (matching cli.py:556-561). Added a gate-form dispatch inside `validate_command_tokens` so `approve <plan> pre_resume_after_child` routes to a dedicated spec that requires `--child` (matching cli.py:245+422), and the bare-suffix form `pre_resume_after_child:CHILD` is refused with a directive (matching cli.py:247-258).\n\n**Finding 2 (high, correctness — incomplete/inaccurate vocabulary)**: Replaced the bare `_VOCABULARY[\"mcp\"] = SubcommandSpec()` with `_MCP_SPEC` requiring `serve` (matching mcp_server.py:1000-1018). Expanded `_ARCHITECTURE_SPEC` to include `diff` and `hook` with their real flag surface (architecture.py:694-726). Expanded `_RECONCILE_SPEC` to add `check` (reconcile.py:716). Added `--overwrite` to `quota-caps init` (cli.py:874). Expanded `_DASHBOARD_SPEC` serve to accept `--host` and the rest of dashboard.py:build_parser. Expanded `_PROJECTS_SPEC` and added `_MANIFEST_SPEC` with real per-sub flags.\n\n**Finding 3 (medium, test_coverage — duplicated intended vocab)**: Added eleven new fixtures targeting real command surfaces: `test_bare_resume_fails`, `test_approve_pre_resume_after_child_missing_child_fails`, `test_approve_pre_resume_after_child_bare_suffix_fails`, `test_architecture_diff_passes`, `test_architecture_",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/sanitization_check.py scripts/dontpanic_orchestrate/command_validation.py scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.command_validation import validate_command_tokens as v; ...\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

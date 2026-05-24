@@ -1,0 +1,17 @@
+{
+  "staged": [],
+  "unstaged_modified": [],
+  "untracked": [
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-1-implementer.json",
+    "scripts/dontpanic_orchestrate/command_validation.py",
+    "scripts/dontpanic_orchestrate/event_copy.py",
+    "scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
+    "scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}
