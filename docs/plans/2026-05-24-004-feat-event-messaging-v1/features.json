@@ -147,10 +147,21 @@
         "Final regression sweep: existing notify_discord, notify, inbox, operator_console tests still pass; new tests added in F001-F004 pass; snapshot suite passes."
       ],
       "acceptance": "(1) Snapshot fixtures pinned per (live or dashboard_action event_kind) \u00d7 (channels it renders to); cross-channel parity snapshots for the six highest-value kinds cover all four channels. (2) Authoring guide committed at docs/event-messaging-authoring-guide.md (or equivalent named location). (3) CHANGELOG entry committed; product-facing format change documented. (4) Sanitization sweep over all fixture content passes (no leaked secrets in pinned snapshots). (5) Existing tests pass unchanged; new tests pass; snapshot suite passes. (6) Plan ready for pre_merge audit.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo-F005.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T23:16:41Z"
     }
   ]
 }

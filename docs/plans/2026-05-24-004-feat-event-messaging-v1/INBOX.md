@@ -753,3 +753,157 @@ auditor: codex
 Volley begins: claude (impl) + codex (aud), max_iterations=3
 
 ===
+---
+timestamp: 2026-05-24T23:13:49Z
+event: verdict_blocked_reconciled
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+aggregate: environmental_reproduction_failure
+blocking: false
+feature_id: F005
+iteration: 2
+original_verdict: blocked
+---
+
+Auditor returned `audit_status=blocked` but every finding classified as advisory-only via the v3 taxonomy. The supervisor refuses to trust the verdict string alone when the underlying findings are non-substantive.
+
+Aggregate class: environmental_reproduction_failure
+Blocking: False
+Recommended action: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Terminal promoted from `blocked` to `stopped_environmental_blocker` (matches F003 ENVIRONMENTAL_BLOCKER semantics — operator clears via the normal `dontpanic approve <plan> breaker:environmental_blocker` flow rather than manual `close --operator-resolved`).
+
+Auditor verdict taxonomy [environmental_reproduction_failure] — ADVISORY.
+
+Feature: F005
+Recommended next action: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Per-finding classification:
+  - [environmental_reproduction_failure] severity=advisory, category=test_coverage: Full pytest regression could not be independently reproduced in this read-only audit sandbox. Evidence: pytest aborted before collection with `FileNotFoundErro…
+
+Audit trail referenced existing evidence at: docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/transcript.md, docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/claude-implementer-F005-i0.json, docs/plans/2026-05-24-004-feat-event-messaging-v1/audit/codex-auditor-F005-i0.json, docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-auditor.json, docs/plans/2026-05-24-004-feat-event-messaging-v1/evidence/git-state-0-implementer.json
+Aggregate class is advisory: every finding mapped to a non-defect harness/scope class. F003 does NOT auto-sign-off; the operator still owns the close decision.
+
+===
+<!-- rendered annotation 2026-05-24T23:13:50Z -->
+**Blocked work on 2026-05-24-004-feat-event-messaging-v1 — verdict reconciled** _(band: needs_action)_
+
+Auditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.
+
+Run:
+
+```
+dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `aggregate_class` = `environmental_reproduction_failure`
+- `blocking` = `False`
+- `feature_id` = `F005`
+- `inbox_event` = `verdict_blocked_reconciled`
+- `iteration_count` = `2`
+- `original_verdict` = `blocked`
+- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`
+
+</details>
+
+===
+---
+timestamp: 2026-05-24T23:13:50Z
+event: breaker_tripped
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+breaker_kind: environmental_blocker
+feature_id: F005
+approval_required: true
+---
+
+Circuit breaker tripped: environmental_blocker
+
+Reason: verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+Operator clearance required: `jarvis approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker` or `jarvis resume 2026-05-24-004-feat-event-messaging-v1 --all`.
+
+===
+<!-- rendered annotation 2026-05-24T23:13:50Z -->
+**Blocked work on 2026-05-24-004-feat-event-messaging-v1 — breaker `environmental_blocker` tripped** _(band: needs_action)_
+
+Circuit breaker `environmental_blocker` tripped. Operator clearance required before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-24-004-feat-event-messaging-v1/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `environmental_blocker`
+- `feature_id` = `F005`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`
+
+</details>
+
+===
+---
+timestamp: 2026-05-24T23:13:50Z
+event: volley_terminal
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+final_status: stopped_environmental_blocker
+rounds: 2
+feature_id: F005
+---
+
+final_status: stopped_environmental_blocker
+rounds: 2
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json']
+reason: verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+
+===
+<!-- rendered annotation 2026-05-24T23:13:51Z -->
+**Blocked work on 2026-05-24-004-feat-event-messaging-v1 — stopped environmental blocker** _(band: needs_action)_
+
+Volley terminated after 2 round(s) with status `stopped_environmental_blocker`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-24-004-feat-event-messaging-v1/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F005`
+- `final_status` = `stopped_environmental_blocker`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`
+- `rounds` = `2`
+
+</details>
+
+===
+---
+timestamp: 2026-05-24T23:16:41Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-004-feat-event-messaging-v1
+feature_id: F005
+reason_class: environmental_reproduction_failure
+---
+
+Operator closed feature F005 as operator_resolved (class=environmental_reproduction_failure).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-004-feat-event-messaging-v1.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

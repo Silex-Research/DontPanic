@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-24-004-feat-event-messaging-v1",
-  "feature_id": "F004",
+  "feature_id": "F005",
   "class": "environmental_reproduction_failure",
-  "memo": "evidence/closeout-memo-F004.md",
+  "memo": "evidence/closeout-memo-F005.md",
   "resolved": true,
-  "resolved_at": "2026-05-24T22:50:32Z"
+  "resolved_at": "2026-05-24T23:16:41Z"
 }

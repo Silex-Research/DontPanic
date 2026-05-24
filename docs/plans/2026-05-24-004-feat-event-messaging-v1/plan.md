@@ -11,7 +11,7 @@ description: |
   pattern so notification flow never mutates dashboard primary artifacts.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-24"
 goal_type: new_feature
 surfaces:
@@ -172,4 +172,4 @@ F001 may begin in parallel with any active IA or Architecture work. F002+ has no
 
 ## Status
 
-`draft` — pending pre-impl review and operator lock. Architectural commitments locked in `decisions.jsonl` (D001–D016). Inventory substrate at `evidence/f001-inventory-draft.md`. IA copy map canonical at `docs/design/dashboard-value-language-ia-v0/copy-map.md`.
+`completed` — all 5 features closed operator_resolved across F001–F005. Architectural commitments locked in `decisions.jsonl` (D001–D016). Inventory substrate at `evidence/f001-inventory-draft.md`. IA copy map canonical at `docs/design/dashboard-value-language-ia-v0/copy-map.md`.
