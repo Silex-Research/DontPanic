@@ -35,6 +35,10 @@ FINDING (high, test_coverage): required dogfood evidence is still ...
 
 The `stopped_no_progress` terminal was caused by an implementer timeout plus two concrete audit findings, not by an unresolved design dispute. The malformed-plan fixture was corrected to use genuinely invalid frontmatter, roadmap-parent fallback received an explicit regression test, and active parent roadmaps no longer block their own child plans. The required real-inventory dogfood output is recorded at `evidence/dontpanic-next-real-inventory-output.json`; targeted verification passed with `22 passed` for `scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py`, and plan schema validation passed.
 
+## Return Condition
+
+F002 is accepted when `dontpanic next` is read-only, emits text and JSON readiness recommendations, covers repo and fleet scopes, explains ready and not-ready work, records real-inventory dogfood output, and passes the targeted readiness test suite.
+
 ## Evidence references
 
 - `audit/signoff-2026-05-23-007-feat-plan-intake-readiness-v0.json`

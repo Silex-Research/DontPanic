@@ -389,3 +389,131 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T00:03:41Z
+event: volley_start
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F003
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T00:03:41Z
+event: volley_start
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T00:13:42Z
+event: error
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F003
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T00:27:16Z
+event: architecture_regenerated
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F003
+prior_fingerprint: 5a0c5c74c350510c1db94e26828a145cdca666b463d392ec0955250677a10705
+new_fingerprint: 5005245540e16afc2da45f6a978ba3dcde6a0fb1326ccf2b5f58eed85a24ade1
+files_added: 4
+files_removed: 0
+files_modified: 2
+total_modules: 101
+total_plans: 63
+state_transition: stale->fresh
+---
+
+Architecture map regenerated after child_commit on F003.
+
+state: stale->fresh
+prior_fingerprint: 5a0c5c74c350510c1db94e26828a145cdca666b463d392ec0955250677a10705
+new_fingerprint: 5005245540e16afc2da45f6a978ba3dcde6a0fb1326ccf2b5f58eed85a24ade1
+files_added: 4
+files_removed: 0
+files_modified: 2
+total_modules: 101
+total_plans: 63
+
+The supervisor does NOT auto-commit architecture.json. Inspect
+`git status` and decide whether to amend, commit separately, or
+discard.
+
+===
+---
+timestamp: 2026-05-24T00:27:16Z
+event: volley_terminal
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+final_status: signed_off
+rounds: 2
+feature_id: F003
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor signed off
+
+===
+---
+timestamp: 2026-05-24T00:27:16Z
+event: breaker:patch_incomplete
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py
+  unstaged_dirty_state | block | docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-05-24T00:27:16Z
+event: volley_crash_caught
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+feature_id: F003
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py
+  unstaged_dirty_state | block | docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-05-24T00:27:16Z
+event: volley_terminal
+plan_id: 2026-05-23-007-feat-plan-intake-readiness-v0
+final_status: blocked
+rounds: 2
+feature_id: F003
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py
+  unstaged_dirty_state | block | docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/AUTHORING_PLANS.md,docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/events.jsonl,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/INBOX.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/audit/transcript.md,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-auditor.json,docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/evidence/git-state-0-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/planning_readiness.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===

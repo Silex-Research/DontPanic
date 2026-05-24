@@ -1,0 +1,288 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-24T00:01:28Z",
+  "scope": "repo",
+  "ready": [
+    {
+      "kind": "feature",
+      "plan_id": "2026-05-23-007-feat-plan-intake-readiness-v0",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0",
+      "feature_id": "F003",
+      "title": "Release and documentation impact checklist",
+      "reason": "all declared dependencies satisfied",
+      "project_name": null,
+      "command": "python -m dontpanic_orchestrate dispatch-from-plan 2026-05-23-007-feat-plan-intake-readiness-v0 --feature F003"
+    }
+  ],
+  "not_ready": [
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F009",
+      "title": "Playwright MCP configured for AXIOM gateway admin UI + dashboard verification",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F010",
+      "title": "XcodeBuild MCP + simulator screenshot capture configured for Glam iOS",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F011",
+      "title": "Firebase Cloud Logging MCP for Functions introspection (Glam + AXIOM functions)",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F012",
+      "title": "init",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F013",
+      "title": "docs/architecture/ scaffolded per project with domain map + layer contracts + Mermaid",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared",
+        "depends on feature F009 (passes=false)",
+        "depends on feature F011 (passes=false)"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F014",
+      "title": "packages/axiom-lints enforces AXIOM monorepo import boundaries with LLM-actionable error messages",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared",
+        "depends on feature F013 (passes=false)"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F015",
+      "title": "Stop hook detects plan status transitions and auto-spawns supervisor",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F016",
+      "title": "SessionStart hook surfaces pending audit work + quota digest + INBOX items",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F017",
+      "title": "Agent teams wired: feature-team (implementer + auditor + verifier), audit-team (diff-reviewer + security + signoff)",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F018",
+      "title": "Scheduled hygiene via schedule skill (Sun-Tue window to preserve mid-week quota)",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared",
+        "depends on feature F015 (passes=false)",
+        "depends on feature F017 (passes=false)"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-19-001-infra-cross-agent-orchestration",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-19-001-infra-cross-agent-orchestration",
+      "feature_id": "F019",
+      "title": "wterm live dashboard (Next",
+      "reasons": [
+        "plan gate 'pre_impl' not cleared",
+        "plan gate 'pre_merge' not cleared",
+        "plan gate 'on_escalation' not cleared",
+        "plan gate 'tier_promotion' not cleared",
+        "plan gate 'cost_trigger' not cleared"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-04-29-001-feat-changelog-skill",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-04-29-001-feat-changelog-skill",
+      "feature_id": "F001",
+      "title": "changelog skill at claude/skills/changelog/",
+      "reasons": [
+        "plan blocked: depends on plan 2026-04-19-001-infra-cross-agent-orchestration (status=draft; not all features pass)",
+        "plan paused on breaker:budget_ceiling"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "plan",
+      "plan_id": "2026-05-03-002-infra-personal-openclaw-axiom-jarvis",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-03-002-infra-personal-openclaw-axiom-jarvis",
+      "feature_id": null,
+      "title": "Personal Axiom runtime — OpenClaw + DontPanic + dashboard + Discord",
+      "reasons": [
+        "roadmap parent has no features.json and no child plans declare it as parent_plan_id; nothing dispatchable from this entry"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "feature_id": "F003",
+      "title": "Cloud Functions for state-changing dashboard actions — required ONLY for the realtime adapter use case (multi-operator drag-flip / approve from a remote browser",
+      "reasons": [
+        "plan blocked: depends on plan 2026-04-25-001-infra-jarvis-firebase-bootstrap (status=abandoned; not all features pass)",
+        "plan paused on breaker:no_progress"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "feature_id": "F005",
+      "title": "End-to-end smoke test + operator runbook",
+      "reasons": [
+        "plan blocked: depends on plan 2026-04-25-001-infra-jarvis-firebase-bootstrap (status=abandoned; not all features pass)",
+        "plan paused on breaker:no_progress",
+        "depends on feature F003 (passes=false)"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "feature",
+      "plan_id": "2026-05-20-001-infra-external-integrations-bridge-v0",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-20-001-infra-external-integrations-bridge-v0",
+      "feature_id": "F003",
+      "title": "Dashboard linked-status chip — dashboard plan cards surface the linked PM-tool issue status alongside DontPanic execution state",
+      "reasons": [
+        "plan blocked: depends on plan 2026-05-09-004-feat-firebase-dashboard-adapter-v0 (status=active; not all features pass)",
+        "plan gate 'pre_merge' not cleared",
+        "plan paused on breaker:no_progress"
+      ],
+      "project_name": null
+    },
+    {
+      "kind": "plan",
+      "plan_id": "2026-05-23-006-infra-planning-intelligence-roadmap-v0",
+      "plan_dir": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0",
+      "feature_id": null,
+      "title": "Planning intelligence roadmap v0",
+      "reasons": [
+        "waiting on child plan 2026-05-23-007-feat-plan-intake-readiness-v0 (status=active)"
+      ],
+      "project_name": null
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "breaker",
+      "subject": "2026-04-29-001-feat-changelog-skill",
+      "message": "active breaker on plan: breaker:budget_ceiling",
+      "project_name": null,
+      "detail": {}
+    },
+    {
+      "kind": "breaker",
+      "subject": "2026-05-09-004-feat-firebase-dashboard-adapter-v0",
+      "message": "active breaker on plan: breaker:no_progress",
+      "project_name": null,
+      "detail": {}
+    },
+    {
+      "kind": "breaker",
+      "subject": "2026-05-20-001-infra-external-integrations-bridge-v0",
+      "message": "active breaker on plan: breaker:no_progress",
+      "project_name": null,
+      "detail": {}
+    }
+  ],
+  "candidate_commands": [
+    "python -m dontpanic_orchestrate dispatch-from-plan 2026-05-23-007-feat-plan-intake-readiness-v0 --feature F003"
+  ],
+  "max_parallel": null
+}

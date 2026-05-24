@@ -593,6 +593,24 @@ class TestCliFlags:
         assert len(report.ready) == 3
         assert len(report.candidate_commands) == 2
 
+    def test_all_passing_active_plan_is_treated_as_complete(
+        self, tmp_path: Path
+    ) -> None:
+        plans_root = tmp_path / "docs" / "plans"
+        _write_plan(
+            plans_root,
+            "2026-05-23-162-feat-all-done",
+            status="active",
+            features=[
+                _feature("F001", passes=True),
+                _feature("F002", passes=True),
+            ],
+        )
+        report = planning_readiness.analyze_repo(plans_root, active_entries=[])
+        assert report.ready == ()
+        assert report.not_ready == ()
+        assert report.candidate_commands == ()
+
 
 class TestNoSideEffects:
     def test_analyze_writes_no_files_into_plan_dirs(

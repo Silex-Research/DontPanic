@@ -104,10 +104,58 @@
         "Add tests or golden-output fixtures for at least CLI/schema/dashboard/docs-only impact scenarios."
       ],
       "acceptance": "(1) Root CHANGELOG.md exists and explains its relationship to claude/shared/CHANGELOG.md. (2) Authoring docs include a release-impact checklist covering README, onboarding/getting-started, architecture map, dashboard, capability manifests, CLI help, schemas, and public metadata/social preview. (3) A path/surface pattern table distinguishes root-CHANGELOG-required, shared-CHANGELOG-sufficient, and usually-no-changelog changes. (4) An advisory helper/checker maps representative changed paths and plan-intent signals to suggested update surfaces without blocking. (5) `dontpanic next` is the primary advisory output surface; plan-lock messaging is secondary when git diff is available; no v0 sidecar is required. (6) Tests or golden fixtures cover docs-only, schema, CLI, dashboard, capability-manifest, social-preview, and internal-only changes. (7) No secret values are read or written.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F003-i1.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "claude",
+          "note": "Implementer reports both auditor findings addressed and targeted F003/F002 tests passing."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "codex",
+          "note": "Auditor signed off F003 with no findings."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../docs/RELEASE_IMPACT.md",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Canonical release-impact checklist and path/surface pattern table."
+        },
+        {
+          "type": "file",
+          "uri": "../../../../../CHANGELOG.md",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Root product changelog convention and planning-intelligence v0 entry."
+        },
+        {
+          "type": "file",
+          "uri": "evidence/release-impact-real-inventory-output.json",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Real DontPanic inventory output showing release_impact advisory warnings in `dontpanic next`."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py",
+          "captured_at": "2026-05-24T00:36:10Z",
+          "captured_by": "operator",
+          "note": "Targeted F003+F002 tests passed: 54 passed."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T00:36:10Z"
     }
   ]
 }

@@ -1,0 +1,11 @@
+dontpanic next --format=text
+
+Relevant output excerpt captured after F002 completed and before F003 closed:
+
+READY (1):
+  - 2026-05-23-007-feat-plan-intake-readiness-v0 F003 - Release and documentation impact checklist
+      reason: all declared dependencies satisfied
+      next: $ python -m dontpanic_orchestrate dispatch-from-plan 2026-05-23-007-feat-plan-intake-readiness-v0 --feature F003
+
+The JSON companion artifacts in this directory carry the full machine-readable
+envelope and candidate command.

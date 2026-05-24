@@ -1,0 +1,11 @@
+Release impact docs case
+
+Input:
+  changed path: README.md
+
+Expected advisory:
+  - root_changelog
+  - readme
+
+Verified by:
+  scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py::test_readme_change_suggests_root_and_readme

@@ -69,6 +69,7 @@ from dontpanic_orchestrate import (
     projects_registry,
     quota_admission,
     quota_caps_loader,
+    release_impact,
     skill_applicability,
     sufficiency_gate,
     supervisor,
@@ -2124,7 +2125,143 @@ def _plan_lock_main(argv: list[str]) -> int:
             file=sys.stderr,
         )
 
+    # Plan 2026-05-23-007 F003 — release-impact advisory (secondary surface).
+    # Combines draft-time plan intent (surfaces, allowed_paths, step path
+    # tokens) with lock-time git diff paths when available. Writes NOTHING:
+    # output goes to stdout only, no v0 sidecar. Failure is a one-line
+    # warning that never blocks lock.
+    try:
+        _emit_plan_lock_release_impact_advisory(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory must never block lock
+        print(
+            f"[release-impact] WARN: advisory failed ({exc!r}); lock succeeded — "
+            "no advisory printed",
+            file=sys.stderr,
+        )
+
     return 0
+
+
+def _emit_plan_lock_release_impact_advisory(plan_dir: Path) -> None:
+    """F003 secondary surface — print a release-impact advisory at lock time.
+
+    Best-effort and non-blocking. The advisory is rendered to stdout under a
+    ``[release-impact]`` prefix; nothing is written to disk. Inputs:
+      - lock-time ``git diff --name-only HEAD`` paths (+ untracked files),
+        captured if a git repo is available in an ancestor of ``plan_dir``.
+        Failures to read git are silent.
+      - draft-time plan intent: ``surfaces``, charter ``allowed_paths``,
+        and feature-step path tokens (same shape as the draft-time advisory
+        emitted by :mod:`planning_readiness`).
+    """
+    diff_paths = _git_changed_paths_for_lock(plan_dir)
+    plan_obj = plan_loader.load(plan_dir)
+
+    raw_surfaces = getattr(plan_obj.plan, "surfaces", None) or []
+    plan_surfaces: list[str] = []
+    for s in raw_surfaces:
+        s_val = s.value if hasattr(s, "value") else str(s)
+        if s_val:
+            plan_surfaces.append(s_val)
+
+    charter = getattr(plan_obj, "child_charter", None)
+    allowed_paths: list[str] = []
+    if charter is not None:
+        for p in getattr(charter, "allowed_paths", None) or []:
+            allowed_paths.append(str(p))
+
+    step_tokens: list[str] = []
+    seen: set[str] = set()
+    for feature in getattr(plan_obj.features, "features", []) or []:
+        if getattr(feature, "passes", False):
+            continue
+        for step in getattr(feature, "steps", None) or []:
+            for raw in str(step).split():
+                cleaned = raw.strip(".,;:()[]`\"'")
+                if "/" not in cleaned:
+                    continue
+                if cleaned.startswith(("http://", "https://")):
+                    continue
+                normalized = cleaned.replace("\\", "/")
+                while normalized.startswith("./"):
+                    normalized = normalized[2:]
+                if normalized and normalized not in seen:
+                    seen.add(normalized)
+                    step_tokens.append(normalized)
+
+    advisory = release_impact.analyze(
+        changed_paths=diff_paths,
+        plan_surfaces=plan_surfaces,
+        allowed_paths=allowed_paths,
+        step_path_tokens=step_tokens,
+    )
+
+    # No inputs and no surfaces → nothing useful to say. Avoid noise.
+    if not advisory.surfaces and not advisory.internal_only:
+        return
+
+    source_bits: list[str] = []
+    if diff_paths:
+        source_bits.append(f"{len(diff_paths)} git-diff path(s)")
+    if plan_surfaces:
+        source_bits.append(f"surfaces={plan_surfaces}")
+    if allowed_paths:
+        source_bits.append(f"allowed_paths={len(allowed_paths)}")
+    source_summary = ", ".join(source_bits) if source_bits else "intent-only"
+    print(
+        f"[release-impact] advisory (no sidecar written; inputs: {source_summary}):"
+    )
+    for line in release_impact.render_text(advisory).split("\n"):
+        print(f"  {line}")
+
+
+def _git_changed_paths_for_lock(plan_dir: Path) -> list[str]:
+    """Best-effort lock-time path scan. Returns the union of staged+unstaged
+    diff paths (``git diff --name-only HEAD``) and untracked-but-not-ignored
+    files. Any git failure (missing binary, not a repo, timeout) returns an
+    empty list — the advisory still has draft-time intent inputs."""
+    import subprocess  # noqa: PLC0415 — keep optional dependency local
+
+    repo_root: Path | None = None
+    for ancestor in [plan_dir, *plan_dir.parents]:
+        if (ancestor / ".git").exists():
+            repo_root = ancestor
+            break
+    if repo_root is None:
+        return []
+
+    paths: list[str] = []
+    seen: set[str] = set()
+
+    def _run(cmd: list[str]) -> str:
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            return ""
+        if result.returncode != 0:
+            return ""
+        return result.stdout
+
+    for line in _run(["git", "diff", "--name-only", "HEAD"]).splitlines():
+        s = line.strip()
+        if s and s not in seen:
+            seen.add(s)
+            paths.append(s)
+    for line in _run(
+        ["git", "ls-files", "--others", "--exclude-standard"]
+    ).splitlines():
+        s = line.strip()
+        if s and s not in seen:
+            seen.add(s)
+            paths.append(s)
+    return paths
 
 
 def _resolve_skills_dir(plan_dir: Path) -> Path | None:

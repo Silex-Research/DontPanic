@@ -106,10 +106,14 @@ executable child plan with locked acceptance.
 
 ### Release-impact prompt
 
-Before locking a plan, the author answers a short release-impact prompt. F003
-of this roadmap will formalize it as the `dontpanic next` release-impact
-checklist; until then, plan authors answer it inline in their plan or in
-`evidence/`:
+Before locking a plan, the author answers a short release-impact prompt. The
+full checklist and the path/surface pattern table live in
+[`docs/RELEASE_IMPACT.md`](./RELEASE_IMPACT.md). The advisory checker shipped
+with `dontpanic next` (plan 2026-05-23-007 F003) renders the same advice
+automatically when it can infer the affected surfaces from the plan's
+`surfaces`, `allowed_paths`, and feature step path tokens.
+
+Plan authors still answer it inline in their plan or in `evidence/`:
 
 - Does this change touch the root README, onboarding/getting-started, or
   `dontpanic init|doctor` behavior?
@@ -126,7 +130,15 @@ checklist; until then, plan authors answer it inline in their plan or in
 
 If any answer is yes, list the surfaces in the plan and include the updates in
 the feature acceptance. "We will remember to update the README" is not an
-acceptance clause.
+acceptance clause. The advisory in `dontpanic next` is a backstop — it catches
+obvious omissions but does not replace this answer.
+
+Root `CHANGELOG.md` records product-facing changes (the CLI, dashboard,
+README/onboarding, capability manifests, public metadata).
+`claude/shared/CHANGELOG.md` records changes to the agent-conventions subtree
+(schemas, conventions, Pydantic mirrors). See
+[`docs/RELEASE_IMPACT.md`](./RELEASE_IMPACT.md) for the full path → surface
+table that determines which (if either) is required.
 
 ### V0 schema scope
 

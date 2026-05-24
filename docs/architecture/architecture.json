@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-23T23:17:52Z",
+  "generated_at": "2026-05-24T01:08:23Z",
   "modules": [
     {
       "imports": [],
@@ -516,6 +516,7 @@
         "os",
         "pathlib",
         "quota_check",
+        "subprocess",
         "sys",
         "typing",
         "yaml"
@@ -1712,6 +1713,32 @@
     {
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "dontpanic_orchestrate",
+        "json",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.planning_readiness",
+      "path": "scripts/dontpanic_orchestrate/planning_readiness.py",
+      "public_symbols": [
+        "NotReadyItem",
+        "ReadyItem",
+        "RecommendationReport",
+        "SCHEMA_VERSION",
+        "Warning",
+        "analyze_fleet",
+        "analyze_repo",
+        "render_json",
+        "render_text"
+      ],
+      "summary": "Plan 2026-05-23-007 F002 — read-only parallel-readiness recommender."
+    },
+    {
+      "imports": [
+        "__future__",
         "collections.abc",
         "concurrent.futures",
         "dataclasses",
@@ -1979,6 +2006,25 @@
         "render_check_text"
       ],
       "summary": "Plan 2026-05-23-002 — ``dontpanic reconcile`` subcommand surface."
+    },
+    {
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "fnmatch",
+        "typing"
+      ],
+      "name": "dontpanic_orchestrate.release_impact",
+      "path": "scripts/dontpanic_orchestrate/release_impact.py",
+      "public_symbols": [
+        "ReleaseImpactAdvisory",
+        "SurfaceSuggestion",
+        "analyze",
+        "analyze_paths",
+        "analyze_plan_intent",
+        "render_text"
+      ],
+      "summary": "Plan 2026-05-23-007 F003 — release-impact advisory checker."
     },
     {
       "imports": [],
@@ -2889,7 +2935,7 @@
     {
       "features_count": 3,
       "id": "2026-05-23-007-feat-plan-intake-readiness-v0",
-      "status": "active",
+      "status": "completed",
       "title": "Plan intake and readiness v0"
     }
   ],
@@ -2952,7 +2998,7 @@
   ],
   "source_fingerprint": {
     "algo": "sha256",
-    "computed_at": "2026-05-23T23:17:52Z",
+    "computed_at": "2026-05-24T01:08:23Z",
     "file_hashes": {
       "claude/shared/VERSION": "c92df6bdde330be219d62f48ec6490b01889436f2f59027aab200e74de619168",
       "claude/shared/schemas/v1.0/architecture-snapshot.schema.json": "0ef8f8926c5fe2f31522eba68c3836d07b79aa6456e65884950223af4e9b8b26",
@@ -3092,8 +3138,8 @@
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/features.json": "693b0604c73c645a98badb9ecfe03a2596dbdc750a1ccf3d6e59e88f44335c2a",
       "docs/plans/2026-05-23-005-feat-dashboard-project-selector-v0/plan.md": "8554a1fd541df1003e45c2f31711f25e4a8f2fecfff507581c1ff5667edf1706",
       "docs/plans/2026-05-23-006-infra-planning-intelligence-roadmap-v0/plan.md": "3ff1e1a75bfa1a7d08c44293912525e109de54e9e6065a2f5113dbe9fbc344d4",
-      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "b0e8471fa07d34d51c89a8690cf778476c1a39baaf966dcc786def330f65baf0",
-      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "8cdb40d4500fc828692c27966607b77f013ce5b6db48dd26875993bdcb3e56b3",
+      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/features.json": "148e8fab00b567044f0f7630f1474202fee589d85726209cbce04f9a160d8ce4",
+      "docs/plans/2026-05-23-007-feat-plan-intake-readiness-v0/plan.md": "468e5462c551bf556cab443bfeff07baefb6183ea94fa70ab0eb20519e36b44b",
       "scripts/dontpanic_orchestrate/__init__.py": "b2e846e16a63df7a621a1ceb20b4cff81cc0d7a141274ef12f994bd6026b3e22",
       "scripts/dontpanic_orchestrate/__main__.py": "78693bb2a4446762751b69571fa1aa585b868b532fa7e0b179885fe15a09d867",
       "scripts/dontpanic_orchestrate/active_supervisors.py": "4e0a75b8435e0e0a99e5f5259dd75578f2c85a889474f101ed48262132fe5408",
@@ -3114,7 +3160,7 @@
       "scripts/dontpanic_orchestrate/capabilities_setup_runner.py": "8c9f4ef87aa1286652d3767815c5f6535301ae2948de06b8f37a5333b399d3d3",
       "scripts/dontpanic_orchestrate/capabilities_status.py": "42abad2c8461667c20279d89c40b025e81ddda54562ab0881416a8ad2c466d9d",
       "scripts/dontpanic_orchestrate/circuit_breakers.py": "20b51629a021346516c349f44469509498d6d2cd21838407ede6efebd68369b3",
-      "scripts/dontpanic_orchestrate/cli.py": "1f1a0cc026111014eecfe21e9d1305f081069ddbd21912dab357c6611e2af763",
+      "scripts/dontpanic_orchestrate/cli.py": "96923360333a299bf68064c92b78b17a01e015a9eeb56752d697a10d098074f9",
       "scripts/dontpanic_orchestrate/closeout.py": "e0b4a65d5b05a1b6b1c2339add1b833366d98a0a8a5570a8c02fbf390a346752",
       "scripts/dontpanic_orchestrate/command_guard.py": "53ed08234b3c4472b12d4c468291151ffd0542b78f06405baa11482cdc0cb1d6",
       "scripts/dontpanic_orchestrate/completion_auditor.py": "5eaf04e6e95f9b222617bfb773ae58f3908db79db06acf5b234cebdb154cbe15",
@@ -3164,6 +3210,7 @@
       "scripts/dontpanic_orchestrate/patch_completeness_gate.py": "b9ceae360e4b279d729f2e56da7c7cee8c10577dde7254ab9bfa29a348a1ab87",
       "scripts/dontpanic_orchestrate/plan_loader.py": "de82d47c5938f6a817f1300d10aa598357909cafcdbb8ed3b287d8596408e0d3",
       "scripts/dontpanic_orchestrate/plan_target.py": "265bbcf0afa2c528836366a339e70aa616c33169eb347d7ed609152d2caa53f4",
+      "scripts/dontpanic_orchestrate/planning_readiness.py": "cb106e7f7c3351a81ab0ae8c3f0719704194d27bfc5798262e5b6248d0714d86",
       "scripts/dontpanic_orchestrate/prereq_registry.py": "b1cae5c00b3448035d3f3d379ff22b4ef472de5832a02756a2fdf5537274d686",
       "scripts/dontpanic_orchestrate/project_config.py": "850da67eab73da49b3d129b1c693430376c4c4ed1e4e84e398afe5a8cb1f0bb1",
       "scripts/dontpanic_orchestrate/projects_dashboard.py": "064f69df64e38df3f361be48981fdd2f30a1352da08987d6aa39c21c03962ff8",
@@ -3173,6 +3220,7 @@
       "scripts/dontpanic_orchestrate/quota_admission.py": "7f4606b4bc32618f5febadfcd6fb65d6cbd6ab61e0e0bb94d2f78b4e9d8aa515",
       "scripts/dontpanic_orchestrate/quota_caps_loader.py": "c2f988ca63c2c47486c3cd21567af7d6e48934dec9891a4541bf38bfa6cff78f",
       "scripts/dontpanic_orchestrate/reconcile.py": "6ce81834719615ea483346783163c6549a72a20040e1fad12d57255fdc08e8b5",
+      "scripts/dontpanic_orchestrate/release_impact.py": "92f81b81a38d0ecbf29dd5e0dce3a777184069ee4f4087e4bb5beae72e92e46b",
       "scripts/dontpanic_orchestrate/roundtrip-output.txt": "02350c27823b353f3fd84c64c995cbcac6bc135eeeea9c57cceaa1fc7e8d1546",
       "scripts/dontpanic_orchestrate/runtime_evidence/__init__.py": "7e5e76bab8acab687379c3c70f446a748c51eae9cb4d2f18994cf07d6184284a",
       "scripts/dontpanic_orchestrate/runtime_evidence/android.py": "71295f16d285a055bac18fdf4d470d42f102b72a5cbab867bbd97e99ae1e6c70",
@@ -3302,6 +3350,7 @@
       "scripts/dontpanic_orchestrate/tests/test_plan_status_pre_impl_sync_f002.py": "9662aa4405ff12af18ebd87e0a0ffc8dc2794ab9e5baa4c4a89e683196df20da",
       "scripts/dontpanic_orchestrate/tests/test_plan_surfaces_field.py": "8b4ea5a2b304dbe55c165dd9f9ecbdab5bd96ea0611597755f88a3af0eecfb1c",
       "scripts/dontpanic_orchestrate/tests/test_plan_target.py": "92680f1a90bda6448f0499934ef18f7eed3035941b34a2f1f84829a839f05f57",
+      "scripts/dontpanic_orchestrate/tests/test_planning_readiness_f002.py": "137faec7ccf0490fbf538efa89e9ce34e6029a9e30f9e42c578ebc3e2f068ca8",
       "scripts/dontpanic_orchestrate/tests/test_pm_tool_contract_f001.py": "65cdc5888014f0028e0bc2ba950609c5358518427607da09cd2dae086300b39e",
       "scripts/dontpanic_orchestrate/tests/test_pre_impl_auto_clear_f002.py": "600b81146cbad1050655db8bff859a0bff5b9b0b8a1c8f789e5070336f3d2671",
       "scripts/dontpanic_orchestrate/tests/test_prereq_capability_binding_f002.py": "c349dc776146c892f6c3bb0b264b9bfee7ef0bbb8c39acd08f98d5fc3ed52bce",
@@ -3312,6 +3361,7 @@
       "scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py": "ed5f0891ee5c3694cf5ce2d4d70928f1cfbf734ca30583ffbeb8779b84b392e4",
       "scripts/dontpanic_orchestrate/tests/test_quota_check_v2.py": "02e8708eb0a9b7157a129ffe6f41143dd1e9a84e5048e324d919899b1ddc94bc",
       "scripts/dontpanic_orchestrate/tests/test_reconcile_check_f002.py": "68494579abed7310f16e948810d07f976309546ca38ada78beba179c922579db",
+      "scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py": "296abd1966138b1cfc761b2a01c127a93dbccef3f674d3070a82755295a8e0fa",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_android.py": "88ba8ed2755c8b5c07c350f3047a57c13ed73b4b932cf155cc8a9ee25583dacb",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_backend.py": "9b50c5999a5d4a980112cef02304f5041f2b782a5fccc51b39a785a22150897e",
       "scripts/dontpanic_orchestrate/tests/test_runtime_evidence_harness.py": "822d641c5558a54a5e21af0c9f9bd25187726f1a871cb880894d3b08d3e203a5",
@@ -3346,7 +3396,7 @@
       "scripts/dontpanic_orchestrate/transcript.py": "fc2431937945a726cbc8ce8880e9e19d611cce39871bc5615c5d42c082a13caf",
       "scripts/dontpanic_orchestrate/volley-synthetic-output.txt": "38eb70937eaf988997d1da1b31275ee255bf86893be6bc02c850701c46826ecb"
     },
-    "file_hashes_root": "5a0c5c74c350510c1db94e26828a145cdca666b463d392ec0955250677a10705",
-    "files_count": 391
+    "file_hashes_root": "1590ade7972c158e457c8924c183e98a15064c265caac3dead1589004a4b1230",
+    "files_count": 395
   }
 }

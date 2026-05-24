@@ -44,6 +44,7 @@ from dontpanic_orchestrate import (
     project_config,
     projects_registry,
     quota_admission,
+    release_impact,
 )
 
 _LOG = logging.getLogger(__name__)
@@ -95,7 +96,9 @@ class NotReadyItem:
 
 @dataclass(frozen=True)
 class Warning:
-    kind: str  # "collision" | "gate" | "breaker" | "defer" | "budget" | "load_error" | "scope"
+    # "collision" | "gate" | "breaker" | "defer" | "budget" | "load_error"
+    # | "scope" | "release_impact"
+    kind: str
     subject: str  # "<plan_id>" or "<plan_id>:<feature_id>"
     message: str
     project_name: str | None = None
@@ -581,6 +584,30 @@ def _step_path_tokens(feature: Any) -> set[str]:
     return out
 
 
+def _step_path_raw_tokens(feature: Any) -> list[str]:
+    """Raw path-shaped tokens (slashes preserved) from feature ``steps``.
+
+    The collision detector wants tokenized segments. The release-impact
+    advisory wants full path-like tokens so its glob rules can match.
+    Both consumers feed off the same step text, but their tokenization
+    needs differ — keep them separate to avoid coupling the two
+    consumers' false-positive characteristics.
+    """
+    out: list[str] = []
+    for step in getattr(feature, "steps", None) or []:
+        for raw in str(step).split():
+            cleaned = raw.strip(".,;:()[]`\"'")
+            if "/" not in cleaned:
+                continue
+            if cleaned.startswith(("http://", "https://")):
+                continue
+            normalized = cleaned.replace("\\", "/")
+            while normalized.startswith("./"):
+                normalized = normalized[2:]
+            out.append(normalized)
+    return out
+
+
 def _paths_overlap(
     a_allowed: list[str], a_tokens: set[str], b_allowed: list[str]
 ) -> tuple[bool, set[str]]:
@@ -679,6 +706,77 @@ def _active_supervisor_collisions(
             )
         )
     return warnings
+
+
+# ─────────────────────────  release-impact advisory  ─────────────────────────
+
+
+def _plan_surfaces(loaded: Any) -> list[str]:
+    """Plan frontmatter ``surfaces`` array (agent-conventions v1.7+).
+    Tolerate missing field / non-list shape."""
+    raw = getattr(loaded.plan, "surfaces", None)
+    if not raw:
+        return []
+    out: list[str] = []
+    for s in raw:
+        s_val = s.value if hasattr(s, "value") else str(s)
+        if s_val:
+            out.append(s_val)
+    return out
+
+
+def _release_impact_warnings_for_plan(
+    loaded: Any,
+    *,
+    project_name: str | None,
+    changed_paths: list[str] | None = None,
+) -> list[Warning]:
+    """Emit per-plan release-impact advisories via :mod:`release_impact`.
+
+    Inputs:
+      - plan-declared ``surfaces`` (draft-time intent)
+      - child charter ``allowed_paths`` (draft-time intent)
+      - union of feature step path tokens (draft-time intent)
+      - optional ``changed_paths`` from a lock-time git diff (precision)
+
+    Each plan produces at most one ``release_impact`` Warning. The
+    advisory's rendered text is the warning message; the structured
+    advisory dict rides on ``detail`` for JSON consumers.
+    """
+    plan_surfaces = _plan_surfaces(loaded)
+    allowed_paths = _allowed_paths(loaded)
+    # Union of all features' step path tokens — a single plan-level
+    # advisory covers every not-yet-passing feature.
+    token_set: list[str] = []
+    seen: set[str] = set()
+    for feature in getattr(loaded.features, "features", []) or []:
+        if _feature_passes(feature):
+            continue
+        for tok in _step_path_raw_tokens(feature):
+            if tok not in seen:
+                seen.add(tok)
+                token_set.append(tok)
+
+    advisory = release_impact.analyze(
+        changed_paths=changed_paths or [],
+        plan_surfaces=plan_surfaces,
+        allowed_paths=allowed_paths,
+        step_path_tokens=token_set,
+    )
+    # If the advisory has no inputs at all (no plan surfaces, no
+    # allowed_paths, no step tokens, no diff) the helper returns an
+    # empty advisory we should not emit.
+    if not advisory.surfaces and not advisory.internal_only:
+        return []
+    return [
+        Warning(
+            kind="release_impact",
+            subject=loaded.plan_id,
+            message=release_impact.render_text(advisory),
+            project_name=project_name,
+            detail=advisory.to_dict(),
+        )
+    ]
 
 
 # ─────────────────────────  command synthesis  ─────────────────────────
@@ -864,6 +962,8 @@ def analyze_repo(
         # Terminal statuses: skip entirely (completed/abandoned/blocked).
         if status in _COMPLETED_PLAN_STATUSES:
             continue
+        if _entry_completed(loaded):
+            continue
         if status in _TERMINAL_NEGATIVE_STATUSES:
             continue
         if status and status not in _ACTIVE_PLAN_STATUSES:
@@ -916,6 +1016,17 @@ def analyze_repo(
         plan_agents = [str(a) for a in (getattr(loaded.plan, "agents_required", None) or [])]
         warnings.extend(
             _budget_state_warnings(plan_id, project_name, agents=plan_agents)
+        )
+
+        # Plan 2026-05-23-007 F003 — release-impact advisory. One per plan,
+        # surfaced as a release_impact warning so the JSON envelope shape
+        # stays stable. Draft-time only (no git diff) at this seam; lock-
+        # time messaging can call release_impact.analyze directly with the
+        # diff for precision.
+        warnings.extend(
+            _release_impact_warnings_for_plan(
+                loaded, project_name=project_name
+            )
         )
 
         features_map = _features_map(loaded)
@@ -1187,7 +1298,14 @@ def render_text(report: RecommendationReport) -> str:
         lines.append(f"WARNINGS ({len(report.warnings)}):")
         for w in report.warnings:
             scope_label = f"[{w.project_name}] " if w.project_name else ""
-            lines.append(f"  • {scope_label}{w.kind}: {w.subject} — {w.message}")
+            # release_impact messages are multi-line — indent continuation
+            # lines so the rendering reads as one logical advisory.
+            msg_lines = w.message.split("\n")
+            lines.append(
+                f"  • {scope_label}{w.kind}: {w.subject} — {msg_lines[0]}"
+            )
+            for cont in msg_lines[1:]:
+                lines.append(f"    {cont}")
         lines.append("")
 
     lines.append(
