@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-24-004-feat-event-messaging-v1",
-  "feature_id": "F001",
+  "feature_id": "F002",
   "class": "implementation_defect",
-  "memo": "evidence/closeout-memo.md",
+  "memo": "evidence/closeout-memo-F002.md",
   "resolved": true,
-  "resolved_at": "2026-05-24T17:14:09Z"
+  "resolved_at": "2026-05-24T20:45:02Z"
 }

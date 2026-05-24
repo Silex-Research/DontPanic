@@ -46,4 +46,3 @@ Auditor findings were real `implementation_defect` (stale `--strict` flag accept
 - `audit/no_progress_classification_F001_iter2.json` — no_progress taxonomy that triggered Path C
 - `scripts/dontpanic_orchestrate/command_validation.py` — patched validator
 - `scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py` — parametrized pin tests for the cited examples
-
