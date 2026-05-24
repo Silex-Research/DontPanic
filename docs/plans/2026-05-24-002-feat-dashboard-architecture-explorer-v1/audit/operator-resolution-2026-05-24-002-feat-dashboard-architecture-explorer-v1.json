@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-24-002-feat-dashboard-architecture-explorer-v1",
-  "feature_id": "F001",
-  "class": "operator_judgment",
+  "feature_id": "F002",
+  "class": "implementation_defect",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-05-24T06:10:33Z"
+  "resolved_at": "2026-05-24T16:11:42Z"
 }

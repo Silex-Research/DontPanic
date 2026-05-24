@@ -382,3 +382,57 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-05-24T15:46:22Z
+event: volley_start
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F002
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-05-24T15:46:22Z
+event: volley_start
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-05-24T15:56:23Z
+event: error
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-05-24T16:11:42Z
+event: feature_operator_resolved
+plan_id: 2026-05-24-002-feat-dashboard-architecture-explorer-v1
+feature_id: F002
+reason_class: implementation_defect
+---
+
+Operator closed feature F002 as operator_resolved (class=implementation_defect).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-05-24-002-feat-dashboard-architecture-explorer-v1.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

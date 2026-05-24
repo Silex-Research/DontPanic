@@ -1,0 +1,160 @@
+{
+  "edges": [
+    {
+      "from": "module:scripts/dontpanic_orchestrate/cli.py",
+      "id": "edge:imports:1",
+      "to": "module:scripts/dontpanic_orchestrate/supervisor.py",
+      "type": "import"
+    }
+  ],
+  "filters": {
+    "categories": [
+      "command",
+      "module"
+    ],
+    "lanes": [
+      {
+        "id": "lane:orchestrator-runtime",
+        "title": "Orchestrator runtime"
+      }
+    ],
+    "modules": [
+      "scripts/dontpanic_orchestrate/cli.py"
+    ],
+    "plans": []
+  },
+  "flows": [
+    {
+      "category": "operator",
+      "id": "flow:architecture-regen",
+      "source": "derived",
+      "steps": [
+        {
+          "edge_ref": null,
+          "id": "step:regen:invoke",
+          "node_ref": "command:dontpanic-architecture-regen",
+          "order": 1,
+          "title": "Operator invokes regen",
+          "type": "step",
+          "warnings": []
+        },
+        {
+          "edge_ref": "edge:imports:1",
+          "id": "step:regen:crawl",
+          "node_ref": "module:scripts/dontpanic_orchestrate/cli.py",
+          "order": 2,
+          "title": "Crawler walks source",
+          "type": "step",
+          "warnings": []
+        }
+      ],
+      "summary": "Operator runs regen; crawler walks source + plans.",
+      "title": "Architecture regen",
+      "type": "flow",
+      "warnings": []
+    },
+    {
+      "category": "operator",
+      "id": "flow:authored-broken",
+      "source": "authored",
+      "steps": [
+        {
+          "edge_ref": null,
+          "id": "step:bad:1",
+          "node_ref": "module:does/not/exist.py",
+          "order": 1,
+          "title": "Bad step",
+          "type": "step",
+          "warnings": [
+            {
+              "message": "node_ref does not resolve to a known node"
+            }
+          ]
+        }
+      ],
+      "summary": "Authored flow whose step points at a missing node.",
+      "title": "Authored flow with bad reference",
+      "type": "flow",
+      "warnings": []
+    }
+  ],
+  "freshness": {
+    "current_fingerprint": "ecc1f145e76e87cf174c6d9cd982c25570c1a9c81ed1efc2a0abb70a2d28950a",
+    "files_count": 402,
+    "fingerprint": "49ac32b330bc9e25e499288723b798fee66798403aa91fa7627f842897ed9a6d",
+    "generated_at": "2026-05-24T06:08:41Z",
+    "message": "architecture.json is stale relative to the working tree.",
+    "regen_command": "dontpanic architecture regen --with-html",
+    "state": "stale",
+    "stored_fingerprint": "49ac32b330bc9e25e499288723b798fee66798403aa91fa7627f842897ed9a6d"
+  },
+  "generated_at": "2026-05-24T06:13:19Z",
+  "insights": [
+    {
+      "id": "insight:module-count",
+      "kind": "count",
+      "title": "Modules",
+      "value": 102
+    },
+    {
+      "id": "insight:plan-count",
+      "kind": "count",
+      "title": "Plans",
+      "value": 66
+    }
+  ],
+  "lanes": [
+    {
+      "id": "lane:client-surfaces",
+      "kind": "client",
+      "order": 0,
+      "title": "Client surfaces"
+    },
+    {
+      "id": "lane:orchestrator-runtime",
+      "kind": "runtime",
+      "order": 1,
+      "title": "Orchestrator runtime"
+    },
+    {
+      "id": "lane:data-evidence",
+      "kind": "data",
+      "order": 2,
+      "title": "Data & evidence"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "module:scripts/dontpanic_orchestrate/cli.py",
+      "lane_id": "lane:orchestrator-runtime",
+      "source_path": "scripts/dontpanic_orchestrate/cli.py",
+      "summary": "CLI entry point.",
+      "title": "dontpanic_orchestrate.cli",
+      "type": "module"
+    },
+    {
+      "id": "module:scripts/dontpanic_orchestrate/supervisor.py",
+      "lane_id": "lane:orchestrator-runtime",
+      "source_path": "scripts/dontpanic_orchestrate/supervisor.py",
+      "summary": "Volley supervisor.",
+      "title": "dontpanic_orchestrate.supervisor",
+      "type": "module"
+    },
+    {
+      "id": "command:dontpanic-architecture-regen",
+      "lane_id": "lane:client-surfaces",
+      "summary": "Regenerate architecture map.",
+      "title": "dontpanic architecture regen",
+      "type": "command"
+    }
+  ],
+  "project": {
+    "display_name": null,
+    "label": "(none)",
+    "name": null
+  },
+  "schema_version": "1.0",
+  "source_path": "docs/architecture/architecture.json",
+  "steps": [],
+  "validation_warnings": []
+}

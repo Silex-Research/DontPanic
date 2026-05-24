@@ -46,10 +46,21 @@
         "Add tests/snapshots for visible nav, missing state, stale state, flow validation warnings, and command copy rendering."
       ],
       "acceptance": "(1) Architecture tab exists and loads locally without waiting for the value-language IA plan. (2) Primary labels are understandable to non-technical reviewers while technical IDs remain visible in details. (3) Missing/stale states are honest and actionable. (4) Regen command is exact and copyable. (5) Dashboard does not auto-write architecture artifacts. (6) Tests cover the shell, labels, provenance, and empty states.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=implementation_defect)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-24T16:11:42Z"
     },
     {
       "id": "F003",
