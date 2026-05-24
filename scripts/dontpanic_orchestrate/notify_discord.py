@@ -35,7 +35,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Final, TYPE_CHECKING
+from typing import Any, Final, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from dontpanic_orchestrate.notify_event import NotifyEvent
@@ -56,7 +56,24 @@ _CONFIG_FILENAME: Final[str] = "discord.json"
 _LEGACY_HOME_DIRNAME: Final[str] = ".jarvis"
 
 _NETWORK_TIMEOUT_SECONDS: Final[float] = 5.0
-_USERNAME: Final[str] = "Jarvis"
+_USERNAME: Final[str] = "DontPanic"
+
+# Plan 2026-05-24-004 F003 (D022): embed colors are inline hex literals from
+# the IA copy map § 3 four-band taxonomy. NOT sourced from a dp-tokens.css
+# file (no such asset exists in this repo). Update both this constant and
+# the copy map's band-color section in the same PR.
+_EMBED_COLOR_HEALTHY: Final[int] = 0x3DD68C  # ready band — green
+_EMBED_COLOR_ACTION: Final[int] = 0xF5A623  # needs_action / advisory — amber
+_EMBED_COLOR_BLOCKED: Final[int] = 0xF25555  # needs_action when blocking — red
+_EMBED_COLOR_PENDING: Final[int] = 0x7E8BA6  # info band — slate
+
+# Discord payload limits — title 256, description 4096, total embed ~6000,
+# but the legacy content body limit is 2000. We cap individual fields well
+# below to leave room for the exact_command code-fence + footer.
+_DISCORD_TITLE_LIMIT: Final[int] = 240
+_DISCORD_DESCRIPTION_LIMIT: Final[int] = 1600
+_DISCORD_FIELD_VALUE_LIMIT: Final[int] = 1000
+_DISCORD_PAYLOAD_TOTAL_LIMIT: Final[int] = 2000
 
 # Discord's edge (Cloudflare) returns HTTP 403 + error 1010 to requests
 # carrying the default ``Python-urllib/X.Y`` User-Agent. Discord's API
@@ -155,9 +172,15 @@ def is_available() -> bool:
     return _is_well_formed(url)
 
 
-def notify(event: "NotifyEvent") -> bool:
+def notify(event: "NotifyEvent", rendered: Any | None = None) -> bool:
     """Post a single Discord webhook for ``event``. Returns True on 2xx
     response, False on every other outcome. Never raises.
+
+    F003 audit finding (i1) addendum: callers that already produced a
+    ``RenderedEvent`` (the F003 dispatch flow does) pass it here so the
+    sink does NOT re-render. ``rendered=None`` keeps backward compat with
+    legacy direct callers that bypass dispatch — :func:`_build_payload`
+    re-renders in that case.
 
     Failure modes that all return False (with at most one warn-once line):
       - Sink disabled (any of three env knobs).
@@ -179,12 +202,13 @@ def notify(event: "NotifyEvent") -> bool:
         )
         return False
 
-    payload = {
-        "username": _USERNAME,
-        "content": _format_content(event),
-        "allowed_mentions": {"parse": []},
-    }
-    body = json.dumps(payload).encode("utf-8")
+    payload = _build_payload(event, rendered=rendered)
+    # F003 audit i0 finding #3: serialize with ensure_ascii=False so the
+    # bytes sent over the wire match what _enforce_payload_total_limit
+    # measured against the same JSON shape. ASCII-escaping inflates the
+    # length and previously caused a measured-1237-char body to balloon to
+    # 5232 chars on send (well past Discord's 2000-char limit).
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(  # noqa: S310 — scheme guarded above.
         url,
         data=body,
@@ -207,11 +231,10 @@ def notify(event: "NotifyEvent") -> bool:
 
 
 def _format_content(event: "NotifyEvent") -> str:
-    """Render the markdown content body for a Discord post.
+    """Render the markdown content body for a Discord post (legacy fallback).
 
-    Header + body + optional action link. Discord posts have a 2000-char
-    content limit; we truncate well below that so embeds + future fields
-    have room.
+    Used when no RenderedEvent is available (renderer returns None) — e.g.
+    for direct legacy callers that bypass the F003 dispatch flow.
     """
     header_parts = [f"**[{event.plan_id}]**"]
     if event.feature_id:
@@ -227,9 +250,164 @@ def _format_content(event: "NotifyEvent") -> str:
     if event.action_link:
         parts.append(f"→ `{event.action_link}`")
     out = "\n".join(parts)
-    if len(out) > 1800:
-        out = out[:1797] + "..."
+    if len(out) > _DISCORD_PAYLOAD_TOTAL_LIMIT - 200:
+        out = out[: _DISCORD_PAYLOAD_TOTAL_LIMIT - 203] + "..."
     return out
+
+
+def _band_to_color(band: str | None) -> int:
+    """Map a RenderedEvent.band into the IA copy map § 3 four-band color.
+
+    Inline hex literals per D022 — NOT sourced from a dp-tokens.css file.
+    Unknown bands fall back to the pending/info slate so the embed always
+    renders with a credible color.
+    """
+    if band == "ready":
+        return _EMBED_COLOR_HEALTHY
+    if band == "needs_action":
+        return _EMBED_COLOR_BLOCKED
+    if band == "advisory":
+        return _EMBED_COLOR_ACTION
+    return _EMBED_COLOR_PENDING
+
+
+def _truncate(value: str, limit: int) -> str:
+    if len(value) <= limit:
+        return value
+    return value[: max(0, limit - 3)] + "..."
+
+
+def _build_payload(event: "NotifyEvent", rendered: Any | None = None) -> dict:
+    """Construct the Discord webhook payload.
+
+    Plan 2026-05-24-004 F003 (D022): when the F003 renderer produces a
+    RenderedEvent, emit a rich Discord embed with title/description/fields/
+    footer/color taxonomy. When the renderer returns None (kind has no
+    translation entry or disposition is inbox_only/audit_only — the latter
+    shouldn't actually reach this sink under normal flow), fall back to the
+    legacy single-content path so dispatch_event callers without a
+    RenderedEvent still get a useful post.
+
+    F003 audit finding (i1) addendum: dispatch_event already invokes
+    ``event_copy.render(event)`` and passes the result via ``rendered=`` so
+    the sink does NOT re-render. Direct callers that omit the kwarg fall
+    back to the in-sink render path (kept for backward compat).
+
+    Per the same decision: respect the Discord 2000-char total payload
+    limit by truncating the description well below; the exact_command is
+    NEVER truncated (operators copy-paste it).
+    """
+    if rendered is None:
+        try:
+            from dontpanic_orchestrate import event_copy
+
+            rendered = event_copy.render(event)
+        except Exception:  # noqa: BLE001 — sink must never raise
+            rendered = None
+
+    if rendered is None:
+        return {
+            "username": _USERNAME,
+            "content": _format_content(event),
+            "allowed_mentions": {"parse": []},
+        }
+
+    title = _truncate(rendered.title, _DISCORD_TITLE_LIMIT)
+    description = _truncate(rendered.detail or "", _DISCORD_DESCRIPTION_LIMIT)
+    fields: list[dict] = []
+    if rendered.exact_command:
+        # D022 + plan acceptance #6: never truncate exact_command. If it's
+        # too long for one field, we still emit it whole and let Discord
+        # complain — this is more honest than rendering a broken copy-paste.
+        fields.append(
+            {
+                "name": "Run",
+                "value": f"```\n{rendered.exact_command}\n```",
+                "inline": False,
+            }
+        )
+    footer_parts: list[str] = []
+    if rendered.evidence_uri:
+        footer_parts.append(f"Evidence: {rendered.evidence_uri}")
+    feature_id = getattr(event, "feature_id", None)
+    if feature_id:
+        footer_parts.append(f"feature={feature_id}")
+    footer_parts.append(f"plan={event.plan_id}")
+    footer_text = _truncate(" · ".join(footer_parts), _DISCORD_FIELD_VALUE_LIMIT)
+
+    embed: dict = {
+        "title": title,
+        "color": _band_to_color(rendered.band),
+        "footer": {"text": footer_text},
+    }
+    if description:
+        embed["description"] = description
+    if fields:
+        embed["fields"] = fields
+
+    payload: dict = {
+        "username": _USERNAME,
+        "embeds": [embed],
+        "allowed_mentions": {"parse": []},
+    }
+
+    # D022 + plan acceptance #6 (F003-i0 audit finding #4): cap the *total*
+    # serialized payload at the Discord limit. Per-field truncation alone is
+    # not enough — title + description + footer + fields can compose past
+    # 2000 chars. Trim the description first, then the footer body. The
+    # exact_command field is NEVER truncated (operators copy-paste it).
+    _enforce_payload_total_limit(payload, embed)
+    return payload
+
+
+def _enforce_payload_total_limit(payload: dict, embed: dict) -> None:
+    """Mutate ``embed`` so ``json.dumps(payload)`` fits the Discord limit.
+
+    Trims description first, then footer text, in shrinking steps until the
+    total fits. Exact-command fields are deliberately left intact so the
+    rendered copy-paste target survives even at the cost of dropping the
+    description entirely. Final fallback collapses both description and
+    footer when even an empty description+footer can't fit (extreme case;
+    we still ship the embed since the title + exact_command alone are the
+    irreducible operator-actionable copy).
+    """
+    limit = _DISCORD_PAYLOAD_TOTAL_LIMIT
+
+    def total_len() -> int:
+        return len(json.dumps(payload, ensure_ascii=False))
+
+    # Fast path — most embeds fit on the first try.
+    if total_len() <= limit:
+        return
+
+    # Step 1: shrink description in halves until either fits or empty.
+    description = embed.get("description", "")
+    while description and total_len() > limit:
+        # Halve, leaving an ellipsis so the truncation is visible.
+        new_len = max(0, len(description) // 2 - 3)
+        description = description[:new_len] + "..." if new_len > 0 else ""
+        embed["description"] = description
+        if not description:
+            embed.pop("description", None)
+            break
+    if total_len() <= limit:
+        return
+
+    # Step 2: shrink footer text in halves.
+    footer = embed.get("footer", {})
+    footer_text = footer.get("text", "")
+    while footer_text and total_len() > limit:
+        new_len = max(0, len(footer_text) // 2 - 3)
+        footer_text = footer_text[:new_len] + "..." if new_len > 0 else ""
+        footer["text"] = footer_text
+        embed["footer"] = footer
+        if not footer_text:
+            embed["footer"] = {"text": ""}
+            break
+    # Step 3 (degenerate): the title + exact_command alone may still exceed
+    # the limit. We choose to ship anyway — Discord will reject and our
+    # warn-once will fire — rather than silently dropping the exact_command,
+    # which is the operator's whole reason for getting the ping.
 
 
 __all__ = ["is_available", "notify", "reset_warning_cache"]

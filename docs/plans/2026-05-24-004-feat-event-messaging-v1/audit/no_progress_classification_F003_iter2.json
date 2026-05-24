@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-24T22:26:29Z",
+  "feature_id": "F003",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Signed-off volley terminal renders as blocked work with a resume command. Evidence: [event_copy.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpani…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "test_coverage",
+      "issue_excerpt": "F003 tests do not cover `volley_terminal` + `final_status=signed_off` rendering. Evidence: `rg signed_off` in the F003 render tests only hits verdict-mismatch…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

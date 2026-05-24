@@ -299,14 +299,11 @@ def _reconcile_gate_state_or_raise(
             persisted_state_path=str(exc.persisted_state_path),
             feature_id=feature_id or "",
         )
-        notify.notify(
-            title=f"jarvis: gate-state contradiction — {plan_id}",
-            message=f"{exc.kind}: {exc.gate or exc.stage or 'see INBOX'}",
-            subtitle=feature_id,
-        )
-        # Plan 2026-05-24-004 F002 — Discord sink for the contradiction so
-        # cross-machine operators see the escalation. INBOX write above is
-        # the truth-of-record; this is advisory and fail-soft.
+        # Plan 2026-05-24-004 F003 (audit i0 finding #3): dispatch through
+        # ALL sinks so the rendered terminal path produces the modern
+        # "DontPanic [..]" title (replaces the legacy jarvis: notify.notify
+        # that used to fire here). INBOX write above is the truth-of-record;
+        # both live channels are advisory and fail-soft.
         notify_event.dispatch_event(
             notify_event.NotifyEvent(
                 kind="gate_state_reconciliation_failed",
@@ -328,7 +325,7 @@ def _reconcile_gate_state_or_raise(
                     "persisted_state_path": str(exc.persisted_state_path),
                 },
             ),
-            sinks=(notify_event.SINK_DISCORD,),
+            plan_dir=plan_dir,
         )
         raise
 
@@ -369,12 +366,9 @@ def _trip_breaker(
         feature_id=feature_id,
         approval_required=str(kind in circuit_breakers.APPROVAL_BREAKERS).lower(),
     )
-    notify.notify(
-        title=f"jarvis: breaker {kind.value} — {plan_id}",
-        message=reason[:120],
-        subtitle=feature_id,
-    )
-    # Plan 2026-05-01-002 F003 — Discord sink (terminal already fired above).
+    # Plan 2026-05-24-004 F003 (audit i0 finding #3): dispatch through ALL
+    # sinks so the rendered terminal path produces the modern "DontPanic [..]"
+    # title (replaces the legacy `jarvis: breaker` notify.notify above).
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="breaker_tripped",
@@ -387,7 +381,7 @@ def _trip_breaker(
             inbox_event="breaker_tripped",
             breaker_kind=kind.value,
         ),
-        sinks=(notify_event.SINK_DISCORD,),
+        plan_dir=plan_dir,
     )
 
 
@@ -401,19 +395,21 @@ def _emit_gate_paused_discord(
     target_env: str | None = None,
     target_project: str | None = None,
 ) -> None:
-    """Plan 2026-05-01-002 F003 — Discord-only emit at every gate-pause site.
+    """Plan 2026-05-01-002 F003 — gate-pause notification emit.
 
-    The terminal-notifier sink already fires from the call-site's existing
-    ``notify.notify`` (which has kind-specific titles like 'pre_merge gate
-    pause'). This helper adds the parallel Discord post so cross-machine
-    operators see the same event. Always action_required severity (pauses
-    are by definition operator-actionable). action_link points at the
-    plan's INBOX.md so operators can drill down.
+    Plan 2026-05-24-004 F003 (audit i0 finding #3): dispatches through ALL
+    sinks (Discord + terminal-notifier) rather than Discord-only. The
+    callers used to fire a paired legacy ``notify.notify(title="jarvis: gate
+    pause...")`` for the terminal channel; that legacy emit has been
+    removed so the modern rendered path (DontPanic-branded title +
+    value-first headline) is the single source of truth. INBOX write at
+    each caller is the truth-of-record; the live channels are advisory.
 
-    Plan 2026-05-24-004 F002: populates ``inbox_event='gate_hit'`` (the
-    INBOX event= value all gate-pause call sites use) and threads
-    ``subtype`` (stage), ``target_env``, ``target_project`` so the
-    translation table can render structured copy."""
+    Always action_required severity (pauses are by definition
+    operator-actionable). evidence_uri points at the plan's INBOX.md so
+    operators can drill down. Populates ``inbox_event='gate_hit'`` (per
+    F002) and threads ``subtype`` (stage), ``target_env``, ``target_project``
+    so the translation table can render structured copy."""
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="gate_paused",
@@ -433,7 +429,7 @@ def _emit_gate_paused_discord(
             target_env=target_env,
             target_project=target_project,
         ),
-        sinks=(notify_event.SINK_DISCORD,),
+        plan_dir=plan_dir,
     )
 
 
@@ -460,6 +456,26 @@ def _maybe_emit_quota_warn(
         percent_weekly=pct,
         threshold=SOFT_THRESHOLD_PERCENT,
         feature_id=feature_id,
+    )
+    # Plan 2026-05-24-004 F003 — dashboard_action disposition: routes the
+    # soft-warn through the sidecar + INBOX rendered annotation so the
+    # dashboard shows the quota pressure without paging Discord.
+    notify_event.dispatch_event(
+        notify_event.NotifyEvent(
+            kind="quota_warn",
+            severity=notify_event.SEVERITY_INFO,
+            plan_id=plan_id,
+            feature_id=feature_id,
+            body="",
+            timestamp=dt.datetime.now(dt.timezone.utc),
+            inbox_event="quota_warn",
+            technical_metadata={
+                "agent": agent,
+                "percent_weekly": pct,
+                "threshold": SOFT_THRESHOLD_PERCENT,
+            },
+        ),
+        plan_dir=plan_dir,
     )
 
 
@@ -607,6 +623,9 @@ def _emit_budget_kind_specific_event(
             feature_id=feature_id,
         )
         # Plan 2026-05-01-002 F003 — calibration_required emit point.
+        # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to ALL sinks so
+        # the rendered terminal + sidecar + INBOX-annotation paths fire for
+        # this LIVE-disposition event (was Discord-only).
         notify_event.dispatch_event(
             notify_event.NotifyEvent(
                 kind="calibration_required",
@@ -627,7 +646,7 @@ def _emit_budget_kind_specific_event(
                     "window": bd_result.window or "",
                 },
             ),
-            sinks=(notify_event.SINK_DISCORD,),
+            plan_dir=plan_dir,
         )
     elif kind == circuit_breakers.BudgetCeilingKind.UNIT_MISMATCH:
         inbox.append_event(
@@ -645,6 +664,26 @@ def _emit_budget_kind_specific_event(
             window=bd_result.window or "",
             feature_id=feature_id,
         )
+        # Plan 2026-05-24-004 F003 — dashboard_action: surface the cap
+        # drift on the dashboard via the sidecar path.
+        notify_event.dispatch_event(
+            notify_event.NotifyEvent(
+                kind="unit_mismatch",
+                severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                plan_id=plan_id,
+                feature_id=feature_id,
+                body="",
+                timestamp=dt.datetime.now(dt.timezone.utc),
+                inbox_event="unit_mismatch",
+                technical_metadata={
+                    "agent": bd_result.agent or "",
+                    "window": bd_result.window or "",
+                    "cap_unit": bd_result.cap_unit or "",
+                    "observed_unit": bd_result.observed_unit or "",
+                },
+            ),
+            plan_dir=plan_dir,
+        )
     elif kind == circuit_breakers.BudgetCeilingKind.CONFIG_REQUIRED:
         cause = (bd_result.details or {}).get("cause", "unknown")
         inbox.append_event(
@@ -661,6 +700,21 @@ def _emit_budget_kind_specific_event(
             ),
             cause=cause,
             feature_id=feature_id,
+        )
+        # Plan 2026-05-24-004 F003 — dashboard_action: operator must seed
+        # quota config; surface as an ActionItem on the dashboard.
+        notify_event.dispatch_event(
+            notify_event.NotifyEvent(
+                kind="config_required",
+                severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                plan_id=plan_id,
+                feature_id=feature_id,
+                body="",
+                timestamp=dt.datetime.now(dt.timezone.utc),
+                inbox_event="config_required",
+                technical_metadata={"cause": cause},
+            ),
+            plan_dir=plan_dir,
         )
     # TRIPPED falls through — the breaker_tripped INBOX event from
     # _trip_breaker carries enough for the operator to act on.
@@ -1030,11 +1084,10 @@ def dispatch_single_agent(
             unmet_gates=",".join(gate_check.unmet),
             feature_id=feature_id,
         )
-        notify.notify(
-            title=f"jarvis: gate pause — {loaded.plan_id}",
-            message=f"Awaiting: {', '.join(gate_check.unmet)}",
-            subtitle=feature_id,
-        )
+        # Plan 2026-05-24-004 F003 (audit i0 finding #3): the rendered
+        # terminal sink fires from _emit_gate_paused_discord, replacing
+        # the legacy `jarvis: gate pause` notify.notify that used to run
+        # here.
         _emit_gate_paused_discord(
             loaded.plan_dir,
             loaded.plan_id,
@@ -1160,14 +1213,11 @@ def _emit_volley_terminal(
         rounds=result.rounds,
         feature_id=feature_id,
     )
-    notify.notify(
-        title=f"jarvis: {result.final_status} — {loaded.plan_id}",
-        message=result.reason[:120],
-        subtitle=feature_id,
-    )
-    # Plan 2026-05-01-002 F003 — Discord sink for volley terminal/signoff.
-    # Severity routes by final_status: signed_off is info, every other
-    # terminal needs operator action.
+    # Plan 2026-05-24-004 F003 (audit i0 finding #2): the legacy
+    # `notify.notify(title=f"jarvis: {result.final_status} ...")` call that
+    # used to fire here is removed — the modern dispatch below fans through
+    # ALL sinks (audit i0 finding #1) so the terminal-notifier sink now
+    # produces the rendered "DontPanic [{plan_id}]" title via notify_event.
     _signoff_severity = (
         notify_event.SEVERITY_INFO
         if result.final_status == "signed_off"
@@ -1196,7 +1246,7 @@ def _emit_volley_terminal(
                 "rounds": result.rounds,
             },
         ),
-        sinks=(notify_event.SINK_DISCORD,),
+        plan_dir=plan_dir,
     )
     if result.audit_paths:
         iteration = max(0, result.rounds - 1)
@@ -1506,11 +1556,9 @@ def dispatch_volley(
             target_project=effective_project or "(none)",
             feature_id=feature_id,
         )
-        notify.notify(
-            title=f"jarvis: gate pause — {loaded.plan_id}",
-            message=f"Awaiting: {', '.join(gate_check.unmet)}",
-            subtitle=feature_id,
-        )
+        # Plan 2026-05-24-004 F003 (audit i0 finding #3): legacy
+        # `jarvis: gate pause` notify.notify removed; rendered terminal
+        # sink fires via _emit_gate_paused_discord.
         _emit_gate_paused_discord(
             loaded.plan_dir,
             loaded.plan_id,
@@ -1743,11 +1791,10 @@ def dispatch_volley(
                                 target_project=effective_project or "(none)",
                                 feature_id=feature_id,
                             )
-                            notify.notify(
-                                title=f"jarvis: pre_impl gate pause — {loaded.plan_id}",
-                                message=f"Awaiting: {', '.join(pre_impl_info.pending)}",
-                                subtitle=feature_id,
-                            )
+                            # Plan 2026-05-24-004 F003 (audit i0 finding #3):
+                            # legacy `jarvis: pre_impl gate pause` notify.notify
+                            # removed; rendered terminal sink fires via
+                            # _emit_gate_paused_discord.
                             _emit_gate_paused_discord(
                                 loaded.plan_dir,
                                 loaded.plan_id,
@@ -1925,17 +1972,12 @@ def dispatch_volley(
                         feature_id=feature_id,
                         iteration=str(iteration),
                     )
-                    notify.notify(
-                        title=f"jarvis: verdict mismatch — {loaded.plan_id}",
-                        message=(
-                            f"narrative={mismatch.narrative_verdict} vs "
-                            f"structured={mismatch.structured_status}"
-                        ),
-                        subtitle=feature_id,
-                    )
-                    # Plan 2026-05-24-004 F002 — Discord sink advisory before the
-                    # supervisor re-raises VerdictMismatchError. INBOX write
-                    # above is the truth-of-record.
+                    # Plan 2026-05-24-004 F003 (audit i0 finding #2): the
+                    # legacy `notify.notify(title=f"jarvis: verdict mismatch ...")`
+                    # call is removed — the dispatch below fans through ALL
+                    # sinks (audit i0 finding #1) so the terminal sink now
+                    # produces the rendered DontPanic-branded title via
+                    # notify_event.
                     try:
                         _vm_display_name = (
                             loaded.feature(feature_id).get("description", "") or None
@@ -1966,7 +2008,7 @@ def dispatch_volley(
                                 "iteration": iteration,
                             },
                         ),
-                        sinks=(notify_event.SINK_DISCORD,),
+                        plan_dir=loaded.plan_dir,
                     )
                     raise mismatch
 
@@ -2020,11 +2062,10 @@ def dispatch_volley(
                             target_project=effective_project or "(none)",
                             feature_id=feature_id,
                         )
-                        notify.notify(
-                            title=f"jarvis: pre_merge gate pause — {loaded.plan_id}",
-                            message=f"Awaiting: {', '.join(pre_merge_info.pending)}",
-                            subtitle=feature_id,
-                        )
+                        # Plan 2026-05-24-004 F003 (audit i0 finding #3):
+                        # legacy `jarvis: pre_merge gate pause` notify.notify
+                        # removed; rendered terminal sink fires via
+                        # _emit_gate_paused_discord.
                         _emit_gate_paused_discord(
                             loaded.plan_dir,
                             loaded.plan_id,
@@ -2246,6 +2287,10 @@ def dispatch_volley(
                             )
                         except KeyError:
                             _vbr_display_name = None
+                        # Plan 2026-05-24-004 F003 (audit i0 finding #1):
+                        # fan to ALL sinks + pass plan_dir so the rendered
+                        # terminal + sidecar + INBOX-annotation paths fire
+                        # for this LIVE-disposition event.
                         notify_event.dispatch_event(
                             notify_event.NotifyEvent(
                                 kind="verdict_blocked_reconciled",
@@ -2271,7 +2316,7 @@ def dispatch_volley(
                                     "original_verdict": "blocked",
                                 },
                             ),
-                            sinks=(notify_event.SINK_DISCORD,),
+                            plan_dir=loaded.plan_dir,
                         )
                         transcript.append_terminal(
                             loaded.plan_dir,
@@ -2357,6 +2402,10 @@ def dispatch_volley(
                             )
                         except KeyError:
                             _eb_display_name = None
+                        # Plan 2026-05-24-004 F003 (audit i0 finding #1):
+                        # fan to ALL sinks + pass plan_dir so the rendered
+                        # terminal + sidecar + INBOX-annotation paths fire
+                        # for this LIVE-disposition event.
                         notify_event.dispatch_event(
                             notify_event.NotifyEvent(
                                 kind="environmental_blocker_short_circuit",
@@ -2378,7 +2427,7 @@ def dispatch_volley(
                                 iteration_count=iteration + 1,
                                 feature_display_name=_eb_display_name,
                             ),
-                            sinks=(notify_event.SINK_DISCORD,),
+                            plan_dir=loaded.plan_dir,
                         )
                         env_reason = (
                             f"environmental blocker — round {iteration + 1} auditor "
@@ -2504,6 +2553,10 @@ def dispatch_volley(
                         )
                     except KeyError:
                         _np_display_name = None
+                    # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to
+                    # ALL sinks + pass plan_dir so the rendered terminal +
+                    # sidecar + INBOX-annotation paths fire for this
+                    # LIVE-disposition event.
                     notify_event.dispatch_event(
                         notify_event.NotifyEvent(
                             kind="no_progress_classification",
@@ -2523,7 +2576,7 @@ def dispatch_volley(
                             blocking=bool(classification.blocking),
                             feature_display_name=_np_display_name,
                         ),
-                        sinks=(notify_event.SINK_DISCORD,),
+                        plan_dir=loaded.plan_dir,
                     )
                     np_reason = (
                         f"{np_reason}\n"

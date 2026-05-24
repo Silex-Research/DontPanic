@@ -1081,7 +1081,8 @@ class TestSinkRenderingDoesNotRegress:
             body="x",
         )
         assert notify.notify_event(ev) is True
-        assert called["args"][0] == "Jarvis [p]"
+        # Plan 2026-05-24-004 F003 D010 — terminal brand fix.
+        assert called["args"][0] == "DontPanic [p]"
 
     def test_discord_sink_renders_populated_event(
         self, monkeypatch: pytest.MonkeyPatch

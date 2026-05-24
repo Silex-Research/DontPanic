@@ -1,0 +1,62 @@
+{
+  "task_id": "2026-05-24-004-feat-event-messaging-v1",
+  "audit_id": "2026-05-24-004-feat-event-messaging-v1#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-24T22:09:00Z",
+  "completed_at": "2026-05-24T22:12:59Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-24-004-feat-event-messaging-v1-co1ux1eq target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 377254 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3450947,
+    "tokens_out": 15550,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is structurally correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their recorded commands contain no forbidden command shapes.\n\nFINDING (high, correctness): Several `live` events still do not render to terminal and/or INBOX annotation. Evidence: `architecture_regen_failed`, `calibration_required`, `volley_terminal/signoff`, `verdict_mismatch`, `verdict_blocked_reconciled`, `environmental_blocker_short_circuit`, and `no_progress_classification` still call `dispatch_event(..., sinks=(notify_event.SINK_DISCORD,))`; some also omit `plan_dir`, so `append_rendered_annotation()` cannot run. Recommendation: route all `live` dispositions through default sinks and pass `plan_dir` wherever a raw INBOX entry exists.\n\nFINDING (high, correctness): `volley_terminal/signoff` still emits a legacy terminal notification titled `jarvis: ...`. Evidence: [supervisor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1215) calls `notify.notify(title=f\"jarvis: {result.final_status} — {loaded.plan_id}\", ...)`, while its rendered dispatch is Discord-only. Recommendation: remove the legacy terminal call or replace it with the rendered `DontPanic [{plan_id}]` terminal sink via `dispatch_event`.\n\nFINDING (medium, correctness): Discord payload-limit enforcement measures a different JSON serialization than the one actually sent. Evidence: `_enforce_paylo",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py scripts/dontpanic_orchestrate/tests/test_notify_event_f002.py scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py scripts/dontpanic_orchestrate/tests/test_event_copy_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c <event_copy contract check>",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c <discord payload serialization check>"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Several `live` events still do not render to terminal and/or INBOX annotation. Evidence: `architecture_regen_failed`, `calibration_required`, `volley_terminal/signoff`, `verdict_mismatch`, `verdict_blocked_reconciled`, `environmental_blocker_short_circuit`, and `no_progress_classification` still call `dispatch_event(..., sinks=(notify_event.SINK_DISCORD,))`; some also omit `plan_dir`, so `append_rendered_annotation()` cannot run. Recommendation: route all `live` dispositions through default sink",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`volley_terminal/signoff` still emits a legacy terminal notification titled `jarvis: ...`. Evidence: [supervisor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:1215) calls `notify.notify(title=f\"jarvis: {result.final_status} — {loaded.plan_id}\", ...)`, while its rendered dispatch is Discord-only. Recommendation: remove the legacy terminal call or replace it with the rendered `DontPanic [{plan_id}]` terminal sink via `dispatch_event`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Discord payload-limit enforcement measures a different JSON serialization than the one actually sent. Evidence: `_enforce_payload_total_limit()` uses `json.dumps(payload, ensure_ascii=False)`, but `notify()` sends `json.dumps(payload)` with ASCII escaping; a rendered payload measured as 1237 chars became 5232 chars on the actual send path. Recommendation: enforce against the exact serialized body sent, or serialize with `ensure_ascii=False` consistently.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "Required translation-table totality coverage is incomplete. Evidence: `DISPOSITION_TABLE` has 27 keys, `TRANSLATION_TABLE` has 15, missing entries include `blocked_no_findings`, `defer_tripped`, `gate_cleared`, `resumed`, and others; tests only sample some `inbox_only`/`audit_only` events returning `None`. Recommendation: either add explicit table rows for every disposition-keyed event or add a focused test documenting and enforcing the intended renderable-only subset. Checks run: $ PYTHONDONTWR",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

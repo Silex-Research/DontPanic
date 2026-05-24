@@ -307,13 +307,23 @@ def build(
                 arch_status=arch_status,
                 plan_id=plan_id,
             )
+            # Plan 2026-05-24-004 F003 (D003 + D019) — merge event-actions
+            # sidecar into provider-derived items BEFORE writing what-now.json
+            # to out_dir. Both write paths (dashboard.build's out_dir copy +
+            # operator_console.write_cache's home cache) must merge or the
+            # served dashboard state goes stale on whichever path skips.
+            merged_items = operator_console.merge_with_event_sidecar(items)
             (out_dir / "what-now.json").write_text(
-                operator_console.render_json(items),
+                operator_console.render_json(merged_items),
                 encoding="utf-8",
             )
+            # write_cache merges by default (merge_event_sidecar=True); pass
+            # the already-merged list and disable the inner merge to avoid
+            # double-application that would be a no-op anyway.
             what_now_cache_path = operator_console.write_cache(
-                items,
+                merged_items,
                 path=what_now_cache_path_override,
+                merge_event_sidecar=False,
             )
         except Exception as exc:  # noqa: BLE001
             msg = f"what-now cache skipped: {exc}"

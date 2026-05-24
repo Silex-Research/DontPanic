@@ -176,11 +176,13 @@ def maybe_regen_after_commit(
             inbox_written = True
         except Exception:  # noqa: BLE001 — INBOX is best-effort here
             pass
-        # Plan 2026-05-24-004 F002 — Discord sink advisory for the failure.
-        # INBOX write above is the truth-of-record; this dispatch is best-
-        # effort and never crashes the volley terminal. If the INBOX write
-        # failed, skip advisory dispatch so D013's truth-of-record invariant
-        # stays intact.
+        # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to ALL sinks
+        # + pass plan_dir so the rendered terminal + sidecar + INBOX-
+        # annotation paths fire for this LIVE-disposition event. INBOX
+        # write above is the truth-of-record; this dispatch is best-effort
+        # and never crashes the volley terminal. If the INBOX write
+        # failed, skip advisory dispatch so D013's truth-of-record
+        # invariant stays intact.
         if inbox_written:
             try:
                 notify_event.dispatch_event(
@@ -203,7 +205,7 @@ def maybe_regen_after_commit(
                             "error_type": type(exc).__name__,
                         },
                     ),
-                    sinks=(notify_event.SINK_DISCORD,),
+                    plan_dir=plan_dir,
                 )
             except Exception:  # noqa: BLE001 — sink failure must not crash hook
                 pass
