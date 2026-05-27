@@ -248,5 +248,5 @@ The design chose hand-written JSON-first inception (this document + siblings) ov
 
 ```yaml
 target_env: dev
-target_project: jarvis-a6ee1
+target_project: <firebase-project-id>
 ```

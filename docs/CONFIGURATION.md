@@ -361,7 +361,7 @@ Plans are directories under `docs/plans/<id>/` containing:
 | `signoff.json` | Closeout verdict (written by supervisor) | `signoff.schema.json` |
 
 The agent-conventions repo at
-[`/Users/bayesian/Documents/GitHub/agent-conventions/`](../../agent-conventions)
+[`$HOME/Documents/GitHub/agent-conventions/`](../../agent-conventions)
 is the source of truth for schemas and is consumed via git subtree.
 
 For plan authoring, see [`AUTHORING_PLANS.md`](./AUTHORING_PLANS.md).

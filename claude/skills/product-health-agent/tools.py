@@ -2,7 +2,7 @@
 Custom tool implementations for product-health-agent.
 
 Every tool in this module:
-- is READ-ONLY for production projects (glam-ac11e, restaurant-attributes)
+- is READ-ONLY for configured production app projects
 - only writes to the insights collection in the workspace project
 - keeps all credentials host-side (never shipped into the managed container)
 - returns JSON-serializable Python dicts suitable for user.custom_tool_result

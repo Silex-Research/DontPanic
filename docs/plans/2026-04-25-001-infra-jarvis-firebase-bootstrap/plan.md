@@ -1,13 +1,13 @@
 ---
 id: 2026-04-25-001-infra-jarvis-firebase-bootstrap
-title: Jarvis Firebase Bootstrap (jarvis-a6ee1) + Two-Axis Billing
+title: Jarvis Firebase Bootstrap (<firebase-project-id>) + Two-Axis Billing
 type: infra
 tier: local
 status: abandoned
 date: "2026-04-25"
 dependencies:
   - 2026-04-19-001-infra-cross-agent-orchestration
-description: Activate jarvis-a6ee1 services + service account + orchestrator credentials, satisfying parent F002 and F020. Lights up GCP $ tracking and LLM token tracking.
+description: Activate <firebase-project-id> services + service account + orchestrator credentials, satisfying parent F002 and F020. Lights up GCP $ tracking and LLM token tracking.
 agents_required:
   - claude
 human_gates:
@@ -30,11 +30,11 @@ Sub-plan of `2026-04-19-001`. Closes parent features F002 (Firebase project + St
 
 ## Goal
 
-Make `jarvis-a6ee1` a working backend for the orchestration system: Storage for evidence > 100KB, service-account creds for Python supervisor, two-axis billing tracking (GCP $ via `refresh-costs.sh`, LLM tokens via `quota_check.py`).
+Make `<firebase-project-id>` a working backend for the orchestration system: Storage for evidence > 100KB, service-account creds for Python supervisor, two-axis billing tracking (GCP $ via `refresh-costs.sh`, LLM tokens via `quota_check.py`).
 
 ## Scope (in)
 
-- New Jarvis billing account, linked to `jarvis-a6ee1`
+- New Jarvis billing account, linked to `<firebase-project-id>`
 - Cloud Storage default bucket + `storage.rules` (auth-only write, no client read)
 - `orchestrator` service account with Storage Admin / Firestore User / Logs Writer
 - Service account JSON key in `Jarvis/.secrets/` (gitignored, mirrored to 1Password)
@@ -42,7 +42,7 @@ Make `jarvis-a6ee1` a working backend for the orchestration system: Storage for 
 - `smoke_test_storage.py` — F002 acceptance harness (upload + 1h signed URL)
 - `quota_check.py` — F020, writes `~/.jarvis/quota_state.json`
 - `refresh-costs.sh` patch — new "Jarvis" cost bucket
-- Parent `features.json` patched (F002 description: `jarvis-main` → `jarvis-a6ee1`)
+- Parent `features.json` patched (F002 description: `jarvis-main` → `<firebase-project-id>`)
 
 ## Scope (out — deferred to parent plan or later sub-plans)
 
@@ -54,8 +54,8 @@ Make `jarvis-a6ee1` a working backend for the orchestration system: Storage for 
 
 ## Dependencies
 
-- gcloud + firebase CLIs authenticated as `bilotto@silexr.com` (✓)
-- `bilotto@silexr.com` Owner on `jarvis-a6ee1` (✓ confirmed 2026-04-25)
+- gcloud + firebase CLIs authenticated as `<operator-email>` (✓)
+- `<operator-email>` Owner on `<firebase-project-id>` (✓ confirmed 2026-04-25)
 - New "Jarvis" billing account created and linked (PENDING — operator action)
 
 ## Acceptance
@@ -64,7 +64,7 @@ This plan is `signoff: true` when:
 - F002 acceptance: `python3 scripts/jarvis_orchestrate/smoke_test_storage.py` uploads fixture and retrieves via 1h signed URL with HTTP 200
 - F020 acceptance: `python3 scripts/quota_check.py` writes `~/.jarvis/quota_state.json` with non-empty `models` map
 - `refresh-costs.sh` runs without error and includes a "Jarvis" key (value will be 0 until BigQuery export populates ~24h after billing link)
-- Parent `features.json` F002 reflects `jarvis-a6ee1`
+- Parent `features.json` F002 reflects `<firebase-project-id>`
 - `decisions.jsonl` D036 records the project-ID rename
 
 ## Risks
@@ -75,11 +75,11 @@ This plan is `signoff: true` when:
 
 ## Provenance
 
-User created `jarvis-a6ee1` in Firebase console on 2026-04-25 from session continuation of parent plan `2026-04-19-001`. This sub-plan was approved during the same session ("execute in parallel where able").
+User created `<firebase-project-id>` in Firebase console on 2026-04-25 from session continuation of parent plan `2026-04-19-001`. This sub-plan was approved during the same session ("execute in parallel where able").
 
 ## Target
 
 ```yaml
 target_env: dev
-target_project: jarvis-a6ee1
+target_project: <firebase-project-id>
 ```

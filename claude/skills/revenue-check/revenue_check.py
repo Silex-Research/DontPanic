@@ -15,6 +15,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,10 +119,18 @@ class GlamLedgerAdapter:
     The Firestore query shape is documented here for readers; live execution requires ADC.
     """
 
-    def __init__(self, project_id: str = "glam-ac11e") -> None:
-        self.project_id = project_id
+    def __init__(self, project_id: str | None = None) -> None:
+        self.project_id = project_id or os.environ.get("GCP_PROJECT_ID")
 
     def fetch(self, app: str, as_of: dt.datetime) -> RevenueResult:  # pragma: no cover - live path
+        if not self.project_id:
+            return RevenueResult(
+                None,
+                "unavailable: set GCP_PROJECT_ID or pass project_id to GlamLedgerAdapter",
+                "monthly",
+                None,
+            )
+
         try:
             from google.cloud import firestore  # noqa: F401
         except ImportError:

@@ -14,7 +14,7 @@ docs/design/dashboard-platform-roadmap-v1/claude-design-v3/
 Source:
 
 ```text
-/Users/bayesian/Downloads/DontPanic-3.zip
+$HOME/Downloads/DontPanic-3.zip
 ```
 
 This pack is non-runtime design intake. Do not import React/JSX files directly

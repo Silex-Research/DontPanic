@@ -7,3 +7,13 @@
 7ce2289ddb359004f98d1718412e373d1bbbc7ff:docs/architecture/architecture.json:discord-api-token:2211
 346ab37e32e74a91267f5a41e823a2f157bbf74c:scripts/jarvis_orchestrate/tests/test_f001_secret_shapes.py:jwt:91
 826c1af3c86c639374dc626128c4fdc727666a6c:tracking/BLOCKED.md:curl-auth-header:130
+beea764d2839231d045b1adf9bfa944995b1af37:scripts/dontpanic_orchestrate/tests/test_event_messaging_sanitization_f004.py:generic-api-key:90
+4806aa67f6f0ffe8da899408c09f8f08956c0f52:scripts/dontpanic_orchestrate/tests/test_event_messaging_sanitization_f004.py:generic-api-key:90
+cd2e5714206c6ced67eaed725ab210e89f8d8374:docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/codex-auditor-F003-i0.json:generic-api-key:31
+cd2e5714206c6ced67eaed725ab210e89f8d8374:docs/plans/2026-05-22-004-feat-capability-guided-setup-v2/audit/codex-auditor-F003-i1.json:generic-api-key:28
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:272
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:290
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:333
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:365
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:424
+cd2e5714206c6ced67eaed725ab210e89f8d8374:scripts/dontpanic_orchestrate/tests/test_capabilities_setup_evidence_f003.py:generic-api-key:465

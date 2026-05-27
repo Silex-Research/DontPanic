@@ -6,14 +6,14 @@
       "id": "F001",
       "category": "infra",
       "phase": 0,
-      "description": "Operator creates new 'Jarvis' billing account and links to jarvis-a6ee1",
+      "description": "Operator creates new 'Jarvis' billing account and links to <firebase-project-id>",
       "steps": [
         "Operator: console.cloud.google.com/billing/create → name 'Jarvis', add payment method",
         "Operator: report account ID (format XXXXXX-XXXXXX-XXXXXX)",
-        "Claude: gcloud beta billing projects link jarvis-a6ee1 --billing-account=<ID>",
-        "Verify: gcloud beta billing projects describe jarvis-a6ee1 → billingEnabled: true"
+        "Claude: gcloud beta billing projects link <firebase-project-id> --billing-account=<ID>",
+        "Verify: gcloud beta billing projects describe <firebase-project-id> → billingEnabled: true"
       ],
-      "acceptance": "gcloud beta billing projects describe jarvis-a6ee1 returns billingEnabled: true with the new account name",
+      "acceptance": "gcloud beta billing projects describe <firebase-project-id> returns billingEnabled: true with the new account name",
       "passes": false,
       "depends_on": []
     },
@@ -21,10 +21,10 @@
       "id": "F002",
       "category": "infra",
       "phase": 1,
-      "description": "Enable required GCP APIs on jarvis-a6ee1",
+      "description": "Enable required GCP APIs on <firebase-project-id>",
       "steps": [
-        "gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com iam.googleapis.com iamcredentials.googleapis.com --project=jarvis-a6ee1",
-        "Verify each service appears in: gcloud services list --enabled --project=jarvis-a6ee1"
+        "gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com iam.googleapis.com iamcredentials.googleapis.com --project=<firebase-project-id>",
+        "Verify each service appears in: gcloud services list --enabled --project=<firebase-project-id>"
       ],
       "acceptance": "All 4 APIs listed as enabled",
       "passes": false,
@@ -36,12 +36,12 @@
       "id": "F003",
       "category": "infra",
       "phase": 1,
-      "description": "Create default Cloud Storage bucket for jarvis-a6ee1",
+      "description": "Create default Cloud Storage bucket for <firebase-project-id>",
       "steps": [
-        "gcloud storage buckets create gs://jarvis-a6ee1.appspot.com --project=jarvis-a6ee1 --location=us-central1 --uniform-bucket-level-access",
+        "gcloud storage buckets create gs://<firebase-project-id>.appspot.com --project=<firebase-project-id> --location=us-central1 --uniform-bucket-level-access",
         "Or: firebase use orchestrator && firebase deploy --only storage (creates default if missing)"
       ],
-      "acceptance": "gcloud storage buckets list --project=jarvis-a6ee1 shows one bucket",
+      "acceptance": "gcloud storage buckets list --project=<firebase-project-id> shows one bucket",
       "passes": false,
       "depends_on": [
         "F002"
@@ -53,11 +53,11 @@
       "phase": 1,
       "description": "Create orchestrator service account with required IAM roles",
       "steps": [
-        "gcloud iam service-accounts create orchestrator --display-name='Jarvis Orchestrator' --project=jarvis-a6ee1",
+        "gcloud iam service-accounts create orchestrator --display-name='Jarvis Orchestrator' --project=<firebase-project-id>",
         "Grant roles: roles/storage.admin, roles/datastore.user, roles/logging.logWriter, roles/iam.serviceAccountTokenCreator",
         "Last role enables signed URL minting via IAM credentials API"
       ],
-      "acceptance": "gcloud projects get-iam-policy jarvis-a6ee1 shows orchestrator@jarvis-a6ee1.iam.gserviceaccount.com with all 4 roles",
+      "acceptance": "gcloud projects get-iam-policy <firebase-project-id> shows <orchestrator-service-account> with all 4 roles",
       "passes": false,
       "depends_on": [
         "F002"
@@ -69,9 +69,9 @@
       "phase": 2,
       "description": "Generate service account JSON key, store in .secrets/, verify gitignored",
       "steps": [
-        "gcloud iam service-accounts keys create .secrets/jarvis-a6ee1-orchestrator.json --iam-account=orchestrator@jarvis-a6ee1.iam.gserviceaccount.com",
-        "git check-ignore .secrets/jarvis-a6ee1-orchestrator.json (must succeed)",
-        "Operator action: mirror to 1Password vault 'Jarvis' as 'jarvis-a6ee1 orchestrator key'"
+        "gcloud iam service-accounts keys create .secrets/<firebase-project-id>-orchestrator.json --iam-account=<orchestrator-service-account>",
+        "git check-ignore .secrets/<firebase-project-id>-orchestrator.json (must succeed)",
+        "Operator action: mirror to 1Password vault 'Jarvis' as '<firebase-project-id> orchestrator key'"
       ],
       "acceptance": "Key file exists at expected path, git check-ignore returns 0, operator confirms 1Password entry created",
       "passes": false,
@@ -83,7 +83,7 @@
       "id": "F006",
       "category": "tooling",
       "phase": 2,
-      "description": "Deploy storage.rules to jarvis-a6ee1",
+      "description": "Deploy storage.rules to <firebase-project-id>",
       "steps": [
         "firebase deploy --only storage --project=orchestrator",
         "Confirm rules deployed: firebase deploy output shows 'Deploy complete'"
@@ -115,9 +115,9 @@
       "id": "F008",
       "category": "observability",
       "phase": 2,
-      "description": "Patch refresh-costs.sh — add 'Jarvis' bucket and jarvis-a6ee1 project mapping",
+      "description": "Patch refresh-costs.sh — add 'Jarvis' bucket and <firebase-project-id> project mapping",
       "steps": [
-        "Add jarvis-a6ee1 to project→app mapping under app='Jarvis'",
+        "Add <firebase-project-id> to project→app mapping under app='Jarvis'",
         "Add 'Jarvis' to totals object",
         "Add UNION ALL for new billing-export table (commented placeholder; activates when operator confirms BigQuery export configured)",
         "Run refresh-costs.sh: should succeed, show Jarvis: 0 (no export yet) or actual value if 24h+ have passed"
@@ -150,13 +150,13 @@
       "id": "F010",
       "category": "schema",
       "phase": 2,
-      "description": "Update parent plan features.json (rename jarvis-main → jarvis-a6ee1) + log decision D036",
+      "description": "Update parent plan features.json (rename jarvis-main → <firebase-project-id>) + log decision D036",
       "steps": [
-        "Edit ../2026-04-19-001/features.json F002: replace 'jarvis-main' with 'jarvis-a6ee1' in description and steps",
+        "Edit ../2026-04-19-001/features.json F002: replace 'jarvis-main' with '<firebase-project-id>' in description and steps",
         "Append D036 to ../2026-04-19-001/decisions.jsonl: project ID rename, why (Firebase auto-suffix)",
         "Re-run validate_plan.py against parent plan to confirm still valid"
       ],
-      "acceptance": "Parent features.json F002 references jarvis-a6ee1, decisions.jsonl has D036, validator passes",
+      "acceptance": "Parent features.json F002 references <firebase-project-id>, decisions.jsonl has D036, validator passes",
       "passes": false,
       "depends_on": []
     },

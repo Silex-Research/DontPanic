@@ -43,18 +43,18 @@
       "id": "F002",
       "category": "infra",
       "phase": 0,
-      "description": "Firebase project jarvis-a6ee1 (Firebase auto-suffixed 'Jarvis') with Storage + Admin SDK credentials",
+      "description": "Firebase project <firebase-project-id> (Firebase auto-suffixed 'Jarvis') with Storage + Admin SDK credentials",
       "steps": [
-        "Project jarvis-a6ee1 created in Firebase console (done 2026-04-25)",
-        "Operator: bilotto@silexr.com granted Owner role (done 2026-04-25)",
-        "Operator: create dedicated 'Jarvis' billing account, link to jarvis-a6ee1",
+        "Project <firebase-project-id> created in Firebase console (done 2026-04-25)",
+        "Operator: <operator-email> granted Owner role (done 2026-04-25)",
+        "Operator: create dedicated 'Jarvis' billing account, link to <firebase-project-id>",
         "Enable APIs: firestore, firebasestorage, iam, iamcredentials",
-        "Create service account orchestrator@jarvis-a6ee1.iam.gserviceaccount.com with Storage Admin + Firestore User + Logs Writer + Service Account Token Creator",
-        "Store credentials in Jarvis/.secrets/jarvis-a6ee1-orchestrator.json (gitignored) and 1Password vault Jarvis",
+        "Create service account <orchestrator-service-account> with Storage Admin + Firestore User + Logs Writer + Service Account Token Creator",
+        "Store credentials in Jarvis/.secrets/<firebase-project-id>-orchestrator.json (gitignored) and 1Password vault Jarvis",
         "Storage rules: full-deny (Admin SDK bypasses; signed-URL reads only)",
         "Test upload + signed URL retrieval via scripts/jarvis_orchestrate/smoke_test_storage.py"
       ],
-      "acceptance": "Python script uploads fixture to gs://jarvis-a6ee1-evidence/evidence/smoke-test-{ts}.json and retrieves via 1-hour signed URL with HTTP 200",
+      "acceptance": "Python script uploads fixture to gs://<firebase-project-id>-evidence/evidence/smoke-test-{ts}.json and retrieves via 1-hour signed URL with HTTP 200",
       "passes": true,
       "verified_at": "2026-04-25T18:23:22Z",
       "verified_by": [
@@ -695,7 +695,7 @@
         "EC5: prompt rule — agents must declare {repo, env, project, command} before any side-effect call; auditor verifies against plan.target_env",
         "EC6: audit field target_context: {env, project, commands_run[]}; supervisor rejects audits whose target_context.env != plan.target_env",
         "EC7: prod gate — target_env=prod requires pre_impl AND on_escalation in human_gates regardless of tier; supervisor refuses to dispatch otherwise",
-        "EC8: starter environments.json files for Jarvis (jarvis-a6ee1), Glam, SpinDine, axiom",
+        "EC8: starter environments.json files for Jarvis (<firebase-project-id>), Glam, SpinDine, axiom",
         "EC9: forbid project-mutating commands — command_guard hard-rejects regardless of context: gcloud config set project, gcloud config configurations activate (without CLOUDSDK_CONFIG), firebase use --add, kubectl config use-context, gh auth switch, npm config set, git config --global, etc.",
         "EC10 (generalized): per-supervisor ExecutionEnvironment isolation — supervisor mints per-plan temp dirs and points each tool's config namespace at them: CLOUDSDK_CONFIG, XDG_CONFIG_HOME, CONFIGSTORE_DIR, KUBECONFIG, GH_CONFIG_DIR, NPM_CONFIG_USERCONFIG, DOCKER_CONFIG, GRADLE_USER_HOME, ANDROID_USER_HOME, ANDROID_AVD_HOME, TF_DATA_DIR. Tool-specific flag discipline (xcodebuild explicit -scheme/-configuration/-destination/-derivedDataPath; gradle explicit flavor/buildType + --gradle-user-home). Mutations stay sandboxed; parallel supervisors against same/different projects are safe. Cleanup on volley terminate.",
         "EC11: per-plan .firebaserc + cwd discipline — supervisor CDs into plan working dir before firebase invocations; --project flag always passed",
@@ -766,7 +766,7 @@
           "uri": "./plan.md",
           "captured_at": "2026-04-26T01:00:00Z",
           "captured_by": "claude",
-          "note": "F023 Step 2 backfill: parent plan + sub-plans (2026-04-25-001 firebase-bootstrap, 2026-04-25-002 trivial-orchestration-test) gained `## Target` sections. Real cloud plans → target_project: jarvis-a6ee1; synthetic test plans → target_project: none. All three validate against agent-conventions v1.0 schemas (Target section is in plan.md body, not frontmatter, so no schema bump triggered)."
+          "note": "F023 Step 2 backfill: parent plan + sub-plans (2026-04-25-001 firebase-bootstrap, 2026-04-25-002 trivial-orchestration-test) gained `## Target` sections. Real cloud plans → target_project: <firebase-project-id>; synthetic test plans → target_project: none. All three validate against agent-conventions v1.0 schemas (Target section is in plan.md body, not frontmatter, so no schema bump triggered)."
         },
         {
           "type": "commit",
@@ -843,7 +843,7 @@
           "uri": "../../../../Jarvis/environments.json",
           "captured_at": "2026-04-26T04:00:00Z",
           "captured_by": "claude",
-          "note": "F023 EC8 starter file: Jarvis dev only → jarvis-a6ee1 (per memory; Jarvis is single-env orchestrator infra, no staging/prod tiers). Verified from /Users/bayesian/Documents/GitHub/Jarvis/.firebaserc orchestrator alias."
+          "note": "F023 EC8 starter file: Jarvis dev only → <firebase-project-id> (per memory; Jarvis is single-env orchestrator infra, no staging/prod tiers). Verified from $HOME/Documents/GitHub/Jarvis/.firebaserc orchestrator alias."
         },
         {
           "type": "file",
@@ -962,14 +962,14 @@
           "uri": "./2026-04-26-006-infra-f023-ec5-evidence/audit/claude-implementer-i0.json",
           "captured_at": "2026-04-26T05:00:00Z",
           "captured_by": "claude",
-          "note": "F023 acceptance — behavioral EC5 evidence: real claude-implementer audit produced by `python -m jarvis_orchestrate 2026-04-26-006-infra-f023-ec5-evidence --volley --max-iterations 1`. target_context.env=='dev' and target_context.project=='jarvis-a6ee1' as required. validation_performed records execution_env_root + target labels + target_source=plan + env_registry=Jarvis + cwd=/Users/bayesian/Documents/GitHub/Jarvis (EC1 + EC11 wiring observable in real subprocess)."
+          "note": "F023 acceptance — behavioral EC5 evidence: real claude-implementer audit produced by `python -m jarvis_orchestrate 2026-04-26-006-infra-f023-ec5-evidence --volley --max-iterations 1`. target_context.env=='dev' and target_context.project=='<firebase-project-id>' as required. validation_performed records execution_env_root + target labels + target_source=plan + env_registry=Jarvis + cwd=$HOME/Documents/GitHub/Jarvis (EC1 + EC11 wiring observable in real subprocess)."
         },
         {
           "type": "file",
           "uri": "./2026-04-26-006-infra-f023-ec5-evidence/audit/codex-auditor-i0.json",
           "captured_at": "2026-04-26T05:00:00Z",
           "captured_by": "codex",
-          "note": "F023 acceptance — behavioral EC5 evidence: real codex-auditor audit produced by the same volley. target_context.env=='dev', target_context.project=='jarvis-a6ee1', commands_run captures the actual shell commands codex ran (jq, git status, git diff, jq -e on target_context fields) — demonstrating EC6 commands_run parser working end-to-end against a real CLI subprocess. audit_status=signed_off."
+          "note": "F023 acceptance — behavioral EC5 evidence: real codex-auditor audit produced by the same volley. target_context.env=='dev', target_context.project=='<firebase-project-id>', commands_run captures the actual shell commands codex ran (jq, git status, git diff, jq -e on target_context fields) — demonstrating EC6 commands_run parser working end-to-end against a real CLI subprocess. audit_status=signed_off."
         },
         {
           "type": "commit",
