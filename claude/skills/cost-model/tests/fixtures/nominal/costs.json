@@ -8,8 +8,8 @@
     "Total": 394.56
   },
   "breakdown": [
-    {"app": "Styln", "project": "<glam-firebase-project-id>", "service": "General", "cost": 235.52, "credits": -2.08, "netCost": 233.44},
-    {"app": "Spin & Dine", "project": "<spindine-dev-firebase-project-id>", "service": "General", "cost": 154.31, "credits": -5.19, "netCost": 149.12},
+    {"app": "Styln", "project": "example-glam-prod", "service": "General", "cost": 235.52, "credits": -2.08, "netCost": 233.44},
+    {"app": "Spin & Dine", "project": "example-spindine-dev", "service": "General", "cost": 154.31, "credits": -5.19, "netCost": 149.12},
     {"app": "Jarvis", "project": "your-jarvis-project-id", "service": "General", "cost": 12.00, "credits": 0, "netCost": 12.00}
   ],
   "trend": []

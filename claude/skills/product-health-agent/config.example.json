@@ -8,7 +8,7 @@
 
   "apps": {
     "glam": {
-      "project_id": "<glam-firebase-project-id>",
+      "project_id": "YOUR_GLAM_FIREBASE_PROJECT_ID",
       "usage_metrics_collection": "usage_metrics",
       "error_aggregates_collection": "error_aggregates",
       "alerts_collection": "alerts",
@@ -17,7 +17,7 @@
       "key_collections": ["users", "outfits", "closet_items", "posts"]
     },
     "spindine": {
-      "project_id": "<spindine-prod-firebase-project-id>",
+      "project_id": "YOUR_SPINDINE_FIREBASE_PROJECT_ID",
       "key_collections": ["users", "favorites", "spin_history"]
     }
   }

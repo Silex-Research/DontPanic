@@ -11,7 +11,7 @@ This checklist runs entirely on your local machine + GCP Console. No code change
 
 ```bash
 # What does doctor say right now?
-cd $HOME/Documents/GitHub/DontPanic
+cd "$HOME/Documents/GitHub/DontPanic"
 python3 -m dontpanic_orchestrate doctor 2>&1 | grep -E "firebase|target-project|secrets-dir|sa-key"
 ```
 
@@ -34,16 +34,17 @@ gcloud auth application-default login
 firebase login
 ```
 
-You'll be redirected to a browser for each. Use the Google account that owns the `<firebase-project-id>` project (or whichever account has owner/editor access).
+You'll be redirected to a browser for each. Use the Google account that owns the target Firebase project (or whichever account has owner/editor access).
 
 ## Step 3 — Confirm project access
 
 ```bash
-gcloud projects list | grep <firebase-project-id>
-firebase projects:list | grep <firebase-project-id>
+PROJECT_ID="YOUR_FIREBASE_PROJECT_ID"
+gcloud projects list | grep "${PROJECT_ID}"
+firebase projects:list | grep "${PROJECT_ID}"
 ```
 
-Expected: both list `<firebase-project-id>` as accessible. If not, you don't have access yet — either grant your account roles in GCP Console, or create the project if it doesn't exist.
+Expected: both list your target Firebase project as accessible. If not, you don't have access yet — either grant your account roles in GCP Console, or create the project if it doesn't exist.
 
 ## Step 4 — Generate the orchestrator service-account key
 
@@ -51,15 +52,16 @@ If a previous SA key exists at `~/.dontpanic/.secrets/`, you can skip this and j
 
 ```bash
 # Create service account if not already present
+PROJECT_ID="YOUR_FIREBASE_PROJECT_ID"
 gcloud iam service-accounts create dontpanic-orchestrator \
-  --project=<firebase-project-id> \
+  --project="${PROJECT_ID}" \
   --display-name="DontPanic orchestrator" \
   --description="Service account used by dontpanic supervisor for Firebase/GCS operations" || true
 
 # Grant roles (these are the documented minimum from F022)
-SA="<orchestrator-service-account>"
+SA="dontpanic-orchestrator@${PROJECT_ID}.iam.gserviceaccount.com"
 for role in roles/storage.objectAdmin roles/firebase.admin roles/logging.logWriter; do
-  gcloud projects add-iam-policy-binding <firebase-project-id> \
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member="serviceAccount:${SA}" --role="${role}" >/dev/null
 done
 
@@ -67,16 +69,17 @@ done
 mkdir -p ~/.dontpanic/.secrets
 chmod 700 ~/.dontpanic/.secrets
 gcloud iam service-accounts keys create \
-  ~/.dontpanic/.secrets/<firebase-project-id>-orchestrator.json \
+  ~/.dontpanic/.secrets/"${PROJECT_ID}"-orchestrator.json \
   --iam-account="${SA}"
-chmod 600 ~/.dontpanic/.secrets/<firebase-project-id>-orchestrator.json
+chmod 600 ~/.dontpanic/.secrets/"${PROJECT_ID}"-orchestrator.json
 ```
 
 ## Step 5 — Verify .secrets is gitignored
 
 ```bash
-cd $HOME/Documents/GitHub/DontPanic
-git check-ignore -v ~/.dontpanic/.secrets/<firebase-project-id>-orchestrator.json || echo "OK — outside repo, not tracked"
+cd "$HOME/Documents/GitHub/DontPanic"
+PROJECT_ID="YOUR_FIREBASE_PROJECT_ID"
+git check-ignore -v ~/.dontpanic/.secrets/"${PROJECT_ID}"-orchestrator.json || echo "OK — outside repo, not tracked"
 # Also check that the in-repo .secrets/ pattern (if any) is gitignored:
 grep -E "^\.secrets|^\.dontpanic" .gitignore || echo "WARN: add .secrets/ to .gitignore if you'll ever symlink it into the repo"
 ```
@@ -84,7 +87,7 @@ grep -E "^\.secrets|^\.dontpanic" .gitignore || echo "WARN: add .secrets/ to .gi
 ## Step 6 — Run the doctor probe
 
 ```bash
-cd $HOME/Documents/GitHub/DontPanic
+cd "$HOME/Documents/GitHub/DontPanic"
 python3 -m dontpanic_orchestrate doctor 2>&1 | tail -30
 ```
 
@@ -94,8 +97,9 @@ Expected: `firebase-auth`, `target-project`, `secrets-dir`, `sa-key-age` all gre
 
 ```bash
 # If Plan 7's Firebase work is queued, this validates the end-to-end pre-condition:
+PROJECT_ID="YOUR_FIREBASE_PROJECT_ID"
 python3 -m firebase_adapter.dontpanic_sync start \
-  --project-id <firebase-project-id> --once --dry-run \
+  --project-id "${PROJECT_ID}" --once --dry-run \
   --plans-root docs/plans 2>&1 | tail -10
 ```
 
