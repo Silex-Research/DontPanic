@@ -1,6 +1,6 @@
 # Security Scan Baseline
 
-Last reviewed: 2026-05-20
+Last reviewed: 2026-05-27
 
 This file documents gitleaks history findings that have been reviewed and
 classified as non-secret false positives before public release. The matching

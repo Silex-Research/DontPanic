@@ -45,7 +45,7 @@ links:
   evidence_dir: ./evidence/
 storage:
   backend: firebase-storage
-  bucket: jarvis-main.appspot.com
+  bucket: <firebase-project-id>.appspot.com
   prefix: plans/2026-04-19-001/
 ---
 
@@ -94,7 +94,7 @@ docs/plans/YYYY-MM-DD-NNN-<type>-<name>/
   evidence/                # small artifacts in-repo; large artifacts in Firebase Storage via signed URLs
 ```
 
-Evidence > 100KB lives in Firebase Storage (`jarvis-main` project, `evidence/plans/<id>/` prefix). URIs embedded in `features.json` as `evidence_refs`.
+Evidence > 100KB lives in Firebase Storage (`<firebase-project-id>` project, `evidence/plans/<id>/` prefix). URIs embedded in `features.json` as `evidence_refs`.
 
 ## Tier system
 
