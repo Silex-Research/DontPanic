@@ -152,8 +152,8 @@
       "phase": 2,
       "description": "Update parent plan features.json (rename <firebase-project-id> → <firebase-project-id>) + log decision D036",
       "steps": [
-        "Edit ../2026-04-19-001/features.json F002: replace '<firebase-project-id>' with '<firebase-project-id>' in description and steps",
-        "Append D036 to ../2026-04-19-001/decisions.jsonl: project ID rename, why (Firebase auto-suffix)",
+        "Edit ../2026-04-19-001-infra-cross-agent-orchestration/features.json F002: replace '<firebase-project-id>' with '<firebase-project-id>' in description and steps",
+        "Append D036 to ../2026-04-19-001-infra-cross-agent-orchestration/decisions.jsonl: project ID rename, why (Firebase auto-suffix)",
         "Re-run validate_plan.py against parent plan to confirm still valid"
       ],
       "acceptance": "Parent features.json F002 references <firebase-project-id>, decisions.jsonl has D036, validator passes",
