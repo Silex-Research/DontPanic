@@ -1,6 +1,35 @@
 {
-  "staged": [],
+  "staged": [
+    {
+      "path": "scripts/dontpanic_orchestrate/agent_manifest.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/agent_surface.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/repo_onboarding.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f003_repo_onboarding.py",
+      "status": "A"
+    }
+  ],
   "unstaged_modified": [
+    {
+      "path": "docs/architecture/architecture.json",
+      "status": "M"
+    },
     {
       "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/INBOX.md",
       "status": "M"
@@ -12,12 +41,72 @@
     {
       "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
       "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/patch-completeness-0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/features.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/agent_manifest.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/",
-    "scripts/dontpanic_orchestrate/agent_brief.py",
-    "scripts/dontpanic_orchestrate/tests/test_f001_agent_brief.py"
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F003-i1.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F004-i0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F002-i1.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F003-i0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F003-i1.json.superseded-by-i0-signoff",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F002_iter2.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F003_iter2.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/operator-resolution-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/terminal-state-iter0.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/closeout-memo.md",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-auditor.json",
+    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-implementer.json",
+    "docs/plans/2026-05-30-002-fix-orchestrator-convergence-bugs/",
+    "scripts/dontpanic_orchestrate/role_assignment.py",
+    "scripts/dontpanic_orchestrate/tests/test_f004_role_assignment.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

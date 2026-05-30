@@ -1,0 +1,15 @@
+{
+  "task_id": "2026-05-30-002-fix-orchestrator-convergence-bugs",
+  "schema_version": "1.0",
+  "objective": "Fix the two orchestration-engine convergence/audit bugs surfaced dogfooding 2026-05-30-001 (no_progress verdict-string trip; stale-envelope index selection) so multi-round volleys converge correctly.",
+  "non_goals": [
+    "Rewriting the breaker framework beyond the two bugs",
+    "Changing the 6 other circuit breakers' trip conditions",
+    "Touching the onboarding-v0 feature set"
+  ],
+  "evidence_required": [
+    "codex cross-model signoff per feature",
+    "full orchestrate pytest sweep green under raw pytest",
+    "synthetic 3-round convergence demonstration"
+  ]
+}

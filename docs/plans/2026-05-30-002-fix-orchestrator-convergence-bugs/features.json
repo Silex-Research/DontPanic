@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-05-30-002-fix-orchestrator-convergence-bugs",
+  "schema_version": "1.0",
+  "agents_required": ["claude", "codex"],
+  "features": [
+    {
+      "id": "F001",
+      "title": "no_progress compares finding signatures, not verdict strings",
+      "depends_on": [],
+      "passes": false,
+      "acceptance": "check_no_progress trips only when the auditor finding-signature SET is identical across threshold_rounds consecutive needs_changes rounds (using compute_audit_finding_signature, mirroring check_diminishing_returns). Different findings each round does NOT trip. Verdict-string equality alone no longer trips. supervisor.py call site passes the auditor envelopes (not bare verdict strings). Timeout-with-work carve-out preserved. Fallback (signatures unavailable) documented + tested.",
+      "steps": [
+        "Read circuit_breakers.check_no_progress + check_diminishing_returns + the supervisor.py:~2493 call site.",
+        "Change check_no_progress signature to accept prior + current auditor envelopes (or findings lists); compute signature sets; trip only on identical persisted signatures.",
+        "Update supervisor call site to pass envelopes; keep timeout-with-work exclusion.",
+        "Preserve the reason-string contract for the stopped_no_progress terminal + classification sidecar."
+      ]
+    },
+    {
+      "id": "F002",
+      "title": "latest-auditor-envelope selection is mtime/supersession aware",
+      "depends_on": [],
+      "passes": false,
+      "acceptance": "signed_off_finalizer + closeout + closeout-memo auto-lift resolve the latest auditor envelope by mtime (or explicit supersession marker), not iteration index alone. A fresh i0 signed_off outranks a stale i1 needs_changes from a superseded run. latest_audit_status reflects the true latest verdict.",
+      "steps": [
+        "Locate every 'latest auditor envelope' selection: closeout._latest_auditor_envelope, signed_off_finalizer, memo lift.",
+        "Switch ranking to mtime (or supersession sidecar) with index as tie-break.",
+        "Optionally have re-dispatch mark superseded envelopes.",
+        "Keep behavior identical when only one envelope per feature exists (the common case)."
+      ]
+    },
+    {
+      "id": "F003",
+      "title": "regression suite + full orchestrate sweep green",
+      "depends_on": ["F001", "F002"],
+      "passes": false,
+      "acceptance": "Red/green tests: (a) no_progress does NOT trip when findings change across rounds with verdict held at needs_changes; DOES trip on identical findings; (b) finalizer picks fresher-by-mtime signed_off over stale higher-index needs_changes. Full existing orchestrate test sweep passes under raw pytest. Synthetic 3-round volley converges to signed_off instead of false stopped_no_progress at round 2.",
+      "steps": [
+        "Write red tests for F001 (finding-set vs verdict-string) + F002 (mtime selection).",
+        "Run targeted tests green.",
+        "Full orchestrate sweep under raw pytest (env-isolated).",
+        "Synthetic multi-round convergence demonstration (mock executors)."
+      ]
+    }
+  ]
+}

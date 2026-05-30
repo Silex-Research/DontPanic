@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-05-30T21:37:18Z",
+  "feature_id": "F004",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "F004’s new implementation and test files are untracked, so they can be omitted from the delivered patch. Evidence: `git status` from `docs` shows `?? ../script…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "low",
+      "category": "correctness",
+      "issue_excerpt": "`dontpanic roles --help` does not list the available worker executors from `AGENT_REGISTRY`. Evidence: help output describes `AGENT_REGISTRY` generically but d…",
+      "rationale": "severity=low, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

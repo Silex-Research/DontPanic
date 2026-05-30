@@ -219,13 +219,18 @@ def write_manifest(manifest: AgentManifest) -> Path:
 def _default_supported_commands() -> list[str]:
     """The Phase A surface that ships in every DontPanic install. Phase B
     F001 adds ``manifest`` to this list; F002 adds ``mcp`` once
-    ``dontpanic mcp serve`` is importable. Future phases append as new
-    subcommands ship; the order is stable so the regenerable invariant
+    ``dontpanic mcp serve`` is importable. Plan 2026-05-30-001 F002 adds the
+    ``agent`` machine surface and the ``orchestrate`` teaching gateway; F004
+    adds the ``roles`` worker-role-assignment surface. Future phases append as
+    new subcommands ship; the order is stable so the regenerable invariant
     holds."""
     base = [
         "projects",
         "doctor",
         "manifest",
+        "agent",
+        "orchestrate",
+        "roles",
         "approve",
         "resume",
         "ps",

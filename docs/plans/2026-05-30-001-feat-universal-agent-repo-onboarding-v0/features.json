@@ -50,10 +50,21 @@
         "Add CLI tests for help, no-arg teaching output, forwarding behavior, manifest content, and invalid input."
       ],
       "acceptance": "(1) `dontpanic agent brief` prints the generated brief and exits 0. (2) `dontpanic agent status` classifies current/named agents as operator-only or worker-capable from AGENT_REGISTRY and role config. (3) `dontpanic agent setup grok` explains that Grok can operate DontPanic but cannot be registered as a worker without an executor. (4) `dontpanic agent register-worker <unknown>` refuses without writing config; `register-worker claude/codex` writes only valid role config according to the selected flags. (5) `dontpanic orchestrate` with no args prints the brief/workflow and exits 0 or 2 with actionable text, per existing CLI convention selected in implementation. (6) `dontpanic orchestrate <plan>` forwards to dispatch-from-plan without changing dry-run semantics. (7) `dontpanic orchestrate <plan> --confirm` reaches the same path as `dispatch-from-plan <plan> --confirm`. (8) `dontpanic manifest show/init` includes agent and orchestrate in supported_commands. (9) Tests cover the gateway and do not invoke real agent CLIs.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=evidence_shape_disagreement)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-30T19:41:33Z"
     },
     {
       "id": "F003",
@@ -71,11 +82,22 @@
         "Add tests for missing files, existing files, stale block update, fresh block no-op, dry-run, JSON output, and no writes outside markers."
       ],
       "acceptance": "(1) `dontpanic projects add NAME PATH --onboard --dry-run` reports all intended writes without changing files. (2) `--onboard` creates `.dontpanic/dontpanic.json` with explicit defaults and a schema-compatible shape. (3) Missing AGENTS.md is created with the generated brief block. (4) Existing AGENTS.md content outside markers remains byte-for-byte unchanged. (5) Stale managed block is updated in place when hash/version differ. (6) Fresh managed block is left unchanged. (7) CLAUDE.md is created or updated as a pointer/alias without clobbering existing content. (8) Tests cover JSON and human output.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-30T21:19:38Z"
     },
     {
       "id": "F004",

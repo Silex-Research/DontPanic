@@ -70,6 +70,7 @@ from dontpanic_orchestrate import (
     quota_admission,
     quota_caps_loader,
     release_impact,
+    repo_onboarding,
     skill_applicability,
     sufficiency_gate,
     supervisor,
@@ -973,6 +974,7 @@ def _quota_caps_main(argv: list[str]) -> int:
 _PROJECTS_USAGE = (
     "usage: dontpanic projects {add|list|show|remove} [args] [--json]\n"
     "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
+    "                    [--onboard] [--dry-run]\n"
     "  list\n"
     "  show <name>\n"
     "  remove <name> [--yes]    (default is dry-run preview)"
@@ -1047,8 +1049,44 @@ def _projects_add(argv: list[str]) -> int:
             "want a per-project config opt in explicitly to avoid surprise."
         ),
     )
+    parser.add_argument(
+        "--onboard",
+        action="store_true",
+        help=(
+            "Plan 2026-05-30-001 F003: scaffold repo onboarding after "
+            "registration — write .dontpanic/dontpanic.json with explicit "
+            "defaults, insert a generated DontPanic brief block into AGENTS.md, "
+            "and a pointer block into CLAUDE.md. Content outside the managed "
+            "markers is never touched; re-running refreshes only stale blocks."
+        ),
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help=(
+            "Preview all intended writes (registration + --onboard scaffolding) "
+            "without changing any file."
+        ),
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
+
+    # --onboard already writes a full .dontpanic/dontpanic.json with explicit
+    # defaults. --init-config (which scaffolds a bare `{}`) would run first and
+    # then suppress onboarding's richer config write — leaving the empty stub.
+    # Reject the combination rather than silently degrading to `{}`.
+    if args.onboard and args.init_config:
+        print(
+            "[projects add] --onboard and --init-config are mutually exclusive: "
+            "--onboard already writes .dontpanic/dontpanic.json with explicit "
+            "defaults. Use --onboard alone.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.dry_run:
+        return _projects_add_dry_run(args)
 
     if args.force and not args.yes:
         # Non-interactive: refuse without --yes. Keeps the surface scriptable
@@ -1092,6 +1130,14 @@ def _projects_add(argv: list[str]) -> int:
         elif scaffold_path is not None:
             payload["scaffold"] = str(scaffold_path)
 
+    onboard_plan = None
+    if args.onboard:
+        # F003: apply repo onboarding after registration. Writes the explicit-
+        # defaults config + managed AGENTS.md / CLAUDE.md blocks; content outside
+        # the markers is never touched.
+        onboard_plan = repo_onboarding.apply_onboarding(Path(entry.path), dry_run=False)
+        payload["onboard"] = repo_onboarding.plan_to_public_dict(onboard_plan)
+
     if args.as_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
@@ -1104,6 +1150,68 @@ def _projects_add(argv: list[str]) -> int:
                 )
             elif scaffold_path is not None:
                 print(f"[projects add] scaffolded empty per-project config at {scaffold_path}")
+        if onboard_plan is not None:
+            _print_onboarding_actions(onboard_plan, dry_run=False)
+    return 0
+
+
+def _print_onboarding_actions(plan: repo_onboarding.OnboardingPlan, *, dry_run: bool) -> None:
+    """Human-readable rendering of an onboarding plan's actions (shared by the
+    apply + dry-run paths)."""
+    prefix = "[projects add] would" if dry_run else "[projects add]"
+    verb = {
+        "create": "create",
+        "update": "update",
+        "noop": "skip (current)",
+        "warn": "WARNING",
+    }
+    for action in plan.actions:
+        label = verb.get(action.action, action.action)
+        print(f"{prefix} {label}: {action.path} — {action.detail}")
+
+
+def _projects_add_dry_run(args: argparse.Namespace) -> int:
+    """``projects add ... --dry-run`` — preview registration + (optional)
+    onboarding writes without changing any file (F003 acceptance #1).
+
+    Resolves and validates the path the same way ``add_project`` would (must be
+    an existing directory) but writes nothing: not the registry, not the config,
+    not AGENTS.md / CLAUDE.md.
+    """
+    proj_path = Path(args.path).expanduser().resolve()
+    if not proj_path.is_dir():
+        print(
+            f"[projects add] path does not exist or is not a directory: {proj_path}",
+            file=sys.stderr,
+        )
+        return 2
+    if not projects_registry.PROJECT_NAME_PATTERN.fullmatch(args.name):
+        print(
+            f"[projects add] project name {args.name!r} does not match "
+            f"{projects_registry.PROJECT_NAME_PATTERN.pattern}",
+            file=sys.stderr,
+        )
+        return 2
+
+    onboard_plan = None
+    if args.onboard:
+        onboard_plan = repo_onboarding.apply_onboarding(proj_path, dry_run=True)
+
+    if args.as_json:
+        payload: dict[str, object] = {
+            "action": "dry_run",
+            "project": {"name": args.name, "path": str(proj_path)},
+        }
+        if onboard_plan is not None:
+            payload["onboard"] = repo_onboarding.plan_to_public_dict(onboard_plan)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(
+            f"[projects add] dry-run: would register {args.name!r} → {proj_path}. "
+            "Pass without --dry-run to apply."
+        )
+        if onboard_plan is not None:
+            _print_onboarding_actions(onboard_plan, dry_run=True)
     return 0
 
 
@@ -3099,6 +3207,359 @@ def _next_main(argv: list[str]) -> int:
     return 0
 
 
+# ──────────────────────────  agent surface + orchestrate gateway (F002)  ──────────────────────────
+
+_AGENT_USAGE = """usage: dontpanic agent <subcommand>
+
+Machine agent surface — bootstrap a newly installed interactive agent and
+classify it as operator-only or worker-capable.
+
+subcommands:
+  brief                       Print the generated DontPanic operating brief
+  status [<name>]             Show worker executors, known operator-only agents,
+                              effective roles, and the classification of the
+                              named agent (or the current agent when no <name>)
+  setup <name>                Operator + worker setup guidance for a named agent
+  register-worker <name>      Assign a registered executor to a role (guarded —
+                              refuses agents with no executor)
+
+Any agent can OPERATE DontPanic by running these commands; only agents with a
+registered executor can be DISPATCHED as workers."""
+
+
+def _agent_main(argv: list[str]) -> int:
+    """``dontpanic agent <subcommand>`` — machine agent surface (F002).
+
+    Subcommands print the generated brief, classify the current/named agent,
+    emit setup guidance, and (guarded) register a worker role. None of these
+    invoke a real agent CLI — they read the executor registry and config only.
+    """
+    from dontpanic_orchestrate import agent_brief, agent_surface
+
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        # Bare `agent` is a teaching surface, not an error: print the brief so a
+        # freshly installed interactive agent learns the command set, then the
+        # subcommand usage. Help exits 0; this matches the orchestrate gateway.
+        print(agent_brief.generate_brief().text, end="")
+        print()
+        print(_AGENT_USAGE)
+        return 0
+
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "brief":
+        parser = argparse.ArgumentParser(prog="dontpanic agent brief", add_help=True)
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        args = parser.parse_args(rest)
+        brief = agent_brief.generate_brief()
+        if args.as_json:
+            print(json.dumps(agent_brief.to_public_dict(brief), indent=2, ensure_ascii=False))
+        else:
+            print(brief.text, end="")
+        return 0
+
+    if sub == "status":
+        parser = argparse.ArgumentParser(prog="dontpanic agent status", add_help=True)
+        parser.add_argument(
+            "name",
+            nargs="?",
+            default=None,
+            help="Optional agent name to classify (operator-only vs worker-capable)",
+        )
+        args = parser.parse_args(rest)
+        print(agent_surface.render_status(Path.cwd().resolve(), name=args.name), end="")
+        return 0
+
+    if sub == "setup":
+        parser = argparse.ArgumentParser(prog="dontpanic agent setup", add_help=True)
+        parser.add_argument("name", help="Agent name to produce setup guidance for")
+        args = parser.parse_args(rest)
+        print(agent_surface.render_setup(args.name), end="")
+        return 0
+
+    if sub == "register-worker":
+        return _agent_register_worker(rest)
+
+    print(f"[agent] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_AGENT_USAGE, file=sys.stderr)
+    return 2
+
+
+def _agent_register_worker(argv: list[str]) -> int:
+    """``dontpanic agent register-worker <name> [--role ROLE] [--project|--global]``.
+
+    Guarded write path: refuses (exit 3, no write) when ``<name>`` has no
+    executor in AGENT_REGISTRY. Otherwise writes only ``roles.<role> = <name>``
+    via the shared dotted-key writer — global by default, project-scoped with
+    ``--project`` (which requires an initialized per-project config)."""
+    from dontpanic_orchestrate import agent_surface
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+
+    parser = argparse.ArgumentParser(prog="dontpanic agent register-worker", add_help=True)
+    parser.add_argument("name", help="Worker executor to register (must be in AGENT_REGISTRY)")
+    parser.add_argument(
+        "--role",
+        choices=list(agent_surface.ROLES),
+        default="implementer",
+        help="Role to assign the executor to (default: implementer)",
+    )
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument(
+        "--global",
+        action="store_true",
+        dest="is_global",
+        help="Write to ~/.dontpanic/config.json (default scope)",
+    )
+    scope.add_argument(
+        "--project",
+        action="store_true",
+        dest="is_project",
+        help="Write to <cwd>/.dontpanic/dontpanic.json (requires project config init)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the intended write without changing any file",
+    )
+    args = parser.parse_args(argv)
+
+    # Guard FIRST — never touch config for an agent with no executor.
+    try:
+        agent_surface.assert_registrable(args.name)
+    except agent_surface.RegisterWorkerError as exc:
+        print(f"[agent register-worker] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    key = f"roles.{args.role}"
+    scope_label = "project" if args.is_project else "global"
+
+    if args.dry_run:
+        target = (
+            "<cwd>/.dontpanic/dontpanic.json" if args.is_project else "~/.dontpanic/config.json"
+        )
+        print(
+            f"[agent register-worker] DRY-RUN: would set {key} → {args.name} "
+            f"in {scope_label} config ({target})"
+        )
+        return 0
+
+    try:
+        if args.is_project:
+            path = _ch.write_project_dotted_key(Path.cwd().resolve(), key, args.name)
+        else:
+            path = _ch.write_global_dotted_key(key, args.name)
+    except _ch.InvalidKeyError as exc:
+        print(f"[agent register-worker] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    print(f"[agent register-worker] wrote {key} → {args.name} ({scope_label}: {path})")
+    return 0
+
+
+_ROLES_USAGE = """usage: dontpanic roles <subcommand>
+
+Simple worker role assignment — the low-friction path for "use Codex as
+auditor for this project" without hand-editing JSON.
+
+subcommands:
+  show [--project NAME|PATH] [--json]
+      List available worker executors and the effective implementer /
+      auditor / goal_auditor with the source layer each value came from.
+  set <role> <executor> [--global | --project NAME|PATH] [--dry-run] [--yes]
+      Assign a worker executor to a role. Guarded — refuses any agent with
+      no executor in AGENT_REGISTRY (operator-only agents can operate
+      DontPanic but cannot be assigned as workers). Default scope is global;
+      --project writes <repo>/.dontpanic/dontpanic.json roles.*; --global
+      writes ~/.dontpanic/config.json roles.*. Preview-by-default is shown
+      with --dry-run; otherwise the write happens immediately."""
+
+
+def _resolve_roles_scope(project_arg: str | None):
+    """Resolve a ``--project NAME|PATH`` (or cwd when absent) to a
+    :class:`role_assignment.ProjectScope`. Returns the scope, or ``None``
+    when an explicit identifier resolves to neither a registered project
+    nor an existing directory (the caller maps this to exit 2)."""
+    from dontpanic_orchestrate import project_config as _pc
+    from dontpanic_orchestrate import role_assignment as _ra
+
+    if project_arg is None:
+        cwd = Path.cwd().resolve()
+        match = _pc.find_project_for_plan_dir(cwd)
+        if match is not None:
+            return _ra.ProjectScope(path=match[0], name=match[1])
+        return _ra.ProjectScope(path=cwd, name=None)
+    resolved = _pc.resolve_project_path(project_arg)
+    if resolved is None:
+        return None
+    path, name = resolved
+    return _ra.ProjectScope(path=path, name=name)
+
+
+def _roles_main(argv: list[str]) -> int:
+    """``dontpanic roles <subcommand>`` — worker role assignment surface (F004).
+
+    ``show`` reports effective roles + source layers + available executors;
+    ``set`` writes a single ``roles.<role>`` key after guarding the executor
+    against AGENT_REGISTRY. Neither path invokes a real agent CLI — the
+    registry is read for classification only."""
+    from dontpanic_orchestrate import agent_surface
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+    from dontpanic_orchestrate import role_assignment as _ra
+
+    if argv and argv[0] in ("-h", "--help", "help"):
+        print(_ROLES_USAGE)
+        return 0
+    if not argv:
+        # No-arg is an actionable error (CLI convention): teach on stderr, exit 2.
+        print(_ROLES_USAGE, file=sys.stderr)
+        return 2
+
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "show":
+        parser = argparse.ArgumentParser(prog="dontpanic roles show", add_help=True)
+        parser.add_argument(
+            "--project",
+            default=None,
+            help="Registered project NAME or filesystem PATH (default: cwd)",
+        )
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        args = parser.parse_args(rest)
+        scope = _resolve_roles_scope(args.project)
+        if scope is None:
+            print(
+                f"[roles show] could not resolve --project {args.project!r} to a "
+                "registered project or an existing directory",
+                file=sys.stderr,
+            )
+            return 2
+        if args.as_json:
+            print(json.dumps(_ra.dashboard_projection(scope), indent=2, ensure_ascii=False))
+        else:
+            print(_ra.render_show(scope), end="")
+        return 0
+
+    if sub == "set":
+        parser = argparse.ArgumentParser(prog="dontpanic roles set", add_help=True)
+        parser.add_argument("role", choices=list(_ra.ROLES), help="Role slot to assign")
+        parser.add_argument("executor", help="Worker executor (must be in AGENT_REGISTRY)")
+        target = parser.add_mutually_exclusive_group()
+        target.add_argument(
+            "--global",
+            action="store_true",
+            dest="is_global",
+            help="Write ~/.dontpanic/config.json roles.* (default scope)",
+        )
+        target.add_argument(
+            "--project",
+            default=None,
+            help="Write <repo>/.dontpanic/dontpanic.json roles.* (NAME or PATH)",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Preview the exact file + value change without writing",
+        )
+        parser.add_argument(
+            "--yes",
+            action="store_true",
+            help="Accepted for symmetry with other mutating commands (writes are "
+            "explicit here; no interactive prompt to confirm)",
+        )
+        args = parser.parse_args(rest)
+
+        is_global = args.is_global or args.project is None
+
+        # Guard FIRST — never touch config for an agent with no executor
+        # (acceptance #5/#6). The message distinguishes operator-only from
+        # worker-capable, identical to `agent register-worker`.
+        try:
+            _ra.assert_assignable(args.executor)
+        except agent_surface.RegisterWorkerError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+
+        scope = None
+        if not is_global:
+            scope = _resolve_roles_scope(args.project)
+            if scope is None:
+                print(
+                    f"[roles set] could not resolve --project {args.project!r} to a "
+                    "registered project or an existing directory",
+                    file=sys.stderr,
+                )
+                return 2
+
+        preview = _ra.render_set_preview(
+            args.role, args.executor, is_global=is_global, scope=scope
+        )
+        if args.dry_run:
+            print(f"[roles set] DRY-RUN: would {preview}")
+            return 0
+
+        key = f"roles.{args.role}"
+        try:
+            if is_global:
+                path = _ch.write_global_dotted_key(key, args.executor)
+            else:
+                assert scope is not None
+                path = _ch.write_project_dotted_key(scope.path, key, args.executor)
+        except _ch.InvalidKeyError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+
+        scope_label = "global" if is_global else "project"
+        print(f"[roles set] wrote {key} → {args.executor} ({scope_label}: {path})")
+        return 0
+
+    print(f"[roles] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_ROLES_USAGE, file=sys.stderr)
+    return 2
+
+
+def _orchestrate_main(argv: list[str]) -> int:
+    """``dontpanic orchestrate`` — teaching gateway over ``dispatch-from-plan``.
+
+    No args, ``--help``, or an invalid shape (a leading flag with no plan)
+    prints the generated brief plus the canonical workflow. A plan id/path
+    forwards verbatim to :func:`_dispatch_from_plan_main`, so dry-run-by-default
+    and ``--confirm`` semantics are preserved exactly (F002 acceptance #5-7)."""
+    from dontpanic_orchestrate import agent_brief
+
+    def _teach(*, file) -> None:
+        brief = agent_brief.generate_brief()
+        print(brief.text, end="", file=file)
+        print("", file=file)
+        print("CANONICAL WORKFLOW", file=file)
+        print(agent_brief.CANONICAL_WORKFLOW, file=file)
+        print("", file=file)
+        print(
+            "Run `dontpanic orchestrate <plan-id-or-path>` to dry-run a dispatch, "
+            "or add --confirm to commit. This forwards to dispatch-from-plan.",
+            file=file,
+        )
+
+    # No args or explicit help → teaching output on stdout, exit 0.
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        _teach(file=sys.stdout)
+        return 0
+
+    # Invalid shape: a leading flag means no plan id/path was supplied. Print
+    # the teaching output to stderr and exit 2 (actionable, per CLI convention).
+    if argv[0].startswith("-"):
+        print(
+            f"[orchestrate] no plan id/path supplied (saw {argv[0]!r} first).\n",
+            file=sys.stderr,
+        )
+        _teach(file=sys.stderr)
+        return 2
+
+    # Plan id/path present → forward verbatim, preserving dry-run/--confirm.
+    return _dispatch_from_plan_main(argv)
+
+
 def _print_top_level_help(*, file) -> None:
     print(
         """usage: dontpanic <command> [args]
@@ -3109,6 +3570,9 @@ Public-alpha command surface:
   project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
+  agent brief|status|setup|register-worker  Machine agent surface (operator vs worker)
+  roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
   doctor                         Run local readiness checks
   init                           Interactive installer (default --profile=core)
   smoke                          Mocked supervisor-plumbing smoke test (no real CLI)
@@ -3171,6 +3635,12 @@ def main(argv: list[str] | None = None) -> int:
         return _projects_main(raw[1:])
     if raw and raw[0] == "manifest":
         return _manifest_main(raw[1:])
+    if raw and raw[0] == "agent":
+        return _agent_main(raw[1:])
+    if raw and raw[0] == "orchestrate":
+        return _orchestrate_main(raw[1:])
+    if raw and raw[0] == "roles":
+        return _roles_main(raw[1:])
     if raw and raw[0] == "mcp":
         return _mcp_main(raw[1:])
     if raw and raw[0] == "state":
