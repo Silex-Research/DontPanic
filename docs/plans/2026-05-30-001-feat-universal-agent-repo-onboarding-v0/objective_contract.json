@@ -1,0 +1,190 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator diagnosis from the Grok/QuantRE onboarding failure, repeated budget/iteration decision friction, role-assignment friction, config/setup sprawl, and concurrent plan-edit drift during an active DontPanic run: new interactive agents need a machine-level operating brief, new repos need non-clobbering repo onboarding, available worker executors need simple role assignment, all configuration surfaces need one inventory/setup cockpit, active runs need plan-drift reconciliation, and all surfaces must be generated from one source of truth so manifest, CLI commands, executor registry, config homes, repo instructions, roles, setup status, active plan context, and operational next-action guidance cannot drift apart.",
+  "user_journeys": [
+    {
+      "name": "New interactive agent operates DontPanic",
+      "description": "An interactive agent with shell access runs `dontpanic agent brief`, understands it is an operator, validates the machine with `doctor --agent`, and starts the workflow with `orchestrate`.",
+      "surfaces": [
+        "infra",
+        "ux",
+        "docs"
+      ],
+      "states": [
+        "agent_installed",
+        "brief_read",
+        "operator_role_understood",
+        "machine_validated",
+        "workflow_started"
+      ],
+      "acceptance_signals": [
+        "Brief comes from generated source-of-truth data",
+        "Brief distinguishes operator from worker executor",
+        "Doctor prints registered worker executors",
+        "Orchestrate gateway points to the correct workflow"
+      ]
+    },
+    {
+      "name": "New repo onboards DontPanic",
+      "description": "A human or interactive agent registers a repo with `projects add --onboard`, sees non-clobbering AGENTS.md and CLAUDE.md updates, validates with `doctor --project`, and dispatches via `orchestrate`.",
+      "surfaces": [
+        "infra",
+        "ux",
+        "docs"
+      ],
+      "states": [
+        "repo_registered",
+        "managed_block_written",
+        "project_config_written",
+        "project_validated",
+        "plan_dispatched"
+      ],
+      "acceptance_signals": [
+        "AGENTS.md content outside markers is unchanged",
+        "Managed block has current generator hash",
+        "CLAUDE.md pointer is present or intentionally skipped",
+        "Project doctor reports current onboarding state"
+      ]
+    },
+    {
+      "name": "Unsupported agent avoids worker misconfiguration",
+      "description": "Grok, Gemini, or another unsupported interactive agent reads the generated brief and does not configure itself as a dispatch worker unless a real executor exists.",
+      "surfaces": [
+        "infra",
+        "ux"
+      ],
+      "states": [
+        "unsupported_agent_present",
+        "executor_registry_read",
+        "operator_only_role_selected",
+        "invalid_role_rejected"
+      ],
+      "acceptance_signals": [
+        "Unsupported agent names do not appear in worker executor list",
+        "Unknown roles.* values fail doctor validation",
+        "Grok-Builder is rejected unless AGENT_REGISTRY contains it",
+        "Docs explain how a future worker executor would be added"
+      ]
+    },
+    {
+      "name": "Operator assigns worker roles without hand-editing JSON",
+      "description": "A human or interactive agent asks to use an available worker executor for a role, sees global versus project scope, previews the write, and assigns the role through CLI or dashboard-safe command data.",
+      "surfaces": [
+        "infra",
+        "ux"
+      ],
+      "states": [
+        "available_executors_listed",
+        "current_roles_resolved",
+        "scope_selected",
+        "change_previewed",
+        "role_written",
+        "dashboard_picker_renderable"
+      ],
+      "acceptance_signals": [
+        "Available executors come from AGENT_REGISTRY",
+        "Current role output includes source layer",
+        "Project role writes do not mutate global config",
+        "Dashboard state can render role pickers safely"
+      ]
+    },
+    {
+      "name": "Operator resolves budget and iteration blockers without log archaeology",
+      "description": "A human or interactive agent sees a budget, cooldown, admission, no-progress, max_iterations blocker, or signed_off/pre_merge finalization gap and receives a short decision set with recommended action, alternatives, exact commands where safe, and tradeoffs.",
+      "surfaces": [
+        "infra",
+        "ux"
+      ],
+      "states": [
+        "dispatch_blocked",
+        "budget_or_iteration_state_read",
+        "action_choices_rendered",
+        "safe_command_available",
+        "dashboard_action_visible"
+      ],
+      "acceptance_signals": [
+        "Cooldown guidance includes wait-until plus redispatch command",
+        "Budget ceiling guidance includes safer wait path and explicit raise path",
+        "Iteration guidance states remaining max_iterations",
+        "Signed_off plus cleared pre_merge can finalize a feature without dispatching workers",
+        "Dashboard and CLI render the same action choices"
+      ]
+    },
+    {
+      "name": "Operator assesses and updates DontPanic configuration from one cockpit",
+      "description": "A human or interactive agent asks what needs setup or updating before orchestrating plans and receives a complete grouped inventory with current status, safe commands, human-required setup, optional integration labeling, and dashboard cards.",
+      "surfaces": [
+        "infra",
+        "ux",
+        "docs"
+      ],
+      "states": [
+        "config_inventory_requested",
+        "machine_project_plan_surfaces_scanned",
+        "optional_integrations_labeled",
+        "safe_edits_generated",
+        "human_required_steps_identified",
+        "setup_plan_available"
+      ],
+      "acceptance_signals": [
+        "Inventory covers core, optional, and secret/auth surfaces",
+        "Safe edits emit exact commands",
+        "Secrets are never printed",
+        "Dashboard Settings/Setup cards use the same inventory data"
+      ]
+    },
+    {
+      "name": "Concurrent interactive agents change a plan during a run",
+      "description": "One interactive agent or human edits the plan while another agent-driven DontPanic run is active. DontPanic detects the drift, classifies the impact, refreshes or pauses before spending more budget, and shows one reconciliation action.",
+      "surfaces": [
+        "infra",
+        "ux"
+      ],
+      "states": [
+        "run_active",
+        "plan_file_changed",
+        "fingerprint_mismatch_detected",
+        "drift_classified",
+        "context_refreshed_or_paused",
+        "operator_action_rendered"
+      ],
+      "acceptance_signals": [
+        "Plan fingerprint is captured at run start",
+        "Changed acceptance/gates/roles/loop caps pause before next paid call",
+        "Additive decision-log edits can reconcile without stopping",
+        "Dashboard and CLI show one concise drift action"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "pytest-agent-brief.log",
+    "pytest-orchestrate-gateway.log",
+    "pytest-project-onboarding.log",
+    "pytest-role-assignment.log",
+    "pytest-doctor-agent-project.log",
+    "pytest-home-reconcile.log",
+    "pytest-operations-guidance.log",
+    "pytest-signed-off-finalizer.log",
+    "pytest-config-inventory.log",
+    "pytest-active-run-plan-drift.log",
+    "pytest-dashboard-singleton.log",
+    "agent-brief-snapshot.txt",
+    "project-onboard-dry-run.txt",
+    "doctor-agent-output.txt",
+    "doctor-project-output.txt",
+    "operations-guidance-budget-iteration-output.txt",
+    "signed-off-finalizer-output.txt",
+    "config-inventory-output.json",
+    "dashboard-settings-state.json",
+    "plan-drift-reconciliation-output.txt",
+    "sanitization-clean.log"
+  ],
+  "non_goals": [
+    "No Grok/Gemini/Kimi/Qwen worker executor implementation",
+    "No remote or multi-machine orchestration",
+    "No authenticated dashboard service mode",
+    "No plan schema change",
+    "No rewrite of historical Jarvis references outside touched onboarding docs"
+  ],
+  "completion_test": "All ten features pass with tests and docs. A fixture unsupported agent sees itself as operator-only, a fixture repo receives current managed onboarding blocks without clobbering existing content, available worker executors can be assigned to roles from CLI/dashboard-safe state without hand-editing JSON, doctor flags unknown roles.*, config-home reconciliation has a non-conflicting migration path, every core configuration surface is visible in a safe inventory/setup cockpit, budget/iteration blockers render clear action choices in CLI and dashboard, signed_off plus cleared pre_merge finalizes a feature without paid worker dispatch, active-run plan edits are detected and reconciled before stale-context paid calls, and dashboard serve refuses duplicate live servers."
+}

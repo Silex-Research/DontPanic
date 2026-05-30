@@ -1,0 +1,246 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Single generated operating brief. Add an agent_brief module that renders DontPanic's operator guide from live source-of-truth data: agent_manifest supported commands, dontpanic version, AGENT_REGISTRY executor names, config-home status, and canonical workflow commands. The brief explicitly distinguishes interactive operators from dispatchable worker executors and states that DontPanic local orchestration is not Kubernetes, Airflow, or generic IT orchestration.",
+      "steps": [
+        "Add scripts/dontpanic_orchestrate/agent_brief.py with typed brief input/output helpers and deterministic text rendering.",
+        "Use agent_manifest supported command generation instead of duplicating command lists by hand.",
+        "Use executors.AGENT_REGISTRY for worker executor names.",
+        "Include the operator-vs-worker paragraph and the not-Kubernetes/Airflow clarification.",
+        "Include canonical workflow: projects add, plan lock, orchestrate/dispatch-from-plan, approve/resume/close.",
+        "Expose a content hash and generator version for managed repo blocks.",
+        "Add tests proving command and executor changes affect the generated brief without hand-editing strings in multiple places."
+      ],
+      "acceptance": "(1) agent_brief renders deterministic text from live manifest and executor registry data. (2) Brief contains the operator-vs-worker distinction. (3) Brief warns that DontPanic orchestration is local CLI workflow orchestration, not Kubernetes/Airflow/IT orchestration. (4) Brief lists current supported commands from agent_manifest, including agent and orchestrate after F002. (5) Brief lists current worker executors from AGENT_REGISTRY and does not include unsupported labels. (6) Brief exposes generator version and content hash. (7) Tests mutate fake command/executor inputs and prove the rendered brief updates from source data.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-30T17:03:03Z"
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Machine agent surface and orchestrate gateway. Add `dontpanic agent brief`, `dontpanic agent status`, `dontpanic agent setup <name>`, a guarded `dontpanic agent register-worker <name>` path for implemented executors only, plus `dontpanic orchestrate`. The agent surface prints the generated brief for newly installed interactive agents, classifies whether the current agent is operator-only or worker-capable, and makes it obvious when no worker registration is possible because no executor exists. The orchestrate command is a teaching gateway: no args or invalid args print the brief plus workflow; a plan id/path forwards to dispatch-from-plan while preserving existing dry-run behavior unless --confirm is supplied. Update the manifest supported_commands accordingly.",
+      "steps": [
+        "Add top-level `agent` subcommand with `brief`, `status`, `setup <name>`, and guarded `register-worker <name>` help text.",
+        "Wire `dontpanic agent brief` to agent_brief renderer.",
+        "Wire `dontpanic agent status` to print installed/known operator agents, registered worker executors, configured roles, and whether the named/current agent can be dispatched.",
+        "Wire `dontpanic agent setup <name>` to produce operator setup guidance for any named interactive agent and worker setup guidance only when the executor is implemented.",
+        "Implement `dontpanic agent register-worker <name>` as a guarded path that refuses unknown executors with a clear message and only writes config when `<name>` resolves to AGENT_REGISTRY.",
+        "Add top-level `orchestrate` command.",
+        "For `dontpanic orchestrate` with no args, --help, or invalid shape, print the generated brief and canonical workflow.",
+        "For `dontpanic orchestrate <plan-id-or-path> [dispatch flags]`, forward to _dispatch_from_plan_main with equivalent argv.",
+        "Preserve dispatch-from-plan dry-run-by-default behavior.",
+        "Update agent_manifest supported_commands with agent and orchestrate.",
+        "Add CLI tests for help, no-arg teaching output, forwarding behavior, manifest content, and invalid input."
+      ],
+      "acceptance": "(1) `dontpanic agent brief` prints the generated brief and exits 0. (2) `dontpanic agent status` classifies current/named agents as operator-only or worker-capable from AGENT_REGISTRY and role config. (3) `dontpanic agent setup grok` explains that Grok can operate DontPanic but cannot be registered as a worker without an executor. (4) `dontpanic agent register-worker <unknown>` refuses without writing config; `register-worker claude/codex` writes only valid role config according to the selected flags. (5) `dontpanic orchestrate` with no args prints the brief/workflow and exits 0 or 2 with actionable text, per existing CLI convention selected in implementation. (6) `dontpanic orchestrate <plan>` forwards to dispatch-from-plan without changing dry-run semantics. (7) `dontpanic orchestrate <plan> --confirm` reaches the same path as `dispatch-from-plan <plan> --confirm`. (8) `dontpanic manifest show/init` includes agent and orchestrate in supported_commands. (9) Tests cover the gateway and do not invoke real agent CLIs.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 3,
+      "description": "Repo onboarding managed block. Add `projects add --onboard` and a reusable managed-block writer. Onboarding creates or updates `.dontpanic/dontpanic.json` with explicit defaults, inserts a marked generated DontPanic block into AGENTS.md, and creates or updates a CLAUDE.md pointer block. Existing repo instructions outside markers are never touched. Dry-run previews all writes. Re-running onboarding updates stale managed blocks based on generator version/hash.",
+      "steps": [
+        "Add an onboarding writer module with create/update/remove-free managed block helpers.",
+        "Define stable markers containing generator version and content hash.",
+        "Add `projects add --onboard` and `--dry-run` flags.",
+        "When onboarded, write `.dontpanic/dontpanic.json` with explicit known fields rather than bare `{}`.",
+        "Create AGENTS.md when missing; otherwise insert or replace only the managed DontPanic block.",
+        "Create CLAUDE.md when missing as a short pointer to AGENTS.md; otherwise insert or replace only the managed pointer block.",
+        "Preserve lowercase `.claude.md` without assuming agents will read it; optionally warn when only lowercase exists.",
+        "Add tests for missing files, existing files, stale block update, fresh block no-op, dry-run, JSON output, and no writes outside markers."
+      ],
+      "acceptance": "(1) `dontpanic projects add NAME PATH --onboard --dry-run` reports all intended writes without changing files. (2) `--onboard` creates `.dontpanic/dontpanic.json` with explicit defaults and a schema-compatible shape. (3) Missing AGENTS.md is created with the generated brief block. (4) Existing AGENTS.md content outside markers remains byte-for-byte unchanged. (5) Stale managed block is updated in place when hash/version differ. (6) Fresh managed block is left unchanged. (7) CLAUDE.md is created or updated as a pointer/alias without clobbering existing content. (8) Tests cover JSON and human output.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "Simple worker role assignment. Add CLI and dashboard-friendly role assignment surfaces for `roles.implementer`, `roles.auditor`, and `roles.goal_auditor`. The surface lists available worker executors from AGENT_REGISTRY, shows effective current roles with source layer (project roles, project legacy, global roles, global legacy, fallback), supports global and per-project writes, previews changes, and refuses unsupported operator-only agents. This is the low-friction path for requests like 'use Codex as auditor for this project' without hand-editing JSON.",
+      "steps": [
+        "Add a role assignment helper that resolves current role values and source layer for implementer, auditor, and goal_auditor.",
+        "Add CLI surface such as `dontpanic roles show [--project NAME|PATH]` and `dontpanic roles set <role> <executor> [--project NAME|PATH|--global] [--dry-run] [--yes]`, or an equivalent shape consistent with existing config commands.",
+        "List available worker executors from AGENT_REGISTRY in role show/help output.",
+        "Refuse role assignment to names not present in AGENT_REGISTRY, with wording that operator-only agents can operate DontPanic but cannot be assigned as workers.",
+        "Make scope explicit: global write updates ~/.dontpanic/config.json roles.*, project write updates <repo>/.dontpanic/dontpanic.json roles.*.",
+        "Expose a dashboard state projection shape for role assignment: available executors, current effective roles, source layer, project/global scope, and safe mutation command.",
+        "Add dashboard action/mutation contract tests or state-shape tests without requiring a browser mutation backend.",
+        "Add tests for global role set, project role set, dry-run, unknown executor refusal, source-layer display, goal_auditor fallback, and dashboard projection shape."
+      ],
+      "acceptance": "(1) A human or interactive agent can list available worker executors and current effective role assignments without reading JSON. (2) Assigning `auditor codex --project myrepo` writes the project roles block and leaves global config untouched. (3) Assigning `implementer claude --global` writes the global roles block. (4) Dry-run previews the exact file and value change. (5) Unknown executor names such as Grok-Builder are refused before writes. (6) Output explains operator-only versus worker-capable when refusal happens. (7) Dashboard state includes enough structured data to render role pickers and safe mutation commands. (8) Tests cover role resolution source layers and mutation targets.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "infra",
+      "phase": 5,
+      "description": "Doctor validation for machine and project onboarding. Add `doctor --agent` and `doctor --project <name-or-path>` checks backed by the same generated brief data. Validate CLI/manifest availability, executor registry, role resolution for both legacy implementer/auditor and roles.* fields, managed-block freshness, and repo onboarding status. `roles.implementer=Grok-Builder` or any other non-registered executor must fail clearly.",
+      "steps": [
+        "Add agent-level doctor checks: dontpanic on PATH or module invocable, manifest present/current, generated brief renders, executor registry non-empty, command list includes agent/orchestrate.",
+        "Add project-level doctor checks: project registered or path-resolved, `.dontpanic/dontpanic.json` valid, AGENTS.md managed block present/current, CLAUDE.md pointer present/current or intentionally skipped.",
+        "Extend existing project agent validation to include project `roles.*` and global `roles.*`, not just legacy implementer/auditor fields.",
+        "Report resolved role chain with source layer: per-call, project roles, project legacy, global roles, global legacy, fallback.",
+        "Expose executor list in doctor output so an interactive agent can classify itself as operator-only or worker-capable.",
+        "Keep existing `doctor --include-projects` compatible by reusing the new project validation helpers.",
+        "Add tests for unknown global roles, unknown project roles, stale managed block, missing block, current block, and operator-only agent interpretation."
+      ],
+      "acceptance": "(1) `dontpanic doctor --agent` validates the machine onboarding layer and prints registered worker executors. (2) `dontpanic doctor --project NAME` validates one project and its managed onboarding block. (3) Unknown global `roles.*` values fail. (4) Unknown project `roles.*` values fail. (5) Legacy implementer/auditor validation still works. (6) Stale or missing managed repo block is reported with an exact `projects add --onboard` remediation. (7) Existing doctor tests remain compatible. (8) Tests prove `Grok-Builder` is flagged as unrunnable unless registered in AGENT_REGISTRY.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F003",
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "infra",
+      "phase": 6,
+      "description": "Config-home reconciliation. Replace silent ~/.dontpanic versus ~/.jarvis split-brain behavior with an explicit reconcile path. Doctor detects contradictory homes; a reconcile command previews differences, migrates missing canonical files into ~/.dontpanic, preserves legacy ~/.jarvis as read-through compatibility, and refuses ambiguous destructive merges without --confirm.",
+      "steps": [
+        "Inventory all files read or written under DontPanic and legacy Jarvis homes, including config.json, projects.json, agent-manifest.json, dashboard state, quota files, and adapters.",
+        "Add config-home comparison helpers that classify identical, missing-in-canonical, missing-in-legacy, divergent, and unsupported shapes.",
+        "Add a CLI surface such as `dontpanic reconcile homes --dry-run` and `--confirm` or extend existing reconcile with a home-state subcommand.",
+        "Migrate agent-manifest.json into ~/.dontpanic when only legacy exists.",
+        "Migrate non-conflicting missing canonical files from ~/.jarvis to ~/.dontpanic with backups where needed.",
+        "Refuse divergent same-name files without an explicit operator choice; never silently pick one.",
+        "Update doctor --agent to fail or warn according to severity and point to the reconcile command.",
+        "Add tests using isolated home dirs for identical homes, legacy-only manifest, divergent role configs, divergent project registries, migration success, and ambiguity refusal."
+      ],
+      "acceptance": "(1) Doctor surfaces split-brain ~/.dontpanic vs ~/.jarvis state with file-level details. (2) Reconcile dry-run prints an exact migration plan and writes nothing. (3) Reconcile confirm migrates non-conflicting legacy-only files into ~/.dontpanic. (4) agent-manifest.json ends up in the canonical home after reconcile. (5) Divergent config.json and projects.json are not silently merged. (6) Legacy read-through compatibility remains for old installs after migration. (7) Tests cover all classification states and write behavior in isolated homes.",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "infra",
+      "phase": 7,
+      "description": "Budget, quota, cooldown, iteration, gate-finalization, and setup decision guidance. Add a small decision engine and CLI/dashboard surfaces that convert common operational blockers into a short set of recommended choices with exact commands and tradeoffs. Cases include quota cooldown, budget ceiling exceeded, admission threshold mismatch, max_iterations remaining/exhausted, signed_off volley paused at pre_merge, no-progress stop, missing project registration, stale repo onboarding, stale agent brief, unsupported worker role, split config homes, and human-required configuration. The goal is that a human or interactive agent should not spend multiple reasoning cycles deciding whether to wait, redispatch, raise a ceiling, finalize a cleared pre_merge signoff, resume, close, onboard, reconcile, open the dashboard, or answer a human-required setup question.",
+      "steps": [
+        "Add an operations guidance module that consumes existing quota/admission/iteration/gate/project/doctor state and emits typed ActionChoice records: recommended action, alternatives, exact_command where safe, rationale, risk, and required human confirmation.",
+        "Expose a CLI surface such as `dontpanic what-now` or extend `dontpanic next`/`doctor` with an operations-guidance section for blocked current work.",
+        "For quota cooldown, calculate and display wait-until time when available, then the exact redispatch command.",
+        "For budget ceiling or admission threshold blockers, show both wait/redispatch and raise-ceiling/raise-threshold paths, including the safer recommended default.",
+        "For max_iterations state, display remaining fix iterations, whether redispatch would run within cap, and the exact command to continue or close.",
+        "For signed_off audits paused at pre_merge, display whether pre_merge is still pending or cleared; when cleared, offer and support a no-paid-call finalization action that writes or repairs the signoff envelope and flips features.json from the existing signed_off audit artifacts.",
+        "Add a no-paid finalizer, such as `dontpanic finalize <plan> --feature <F>` or an equivalent command, that gates on the latest auditor artifact being signed_off plus cleared pre_merge state, reuses closeout._flip_feature_passes or a shared helper without entering the operator-resolved/no_progress path, repairs the signoff envelope if the pre_merge pause skipped _emit_volley_terminal, and writes evidence_refs.",
+        "For exhausted iterations or no-progress stops, display approve/resume/close choices with the current gate/breaker name and risk text.",
+        "For setup friction, recommend `projects add --onboard`, `doctor --agent`, `doctor --project`, `agent brief`, or home reconcile when the state indicates they are needed.",
+        "When any ActionChoice requires human input, attach one response-level dashboard affordance: active URL if a dashboard singleton is running, otherwise the exact command to start the dashboard. Individual choices may reference the affordance by id but must not repeat the full dashboard text.",
+        "Surface the same ActionChoice records in dashboard what-now/action items so decisions are available without re-reading CLI logs.",
+        "Add tests for the concrete example: Codex budget cooling plus remaining max_iterations recommends waiting and redispatching, with an alternative raise-ceiling path.",
+        "Add tests for missing project registration, stale onboarding block, unsupported roles.*, budget ceiling exceeded, admission threshold mismatch, iterations exhausted, and no-progress stop."
+      ],
+      "acceptance": "(1) A blocked quota/cooldown case renders a recommended wait-until + redispatch action and a separate raise-ceiling/threshold alternative when applicable. (2) The guidance explicitly states remaining max_iterations and whether the next fix iteration is within cap. (3) Budget and iteration guidance appears in CLI output and dashboard ActionItems from the same typed ActionChoice data. (4) A signed_off volley paused at pre_merge shows the gate state; after pre_merge is cleared, guidance offers a no-paid-call finalization action instead of forcing a fresh paid dispatch. (5) Setup guidance tells humans/agents when to run projects add --onboard, doctor --agent, doctor --project, agent brief, or home reconcile. (6) Human-required output includes exactly one response-level dashboard affordance: active URL when running, start command when not running; individual choices do not repeat it. (7) Exact commands are emitted only when safe and validated; otherwise guidance says human action required. (8) Tests cover at least nine decision states, including the Codex cooldown + max_iterations example, signed_off/pre_merge finalization, active/inactive dashboard hints, and dashboard-hint deduplication. (9) A signed_off-and-pre_merge-cleared feature can be finalized with zero paid agent calls: a `dontpanic finalize <plan> --feature <F>` command, or equivalent, consumes the existing signed_off auditor artifact plus cleared gate-state, writes or repairs `signoff-<plan>.json`, and flips only that feature's passes:true with evidence_refs pointing at the audit artifact. (10) The finalizer refuses without mutation if the latest audit verdict is not signed_off, if pre_merge is uncleared, or if no audit envelope exists, with distinct exit codes per case. (11) The finalizer is idempotent and never triggers `dispatch_volley` or any worker executor invocation. (12) Tests prove clean signed_off to passes:true with no executor invocation, refusal on needs_changes, refusal on uncleared pre_merge, missing-audit refusal, and idempotent re-run.",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F006"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "infra",
+      "phase": 8,
+      "description": "Configuration inventory and setup cockpit. Add a unified config inventory that lets humans and interactive agents assess, configure, and update every core DontPanic surface without spelunking files or prompting through long reasoning loops. Inventory entries include global config, per-project config, role assignments, project registry, agent manifest, capability manifests, adapters, runtime evidence defaults, human gates/protected paths/plans_dir, quota state/caps/calibration/admission thresholds, circuit breaker history, notification settings, dashboard local/remote settings, secrets/auth prerequisites, environments.json/Firebase target, install snapshot/reconcile state, PM-tool credentials, MCP server readiness, and generated dashboard state. Expose the inventory through CLI JSON/text and dashboard Settings/Setup state with safe commands, human-required steps, and dashboard availability hints.",
+      "steps": [
+        "Add a config inventory model with fields: id, title, scope (machine/project/plan/capability/secret/runtime), status, editable, safe_command, dashboard_mutation_shape, human_required, current_value_summary, owner_file_or_env, risks, and related doctor probes.",
+        "Create inventory providers for global config, project config, projects registry, agent manifest, roles, runtime_evidence, human_gates/protected_paths/plans_dir/default_target_env, quota caps/calibration/state, circuit breaker state/history, notifications, dashboard config, capabilities/adapters, MCP, environments/Firebase target, secrets/auth, install snapshot/reconcile, and PM-tool credentials.",
+        "Expose `dontpanic config inventory [--project NAME|PATH] [--format text|json]` or an equivalent setup-oriented command.",
+        "Render the same inventory into dashboard Settings/Setup state so the UI can show editable cards and human-required setup cards.",
+        "For safe edits, emit exact commands that route through existing validated surfaces (`roles set`, `project config set`, `capabilities setup`, `quota-caps init`, `calibrate-claude`, `reconcile`, `projects add --onboard`).",
+        "For secrets/auth/provider setup, never print or write secrets; show human-required steps and verification commands only.",
+        "When one or more inventory items require human input, include one response-level dashboard_hint with active_url when a local dashboard is running or start_command when it is not; item-level records may include a dashboard_hint_ref but must not duplicate the full text.",
+        "For optional capabilities, explain readiness and why they are optional so core DontPanic use is not blocked by Firebase/Discord/Linear/GCP setup.",
+        "Add a setup/update planner that can generate a DontPanic plan or ActionChoice list for incomplete setup areas instead of forcing the interactive agent to invent next steps.",
+        "Add tests for inventory completeness, JSON shape, dashboard state shape, safe-command validation, secret redaction/no-secret-output, optional-vs-required classification, and project-scoped overrides."
+      ],
+      "acceptance": "(1) A human or interactive agent can run one command to see all relevant DontPanic configuration surfaces and their status. (2) Inventory covers global config, project config, registry, manifest, roles, runtime evidence, gates/protected paths, quota/caps/calibration, circuit breakers, notifications, dashboard, capabilities/adapters, MCP, environments/Firebase, secrets/auth, install snapshot/reconcile, PM-tool credentials, and generated state. (3) Dashboard state can render the same inventory as Settings/Setup cards. (4) Optional integrations are labeled optional and do not block core use. (5) Safe edits route through existing commands; secrets/auth steps are human-required and never echo secret values. (6) Human-required inventory output includes exactly one response-level dashboard_hint with active URL or start command, with optional item references rather than repeated text. (7) The setup/update planner can emit ActionChoices or a draft DontPanic plan for incomplete setup/update work. (8) Tests cover at least ten inventory providers, active/inactive dashboard hints, dashboard-hint deduplication, and secret-safe output.",
+      "passes": false,
+      "depends_on": [
+        "F004",
+        "F005",
+        "F006",
+        "F007"
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "infra",
+      "phase": 9,
+      "description": "Active-run plan drift reconciliation. Detect and reconcile plan changes made while DontPanic is running, especially when one interactive agent edits the plan while another interactive agent or worker volley is operating from older context. Capture a plan fingerprint at dispatch/start, watch or re-check plan artifacts before paid calls, before auditor calls, before gate finalization, and before signoff. Classify drift as safe additive (e.g. new decision note), requires refresh (e.g. changed acceptance, feature list, dependencies, gates, roles, max_iterations), or blocking (e.g. allowed_paths/forbidden_decisions scope change). Emit a concise ActionChoice and dashboard item that tells the operator whether DontPanic refreshed context automatically, needs redispatch, or needs human reconciliation.",
+      "steps": [
+        "Define a plan-run fingerprint over plan.md frontmatter, features.json, decisions.jsonl, objective_contract.json, gate-state, and any files that affect dispatch semantics.",
+        "Record the fingerprint and source file mtimes/content hashes at dispatch start and in active supervisor state.",
+        "Before each expensive/policy-relevant step (implementer call, auditor call, signoff/finalization), recompute the fingerprint and compare.",
+        "Classify drift: additive ledger-only, context-refresh-required, or blocking-policy-change.",
+        "For additive ledger-only drift, update active state and continue while recording the reconciliation event.",
+        "For context-refresh-required drift, pause before the next paid call and offer exact redispatch/resume guidance with refreshed plan context.",
+        "For blocking policy/scope drift, require human acknowledgement before continuing.",
+        "Add dashboard/CLI ActionChoice output that names changed files, impact, recommended action, and whether budget was protected by pausing before the next call.",
+        "Add tests for concurrent edits to decisions.jsonl, features.json acceptance, loop_caps.max_iterations, human_gates, roles, allowed_paths, and objective_contract."
+      ],
+      "acceptance": "(1) Dispatch records a plan-run fingerprint before work starts. (2) Plan changes during a run are detected before the next paid agent call or signoff finalization. (3) Additive decisions.jsonl drift is reconciled without stopping, with an event recorded. (4) Feature/acceptance/gate/role/loop-cap drift pauses and tells the operator how to refresh/redispatch. (5) Scope/policy drift such as allowed_paths or forbidden_decisions requires human acknowledgement. (6) CLI and dashboard show one concise reconciliation action, not repeated warnings. (7) Tests simulate another process editing plan files mid-run and prove DontPanic does not continue on stale context silently.",
+      "passes": false,
+      "depends_on": [
+        "F007",
+        "F008"
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "infra",
+      "phase": 9,
+      "description": "Dashboard singleton guard, availability discovery, and final docs. Prevent multiple local dashboard servers from accumulating by adding a singleton registry or pidfile with stale-process pruning and `--replace` behavior. Expose a lightweight dashboard status helper so CLI/agent guidance can tell users whether the dashboard is running and what URL to open. Update README, getting started, and changelog to document the new agent/repo onboarding flow and the operator-vs-worker distinction.",
+      "steps": [
+        "Add a dashboard serve singleton record under the canonical DontPanic home, or reuse active_supervisors with a distinct dashboard kind if that is cleaner.",
+        "On `dontpanic dashboard serve`, detect an existing live dashboard process for the same home and refuse with the existing URL plus remediation.",
+        "Add `--replace` or `--force-single` to stop or supersede the existing singleton when requested.",
+        "Prune stale singleton records when the recorded pid is gone.",
+        "Add a dashboard status helper returning active URL/project/scope when running, or the exact serve command when not running, plus a response-level render helper that dedupes dashboard hints.",
+        "Route operations guidance and config inventory through the status helper rather than reimplementing dashboard discovery.",
+        "Keep port-bind OSError handling for normal same-port conflicts.",
+        "Add tests for first serve, second serve refusal, stale record prune, replace behavior, and once-mode cleanup.",
+        "Update README.md and docs/GETTING_STARTED.md with the new `agent brief`, `projects add --onboard`, role assignment, configuration inventory/setup cockpit, `doctor --agent`, `doctor --project`, `what-now`/operations guidance, and `orchestrate` flow.",
+        "Add CHANGELOG.md entry for the product-facing onboarding and dashboard serve behavior."
+      ],
+      "acceptance": "(1) Starting a second dashboard serve in the same DontPanic home refuses with an actionable message. (2) Stale singleton records are pruned. (3) `--replace` or equivalent intentionally replaces a live singleton. (4) Dashboard status helper returns active URL when running and start command when inactive. (5) Shared render helper emits the dashboard hint once per response even when many items require human input. (6) Existing bind failure handling still works. (7) Tests cover singleton behavior, status helper, and deduped hint rendering without opening a browser. (8) README and getting-started docs show the complete new-agent, new-repo, role-assignment, config-inventory/setup, budget/iteration guidance, and dashboard decision flow. (9) CHANGELOG documents the operator-visible changes. (10) Full targeted test suite passes.",
+      "passes": false,
+      "depends_on": [
+        "F009"
+      ]
+    }
+  ]
+}

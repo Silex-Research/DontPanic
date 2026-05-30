@@ -1,0 +1,24 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "signoff_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#signoff#0",
+  "iteration": 0,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F001-i0.json",
+    "audit/codex-auditor-F001-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 2,
+    "needs_changes_count": 0,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "no-paid finalize of signed_off feature F001 (pre_merge cleared); F007 finalizer",
+  "next_action": "merge",
+  "decided_at": "2026-05-30T17:03:03Z"
+}

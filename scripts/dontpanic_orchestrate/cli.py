@@ -722,6 +722,57 @@ def _claude_touch_main(argv: list[str]) -> int:
     return 0
 
 
+def _finalize_main(argv: list[str]) -> int:
+    """``dontpanic finalize <plan> --feature <F>`` — Plan 2026-05-30-001 F007.
+
+    No-paid finalization of a cleanly auditor-signed_off + pre_merge-cleared
+    feature: repairs the signoff envelope if the pre_merge pause skipped it and
+    flips only that feature's ``passes: true``. Never re-runs a paid volley.
+
+    Exit codes (distinct per refusal so scripts/dashboard can branch):
+      0 — finalized (or idempotent no-op)
+      2 — usage error
+      3 — refused: latest auditor verdict is not signed_off
+      4 — refused: pre_merge gate not cleared
+      5 — refused: no auditor envelope for the feature
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic finalize",
+        description=(
+            "Finalize a signed_off + pre_merge-cleared feature with no paid "
+            "agent calls: repair the signoff envelope if missing and flip only "
+            "that feature's passes:true. Refuses (no mutation) when the latest "
+            "auditor verdict is not signed_off, pre_merge is uncleared, or no "
+            "auditor envelope exists."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--feature", required=True, help="Feature ID, e.g. F001")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import signed_off_finalizer
+
+    _refusal_exit = {"not_signed_off": 3, "pre_merge_uncleared": 4, "no_audit": 5}
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    plan_id = plan_loader.load(plan_dir).plan_id
+    try:
+        result = signed_off_finalizer.finalize_signed_off_feature(
+            plan_dir, plan_id=plan_id, feature_id=args.feature
+        )
+    except signed_off_finalizer.FinalizeError as exc:
+        print(f"[finalize] REFUSED ({exc.code}): {exc}", file=sys.stderr)
+        return _refusal_exit.get(exc.code, 3)
+
+    if result.already_finalized:
+        print(f"[finalize] {args.feature} already finalized — no-op")
+    else:
+        print(f"[finalize] {args.feature} finalized (no paid calls)")
+    print(f"[finalize]   signoff: {result.signoff_path} (repaired={result.signoff_repaired})")
+    print(f"[finalize]   features.json passes flipped: {result.features_passes_flipped}")
+    return 0
+
+
 def _close_main(argv: list[str]) -> int:
     """Plan 2026-05-11-002 v3 F004 — operator-resolved feature close-out.
 
@@ -3112,6 +3163,8 @@ def main(argv: list[str] | None = None) -> int:
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "close":
         return _close_main(raw[1:])
+    if raw and raw[0] == "finalize":
+        return _finalize_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":

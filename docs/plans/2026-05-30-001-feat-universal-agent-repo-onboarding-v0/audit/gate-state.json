@@ -1,0 +1,121 @@
+{
+  "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-05-30T03:26:35Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-05-30T03:26:35Z",
+      "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "defer_trip",
+      "gate": "defer:quota_threshold",
+      "at": "2026-05-30T03:26:35Z",
+      "actor": "supervisor",
+      "reason": "codex percent_weekly 4610.4% > threshold 70.0%"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-30T03:26:35Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "defer:quota_threshold"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "defer:quota_threshold",
+      "at": "2026-05-30T03:29:54Z",
+      "actor": "operator"
+    },
+    {
+      "action": "defer_trip",
+      "gate": "defer:quota_threshold",
+      "at": "2026-05-30T03:30:08Z",
+      "actor": "supervisor",
+      "reason": "codex percent_weekly 4610.4% > threshold 70.0%"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-30T03:30:08Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "defer:quota_threshold"
+      ]
+    },
+    {
+      "action": "defer_clear",
+      "gate": "defer:quota_threshold",
+      "at": "2026-05-30T03:31:14Z",
+      "actor": "supervisor",
+      "reason": "condition_cleared"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-05-30T03:37:11Z",
+      "actor": "supervisor",
+      "reason": "codex.plus.rolling_5h observed 1.264e+08 tokens_local_proxy > cap 2741314 tokens_local_proxy (confidence=uncalibrated)"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-30T12:57:11Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:budget_ceiling"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-05-30T13:06:18Z",
+      "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-05-30T13:09:48Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-05-30T15:44:58Z",
+      "actor": "operator"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-05-30T03:26:35Z",
+      "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-05-30T15:44:58Z",
+      "cleared_by": "operator"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl",
+    "pre_merge"
+  ]
+}

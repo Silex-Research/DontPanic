@@ -1,0 +1,31 @@
+{
+  "auditor": "claude-critical-review",
+  "implementer": "claude",
+  "_note": "Pre-impl sufficiency review performed by Claude and operator-accepted in lieu of operator-critical-review (see decisions D009: run_sufficiency_audit has no production auto-generator). All three objective_contract user_journeys and their acceptance_signals trace to feature ACs; dependency DAG F001->F002->F003->F004->F005->F006 is clean. Findings below are advisory/low (non-blocking per BLOCKING_SEVERITIES={medium,high,critical}); the plan is sufficient to lock.",
+  "findings": [
+    {
+      "severity": "low",
+      "journey_id": "Unsupported agent avoids worker misconfiguration",
+      "gap_class": "coverage_gap",
+      "description": "F004 should validate that global and project roles.* resolve to AGENT_REGISTRY entries independently of any plan's agents_required override. The dry-run of this plan resolved implementer=claude/auditor=codex from agents_required, masking the broken global roles.implementer='Grok-Builder' that caused the original incident. F004 AC(3)/AC(8) already imply config-level validation; this asks the implementer to assert plan-independence explicitly rather than leave it inferred.",
+      "feature_refs": ["F004"],
+      "recommendation": "Add an F004 test that doctor --agent flags roles.implementer='Grok-Builder' in ~/.dontpanic/config.json as unrunnable even when a plan's agents_required would resolve to valid executors."
+    },
+    {
+      "severity": "low",
+      "journey_id": "New interactive agent operates DontPanic",
+      "gap_class": "coverage_gap",
+      "description": "F002 AC(2) permits the orchestrate no-arg path to exit 0 or 2 'per existing CLI convention selected in implementation', leaving one acceptance criterion partially unbound. Acceptable latitude, but the implementer should pin a single exit code and record the choice so the gateway behavior is deterministic for tests and reading agents.",
+      "feature_refs": ["F002"],
+      "recommendation": "Implementer pins the orchestrate no-arg exit code to match the prevailing CLI convention and records the choice in decisions.jsonl."
+    },
+    {
+      "severity": "advisory",
+      "journey_id": "Unsupported agent avoids worker misconfiguration",
+      "gap_class": "coverage_gap",
+      "description": "The machine's live ~/.dontpanic/config.json currently holds the Grok-Builder/Codex-Auditor display strings that triggered the original onboarding incident. This is an ideal real-world fixture shape for F004's role-rejection test and should be mirrored into an isolated-home test rather than invented from scratch.",
+      "feature_refs": ["F004"],
+      "recommendation": "Mirror the live broken-config shape into an isolated-home F004 rejection-test fixture."
+    }
+  ]
+}
