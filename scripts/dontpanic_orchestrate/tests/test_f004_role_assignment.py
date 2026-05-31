@@ -373,3 +373,31 @@ def test_manifest_supported_commands_includes_roles() -> None:
 
     m = am.bootstrap_manifest(install_source="source", cli_path="/x")
     assert "roles" in m.supported_commands
+
+
+def test_roles_help_lists_worker_executors(capsys):
+    """`dontpanic roles --help` names the live worker executors (F004 #1/#6),
+    not just a generic AGENT_REGISTRY reference (closes codex F004 low finding)."""
+    from dontpanic_orchestrate import cli
+    from dontpanic_orchestrate import role_assignment as ra
+
+    rc = cli._roles_main(["--help"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    workers = ra.available_worker_executors()
+    assert workers, "expected at least one registered worker executor"
+    for w in workers:
+        assert w in out, f"help output should name worker executor {w!r}"
+    assert "available worker executors" in out.lower()
+
+
+def test_roles_no_subcommand_teaches_workers_on_stderr(capsys):
+    """No-arg `roles` exits 2 and teaches the worker roster on stderr."""
+    from dontpanic_orchestrate import cli
+    from dontpanic_orchestrate import role_assignment as ra
+
+    rc = cli._roles_main([])
+    assert rc == 2
+    err = capsys.readouterr().err
+    for w in ra.available_worker_executors():
+        assert w in err

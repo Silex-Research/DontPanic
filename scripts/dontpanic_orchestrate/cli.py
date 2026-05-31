@@ -3375,6 +3375,23 @@ subcommands:
       with --dry-run; otherwise the write happens immediately."""
 
 
+def _roles_usage_with_workers() -> str:
+    """``_ROLES_USAGE`` plus the live worker-executor roster.
+
+    The static usage text describes ``AGENT_REGISTRY`` generically; the
+    teaching output (``roles --help`` / no-arg / unknown-subcommand) also
+    names the executors a human can actually assign — ``available_worker_executors()``
+    — so the help is self-contained without running ``roles show`` (F004 #1/#6)."""
+    from dontpanic_orchestrate import role_assignment as _ra
+
+    workers = _ra.available_worker_executors()
+    worker_line = ", ".join(workers) if workers else "(none registered)"
+    return (
+        f"{_ROLES_USAGE}\n\n"
+        f"available worker executors (assignable to a role): {worker_line}"
+    )
+
+
 def _resolve_roles_scope(project_arg: str | None):
     """Resolve a ``--project NAME|PATH`` (or cwd when absent) to a
     :class:`role_assignment.ProjectScope`. Returns the scope, or ``None``
@@ -3408,11 +3425,11 @@ def _roles_main(argv: list[str]) -> int:
     from dontpanic_orchestrate import role_assignment as _ra
 
     if argv and argv[0] in ("-h", "--help", "help"):
-        print(_ROLES_USAGE)
+        print(_roles_usage_with_workers())
         return 0
     if not argv:
         # No-arg is an actionable error (CLI convention): teach on stderr, exit 2.
-        print(_ROLES_USAGE, file=sys.stderr)
+        print(_roles_usage_with_workers(), file=sys.stderr)
         return 2
 
     sub = argv[0]
@@ -3515,7 +3532,7 @@ def _roles_main(argv: list[str]) -> int:
         return 0
 
     print(f"[roles] unknown subcommand: {sub!r}", file=sys.stderr)
-    print(_ROLES_USAGE, file=sys.stderr)
+    print(_roles_usage_with_workers(), file=sys.stderr)
     return 2
 
 

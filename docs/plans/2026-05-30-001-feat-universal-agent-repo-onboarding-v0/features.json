@@ -115,12 +115,23 @@
         "Add tests for global role set, project role set, dry-run, unknown executor refusal, source-layer display, goal_auditor fallback, and dashboard projection shape."
       ],
       "acceptance": "(1) A human or interactive agent can list available worker executors and current effective role assignments without reading JSON. (2) Assigning `auditor codex --project myrepo` writes the project roles block and leaves global config untouched. (3) Assigning `implementer claude --global` writes the global roles block. (4) Dry-run previews the exact file and value change. (5) Unknown executor names such as Grok-Builder are refused before writes. (6) Output explains operator-only versus worker-capable when refusal happens. (7) Dashboard state includes enough structured data to render role pickers and safe mutation commands. (8) Tests cover role resolution source layers and mutation targets.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-05-31T04:10:41Z"
     },
     {
       "id": "F005",
