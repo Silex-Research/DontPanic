@@ -161,19 +161,49 @@ def _audit_paths_for_feature(plan_dir: Path, feature_id: str) -> list[Path]:
     return matches
 
 
+def _auditor_iteration_of(path: Path) -> int:
+    """Parse the ``i<N>`` iteration suffix from an audit envelope filename.
+    Returns 0 when the suffix is absent or malformed."""
+    stem = path.name[:-5] if path.name.endswith(".json") else path.name
+    iter_seg = stem.rsplit("-", 1)[-1]
+    return int(iter_seg[1:]) if iter_seg.startswith("i") and iter_seg[1:].isdigit() else 0
+
+
 def _latest_auditor_envelope(audit_paths: list[Path]) -> dict[str, Any] | None:
-    """Return the parsed JSON of the most-recent auditor envelope, or None
-    when no auditor envelope is present."""
-    for path in reversed(audit_paths):
+    """Return the parsed JSON of the freshest auditor envelope, or None when no
+    auditor envelope is present.
+
+    Plan 2026-05-30-002 F002 (D028 fix): rank by modification time (freshest
+    wins), with the iteration index as the tie-break. Re-dispatching a feature
+    reuses the ``<vendor>-auditor-<FNNN>-iN.json`` filename per iteration, so a
+    superseded run with more iterations can leave a STALE higher-index envelope
+    on disk. Selecting by iteration index alone (the old ``reversed()`` walk)
+    let that stale ``i1 needs_changes`` outrank a fresh ``i0 signed_off``,
+    mislabeling ``latest_audit_status`` and refusing a valid finalize.
+
+    The common cases are unchanged: a single envelope returns itself; a
+    monotonic run (i0,i1,i2 written in order, so mtime increases with the
+    index) still resolves to the highest index. The iteration tie-break keeps
+    same-mtime (coarse-filesystem / same-second) writes ranked by index, so a
+    true monotonic run is never mis-ordered on a timestamp tie.
+    """
+    best: dict[str, Any] | None = None
+    best_key: tuple[float, int] | None = None
+    for path in audit_paths:
         if "auditor" not in path.name:
             continue
         try:
+            mtime = path.stat().st_mtime
             data = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
             continue
-        if isinstance(data, dict):
-            return data
-    return None
+        if not isinstance(data, dict):
+            continue
+        key = (mtime, _auditor_iteration_of(path))
+        if best_key is None or key > best_key:
+            best_key = key
+            best = data
+    return best
 
 
 def _lift_auditor_summary(envelope: dict[str, Any] | None) -> str:
