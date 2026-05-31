@@ -1,24 +1,28 @@
 {
   "task_id": "2026-05-30-002-fix-orchestrator-convergence-bugs",
   "schema_version": "1.0",
-  "agents_required": ["claude", "codex"],
   "features": [
     {
       "id": "F001",
-      "title": "no_progress compares finding signatures, not verdict strings",
+      "category": "infra",
+      "phase": 1,
+      "description": "Convergence breakers use progress-aware finding semantics. no_progress and diminishing_returns must not terminate rounds that are making real progress by shrinking or changing blocking findings, and supervisor breaker precedence must not mask progress before max_iterations or signoff.",
       "depends_on": [],
       "passes": false,
-      "acceptance": "check_no_progress trips only when the auditor finding-signature SET is identical across threshold_rounds consecutive needs_changes rounds (using compute_audit_finding_signature, mirroring check_diminishing_returns). Different findings each round does NOT trip. Verdict-string equality alone no longer trips. supervisor.py call site passes the auditor envelopes (not bare verdict strings). Timeout-with-work carve-out preserved. Fallback (signatures unavailable) documented + tested.",
+      "acceptance": "check_no_progress trips only when the auditor finding-signature SET is identical across threshold_rounds consecutive needs_changes rounds (using compute_audit_finding_signature). check_diminishing_returns is audited and corrected so shrinking/changing blocking finding sets are treated as progress, not diminishing returns. Verdict-string equality alone no longer trips. Supervisor call sites pass auditor envelopes (not bare verdict strings) and breaker ordering/precedence does not terminate progress-making rounds before max_iterations/signoff. Timeout-with-work carve-out preserved. Fallback behavior when signatures are unavailable is documented and tested.",
       "steps": [
-        "Read circuit_breakers.check_no_progress + check_diminishing_returns + the supervisor.py:~2493 call site.",
-        "Change check_no_progress signature to accept prior + current auditor envelopes (or findings lists); compute signature sets; trip only on identical persisted signatures.",
-        "Update supervisor call site to pass envelopes; keep timeout-with-work exclusion.",
-        "Preserve the reason-string contract for the stopped_no_progress terminal + classification sidecar."
+        "Read circuit_breakers.check_no_progress, check_diminishing_returns, compute_audit_finding_signature, and the supervisor.py breaker call order.",
+        "Change check_no_progress signature to accept prior + current auditor envelopes (or findings lists); compute signature sets; trip only on identical persisted blocking signatures.",
+        "Audit and correct check_diminishing_returns so finding-set shrink/change across rounds does not trip as diminishing returns.",
+        "Update supervisor call sites and breaker ordering/precedence so progress-making needs_changes rounds can continue until max_iterations or signoff.",
+        "Preserve the reason-string contract and classification sidecars for stopped_no_progress and diminishing-returns terminals."
       ]
     },
     {
       "id": "F002",
-      "title": "latest-auditor-envelope selection is mtime/supersession aware",
+      "category": "infra",
+      "phase": 2,
+      "description": "Latest-auditor-envelope selection is mtime or supersession aware. Finalizer, closeout, and closeout-memo paths must choose the freshest valid auditor verdict for a feature rather than blindly preferring the highest iteration index left on disk.",
       "depends_on": [],
       "passes": false,
       "acceptance": "signed_off_finalizer + closeout + closeout-memo auto-lift resolve the latest auditor envelope by mtime (or explicit supersession marker), not iteration index alone. A fresh i0 signed_off outranks a stale i1 needs_changes from a superseded run. latest_audit_status reflects the true latest verdict.",
@@ -31,12 +35,14 @@
     },
     {
       "id": "F003",
-      "title": "regression suite + full orchestrate sweep green",
+      "category": "infra",
+      "phase": 3,
+      "description": "Regression suite and full orchestrate sweep. Add focused red/green tests for convergence breaker behavior and latest-envelope selection, then prove the existing orchestrate test sweep remains green except for any explicitly documented pre-existing baseline failure.",
       "depends_on": ["F001", "F002"],
       "passes": false,
-      "acceptance": "Red/green tests: (a) no_progress does NOT trip when findings change across rounds with verdict held at needs_changes; DOES trip on identical findings; (b) finalizer picks fresher-by-mtime signed_off over stale higher-index needs_changes. Full existing orchestrate test sweep passes under raw pytest. Synthetic 3-round volley converges to signed_off instead of false stopped_no_progress at round 2.",
+      "acceptance": "Red/green tests: (a) no_progress does NOT trip when findings change across rounds with verdict held at needs_changes; DOES trip on identical findings; (b) diminishing_returns does NOT trip when blocking finding sets shrink/change across rounds; DOES trip only on the intended non-progress pattern; (c) breaker precedence does not mask progress before max_iterations/signoff; (d) finalizer picks fresher-by-mtime signed_off over stale higher-index needs_changes. Full existing orchestrate test sweep passes under raw pytest. Synthetic 3-round volley converges to signed_off instead of false stopped_no_progress/stopped_cap at round 2.",
       "steps": [
-        "Write red tests for F001 (finding-set vs verdict-string) + F002 (mtime selection).",
+        "Write red tests for F001 (finding-set vs verdict-string, diminishing_returns false-positive, and breaker precedence) + F002 (mtime selection).",
         "Run targeted tests green.",
         "Full orchestrate sweep under raw pytest (env-isolated).",
         "Synthetic multi-round convergence demonstration (mock executors)."

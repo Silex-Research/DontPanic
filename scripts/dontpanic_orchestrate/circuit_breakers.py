@@ -914,9 +914,36 @@ def _round_pairs(audit_paths: Iterable[Path]) -> list[tuple[dict[str, Any] | Non
     return pairs
 
 
+def _envelope_finding_signatures(envelope: dict[str, Any]) -> set[str] | None:
+    """Plan 2026-05-30-002 F001: return the set of finding signatures for an
+    auditor envelope, or None when ANY finding lacks usable issue text (so
+    ``compute_audit_finding_signature`` returns None and signature comparison
+    would be unsound — the caller falls back to verdict-string semantics)."""
+    from dontpanic_orchestrate.nested_orchestration import compute_audit_finding_signature
+
+    findings = _audit_findings(envelope)
+    sigs: set[str] = set()
+    for f in findings:
+        sig = compute_audit_finding_signature(f)
+        if sig is None:
+            return None
+        sigs.add(sig)
+    return sigs
+
+
+def _envelope_verdict(envelope: dict[str, Any]) -> str:
+    """Best-effort auditor verdict string from an envelope."""
+    return str(
+        envelope.get("audit_status")
+        or envelope.get("verdict")
+        or envelope.get("status")
+        or ""
+    )
+
+
 def check_no_progress(
-    prior_status: str | None,
-    current_status: str,
+    prior_status: str | dict[str, Any] | None,
+    current_status: str | dict[str, Any],
     threshold_rounds: int = 2,
     *,
     current_impl_envelope: dict[str, Any] | None = None,
@@ -932,14 +959,39 @@ def check_no_progress(
     pattern (timeout both rounds + work landed) terminates at ``stopped_cap``
     rather than ``stopped_no_progress`` because no-progress never trips on
     those rounds.
+
+    Plan 2026-05-30-002 F001 (D029 fix, Design B): ``prior_status`` and
+    ``current_status`` may now be auditor ENVELOPES (dicts) rather than bare
+    verdict strings. When both are envelopes with usable finding signatures,
+    a STRICTLY SHRINKING blocking-finding set across the window is PROGRESS and
+    does NOT trip — even when both verdicts are ``needs_changes`` and some
+    findings persist. A flat or growing finding count with the same verdict is
+    still no-progress and trips. When envelopes are absent or any finding lacks
+    usable issue text, the legacy verdict-string equality path is preserved
+    unchanged (distinct-but-flat findings still trip via that fallback).
     """
     if _envelope_is_timeout_with_work(current_impl_envelope):
         return False, ""
     if prior_status is None:
         return False, ""
-    if prior_status == current_status and current_status not in {"signed_off", "blocked"}:
+
+    prior_verdict = _envelope_verdict(prior_status) if isinstance(prior_status, dict) else prior_status
+    current_verdict = (
+        _envelope_verdict(current_status) if isinstance(current_status, dict) else current_status
+    )
+
+    # Progress-aware carve-out: only when BOTH sides are envelopes with sound
+    # signatures. A strictly shrinking finding set is progress → never trips.
+    if isinstance(prior_status, dict) and isinstance(current_status, dict):
+        prior_sigs = _envelope_finding_signatures(prior_status)
+        current_sigs = _envelope_finding_signatures(current_status)
+        if prior_sigs is not None and current_sigs is not None:
+            if len(current_sigs) < len(prior_sigs):
+                return False, ""
+
+    if prior_verdict == current_verdict and current_verdict not in {"signed_off", "blocked"}:
         return True, (
-            f"auditor verdict unchanged ({current_status}) across "
+            f"auditor verdict unchanged ({current_verdict}) across "
             f"{threshold_rounds} consecutive rounds"
         )
     return False, ""
@@ -1019,8 +1071,25 @@ def check_diminishing_returns(audit_paths: list[Path]) -> tuple[bool, str]:
 
     if not fallback and rounds_signatures and all(rounds_signatures):
         # Every round contributed at least one signed finding.
+        #
+        # Plan 2026-05-30-002 F001 (D029 fix, Design B): a STRICTLY SHRINKING
+        # finding set across the window is PROGRESS, not diminishing returns —
+        # even when some findings persist (the intersection is non-empty). The
+        # original signature-intersection rule tripped on the canonical
+        # convergence pattern (3 → 1, where finding #1 carries over), killing a
+        # volley that was demonstrably resolving findings. Guard for it first:
+        # when each round's signature count is strictly less than the prior
+        # round's, the implementer is making headway → do not trip.
+        sig_counts = [len(s) for s in rounds_signatures]
+        strictly_shrinking = all(
+            sig_counts[i] > sig_counts[i + 1] for i in range(len(sig_counts) - 1)
+        )
+        if strictly_shrinking:
+            return False, ""
+
         # Trip when the intersection of signature sets is non-empty —
-        # at least one finding signature persisted across every round.
+        # at least one finding signature persisted across every round —
+        # AND the set is not strictly shrinking (handled above).
         persistent = set.intersection(*rounds_signatures)
         if persistent:
             return True, (

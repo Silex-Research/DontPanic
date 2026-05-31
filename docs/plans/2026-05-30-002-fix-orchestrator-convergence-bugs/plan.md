@@ -1,19 +1,45 @@
 ---
 id: 2026-05-30-002-fix-orchestrator-convergence-bugs
 title: Fix orchestrator convergence + audit-envelope bugs
-status: draft
+status: active
+description: |
+  Fix the orchestration-engine convergence and audit-envelope selection bugs
+  surfaced while dogfooding the universal onboarding plan. The corrected scope
+  includes no_progress verdict-string false trips, diminishing_returns false
+  positives, minimum breaker precedence needed for progress-making rounds, and
+  stale latest-auditor-envelope selection.
+type: fix
 tier: cross-cutting
+date: "2026-05-30"
 goal_type: refactor
+surfaces:
+  - infra
+agents_required:
+  - claude
+  - codex
 human_gates:
   - pre_impl
   - pre_merge
 loop_caps:
   max_iterations: 3
+links:
+  features: ./features.json
+  decisions: ./decisions.jsonl
+  objective_contract: ./objective_contract.json
 ---
 
 # DontPanic — Fix orchestrator convergence + audit-envelope bugs
 
 title: 2026-05-30-002-fix-orchestrator-convergence-bugs
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
+
+DontPanic-internal orchestration-engine fix. No external service setup.
 
 ## Why
 
@@ -30,17 +56,22 @@ codex audit-only** (`dontpanic <plan> --feature FNNN --role auditor`) plus the
 no-paid finalizer — NOT a multi-round volley. Using the broken convergence loop
 to fix the convergence loop is a self-deadlock (cf. no-self-deadlocking-plans).
 
-## Bugs (from 2026-05-30-001 D029 + D028)
+## Bugs (from 2026-05-30-001 D029 + D028, amended after failed implementation)
 
-1. **no_progress trips on verdict-string, not finding-set.**
+1. **convergence breakers false-trip before real progress can finish.**
    `circuit_breakers.check_no_progress` (circuit_breakers.py:~938-945) trips when
    `prior_status == current_status` (both `needs_changes`), regardless of whether
    the *findings* changed. `supervisor.py:~2493` calls it with only verdict
-   strings. The sibling `check_diminishing_returns` already does the right thing
-   (compares `compute_audit_finding_signature` sets, D001/D002). Net effect: every
-   volley caps at 2 rounds even when the implementer is demonstrably making
-   progress (findings shrinking/changing round over round). `--max-iterations N`
-   is never reached because no_progress fires first in the loop.
+   strings.
+
+   The original draft assumed the sibling `check_diminishing_returns` already did
+   the right thing because it compares `compute_audit_finding_signature` sets. That
+   assumption was false. The failed implementation showed the real convergence bug
+   also involves diminishing-returns semantics and/or breaker precedence: a
+   shrinking/changing finding set can still be terminated before `max_iterations`
+   because the wrong breaker class fires too early. This plan must therefore cover
+   the no_progress verdict-string bug, diminishing_returns false positives, and
+   breaker ordering/precedence for progress-making rounds.
 
 2. **Audit-envelope filename reuse picks a stale verdict as "latest".**
    Re-dispatching a feature reuses the `*-auditor-FNNN-iN.json` filename per
@@ -52,12 +83,14 @@ to fix the convergence loop is a self-deadlock (cf. no-self-deadlocking-plans).
 
 ## Features
 
-- **F001** — no_progress compares finding signatures, not verdict strings.
+- **F001** — convergence breakers share progress-aware finding semantics.
   `check_no_progress` takes both auditor envelopes (or their findings), computes
-  `compute_audit_finding_signature` sets, and trips only when the SAME signatures
-  persist across the threshold rounds (mirroring `check_diminishing_returns`).
-  Different findings each round = progress = no trip. Wire the supervisor call
-  site to pass the envelopes. Preserve the timeout-with-work carve-out.
+  `compute_audit_finding_signature` sets, and trips only when the SAME blocking
+  signatures persist across the threshold rounds. `check_diminishing_returns` is
+  audited and corrected so shrinking/changing finding sets are treated as progress,
+  not as diminishing returns. Supervisor breaker ordering/precedence is updated so
+  progress-making rounds can reach `max_iterations` or signoff instead of
+  terminating at round 2. Preserve the timeout-with-work carve-out.
 
 - **F002** — audit "latest envelope" selection is mtime/supersession aware.
   The finalizer, closeout, and memo-lift resolve the latest auditor envelope by
@@ -67,15 +100,17 @@ to fix the convergence loop is a self-deadlock (cf. no-self-deadlocking-plans).
   envelopes for the feature.
 
 - **F003** — regression suite + full orchestrate sweep.
-  Red/green tests for both fixes: (a) no_progress does NOT trip when findings
-  change across rounds but verdict stays `needs_changes`; DOES trip when findings
-  are identical; (b) finalizer picks the fresher-by-mtime signed_off envelope over
-  a stale higher-index needs_changes. Full existing orchestrate test sweep stays
-  green.
+  Red/green tests for both fixes: (a) neither no_progress nor diminishing_returns
+  trips when blocking findings shrink/change across rounds while verdict stays
+  `needs_changes`; (b) the correct breaker trips when the exact same blocking
+  findings persist; (c) breaker precedence does not mask progress; (d) finalizer
+  picks the fresher-by-mtime signed_off envelope over a stale higher-index
+  needs_changes. Full existing orchestrate test sweep stays green.
 
 ## Acceptance / Return Condition
 
 All three features `passes: true` with codex (cross-model) signoff evidence, the
 full orchestrate test sweep green under raw pytest, and a demonstration that a
 3+-round volley on a synthetic plan now converges to `signed_off` instead of
-false-tripping `stopped_no_progress` at round 2.
+false-tripping `stopped_no_progress` or `stopped_cap` at round 2 while findings
+are demonstrably improving.

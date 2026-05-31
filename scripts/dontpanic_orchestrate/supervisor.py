@@ -1400,6 +1400,11 @@ def dispatch_volley(
     audit_paths: list[Path] = []
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
+    # Plan 2026-05-30-002 F001 (D029 fix): retain the prior round's full auditor
+    # envelope so check_no_progress can compare finding-signature SETS, not just
+    # verdict strings — a shrinking blocking-finding set is progress and must not
+    # trip no-progress even when both verdicts stay ``needs_changes``.
+    prior_aud_envelope: dict[str, Any] | None = None
 
     effective_env = target_env if target_env is not None else loaded.target_env
     effective_project = target_project if target_project is not None else loaded.target_project
@@ -2490,9 +2495,15 @@ def dispatch_volley(
                 # Plan 2026-05-04-003 F003: pass the implementer envelope so the
                 # detector skips counting timeout-with-work iterations (D008 +
                 # audit-focus item 1).
+                # Plan 2026-05-30-002 F001 (D029 fix): pass the prior + current
+                # auditor ENVELOPES (not bare verdict strings) so the breaker can
+                # compare finding-signature SETS. A shrinking blocking-finding set
+                # is progress and must not trip even when both verdicts stay
+                # ``needs_changes``. Falls back to verdict-string semantics when an
+                # envelope is missing or any finding lacks usable issue text.
                 np_tripped, np_reason = circuit_breakers.check_no_progress(
-                    prior_aud_status,
-                    aud_status,
+                    prior_aud_envelope if prior_aud_envelope is not None else prior_aud_status,
+                    aud_data,
                     current_impl_envelope=impl_envelope,
                 )
                 if np_tripped:
@@ -2606,6 +2617,10 @@ def dispatch_volley(
                 # (orthogonal to counter accumulation).
                 if not is_timeout_with_work:
                     prior_aud_status = aud_status
+                    # Plan 2026-05-30-002 F001 — advance the envelope baseline in
+                    # lockstep with prior_aud_status so the next round's
+                    # no-progress check compares finding-signature sets.
+                    prior_aud_envelope = aud_data
 
         except ValueError as _backstop_exc:
             # F003 backstop catches ValueError for D025 root cause #1, but
