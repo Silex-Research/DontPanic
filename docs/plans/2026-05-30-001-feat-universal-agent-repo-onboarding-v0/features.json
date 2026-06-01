@@ -148,7 +148,7 @@
         "Add tests for unknown global roles, unknown project roles, stale managed block, missing block, current block, and operator-only agent interpretation."
       ],
       "acceptance": "(1) `dontpanic doctor --agent` validates the machine onboarding layer and prints registered worker executors. (2) `dontpanic doctor --project NAME` validates one project and its managed onboarding block. (3) Unknown global `roles.*` values fail. (4) Unknown project `roles.*` values fail. (5) Legacy implementer/auditor validation still works. (6) Stale or missing managed repo block is reported with an exact `projects add --onboard` remediation. (7) Existing doctor tests remain compatible. (8) Tests prove `Grok-Builder` is flagged as unrunnable unless registered in AGENT_REGISTRY.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F003",
@@ -171,7 +171,7 @@
         "Add tests using isolated home dirs for identical homes, legacy-only manifest, divergent role configs, divergent project registries, migration success, and ambiguity refusal."
       ],
       "acceptance": "(1) Doctor surfaces split-brain ~/.dontpanic vs ~/.jarvis state with file-level details. (2) Reconcile dry-run prints an exact migration plan and writes nothing. (3) Reconcile confirm migrates non-conflicting legacy-only files into ~/.dontpanic. (4) agent-manifest.json ends up in the canonical home after reconcile. (5) Divergent config.json and projects.json are not silently merged. (6) Legacy read-through compatibility remains for old installs after migration. (7) Tests cover all classification states and write behavior in isolated homes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005"
       ]
@@ -253,10 +253,38 @@
       ]
     },
     {
+      "id": "F011",
+      "category": "infra",
+      "phase": 9,
+      "description": "Skill invocation rubrics and automation recommendations. Extend the existing advisory skill-applicability layer into a safe invocation planner that helps DontPanic decide when valuable skills should be auto-run, suggested, blocked for missing inputs, or require human approval. Skill authors declare invocation metadata in SKILL.md frontmatter; DontPanic combines that metadata with plan surfaces, goal_type, changed files, known config, credentials/network risk, budget state, available eval commands, and current lifecycle stage. The output is a typed recommendation set shared by CLI and dashboard so humans and interactive agents do not have to manually remember when to use autoresearch, security-review, eval-harness, test-runner, cost-model, browser-use, or other high-value skills.",
+      "steps": [
+        "Define `invocation:` SKILL.md frontmatter with mode (`auto_readonly`, `auto_safe`, `suggest`, `approval_required`, `never_auto`, `never_suggest`), lifecycle stages, required inputs, risk flags, evidence target, and optional command template.",
+        "Add a pure skill-invocation evaluator that reads an injected SkillInvocationContext containing applicable-skills output, skill frontmatter, plan metadata, changed files, config inventory summaries, budget state, lifecycle stage, and available commands, then emits SkillAction records: skill_name, recommendation, reason, risk, missing_inputs, exact_command when safe, dashboard_action, evidence_target, and approval_required.",
+        "Make the auto-run allowlist a first-class, versioned, auditable artifact. It must record skill name, command template or command prefix, allowed mode, owner/approval metadata, version/hash, and rationale; F008 config inventory and doctor/reconcile surfaces must expose stale, missing, or conflicting allowlist state.",
+        "Document and implement risk-precedence rules in the evaluator: explicit `never_auto`/`never_suggest` wins; external writes, paid actions, indefinite loops, credentialed production reads, network access, repo mutation, missing allowlist, and missing inputs each downgrade or block auto-run regardless of a skill's declared mode; contradictory metadata must produce a diagnostic SkillAction instead of silently trusting the unsafe declaration.",
+        "Default skills without invocation metadata to `suggest` or `not_applicable` but never `auto_run`, preserving backward compatibility with existing skills.",
+        "Classify read-only bounded skills as auto-runnable only when all inputs exist and the command is allowlisted; examples include changelog, cost-model with fresh local state, and deterministic test/eval reports.",
+        "Classify mutating, credentialed, networked, paid, external-write, or indefinite-loop skills as `approval_required` or `suggest`; examples include autoresearch, prompt-optimizer, browser-use, agent-browser, revenue-check --live, github-pr merge, product-health-agent, and long-running managed agents.",
+        "Add a lightweight migration path for existing skills: `dontpanic skills rubric --suggest <skill>` (or equivalent) proposes starting invocation metadata from current frontmatter, known triggers, tool requirements, and risk heuristics; `doctor` flags high-value skills without rubrics without blocking core use.",
+        "Add built-in rubric fixtures for representative current skills: autoresearch, security-review, eval-harness, test-runner, cost-model, cost-guard, changelog, browser-use, agent-browser, worktree-isolation, subagent-driven-dev, prompt-optimizer, revenue-check, github-pr, and printing-press-adapter.",
+        "Route missing required inputs through the F007 ActionChoice/dashboard-hint system so DontPanic asks one concise question or presents one dashboard action instead of a long prompting loop.",
+        "Expose `dontpanic skills recommend --plan <plan> [--stage STAGE] [--format text|json]` or an equivalent command, and include the same recommendations in dashboard action/setup state.",
+        "Integrate with F008 config inventory so unavailable credentials, missing binaries, unconfigured capabilities, or absent eval commands explain why a skill is blocked rather than silently skipped.",
+        "Ensure execution policy is separate from recommendation policy: this feature may recommend or auto-run only read-only bounded commands; approval-required skills are never invoked by the recommender without explicit confirmation.",
+        "Add tests for all recommendation classes, missing-input behavior, no-auto fallback for skills without metadata, never-suggest opt-out, command allowlist validation, risk precedence with contradictory metadata, dashboard state shape, doctor/reconcile allowlist visibility, migration suggestion output, and representative skill classifications."
+      ],
+      "acceptance": "(1) `SKILL.md` supports validated `invocation:` metadata without breaking skills that lack it. (2) The recommender emits typed SkillAction records from an injected pure SkillInvocationContext with recommendation values `auto_run`, `suggest`, `approval_required`, `blocked_missing_inputs`, and `not_applicable`. (3) Skills without invocation metadata are never auto-run. (4) Read-only bounded skills auto-run or become auto-runnable only when required inputs exist and the exact command is present in a versioned auditable auto-run allowlist. (5) The allowlist has owner/approval metadata, version/hash, rationale, and command template/prefix fields; doctor/reconcile and F008 config inventory expose missing/stale/conflicting allowlist state. (6) Risk precedence is deterministic and tested: explicit never-auto/never-suggest, external writes, paid actions, indefinite loops, credentialed production reads, network access, repo mutation, missing allowlist, and missing inputs downgrade/block auto-run regardless of declared mode. (7) Mutating, credentialed, networked, paid, external-write, or indefinite-loop skills require approval or are suggested; they are never silently executed. (8) Missing inputs produce one concise ActionChoice or dashboard action naming only the missing blocker. (9) CLI and dashboard render the same SkillAction data, including reason, risk, command, approval requirement, and evidence target. (10) The recommender uses F008 config inventory to explain unavailable credentials/binaries/capabilities and F007 dashboard-hint deduplication for human decisions. (11) Existing skills have a migration path: a rubric suggestion command or doctor advisory identifies high-value skills missing invocation metadata and proposes safe starting rubrics without blocking core use. (12) `never_suggest` or equivalent opt-out prevents noisy/toolkit skills from appearing in recommendations. (13) Representative current skills are covered by fixtures: autoresearch, security-review, eval-harness, test-runner, cost-model, changelog, browser-use, revenue-check, github-pr, worktree-isolation, subagent-driven-dev, prompt-optimizer, and printing-press-adapter. (14) Tests prove each recommendation class, no-auto fallback, never-suggest opt-out, command allowlist enforcement, risk precedence with contradictory metadata, missing-input handling, dashboard JSON shape, doctor/reconcile allowlist visibility, migration suggestion output, and no invocation of approval-required skills.",
+      "passes": false,
+      "depends_on": [
+        "F007",
+        "F008"
+      ]
+    },
+    {
       "id": "F010",
       "category": "infra",
       "phase": 9,
-      "description": "Dashboard singleton guard, availability discovery, and final docs. Prevent multiple local dashboard servers from accumulating by adding a singleton registry or pidfile with stale-process pruning and `--replace` behavior. Expose a lightweight dashboard status helper so CLI/agent guidance can tell users whether the dashboard is running and what URL to open. Update README, getting started, and changelog to document the new agent/repo onboarding flow and the operator-vs-worker distinction.",
+      "description": "Dashboard singleton guard, availability discovery, and final docs. Prevent multiple local dashboard servers from accumulating by adding a singleton registry or pidfile with stale-process pruning and `--replace` behavior. Expose a lightweight dashboard status helper so CLI/agent guidance can tell users whether the dashboard is running and what URL to open. Update README, getting started, and changelog to document the new agent/repo onboarding flow, skill invocation recommendations, and the operator-vs-worker distinction.",
       "steps": [
         "Add a dashboard serve singleton record under the canonical DontPanic home, or reuse active_supervisors with a distinct dashboard kind if that is cleaner.",
         "On `dontpanic dashboard serve`, detect an existing live dashboard process for the same home and refuse with the existing URL plus remediation.",
@@ -266,13 +294,14 @@
         "Route operations guidance and config inventory through the status helper rather than reimplementing dashboard discovery.",
         "Keep port-bind OSError handling for normal same-port conflicts.",
         "Add tests for first serve, second serve refusal, stale record prune, replace behavior, and once-mode cleanup.",
-        "Update README.md and docs/GETTING_STARTED.md with the new `agent brief`, `projects add --onboard`, role assignment, configuration inventory/setup cockpit, `doctor --agent`, `doctor --project`, `what-now`/operations guidance, and `orchestrate` flow.",
+        "Update README.md and docs/GETTING_STARTED.md with the new `agent brief`, `projects add --onboard`, role assignment, configuration inventory/setup cockpit, skill invocation recommendations, `doctor --agent`, `doctor --project`, `what-now`/operations guidance, and `orchestrate` flow.",
         "Add CHANGELOG.md entry for the product-facing onboarding and dashboard serve behavior."
       ],
-      "acceptance": "(1) Starting a second dashboard serve in the same DontPanic home refuses with an actionable message. (2) Stale singleton records are pruned. (3) `--replace` or equivalent intentionally replaces a live singleton. (4) Dashboard status helper returns active URL when running and start command when inactive. (5) Shared render helper emits the dashboard hint once per response even when many items require human input. (6) Existing bind failure handling still works. (7) Tests cover singleton behavior, status helper, and deduped hint rendering without opening a browser. (8) README and getting-started docs show the complete new-agent, new-repo, role-assignment, config-inventory/setup, budget/iteration guidance, and dashboard decision flow. (9) CHANGELOG documents the operator-visible changes. (10) Full targeted test suite passes.",
+      "acceptance": "(1) Starting a second dashboard serve in the same DontPanic home refuses with an actionable message. (2) Stale singleton records are pruned. (3) `--replace` or equivalent intentionally replaces a live singleton. (4) Dashboard status helper returns active URL when running and start command when inactive. (5) Shared render helper emits the dashboard hint once per response even when many items require human input. (6) Existing bind failure handling still works. (7) Tests cover singleton behavior, status helper, and deduped hint rendering without opening a browser. (8) README and getting-started docs show the complete new-agent, new-repo, role-assignment, config-inventory/setup, budget/iteration guidance, skill invocation recommendation, and dashboard decision flow. (9) CHANGELOG documents the operator-visible changes. (10) Full targeted test suite passes.",
       "passes": false,
       "depends_on": [
-        "F009"
+        "F009",
+        "F011"
       ]
     }
   ]
