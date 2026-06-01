@@ -357,6 +357,32 @@
       "at": "2026-06-01T19:18:07Z",
       "actor": "supervisor",
       "reason": "caps file unavailable: caps file at /Users/bayesian/.jarvis/quota_caps.json invalid:\n  schema_version must be 1, got 2\n  unknown vendor key: 'vendors'. Run `python -m dontpanic_orchestrate quota-caps init` to seed."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T20:31:51Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T20:44:10Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T20:47:53Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T21:21:33Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
     }
   ],
   "gate_events": [
@@ -378,6 +404,6 @@
     "pre_merge"
   ],
   "active_breakers": [
-    "breaker:budget_ceiling"
+    "breaker:no_progress"
   ]
 }

@@ -133,3 +133,21 @@ taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the tax
 | 2026-06-01T19:02:41Z | F008 | i0 | codex / auditor | needs_changes | 1,766,307 / 12,958 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
 | 2026-06-01T19:13:32Z | F008 | i0 | claude / implementer | signed_off | 791,443 / 6,343 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
 | 2026-06-01T19:18:07Z | F008 | i0 | codex / auditor | needs_changes | 2,749,863 / 18,426 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T20:35:08Z | F008 | i0 | claude / implementer | signed_off | 2,342,816 / 12,520 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T20:38:23Z | F008 | i0 | codex / auditor | needs_changes | 1,816,965 / 12,497 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T20:40:44Z | F008 | i1 | claude / implementer | signed_off | 1,597,087 / 9,558 | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-06-01T20:44:09Z | F008 | i1 | codex / auditor | needs_changes | 2,549,949 / 14,363 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+
+**2026-06-01T20:44:10Z** — feature **F008** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+| 2026-06-01T20:53:24Z | F008 | i0 | claude / implementer | signed_off | 3,257,388 / 27,444 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T20:59:06Z | F008 | i0 | codex / auditor | needs_changes | 4,579,219 / 18,342 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T21:07:30Z | F008 | i1 | claude / implementer | signed_off | 7,654,571 / 36,549 | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-06-01T21:12:35Z | F008 | i1 | codex / auditor | needs_changes | 3,430,487 / 22,328 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+| 2026-06-01T21:18:00Z | F008 | i2 | claude / implementer | signed_off | 4,712,042 / 25,703 | [claude-implementer-F008-i2.json](audit/claude-implementer-F008-i2.json) |
+| 2026-06-01T21:21:32Z | F008 | i2 | codex / auditor | needs_changes | 1,955,696 / 15,074 | [codex-auditor-F008-i2.json](audit/codex-auditor-F008-i2.json) |
+
+**2026-06-01T21:21:33Z** — feature **F008** terminal: `stopped_no_progress` after 3 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+

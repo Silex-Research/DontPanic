@@ -30,10 +30,11 @@ through :func:`state_projection.scrub_secrets` before it leaves this module.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # ─────────────────────────────── vocabulary ────────────────────────────────
 
@@ -45,7 +46,7 @@ class Scope(str, Enum):
     PROJECT = "project"      # per-repo (<repo>/.dontpanic)
     PLAN = "plan"            # per-plan runtime state
     CAPABILITY = "capability"  # optional adapters / integrations
-    SECRET = "secret"        # credentials / auth prerequisites
+    SECRET = "secret"        # noqa: S105 — enum label, not a credential value
     RUNTIME = "runtime"      # runtime evidence / live execution targets
 
 
@@ -58,6 +59,27 @@ class Status(str, Enum):
     OPTIONAL_UNCONFIGURED = "optional_unconfigured"  # optional, not set up
     HUMAN_REQUIRED = "human_required"      # only a human can complete it
     UNKNOWN = "unknown"                    # reader failed / indeterminate
+
+
+class UnresolvedProjectError(ValueError):
+    """Raised when an explicit ``--project NAME|PATH`` selector resolves to
+    neither a registered project nor an existing directory.
+
+    Mirrors ``project_config.resolve_project_path``'s contract that callers
+    MUST hard-refuse unresolved selectors (D003): silently degrading an
+    explicitly-requested project to machine-only scope would report an
+    optimistic, wrong inventory for a project the caller never asked about.
+    The CLI translates this into exit 2 + a clear message.
+    """
+
+    def __init__(self, selector: str) -> None:
+        self.selector = selector
+        super().__init__(
+            f"project {selector!r} is not a registered project name and is "
+            f"not an existing directory on disk; refusing to fall back to "
+            f"machine-only inventory. Register it with `dontpanic projects "
+            f"add --onboard` or pass an existing project path."
+        )
 
 
 # Statuses that the setup planner treats as "incomplete work".
@@ -262,6 +284,61 @@ def _probe_loadable(path: Path, model: Any) -> tuple[bool, str | None]:
     return True, None
 
 
+@dataclass(frozen=True)
+class StatusFacts:
+    """Normalized facts about ONE config surface, fed to :func:`derive_status`.
+
+    AC2e: the non-optimistic-status invariant is implemented as a SINGLE shared
+    status-derivation helper applied uniformly by EVERY provider — not per-
+    provider ad-hoc ``status=Status.OK if … else …`` branches. Every provider
+    reduces its underlying read to these four booleans and routes them through
+    :func:`derive_status`, so "present but invalid / incomplete / unloadable ⇒
+    non-ok" holds class-wide *by construction*, not because each provider
+    happens to repeat the same check.
+
+    Field semantics (each later field is only consulted once the earlier ones
+    hold, mirroring the derivation order):
+
+    - ``present``: the underlying artifact exists / is configured at all.
+    - ``loadable``: a PRESENT artifact parses + structurally validates. A
+      present-but-unloadable file is a hard defect regardless of optionality.
+    - ``valid``: a present + loadable artifact is semantically runnable /
+      healthy (roles in AGENT_REGISTRY, breaker not tripped, calibration +
+      observed state present, registered project paths exist, an adapter is
+      ready, …).
+    - ``human_required``: an ABSENT required secret only a human can supply.
+    """
+
+    optional: bool
+    present: bool
+    loadable: bool = True
+    valid: bool = True
+    human_required: bool = False
+
+
+def derive_status(facts: StatusFacts) -> Status:
+    """The ONE shared status-derivation rule every provider routes through (AC2e).
+
+    A present-but-unloadable artifact is a hard defect (``NEEDS_SETUP``) even for
+    optional surfaces — the operator must fix or remove it. An absent surface is
+    ``HUMAN_REQUIRED`` for a required secret, ``OPTIONAL_UNCONFIGURED`` when
+    optional, else ``NEEDS_SETUP``. A present + loadable but semantically
+    invalid/incomplete surface degrades softly to ``OPTIONAL_UNCONFIGURED`` when
+    optional (never blocks core use, AC4) and to ``NEEDS_SETUP`` when required.
+    Only a present + loadable + valid surface is ``OK`` — so an invalid /
+    incomplete / unrunnable underlying state can NEVER report ``ok``.
+    """
+    if facts.present and not facts.loadable:
+        return Status.NEEDS_SETUP
+    if not facts.present:
+        if facts.human_required:
+            return Status.HUMAN_REQUIRED
+        return Status.OPTIONAL_UNCONFIGURED if facts.optional else Status.NEEDS_SETUP
+    if not facts.valid:
+        return Status.OPTIONAL_UNCONFIGURED if facts.optional else Status.NEEDS_SETUP
+    return Status.OK
+
+
 def _safe(fn: Callable[[], InventoryItem], *, fallback: InventoryItem) -> InventoryItem:
     try:
         return fn()
@@ -297,7 +374,7 @@ def provider_global_config(ctx: InventoryContext) -> InventoryItem:
                 id="global_config",
                 title="Global config (per-user defaults)",
                 scope=Scope.MACHINE,
-                status=Status.NEEDS_SETUP,
+                status=derive_status(StatusFacts(optional=False, present=False)),
                 editable=True,
                 human_required=False,
                 optional=False,
@@ -318,7 +395,9 @@ def provider_global_config(ctx: InventoryContext) -> InventoryItem:
                 id="global_config",
                 title="Global config (per-user defaults)",
                 scope=Scope.MACHINE,
-                status=Status.NEEDS_SETUP,
+                status=derive_status(
+                    StatusFacts(optional=False, present=True, loadable=False)
+                ),
                 editable=True,
                 human_required=False,
                 optional=False,
@@ -336,17 +415,56 @@ def provider_global_config(ctx: InventoryContext) -> InventoryItem:
                 risks="An unloadable config silently degrades to hardcoded fallbacks.",
                 doctor_probes=("doctor --agent",),
             )
+        from dontpanic_orchestrate import agent_surface
+
         cfg = gc.load_config()
         impl = cfg.default_implementer or (cfg.roles.implementer if cfg.roles else None)
         aud = cfg.default_auditor or (cfg.roles.auditor if cfg.roles else None)
-        summary = (
+        goal_aud = getattr(cfg.roles, "goal_auditor", None) if cfg.roles else None
+        # AC2b/AC2c — status must NOT be optimistic (audit finding, codex i1).
+        # A worker *default* (implementer / auditor / goal_auditor) whose value
+        # is not in AGENT_REGISTRY is operator-only — dispatch would refuse it —
+        # so the global config surface is unrunnable and must report non-ok, the
+        # same way ``provider_roles`` does for the resolved chain. A default of
+        # ``None`` means "use the hardcoded worker fallback" (claude/codex) and
+        # is fine; only an explicitly-set non-worker value is a defect.
+        configured_defaults = [
+            (role, value)
+            for role, value in (
+                ("implementer", impl),
+                ("auditor", aud),
+                ("goal_auditor", goal_aud),
+            )
+            if value
+        ]
+        unrunnable = [
+            (role, value)
+            for role, value in configured_defaults
+            if not agent_surface.is_worker_capable(value)
+        ]
+        base_summary = (
             f"implementer={impl or '(fallback claude)'}, auditor={aud or '(fallback codex)'}"
         )
+        if unrunnable:
+            bad = ", ".join(f"{role}={value}" for role, value in unrunnable)
+            summary = (
+                f"global default(s) not a worker executor: {bad} "
+                f"(not in AGENT_REGISTRY). Reassign with `dontpanic roles set "
+                f"<role> <executor> --global`. Resolved: {base_summary}"
+            )
+        else:
+            summary = base_summary
         return InventoryItem(
             id="global_config",
             title="Global config (per-user defaults)",
             scope=Scope.MACHINE,
-            status=Status.OK,
+            # OK only when every explicitly-set worker default is registry-backed
+            # (routed through the shared helper: present + loadable + valid → OK).
+            status=derive_status(
+                StatusFacts(
+                    optional=False, present=True, loadable=True, valid=not unrunnable
+                )
+            ),
             editable=True,
             human_required=False,
             optional=False,
@@ -412,7 +530,9 @@ def provider_project_config(ctx: InventoryContext) -> InventoryItem:
                 id="project_config",
                 title="Project config",
                 scope=Scope.PROJECT,
-                status=Status.NEEDS_SETUP,
+                status=derive_status(
+                    StatusFacts(optional=False, present=True, loadable=False)
+                ),
                 editable=True,
                 human_required=False,
                 optional=False,
@@ -438,7 +558,9 @@ def provider_project_config(ctx: InventoryContext) -> InventoryItem:
             id="project_config",
             title="Project config",
             scope=Scope.PROJECT,
-            status=Status.OK if present else Status.NEEDS_SETUP,
+            status=derive_status(
+                StatusFacts(optional=False, present=present, loadable=True)
+            ),
             editable=True,
             human_required=False,
             optional=False,
@@ -477,15 +599,42 @@ def provider_projects_registry(ctx: InventoryContext) -> InventoryItem:
         reg = pr.load_registry()
         count = len(reg.projects)
         path = pr.registry_path()
+        # AC2c / audit finding (codex i0): status must NOT be optimistic. A
+        # registry that lists projects whose on-disk path no longer exists (or is
+        # not a directory) is STALE — dispatch against those entries would fail —
+        # so it must report non-ok, never `ok N project(s) registered`. A project
+        # is "runnable" only when its registered path still resolves to a
+        # directory on disk; ``valid`` is False when any entry is stale.
+        stale = [
+            p for p in reg.projects if not Path(p.path).expanduser().is_dir()
+        ]
+        if not count:
+            summary = "0 project(s) registered"
+        elif stale:
+            bad = ", ".join(f"{p.name}→{p.path}" for p in stale)
+            summary = (
+                f"{count} project(s) registered but {len(stale)} STALE "
+                f"(path missing): {bad}. Re-add with `dontpanic projects add "
+                f"<name> <path> --onboard` or remove the stale entry."
+            )
+        else:
+            summary = f"{count} project(s) registered"
         return InventoryItem(
             id="projects_registry",
             title="Project registry",
             scope=Scope.MACHINE,
-            status=Status.OK if count else Status.NEEDS_SETUP,
+            status=derive_status(
+                StatusFacts(
+                    optional=False,
+                    present=bool(count),
+                    loadable=True,
+                    valid=not stale,
+                )
+            ),
             editable=True,
             human_required=False,
             optional=False,
-            current_value_summary=f"{count} project(s) registered",
+            current_value_summary=summary,
             owner_file_or_env=str(path),
             # `projects add` needs <name> <path> arguments — a template, not a
             # runnable command; safe_command stays None.
@@ -518,9 +667,23 @@ def provider_agent_manifest(ctx: InventoryContext) -> InventoryItem:
 
     def _build() -> InventoryItem:
         path = am.manifest_path()
+        present = path.is_file()
+        # AC2c/AC2d (audit finding, codex i0): ``load_manifest`` returns None for
+        # BOTH an absent file AND a present-but-unloadable one (it swallows
+        # invalid-JSON / schema errors and degrades to None). Keying status off
+        # the load result alone reports the same NEEDS_SETUP for a malformed
+        # manifest as for a fresh install, but more importantly an OK must never
+        # ride a present-but-broken file. Use file presence to distinguish:
+        # present + unloadable → non-ok (UNLOADABLE), absent → non-ok (setup).
         manifest = am.load_manifest()
-        configured = manifest is not None and path.is_file()
-        if configured:
+        loadable = (manifest is not None) if present else True
+        if present and not loadable:
+            summary = (
+                f"agent-manifest present at {path.name} but UNLOADABLE "
+                "(invalid JSON or schema); fix the file or re-run `dontpanic "
+                "manifest init`"
+            )
+        elif present:
             cmds = getattr(manifest, "supported_commands", None) or []
             summary = f"manifest present ({len(cmds)} supported commands)"
         else:
@@ -529,7 +692,9 @@ def provider_agent_manifest(ctx: InventoryContext) -> InventoryItem:
             id="agent_manifest",
             title="Agent manifest",
             scope=Scope.MACHINE,
-            status=Status.OK if configured else Status.NEEDS_SETUP,
+            status=derive_status(
+                StatusFacts(optional=False, present=present, loadable=loadable)
+            ),
             editable=True,
             human_required=False,
             optional=False,
@@ -588,8 +753,14 @@ def provider_roles(ctx: InventoryContext) -> InventoryItem:
             id="roles",
             title="Worker role assignments",
             scope=Scope.PROJECT if ctx.project_path else Scope.MACHINE,
-            # OK only when every resolved role is a registered worker executor.
-            status=Status.NEEDS_SETUP if unrunnable else Status.OK,
+            # OK only when every resolved role is a registered worker executor
+            # (shared helper: roles always resolve, so present+loadable; the
+            # semantic ``valid`` is "no unrunnable role").
+            status=derive_status(
+                StatusFacts(
+                    optional=False, present=True, loadable=True, valid=not unrunnable
+                )
+            ),
             editable=True,
             human_required=False,
             optional=False,
@@ -633,7 +804,7 @@ def provider_runtime_evidence(ctx: InventoryContext) -> InventoryItem:
                 id="runtime_evidence",
                 title="Runtime evidence defaults",
                 scope=Scope.RUNTIME,
-                status=Status.OPTIONAL_UNCONFIGURED,
+                status=derive_status(StatusFacts(optional=True, present=False)),
                 editable=True,
                 human_required=False,
                 optional=True,
@@ -657,7 +828,7 @@ def provider_runtime_evidence(ctx: InventoryContext) -> InventoryItem:
             id="runtime_evidence",
             title="Runtime evidence defaults",
             scope=Scope.RUNTIME,
-            status=Status.OK if configured else Status.OPTIONAL_UNCONFIGURED,
+            status=derive_status(StatusFacts(optional=True, present=configured)),
             editable=True,
             human_required=False,
             optional=True,
@@ -695,7 +866,7 @@ def provider_gates_paths(ctx: InventoryContext) -> InventoryItem:
                 id="gates_paths",
                 title="Human gates / protected paths / plans_dir / default target env",
                 scope=Scope.PROJECT,
-                status=Status.OPTIONAL_UNCONFIGURED,
+                status=derive_status(StatusFacts(optional=True, present=False)),
                 editable=True,
                 human_required=False,
                 optional=True,
@@ -723,7 +894,7 @@ def provider_gates_paths(ctx: InventoryContext) -> InventoryItem:
             id="gates_paths",
             title="Human gates / protected paths / plans_dir / default target env",
             scope=Scope.PROJECT,
-            status=Status.OK,
+            status=derive_status(StatusFacts(optional=True, present=True)),
             editable=True,
             human_required=False,
             optional=True,
@@ -755,33 +926,56 @@ def provider_gates_paths(ctx: InventoryContext) -> InventoryItem:
 
 
 def provider_quota(ctx: InventoryContext) -> InventoryItem:
+    import json
+    import os
+
     from dontpanic_orchestrate import calibration_loader, quota_caps_loader
+    from dontpanic_orchestrate import circuit_breakers as cb
 
     def _build() -> InventoryItem:
         caps_path = quota_caps_loader.effective_caps_path()
         caps_present = caps_path.is_file()
         cal = calibration_loader.load()
         cal_present = bool(cal)
-        # AC2b/AC2c — status must NOT be optimistic. Caps alone do not make the
-        # quota surface complete: the breaker cannot convert local token proxies
-        # into a comparable percent-of-plan number without operator calibration
-        # (see calibration_loader). So:
-        #   - caps absent              → NEEDS_SETUP, route to `quota-caps init`
-        #   - caps present, NO cal     → NEEDS_SETUP (incomplete), route to
-        #                                 `calibrate-claude` (operator-sampled args
-        #                                 → a TEMPLATE, never an exact safe_command)
-        #   - caps present + cal       → OK
-        # Reporting `ok` on caps-present/calibration-absent (the prior bug) is
-        # exactly the optimistic status the invariant forbids.
+        # Resolve the observed-quota state path the same way the breaker does
+        # (honors JARVIS_QUOTA_STATE_PATH for hermetic isolation), then probe it
+        # for presence + loadability. The breaker reads this file to compute the
+        # percent-of-plan / token proxy it compares against caps; an absent or
+        # malformed state file means the breaker has no observed data to act on.
+        env_override = os.environ.get("JARVIS_QUOTA_STATE_PATH")
+        state_path = Path(env_override) if env_override else cb.QUOTA_STATE_PATH
+        state_present = state_path.is_file()
+        state_loadable = False
+        if state_present:
+            try:
+                json.loads(state_path.read_text())
+                state_loadable = True
+            except (OSError, json.JSONDecodeError):
+                state_loadable = False
+        # AC2b/AC2c — status must NOT be optimistic. The quota surface is only
+        # complete when caps, calibration, AND observed state are all present and
+        # usable. The breaker cannot convert local token proxies into a
+        # comparable percent-of-plan number without operator calibration (see
+        # calibration_loader), and it has nothing to evaluate at all without an
+        # observed state file. So:
+        #   - caps absent                  → NEEDS_SETUP, route to `quota-caps init`
+        #   - caps present, NO cal         → NEEDS_SETUP (incomplete), route to
+        #                                     `calibrate-claude` (operator-sampled
+        #                                     args → a TEMPLATE, never a safe_command)
+        #   - caps+cal present, NO state   → NEEDS_SETUP (no observed quota yet)
+        #   - caps+cal present, state bad  → NEEDS_SETUP (state unloadable)
+        #   - caps + cal + loadable state  → OK
+        # Reporting `ok` on caps-present/calibration-absent OR on a
+        # missing/unreadable state file (the prior bugs) is exactly the
+        # optimistic status the invariant forbids.
+        safe_command: str | None = None
         if not caps_present:
-            status = Status.NEEDS_SETUP
             summary = (
                 f"caps absent at {caps_path.name}; "
                 "run `dontpanic quota-caps init`"
             )
-            safe_command: str | None = "dontpanic quota-caps init"
+            safe_command = "dontpanic quota-caps init"
         elif not cal_present:
-            status = Status.NEEDS_SETUP
             summary = (
                 f"caps present at {caps_path.name} but calibration absent — the "
                 "quota breaker is uncalibrated. Calibrate with `dontpanic "
@@ -791,12 +985,37 @@ def provider_quota(ctx: InventoryContext) -> InventoryItem:
             # args, so the validated route is a template (mutation shape), not an
             # exact runnable safe_command.
             safe_command = None
-        else:
-            status = Status.OK
+        elif not state_present:
             summary = (
-                f"caps present at {caps_path.name}; calibration present"
+                f"caps + calibration present but observed quota state absent at "
+                f"{state_path.name} — the breaker has no observed usage to "
+                "evaluate yet. Run a quota check to populate it."
+            )
+            safe_command = None
+        elif not state_loadable:
+            summary = (
+                f"caps + calibration present but quota state at {state_path.name} "
+                "is UNLOADABLE (invalid JSON); fix or regenerate the state file."
+            )
+            safe_command = None
+        else:
+            summary = (
+                f"caps present at {caps_path.name}; calibration present; "
+                "observed quota state present"
             )
             safe_command = "dontpanic quota-caps init"
+        # Shared helper (AC2e): caps is the artifact (present iff caps_present);
+        # the surface is semantically VALID only when calibration AND a loadable
+        # observed-state file are also present — so caps-present/calibration-
+        # absent, state-missing, and state-unloadable all collapse to non-ok.
+        status = derive_status(
+            StatusFacts(
+                optional=False,
+                present=caps_present,
+                loadable=True,
+                valid=cal_present and state_present and state_loadable,
+            )
+        )
         return InventoryItem(
             id="quota",
             title="Quota caps / calibration / admission thresholds",
@@ -878,7 +1097,13 @@ def provider_circuit_breakers(ctx: InventoryContext) -> InventoryItem:
             id="circuit_breakers",
             title="Circuit breaker state / history",
             scope=Scope.MACHINE,
-            status=Status.NEEDS_SETUP if tripped else Status.OK,
+            # The breaker state always exists (present); a TRIPPED breaker is the
+            # semantically-invalid case → non-ok via the shared helper.
+            status=derive_status(
+                StatusFacts(
+                    optional=False, present=True, loadable=True, valid=not tripped
+                )
+            ),
             editable=False,
             human_required=False,
             optional=False,
@@ -925,7 +1150,7 @@ def provider_notifications(ctx: InventoryContext) -> InventoryItem:
             id="notifications",
             title="Notification settings",
             scope=Scope.CAPABILITY,
-            status=Status.OPTIONAL_UNCONFIGURED if not discord else Status.OK,
+            status=derive_status(StatusFacts(optional=True, present=discord)),
             editable=True,
             human_required=False,
             optional=True,
@@ -969,7 +1194,7 @@ def provider_dashboard(ctx: InventoryContext) -> InventoryItem:
             id="dashboard",
             title="Dashboard (local / generated state)",
             scope=Scope.MACHINE,
-            status=Status.OK if built else Status.OPTIONAL_UNCONFIGURED,
+            status=derive_status(StatusFacts(optional=True, present=built)),
             editable=True,
             human_required=False,
             optional=True,
@@ -1008,25 +1233,36 @@ def provider_capabilities(ctx: InventoryContext) -> InventoryItem:
             capability_index=index, repo_root=ctx.project_path
         )
         caps = getattr(envelope, "capabilities", []) or []
-        ready = sum(
-            1 for c in caps if str(getattr(c, "status", "")).endswith("ready")
-        )
-        # AC2b — status must not be optimistic (audit finding). The aggregate is
-        # derived from the dedicated capability surface's own run_status, never
-        # hardcoded to OK: a population where NO adapter is ready (e.g. all
-        # `needs_setup` / `not_installed`) reports OPTIONAL_UNCONFIGURED, not OK.
-        # ``optional`` stays True so unready integrations never block core use
-        # (AC4) and never land in the required-incomplete bucket.
-        if caps and ready:
-            agg_status = Status.OK
-        else:
-            agg_status = Status.OPTIONAL_UNCONFIGURED
+        # Audit finding (codex i0): count readiness off the canonical enum VALUE,
+        # not str(enum). ``str(CapabilityStatus.READY)`` is
+        # "CapabilityStatus.READY" (which does NOT end with "ready"), so the old
+        # ``str(...).endswith("ready")`` miscounted a genuinely-ready adapter as
+        # 0 ready. Normalize each status to its ``.value`` (falling back to str
+        # for a plain string) and compare to "ready" exactly.
+        def _ready_value(c: Any) -> str:
+            st = getattr(c, "status", "")
+            return getattr(st, "value", st) if not isinstance(st, str) else st
+
+        ready = sum(1 for c in caps if _ready_value(c) == "ready")
+        # AC2b — status must not be optimistic (audit finding). Routed through the
+        # shared helper: capabilities are an OPTIONAL surface, present iff any
+        # adapter is known, semantically VALID iff at least one is ready. A
+        # population with adapters known but none ready is present+invalid →
+        # OPTIONAL_UNCONFIGURED (non-ok, never blocks core use, AC4); one with a
+        # ready adapter is OK.
         summary = f"{len(caps)} capabilities/adapters known, {ready} ready"
         return InventoryItem(
             id="capabilities",
             title="Capabilities / adapters",
             scope=Scope.CAPABILITY,
-            status=agg_status,
+            status=derive_status(
+                StatusFacts(
+                    optional=True,
+                    present=bool(caps),
+                    loadable=True,
+                    valid=ready > 0,
+                )
+            ),
             editable=True,
             human_required=False,
             optional=True,
@@ -1068,7 +1304,9 @@ def provider_mcp(ctx: InventoryContext) -> InventoryItem:
             id="mcp",
             title="MCP server readiness",
             scope=Scope.CAPABILITY,
-            status=Status.OPTIONAL_UNCONFIGURED,
+            # A start surface, never a "configured" edit target → present=False so
+            # the shared helper reports OPTIONAL_UNCONFIGURED (never OK).
+            status=derive_status(StatusFacts(optional=True, present=False)),
             editable=False,
             human_required=False,
             optional=True,
@@ -1102,6 +1340,8 @@ def provider_mcp(ctx: InventoryContext) -> InventoryItem:
 
 
 def provider_environments(ctx: InventoryContext) -> InventoryItem:
+    import json
+
     from dontpanic_orchestrate import environments_loader as el
 
     def _build() -> InventoryItem:
@@ -1110,7 +1350,7 @@ def provider_environments(ctx: InventoryContext) -> InventoryItem:
                 id="environments",
                 title="environments.json / Firebase target",
                 scope=Scope.PROJECT,
-                status=Status.OPTIONAL_UNCONFIGURED,
+                status=derive_status(StatusFacts(optional=True, present=False)),
                 editable=True,
                 human_required=False,
                 optional=True,
@@ -1119,28 +1359,84 @@ def provider_environments(ctx: InventoryContext) -> InventoryItem:
                 safe_command=None,
             )
         env_path = ctx.project_path / "environments.json"
-        configured = env_path.is_file()
-        summary = (
-            "environments.json present" if configured else "no environments.json (optional)"
-        )
-        if configured:
+        fr_path = ctx.project_path / ".firebaserc"
+        env_present = env_path.is_file()
+        fr_present = fr_path.is_file()
+        # The Firebase target lives across TWO surfaces: environments.json (the
+        # DontPanic tier registry) and .firebaserc (the Firebase CLI's own
+        # alias→project map). The prior provider only inventoried environments.json
+        # and never looked at .firebaserc, so it reported `ok environments.json
+        # present` while saying nothing about the actual Firebase target aliases
+        # (audit finding, codex i1). Inventory BOTH: presence + loadability of each,
+        # with the .firebaserc aliases surfaced in the summary. Either file being
+        # present-but-UNLOADABLE is a hard defect (non-ok), never `ok`.
+        present = env_present or fr_present
+        loadable = True
+        parts: list[str] = []
+        # environments.json — load_environments raises on malformed JSON / schema.
+        if env_present:
             try:
                 env = el.load_environments(ctx.project_path)
                 tiers = getattr(env, "environments", None)
-                if isinstance(tiers, dict):
-                    summary = f"environments.json present ({len(tiers)} tier(s))"
-            except Exception:  # noqa: BLE001 — presence is enough for the summary
-                summary = "environments.json present (validation deferred)"
+                parts.append(
+                    f"environments.json present ({len(tiers)} tier(s))"
+                    if isinstance(tiers, dict)
+                    else "environments.json present"
+                )
+            except Exception as exc:  # noqa: BLE001 — EnvironmentsError or similar
+                loadable = False
+                parts.append(
+                    f"environments.json present at {env_path.name} but UNLOADABLE "
+                    f"({type(exc).__name__})"
+                )
+        else:
+            parts.append("no environments.json")
+        # .firebaserc — the Firebase target alias map. Parse it and surface the
+        # declared aliases; a present-but-unparseable .firebaserc is non-ok.
+        if fr_present:
+            try:
+                fr_data = json.loads(fr_path.read_text())
+                projects = (
+                    (fr_data.get("projects") or {}) if isinstance(fr_data, dict) else {}
+                )
+                # Surface alias→project so the operator sees the actual Firebase
+                # target project IDs, not just the alias names.
+                aliases = ", ".join(
+                    f"{alias}→{proj}" for alias, proj in sorted(projects.items())
+                )
+                parts.append(
+                    f".firebaserc present (aliases: {aliases})"
+                    if aliases
+                    else ".firebaserc present (no project aliases)"
+                )
+            except (OSError, json.JSONDecodeError) as exc:
+                loadable = False
+                parts.append(
+                    f".firebaserc present at {fr_path.name} but UNLOADABLE "
+                    f"({type(exc).__name__})"
+                )
+        else:
+            parts.append("no .firebaserc")
+        summary = (
+            "no environments.json or .firebaserc (optional)"
+            if not present
+            else "; ".join(parts)
+        )
+        # Optional surface, but a present-but-unloadable file (either one) is still
+        # a hard defect (NEEDS_SETUP) via the shared helper — never OK.
+        status = derive_status(
+            StatusFacts(optional=True, present=present, loadable=loadable)
+        )
         return InventoryItem(
             id="environments",
             title="environments.json / Firebase target",
             scope=Scope.PROJECT,
-            status=Status.OK if configured else Status.OPTIONAL_UNCONFIGURED,
+            status=status,
             editable=True,
             human_required=False,
             optional=True,
             current_value_summary=summary,
-            owner_file_or_env=str(env_path),
+            owner_file_or_env=f"{env_path} + {fr_path}",
             safe_command=None,
             detail=(
                 "Optional. Only repos that deploy to Firebase/GCP need this; "
@@ -1181,17 +1477,19 @@ def _secret_provider(
     Secrets are always ``human_required`` and carry NO ``safe_command``; the
     operator sets them out-of-band and verifies with ``verify_command``.
     """
-    if configured:
-        status = Status.OK
-    elif optional:
-        status = Status.OPTIONAL_UNCONFIGURED
-    else:
-        status = Status.HUMAN_REQUIRED
     # human_required only for a REQUIRED secret that is unconfigured — an
     # optional integration that is simply not set up does not "require" a human
     # and so must not, on its own, force a dashboard hint (AC4: optional never
     # blocks core use).
     human_required = (not configured) and (not optional)
+    # Routed through the shared helper (AC2e): a secret is the artifact (present
+    # iff configured); an absent REQUIRED secret is HUMAN_REQUIRED, an absent
+    # OPTIONAL one is OPTIONAL_UNCONFIGURED, a configured one is OK.
+    status = derive_status(
+        StatusFacts(
+            optional=optional, present=configured, human_required=human_required
+        )
+    )
     return InventoryItem(
         id=item_id,
         title=title,
@@ -1209,6 +1507,30 @@ def _secret_provider(
     )
 
 
+def _anthropic_auth_configured() -> bool:
+    """True when the claude worker can authenticate.
+
+    Claude auth is satisfied by EITHER an ``ANTHROPIC_API_KEY`` env var OR an
+    authenticated ``claude`` CLI session. The prior provider only checked the
+    env var, so a machine logged in via ``claude`` session — with no
+    ANTHROPIC_API_KEY — was falsely reported ``human_required`` despite the item
+    claiming "ANTHROPIC_API_KEY or `claude` session" (audit finding, codex i1).
+    Probe the claude executor's OWN availability surface (``is_available()`` —
+    the ``claude`` binary on PATH, which a session uses) rather than the env var
+    alone, so the reported status matches the wording.
+    """
+    import os
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return True
+    try:
+        from dontpanic_orchestrate import executors
+
+        return bool(executors.get_executor("claude").is_available())
+    except Exception:  # noqa: BLE001 — availability probe is best-effort
+        return False
+
+
 def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:
     """Secrets / auth prerequisites — returns multiple items, all secret-safe."""
     import os
@@ -1217,14 +1539,18 @@ def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:
 
     # Anthropic / Claude auth (required for paid dispatch but core CLI works
     # without it — it is the worker prerequisite, so we mark it required-ish but
-    # human-driven).
+    # human-driven). Configured when EITHER ANTHROPIC_API_KEY is set OR a `claude`
+    # CLI session is available, so a session-authed machine is not falsely flagged.
     items.append(
         _secret_provider(
             item_id="secret_anthropic_auth",
             title="Anthropic / Claude CLI auth",
-            owner_env="claude CLI login (ANTHROPIC_API_KEY or `claude` session)",
-            configured=bool(os.environ.get("ANTHROPIC_API_KEY")),
-            detail="Required to dispatch the claude worker executor.",
+            owner_env="ANTHROPIC_API_KEY env var or an authenticated `claude` CLI session",
+            configured=_anthropic_auth_configured(),
+            detail=(
+                "Required to dispatch the claude worker executor. Satisfied by "
+                "ANTHROPIC_API_KEY or a logged-in `claude` session."
+            ),
             verify_command="dontpanic doctor --agent",
             optional=False,
         )
@@ -1282,17 +1608,26 @@ def provider_install_reconcile(ctx: InventoryContext) -> InventoryItem:
         except Exception:  # noqa: BLE001 — classification is best-effort
             split = False
         if split:
-            status = Status.NEEDS_SETUP
             summary = "split config homes detected (~/.dontpanic vs ~/.jarvis)"
             cmd = "dontpanic reconcile homes --dry-run"
         else:
-            status = Status.OK if snap_present else Status.OPTIONAL_UNCONFIGURED
             summary = (
                 "install snapshot present, homes consistent"
                 if snap_present
                 else "no install snapshot (optional baseline), homes consistent"
             )
             cmd = "dontpanic reconcile baseline"
+        # Shared helper: a split-home is a REQUIRED defect (present + invalid →
+        # NEEDS_SETUP); otherwise the baseline snapshot is an OPTIONAL surface
+        # (present → OK, absent → OPTIONAL_UNCONFIGURED).
+        status = derive_status(
+            StatusFacts(
+                optional=not split,
+                present=split or snap_present,
+                loadable=True,
+                valid=not split,
+            )
+        )
         return InventoryItem(
             id="install_reconcile",
             title="Install snapshot / reconcile state",
@@ -1337,7 +1672,7 @@ def provider_pm_credentials(ctx: InventoryContext) -> InventoryItem:
             id="pm_credentials",
             title="PM-tool credentials (Linear, …)",
             scope=Scope.SECRET,
-            status=Status.OK if linear else Status.OPTIONAL_UNCONFIGURED,
+            status=derive_status(StatusFacts(optional=True, present=linear)),
             editable=False,
             # Optional integration: not human-"required". Surfacing it as
             # required would force a dashboard hint for an integration that
@@ -1399,6 +1734,13 @@ def resolve_context(project: str | None) -> InventoryContext:
     When ``project`` is None, a cwd-local ``.dontpanic`` directory makes the cwd
     the in-scope project (single-repo compat); otherwise the context is
     machine-only and project-scoped providers degrade gracefully.
+
+    When ``project`` is an explicit selector that resolves to neither a
+    registered name nor an existing directory, this raises
+    :class:`UnresolvedProjectError` rather than silently falling back to
+    machine-only scope (which would report an optimistic inventory for a
+    project the caller never asked about — see ``resolve_project_path``'s
+    hard-refuse contract).
     """
     from dontpanic_orchestrate import project_config as pc
 
@@ -1407,8 +1749,9 @@ def resolve_context(project: str | None) -> InventoryContext:
         if resolved is not None:
             path, name = resolved
             return InventoryContext(project_path=path, project_name=name)
-        # Unknown name/path: treat as machine-only scope (providers degrade).
-        return InventoryContext()
+        # Unknown name/path: hard-refuse — never silently degrade an
+        # explicitly-requested project to machine-only scope.
+        raise UnresolvedProjectError(project)
     cwd = Path.cwd()
     if (cwd / ".dontpanic").is_dir():
         return InventoryContext(project_path=cwd, project_name=None)
@@ -1646,8 +1989,11 @@ __all__ = [
     "InventoryItem",
     "Scope",
     "Status",
+    "StatusFacts",
+    "UnresolvedProjectError",
     "build_setup_plan",
     "collect_inventory",
+    "derive_status",
     "render_text",
     "resolve_context",
     "to_dashboard_state",

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "kind": "no_progress_classification",
-  "captured_at": "2026-06-01T20:44:09Z",
+  "captured_at": "2026-06-01T21:21:32Z",
   "feature_id": "F008",
   "aggregate": "unknown",
   "blocking": true,
@@ -13,23 +13,23 @@
       "classification": "implementation_defect",
       "severity": "high",
       "category": "correctness",
-      "issue_excerpt": "The quota inventory provider does not cover quota state, so it can report `ok` when the quota state file is missing/unreadable. Evidence: [config_inventory.py]…",
+      "issue_excerpt": "Anthropic auth status is optimistic. Evidence: `config_inventory._anthropic_auth_configured()` treats `executors.get_executor(\"claude\").is_available()` as auth…",
       "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
     },
     {
       "finding_index": 1,
       "classification": "implementation_defect",
-      "severity": "high",
+      "severity": "medium",
       "category": "correctness",
-      "issue_excerpt": "`global_config` reports `ok` for global worker defaults that are not runnable executors. Evidence: [config_inventory.py](/Users/bayesian/Documents/GitHub/DontP…",
-      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+      "issue_excerpt": "the acceptance-listed `roles set` edit route is not a validated command surface. Evidence: inventory emits `dontpanic roles set <role> <executor>` in `dashboar…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
     },
     {
       "finding_index": 2,
       "classification": "unknown",
-      "severity": "medium",
-      "category": "test_coverage",
-      "issue_excerpt": "The parametrized non-optimistic invariant test uses too-narrow invalid states and misses the above regressions. Evidence: [test_config_inventory_f008.py](/User…",
+      "severity": "low",
+      "category": "style",
+      "issue_excerpt": "changed F008 tests are not ruff-clean despite the implementer claim. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts…",
       "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
     }
   ]

@@ -4,45 +4,52 @@
   "agent": "codex",
   "agent_role": "auditor",
   "iteration": 1,
-  "started_at": "2026-06-01T17:48:32Z",
-  "completed_at": "2026-06-01T17:51:14Z",
+  "started_at": "2026-06-01T21:07:30Z",
+  "completed_at": "2026-06-01T21:12:35Z",
   "validation_performed": [
     "codex auditor round (iteration 1)",
     "quota gate aud=63.192670500000006",
     "reviewing implementer audit at claude-implementer-F008-i1.json",
-    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-2fqnu5w4 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
-    "captured stdout 324270 bytes"
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-e86jsq_y target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 492410 bytes"
   ],
   "quota_consumed": {
-    "tokens_in": 1469447,
-    "tokens_out": 11947,
+    "tokens_in": 3430487,
+    "tokens_out": 22328,
     "api_calls": 1
   },
-  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and their recorded commands had no forbidden shapes.\n\nFINDING (high, correctness): quota inventory reports `ok` when calibration is absent. Evidence: [config_inventory.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/config_inventory.py:675) sets status from caps-file presence only; my targeted check returned `ok caps present at quota_caps.json; calibration absent`. Recommendation: mark quota non-ok when required calibration is absent, surface the proper calibration setup/verification path, and add a regression test.\n\nFINDING (medium, test_coverage): F008 tests do not cover the quota “caps present, calibration absent” non-optimistic status case. Evidence: tests cover capabilities non-optimism around [test_config_inventory_f008.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py:323), but no equivalent quota calibration assertion. Recommendation: add a test that monkeypatches calibration absent with caps present and expects a non-ok required status.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q -p no:cacheprovider  \nFailed before collection because this sandbox has no usable writable temp directory.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONP",
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct, and I saw no forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (medium, correctness): The environments/Firebase inventory surface does not actually inventory Firebase target state. Evidence: `provider_environments` only checks `environments.json` loadability and never calls `.firebaserc`/`check_firebaserc_consistency`; on this repo it reports `status=ok` with summary `environments.json present` despite `.firebaserc` being a separate target surface. Recommendation: include `.firebaserc` presence/loadability/aliases in the provider summary/status and report non-ok for present-but-unloadable or mismatched Firebase target state when project target context is available.\n\nFINDING (medium, correctness): The Anthropic/Claude auth provider reports only `ANTHROPIC_API_KEY`, despite claiming “ANTHROPIC_API_KEY or `claude` session.” Evidence: `provider_secrets_auth` sets `configured=bool(os.environ.get(\"ANTHROPIC_API_KEY\"))`, so a machine authenticated via Claude CLI session but without the env var is incorrectly reported `human_required`. Recommendation: either probe the existing Claude executor/doctor availability surface or narrow the item wording/status to API-key-only.\n\nFINDING (low, style): The new inventory module fails repo lint. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py` reports unused `field`, `Callable` im",
   "target_context": {
     "env": "dev",
     "project": null,
     "commands_run": [
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q -p no:cacheprovider",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import config_inventory as ci, command_validation as cv; inv=ci.collect_inventory(); assert len(inv.items)>=10; assert all(cv.validate_command_tokens(i.safe_command.split()[1:]).ok for i in inv.items if i.safe_command); print(len(inv.items), sorted(i.id for i in inv.items if i.safe_command))'",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate config inventory --format json",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate config inventory --setup-plan --format json",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import config_inventory as ci, calibration_loader as cl; cl.load=lambda: {}; item=ci.provider_quota(ci.InventoryContext()); print(item.status.value, item.current_value_summary)'"
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --project /definitely/not/a/dontpanic/project --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --setup-plan --format json"
     ]
   },
   "findings": [
     {
-      "severity": "high",
+      "severity": "medium",
       "category": "correctness",
       "feature_id": "F008",
-      "issue": "quota inventory reports `ok` when calibration is absent. Evidence: [config_inventory.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/config_inventory.py:675) sets status from caps-file presence only; my targeted check returned `ok caps present at quota_caps.json; calibration absent`. Recommendation: mark quota non-ok when required calibration is absent, surface the proper calibration setup/verification path, and add a regression test.",
+      "issue": "The environments/Firebase inventory surface does not actually inventory Firebase target state. Evidence: `provider_environments` only checks `environments.json` loadability and never calls `.firebaserc`/`check_firebaserc_consistency`; on this repo it reports `status=ok` with summary `environments.json present` despite `.firebaserc` being a separate target surface. Recommendation: include `.firebaserc` presence/loadability/aliases in the provider summary/status and report non-ok for present-but-u",
       "evidence": "Extracted from auditor summary."
     },
     {
       "severity": "medium",
-      "category": "test_coverage",
+      "category": "correctness",
       "feature_id": "F008",
-      "issue": "F008 tests do not cover the quota “caps present, calibration absent” non-optimistic status case. Evidence: tests cover capabilities non-optimism around [test_config_inventory_f008.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py:323), but no equivalent quota calibration assertion. Recommendation: add a test that monkeypatches calibration absent with caps present and expects a non-ok required status. Checks run: $ PYTHONDONTWRITEBYTE",
+      "issue": "The Anthropic/Claude auth provider reports only `ANTHROPIC_API_KEY`, despite claiming “ANTHROPIC_API_KEY or `claude` session.” Evidence: `provider_secrets_auth` sets `configured=bool(os.environ.get(\"ANTHROPIC_API_KEY\"))`, so a machine authenticated via Claude CLI session but without the env var is incorrectly reported `human_required`. Recommendation: either probe the existing Claude executor/doctor availability surface or narrow the item wording/status to API-key-only.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F008",
+      "issue": "The new inventory module fails repo lint. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py` reports unused `field`, `Callable` import style, `S105` on `Scope.SECRET`, and import ordering in `provider_quota`. Recommendation: fix/annotate the new-file lint issues. Checks run: $ PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py $ ruff check --no-cache scripts/dontpanic_orchestrate/con",
       "evidence": "Extracted from auditor summary."
     }
   ],

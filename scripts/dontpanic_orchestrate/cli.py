@@ -968,24 +968,29 @@ def _quota_caps_main(argv: list[str]) -> int:
 
     if sub == "init":
         overwrite = "--overwrite" in rest
-        # Sample codex rolling_5h via quota_check (sibling of dontpanic_orchestrate
+        # Sample Codex windows via quota_check (sibling of dontpanic_orchestrate
         # under scripts/). Lazy-import to keep the loader decoupled.
-        codex_observed: int | None = None
+        codex_observed_5h: int | None = None
+        codex_observed_7d: int | None = None
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
             import quota_check as qc
 
-            sample = qc._codex_usage_v2("rolling_5h")
-            codex_observed = int(sample.get("observed_native") or 0) or None
+            sample_5h = qc._codex_usage_v2("rolling_5h")
+            sample_7d = qc._codex_usage_v2("rolling_7d")
+            codex_observed_5h = int(sample_5h.get("observed_native") or 0) or None
+            codex_observed_7d = int(sample_7d.get("observed_native") or 0) or None
         except (ImportError, OSError, RuntimeError) as exc:
             print(
                 f"[quota-caps] codex sample failed ({exc}); using high provisional cap",
                 file=sys.stderr,
             )
-            codex_observed = None
+            codex_observed_5h = None
+            codex_observed_7d = None
         try:
             data = quota_caps_loader.init_starter_file(
-                codex_observed_5h=codex_observed,
+                codex_observed_5h=codex_observed_5h,
+                codex_observed_7d=codex_observed_7d,
                 overwrite=overwrite,
             )
         except quota_caps_loader.QuotaCapsError as exc:
@@ -994,12 +999,17 @@ def _quota_caps_main(argv: list[str]) -> int:
         # Print the resolved path (honors JARVIS_QUOTA_CAPS_PATH) so the
         # operator sees exactly what was written, not the default constant.
         print(f"[quota-caps] wrote {quota_caps_loader.effective_caps_path()}")
-        if codex_observed is not None:
+        if codex_observed_5h is not None:
             cap = data["codex"]["plus"]["rolling_5h"]["cap"]
             print(
-                f"[quota-caps] codex.plus.rolling_5h cap={cap} (observed {codex_observed} * 1.25)"
+                f"[quota-caps] codex.plus.rolling_5h cap={cap} (observed {codex_observed_5h} * 1.25)"
             )
-        else:
+        if codex_observed_7d is not None:
+            cap = data["codex"]["plus"]["rolling_7d"]["cap"]
+            print(
+                f"[quota-caps] codex.plus.rolling_7d cap={cap} (observed {codex_observed_7d} * 1.25)"
+            )
+        if codex_observed_5h is None and codex_observed_7d is None:
             print(
                 "[quota-caps] codex cap = high provisional; re-run after some "
                 "usage exists to derive a tighter cap"
@@ -1873,12 +1883,13 @@ def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | No
 
     try:
         caps = quota_caps_loader.load()
-    except quota_caps_loader.QuotaCapsError:
-        return "config_required", None
+    except quota_caps_loader.QuotaCapsError as exc:
+        return "config_required", str(exc)
 
     vendors = state.get("vendors") or {}
     agents = sorted({implementer, auditor})
     primary_pct: dict[str, int] = {}
+    config_details: list[str] = []
     for agent in agents:
         report = cb.collect_agent_coverage(agent=agent, vendors=vendors, caps=caps)
         if report.terminal is not None:
@@ -1889,7 +1900,20 @@ def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | No
                 return "unit_mismatch", None
             # TRIPPED: fall through, dispatch_volley owns the runtime breaker
         if report.config_cause is not None:
-            return "config_required", None
+            if report.config_cause == "missing_vendor_block":
+                config_details.append(
+                    f"{agent}: missing quota_state vendor block; run `python scripts/quota_check.py`"
+                )
+            else:
+                for ev in report.evaluations:
+                    if ev.outcome == cb.WindowOutcome.NO_CAP:
+                        config_details.append(
+                            f"{ev.agent}.{ev.tier}.{ev.window}: add cap in ~/.jarvis/quota_caps.json "
+                            f"(observed {int(ev.observed_native or 0)} {ev.observed_unit})"
+                        )
+                if not config_details:
+                    config_details.append(f"{agent}: quota cap configuration incomplete")
+            return "config_required", "; ".join(config_details)
         if report.primary is not None and report.primary.pct_of_cap is not None:
             primary_pct[agent] = int(round(report.primary.pct_of_cap * 100))
 
@@ -1929,7 +1953,7 @@ def _print_preflight_block(
     iters_render = str(max_iterations) if max_iterations is not None else "(plan default)"
     print(f"  max_iterations: {iters_render}")
     print(f"  quota_readiness: {readiness}")
-    if readiness == "ok" and readiness_summary:
+    if readiness_summary:
         print(f"    {readiness_summary}")
 
 
@@ -2147,6 +2171,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         )
         if remediation:
             print(remediation, file=sys.stderr)
+        if readiness_summary:
+            print(f"Detail: {readiness_summary}", file=sys.stderr)
         return 3
 
     # In-process hand-off. NO subprocess shell-out — same interpreter, same
@@ -3006,9 +3032,15 @@ def _config_inventory_main(argv: list[str]) -> int:
 
     from dontpanic_orchestrate import config_inventory as ci
 
-    inventory = ci.collect_inventory(
-        project=args.project, dashboard_url=args.dashboard_url
-    )
+    try:
+        inventory = ci.collect_inventory(
+            project=args.project, dashboard_url=args.dashboard_url
+        )
+    except ci.UnresolvedProjectError as exc:
+        # Hard-refuse an unresolved --project selector (D003): never silently
+        # degrade to machine-only inventory for a project the caller asked about.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     if args.setup_plan:
         plan = ci.build_setup_plan(inventory)
         if args.format == "json":

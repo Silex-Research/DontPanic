@@ -13,6 +13,7 @@ home with no global config / registry / manifest.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -298,6 +299,36 @@ def test_discord_webhook_value_is_redacted_from_summary(monkeypatch):
     assert webhook not in blob
 
 
+def test_anthropic_auth_configured_via_claude_session(monkeypatch):
+    # Audit finding (codex i1): the item claims "ANTHROPIC_API_KEY or `claude`
+    # session", so a machine authed via an available `claude` CLI session — with
+    # NO ANTHROPIC_API_KEY — must report configured / not human_required. The
+    # provider probes the claude executor's own availability surface, not the env
+    # var alone, so the reported status matches the wording.
+    from dontpanic_orchestrate import executors
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(executors.ClaudeCLIExecutor, "is_available", lambda self: True)
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    item = next(i for i in items if i.id == "secret_anthropic_auth")
+    assert item.current_value_summary == "configured"
+    assert item.human_required is False
+    assert item.status is ci.Status.OK
+
+
+def test_anthropic_auth_human_required_without_key_or_session(monkeypatch):
+    # The converse: neither ANTHROPIC_API_KEY nor an available `claude` session →
+    # the required secret is human_required (non-ok), as before the fix.
+    from dontpanic_orchestrate import executors
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(executors.ClaudeCLIExecutor, "is_available", lambda self: False)
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    item = next(i for i in items if i.id == "secret_anthropic_auth")
+    assert item.human_required is True
+    assert item.status is ci.Status.HUMAN_REQUIRED
+
+
 # ───────────────── (4) optional-vs-required classification ──────────────────
 
 
@@ -365,7 +396,12 @@ def test_quota_status_non_ok_when_calibration_absent(monkeypatch):
     assert "dontpanic calibrate-claude" in (shape.get("command_template") or "")
 
 
-def test_quota_status_ok_only_when_caps_and_calibration_present(monkeypatch):
+def test_quota_status_ok_only_when_caps_calibration_and_state_present(monkeypatch):
+    # OK requires ALL THREE: caps, calibration, AND a loadable observed-quota
+    # state file (audit finding, codex i1). Writing only caps + calibration is
+    # NOT enough — the breaker has nothing observed to evaluate.
+    import os
+
     from dontpanic_orchestrate import calibration_loader, quota_caps_loader
 
     caps = quota_caps_loader.effective_caps_path()
@@ -376,11 +412,67 @@ def test_quota_status_ok_only_when_caps_and_calibration_present(monkeypatch):
         "load",
         lambda *a, **k: {"schema_version": 1, "claude": {"rolling_7d": {"ratio": 1e-8}}},
     )
+    state = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(json.dumps({"schema_version": 2, "vendors": {}}))
 
     item = ci.provider_quota(ci.InventoryContext())
     assert item.status is ci.Status.OK
     # The caps re-init route is exact + runnable, so it may carry a safe_command.
     assert item.safe_command == "dontpanic quota-caps init"
+
+
+def test_quota_status_non_ok_when_state_missing(monkeypatch):
+    # AC2c (audit finding, codex i1): caps + calibration present but the observed
+    # quota state file is ABSENT → the breaker has no observed usage to evaluate,
+    # so the surface is incomplete and must report non-ok, never `ok`.
+    import os
+
+    from dontpanic_orchestrate import calibration_loader, quota_caps_loader
+
+    caps = quota_caps_loader.effective_caps_path()
+    caps.parent.mkdir(parents=True, exist_ok=True)
+    caps.write_text(json.dumps({"schema_version": 2, "vendors": {}}))
+    monkeypatch.setattr(
+        calibration_loader,
+        "load",
+        lambda *a, **k: {"schema_version": 1, "claude": {"rolling_7d": {"ratio": 1e-8}}},
+    )
+    # Point the state path at a file that does not exist.
+    missing = Path(os.environ["JARVIS_QUOTA_STATE_PATH"]).parent / "definitely_absent.json"
+    monkeypatch.setenv("JARVIS_QUOTA_STATE_PATH", str(missing))
+
+    item = ci.provider_quota(ci.InventoryContext())
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    assert "state absent" in item.current_value_summary
+
+
+def test_quota_status_non_ok_when_state_unloadable(monkeypatch):
+    # AC2c (audit finding, codex i1): caps + calibration present but the observed
+    # quota state file is present-but-UNLOADABLE (malformed JSON) → non-ok.
+    import os
+
+    from dontpanic_orchestrate import calibration_loader, quota_caps_loader
+
+    caps = quota_caps_loader.effective_caps_path()
+    caps.parent.mkdir(parents=True, exist_ok=True)
+    caps.write_text(json.dumps({"schema_version": 2, "vendors": {}}))
+    monkeypatch.setattr(
+        calibration_loader,
+        "load",
+        lambda *a, **k: {"schema_version": 1, "claude": {"rolling_7d": {"ratio": 1e-8}}},
+    )
+    state = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text("{ this is not valid json ::::")
+
+    item = ci.provider_quota(ci.InventoryContext())
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    assert "UNLOADABLE" in item.current_value_summary
 
 
 # ───────── (2d) present-but-unloadable config + tripped breaker → non-ok ─────
@@ -425,6 +517,45 @@ def test_global_config_present_but_schema_invalid_is_non_ok():
     assert item.is_incomplete
 
 
+def test_global_config_non_runnable_defaults_is_non_ok():
+    # AC2b (audit finding, codex i1): a loadable global config whose worker
+    # default (implementer/auditor) is NOT in AGENT_REGISTRY is operator-only —
+    # dispatch would refuse it — so global_config must report non-ok, never `ok`.
+    # This is the regression the prior code missed: it unconditionally returned
+    # Status.OK once the file parsed, even for `Grok-Builder`-style names.
+    from dontpanic_orchestrate import global_config as gc
+
+    path = gc.config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"default_implementer": "Grok-Builder", "default_auditor": "codex"})
+    )
+    # Sanity: the config loads cleanly (this is NOT an unloadable-file case).
+    assert gc.load_config() is not None
+
+    item = ci.provider_global_config(ci.InventoryContext())
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    # Names the offending default and routes the operator to the validated edit.
+    assert "Grok-Builder" in item.current_value_summary
+    assert "dontpanic roles set" in item.current_value_summary
+
+
+def test_global_config_runnable_defaults_is_ok():
+    # The healthy path must not regress into a false alarm: registry-backed
+    # worker defaults (claude/codex) report OK.
+    from dontpanic_orchestrate import global_config as gc
+
+    path = gc.config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"default_implementer": "claude", "default_auditor": "codex"})
+    )
+    item = ci.provider_global_config(ci.InventoryContext())
+    assert item.status is ci.Status.OK
+
+
 def test_project_config_present_but_unloadable_is_non_ok(tmp_path):
     proj = tmp_path / "brokenrepo"
     (proj / ".dontpanic").mkdir(parents=True)
@@ -456,6 +587,112 @@ def test_circuit_breaker_clear_is_ok():
     # A clear breaker (fresh isolated history) reports OK — the fix must not
     # regress the healthy path into a false alarm.
     item = ci.provider_circuit_breakers(ci.InventoryContext())
+    assert item.status is ci.Status.OK
+
+
+def _write_stale_registry() -> None:
+    """Write a registry JSON whose single entry points at a path that does NOT
+    exist on disk — a stale/unrunnable onboarding state. Done by writing the
+    on-disk file directly because the public ``projects add`` API refuses a
+    non-existent path, so a stale entry can only arise from drift (a project was
+    moved/deleted after registration)."""
+    from dontpanic_orchestrate import projects_registry as pr
+
+    path = pr.registry_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "projects": [
+                    {
+                        "name": "ghost",
+                        "path": "/definitely/missing/dontpanic-project",
+                        "created_at": "2026-01-01T00:00:00Z",
+                    }
+                ]
+            }
+        )
+    )
+
+
+def test_projects_registry_stale_entry_is_non_ok():
+    # AC2c (audit finding, codex i0): a registry listing a project whose path no
+    # longer exists is STALE — dispatch against it would fail — so it must report
+    # non-ok, never `ok 1 project(s) registered`. The prior provider keyed status
+    # off len(reg.projects) alone and reported OK for exactly this case.
+    _write_stale_registry()
+    item = ci.provider_projects_registry(ci.InventoryContext())
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    assert "STALE" in item.current_value_summary
+    assert "ghost" in item.current_value_summary
+
+
+def test_projects_registry_live_entry_is_ok(tmp_path):
+    # The healthy path must not regress: a registered project whose path exists
+    # reports OK.
+    from dontpanic_orchestrate import projects_registry as pr
+
+    live = tmp_path / "liverepo"
+    live.mkdir()
+    path = pr.registry_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "projects": [
+                    {
+                        "name": "live",
+                        "path": str(live),
+                        "created_at": "2026-01-01T00:00:00Z",
+                    }
+                ]
+            }
+        )
+    )
+    item = ci.provider_projects_registry(ci.InventoryContext())
+    assert item.status is ci.Status.OK
+
+
+def test_agent_manifest_present_but_unloadable_is_non_ok():
+    # AC2c/AC2d (audit finding, codex i0): a present-but-UNLOADABLE
+    # agent-manifest.json (malformed JSON) must report non-ok, distinct from the
+    # absent first-run state. ``load_manifest`` swallows the parse error and
+    # degrades to None, so the provider must probe file presence to tell a broken
+    # manifest from an absent one — and never report OK on a broken file.
+    from dontpanic_orchestrate import agent_manifest as am
+
+    path = am.manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{ not valid json ::::")
+    # Loader degrades silently (the bug surface): it does NOT raise.
+    assert am.load_manifest() is None
+
+    item = ci.provider_agent_manifest(ci.InventoryContext())
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    assert "UNLOADABLE" in item.current_value_summary
+
+
+def test_capabilities_ready_count_uses_enum_value_not_str(monkeypatch):
+    # AC2b (audit finding, codex i0): a genuinely-ready adapter must be counted
+    # ready. The prior provider used ``str(CapabilityStatus.READY).endswith(
+    # "ready")`` which is False (str(enum) is "CapabilityStatus.READY"), so it
+    # miscounted a ready adapter as 0 ready and reported OPTIONAL_UNCONFIGURED.
+    import types
+
+    from dontpanic_orchestrate import capabilities_status as cs
+
+    ready_cap = types.SimpleNamespace(status=cs.CapabilityStatus.READY)
+    monkeypatch.setattr(
+        cs,
+        "run_status",
+        lambda *a, **k: types.SimpleNamespace(capabilities=[ready_cap]),
+    )
+    item = ci.provider_capabilities(ci.InventoryContext())
+    assert "1 ready" in item.current_value_summary
     assert item.status is ci.Status.OK
 
 
@@ -584,9 +821,17 @@ def _arr_mcp(monkeypatch):
     return ci.provider_mcp(ci.InventoryContext())
 
 
-def _arr_environments(monkeypatch):
-    # No project → no environments.json → OPTIONAL_UNCONFIGURED.
-    return ci.provider_environments(ci.InventoryContext())
+def _arr_environments(monkeypatch, tmp_path):
+    # AC2d: a REAL present-but-UNLOADABLE environments.json, not the weak
+    # no-project case. Write malformed JSON at the project root so
+    # load_environments raises; the provider must report non-ok (the file
+    # exists but cannot be loaded/validated), never OK.
+    proj = tmp_path / "envrepo"
+    proj.mkdir()
+    (proj / "environments.json").write_text("{ this is not valid json")
+    return ci.provider_environments(
+        ci.InventoryContext(project_path=proj, project_name="envrepo")
+    )
 
 
 def _arr_install_reconcile(monkeypatch):
@@ -602,58 +847,165 @@ def _arr_pm_credentials(monkeypatch):
 
 
 def _arr_secret_anthropic(monkeypatch):
-    # Required secret unconfigured → HUMAN_REQUIRED (non-ok).
+    # Required secret unconfigured → HUMAN_REQUIRED (non-ok). Force BOTH auth
+    # routes off: no ANTHROPIC_API_KEY AND no available `claude` session
+    # (the executor probe), so the case is deterministic regardless of whether
+    # the test machine happens to have the `claude` binary on PATH.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
     items = ci.provider_secrets_auth(ci.InventoryContext())
     return next(i for i in items if i.id == "secret_anthropic_auth")
 
 
-# (provider_id, arranger). Arrangers take monkeypatch (and tmp_path where they
-# need to write a fixture repo). Every entry sets up an INVALID / INCOMPLETE /
-# UNRUNNABLE underlying state for that provider.
-_NON_OPTIMISTIC_CASES: dict = {
-    "global_config": _arr_global_config,
-    "project_config": _arr_project_config,
-    "projects_registry": _arr_projects_registry,
-    "agent_manifest": _arr_agent_manifest,
-    "roles": _arr_roles,
-    "runtime_evidence": _arr_runtime_evidence,
-    "gates_paths": _arr_gates_paths,
-    "quota": _arr_quota,
-    "circuit_breakers": _arr_circuit_breakers,
-    "notifications": _arr_notifications,
-    "dashboard": _arr_dashboard,
-    "capabilities": _arr_capabilities,
-    "mcp": _arr_mcp,
-    "environments": _arr_environments,
-    "install_reconcile": _arr_install_reconcile,
-    "pm_credentials": _arr_pm_credentials,
-    "secret_anthropic_auth": _arr_secret_anthropic,
-}
+def _arr_global_config_nonrunnable(monkeypatch):
+    # AC2b (audit finding, codex i1): a LOADABLE global config whose worker
+    # default is not in AGENT_REGISTRY (`Grok-Builder`). The prior provider
+    # returned Status.OK once the file parsed; it must report non-ok. This is a
+    # distinct invalid state from the malformed-JSON case above.
+    from dontpanic_orchestrate import global_config as gc
+
+    path = gc.config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"default_implementer": "Grok-Builder", "default_auditor": "codex"})
+    )
+    return ci.provider_global_config(ci.InventoryContext())
+
+
+def _arr_quota_state_missing(monkeypatch):
+    # AC2c (audit finding, codex i1): caps + calibration present but the observed
+    # quota state file is ABSENT. The prior provider reported `ok`; it must now
+    # report non-ok. Distinct from the caps-present/calibration-absent case.
+    import os
+
+    from dontpanic_orchestrate import calibration_loader, quota_caps_loader
+
+    caps = quota_caps_loader.effective_caps_path()
+    caps.parent.mkdir(parents=True, exist_ok=True)
+    caps.write_text(json.dumps({"schema_version": 2, "vendors": {}}))
+    monkeypatch.setattr(
+        calibration_loader,
+        "load",
+        lambda *a, **k: {"schema_version": 1, "claude": {"rolling_7d": {"ratio": 1e-8}}},
+    )
+    missing = Path(os.environ["JARVIS_QUOTA_STATE_PATH"]).parent / "definitely_absent.json"
+    monkeypatch.setenv("JARVIS_QUOTA_STATE_PATH", str(missing))
+    return ci.provider_quota(ci.InventoryContext())
+
+
+def _arr_quota_state_unloadable(monkeypatch):
+    # AC2c: caps + calibration present but the observed quota state file is
+    # present-but-UNLOADABLE (malformed JSON) → non-ok.
+    import os
+
+    from dontpanic_orchestrate import calibration_loader, quota_caps_loader
+
+    caps = quota_caps_loader.effective_caps_path()
+    caps.parent.mkdir(parents=True, exist_ok=True)
+    caps.write_text(json.dumps({"schema_version": 2, "vendors": {}}))
+    monkeypatch.setattr(
+        calibration_loader,
+        "load",
+        lambda *a, **k: {"schema_version": 1, "claude": {"rolling_7d": {"ratio": 1e-8}}},
+    )
+    state = Path(os.environ["JARVIS_QUOTA_STATE_PATH"])
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text("{ not valid json ::::")
+    return ci.provider_quota(ci.InventoryContext())
+
+
+def _arr_agent_manifest_unloadable(monkeypatch):
+    # AC2d (audit finding, codex i0): a REAL present-but-UNLOADABLE
+    # agent-manifest.json (malformed JSON), distinct from the absent case. The
+    # loader swallows the parse error and returns None, so a status keyed off the
+    # load result alone cannot tell a broken manifest from an absent one; the
+    # provider must report non-ok for the broken file.
+    from dontpanic_orchestrate import agent_manifest as am
+
+    path = am.manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{ malformed manifest json ::::")
+    return ci.provider_agent_manifest(ci.InventoryContext())
+
+
+def _arr_projects_registry_stale(monkeypatch):
+    # AC2c/AC2e (audit finding, codex i0): a REAL stale onboarding state — a
+    # registry entry whose path no longer exists on disk. The prior provider
+    # keyed status off len(reg.projects) and reported `ok 1 project(s)
+    # registered`; the provider must now report non-ok.
+    _write_stale_registry()
+    return ci.provider_projects_registry(ci.InventoryContext())
+
+
+# (case_id, provider_id, arranger). Every arranger takes (monkeypatch, tmp_path)
+# — single-arg arrangers are wrapped so the signature is uniform. Each entry
+# sets up an INVALID / INCOMPLETE / UNRUNNABLE underlying state for that
+# provider. AC2e: the suite covers MULTIPLE distinct invalid states for the
+# providers the audit flagged (global_config: malformed-file AND non-runnable
+# default; quota: caps-no-cal AND state-missing AND state-unloadable), not a
+# single representative each, so a per-example fix cannot satisfy it.
+_NON_OPTIMISTIC_CASES: list = [
+    ("global_config_unloadable", "global_config", lambda m, t: _arr_global_config(m)),
+    (
+        "global_config_nonrunnable_default",
+        "global_config",
+        lambda m, t: _arr_global_config_nonrunnable(m),
+    ),
+    ("project_config_unloadable", "project_config", _arr_project_config),
+    ("projects_registry_empty", "projects_registry", lambda m, t: _arr_projects_registry(m)),
+    (
+        "projects_registry_stale_onboarding",
+        "projects_registry",
+        lambda m, t: _arr_projects_registry_stale(m),
+    ),
+    ("agent_manifest_absent", "agent_manifest", lambda m, t: _arr_agent_manifest(m)),
+    (
+        "agent_manifest_unloadable",
+        "agent_manifest",
+        lambda m, t: _arr_agent_manifest_unloadable(m),
+    ),
+    ("roles_unrunnable", "roles", _arr_roles),
+    ("runtime_evidence_unset", "runtime_evidence", lambda m, t: _arr_runtime_evidence(m)),
+    ("gates_paths_defaults", "gates_paths", lambda m, t: _arr_gates_paths(m)),
+    ("quota_caps_no_calibration", "quota", lambda m, t: _arr_quota(m)),
+    ("quota_state_missing", "quota", lambda m, t: _arr_quota_state_missing(m)),
+    ("quota_state_unloadable", "quota", lambda m, t: _arr_quota_state_unloadable(m)),
+    ("circuit_breaker_tripped", "circuit_breakers", lambda m, t: _arr_circuit_breakers(m)),
+    ("notifications_unconfigured", "notifications", lambda m, t: _arr_notifications(m)),
+    ("dashboard_not_built", "dashboard", _arr_dashboard),
+    ("capabilities_none_ready", "capabilities", lambda m, t: _arr_capabilities(m)),
+    ("mcp_start_surface", "mcp", lambda m, t: _arr_mcp(m)),
+    ("environments_unloadable", "environments", _arr_environments),
+    ("install_reconcile_no_snapshot", "install_reconcile", lambda m, t: _arr_install_reconcile(m)),
+    ("pm_credentials_unset", "pm_credentials", lambda m, t: _arr_pm_credentials(m)),
+    ("secret_anthropic_unconfigured", "secret_anthropic_auth", lambda m, t: _arr_secret_anthropic(m)),
+]
 
 
 def test_every_provider_is_listed_in_the_invariant_suite():
-    # Guard: every single-item provider in the registry has an invariant case,
-    # so a future provider cannot be added without proving its non-optimism.
+    # Guard: every single-item provider in the registry has at least one
+    # invariant case, so a future provider cannot be added without proving its
+    # non-optimism.
     registry_ids = {p(ci.InventoryContext()).id for p in ci._PROVIDERS}
-    covered = set(_NON_OPTIMISTIC_CASES) - {"secret_anthropic_auth"}
+    covered = {provider_id for _, provider_id, _ in _NON_OPTIMISTIC_CASES}
+    covered -= {"secret_anthropic_auth"}
     assert registry_ids <= covered, f"providers missing invariant case: {registry_ids - covered}"
 
 
-@pytest.mark.parametrize("provider_id", sorted(_NON_OPTIMISTIC_CASES))
+@pytest.mark.parametrize(
+    "case_id,provider_id,arranger",
+    _NON_OPTIMISTIC_CASES,
+    ids=[c[0] for c in _NON_OPTIMISTIC_CASES],
+)
 def test_no_provider_reports_ok_on_invalid_or_incomplete_state(
-    provider_id, monkeypatch, tmp_path
+    case_id, provider_id, arranger, monkeypatch, tmp_path
 ):
-    arranger = _NON_OPTIMISTIC_CASES[provider_id]
-    # Some arrangers need a tmp repo to write fixture config into.
-    if provider_id in ("roles", "dashboard", "project_config"):
-        item = arranger(monkeypatch, tmp_path)
-    else:
-        item = arranger(monkeypatch)
+    item = arranger(monkeypatch, tmp_path)
     assert item.id == provider_id
     assert item.status is not ci.Status.OK, (
-        f"{provider_id} reported OK on an invalid/incomplete underlying state; "
-        f"the non-optimistic-status invariant (AC2c) requires a non-ok status"
+        f"{case_id} ({provider_id}) reported OK on an invalid/incomplete "
+        f"underlying state; the non-optimistic-status invariant (AC2c) requires "
+        f"a non-ok status"
     )
 
 
@@ -666,9 +1018,11 @@ def test_core_surfaces_are_required():
 # ─────────────────────── (8) active / inactive dashboard hint ───────────────
 
 
-def test_dashboard_hint_inactive_uses_start_command():
+def test_dashboard_hint_inactive_uses_start_command(monkeypatch):
     # A fresh home leaves the required anthropic-auth secret unconfigured →
-    # at least one human-required item → exactly one hint.
+    # at least one human-required item → exactly one hint. Force the auth probe
+    # off so the trigger is deterministic even when `claude` is on PATH.
+    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
     inv = ci.collect_inventory(dashboard_url=None)
     assert inv.dashboard_hint is not None
     hd = inv.dashboard_hint.to_dict()
@@ -677,7 +1031,8 @@ def test_dashboard_hint_inactive_uses_start_command():
     assert hd["start_command"] == ci.DASHBOARD_START_COMMAND
 
 
-def test_dashboard_hint_active_uses_url():
+def test_dashboard_hint_active_uses_url(monkeypatch):
+    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
     url = "http://127.0.0.1:8787/"
     inv = ci.collect_inventory(dashboard_url=url)
     assert inv.dashboard_hint is not None
@@ -699,7 +1054,8 @@ def test_no_dashboard_hint_when_nothing_human_required(monkeypatch):
 # ─────────────────────── (8) dashboard-hint deduplication ───────────────────
 
 
-def test_dashboard_hint_appears_once_and_items_only_reference_it():
+def test_dashboard_hint_appears_once_and_items_only_reference_it(monkeypatch):
+    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
     url = "http://127.0.0.1:8787/"
     inv = ci.collect_inventory(dashboard_url=url)
     assert inv.dashboard_hint is not None
@@ -825,6 +1181,95 @@ def test_machine_scope_when_no_project_degrades_gracefully():
     assert pc_item.status in (ci.Status.UNKNOWN, ci.Status.NEEDS_SETUP)
     # And the inventory as a whole is still complete.
     assert len(inv.items) >= 10
+
+
+# ─────────────── environments / Firebase target (.firebaserc) ────────────────
+#
+# Audit finding (codex i1): the environments surface must inventory BOTH
+# environments.json AND .firebaserc — the Firebase target alias map is a
+# separate surface the prior provider ignored entirely.
+
+
+def test_environments_surfaces_firebaserc_aliases(tmp_path):
+    # A present .firebaserc must be inventoried: its declared aliases appear in
+    # the summary so the operator sees the actual Firebase target, not just
+    # "environments.json present".
+    proj = tmp_path / "fbrepo"
+    proj.mkdir()
+    (proj / ".firebaserc").write_text(
+        json.dumps({"projects": {"default": "my-dev-proj", "prod": "my-prod-proj"}})
+    )
+    item = ci.provider_environments(
+        ci.InventoryContext(project_path=proj, project_name="fbrepo")
+    )
+    assert ".firebaserc present" in item.current_value_summary
+    assert "my-dev-proj" in item.current_value_summary
+    assert "my-prod-proj" in item.current_value_summary
+    # Owner surface names both files.
+    assert ".firebaserc" in item.owner_file_or_env
+
+
+def test_environments_firebaserc_present_but_unloadable_is_non_ok(tmp_path):
+    # A present-but-UNLOADABLE .firebaserc (malformed JSON) is a hard defect —
+    # non-ok — even though environments.json itself is absent/optional.
+    proj = tmp_path / "badfbrepo"
+    proj.mkdir()
+    (proj / ".firebaserc").write_text("{ not valid json ::::")
+    item = ci.provider_environments(
+        ci.InventoryContext(project_path=proj, project_name="badfbrepo")
+    )
+    assert item.status is not ci.Status.OK
+    assert item.status is ci.Status.NEEDS_SETUP
+    assert item.is_incomplete
+    assert "UNLOADABLE" in item.current_value_summary
+
+
+def test_environments_neither_file_is_optional_unconfigured(tmp_path):
+    # A repo with neither environments.json nor .firebaserc is an optional,
+    # unconfigured surface — never a required-incomplete one (AC4).
+    proj = tmp_path / "plainrepo"
+    proj.mkdir()
+    item = ci.provider_environments(
+        ci.InventoryContext(project_path=proj, project_name="plainrepo")
+    )
+    assert item.status is ci.Status.OPTIONAL_UNCONFIGURED
+    assert item.optional is True
+
+
+# ─────────────────── explicit --project hard-refuse (audit i0) ───────────────
+
+
+def test_explicit_unresolved_project_raises_not_silent_fallback():
+    # Audit i0 (high, correctness): an explicit --project selector that
+    # resolves to neither a registered name nor an existing directory must
+    # HARD-REFUSE, never silently degrade to machine-only inventory.
+    with pytest.raises(ci.UnresolvedProjectError) as excinfo:
+        ci.resolve_context("/definitely/not/a/dontpanic/project")
+    # The selector is echoed so the caller knows what was refused.
+    assert "/definitely/not/a/dontpanic/project" in str(excinfo.value)
+    assert excinfo.value.selector == "/definitely/not/a/dontpanic/project"
+
+
+def test_collect_inventory_propagates_unresolved_project():
+    # collect_inventory must surface the refusal rather than returning a
+    # machine-only inventory with project_path: null for the bad selector.
+    with pytest.raises(ci.UnresolvedProjectError):
+        ci.collect_inventory(project="/definitely/not/a/dontpanic/project")
+
+
+def test_cli_unresolved_project_exits_nonzero(capsys):
+    # End-to-end: `dontpanic config inventory --project <bad>` exits 2 with a
+    # clear stderr message — not exit 0 with project_path: null.
+    from dontpanic_orchestrate import cli
+
+    rc = cli._config_inventory_main(
+        ["--project", "/definitely/not/a/dontpanic/project", "--format", "json"]
+    )
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "/definitely/not/a/dontpanic/project" in captured.err
+    # No inventory JSON should have been emitted to stdout.
+    assert captured.out.strip() == ""
 
 
 # ──────────────────────── provider robustness (degrade) ─────────────────────

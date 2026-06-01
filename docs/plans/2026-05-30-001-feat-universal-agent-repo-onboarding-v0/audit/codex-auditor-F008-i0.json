@@ -4,38 +4,64 @@
   "agent": "codex",
   "agent_role": "auditor",
   "iteration": 0,
-  "started_at": "2026-06-01T19:13:32Z",
-  "completed_at": "2026-06-01T19:18:07Z",
+  "started_at": "2026-06-01T20:53:24Z",
+  "completed_at": "2026-06-01T20:59:06Z",
   "validation_performed": [
     "codex auditor round (iteration 0)",
-    "quota gate aud=None",
+    "quota gate aud=63.192670500000006",
     "reviewing implementer audit at claude-implementer-F008-i0.json",
-    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-mdauh_ig target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
-    "captured stdout 610911 bytes"
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-e86jsq_y target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 335257 bytes"
   ],
   "quota_consumed": {
-    "tokens_in": 2749863,
-    "tokens_out": 18426,
+    "tokens_in": 4579219,
+    "tokens_out": 18342,
     "api_calls": 1
   },
-  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}`, and I found no forbidden command shapes in their recorded `target_context.commands_run`.\n\nFINDING (high, correctness): `environments/Firebase` can report `ok` for a present-but-unloadable `environments.json`, violating the class-wide non-optimistic status invariant. Evidence: [config_inventory.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/config_inventory.py:1126) catches `load_environments(...)` exceptions, changes the summary to “validation deferred,” then still returns `Status.OK if configured else OPTIONAL_UNCONFIGURED` at line 1138. The invariant test’s environments case only uses “no project” ([test_config_inventory_f008.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py:587)), so it does not catch a real unloadable env file. Recommendation: make unloadable `environments.json` non-ok and add that real invalid-state case to the parametrized invariant suite.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate config inventory --format json\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import",
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes.\n\nFINDING (high, architecture): AC2e is not met because status derivation is still per-provider ad hoc, not a single shared helper applied uniformly. Evidence: `config_inventory.py` has direct `status=Status...` branches across providers and no shared status derivation helper; `rg` only found `_probe_loadable`/`_safe`, not a status helper. Recommendation: introduce one shared derivation helper that maps validated provider facts to status and route every provider through it.\n\nFINDING (high, correctness): stale project/onboarding state can report `ok`. Evidence: `provider_projects_registry` uses only `len(reg.projects)` for status; a fake registry entry pointing at `/definitely/missing/dontpanic-project` returned `ok 1 project(s) registered`. Recommendation: validate registered project paths/onboarding state and report non-ok when entries are stale/unrunnable.\n\nFINDING (high, test_coverage): the exhaustive invariant test does not cover AC2e’s minimum invalid-manifest or stale-onboarding cases. Evidence: `_NON_OPTIMISTIC_CASES` has `agent_manifest_absent` and `install_reconcile_no_snapshot`, but no invalid manifest and no stale onboarding/registry case. Recommendation: add real malformed `agent-manifest.json` and stale registered project/onboarding fixtures to the single parametrized invariant test.\n\nFINDING (medium, correctness): ready capabilities are miscounted as zero ready. Evidence: `provider_capabilities` ch",
   "target_context": {
     "env": "dev",
     "project": null,
     "commands_run": [
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q -p no:cacheprovider",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate config inventory --format json",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import config_inventory as ci, command_validation as cv; inv=ci.collect_inventory(); failures=[]; [failures.append((i.id,i.safe_command,cv.validate_command_tokens(i.safe_command.split()[1:]).reason)) for i in inv.items if i.safe_command and not cv.validate_command_tokens(i.safe_command.split()[1:]).ok]; print('items', len(inv.items)); print('safe_failures', failures); assert not failures\"",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate config inventory --setup-plan --format json",
-      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"import ast, pathlib; [ast.parse(pathlib.Path(p).read_text(), filename=p) for p in ['scripts/dontpanic_orchestrate/config_inventory.py','scripts/dontpanic_orchestrate/cli.py','scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py']]; print('syntax_ok')\""
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import config_inventory as ci, command_validation as cv; bad=[]; inv=ci.collect_inventory(); [bad.append((i.id,i.safe_command,cv.validate_command_tokens(i.safe_command.split()[1:]).reason)) for i in inv.items if i.safe_command and not cv.validate_command_tokens(i.safe_command.split()[1:]).ok]; print('bad_safe_commands=', bad)\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --project __definitely_missing_project__ --format json >/dev/null; echo rc=$?"
     ]
   },
   "findings": [
     {
       "severity": "high",
+      "category": "architecture",
+      "feature_id": "F008",
+      "issue": "AC2e is not met because status derivation is still per-provider ad hoc, not a single shared helper applied uniformly. Evidence: `config_inventory.py` has direct `status=Status...` branches across providers and no shared status derivation helper; `rg` only found `_probe_loadable`/`_safe`, not a status helper. Recommendation: introduce one shared derivation helper that maps validated provider facts to status and route every provider through it.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
       "category": "correctness",
       "feature_id": "F008",
-      "issue": "`environments/Firebase` can report `ok` for a present-but-unloadable `environments.json`, violating the class-wide non-optimistic status invariant. Evidence: [config_inventory.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/config_inventory.py:1126) catches `load_environments(...)` exceptions, changes the summary to “validation deferred,” then still returns `Status.OK if configured else OPTIONAL_UNCONFIGURED` at line 1138. The invariant test’s environments case only ",
+      "issue": "stale project/onboarding state can report `ok`. Evidence: `provider_projects_registry` uses only `len(reg.projects)` for status; a fake registry entry pointing at `/definitely/missing/dontpanic-project` returned `ok 1 project(s) registered`. Recommendation: validate registered project paths/onboarding state and report non-ok when entries are stale/unrunnable.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F008",
+      "issue": "the exhaustive invariant test does not cover AC2e’s minimum invalid-manifest or stale-onboarding cases. Evidence: `_NON_OPTIMISTIC_CASES` has `agent_manifest_absent` and `install_reconcile_no_snapshot`, but no invalid manifest and no stale onboarding/registry case. Recommendation: add real malformed `agent-manifest.json` and stale registered project/onboarding fixtures to the single parametrized invariant test.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "ready capabilities are miscounted as zero ready. Evidence: `provider_capabilities` checks `str(status).endswith(\"ready\")`; for `CapabilityStatus.READY`, `str(...)` is `CapabilityStatus.READY`, so a mocked ready capability returned `optional_unconfigured 1 capabilities/adapters known, 0 ready`. Recommendation: compare `status.value == \"ready\"` or normalize enum/string values before aggregation.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F008",
+      "issue": "the patch includes unrelated quota/F009 changes outside F008. Evidence: `git diff HEAD~1 --name-only` includes `quota_caps_loader.py`, `test_dispatch_from_plan.py`, and `test_quota_caps_loader.py`, and the diff adds Codex rolling_7d quota behavior. Recommendation: split unrelated quota readiness work out of the F008 patch. The implementer’s structured target context is valid (`env=dev`, `project=null`), the prose summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_cont",
       "evidence": "Extracted from auditor summary."
     }
   ],

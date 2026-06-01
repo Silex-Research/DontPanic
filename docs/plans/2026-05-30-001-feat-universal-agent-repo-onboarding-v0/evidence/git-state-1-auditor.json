@@ -14,30 +14,14 @@
     },
     {
       "path": "scripts/dontpanic_orchestrate/config_inventory.py",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/dashboard.py",
       "status": "M"
     },
     {
       "path": "scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
-      "status": "A"
+      "status": "M"
     }
   ],
   "unstaged_modified": [
-    {
-      "path": "dashboard/core.js",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/settings/settings.css",
-      "status": "M"
-    },
-    {
-      "path": "dashboard/pages/settings/settings.js",
-      "status": "M"
-    },
     {
       "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
       "status": "M"
@@ -47,7 +31,27 @@
       "status": "M"
     },
     {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F008-i0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F008-i1.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i1.json",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F008_iter2.json",
       "status": "M"
     },
     {
@@ -84,13 +88,7 @@
     }
   ],
   "untracked": [
-    "dashboard/lib/settings-inventory-logic.js",
-    "dashboard/tests/integration/settings-inventory-page.test.js",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F008-i0.json",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F008-i1.json",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i0.json",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i1.json",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F008_iter2.json"
+    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

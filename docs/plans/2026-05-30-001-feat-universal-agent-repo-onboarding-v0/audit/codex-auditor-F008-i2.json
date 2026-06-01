@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-01T21:18:00Z",
+  "completed_at": "2026-06-01T21:21:32Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F008-i2.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-e86jsq_y target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 486057 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1955696,
+    "tokens_out": 15074,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is present and matches `{Repo: DontPanic, Env: dev, Project: (none)}`; I found no forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (high, correctness): Anthropic auth status is optimistic. Evidence: `config_inventory._anthropic_auth_configured()` treats `executors.get_executor(\"claude\").is_available()` as auth, but `BaseExecutor.is_available()` only checks `shutil.which(self.cli_binary)`, so a machine with `claude` installed but not authenticated reports `secret_anthropic_auth=ok`. Recommendation: probe an actual authenticated Claude session or downgrade binary-only presence to non-ok/human-required.\n\nFINDING (medium, correctness): the acceptance-listed `roles set` edit route is not a validated command surface. Evidence: inventory emits `dontpanic roles set <role> <executor>` in `dashboard_mutation_shape`, but `command_validation.validate_command_tokens(['roles','set','implementer','claude'])` returns `False` with “unknown subcommand 'roles'”. Recommendation: add a real `roles` spec to `command_validation` and test the filled command shape.\n\nFINDING (low, style): changed F008 tests are not ruff-clean despite the implementer claim. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py` reports `I001` on the test import block. Recommendation: run ruff on al",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --name-only HEAD~1",
+      "git diff --check HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate config inventory --project /definitely/not/a/dontpanic/project --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import command_validation as cv; r=cv.validate_command_tokens(['roles','set','implementer','claude']); print(r.ok, r.reason)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "Anthropic auth status is optimistic. Evidence: `config_inventory._anthropic_auth_configured()` treats `executors.get_executor(\"claude\").is_available()` as auth, but `BaseExecutor.is_available()` only checks `shutil.which(self.cli_binary)`, so a machine with `claude` installed but not authenticated reports `secret_anthropic_auth=ok`. Recommendation: probe an actual authenticated Claude session or downgrade binary-only presence to non-ok/human-required.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "the acceptance-listed `roles set` edit route is not a validated command surface. Evidence: inventory emits `dontpanic roles set <role> <executor>` in `dashboard_mutation_shape`, but `command_validation.validate_command_tokens(['roles','set','implementer','claude'])` returns `False` with “unknown subcommand 'roles'”. Recommendation: add a real `roles` spec to `command_validation` and test the filled command shape.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F008",
+      "issue": "changed F008 tests are not ruff-clean despite the implementer claim. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py` reports `I001` on the test import block. Recommendation: run ruff on all touched Python files and commit the import formatting fix. Checks run: $ git status --short $ git diff --name-only HEAD~1 $ git diff --check HEAD~1 $ PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cachep",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
