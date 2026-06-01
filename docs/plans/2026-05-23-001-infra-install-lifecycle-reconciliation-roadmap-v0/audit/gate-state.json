@@ -8,9 +8,17 @@
       "at": "2026-05-23T00:59:23Z",
       "actor": "supervisor",
       "reason": "child '2026-05-23-002-feat-install-reconcile-foundation-v0' dispatched"
+    },
+    {
+      "action": "pre_resume_after_child_arm",
+      "gate": "pre_resume_after_child:2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+      "at": "2026-05-30T03:26:35Z",
+      "actor": "supervisor",
+      "reason": "child '2026-05-30-001-feat-universal-agent-repo-onboarding-v0' dispatched"
     }
   ],
   "active_pre_resume_after_children": [
-    "pre_resume_after_child:2026-05-23-002-feat-install-reconcile-foundation-v0"
+    "pre_resume_after_child:2026-05-23-002-feat-install-reconcile-foundation-v0",
+    "pre_resume_after_child:2026-05-30-001-feat-universal-agent-repo-onboarding-v0"
   ]
 }

@@ -15,3 +15,16 @@ Child plan 2026-05-23-002-feat-install-reconcile-foundation-v0 is in flight (par
 After authoring evidence/fan-in-from-2026-05-23-002-feat-install-reconcile-foundation-v0.md with `## Return Condition / status: satisfied`.
 
 ===
+---
+timestamp: 2026-05-30T03:26:35Z
+event: nested_child_pending
+plan_id: 2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0
+child_plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+spawn_reason: operator_manual
+---
+
+Child plan 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 is in flight (parent: 2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0, spawn_reason: operator_manual). Parent re-entry is paused until operator runs:
+  jarvis-orchestrate approve 2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0 pre_resume_after_child --child 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+After authoring evidence/fan-in-from-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.md with `## Return Condition / status: satisfied`.
+
+===
