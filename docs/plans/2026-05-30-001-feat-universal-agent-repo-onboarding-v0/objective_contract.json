@@ -1,6 +1,6 @@
 {
   "goal_type": "new_feature",
-  "source_of_truth": "Operator diagnosis from the Grok/QuantRE onboarding failure, repeated budget/iteration decision friction, role-assignment friction, config/setup sprawl, and concurrent plan-edit drift during an active DontPanic run: new interactive agents need a machine-level operating brief, new repos need non-clobbering repo onboarding, available worker executors need simple role assignment, all configuration surfaces need one inventory/setup cockpit, active runs need plan-drift reconciliation, and all surfaces must be generated from one source of truth so manifest, CLI commands, executor registry, config homes, repo instructions, roles, setup status, active plan context, and operational next-action guidance cannot drift apart.",
+  "source_of_truth": "Operator diagnosis from the Grok/QuantRE onboarding failure, repeated budget/iteration decision friction, role-assignment friction, config/setup sprawl, skill-use friction, and concurrent plan-edit drift during an active DontPanic run: new interactive agents need a machine-level operating brief, new repos need non-clobbering repo onboarding, available worker executors need simple role assignment, all configuration surfaces need one inventory/setup cockpit, valuable skills need safe invocation rubrics, active runs need plan-drift reconciliation, and all surfaces must be generated from one source of truth so manifest, CLI commands, executor registry, config homes, repo instructions, roles, setup status, active plan context, skill recommendations, and operational next-action guidance cannot drift apart.",
   "user_journeys": [
     {
       "name": "New interactive agent operates DontPanic",
@@ -134,6 +134,31 @@
       ]
     },
     {
+      "name": "Operator gets valuable skills recommended without manual prompting",
+      "description": "A human or interactive agent starts or reviews a plan and DontPanic identifies relevant skills, explains whether each can be auto-run, should be suggested, is blocked by missing inputs, or requires approval, and surfaces the same safe choices in CLI and dashboard.",
+      "surfaces": [
+        "infra",
+        "ux",
+        "docs"
+      ],
+      "states": [
+        "skill_applicability_loaded",
+        "invocation_metadata_loaded",
+        "plan_context_evaluated",
+        "risk_classified",
+        "missing_inputs_identified",
+        "skill_actions_rendered"
+      ],
+      "acceptance_signals": [
+        "Skills without invocation metadata are never auto-run",
+        "Read-only bounded skills auto-run only when required inputs and allowlisted commands are present",
+        "Mutating, credentialed, networked, paid, external-write, or indefinite-loop skills require approval or are suggested",
+        "Allowlist state and missing rubrics are visible to doctor/config inventory",
+        "Contradictory risk signals are downgraded by deterministic precedence rules",
+        "CLI and dashboard render the same SkillAction recommendations"
+      ]
+    },
+    {
       "name": "Concurrent interactive agents change a plan during a run",
       "description": "One interactive agent or human edits the plan while another agent-driven DontPanic run is active. DontPanic detects the drift, classifies the impact, refreshes or pauses before spending more budget, and shows one reconciliation action.",
       "surfaces": [
@@ -166,6 +191,8 @@
     "pytest-operations-guidance.log",
     "pytest-signed-off-finalizer.log",
     "pytest-config-inventory.log",
+    "pytest-skill-invocation-rubrics.log",
+    "pytest-skill-invocation-allowlist.log",
     "pytest-active-run-plan-drift.log",
     "pytest-dashboard-singleton.log",
     "agent-brief-snapshot.txt",
@@ -175,6 +202,10 @@
     "operations-guidance-budget-iteration-output.txt",
     "signed-off-finalizer-output.txt",
     "config-inventory-output.json",
+    "skill-invocation-recommendations.json",
+    "skill-auto-run-allowlist-output.json",
+    "skill-rubric-suggestion-output.txt",
+    "dashboard-skill-actions-state.json",
     "dashboard-settings-state.json",
     "plan-drift-reconciliation-output.txt",
     "sanitization-clean.log"
@@ -186,5 +217,5 @@
     "No plan schema change",
     "No rewrite of historical Jarvis references outside touched onboarding docs"
   ],
-  "completion_test": "All ten features pass with tests and docs. A fixture unsupported agent sees itself as operator-only, a fixture repo receives current managed onboarding blocks without clobbering existing content, available worker executors can be assigned to roles from CLI/dashboard-safe state without hand-editing JSON, doctor flags unknown roles.*, config-home reconciliation has a non-conflicting migration path, every core configuration surface is visible in a safe inventory/setup cockpit, budget/iteration blockers render clear action choices in CLI and dashboard, signed_off plus cleared pre_merge finalizes a feature without paid worker dispatch, active-run plan edits are detected and reconciled before stale-context paid calls, and dashboard serve refuses duplicate live servers."
+  "completion_test": "All eleven features pass with tests and docs. A fixture unsupported agent sees itself as operator-only, a fixture repo receives current managed onboarding blocks without clobbering existing content, available worker executors can be assigned to roles from CLI/dashboard-safe state without hand-editing JSON, doctor flags unknown roles.*, config-home reconciliation has a non-conflicting migration path, every core configuration surface is visible in a safe inventory/setup cockpit, budget/iteration blockers render clear action choices in CLI and dashboard, signed_off plus cleared pre_merge finalizes a feature without paid worker dispatch, valuable skills are recommended or gated by safe invocation rubrics in CLI and dashboard, active-run plan edits are detected and reconciled before stale-context paid calls, and dashboard serve refuses duplicate live servers."
 }

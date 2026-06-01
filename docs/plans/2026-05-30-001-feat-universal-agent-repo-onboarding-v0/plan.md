@@ -162,6 +162,8 @@ onboarding updates only the marked block when the hash is stale.
   evidence, project gates/protected paths, notification preferences, quota caps,
   calibration, env vars, secrets/auth checks, install snapshots, and dashboard
   local/remote configuration.
+- Skill invocation rubrics that turn existing skill applicability into safe
+  recommendations or bounded auto-run decisions, shared by CLI and dashboard.
 - A deduplicated dashboard availability affordance whenever a command produces
   human-required configuration or approval work: show the active URL or start
   command once per output, then let individual items reference that affordance.
@@ -185,6 +187,8 @@ onboarding updates only the marked block when the hash is stale.
 - Implementing worker executors for Grok, Gemini, Kimi, Qwen, or other agents.
 - Remote/multi-machine coordination.
 - Authenticated dashboard service mode.
+- Blind automatic execution of mutating, credentialed, networked, paid, or
+  indefinite-loop skills without explicit approval.
 - Changing the plan schema.
 - Rewriting every existing historical plan/doc that mentions Jarvis.
 
@@ -218,6 +222,21 @@ Config-home reconciliation must not stop at detection. Add a command that
 previews differences, writes missing canonical `~/.dontpanic` files, preserves
 legacy `~/.jarvis` as a read-through compatibility home, and refuses destructive
 merge ambiguity without `--confirm`.
+
+Skill automation builds on the existing advisory `applies_to:` matcher instead
+of replacing it with a central router. Skills declare their own invocation
+rubric in `SKILL.md`; DontPanic evaluates those declarations against plan state,
+config readiness, command safety, and lifecycle stage. The result is shared
+SkillAction data: read-only bounded skills can be auto-run when inputs are
+complete, missing-input skills ask one concise question, and risky skills are
+suggested or require approval.
+
+Auto-run requires a separate versioned allowlist, visible in doctor/reconcile
+and the setup inventory. Declared skill metadata is advisory input, not enough
+authority to execute. If risk signals conflict, the evaluator applies a fixed
+precedence order: opt-out and unsafe properties win over a skill's requested
+mode. Existing skills get a migration helper that proposes starting rubrics
+without blocking normal DontPanic use.
 
 ## Acceptance Summary
 
@@ -261,6 +280,12 @@ human or interactive agent spelunking README text, environment variables, JSON
 files, or dashboard state. The answer should be a grouped setup checklist with
 safe edits, human-required steps, current status, and exact remediation commands
 where available.
+
+Skill usage should follow the same product rule. A human or interactive agent
+should be able to ask DontPanic to run a plan and see when useful skills such as
+`security-review`, `eval-harness`, `test-runner`, `autoresearch`,
+`browser-use`, or `cost-model` apply, why they apply, what input is missing, and
+whether DontPanic can safely run them or must ask for approval.
 
 Whenever a decision requires a human, DontPanic should not assume the user or
 interactive agent knows a dashboard exists. CLI output and agent-facing guidance
