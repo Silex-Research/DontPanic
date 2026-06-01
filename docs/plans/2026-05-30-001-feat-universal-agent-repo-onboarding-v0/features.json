@@ -196,12 +196,62 @@
         "Add tests for the concrete example: Codex budget cooling plus remaining max_iterations recommends waiting and redispatching, with an alternative raise-ceiling path.",
         "Add tests for missing project registration, stale onboarding block, unsupported roles.*, budget ceiling exceeded, admission threshold mismatch, iterations exhausted, and no-progress stop."
       ],
-      "acceptance": "(1) A blocked quota/cooldown case renders a recommended wait-until + redispatch action and a separate raise-ceiling/threshold alternative when applicable. (2) The guidance explicitly states remaining max_iterations and whether the next fix iteration is within cap. (3) Budget and iteration guidance appears in CLI output and dashboard ActionItems from the same typed ActionChoice data. (4) A signed_off volley paused at pre_merge shows the gate state; after pre_merge is cleared, guidance offers a no-paid-call finalization action instead of forcing a fresh paid dispatch. (5) Setup guidance tells humans/agents when to run projects add --onboard, doctor --agent, doctor --project, agent brief, or home reconcile. (6) Human-required output includes exactly one response-level dashboard affordance: active URL when running, start command when not running; individual choices do not repeat it. (7) Exact commands are emitted only when safe and validated; otherwise guidance says human action required. (8) Tests cover at least nine decision states, including the Codex cooldown + max_iterations example, signed_off/pre_merge finalization, active/inactive dashboard hints, and dashboard-hint deduplication. (9) A signed_off-and-pre_merge-cleared feature can be finalized with zero paid agent calls: a `dontpanic finalize <plan> --feature <F>` command, or equivalent, consumes the existing signed_off auditor artifact plus cleared gate-state, writes or repairs `signoff-<plan>.json`, and flips only that feature's passes:true with evidence_refs pointing at the audit artifact. (10) The finalizer refuses without mutation if the latest audit verdict is not signed_off, if pre_merge is uncleared, or if no audit envelope exists, with distinct exit codes per case. (11) The finalizer is idempotent and never triggers `dispatch_volley` or any worker executor invocation. (12) Tests prove clean signed_off to passes:true with no executor invocation, refusal on needs_changes, refusal on uncleared pre_merge, missing-audit refusal, and idempotent re-run.",
-      "passes": false,
+      "acceptance": "(1) A blocked quota/cooldown case renders a recommended wait-until + redispatch action and a separate raise-ceiling/threshold alternative when applicable. (2) The guidance explicitly states remaining max_iterations and whether the next fix iteration is within cap. (3) Budget and iteration guidance appears in CLI output and dashboard ActionItems from the same typed ActionChoice data. (4) A signed_off volley paused at pre_merge shows the gate state; after pre_merge is cleared, guidance offers a no-paid-call finalization action instead of forcing a fresh paid dispatch. (5) Setup guidance tells humans/agents when to run projects add --onboard, doctor --agent, doctor --project, agent brief, or home reconcile. (6) Human-required output includes exactly one response-level dashboard affordance: active URL when running, start command when not running; individual choices do not repeat it. (7) Exact commands are emitted only when safe AND validated against the live CLI grammar. \"Validated\" means: every emitted exact_command is a runnable invocation with the correct subcommand and all required arguments (it must not exit 2 on a usage error), and it respects current state. Concretely: (7a) no redispatch/orchestrate command is emitted when the next fix iteration would exceed max_iterations (exhausted state offers close/finalize or human action, never a redispatch command); (7b) no bare `dontpanic resume <plan>` — resume commands must carry the required `--gate <name>` or `--all`; (7c) no bare `dontpanic reconcile` — it must name the `homes` subcommand (e.g. `dontpanic reconcile homes --dry-run`); (7d) any response-level dashboard affordance referenced by an ActionItem must actually be present in the rendered dashboard cache, not merely named in detail text; (7e) re-onboarding guidance for an already-registered project emits `projects add <name> <path> --onboard --force --yes` (a bare `--onboard` is invalid because the registry refuses an existing name without --force --yes). When a valid command cannot be formed, guidance says human action required (requires_human) with advisory text instead of emitting a bare or invalid command. (8) Tests cover at least nine decision states, including the Codex cooldown + max_iterations example, signed_off/pre_merge finalization, active/inactive dashboard hints, and dashboard-hint deduplication; tests must also assert each of 7a–7e directly (exhausted-iteration emits no redispatch command; resume carries --gate/--all; reconcile names homes; referenced dashboard affordance is present in the built cache; already-registered re-onboard carries --force --yes). (9) A signed_off-and-pre_merge-cleared feature can be finalized with zero paid agent calls: a `dontpanic finalize <plan> --feature <F>` command, or equivalent, consumes the existing signed_off auditor artifact plus cleared gate-state, writes or repairs `signoff-<plan>.json`, and flips only that feature's passes:true with evidence_refs pointing at the audit artifact. (10) The finalizer refuses without mutation if the latest audit verdict is not signed_off, if pre_merge is uncleared, or if no audit envelope exists, with distinct exit codes per case. (11) The finalizer is idempotent and never triggers `dispatch_volley` or any worker executor invocation. (12) Tests prove clean signed_off to passes:true with no executor invocation, refusal on needs_changes, refusal on uncleared pre_merge, missing-audit refusal, and idempotent re-run. (Scope, per D035 split: F007 covers the decision engine, exact_command validity (7a–7e), and the no-paid finalizer with their CLI + dashboard rendering. Live-path completeness — every setup/doctor guidance state reachable from BOTH `what-now` and the dashboard, and ActionItem IDs carrying feature_id so distinct features do not collapse — is delegated to F012 and is OUT OF SCOPE for F007.)",
+      "passes": true,
       "depends_on": [
         "F005",
         "F006"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F007-i1.json",
+          "note": "signed_off auditor envelope (codex, iteration 1) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-01T15:49:16Z"
+    },
+    {
+      "id": "F012",
+      "category": "infra",
+      "phase": 7,
+      "description": "Live-path completeness for the F007 operations-guidance surface. F007 built the decision engine and its quota/budget/iteration/finalize states reachable from `what-now` and the dashboard, but the setup/doctor guidance states (missing project registration, stale onboarding, unsupported roles, doctor --agent, doctor --project, agent brief, home reconcile) are computed only in the builder and are not surfaced through the live `collect_state()` path, so they are unreachable from `dontpanic what-now` and the dashboard. Additionally, dashboard ActionItem IDs omit feature_id, so distinct blocked features sharing a choice kind collapse into one item. This slice wires the full setup/doctor surface into the live path with CLI+dashboard parity and makes ActionItem IDs feature-scoped.",
+      "steps": [
+        "Extend `collect_state()` so the live path derives every setup/doctor guidance state F007's builder can emit: missing registration, stale onboarding, unsupported roles.*, doctor --agent, doctor --project, agent brief, and home reconcile.",
+        "Ensure `dontpanic what-now [--feature F]` renders each setup/doctor state with its validated exact_command or requires_human advisory (reusing F007's exact_command validity rules, including the --force --yes re-onboard case).",
+        "Render the same setup/doctor ActionChoices into dashboard ActionItems so CLI and dashboard reach parity for setup guidance, not just quota/budget/iteration.",
+        "Make dashboard ActionItem IDs feature-scoped (include feature_id) so multiple blocked features with the same choice kind do not dedupe into a single item; preserve intentional plan-level blocker dedup.",
+        "Add tests proving each setup/doctor state is reachable from BOTH what-now and the built dashboard cache, and that two features with the same choice kind produce two distinct ActionItems."
+      ],
+      "acceptance": "(1) `collect_state()` (the live path used by `dontpanic what-now` and the dashboard) derives every setup/doctor guidance state F007's builder emits: missing registration, stale onboarding, unsupported roles.*, doctor --agent, doctor --project, agent brief, and home reconcile — none are builder-only/unreachable. (2) `dontpanic what-now` renders each of those setup/doctor states with a validated exact_command (per F007 7a–7e) or a requires_human advisory when no safe command exists. (3) The dashboard renders the same setup/doctor ActionChoices as ActionItems, achieving CLI+dashboard parity for setup guidance. (4) Dashboard ActionItem IDs include feature_id so two distinct blocked features sharing a choice kind produce two distinct items; intentional plan-level blocker dedup is preserved. (5) Tests prove each setup/doctor state is reachable from BOTH what-now and the built dashboard cache, and that two same-kind blocked features yield two distinct ActionItems (no collapse). (6) \"Validated exact_command\" means the command actually PASSES `command_validation.validate_command_tokens` (not merely that a string matches): `command_validation.py` must recognize every command operations_guidance can emit across all states — including `agent brief`, `finalize <plan> --feature <F>`, `what-now <plan> --feature <F>`, `orchestrate <plan>`, `doctor --agent`, `doctor --project <name>`, `reconcile homes [--dry-run]`, and `projects add <name> <path> --onboard --force --yes`. Any state whose command does NOT pass the validator must emit `requires_human` advisory with `exact_command=None` instead of an invalid string. (7) A test iterates EVERY non-null `exact_command` emitted by `build_guidance`/`collect_state` across all quota/budget/iteration/finalize/setup/doctor states and asserts each passes `validate_command_tokens` (stripping the `dontpanic`/`python -m dontpanic_orchestrate` prefix) — this is what makes the green suite actually prove validity (closing the codex i2 gap where string-equality tests let invalid shapes through).",
+      "passes": true,
+      "depends_on": [
+        "F007"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F012-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-01T17:07:51Z"
     },
     {
       "id": "F008",

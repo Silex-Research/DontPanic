@@ -774,6 +774,50 @@ def _finalize_main(argv: list[str]) -> int:
     return 0
 
 
+def _what_now_main(argv: list[str]) -> int:
+    """``dontpanic what-now <plan> [--feature F]`` — Plan 2026-05-30-001 F007.
+
+    Read-only operations guidance: collects the plan's quota / iteration / gate /
+    signoff state and prints a short decision set (recommended action +
+    alternatives, exact commands where safe, one dashboard affordance). The same
+    typed ActionChoice data feeds the dashboard ActionItems via
+    ``Guidance.to_action_items``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic what-now",
+        description=(
+            "Operations guidance for blocked work: wait/redispatch, "
+            "raise-ceiling, finalize a cleared signoff, resume/close, onboard, "
+            "or reconcile — with exact commands where safe."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--feature", default="F001", help="Feature ID (default F001)")
+    parser.add_argument(
+        "--dashboard-url",
+        default=None,
+        help="Active dashboard URL when a singleton is running (omit when not).",
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import operations_guidance
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    plan_id = plan_loader.load(plan_dir).plan_id
+    guidance = operations_guidance.collect_state(
+        plan_dir,
+        plan_id=plan_id,
+        feature_id=args.feature,
+        dashboard_url=args.dashboard_url,
+    )
+    if args.format == "json":
+        print(json.dumps(guidance.to_dict(), indent=2))
+    else:
+        print(operations_guidance.render_text(guidance), end="")
+    return 0
+
+
 def _close_main(argv: list[str]) -> int:
     """Plan 2026-05-11-002 v3 F004 — operator-resolved feature close-out.
 
@@ -3672,6 +3716,8 @@ def main(argv: list[str] | None = None) -> int:
         return _close_main(raw[1:])
     if raw and raw[0] == "finalize":
         return _finalize_main(raw[1:])
+    if raw and raw[0] == "what-now":
+        return _what_now_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":

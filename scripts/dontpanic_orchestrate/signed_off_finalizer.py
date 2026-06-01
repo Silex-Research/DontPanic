@@ -85,6 +85,30 @@ def _read_plan_tier(plan_dir: Path) -> str:
     return _DEFAULT_TIER
 
 
+def _latest_auditor_path(audit_paths: list[Path]) -> Path | None:
+    """Path of the freshest auditor envelope, ranked exactly like
+    :func:`closeout._latest_auditor_envelope` (mtime, then iteration index) so
+    the evidence ref points at the SAME artifact whose verdict authorized the
+    flip (F007 AC9)."""
+    best: Path | None = None
+    best_key: tuple[float, int] | None = None
+    for path in audit_paths:
+        if "auditor" not in path.name:
+            continue
+        try:
+            mtime = path.stat().st_mtime
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        key = (mtime, closeout._auditor_iteration_of(path))
+        if best_key is None or key > best_key:
+            best_key = key
+            best = path
+    return best
+
+
 def _agents_in_panel(audit_paths: list[Path]) -> list[str]:
     """Distinct agent names across the feature's audit envelopes, preserving
     first-seen order (implementer then auditor)."""
@@ -171,13 +195,29 @@ def finalize_signed_off_feature(
         )
         signoff_repaired = True
 
-    # Step 5 — flip only this feature, idempotently, citing the signoff envelope.
+    # Step 5 — flip only this feature, idempotently. The PRIMARY evidence ref
+    # (AC9) is the signed_off auditor envelope that authorized the flip; the
+    # repaired/existing signoff envelope is recorded alongside it.
     memo_rel = signoff_writer._audit_relpath(out_path, plan_dir)
+    extra_refs: list[dict[str, Any]] = []
+    auditor_path = _latest_auditor_path(audit_paths)
+    if auditor_path is not None:
+        extra_refs.append(
+            {
+                "type": "file",
+                "uri": signoff_writer._audit_relpath(auditor_path, plan_dir),
+                "note": (
+                    f"signed_off auditor envelope ({auditor}, iteration {iteration}) "
+                    f"that authorized the no-paid finalize"
+                ),
+            }
+        )
     _features_json, flipped = closeout._flip_feature_passes(
         plan_dir,
         feature_id,
         reason_class=FINALIZE_REASON,
         memo_relpath=memo_rel,
+        extra_refs=extra_refs,
     )
 
     already_finalized = not signoff_repaired and not flipped

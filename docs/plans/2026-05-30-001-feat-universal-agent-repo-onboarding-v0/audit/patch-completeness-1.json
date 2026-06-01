@@ -5,12 +5,11 @@
     {
       "mode": "test_file_untracked",
       "files": [
-        "scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
         "scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py"
       ],
       "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
       "severity": "block",
-      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py"
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py"
     },
     {
       "mode": "unstaged_dirty_state",
@@ -27,9 +26,7 @@
         "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-0-implementer.json",
         "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-auditor.json",
         "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-implementer.json",
-        "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-2-auditor.json",
-        "scripts/dontpanic_orchestrate/command_validation.py",
-        "scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
+        "scripts/dontpanic_orchestrate/operations_guidance.py",
         "scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py"
       ],
       "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files.",
@@ -38,7 +35,6 @@
     }
   ],
   "files": [
-    "scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py",
     "scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py",
     "CHANGELOG.md",
     "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
@@ -52,7 +48,6 @@
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-0-implementer.json",
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-auditor.json",
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-implementer.json",
-    "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-2-auditor.json",
-    "scripts/dontpanic_orchestrate/command_validation.py"
+    "scripts/dontpanic_orchestrate/operations_guidance.py"
   ]
 }

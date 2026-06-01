@@ -80,8 +80,10 @@ def test_finalize_flips_passes_and_repairs_signoff(tmp_path):
     assert result.already_finalized is False
     data = json.loads((plan_dir / "features.json").read_text())
     assert data["features"][0]["passes"] is True
-    # evidence_ref points at the signoff envelope.
     refs = data["features"][0].get("evidence_refs") or []
+    # AC9: evidence_refs cite the signed_off AUDITOR artifact that authorized the
+    # flip, alongside the signoff envelope.
+    assert any("codex-auditor-F001-i0.json" in (r.get("uri") or "") for r in refs)
     assert any("signoff-" in (r.get("uri") or "") for r in refs)
     # signoff envelope now exists and validates as signed_off.
     signoff = json.loads(result.signoff_path.read_text())

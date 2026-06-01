@@ -46,6 +46,27 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-05-30 — Operations guidance + no-paid finalizer (plan 2026-05-30-001 F007)
+
+### Added
+- `dontpanic what-now <plan> [--feature F] [--format text|json] [--dashboard-url URL]`:
+  read-only operations guidance that turns a blocked unit of work into a short
+  typed decision set — recommended action plus alternatives, an exact command
+  where one is safe and validated, a rationale, a risk band, and whether a human
+  must confirm. Covers quota cooldown (wait-until + redispatch + raise-ceiling
+  alternative), budget ceiling, admission threshold, max_iterations
+  remaining/exhausted, a signed_off feature paused at `pre_merge` (offers the
+  no-paid finalize once `pre_merge` is cleared), no-progress stops, and setup
+  friction (register/onboard, refresh brief, reconcile homes, unsupported worker
+  role, human-required config).
+- One response-level dashboard affordance per `what-now` output: the active URL
+  when a dashboard is running, otherwise the `dontpanic dashboard serve` start
+  command — shown once, referenced (not repeated) by individual choices.
+- The same typed `ActionChoice` data backs both the CLI text and the dashboard
+  ActionItems, so budget/iteration guidance never drifts between the two.
+
+Surfaces affected: ux, infra
+
 ## 2026-05-24 — Event messaging v1 (plan 2026-05-24-004)
 
 Layered, value-first notifications across every operator-visible sink. The

@@ -467,9 +467,81 @@ def _gather_action_items(
         supervisors = []
     supervisor_items = operator_console.provide_supervisor_actions(supervisors)
 
+    # Plan 2026-05-30-001 F007: surface the operations-guidance decision set
+    # (wait/redispatch, raise-ceiling, finalize a cleared signoff, resume/close)
+    # as ActionItems built from the SAME typed ActionChoice data the CLI prints,
+    # so budget/iteration/finalize decisions never drift between the two surfaces.
+    operations_items = _gather_operations_items(plan_dirs_by_id)
+
     return operator_console.aggregate(
-        gate_items, capability_items, reconcile_items, supervisor_items, arch_items
+        gate_items,
+        capability_items,
+        reconcile_items,
+        supervisor_items,
+        arch_items,
+        operations_items,
     )
+
+
+def _gather_operations_items(
+    plan_dirs_by_id: dict[str, Path],
+) -> tuple[operator_console.ActionItem, ...]:
+    """Build operations-guidance ActionItems for each plan with a blocked state.
+
+    Drives :func:`operations_guidance.collect_state` per plan AND per blocked
+    feature, converting the resulting choices via ``Guidance.to_action_items``
+    (F007 AC3). Finding 1: guidance must surface for the ACTUAL blocked feature(s)
+    — ``blocked_feature_ids`` reads ``features.json`` so F007 (and any other
+    in-flight feature) appears, not a hard-coded ``F001``. A plan/feature with no
+    operational blockers yields no choices and contributes nothing. Each plan and
+    feature is isolated in a try/except — a single malformed plan never sinks the
+    cache. Items are de-duplicated by id (a plan-level blocker that surfaces under
+    several features collapses to one ActionItem).
+    """
+    from dontpanic_orchestrate import operations_guidance
+
+    items: list[operator_console.ActionItem] = []
+    seen_ids: set[str] = set()
+    # AC7d: when any guidance references the response-level dashboard affordance,
+    # the affordance itself must be PRESENT in the cache (not just named in detail
+    # text). Capture one affordance across all plans and append exactly one item.
+    affordance: operations_guidance.DashboardAffordance | None = None
+    for plan_id, plan_dir in plan_dirs_by_id.items():
+        try:
+            feature_ids = operations_guidance.blocked_feature_ids(plan_dir)
+        except Exception:  # noqa: BLE001 — malformed features.json skipped
+            feature_ids = ["F001"]
+        for feature_id in feature_ids:
+            try:
+                guidance = operations_guidance.collect_state(
+                    plan_dir, plan_id=plan_id, feature_id=feature_id
+                )
+            except Exception:  # noqa: BLE001 — malformed/blocked-read plans skipped
+                continue
+            if not guidance.choices:
+                continue
+            if guidance.affordance is not None and affordance is None:
+                affordance = guidance.affordance
+            try:
+                feature_items = guidance.to_action_items()
+            except Exception:  # noqa: BLE001
+                continue
+            for item in feature_items:
+                if item.id in seen_ids:
+                    continue
+                seen_ids.add(item.id)
+                items.append(item)
+    # Append the single dashboard affordance item iff at least one operations
+    # item referenced it (i.e. some choice required human input).
+    if affordance is not None:
+        try:
+            hint = affordance.to_action_item()
+        except Exception:  # noqa: BLE001
+            hint = None
+        if hint is not None and hint.id not in seen_ids:
+            seen_ids.add(hint.id)
+            items.append(hint)
+    return tuple(items)
 
 
 @dataclass(frozen=True)

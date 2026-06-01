@@ -302,6 +302,7 @@ def _flip_feature_passes(
     *,
     reason_class: str,
     memo_relpath: str,
+    extra_refs: list[dict[str, Any]] | None = None,
 ) -> tuple[Path, bool]:
     """Set ``passes: true`` for the matching feature in ``features.json``.
 
@@ -309,6 +310,11 @@ def _flip_feature_passes(
     actually mutated. Idempotent — re-running on an already-flipped feature
     is a no-op. Preserves any pre-existing ``evidence_refs`` and appends a
     new entry pointing at the closeout memo (de-duplicated by uri).
+
+    ``extra_refs`` lets callers append additional evidence refs (each a dict
+    with at least a ``uri``) alongside the memo ref — e.g. the no-paid
+    finalizer cites the signed_off auditor envelope so the flip points at the
+    artifact that authorized it (F007 AC9). De-duplicated by uri like the memo.
     """
     features_json = plan_dir / "features.json"
     if not features_json.is_file():
@@ -352,6 +358,17 @@ def _flip_feature_passes(
         changed = True
     elif feature.get("evidence_refs") is None:
         feature["evidence_refs"] = refs
+
+    # Append any caller-supplied evidence refs (e.g. the signed_off auditor
+    # envelope) unless an entry with the same uri already exists.
+    for ref in extra_refs or []:
+        if not isinstance(ref, dict) or not ref.get("uri"):
+            continue
+        if any(isinstance(r, dict) and r.get("uri") == ref["uri"] for r in refs):
+            continue
+        refs.append(ref)
+        feature["evidence_refs"] = refs
+        changed = True
 
     if not feature.get("verified_by"):
         feature["verified_by"] = ["operator"]

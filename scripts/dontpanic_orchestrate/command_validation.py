@@ -164,7 +164,11 @@ _CAPABILITIES_SPEC = SubcommandSpec(
     },
 )
 
-# ``reconcile`` ships ``baseline`` and ``check`` per reconcile.py:_build_parser.
+# ``reconcile`` ships ``baseline``, ``check``, and ``homes`` per
+# reconcile.py:_build_parser. ``homes`` (Plan 2026-05-30-001 F006) reconciles
+# the canonical ~/.dontpanic home against the legacy ~/.jarvis home: dry-run by
+# default, ``--confirm`` to migrate. operations_guidance emits
+# ``reconcile homes --dry-run`` (AC7c) — bare ``reconcile`` exits 2.
 _RECONCILE_SPEC = SubcommandSpec(
     subcommands={
         "baseline": SubcommandSpec(
@@ -173,6 +177,10 @@ _RECONCILE_SPEC = SubcommandSpec(
         ),
         "check": SubcommandSpec(
             value_flags=frozenset({"--area", "--format"}),
+        ),
+        "homes": SubcommandSpec(
+            bool_flags=frozenset({"--confirm", "--dry-run"}),
+            value_flags=frozenset({"--format"}),
         ),
     },
 )
@@ -224,7 +232,9 @@ _PROJECTS_SPEC = SubcommandSpec(
             positional_min=2,
             positional_max=2,
             value_flags=frozenset({"--implementer", "--auditor", "--notes"}),
-            bool_flags=frozenset({"--force", "--yes", "--init-config", "--json"}),
+            bool_flags=frozenset(
+                {"--force", "--yes", "--init-config", "--json", "--onboard", "--dry-run"}
+            ),
         ),
         "list": SubcommandSpec(bool_flags=frozenset({"--json"})),
         "show": SubcommandSpec(
@@ -257,6 +267,46 @@ _MCP_SPEC = SubcommandSpec(
     subcommands={
         "serve": SubcommandSpec(),
     },
+)
+
+# ``agent`` subcommands per cli.py:_agent_main (F002). operations_guidance emits
+# ``agent brief`` (the refresh-brief setup choice). ``brief`` takes only --json;
+# ``status``/``setup`` take a name positional; ``register-worker`` is the guarded
+# role-assignment write path.
+_AGENT_SPEC = SubcommandSpec(
+    subcommands={
+        "brief": SubcommandSpec(bool_flags=frozenset({"--json"})),
+        "status": SubcommandSpec(positional_min=0, positional_max=1),
+        "setup": SubcommandSpec(positional_min=1, positional_max=1),
+        "register-worker": SubcommandSpec(
+            positional_min=1,
+            positional_max=1,
+            value_flags=frozenset({"--role"}),
+            bool_flags=frozenset({"--global", "--project", "--dry-run"}),
+        ),
+    },
+)
+
+# ``dispatch-from-plan`` and its teaching gateway ``orchestrate`` share one
+# shape: ``orchestrate`` (cli.py:_orchestrate_main) forwards its argv verbatim to
+# ``_dispatch_from_plan_main``. operations_guidance emits the redispatch command
+# ``orchestrate <plan> --confirm`` (AC7a), so the validator recognizes both
+# spellings against the identical spec.
+_DISPATCH_FROM_PLAN_SPEC = SubcommandSpec(
+    positional_min=1,
+    positional_max=1,
+    bool_flags=frozenset({"--confirm"}),
+    value_flags=frozenset(
+        {
+            "--feature",
+            "--implementer",
+            "--auditor",
+            "--max-iterations",
+            "--mode",
+            "--allow-incomplete-patch",
+            "--unrelated-dirty-state-note",
+        }
+    ),
 )
 
 _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
@@ -329,27 +379,36 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     # (--volley, --role, --iteration, --allow-depth, --allow-incomplete-patch-reason)
     # belong to ``python -m dontpanic_orchestrate <plan-id>`` (no subcommand
     # token), NOT to dispatch-from-plan. Removing them per the F001 audit.
-    "dispatch-from-plan": SubcommandSpec(
+    "dispatch-from-plan": _DISPATCH_FROM_PLAN_SPEC,
+    # ``orchestrate`` is the teaching gateway that forwards to dispatch-from-plan
+    # (cli.py:_orchestrate_main); same shape. operations_guidance's redispatch
+    # command ``orchestrate <plan> --confirm`` (AC7a) validates here.
+    "orchestrate": _DISPATCH_FROM_PLAN_SPEC,
+    # ``finalize <plan> --feature <F>`` per cli.py:_finalize_main — --feature is
+    # required. operations_guidance's no-paid finalize choice emits this (AC6).
+    "finalize": SubcommandSpec(
         positional_min=1,
         positional_max=1,
-        bool_flags=frozenset({"--confirm"}),
-        value_flags=frozenset(
-            {
-                "--feature",
-                "--implementer",
-                "--auditor",
-                "--max-iterations",
-                "--mode",
-                "--allow-incomplete-patch",
-                "--unrelated-dirty-state-note",
-            }
-        ),
+        value_flags=frozenset({"--feature"}),
+        required_flags=frozenset({"--feature"}),
     ),
+    # ``what-now <plan> [--feature F]`` per cli.py:_what_now_main. Listed in the
+    # AC6 command set; read-only guidance surface.
+    "what-now": SubcommandSpec(
+        positional_min=1,
+        positional_max=1,
+        value_flags=frozenset({"--feature", "--dashboard-url", "--format"}),
+    ),
+    "agent": _AGENT_SPEC,
     # ``doctor`` per cli.py:_doctor_main (parser at cli.py:1422-1520). The
     # earlier validator listed --strict, which does not exist; the real
     # promote-WARN-to-FAIL flags are --validate-plans-strict /
     # --architecture-drift-strict / --profile-strict. Adding --json plus the
     # full profile/report/validation flag surface.
+    # ``--agent`` (bool) and ``--project NAME_OR_PATH`` (value) per cli.py F005
+    # (cli.py:1724-1743). operations_guidance emits ``doctor --agent`` and
+    # ``doctor --project <name>`` (F012 setup/doctor surface), so both must
+    # validate or those choices would fall back to requires_human (AC6/AC7).
     "doctor": SubcommandSpec(
         bool_flags=frozenset(
             {
@@ -360,6 +419,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
                 "--architecture-drift-strict",
                 "--profile-strict",
                 "--report",
+                "--agent",
             }
         ),
         value_flags=frozenset(
@@ -368,6 +428,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
                 "--architecture-json",
                 "--profile",
                 "--report-path",
+                "--project",
             }
         ),
     ),

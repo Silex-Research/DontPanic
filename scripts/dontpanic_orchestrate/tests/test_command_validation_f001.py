@@ -494,6 +494,14 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "setup",
         "calibrate-claude",
         "dispatch-from-plan",
+        # Plan 2026-05-30-001 F012: operations_guidance emits these shapes, so
+        # the validator must recognize them (AC6/AC7). orchestrate is the
+        # teaching gateway over dispatch-from-plan; agent/finalize/what-now are
+        # first-class top-level subcommands in cli.py:main.
+        "orchestrate",
+        "finalize",
+        "what-now",
+        "agent",
         "doctor",
         "init",
         "smoke",

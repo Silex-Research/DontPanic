@@ -1,0 +1,38 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-01T15:33:06Z",
+  "completed_at": "2026-06-01T15:37:05Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F007-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-s3oube56 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 817460 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3493244,
+    "tokens_out": 15118,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F007] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: signed_off. No findings. The implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly in the summary, and `target_context.commands_run` contains no forbidden command shapes. The staged/worktree implementation matches the F007 scope: typed `ActionChoice` guidance, CLI/dashboard rendering, AC7a-7e command guards, and no-paid `finalize`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py -q -p no:cacheprovider -s -k \"not collect_state and not dashboard_gathers and not dashboard_surfaces and not blocked_feature_ids and not 7d\"\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli finalize --help\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli what-now --help\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli reconcile homes --help\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli projects add --help\n$ PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli what-now docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --feature F007 --format json\n$ PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import operations_guidance as og; p='p'; it=og.Iterati",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py -q -p no:cacheprovider -s -k \"not collect_state and not dashboard_gathers and not dashboard_surfaces and not blocked_feature_ids and not 7d\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli finalize --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli what-now --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli reconcile homes --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli projects add --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli what-now docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --feature F007 --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate import operations_guidance as og; p='p'; it=og.IterationState(3,3); g=og.build_guidance(p, feature_id='F007', quota_cooldown=og.QuotaCooldownState(agent='codex', observed_pct=85, threshold=70), iteration=it); print([c.exact_command for c in g.choices]); g2=og.build_guidance(p, feature_id='F007', no_progress=og.NoProgressState('breaker:no_progress','2 rounds')); print([c.exact_command for c in g2.choices]); g3=og.build_guidance(p, setup=og.SetupNeeds(split_config_homes=True)); print([c.exact_command for c in g3.choices]); g4=og.build_guidance(p, setup=og.SetupNeeds(stale_onboarding=True, project_name='r', project_path='/p')); print([c.exact_command for c in g4.choices])\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

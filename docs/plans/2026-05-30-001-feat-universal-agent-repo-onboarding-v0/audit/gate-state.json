@@ -179,6 +179,125 @@
       "gate": "breaker:no_progress",
       "at": "2026-05-31T03:52:57Z",
       "actor": "operator"
+    },
+    {
+      "action": "defer_trip",
+      "gate": "defer:quota_threshold",
+      "at": "2026-06-01T05:17:11Z",
+      "actor": "supervisor",
+      "reason": "codex percent_weekly 4610.4% > threshold 70.0%"
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-01T05:17:11Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "defer:quota_threshold"
+      ]
+    },
+    {
+      "action": "defer_clear",
+      "gate": "defer:quota_threshold",
+      "at": "2026-06-01T05:19:10Z",
+      "actor": "supervisor",
+      "reason": "condition_cleared"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T05:31:57Z",
+      "actor": "supervisor",
+      "reason": "codex.plus.rolling_5h observed 1.264e+08 tokens_local_proxy > cap 2741314 tokens_local_proxy (confidence=uncalibrated)"
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-01T05:42:30Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:budget_ceiling"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T05:43:04Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T06:07:11Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-01T12:49:45Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:no_progress"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T12:50:34Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T13:04:50Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T15:23:08Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-06-01T16:30:13Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-01T16:42:23Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:iteration_cap"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-06-01T16:44:39Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-06-01T16:50:08Z",
+      "actor": "supervisor",
+      "reason": "verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-01T16:56:34Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:environmental_blocker"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-06-01T16:57:22Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [

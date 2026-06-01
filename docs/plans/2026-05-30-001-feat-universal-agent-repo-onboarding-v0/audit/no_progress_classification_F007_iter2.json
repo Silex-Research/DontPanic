@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-06-01T13:04:49Z",
+  "feature_id": "F007",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Stale onboarding emits an exact command that is not valid for the current registered-project state. Evidence: `operations_guidance.py:731-733` emits `dontpanic…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "CLI/dashboard live guidance does not consume most project/doctor setup state, so missing registration, stale onboarding, unsupported roles, `doctor --agent`, `…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "Dashboard ActionItem IDs omit `feature_id`, so multiple blocked features with the same choice kind collapse into one item. Evidence: `Guidance.to_action_items(…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

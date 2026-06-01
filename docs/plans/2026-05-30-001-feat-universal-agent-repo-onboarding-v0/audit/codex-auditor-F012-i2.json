@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-01T16:26:05Z",
+  "completed_at": "2026-06-01T16:30:13Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F012-i2.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-96mvrwkw target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 568985 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3179671,
+    "tokens_out": 14906,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F012] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes.\n\nFINDING (high, correctness): Setup/doctor `exact_command` values are not validated against the repo’s command validator. Evidence: `validate_command_tokens` rejects `dontpanic doctor --agent`, `dontpanic doctor --project myrepo`, `dontpanic reconcile homes --dry-run`, `dontpanic agent brief`, and `dontpanic projects add ... --onboard --force --yes`, while `what-now`/dashboard now emit them as exact commands. Recommendation: update `command_validation.py` for the F005/F006/F007 command surface and add tests that every emitted setup `exact_command` validates.\n\nFINDING (medium, test_coverage): The new F012 tests assert command strings but do not exercise the exact-command validator, which is why the invalid shapes above slipped through. Evidence: `test_setup_state_reachable_*` checks `choice.exact_command == command`, but never calls `validate_command_tokens`. Recommendation: extend the parametrized setup cases to validate every non-null exact command.\n\nImplementer target context: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` and structured `target_context` is `env=dev`, `project=null`, `commands_run=[]`; no forbidden command shapes were present.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-only HEAD~1\n$ PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py -p no:cacheprovider",
+      "python -c \"import shlex; from dontpanic_orchestrate.command_validation import validate_command_tokens; cmds=['dontpanic doctor --agent','dontpanic doctor --project myrepo','dontpanic reconcile homes --dry-run','dontpanic agent brief','dontpanic projects add myrepo /repo/myrepo --onboard --force --yes']; for c in cmds: r=validate_command_tokens(shlex.split(c)[1:]); print(c, r.ok, r.errors)\"",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/operations_guidance.py scripts/dontpanic_orchestrate/dashboard.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F012",
+      "issue": "Setup/doctor `exact_command` values are not validated against the repo’s command validator. Evidence: `validate_command_tokens` rejects `dontpanic doctor --agent`, `dontpanic doctor --project myrepo`, `dontpanic reconcile homes --dry-run`, `dontpanic agent brief`, and `dontpanic projects add ... --onboard --force --yes`, while `what-now`/dashboard now emit them as exact commands. Recommendation: update `command_validation.py` for the F005/F006/F007 command surface and add tests that every emitte",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F012",
+      "issue": "The new F012 tests assert command strings but do not exercise the exact-command validator, which is why the invalid shapes above slipped through. Evidence: `test_setup_state_reachable_*` checks `choice.exact_command == command`, but never calls `validate_command_tokens`. Recommendation: extend the parametrized setup cases to validate every non-null exact command. Implementer target context: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` and structured `target_context` is `env=",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
