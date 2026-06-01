@@ -1,0 +1,42 @@
+{
+  "audit_id": "2026-05-30-001#codex#F005F006#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "model": "gpt-5.5",
+  "scope": "F005+F006 batched cross-agent audit",
+  "verdict": {
+    "overall_verdict": "needs_changes",
+    "per_feature": {
+      "F005": {
+        "verdict": "needs_changes",
+        "note": "Core role-registry checks are present, but manifest validation and managed-block freshness are incomplete."
+      },
+      "F006": {
+        "verdict": "needs_changes",
+        "note": "Reconcile behavior is mostly sound, but split-brain detection is only wired through doctor --agent, not the normal doctor path."
+      }
+    },
+    "findings": [
+      {
+        "severity": "high",
+        "feature": "F005",
+        "issue": "agent-manifest validation is unsound: agent_manifest.load_manifest() swallows invalid JSON/schema and returns None, so doctor --agent reports an invalid existing manifest as a valid missing zero-state instead of FAILing."
+      },
+      {
+        "severity": "high",
+        "feature": "F005",
+        "issue": "managed-block freshness only compares generator version. It does not validate the stored hash/body against the current generated brief, so edited or content-stale AGENTS.md managed blocks can pass as current."
+      },
+      {
+        "severity": "medium",
+        "feature": "F006",
+        "issue": "split-brain home detection is not included in the default dontpanic doctor run_all_checks path; users running the canonical doctor command will not see ~/.dontpanic vs ~/.jarvis contradictions unless they know to run doctor --agent."
+      },
+      {
+        "severity": "low",
+        "feature": "F005",
+        "issue": "managed-block remediation for registered projects suggests `dontpanic projects add NAME PATH --onboard`, but projects add refuses an already-registered project without `--force --yes`, so the printed remediation is not directly executable for the common registered-project case."
+      }
+    ]
+  }
+}

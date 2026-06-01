@@ -906,7 +906,12 @@ def _check_managed_block(name: str, project_path: Path) -> CheckResult:
         sys.path.pop(0)
 
     cname = f"project:{name}:managed-block"
-    remediation = f"run `dontpanic projects add {name} {project_path} --onboard` to (re)write the managed block"
+    # Plan 2026-05-30-001 F005 (codex audit finding #4): `projects add` refuses an
+    # already-registered name without --force --yes, so the re-onboard remediation
+    # must include them to be directly executable for the common registered case.
+    remediation = (
+        f"run `dontpanic projects add {name} {project_path} --onboard --force --yes` to (re)write the managed block"
+    )
     agents_md = project_path / "AGENTS.md"
     if not agents_md.is_file():
         return _warn(cname, f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)", remediation)
@@ -928,7 +933,19 @@ def _check_managed_block(name: str, project_path: Path) -> CheckResult:
             f"managed block generator {generator!r} != current {ro.ONBOARDING_GENERATOR_VERSION!r} (stale)",
             remediation,
         )
-    return _ok(cname, f"managed block present + current (generator {generator})")
+    # Plan 2026-05-30-001 F005 (codex audit finding #2): generator-version match
+    # alone is not freshness — a block whose body was hand-edited inside the
+    # markers (while the marker hash was left untouched) is stale/tampered. Verify
+    # the on-disk body actually hashes to the stored marker hash (the integrity
+    # clause repo_onboarding._block_is_fresh enforces).
+    on_disk_hash = ro._body_hash(match.group("body"))
+    if on_disk_hash != match.group("hash"):
+        return _warn(
+            cname,
+            f"managed block body was edited after generation (on-disk hash != marker hash) — content is stale/tampered",
+            remediation,
+        )
+    return _ok(cname, f"managed block present + current (generator {generator}, body integrity ok)")
 
 
 def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
@@ -980,12 +997,25 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
         )
     else:
         if manifest is None:
-            results.append(
-                _ok(
-                    "agent:manifest",
-                    f"{am.manifest_path()} not present (zero-state — run `dontpanic agent init` to generate)",
+            # Plan 2026-05-30-001 F005 (codex F005/F006 audit finding #1):
+            # load_manifest() swallows invalid JSON / schema violations and
+            # returns None — same as absent. Distinguish: a present-but-None
+            # manifest is INVALID (FAIL), not the valid zero-state.
+            if am.manifest_path().is_file():
+                results.append(
+                    _bad(
+                        "agent:manifest",
+                        f"{am.manifest_path()} exists but failed to load (invalid JSON or schema validation)",
+                        f"fix or remove {am.manifest_path()} (regenerate with `dontpanic agent init`); see logs for the parse/validation error",
+                    )
                 )
-            )
+            else:
+                results.append(
+                    _ok(
+                        "agent:manifest",
+                        f"{am.manifest_path()} not present (zero-state — run `dontpanic agent init` to generate)",
+                    )
+                )
         else:
             results.append(_ok("agent:manifest", f"{am.manifest_path()} parses + validates"))
 
@@ -1050,11 +1080,20 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
         )
     )
 
-    # 6. config-home split-brain (Plan 2026-05-30-001 F006 AC1). Surface
-    # ~/.dontpanic vs ~/.jarvis divergence with file-level detail; advisory WARN
-    # pointing at the reconcile command. Divergent files are a sharper signal
-    # than legacy-only (migratable) files, but both stay advisory so the doctor
-    # exit isn't escalated by an opt-in legacy home.
+    # 6. config-home split-brain (Plan 2026-05-30-001 F006 AC1). Reuses the
+    # shared check so doctor --agent AND the canonical default doctor both
+    # surface it (codex F005/F006 audit finding #3).
+    results.append(check_config_home())
+
+    return results
+
+
+def check_config_home() -> CheckResult:
+    """Plan 2026-05-30-001 F006 (codex audit finding #3): surface a split-brain
+    between the canonical (~/.dontpanic) and legacy (~/.jarvis) homes with
+    file-level detail. Advisory WARN pointing at `reconcile homes` so an opt-in
+    legacy home never escalates the doctor exit. Run by both check_agent_
+    onboarding and the default run_all_checks path."""
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     try:
         from dontpanic_orchestrate import home_reconcile as hr
@@ -1063,22 +1102,17 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
     states = hr.classify_homes()
     legacy_only, divergent = hr.split_brain_summary(states)
     if not legacy_only and not divergent:
-        results.append(_ok("agent:config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled"))
-    else:
-        parts = []
-        if legacy_only:
-            parts.append(f"legacy-only (migratable): {', '.join(legacy_only)}")
-        if divergent:
-            parts.append(f"divergent (needs manual merge): {', '.join(divergent)}")
-        results.append(
-            _warn(
-                "agent:config-home",
-                "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
-                "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
-            )
-        )
-
-    return results
+        return _ok("config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled")
+    parts = []
+    if legacy_only:
+        parts.append(f"legacy-only (migratable): {', '.join(legacy_only)}")
+    if divergent:
+        parts.append(f"divergent (needs manual merge): {', '.join(divergent)}")
+    return _warn(
+        "config-home",
+        "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
+        "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
+    )
 
 
 def check_project_onboarding(name_or_path: str) -> list[CheckResult]:
@@ -2280,6 +2314,11 @@ def run_all_checks(
         results.append(check_global_config())
         results.append(check_projects_registry_status())
         results.extend(check_registered_projects())
+        # Plan 2026-05-30-001 F006 (codex audit finding #3): the canonical
+        # doctor (which always runs with include_projects=True via the CLI
+        # wrapper) surfaces ~/.dontpanic vs ~/.jarvis split-brain, not only
+        # `doctor --agent`. Advisory WARN — never escalates the exit code.
+        results.append(check_config_home())
     if validate_plans:
         results.extend(check_plan_cohesion())
     results.extend(

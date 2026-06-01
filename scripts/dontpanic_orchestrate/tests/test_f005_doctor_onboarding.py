@@ -222,3 +222,45 @@ def test_doctor_main_agent_flag_exit_zero_when_healthy(doctor, capsys):
 def test_doctor_main_project_flag_unknown_exits_fail(doctor, capsys):
     rc = doctor.main(["--project", "definitely-not-registered"])
     assert rc == 2  # strict-exit FAIL
+
+
+# ─────────── codex F005/F006 audit regressions (cross-agent findings) ───────────
+
+
+def test_agent_manifest_invalid_fails(doctor):
+    # Finding #1: a present-but-invalid manifest must FAIL, not be reported as a
+    # valid missing zero-state (load_manifest() returns None for both).
+    from dontpanic_orchestrate import agent_manifest as am
+
+    path = am.manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{ this is not valid json")
+
+    manifest = _by_name(doctor.check_agent_onboarding(), "agent:manifest")
+    assert not manifest.ok, "an invalid manifest must FAIL"
+    assert "exists but failed to load" in manifest.message
+
+
+def test_managed_block_body_edit_is_stale(doctor, tmp_path):
+    # Finding #2: a managed block whose body was hand-edited after generation
+    # (marker hash untouched) is stale — generator-version match is not enough.
+    from dontpanic_orchestrate import repo_onboarding as ro
+
+    repo = _make_repo(tmp_path, config={})
+    block = ro.render_block(ro.BLOCK_AGENTS, "# brief\n\noriginal body\n")
+    tampered = block.replace("original body", "HAND-EDITED body")  # body changed, marker hash stale
+    (repo / "AGENTS.md").write_text(tampered + "\n")
+    _register_project("demo", repo)
+
+    mb = _by_name(doctor.check_project_onboarding("demo"), "project:demo:managed-block")
+    assert mb.warn is True
+    assert "edited after generation" in mb.message or "tamper" in mb.message
+
+
+def test_managed_block_remediation_is_executable(doctor, tmp_path):
+    # Finding #4: re-onboard remediation must include --force --yes (projects add
+    # refuses an already-registered name otherwise).
+    repo = _make_repo(tmp_path, config={})
+    _register_project("demo", repo)
+    mb = _by_name(doctor.check_project_onboarding("demo"), "project:demo:managed-block")
+    assert "--force --yes" in mb.remediation

@@ -157,7 +157,7 @@ def test_doctor_agent_surfaces_split_brain(doctor):
     (legacy / "agent-manifest.json").write_text('{"schema_version":"1.0"}')
 
     results = doctor.check_agent_onboarding()
-    ch = next(r for r in results if r.name == "agent:config-home")
+    ch = next(r for r in results if r.name == "config-home")
     assert ch.warn is True
     assert "agent-manifest.json" in ch.message
     assert "reconcile homes" in ch.remediation
@@ -167,7 +167,7 @@ def test_doctor_agent_clean_when_reconciled(doctor):
     # Both homes empty (the isolated zero-state) → reconciled, no split-brain.
     _homes()
     results = doctor.check_agent_onboarding()
-    ch = next(r for r in results if r.name == "agent:config-home")
+    ch = next(r for r in results if r.name == "config-home")
     assert ch.ok is True
     assert ch.warn is False
 
@@ -177,6 +177,17 @@ def test_doctor_agent_surfaces_divergent(doctor):
     (canonical / "config.json").write_text('{"a":1}')
     (legacy / "config.json").write_text('{"a":2}')
     results = doctor.check_agent_onboarding()
-    ch = next(r for r in results if r.name == "agent:config-home")
+    ch = next(r for r in results if r.name == "config-home")
     assert ch.warn is True
     assert "divergent" in ch.message
+
+
+def test_default_doctor_surfaces_config_home(doctor):
+    # codex F005/F006 audit finding #3: the canonical default doctor path (not
+    # only --agent) must surface split-brain. Empty isolated homes -> config-home
+    # present + OK (so it's wired) without warning.
+    _homes()
+    results = doctor.run_all_checks(skip_auth=True, include_projects=True)
+    ch = next((r for r in results if r.name == "config-home"), None)
+    assert ch is not None, "default doctor (include_projects) must run check_config_home"
+    assert ch.ok is True
