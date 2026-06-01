@@ -1677,6 +1677,26 @@ def _doctor_main(argv: list[str]) -> int:
             "path. Default = <repo>/docs/install-report.html."
         ),
     )
+    parser.add_argument(
+        "--agent",
+        action="store_true",
+        help=(
+            "Plan 2026-05-30-001 F005: validate the machine onboarding layer "
+            "(CLI, agent-manifest, registered executors, global roles.*) and "
+            "list registered worker executors."
+        ),
+    )
+    parser.add_argument(
+        "--project",
+        type=str,
+        default=None,
+        metavar="NAME_OR_PATH",
+        help=(
+            "Plan 2026-05-30-001 F005: validate ONE project's onboarding "
+            "(config / agents / roles.* / managed AGENTS.md block) by "
+            "registry name or filesystem path."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1695,6 +1715,12 @@ def _doctor_main(argv: list[str]) -> int:
     # render_text/render_json + report wiring in one place rather than
     # forking the logic between cli.py and dontpanic_doctor.py.
     if args.profile is not None or args.report:
+        return jd.main(argv)
+
+    # Plan 2026-05-30-001 F005: the agent / project onboarding surfaces are
+    # owned by jd.main (single place for render + strict-exit). Delegate the
+    # raw argv so the new flags + their 0/1/2 matrix flow through unchanged.
+    if args.agent or args.project is not None:
         return jd.main(argv)
 
     results = jd.run_all_checks(

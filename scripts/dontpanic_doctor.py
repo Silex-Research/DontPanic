@@ -53,6 +53,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 try:
@@ -823,7 +824,283 @@ def check_registered_project(entry: object) -> list[CheckResult]:
     else:
         results.append(_ok(f"project:{name}:gates", "no per-project human_gates override"))
 
+    # 6. project roles.* validity (Plan 2026-05-30-001 F005 AC4). The legacy
+    # implementer/auditor fields are covered by sub-check #4 above; this adds
+    # the canonical roles.* layer so an unknown roles.implementer (e.g.
+    # 'Grok-Builder') FAILs even when the legacy fields are clean.
+    results.extend(
+        _validate_roles_against_registry(
+            name_prefix=f"project:{name}:roles",
+            layer_label="project",
+            roles_obj=getattr(project_cfg, "roles", None) if project_cfg is not None else None,
+            remediation=(
+                f"run `dontpanic project config set roles.<role> <agent>` in {project_path} "
+                "with a registered executor (claude, codex)"
+            ),
+        )
+    )
+
+    # NOTE: the managed-block freshness check (Plan 2026-05-30-001 F005 AC6) is
+    # intentionally NOT part of the --include-projects sweep — repo onboarding
+    # is opt-in, so a non-onboarded registered project must not introduce a WARN
+    # into the broad sweep (preserves the F003 per-project clean-state contract).
+    # It runs only on the explicit `doctor --project NAME` surface, appended by
+    # check_project_onboarding.
+
     return results
+
+
+# ── plan 2026-05-30-001 F005: agent + project onboarding doctor ───────────
+#
+# Two operator-facing surfaces backed by the same generated-brief data:
+#   `dontpanic doctor --agent`            — machine onboarding layer
+#   `dontpanic doctor --project <name>`   — one project's onboarding block
+# Both reuse the CheckResult pipeline so rendering + strict-exit are shared.
+
+
+def _validate_roles_against_registry(
+    *, name_prefix: str, layer_label: str, roles_obj: object, remediation: str
+) -> list[CheckResult]:
+    """Validate every declared ``roles.<role>`` value on ``roles_obj`` against
+    AGENT_REGISTRY. ``roles_obj`` is a RolesConfig (or None). Each unknown
+    executor (e.g. ``Grok-Builder``) is a FAIL so an operator can't dispatch a
+    role to an unrunnable agent. Returns one CheckResult under ``name_prefix``.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import project_config as pc
+    finally:
+        sys.path.pop(0)
+
+    if roles_obj is None:
+        return [_ok(name_prefix, f"no {layer_label} roles.* overrides declared")]
+
+    declared: list[tuple[str, str]] = []
+    for role in ("implementer", "auditor", "goal_auditor"):
+        val = getattr(roles_obj, role, None)
+        if val:
+            declared.append((role, val))
+    if not declared:
+        return [_ok(name_prefix, f"no {layer_label} roles.* overrides declared")]
+
+    unknown = [(r, a) for r, a in declared if not pc.is_known_agent(a)]
+    if unknown:
+        details = ", ".join(f"roles.{r}={a!r}" for r, a in unknown)
+        return [_bad(name_prefix, f"{layer_label} role(s) not in AGENT_REGISTRY: {details}", remediation)]
+    joined = ", ".join(f"roles.{r}={a}" for r, a in declared)
+    return [_ok(name_prefix, f"{layer_label} roles recognized: {joined}")]
+
+
+def _check_managed_block(name: str, project_path: Path) -> CheckResult:
+    """Plan 2026-05-30-001 F005: the project's ``AGENTS.md`` carries a
+    *current* DontPanic managed block. Repo onboarding is OPT-IN, so a missing
+    or absent block is ADVISORY (WARN) — not every registered project has run
+    ``projects add --onboard`` — and a present-but-stale block (generator
+    version drift) is also WARN; a current block is PASS. The remediation is
+    always the exact ``projects add --onboard`` invocation that (re)writes the
+    block. (A genuine I/O error reading the file is still a hard FAIL.)"""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import repo_onboarding as ro
+    finally:
+        sys.path.pop(0)
+
+    cname = f"project:{name}:managed-block"
+    remediation = f"run `dontpanic projects add {name} {project_path} --onboard` to (re)write the managed block"
+    agents_md = project_path / "AGENTS.md"
+    if not agents_md.is_file():
+        return _warn(cname, f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)", remediation)
+    try:
+        text = agents_md.read_text()
+    except OSError as exc:
+        return _bad(cname, f"{agents_md} is unreadable: {exc}", f"check file permissions on {agents_md}")
+    match = ro.find_block(text, ro.BLOCK_AGENTS)
+    if match is None:
+        return _warn(
+            cname,
+            f"{agents_md} has no DontPanic managed block (marker '{ro.BLOCK_AGENTS}' absent — repo not onboarded)",
+            remediation,
+        )
+    generator = match.group("generator")
+    if generator != ro.ONBOARDING_GENERATOR_VERSION:
+        return _warn(
+            cname,
+            f"managed block generator {generator!r} != current {ro.ONBOARDING_GENERATOR_VERSION!r} (stale)",
+            remediation,
+        )
+    return _ok(cname, f"managed block present + current (generator {generator})")
+
+
+def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
+    """Plan 2026-05-30-001 F005: validate the MACHINE onboarding layer.
+
+    Surfaces: CLI invocability, agent-manifest validity, registered worker
+    executors (with availability), supported-command coverage, and global
+    ``roles.*`` validity. ``skip_auth`` is accepted for signature symmetry
+    with the other check entrypoints (no auth probes run here).
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        import importlib.util as _ilu
+
+        from dontpanic_orchestrate import agent_manifest as am
+        from dontpanic_orchestrate import global_config as gc
+        from dontpanic_orchestrate.executors import AGENT_REGISTRY, get_executor
+    finally:
+        sys.path.pop(0)
+
+    results: list[CheckResult] = []
+
+    # 1. CLI invocable: console-script on PATH OR the module importable.
+    on_path = shutil.which("dontpanic") is not None
+    module_ok = _ilu.find_spec("dontpanic_orchestrate.cli") is not None
+    if on_path or module_ok:
+        how = "console-script on PATH" if on_path else "module import"
+        results.append(_ok("agent:cli", f"dontpanic is invocable ({how})"))
+    else:
+        results.append(
+            _bad(
+                "agent:cli",
+                "dontpanic is neither on PATH nor importable as dontpanic_orchestrate.cli",
+                "install the console script (pipx install / pip install -e) or add scripts/ to PYTHONPATH",
+            )
+        )
+
+    # 2. agent-manifest: absent is the valid zero-state; present-but-invalid FAILs.
+    manifest = None
+    try:
+        manifest = am.load_manifest()
+    except Exception as exc:  # noqa: BLE001 — surface any manifest load failure as a doctor FAIL
+        results.append(
+            _bad(
+                "agent:manifest",
+                f"{am.manifest_path()} failed to load: {exc}",
+                f"fix or remove {am.manifest_path()}; a missing manifest is the valid zero-state",
+            )
+        )
+    else:
+        if manifest is None:
+            results.append(
+                _ok(
+                    "agent:manifest",
+                    f"{am.manifest_path()} not present (zero-state — run `dontpanic agent init` to generate)",
+                )
+            )
+        else:
+            results.append(_ok("agent:manifest", f"{am.manifest_path()} parses + validates"))
+
+    # 3. executor registry non-empty + per-executor availability (AC1).
+    if not AGENT_REGISTRY:
+        results.append(
+            _bad(
+                "agent:executors",
+                "AGENT_REGISTRY is empty — no worker executors registered",
+                "register at least one executor (claude, codex) in executors/__init__.py",
+            )
+        )
+    else:
+        parts: list[str] = []
+        for agent_name in sorted(AGENT_REGISTRY):
+            try:
+                avail = get_executor(agent_name).is_available()
+            except Exception:  # noqa: BLE001 — availability probe must never crash the doctor
+                avail = False
+            parts.append(f"{agent_name}({'available' if avail else 'unavailable'})")
+        results.append(_ok("agent:executors", f"registered worker executors: {', '.join(parts)}"))
+
+    # 4. supported-command coverage: the manifest (or the default set) must
+    # advertise the core dispatch command so an onboarded agent knows it can
+    # orchestrate. Surface the full list for operator visibility.
+    try:
+        commands = list(manifest.supported_commands) if manifest is not None else am._default_supported_commands()
+    except Exception:  # noqa: BLE001
+        commands = []
+    if "orchestrate" in commands:
+        results.append(_ok("agent:commands", f"supported commands include 'orchestrate' ({', '.join(commands)})"))
+    elif commands:
+        results.append(
+            _warn(
+                "agent:commands",
+                f"supported commands do not include 'orchestrate': {', '.join(commands)}",
+                "regenerate the manifest with `dontpanic agent init` so it advertises the dispatch command",
+            )
+        )
+    else:
+        results.append(
+            _bad(
+                "agent:commands",
+                "no supported commands resolved (manifest + defaults both empty)",
+                "regenerate the manifest with `dontpanic agent init`",
+            )
+        )
+
+    # 5. global roles.* validity (AC3): an unknown global roles.<role> FAILs.
+    global_cfg = None
+    try:
+        global_cfg = gc.load_config()
+    except Exception:  # noqa: BLE001 — a broken global config is surfaced by check_global_config; don't double-fail
+        global_cfg = None
+    roles_obj = getattr(global_cfg, "roles", None) if global_cfg is not None else None
+    results.extend(
+        _validate_roles_against_registry(
+            name_prefix="agent:roles",
+            layer_label="global",
+            roles_obj=roles_obj,
+            remediation="run `dontpanic config set roles.<role> <agent>` with a registered executor (claude, codex)",
+        )
+    )
+
+    return results
+
+
+def check_project_onboarding(name_or_path: str) -> list[CheckResult]:
+    """Plan 2026-05-30-001 F005: validate ONE project by registry name or by
+    filesystem path. A registered name resolves to its ``ProjectEntry``; an
+    unregistered path is validated in-place (synthetic entry) so operators can
+    doctor a repo before registering it. Reuses :func:`check_registered_project`
+    so the per-project sub-check set (path / config / plans-dir / agents /
+    gates / roles / managed-block) is identical to the ``--include-projects``
+    sweep."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import projects_registry as pr
+    finally:
+        sys.path.pop(0)
+
+    reg = pr.load_registry()
+    entry = next((e for e in reg.projects if e.name == name_or_path), None)
+    if entry is not None:
+        out = check_registered_project(entry)
+        # AC6: the explicit --project surface adds the managed-block freshness
+        # check (kept out of the broad sweep so opt-in onboarding doesn't WARN
+        # every non-onboarded registered project).
+        if Path(entry.path).expanduser().is_dir():
+            out.append(_check_managed_block(entry.name, Path(entry.path).expanduser()))
+        return out
+
+    # Not a registered name — treat as a path to validate in place.
+    candidate = Path(name_or_path).expanduser()
+    if candidate.is_dir():
+        synthetic = SimpleNamespace(name=candidate.name, path=str(candidate.resolve()))
+        out = check_registered_project(synthetic)
+        out.append(_check_managed_block(candidate.name, candidate.resolve()))
+        out.insert(
+            0,
+            _warn(
+                f"project:{candidate.name}:registered",
+                f"{candidate} is not in the projects registry (validated in place)",
+                f"run `dontpanic projects add {candidate.name} {candidate}` to register it",
+            ),
+        )
+        return out
+
+    return [
+        _bad(
+            f"project:{name_or_path}:resolve",
+            f"{name_or_path!r} is neither a registered project name nor an existing directory",
+            "run `dontpanic projects list` to see registered names, or pass an existing repo path",
+        )
+    ]
 
 
 def check_registered_projects() -> list[CheckResult]:
@@ -2268,7 +2545,42 @@ def main(argv: list[str] | None = None) -> int:
             "<repo>/docs/install-report.html. Only honored with --report."
         ),
     )
+    parser.add_argument(
+        "--agent",
+        action="store_true",
+        help=(
+            "Plan 2026-05-30-001 F005: validate the MACHINE onboarding layer "
+            "(CLI invocability, agent-manifest, registered worker executors + "
+            "availability, supported commands, global roles.*) and print the "
+            "registered executors. Uses the 0/1/2 strict-exit matrix."
+        ),
+    )
+    parser.add_argument(
+        "--project",
+        type=str,
+        default=None,
+        metavar="NAME_OR_PATH",
+        help=(
+            "Plan 2026-05-30-001 F005: validate ONE project's onboarding by "
+            "registry name or filesystem path (path / config / plans-dir / "
+            "agents / gates / roles.* / managed AGENTS.md block). Uses the "
+            "0/1/2 strict-exit matrix."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Plan 2026-05-30-001 F005 — agent / project onboarding surfaces. Activated
+    # only when --agent or --project is supplied; otherwise the legacy pipeline
+    # below is unchanged. Both use the 0/1/2 strict-exit matrix so a FAIL is a
+    # clear nonzero exit for scripts.
+    if args.agent or args.project is not None:
+        onboarding_results: list[CheckResult] = []
+        if args.agent:
+            onboarding_results.extend(check_agent_onboarding(skip_auth=args.skip_auth))
+        if args.project is not None:
+            onboarding_results.extend(check_project_onboarding(args.project))
+        print(render_json(onboarding_results) if args.json else render_text(onboarding_results))
+        return compute_strict_exit(onboarding_results)
 
     results = run_all_checks(
         skip_auth=args.skip_auth,
