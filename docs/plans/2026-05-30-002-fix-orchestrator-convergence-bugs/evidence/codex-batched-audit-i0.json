@@ -1,0 +1,41 @@
+{
+  "audit_id": "2026-05-30-002#codex#batched#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "model": "gpt-5.5",
+  "scope": "F001+F002+F003 batched (D004)",
+  "verdict": {
+    "overall_verdict": "needs_changes",
+    "per_feature": {
+      "F001": {
+        "verdict": "needs_changes",
+        "note": "Timeout-with-work is preserved and the canonical strictly-shrinking 3->1 case is fixed, but no_progress still trips on verdict equality whenever the signature count is not strictly smaller; it does not implement the required identical-signature-set condition. diminishing_returns also only exempts strictly decreasing counts, not all changed finding sets."
+      },
+      "F002": {
+        "verdict": "signed_off",
+        "note": "_latest_auditor_envelope now ranks auditor envelopes by mtime with iteration as a tie-break, which fixes fresh low-index signed_off versus stale high-index needs_changes while preserving single-envelope and monotonic-run behavior."
+      },
+      "F003": {
+        "verdict": "needs_changes",
+        "note": "The wired 3->1->0 convergence demonstration is useful, but the regression tests encode the wrong no_progress expectation for changed flat findings and do not prove the stated acceptance criteria."
+      }
+    },
+    "findings": [
+      {
+        "severity": "high",
+        "feature": "F001",
+        "issue": "check_no_progress still uses same-verdict equality as the trip condition after only a strictly-shrinking count carve-out. Changed same-count envelopes such as {A}->{B}, and growing envelopes such as {A}->{A,B}, still trip stopped_no_progress even though F001 requires tripping only when the auditor finding-signature SET is identical across consecutive needs_changes rounds."
+      },
+      {
+        "severity": "medium",
+        "feature": "F001",
+        "issue": "check_diminishing_returns only treats strictly decreasing signature counts as progress. Changed sets with a persisted finding but flat count, e.g. {A,B}->{A,C}, still trip via intersection even though the acceptance language says shrinking/changing blocking finding sets should be treated as progress."
+      },
+      {
+        "severity": "medium",
+        "feature": "F003",
+        "issue": "The tests contradict the contract: test_no_progress_envelope_flat_count_still_trips and the flat-distinct wired test expect changed findings with unchanged needs_changes verdict to stop at round 2. The growing test also only asserts not signed_off, so it does not prove the claimed breaker behavior or precedence."
+      }
+    ]
+  }
+}

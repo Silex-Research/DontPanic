@@ -1,7 +1,7 @@
 ---
 id: 2026-05-30-002-fix-orchestrator-convergence-bugs
 title: Fix orchestrator convergence + audit-envelope bugs
-status: active
+status: completed
 description: |
   Fix the orchestration-engine convergence and audit-envelope selection bugs
   surfaced while dogfooding the universal onboarding plan. The corrected scope
