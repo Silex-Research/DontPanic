@@ -859,9 +859,52 @@ def _arr_secret_anthropic(monkeypatch):
     # (the executor probe), so the case is deterministic regardless of whether
     # the test machine happens to have the `claude` binary on PATH.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
+    monkeypatch.setattr(ci, "_anthropic_auth_facts", lambda: (False, True, True))
     items = ci.provider_secrets_auth(ci.InventoryContext())
     return next(i for i in items if i.id == "secret_anthropic_auth")
+
+
+def _arr_secret_anthropic_malformed(monkeypatch, tmp_path):
+    # AC2c (audit finding, codex i0): a present-but-MALFORMED
+    # ~/.claude/.credentials.json (non-JSON) must report non-ok — the prior probe
+    # accepted any non-empty file (size > 0) and reported `ok`, which is the
+    # optimistic status the invariant forbids. Real unloadable-file input that
+    # fails before the fix and passes after.
+    import shutil
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    cred = tmp_path / ".claude" / ".credentials.json"
+    cred.parent.mkdir(parents=True, exist_ok=True)
+    cred.write_text("{ this is not valid json")  # present but UNLOADABLE
+    monkeypatch.setattr(shutil, "which", lambda name: None)  # no keychain fallback
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    return next(i for i in items if i.id == "secret_anthropic_auth")
+
+
+def _arr_secret_discord_invalid(monkeypatch):
+    # AC2c (audit finding, codex i0): a Discord webhook env var that is SET but is
+    # NOT a real webhook URL is present-but-invalid → non-ok. The prior provider
+    # keyed status off `bool(url)` alone and reported `ok` for any non-empty value.
+    monkeypatch.setenv("DONTPANIC_DISCORD_WEBHOOK_URL", "not-a-real-webhook")
+    monkeypatch.delenv("JARVIS_DISCORD_WEBHOOK_URL", raising=False)
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    return next(i for i in items if i.id == "secret_discord_webhook")
+
+
+def _arr_secret_gcp_unloadable(monkeypatch, tmp_path):
+    # AC2c (audit finding, codex i0): a *.json under the secrets dir that does NOT
+    # parse as JSON (or is not a service-account key shape) is present-but-
+    # unloadable/invalid → non-ok. The prior provider reported `ok` for ANY
+    # *.json present. Real unloadable-file input; chdir to an empty tmp cwd so a
+    # real <repo>/.secrets key cannot mask the case.
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    secrets = tmp_path / ".dontpanic" / ".secrets"
+    secrets.mkdir(parents=True, exist_ok=True)
+    (secrets / "key.json").write_text("{ not a valid service account ::::")
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    return next(i for i in items if i.id == "secret_gcp_sa_key")
 
 
 def _arr_global_config_nonrunnable(monkeypatch):
@@ -986,6 +1029,21 @@ _NON_OPTIMISTIC_CASES: list = [
     ("install_reconcile_no_snapshot", "install_reconcile", lambda m, t: _arr_install_reconcile(m)),
     ("pm_credentials_unset", "pm_credentials", lambda m, t: _arr_pm_credentials(m)),
     ("secret_anthropic_unconfigured", "secret_anthropic_auth", lambda m, t: _arr_secret_anthropic(m)),
+    (
+        "secret_anthropic_malformed_credfile",
+        "secret_anthropic_auth",
+        _arr_secret_anthropic_malformed,
+    ),
+    (
+        "secret_discord_invalid_url",
+        "secret_discord_webhook",
+        lambda m, t: _arr_secret_discord_invalid(m),
+    ),
+    (
+        "secret_gcp_sa_key_unloadable",
+        "secret_gcp_sa_key",
+        _arr_secret_gcp_unloadable,
+    ),
 ]
 
 
@@ -1029,7 +1087,7 @@ def test_dashboard_hint_inactive_uses_start_command(monkeypatch):
     # A fresh home leaves the required anthropic-auth secret unconfigured →
     # at least one human-required item → exactly one hint. Force the auth probe
     # off so the trigger is deterministic even when `claude` is on PATH.
-    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
+    monkeypatch.setattr(ci, "_anthropic_auth_facts", lambda: (False, True, True))
     inv = ci.collect_inventory(dashboard_url=None)
     assert inv.dashboard_hint is not None
     hd = inv.dashboard_hint.to_dict()
@@ -1039,7 +1097,7 @@ def test_dashboard_hint_inactive_uses_start_command(monkeypatch):
 
 
 def test_dashboard_hint_active_uses_url(monkeypatch):
-    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
+    monkeypatch.setattr(ci, "_anthropic_auth_facts", lambda: (False, True, True))
     url = "http://127.0.0.1:8787/"
     inv = ci.collect_inventory(dashboard_url=url)
     assert inv.dashboard_hint is not None
@@ -1062,7 +1120,7 @@ def test_no_dashboard_hint_when_nothing_human_required(monkeypatch):
 
 
 def test_dashboard_hint_appears_once_and_items_only_reference_it(monkeypatch):
-    monkeypatch.setattr(ci, "_anthropic_auth_configured", lambda: False)
+    monkeypatch.setattr(ci, "_anthropic_auth_facts", lambda: (False, True, True))
     url = "http://127.0.0.1:8787/"
     inv = ci.collect_inventory(dashboard_url=url)
     assert inv.dashboard_hint is not None

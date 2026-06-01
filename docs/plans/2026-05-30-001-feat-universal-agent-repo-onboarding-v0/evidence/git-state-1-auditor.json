@@ -1,26 +1,5 @@
 {
-  "staged": [
-    {
-      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/decisions.jsonl",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/features.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/config_inventory.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
-      "status": "M"
-    }
-  ],
+  "staged": [],
   "unstaged_modified": [
     {
       "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
@@ -51,14 +30,6 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F008_iter2.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/patch-completeness-0.json",
-      "status": "M"
-    },
-    {
       "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/transcript.md",
       "status": "M"
     },
@@ -68,10 +39,6 @@
     },
     {
       "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-0-implementer.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-1-auditor.json",
       "status": "M"
     },
     {

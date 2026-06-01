@@ -5,30 +5,39 @@
   "agent_role": "implementer",
   "model_version": "claude-opus-4-8[1m]",
   "iteration": 1,
-  "started_at": "2026-06-01T20:59:06Z",
-  "completed_at": "2026-06-01T21:07:30Z",
+  "started_at": "2026-06-01T23:40:52Z",
+  "completed_at": "2026-06-01T23:47:20Z",
   "validation_performed": [
     "claude implementer round (iteration 1)",
     "quota gate impl=13.449712237281572",
     "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i0.json",
-    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-e86jsq_y target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
-    "captured stdout 4445 bytes"
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-flqxpocg target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4270 bytes"
   ],
   "quota_consumed": {
-    "tokens_in": 7654571,
-    "tokens_out": 36549,
+    "tokens_in": 3739695,
+    "tokens_out": 28150,
     "api_calls": 1
   },
-  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F008] All findings are addressed and verified. Let me summarize.\n\n## Target accountability\n\nRepo: DontPanic\nEnv: dev\nProject: (none)\n\nSide-effect commands invoked:\n```\n$ git checkout HEAD -- scripts/dontpanic_orchestrate/quota_caps_loader.py scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py\n$ python -m pytest -q scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py\n$ python -m pytest -q scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py\n```\n\n## Summary\n\nI addressed every iteration-0 finding:\n\n**[high, architecture] AC2e single shared status helper** — Introduced one `StatusFacts` dataclass + `derive_status()` helper in `config_inventory.py`. Every fact-based provider (global_config, project_config, projects_registry, agent_manifest, roles, runtime_evidence, gates_paths, quota, circuit_breakers, notifications, dashboard, capabilities, mcp, environments, install_reconcile, pm_credentials, and the shared `_secret_provider`) now reduces its read to `(optional, present, loadable, valid, human_required)` and routes through that single helper. The only remaining literal statuses are `Status.UNKNOWN` degrade/indeterminate paths (`_safe` fallbacks, no-project-in-scope), which are not fact-derivations. The \"present-but-invalid ⇒ non-ok\" rule now holds class-wide by construction.\n\n**[high, correctness] stale project/onboarding can rep",
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F008] Both findings are addressed and verified. Here's the summary:\n\n## Side-effect commands run\n```\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider \"scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py::test_no_provider_reports_ok_on_invalid_or_incomplete_state\" -q\n$ PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q\n```\n\n---\n\n**Finding 1 (high, correctness) — secrets/auth reported `ok` from mere presence.** Fixed by making every secret item reduce to `present`/`loadable`/`valid` facts that route through the *same* shared `derive_status` helper as all other providers, so the non-optimistic invariant now holds for secrets by construction. `_secret_provider` no longer takes a single `configured` bool — it takes `present`, `loadable`, `valid`. I added `_anthropic_auth_facts()` which actually parses `~/.claude/.credentials.json` and returns non-ok for an empty/malformed (non-JSON) file instead of accepting any non-empty file; `_is_discord_webhook_url()` which validates the webhook URL shape so a set-but-bogus value is `present-but",
   "target_context": {
     "env": "dev",
     "project": null,
     "commands_run": [
-      "git checkout HEAD -- scripts/dontpanic_orchestrate/quota_caps_loader.py scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py",
-      "python -m pytest -q scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
-      "python -m pytest -q scripts/dontpanic_orchestrate/tests/test_quota_caps_loader.py scripts/dontpanic_orchestrate/tests/test_dispatch_from_plan.py"
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider \"scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py::test_no_provider_reports_ok_on_invalid_or_incomplete_state\" -q",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q"
     ]
   },
-  "findings": [],
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
   "audit_status": "signed_off"
 }

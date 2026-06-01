@@ -3891,3 +3891,166 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-
 </details>
 
 ===
+---
+timestamp: 2026-06-01T23:34:17Z
+event: gate_cleared
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-06-01T23:34:18Z
+event: volley_start
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+feature_id: F008
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-01T23:34:18Z
+event: volley_start
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+feature_id: F008
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-06-01T23:50:28Z
+event: no_progress_classification
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+aggregate: implementation_defect
+blocking: true
+feature_id: F008
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F008
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Required secret/auth repair can require human input without producing `human_required` or the required dashboard hint. Evidence: `_secret_provider` sets `human…
+  - [implementation_defect] severity=medium, category=correctness: Quota emits a non-runnable `safe_command` in the already-configured state. Evidence: `provider_quota` sets `safe_command = "dontpanic quota-caps init"` when ca…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 F008 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+<!-- rendered annotation 2026-06-01T23:50:30Z -->
+**Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 — no-progress taxonomy** _(band: needs_action)_
+
+Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.
+
+Run:
+
+```
+dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `aggregate_class` = `implementation_defect`
+- `blocking` = `True`
+- `feature_id` = `F008`
+- `inbox_event` = `no_progress_classification`
+- `plan_id` = `2026-05-30-001-feat-universal-agent-repo-onboarding-v0`
+
+</details>
+
+===
+---
+timestamp: 2026-06-01T23:50:30Z
+event: breaker_tripped
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+breaker_kind: no_progress
+feature_id: F008
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress` or `jarvis resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all`.
+
+===
+<!-- rendered annotation 2026-06-01T23:50:30Z -->
+**Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 — breaker `no_progress` tripped** _(band: needs_action)_
+
+Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `no_progress`
+- `feature_id` = `F008`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-05-30-001-feat-universal-agent-repo-onboarding-v0`
+
+</details>
+
+===
+---
+timestamp: 2026-06-01T23:50:30Z
+event: volley_terminal
+plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F008
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F008-i0.json', 'codex-auditor-F008-i0.json', 'claude-implementer-F008-i1.json', 'codex-auditor-F008-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+<!-- rendered annotation 2026-06-01T23:50:31Z -->
+**Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 — stopped no progress** _(band: needs_action)_
+
+Volley terminated after 2 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F008`
+- `final_status` = `stopped_no_progress`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-05-30-001-feat-universal-agent-repo-onboarding-v0`
+- `rounds` = `2`
+
+</details>
+
+===

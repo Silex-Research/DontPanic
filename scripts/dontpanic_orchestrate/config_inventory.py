@@ -1466,30 +1466,57 @@ def _secret_provider(
     item_id: str,
     title: str,
     owner_env: str,
-    configured: bool,
+    present: bool,
     detail: str,
     verify_command: str,
     optional: bool,
+    loadable: bool = True,
+    valid: bool = True,
 ) -> InventoryItem:
     """Shared secret/auth item shape.
 
-    AC5: never echoes a secret value — only ``configured`` / ``not configured``.
-    Secrets are always ``human_required`` and carry NO ``safe_command``; the
-    operator sets them out-of-band and verifies with ``verify_command``.
+    AC5: never echoes a secret value — only a status phrase
+    (``configured`` / ``present but …`` / ``not configured``). Secrets are
+    always ``human_required`` (when a required one is absent) and carry NO
+    ``safe_command``; the operator sets them out-of-band and verifies with
+    ``verify_command``.
+
+    AC2c (audit finding, codex i0): a secret artifact that is merely PRESENT is
+    not enough to report ``ok``. Mere credential presence is optimistic — a
+    present-but-malformed ``~/.claude/.credentials.json`` (unparseable), a
+    Discord URL that is not a webhook, or a ``*.json`` under a secrets dir that
+    is not a loadable/valid service-account key must report non-ok. The provider
+    reduces the secret to ``present`` / ``loadable`` / ``valid`` facts and routes
+    them through the SAME shared :func:`derive_status` helper as every other
+    provider, so the non-optimistic invariant holds for secrets by construction.
     """
-    # human_required only for a REQUIRED secret that is unconfigured — an
-    # optional integration that is simply not set up does not "require" a human
-    # and so must not, on its own, force a dashboard hint (AC4: optional never
-    # blocks core use).
-    human_required = (not configured) and (not optional)
-    # Routed through the shared helper (AC2e): a secret is the artifact (present
-    # iff configured); an absent REQUIRED secret is HUMAN_REQUIRED, an absent
-    # OPTIONAL one is OPTIONAL_UNCONFIGURED, a configured one is OK.
+    # human_required only for a REQUIRED secret that is ABSENT — an optional
+    # integration that is simply not set up does not "require" a human and so
+    # must not, on its own, force a dashboard hint (AC4: optional never blocks
+    # core use). A present-but-malformed required secret is a NEEDS_SETUP defect,
+    # not a human-supply gap, so it is not human_required.
+    human_required = (not present) and (not optional)
+    # Routed through the shared helper (AC2e): present + loadable + valid → OK;
+    # present-but-unloadable → NEEDS_SETUP (hard defect, even when optional);
+    # present-but-invalid → NEEDS_SETUP (required) / OPTIONAL_UNCONFIGURED
+    # (optional); absent → HUMAN_REQUIRED (required) / OPTIONAL_UNCONFIGURED.
     status = derive_status(
         StatusFacts(
-            optional=optional, present=configured, human_required=human_required
+            optional=optional,
+            present=present,
+            loadable=loadable,
+            valid=valid,
+            human_required=human_required,
         )
     )
+    if not present:
+        summary = "not configured"
+    elif not loadable:
+        summary = "present but UNLOADABLE"
+    elif not valid:
+        summary = "present but malformed/invalid"
+    else:
+        summary = "configured"
     return InventoryItem(
         id=item_id,
         title=title,
@@ -1498,7 +1525,7 @@ def _secret_provider(
         editable=False,
         human_required=human_required,
         optional=optional,
-        current_value_summary="configured" if configured else "not configured",
+        current_value_summary=summary,
         owner_file_or_env=owner_env,
         safe_command=None,  # secrets never route through an auto command
         dashboard_mutation_shape=None,
@@ -1507,32 +1534,46 @@ def _secret_provider(
     )
 
 
-def _anthropic_auth_configured() -> bool:
-    """True when the claude worker can authenticate.
+def _anthropic_auth_facts() -> tuple[bool, bool, bool]:
+    """``(present, loadable, valid)`` for the claude worker's auth — secret-safe.
 
     Claude auth is satisfied by EITHER an ``ANTHROPIC_API_KEY`` env var OR an
     authenticated ``claude`` CLI session. The prior provider only checked the
     env var, so a machine logged in via ``claude`` session — with no
     ANTHROPIC_API_KEY — was falsely reported ``human_required`` despite the item
     claiming "ANTHROPIC_API_KEY or `claude` session" (audit finding, codex i1).
-    The fix here probes a real credential artifact — the ANTHROPIC_API_KEY env
-    var, a ``~/.claude/.credentials.json`` file, or the macOS keychain
+    This probes a real credential artifact — the ANTHROPIC_API_KEY env var, a
+    ``~/.claude/.credentials.json`` file, or the macOS keychain
     ``Claude Code-credentials`` entry — and explicitly does NOT treat the
     ``claude`` binary being on PATH as proof of auth (the optimistic status the
     non-optimistic invariant forbids — codex i2).
+
+    AC2c (audit finding, codex i0): mere presence of a non-empty credentials
+    file is NOT enough. A present-but-malformed ``~/.claude/.credentials.json``
+    (empty, truncated, or non-JSON) must report non-ok, so the file is parsed
+    here and the ``loadable`` / ``valid`` facts reflect whether it is a usable
+    JSON credential object — never the secret contents themselves. Returns the
+    facts only; the value is never returned or logged.
     """
+    import json
     import os
     import shutil
     import subprocess
 
     if os.environ.get("ANTHROPIC_API_KEY"):
-        return True
+        return (True, True, True)
     # File-based credential (Linux / non-keychain installs). Binary-on-PATH
     # alone is NOT auth (codex i2): only a real credential artifact counts.
     cred_file = Path.home() / ".claude" / ".credentials.json"
     try:
-        if cred_file.is_file() and cred_file.stat().st_size > 0:
-            return True
+        if cred_file.is_file():
+            # Present. A present file that cannot be parsed as a JSON object is a
+            # hard defect (UNLOADABLE) — never silently treated as configured.
+            try:
+                raw = json.loads(cred_file.read_text())
+            except (OSError, json.JSONDecodeError):
+                return (True, False, False)
+            return (True, True, isinstance(raw, dict) and bool(raw))
     except OSError:  # best-effort probe
         pass
     # macOS keychain session credential.
@@ -1546,10 +1587,72 @@ def _anthropic_auth_configured() -> bool:
                 check=False,
             )
             if result.returncode == 0:
-                return True
+                return (True, True, True)
         except (OSError, subprocess.SubprocessError):  # best-effort probe
             pass
-    return False
+    return (False, True, True)
+
+
+def _anthropic_auth_configured() -> bool:
+    """Back-compat boolean: True only when auth is present, loadable AND valid."""
+    present, loadable, valid = _anthropic_auth_facts()
+    return present and loadable and valid
+
+
+def _is_discord_webhook_url(value: str) -> bool:
+    """True when ``value`` has the shape of a real Discord webhook URL.
+
+    A bare non-empty string set in ``DONTPANIC_DISCORD_WEBHOOK_URL`` is not a
+    usable webhook — the notifier would fail at runtime. Validating the shape
+    keeps the secret/auth status non-optimistic (AC2c) without echoing the value.
+    """
+    import re
+
+    return bool(
+        re.match(
+            r"^https://(discord(app)?\.com)/api/(v\d+/)?webhooks/\d+/[\w-]+$",
+            value,
+        )
+    )
+
+
+def _gcp_sa_key_facts() -> tuple[bool, bool, bool]:
+    """``(present, loadable, valid)`` for a GCP/Firebase service-account key.
+
+    ``present`` when any ``*.json`` exists under a known secrets dir; ``loadable``
+    when at least one parses as JSON; ``valid`` when at least one parses to a
+    service-account key shape (``type == "service_account"`` with a
+    ``client_email`` and ``private_key``). A dir holding only a malformed or
+    non-SA JSON is present-but-not-valid → non-ok (AC2c). Never returns the key.
+    """
+    import json
+
+    sa_files: list[Path] = []
+    for d in (Path.home() / ".dontpanic" / ".secrets", Path(".secrets")):
+        try:
+            if d.is_dir():
+                sa_files.extend(sorted(d.glob("*.json")))
+        except OSError:  # best-effort probe
+            continue
+    if not sa_files:
+        return (False, True, True)
+    loadable = False
+    valid = False
+    for f in sa_files:
+        try:
+            data = json.loads(f.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        loadable = True
+        if (
+            isinstance(data, dict)
+            and data.get("type") == "service_account"
+            and data.get("client_email")
+            and data.get("private_key")
+        ):
+            valid = True
+            break
+    return (True, loadable, valid)
 
 
 def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:
@@ -1562,12 +1665,16 @@ def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:
     # without it — it is the worker prerequisite, so we mark it required-ish but
     # human-driven). Configured when EITHER ANTHROPIC_API_KEY is set OR a `claude`
     # CLI session is available, so a session-authed machine is not falsely flagged.
+    # AC2c: a present-but-malformed credential file reports non-ok, not OK.
+    anth_present, anth_loadable, anth_valid = _anthropic_auth_facts()
     items.append(
         _secret_provider(
             item_id="secret_anthropic_auth",
             title="Anthropic / Claude CLI auth",
             owner_env="ANTHROPIC_API_KEY env var or an authenticated `claude` CLI session",
-            configured=_anthropic_auth_configured(),
+            present=anth_present,
+            loadable=anth_loadable,
+            valid=anth_valid,
             detail=(
                 "Required to dispatch the claude worker executor. Satisfied by "
                 "ANTHROPIC_API_KEY or a logged-in `claude` session."
@@ -1576,36 +1683,35 @@ def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:
             optional=False,
         )
     )
-    # Discord webhook (optional notification secret).
+    # Discord webhook (optional notification secret). AC2c: a value that is set
+    # but is NOT a real webhook URL is present-but-invalid → non-ok, not OK.
+    discord_url = os.environ.get("DONTPANIC_DISCORD_WEBHOOK_URL") or os.environ.get(
+        "JARVIS_DISCORD_WEBHOOK_URL"
+    )
     items.append(
         _secret_provider(
             item_id="secret_discord_webhook",
             title="Discord webhook URL",
             owner_env="DONTPANIC_DISCORD_WEBHOOK_URL",
-            configured=bool(
-                os.environ.get("DONTPANIC_DISCORD_WEBHOOK_URL")
-                or os.environ.get("JARVIS_DISCORD_WEBHOOK_URL")
-            ),
+            present=bool(discord_url),
+            valid=bool(discord_url) and _is_discord_webhook_url(discord_url),
             detail="Optional. Enables Discord notifications; INBOX works without it.",
             verify_command="dontpanic doctor",
             optional=True,
         )
     )
-    # GCP / Firebase service-account key (optional, only for deploy repos).
-    sa_present = False
-    try:
-        for d in (Path.home() / ".dontpanic" / ".secrets", Path(".secrets")):
-            if d.is_dir() and any(d.glob("*.json")):
-                sa_present = True
-                break
-    except OSError:
-        sa_present = False
+    # GCP / Firebase service-account key (optional, only for deploy repos). AC2c:
+    # a present-but-unloadable (non-JSON) or non-service-account key reports
+    # non-ok, never OK from mere file presence.
+    sa_present, sa_loadable, sa_valid = _gcp_sa_key_facts()
     items.append(
         _secret_provider(
             item_id="secret_gcp_sa_key",
             title="GCP / Firebase service-account key",
             owner_env="~/.dontpanic/.secrets/*.json or <repo>/.secrets/*.json",
-            configured=sa_present,
+            present=sa_present,
+            loadable=sa_loadable,
+            valid=sa_valid,
             detail="Optional. Only repos deploying to Firebase/GCP need this.",
             verify_command="dontpanic doctor --project <name>",
             optional=True,
