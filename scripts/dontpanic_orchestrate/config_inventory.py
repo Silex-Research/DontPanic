@@ -1515,20 +1515,41 @@ def _anthropic_auth_configured() -> bool:
     env var, so a machine logged in via ``claude`` session — with no
     ANTHROPIC_API_KEY — was falsely reported ``human_required`` despite the item
     claiming "ANTHROPIC_API_KEY or `claude` session" (audit finding, codex i1).
-    Probe the claude executor's OWN availability surface (``is_available()`` —
-    the ``claude`` binary on PATH, which a session uses) rather than the env var
-    alone, so the reported status matches the wording.
+    The fix here probes a real credential artifact — the ANTHROPIC_API_KEY env
+    var, a ``~/.claude/.credentials.json`` file, or the macOS keychain
+    ``Claude Code-credentials`` entry — and explicitly does NOT treat the
+    ``claude`` binary being on PATH as proof of auth (the optimistic status the
+    non-optimistic invariant forbids — codex i2).
     """
     import os
+    import shutil
+    import subprocess
 
     if os.environ.get("ANTHROPIC_API_KEY"):
         return True
+    # File-based credential (Linux / non-keychain installs). Binary-on-PATH
+    # alone is NOT auth (codex i2): only a real credential artifact counts.
+    cred_file = Path.home() / ".claude" / ".credentials.json"
     try:
-        from dontpanic_orchestrate import executors
-
-        return bool(executors.get_executor("claude").is_available())
-    except Exception:  # noqa: BLE001 — availability probe is best-effort
-        return False
+        if cred_file.is_file() and cred_file.stat().st_size > 0:
+            return True
+    except OSError:  # best-effort probe
+        pass
+    # macOS keychain session credential.
+    security = shutil.which("security")
+    if security:
+        try:
+            result = subprocess.run(  # noqa: S603 — fixed argv, no user input
+                [security, "find-generic-password", "-s", "Claude Code-credentials"],
+                capture_output=True,
+                timeout=5,
+                check=False,
+            )
+            if result.returncode == 0:
+                return True
+        except (OSError, subprocess.SubprocessError):  # best-effort probe
+            pass
+    return False
 
 
 def provider_secrets_auth(ctx: InventoryContext) -> list[InventoryItem]:

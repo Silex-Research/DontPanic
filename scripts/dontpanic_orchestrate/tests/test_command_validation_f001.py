@@ -502,6 +502,10 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "finalize",
         "what-now",
         "agent",
+        # Plan 2026-05-30-001 F008 (codex i2): config_inventory emits
+        # ``dontpanic roles set <role> <executor>`` as the dashboard safe-edit
+        # route, so the validator must recognize the ``roles`` surface.
+        "roles",
         "doctor",
         "init",
         "smoke",

@@ -287,6 +287,26 @@ _AGENT_SPEC = SubcommandSpec(
     },
 )
 
+# ``roles`` subcommands per cli.py:_roles_main (F004). config_inventory emits
+# ``dontpanic roles set <role> <executor> --global`` as the safe edit route in
+# dashboard_mutation_shape.command_template, so the validator must recognize it
+# (codex i2 — the acceptance-listed edit route was not a validated surface).
+# ``set`` takes <role> <executor> positionals; ``show`` takes none.
+_ROLES_SPEC = SubcommandSpec(
+    subcommands={
+        "show": SubcommandSpec(
+            value_flags=frozenset({"--project"}),
+            bool_flags=frozenset({"--json"}),
+        ),
+        "set": SubcommandSpec(
+            positional_min=2,
+            positional_max=2,
+            value_flags=frozenset({"--project"}),
+            bool_flags=frozenset({"--global", "--dry-run", "--yes"}),
+        ),
+    },
+)
+
 # ``dispatch-from-plan`` and its teaching gateway ``orchestrate`` share one
 # shape: ``orchestrate`` (cli.py:_orchestrate_main) forwards its argv verbatim to
 # ``_dispatch_from_plan_main``. operations_guidance emits the redispatch command
@@ -400,6 +420,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         value_flags=frozenset({"--feature", "--dashboard-url", "--format"}),
     ),
     "agent": _AGENT_SPEC,
+    "roles": _ROLES_SPEC,
     # ``doctor`` per cli.py:_doctor_main (parser at cli.py:1422-1520). The
     # earlier validator listed --strict, which does not exist; the real
     # promote-WARN-to-FAIL flags are --validate-plans-strict /

@@ -19,7 +19,6 @@ import pytest
 
 from dontpanic_orchestrate import config_inventory as ci
 
-
 # ───────────────────────────── helpers ─────────────────────────────
 
 
@@ -299,16 +298,21 @@ def test_discord_webhook_value_is_redacted_from_summary(monkeypatch):
     assert webhook not in blob
 
 
-def test_anthropic_auth_configured_via_claude_session(monkeypatch):
-    # Audit finding (codex i1): the item claims "ANTHROPIC_API_KEY or `claude`
-    # session", so a machine authed via an available `claude` CLI session — with
-    # NO ANTHROPIC_API_KEY — must report configured / not human_required. The
-    # provider probes the claude executor's own availability surface, not the env
-    # var alone, so the reported status matches the wording.
-    from dontpanic_orchestrate import executors
+def test_anthropic_auth_configured_via_claude_session(monkeypatch, tmp_path):
+    # The item claims "ANTHROPIC_API_KEY or `claude` session", so a machine authed
+    # via a stored `claude` session credential — with NO ANTHROPIC_API_KEY — must
+    # report configured. codex i2: the provider must probe a real credential
+    # artifact (~/.claude/.credentials.json or the macOS keychain), NOT the claude
+    # binary merely being on PATH. Drive the file-based credential path here.
+    import shutil
 
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(executors.ClaudeCLIExecutor, "is_available", lambda self: True)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    cred = tmp_path / ".claude" / ".credentials.json"
+    cred.parent.mkdir(parents=True, exist_ok=True)
+    cred.write_text('{"session": "present"}')
+    # Even with no keychain `security` binary, the file credential alone suffices.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     items = ci.provider_secrets_auth(ci.InventoryContext())
     item = next(i for i in items if i.id == "secret_anthropic_auth")
     assert item.current_value_summary == "configured"
@@ -316,13 +320,16 @@ def test_anthropic_auth_configured_via_claude_session(monkeypatch):
     assert item.status is ci.Status.OK
 
 
-def test_anthropic_auth_human_required_without_key_or_session(monkeypatch):
-    # The converse: neither ANTHROPIC_API_KEY nor an available `claude` session →
-    # the required secret is human_required (non-ok), as before the fix.
-    from dontpanic_orchestrate import executors
+def test_anthropic_auth_human_required_without_key_or_session(monkeypatch, tmp_path):
+    # The converse: no ANTHROPIC_API_KEY, no credential file, and no keychain
+    # session → the required secret is human_required (non-ok). codex i2: the
+    # claude binary being installed/on-PATH must NOT count as auth, so this stays
+    # human_required even on a machine where `claude` is available.
+    import shutil
 
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(executors.ClaudeCLIExecutor, "is_available", lambda self: False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))  # no ~/.claude/.credentials.json
+    monkeypatch.setattr(shutil, "which", lambda name: None)  # no `security` keychain probe
     items = ci.provider_secrets_auth(ci.InventoryContext())
     item = next(i for i in items if i.id == "secret_anthropic_auth")
     assert item.human_required is True
