@@ -1050,6 +1050,34 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
         )
     )
 
+    # 6. config-home split-brain (Plan 2026-05-30-001 F006 AC1). Surface
+    # ~/.dontpanic vs ~/.jarvis divergence with file-level detail; advisory WARN
+    # pointing at the reconcile command. Divergent files are a sharper signal
+    # than legacy-only (migratable) files, but both stay advisory so the doctor
+    # exit isn't escalated by an opt-in legacy home.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import home_reconcile as hr
+    finally:
+        sys.path.pop(0)
+    states = hr.classify_homes()
+    legacy_only, divergent = hr.split_brain_summary(states)
+    if not legacy_only and not divergent:
+        results.append(_ok("agent:config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled"))
+    else:
+        parts = []
+        if legacy_only:
+            parts.append(f"legacy-only (migratable): {', '.join(legacy_only)}")
+        if divergent:
+            parts.append(f"divergent (needs manual merge): {', '.join(divergent)}")
+        results.append(
+            _warn(
+                "agent:config-home",
+                "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
+                "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
+            )
+        )
+
     return results
 
 
