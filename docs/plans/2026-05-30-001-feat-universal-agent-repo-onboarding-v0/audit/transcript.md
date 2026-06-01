@@ -111,3 +111,25 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py,scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
 
+| 2026-06-01T17:21:30Z | F008 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T17:24:37Z | F008 | i0 | codex / auditor | needs_changes | 2,459,992 / 12,021 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T17:34:37Z | F008 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-06-01T17:38:17Z | F008 | i1 | codex / auditor | needs_changes | 3,145,434 / 15,365 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+
+**2026-06-01T17:38:17Z** — feature **F008** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+| 2026-06-01T17:44:28Z | F008 | i0 | claude / implementer | signed_off | 1,106,524 / 10,572 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T17:47:14Z | F008 | i0 | codex / auditor | needs_changes | 1,565,015 / 11,842 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T17:48:32Z | F008 | i1 | claude / implementer | signed_off | 644,804 / 4,943 | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-06-01T17:51:14Z | F008 | i1 | codex / auditor | needs_changes | 1,469,447 / 11,947 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+
+**2026-06-01T17:51:15Z** — feature **F008** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+| 2026-06-01T18:00:44Z | F008 | i0 | claude / implementer | signed_off | 1,996,432 / 24,487 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T18:04:22Z | F008 | i0 | codex / auditor | needs_changes | 1,843,406 / 15,510 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T18:59:26Z | F008 | i0 | claude / implementer | signed_off | 3,854,222 / 23,512 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T19:02:41Z | F008 | i0 | codex / auditor | needs_changes | 1,766,307 / 12,958 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-06-01T19:13:32Z | F008 | i0 | claude / implementer | signed_off | 791,443 / 6,343 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-01T19:18:07Z | F008 | i0 | codex / auditor | needs_changes | 2,749,863 / 18,426 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |

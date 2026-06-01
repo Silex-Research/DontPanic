@@ -2969,6 +2969,65 @@ def _plan_resync_main(argv: list[str]) -> int:
 # ─────────────────────────  config / project / setup (F006)  ─────────────────────────
 
 
+def _config_inventory_main(argv: list[str]) -> int:
+    """``dontpanic config inventory`` — the configuration setup cockpit.
+
+    Plan 2026-05-30-001 F008. One command surfaces every DontPanic config
+    surface and its status, the exact safe command to edit each one, the
+    human-required (secret/auth) steps with NO secret values, and exactly one
+    response-level dashboard hint when any item needs human input. ``--setup-plan``
+    emits the typed ActionChoice list + draft DontPanic plan for the incomplete
+    areas instead of forcing the agent to invent next steps.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic config inventory",
+        description=(
+            "Configuration inventory and setup cockpit: assess, configure, and "
+            "update every core DontPanic surface without spelunking files."
+        ),
+    )
+    parser.add_argument(
+        "--project",
+        default=None,
+        help="Project NAME (registry) or PATH for project-scoped surfaces.",
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--dashboard-url",
+        default=None,
+        help="Active dashboard URL when a singleton is running (omit when not).",
+    )
+    parser.add_argument(
+        "--setup-plan",
+        action="store_true",
+        help="Emit ActionChoices + a draft DontPanic plan for incomplete setup areas.",
+    )
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import config_inventory as ci
+
+    inventory = ci.collect_inventory(
+        project=args.project, dashboard_url=args.dashboard_url
+    )
+    if args.setup_plan:
+        plan = ci.build_setup_plan(inventory)
+        if args.format == "json":
+            print(json.dumps(plan, indent=2))
+        else:
+            print(f"Setup plan: {plan['draft_plan']['summary']}")
+            for choice in plan["choices"]:
+                cmd = choice["exact_command"] or "(human action required)"
+                print(f"  - {choice['title']}: {cmd}")
+            if plan["dashboard_hint"]:
+                print(f"  dashboard: {plan['dashboard_hint']['text']}")
+        return 0
+    if args.format == "json":
+        print(json.dumps(inventory.to_dict(), indent=2))
+    else:
+        print(ci.render_text(inventory), end="")
+    return 0
+
+
 def _config_main(argv: list[str]) -> int:
     """``dontpanic config <subcommand>`` — global config CRUD (Plan G F006)."""
     if not argv or argv[0] in ("-h", "--help"):
@@ -2981,12 +3040,18 @@ def _config_main(argv: list[str]) -> int:
             "                    roles.goal_auditor. Legacy default_implementer /\n"
             "                    default_auditor still accepted.\n"
             "                    runtime_evidence.* refused at global tier (D015 — use\n"
-            "                    `dontpanic project config set` instead).",
+            "                    `dontpanic project config set` instead).\n"
+            "  inventory         Setup cockpit: every config surface + status, safe\n"
+            "                    commands, human-required steps, dashboard hint\n"
+            "                    [--project NAME|PATH] [--format text|json]\n"
+            "                    [--setup-plan] [--dashboard-url URL]",
             file=sys.stderr,
         )
         return 2
     sub = argv[0]
     rest = argv[1:]
+    if sub == "inventory":
+        return _config_inventory_main(rest)
     from dontpanic_orchestrate import global_config as _gc
     from dontpanic_orchestrate.config import cli_helpers as _ch
 

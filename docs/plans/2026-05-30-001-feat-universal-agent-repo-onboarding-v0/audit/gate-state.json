@@ -298,6 +298,65 @@
       "gate": "breaker:environmental_blocker",
       "at": "2026-06-01T16:57:22Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T17:38:17Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T17:41:57Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T17:51:15Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-01T17:55:41Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T18:04:22Z",
+      "actor": "supervisor",
+      "reason": "caps file unavailable: caps file at /Users/bayesian/.jarvis/quota_caps.json invalid:\n  schema_version must be 1, got None. Run `python -m dontpanic_orchestrate quota-caps init` to seed."
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T18:33:18Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T19:02:41Z",
+      "actor": "supervisor",
+      "reason": "codex.plus.rolling_5h observed 1.264e+08 tokens_local_proxy > cap 48987969 tokens_local_proxy (confidence=uncalibrated)"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T19:11:21Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:budget_ceiling",
+      "at": "2026-06-01T19:18:07Z",
+      "actor": "supervisor",
+      "reason": "caps file unavailable: caps file at /Users/bayesian/.jarvis/quota_caps.json invalid:\n  schema_version must be 1, got 2\n  unknown vendor key: 'vendors'. Run `python -m dontpanic_orchestrate quota-caps init` to seed."
     }
   ],
   "gate_events": [
@@ -317,5 +376,8 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:budget_ceiling"
   ]
 }
