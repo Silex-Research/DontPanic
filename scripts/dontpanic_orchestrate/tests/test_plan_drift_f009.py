@@ -17,7 +17,6 @@ import pytest
 from dontpanic_orchestrate import plan_drift
 from dontpanic_orchestrate.plan_drift import DriftClass
 
-
 # ─────────────────────────────── fixtures ──────────────────────────────────
 
 _BASE_PLAN_MD = """---
@@ -496,18 +495,39 @@ def test_reconcile_blocking_pauses_for_human_ack(tmp_path):
     assert "plan_drift_blocked" in _read_inbox_events(plan_dir)
 
 
-def test_reconcile_no_baseline_records_and_proceeds(tmp_path):
-    """When no baseline exists yet, the check records one and proceeds (safe)."""
+def test_reconcile_missing_baseline_fails_closed(tmp_path):
+    """codex #1: a missing/corrupt active-run baseline must FAIL CLOSED — the
+    check raises rather than silently re-baselining the (possibly already
+    drifted) current state and proceeding. The dispatch-start baseline is the
+    true reference; losing it means drift can no longer be proven, so the volley
+    must pause, not run blind."""
     plan_dir = _make_plan(tmp_path)
     assert not plan_drift.baseline_path(plan_dir).is_file()
-    decision = plan_drift.check_and_reconcile(
-        plan_dir,
-        plan_id="2026-01-01-001-test-drift",
-        feature_id="F001",
-        stage=plan_drift.STAGE_IMPLEMENTER,
-    )
-    assert decision.proceed is True
-    assert plan_drift.baseline_path(plan_dir).is_file()
+    with pytest.raises(plan_drift.DriftBaselineMissingError):
+        plan_drift.check_and_reconcile(
+            plan_dir,
+            plan_id="2026-01-01-001-test-drift",
+            feature_id="F001",
+            stage=plan_drift.STAGE_IMPLEMENTER,
+        )
+    # No baseline was silently written behind the operator's back.
+    assert not plan_drift.baseline_path(plan_dir).is_file()
+
+
+def test_reconcile_corrupt_baseline_fails_closed(tmp_path):
+    """codex #1: a baseline file that exists but cannot be parsed is treated the
+    same as missing — fail closed rather than proceed on unverifiable state."""
+    plan_dir = _make_plan(tmp_path)
+    bp = plan_drift.baseline_path(plan_dir)
+    bp.parent.mkdir(parents=True, exist_ok=True)
+    bp.write_text("{ this is not valid json")
+    with pytest.raises(plan_drift.DriftBaselineMissingError):
+        plan_drift.check_and_reconcile(
+            plan_dir,
+            plan_id="2026-01-01-001-test-drift",
+            feature_id="F001",
+            stage=plan_drift.STAGE_IMPLEMENTER,
+        )
 
 
 def test_reconcile_no_drift_no_event(tmp_path):
@@ -541,7 +561,7 @@ def test_reconcile_emits_dashboard_sidecar(tmp_path):
     )
     sidecar = operator_console.default_event_sidecar_path()
     assert sidecar.is_file()
-    lines = [l for l in sidecar.read_text().splitlines() if l.strip()]
+    lines = [ln for ln in sidecar.read_text().splitlines() if ln.strip()]
     assert len(lines) == 1
     entry = json.loads(lines[0])
     # Rehydrates into a valid ActionItem.

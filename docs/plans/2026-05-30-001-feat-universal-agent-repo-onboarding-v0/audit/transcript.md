@@ -186,3 +186,17 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 **2026-06-02T03:16:04Z** — feature **F009** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-06-02T03:48:07Z | F009 | i0 | claude / implementer | signed_off | 2,032,054 / 14,834 | [claude-implementer-F009-i0.json](audit/claude-implementer-F009-i0.json) |
+| 2026-06-02T03:50:36Z | F009 | i0 | codex / auditor | needs_changes | 1,814,182 / 9,358 | [codex-auditor-F009-i0.json](audit/codex-auditor-F009-i0.json) |
+| 2026-06-02T03:58:32Z | F009 | i1 | claude / implementer | signed_off | 7,264,520 / 34,737 | [claude-implementer-F009-i1.json](audit/claude-implementer-F009-i1.json) |
+| 2026-06-02T04:01:52Z | F009 | i1 | codex / auditor | needs_changes | 1,354,293 / 14,943 | [codex-auditor-F009-i1.json](audit/codex-auditor-F009-i1.json) |
+| 2026-06-02T04:08:33Z | F009 | i2 | claude / implementer | signed_off | 3,166,519 / 31,895 | [claude-implementer-F009-i2.json](audit/claude-implementer-F009-i2.json) |
+| 2026-06-02T04:11:55Z | F009 | i2 | codex / auditor | signed_off | 1,241,143 / 15,649 | [codex-auditor-F009-i2.json](audit/codex-auditor-F009-i2.json) |
+
+**2026-06-02T04:11:55Z** — feature **F009** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+
+**2026-06-02T04:11:56Z** — feature **F009** terminal: `blocked` after 3 round(s) — supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py,scripts/dontpanic_orchestrate/tests/test_plan_drift_supervisor_f009.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py scripts/dontpanic_orchestrate/tests/test_plan_drift_supervisor_f009.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+

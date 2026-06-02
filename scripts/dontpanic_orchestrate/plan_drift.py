@@ -58,7 +58,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -92,6 +92,20 @@ def baseline_path(plan_dir: Path) -> Path:
 
 
 # ───────────────────────────────── vocabulary ──────────────────────────────
+
+
+class DriftBaselineMissingError(RuntimeError):
+    """Raised when a drift check is asked to compare against an active-run
+    baseline that is absent or corrupt.
+
+    F009 codex #1 — a missing/corrupt baseline means the true dispatch-start
+    disk state has been LOST, so drift can no longer be detected against it.
+    A safety mechanism must FAIL CLOSED: rather than silently recording the
+    *current* (possibly already-drifted) state as a fresh baseline and
+    proceeding — which would bless stale context as if it were the original —
+    the check raises so the supervisor pauses the volley before the next paid
+    call. Recovery is operator-driven: verify the plan files on disk and
+    redispatch so a clean dispatch-start baseline is recorded."""
 
 
 class DriftClass(str, Enum):
@@ -742,21 +756,28 @@ def check_and_reconcile(
     ``baseline``/``current`` may be supplied to keep the function pure for
     tests; otherwise they are read/computed from ``plan_dir``. ``emit=False``
     suppresses all IO (used by tests that assert classification only).
+
+    Raises :class:`DriftBaselineMissingError` (FAIL CLOSED, codex #1) when no
+    baseline is supplied AND none can be read from disk — a missing/corrupt
+    active-run baseline must pause, never silently re-baseline and proceed.
     """
     plan_dir = Path(plan_dir)
     base = baseline if baseline is not None else read_baseline(plan_dir)
     cur = current if current is not None else compute_fingerprint(plan_dir)
 
-    # No baseline recorded (dispatch never called record_baseline): record it
-    # now so subsequent checks have a reference, and proceed. This keeps the
-    # check safe to call even if dispatch wiring is partial.
+    # FAIL CLOSED (codex #1): a missing/corrupt active-run baseline means the
+    # true dispatch-start disk state is gone, so we can no longer detect drift
+    # against it. Recording the CURRENT state as a fresh baseline and proceeding
+    # would silently bless possibly-already-drifted context as the original —
+    # the exact fail-open this safety mechanism must not do. Raise instead so
+    # the caller pauses before the next paid call. The supervisor records the
+    # baseline at dispatch start (before plan load), so a baseline absent HERE
+    # is an anomaly (deleted/corrupted mid-run), not a normal bootstrap.
     if base is None:
-        if emit:
-            record_baseline(plan_dir, cur)
-        return ReconcileDecision(
-            proceed=True,
-            report=DriftReport(DriftClass.NONE, (), (), stage=stage),
-            advanced_baseline=cur,
+        raise DriftBaselineMissingError(
+            f"no readable plan-run drift baseline at {baseline_path(plan_dir)} "
+            f"for stage {stage!r}; failing closed — verify the plan files on "
+            "disk and redispatch so a clean dispatch-start baseline is recorded"
         )
 
     report = classify_drift(base, cur, stage=stage)
@@ -865,6 +886,7 @@ def _emit_sidecar(plan_dir: Path, guidance: Any) -> None:
 __all__ = [
     "BASELINE_FILENAME",
     "ChangeNote",
+    "DriftBaselineMissingError",
     "DriftClass",
     "DriftReport",
     "GATE_STATE_JSON",

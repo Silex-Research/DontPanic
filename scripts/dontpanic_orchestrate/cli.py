@@ -765,12 +765,22 @@ def _finalize_main(argv: list[str]) -> int:
     # bake a success signoff against stale context. Run the same drift check the
     # paid signoff boundary uses BEFORE any mutation and refuse on refresh/
     # blocking drift (additive ledger drift is reconciled in-place and proceeds).
-    drift = plan_drift.check_and_reconcile(
-        plan_dir,
-        plan_id=plan_id,
-        feature_id=args.feature,
-        stage=plan_drift.STAGE_SIGNOFF,
-    )
+    try:
+        drift = plan_drift.check_and_reconcile(
+            plan_dir,
+            plan_id=plan_id,
+            feature_id=args.feature,
+            stage=plan_drift.STAGE_SIGNOFF,
+        )
+    except plan_drift.DriftBaselineMissingError as exc:
+        # FAIL CLOSED (F009 codex #1): no readable dispatch-start baseline means
+        # we cannot prove the plan has not drifted. Refuse to finalize against
+        # unverifiable context rather than baking a signoff blind.
+        print(
+            f"[finalize] REFUSED (plan_drift): {exc}",
+            file=sys.stderr,
+        )
+        return 6
     if not drift.proceed:
         guidance = drift.guidance
         cmd = ""
@@ -3619,8 +3629,8 @@ def _roles_main(argv: list[str]) -> int:
     against AGENT_REGISTRY. Neither path invokes a real agent CLI — the
     registry is read for classification only."""
     from dontpanic_orchestrate import agent_surface
-    from dontpanic_orchestrate.config import cli_helpers as _ch
     from dontpanic_orchestrate import role_assignment as _ra
+    from dontpanic_orchestrate.config import cli_helpers as _ch
 
     if argv and argv[0] in ("-h", "--help", "help"):
         print(_roles_usage_with_workers())
