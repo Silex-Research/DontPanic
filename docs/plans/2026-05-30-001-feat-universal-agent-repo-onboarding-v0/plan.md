@@ -10,7 +10,7 @@ description: |
   decisions explicit, and prevents dashboard process duplication.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-30"
 goal_type: new_feature
 surfaces:

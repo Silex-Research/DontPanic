@@ -2,82 +2,79 @@
 status: operator_resolved
 reason_class: operator_judgment
 plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
-feature_id: F016
-closed_at: 2026-06-02T16:43:01Z
+feature_id: F010
+closed_at: 2026-06-02T17:39:38Z
 latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F016
+# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F010
 
 ## Operator decision
 
-F016 (skill recommendation SURFACES + migration — split from F011 per D060) is
-closed `operator_resolved` (class `operator_judgment`).
+F010 (dashboard singleton guard + availability discovery + final docs — the plan's
+FINAL feature) is closed `operator_resolved` (class `operator_judgment`). With it,
+the plan reaches **16/16**.
 
-The volley implementer **over-scoped** F016 — it TIMED OUT at 600s on BOTH rounds
-(`claude-implementer-F016-i0/i1.json`: `DISPATCH TIMED OUT after 600s`,
-`audit_status: blocked`, zero validation commands). This is the 4th over-scope
-event of the arc and the strongest evidence yet for the plan-review pre-dispatch
-sizing gate (F016 was *itself* already a split of F011). The ~80% the implementer
-landed (a 755-line `skill_recommendation.py` + CLI `skills recommend` + the
-build-side `write_skill_recommendations`) was kept; the operator finished the
-codex auditor's 6 concrete, REAL gaps (NOT a no-defect close) and independently
-verified.
+The volley ran 3 codex rounds (findings moved 4→3→3, no timeout) and terminated
+`stopped_no_progress`. The residual findings were **real defects** (NOT a no-defect
+close); the operator finished them and independently verified.
 
-## Operator action (commit f1865e3)
+## Operator action (commit e3bb3c2)
 
-1. **AC9 dashboard parity** — `dashboard/core.js` loads `skill-recommendations.json`
-   into a pure `dashboard/lib/skill-recommendations-logic.js` render module wired
-   into the Settings page; a Python parity test asserts the JS-consumed JSON equals
-   the CLI `report.to_dict()` (mirrors F013's config-inventory pattern).
-2. **AC10 external-binary blocker** — `explain_blockers` probes the binary
-   (`shutil.which`, injectable) and synthesizes a SPECIFIC capability blocker when
-   it is absent.
-3. **AC10 blocker specificity** — only the required credential/binary/capability is
-   named, not the whole unavailable set.
-4. **AC11 doctor advisory** — non-blocking `dontpanic_doctor.check_skill_rubrics_advisory`
-   lists high-value skills missing rubrics and suggests `skills rubric --suggest`.
-5. **AC11 rubric required_inputs** — `_derive_required_inputs` harvests from
-   `argument-hint`/triggers/explicit lists (prose deliberately not parsed).
-6. **ruff** — dropped unused `field` import; justified the advisory try/except.
+1. **(HIGH, security)** `--replace` no longer signals an arbitrary/reused PID.
+   `_write_singleton_record` stamps a unique `guard_token`; a new
+   `_pid_is_dashboard_process(pid)` POSITIVELY confirms — via `ps -p <pid>
+   -o command=` (shell=False, fixed args) matched against a dashboard-serve
+   signature (`dashboard`+`serve` or `dontpanic`+`serve`) — that the live PID is a
+   dontpanic dashboard BEFORE any SIGTERM/SIGKILL. On any failure (ps missing,
+   non-zero exit, timeout, empty) it returns False and the process is never
+   signaled. `_supersede_existing_singleton` now gates on it: an alive-but-
+   unconfirmed PID is left untouched (record cleared, serve proceeds) — fail safe.
+2. **(MEDIUM, correctness)** same-process `replace=True` raises a typed
+   `SameProcessReplaceError` instead of silently binding a second in-process
+   server; the test asserts the refusal + that the original record is intact.
+3. **(LOW, ruff)** the F010-introduced `S101` (assert→raise in `_make_server`) and
+   `I001` are cleared; the `ps` subprocess `S607` is suppressed inline per the
+   file's existing subprocess convention.
+
+The dashboard availability hint is single-sourced through `dashboard.render_hint_line`
+(operations_guidance / config_inventory / skill_recommendation route through it,
+per the codex i1 architecture finding). Final docs updated (README / GETTING_STARTED
+/ CHANGELOG).
 
 ## Return Condition
 
 status: satisfied
 
-F016 returns complete when:
+F010 returns complete when:
 
-- Missing inputs produce ONE concise ActionChoice naming only the missing blocker
-  (AC8); the build-side merges it into the dashboard what-now action queue.
-- CLI (`dontpanic skills recommend --format text|json`) and the dashboard render the
-  SAME SkillAction data — skill, recommendation, reason, risk, exact_command,
-  approval_required, evidence_target (AC9). Proven by the JSON-shape parity test.
-- The recommender uses the F008 config inventory to explain unavailable
-  credentials/binaries/capabilities — matching the SPECIFIC required resource,
-  including external CLIs absent from PATH (AC10), via F007 dedup.
-- A migration path exists: `dontpanic skills rubric --suggest <skill>` derives safe
-  starting `required_inputs`, and a non-blocking doctor advisory flags high-value
-  skills missing rubrics (AC11).
-- Tests cover dashboard JSON shape parity, missing-input handling, the external-binary
-  blocker, blocker specificity, doctor advisory output, and rubric derivation (AC14c).
+- A serve-singleton record is detected/pruned (`detect_active_dashboard`), a second
+  serve refuses or `--replace` supersedes the prior live server, and a guard prevents
+  accumulating local servers.
+- `--replace` only ever signals a process POSITIVELY confirmed to be a dontpanic
+  dashboard (PID-reuse safe); same-process replace fails loudly rather than double-
+  binding.
+- The dashboard availability hint is implemented once and routed through by every
+  consumer surface (CLI/agent guidance).
+- Final operator docs (README quickstart / GETTING_STARTED / CHANGELOG) reflect the
+  shipped onboarding-v0 surface.
+- Tests cover detection/prune, refuse-second-serve, confirmed-vs-foreign supersede,
+  same-process refusal, and the guard_token.
 
 ## Verification
 
-- 23 pytest (`test_skill_recommendation_f016.py`, 13 original + 10 new) + 8 vitest
-  (new `skill-recommendations-logic.test.js`) + 200 broader Python (skill + dashboard
-  F013 + config-inventory F008 + command-validation) all pass.
-- Dashboard full vitest suite: 936 pass (no regressions). ruff clean on the in-scope
-  Python files. `skills recommend`/`skills rubric --help` exit 0; live doctor emits a
-  non-blocking WARN.
-- Operator independently read the 4 substantive fixes (external-binary synth blocker,
-  doctor advisory, rubric derivation, JS↔CLI parity test) — real implementations, not
-  stubs or test-weakening. Mechanical multi-file implementation was delegated to a
-  subagent; verification was performed directly by the operator.
+- 117 pytest pass (`test_dashboard_singleton_f010.py` + `test_dashboard_inventory_f013.py`
+  + `test_config_inventory_f008.py`); the F010-introduced ruff S101/I001 are clean
+  (5 remaining ruff errors are PRE-EXISTING CLI-path S101/S112, not F010 code).
+- Operator independently re-ran the suite and read the security fix: confirmed
+  `_supersede_existing_singleton` gates on `_pid_is_dashboard_process` (positive
+  `ps` confirmation, fail-safe). Mechanical fix delegated to a subagent; verification
+  by the operator.
 
 ## Evidence references
 
-- `audit/codex-auditor-F016-i0.json` / `-i1.json` — verdicts `needs_changes`
-  (implementer timed out both rounds).
+- `audit/codex-auditor-F010-i0/i1/i2.json` — verdicts `needs_changes` (findings 4→3→3).
 - `audit/signoff-…json` — operator-resolved signoff envelope (`operator_judgment`).
-- commit `f1865e3` — F016 deliverables (engine + CLI + dashboard Python/JS + doctor + tests).
-- decisions `D060` (F011 3-way split), `D063` (this close).
+- commit `e3bb3c2` — F010 deliverables (singleton guard + identity verification +
+  hint single-sourcing + docs).
+- decisions `D064` (this close).

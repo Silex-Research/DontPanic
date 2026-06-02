@@ -485,11 +485,22 @@
         "Add CHANGELOG.md entry for the product-facing onboarding and dashboard serve behavior."
       ],
       "acceptance": "(1) Starting a second dashboard serve in the same DontPanic home refuses with an actionable message. (2) Stale singleton records are pruned. (3) `--replace` or equivalent intentionally replaces a live singleton. (4) Dashboard status helper returns active URL when running and start command when inactive. (5) Shared render helper emits the dashboard hint once per response even when many items require human input. (6) Existing bind failure handling still works. (7) Tests cover singleton behavior, status helper, and deduped hint rendering without opening a browser. (8) README and getting-started docs show the complete new-agent, new-repo, role-assignment, config-inventory/setup, budget/iteration guidance, skill invocation recommendation, and dashboard decision flow. (9) CHANGELOG documents the operator-visible changes. (10) Full targeted test suite passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F009",
         "F011"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T17:39:38Z"
     },
     {
       "id": "F014",
