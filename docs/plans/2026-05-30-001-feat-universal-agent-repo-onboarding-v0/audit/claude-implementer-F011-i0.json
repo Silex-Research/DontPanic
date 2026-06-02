@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-02T14:35:03Z",
+  "completed_at": "2026-06-02T14:41:27Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-a0f2l21f target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3163 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2856819,
+    "tokens_out": 31349,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F011] I implemented the F011 core engine as a new pure module `scripts/dontpanic_orchestrate/skill_invocation.py` with two layers: (1) a Pydantic-validated `invocation:` SKILL.md frontmatter schema (`mode` enum over all six values, lifecycle stages, required inputs, risk flags, evidence target, optional command template) whose `parse_invocation` is a strict no-op for skills lacking the block (AC1), and (2) a pure `evaluate(SkillInvocationContext) → list[SkillAction]` evaluator that emits typed records across the five recommendation values with no I/O, network, or execution (AC2). Deterministic risk precedence (AC6) is implemented in fixed order — `never_suggest` opt-out → suppressed/`not_applicable` (AC12), `never_auto` → suggest, any of the six risk flags or missing inputs blocks auto-run regardless of declared mode, and an auto mode declared alongside an auto-blocking flag (or a malformed block) yields a diagnostic `approval_required` rather than silently trusting the unsafe declaration; metadata-less applicable skills default to `suggest` and are never auto-run (AC3). The auto-run allowlist stays an *injected* `is_command_allowlisted` predicate owned by F015 — the engine only classifies auto_run-eligible vs suggest based on its result. I added SKILL.md fixtures for all 13 representative skills (AC13) and a 36-test suite covering every recommendation class, the no-auto fallback, the never_suggest opt-out, contradictory-metadata precedence (parametrized over all risk flags), missi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py -q",
+      "ruff check scripts/dontpanic_orchestrate/skill_invocation.py scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

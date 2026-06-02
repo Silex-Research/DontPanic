@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-02T14:53:51Z",
+  "completed_at": "2026-06-02T14:56:17Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F011-i2.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-a0f2l21f target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 336095 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 707753,
+    "tokens_out": 10598,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F011] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (medium, correctness): `evidence_target` is not validated as a required part of `invocation:` metadata except for auto modes. Evidence: F011 AC1 defines schema fields as “risk flags, evidence target, optional command template”; only `command_template` is optional, but `skill_invocation.py:167-185` allows `evidence_target = None` for `suggest`, `approval_required`, `never_auto`, and `never_suggest`, and tests explicitly lock that in at `test_skill_invocation_f011.py:177-184`. Representative fixtures like `github-pr`, `browser-use`, and `prompt-optimizer` also omit it. Recommendation: make `evidence_target` required for invocation metadata, or narrow the schema with an explicit documented exception only for `never_suggest` if that opt-out should truly carry no evidence target.\n\nImplementer target declaration: summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`. `target_context.commands_run` is empty, so I found no forbidden command shapes there.\n\nChecks run:\n$ git status --short\n$ git diff --stat HEAD~1\n$ git diff --name-only HEAD~1\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHO",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider -s scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.skill_invocation import *; allow=lambda c: c=='cmd'; r=load_rubric('x', {'invocation': {'mode':'auto_safe','evidence_target':'e','command_template':'cmd'}}); a=evaluate(SkillInvocationContext(skills=(r,), is_command_allowlisted=allow))[0]; assert a.recommendation is Recommendation.AUTO_RUN and a.exact_command=='cmd'; r=SkillRubric(skill_name='legacy', applicable=True); assert evaluate(SkillInvocationContext(skills=(r,), is_command_allowlisted=lambda c: True))[0].recommendation is Recommendation.SUGGEST; r=load_rubric('ns', {'invocation': {'mode':'never_suggest'}}); assert recommendations(SkillInvocationContext(skills=(r,))) == []; r=load_rubric('risk', {'invocation': {'mode':'auto_safe','risk_flags':['network_access'],'evidence_target':'e','command_template':'cmd'}}); assert evaluate(SkillInvocationContext(skills=(r,), is_command_allowlisted=allow))[0].recommendation is Recommendation.APPROVAL_REQUIRED; r=load_rubric('miss', {'invocation': {'mode':'auto_safe','required_inputs':['x'],'evidence_target':'e','command_template':'cmd'}}); assert evaluate(SkillInvocationContext(skills=(r,), is_command_allowlisted=allow))[0].recommendation is Recommendation.BLOCKED_MISSING_INPUTS; print('pure smoke ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F011",
+      "issue": "`evidence_target` is not validated as a required part of `invocation:` metadata except for auto modes. Evidence: F011 AC1 defines schema fields as “risk flags, evidence target, optional command template”; only `command_template` is optional, but `skill_invocation.py:167-185` allows `evidence_target = None` for `suggest`, `approval_required`, `never_auto`, and `never_suggest`, and tests explicitly lock that in at `test_skill_invocation_f011.py:177-184`. Representative fixtures like `github-pr`, `",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
