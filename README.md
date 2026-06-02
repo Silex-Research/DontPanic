@@ -222,7 +222,15 @@ dontpanic --version
 dontpanic --help
 ```
 
-### 2. Configure Roles
+### 2. Orient A New Agent, Then Configure Roles
+
+A new agent (human or AI) starts by reading the generated operating brief — the
+operator-vs-worker distinction, role catalog, and the canonical command flow:
+
+```bash
+dontpanic agent brief          # the onboarding brief; `dontpanic agent` alone prints it too
+dontpanic agent whoami         # classify THIS agent (operator vs registered worker)
+```
 
 `dontpanic setup` is preview-only by default. It writes no secrets; it stores
 agent role names and project runtime pointers only.
@@ -254,21 +262,54 @@ dontpanic manifest show --json
 
 Agent CLIs authenticate themselves. DontPanic does not store API keys.
 
-### 3. Register A Project
+### 3. Onboard An Agent And A Repo
+
+DontPanic distinguishes two roles: an **operator** (a human or interactive agent
+that *runs* DontPanic — locks plans, approves gates, reads guidance) and a
+**worker** (an agent DontPanic *dispatches* to implement or audit, e.g.
+claude / codex). A worker must be a registered executor; an operator-only agent
+cannot be assigned the `implementer`/`auditor` roles.
+
+**New agent — read the operating brief and check agent readiness:**
 
 ```bash
-dontpanic projects add myapp /absolute/path/to/myapp --init-config
+dontpanic agent brief            # human-readable operating brief
+dontpanic doctor --agent         # CLI, manifest, roles, homes readiness
+```
+
+**New repo — register and onboard in one step.** `--onboard` writes the managed
+`AGENTS.md` block so a fresh clone is agent-ready immediately:
+
+```bash
+dontpanic projects add myapp /absolute/path/to/myapp --onboard
+dontpanic doctor --project myapp     # this project's onboarding/config/roles
+```
+
+Re-onboarding an already-registered repo requires the explicit overwrite flags
+(`--onboard --force --yes`).
+
+**Assign roles** (workers must be registered executors) and set project-scoped
+runtime evidence:
+
+```bash
 cd /absolute/path/to/myapp
 dontpanic project config set roles.implementer claude
 dontpanic project config set roles.auditor codex
-```
-
-Runtime evidence defaults are also project-scoped:
-
-```bash
-cd /absolute/path/to/myapp
 dontpanic project config set runtime_evidence.web.base_url http://localhost:3000
 ```
+
+**See what is configured and what still needs setup** — across machine and
+project scope, classed `ok` / `needs_setup` / `missing` / `human_required`:
+
+```bash
+dontpanic config inventory               # current repo / machine scope
+dontpanic config inventory --project myapp
+```
+
+When any item needs a human, the response carries exactly **one** dashboard hint
+(the active URL if a dashboard is running, otherwise the start command). The full
+new-agent / new-repo / role-assignment / inventory walkthrough lives in
+[`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md).
 
 ### 4. Run The Doctor
 
@@ -300,6 +341,16 @@ For a live localhost view while you work:
 ```bash
 dontpanic dashboard serve
 ```
+
+The dashboard binds `127.0.0.1` only and runs **one server per DontPanic home**.
+A second `serve` for the same home is refused with the URL of the one already
+running — open that instead of stacking servers. Pass `--replace` (alias
+`--force-single`) to intentionally stop a stuck server and take over; a crashed
+server's stale record is pruned automatically on the next `serve`. When work is
+blocked, `dontpanic what-now <plan>` and `dontpanic config inventory` tell you
+whether a dashboard is already running (and its URL) or print the start command
+— see [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) for the full
+new-agent / new-repo onboarding and dashboard decision flow.
 
 ### 6. Try A Safe Sample Plan
 
@@ -339,6 +390,20 @@ capability requirements, active supervisors, and release-impact signals. It
 does not dispatch anything. It explains which work is ready, which work is
 blocked, where parallel work may collide, and which public docs or changelog
 surfaces may need attention before merge.
+
+For a per-stage skill rubric, and a ranked decision set when work is blocked:
+
+```bash
+dontpanic skills recommend <plan-id>      # which skills to invoke for this stage
+dontpanic what-now <plan-id> --feature F001   # ranked moves when blocked
+```
+
+`what-now` turns a blocked dispatch (quota cooldown, budget ceiling, iteration
+cap, a cleared `pre_merge` signoff, a tripped breaker, a setup gap) into a short
+list with an exact command where one is safe to emit. The supervised
+implement→audit loop is `dontpanic orchestrate <plan-id>` (preview) /
+`--confirm` (run); the lower-level `dispatch-from-plan` below is the same engine
+with explicit per-step control.
 
 Preview dispatch:
 

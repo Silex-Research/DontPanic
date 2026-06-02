@@ -46,6 +46,40 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-02 — Dashboard serve singleton guard + status helper (plan 2026-05-30-001 F010)
+
+### Added
+- `dontpanic dashboard serve --replace` (alias `--force-single`): intentionally
+  stop a live dashboard serving the same DontPanic home and take over. Use it to
+  recover when a previous server is stuck. It waits for the old process to exit
+  (escalating to SIGKILL if it ignores the graceful stop) before binding, so
+  replacing a server on the same port no longer races the port release.
+- A dashboard status helper that one-answers "is a dashboard running, and at what
+  URL?" — returning the active URL plus recorded project/scope when live, or the
+  exact `dontpanic dashboard serve` command when not. `dontpanic config
+  inventory` and `dontpanic what-now` now route their dashboard discovery through
+  this single helper, so the two surfaces never disagree.
+
+### Changed
+- Starting a second `dontpanic dashboard serve` for the same home is now refused
+  with an actionable message naming the already-running URL (open it, or pass
+  `--replace`), instead of silently stacking another local server. The guard is
+  per-home, so an ordinary same-port conflict in a different home still surfaces
+  as a normal bind error.
+- A crashed serve leaves a stale singleton record; the next `serve` prunes the
+  dead-pid record automatically and is admitted, so `--replace` is only needed
+  when the old server is genuinely still alive. `--once` and Ctrl-C shutdown both
+  clear the record.
+- README "Onboard An Agent And A Repo" / "Dispatch Real Work" and
+  `docs/GETTING_STARTED.md` now document the complete new-agent / new-repo
+  onboarding flow (`agent brief`, `projects add --onboard`, role assignment,
+  `config inventory`, `doctor --agent|--project`, `skills recommend`, `what-now`,
+  `orchestrate`) and the operator-vs-worker distinction plus the dashboard
+  decision flow. The README quickstart's `projects add` example now uses
+  `--onboard` (was the stale `--init-config`).
+
+Surfaces affected: ux, infra, readme
+
 ## 2026-05-30 — Operations guidance + no-paid finalizer (plan 2026-05-30-001 F007)
 
 ### Added

@@ -900,7 +900,23 @@ def render_text(report: RecommendationReport) -> str:
         lines.append("")
         lines.append(f"  → {c.title}: {c.rationale}")
     if report.affordance is not None:
-        lines.append(f"  Dashboard: {report.affordance.text()}")
+        # Emit the dashboard pointer exactly once per response through the shared
+        # dedup helper (AC10 / codex F010 i1). The affordance is attached only
+        # when the missing-input action requires a human, so the count is the
+        # number of human-required missing actions in this response.
+        from dontpanic_orchestrate import dashboard
+
+        human_required = (
+            1
+            if report.missing_input_action is not None
+            and report.missing_input_action.requires_human
+            else 0
+        )
+        hint = dashboard.render_dashboard_hint_once(
+            report.affordance.as_status(), human_required_count=human_required
+        )
+        if hint is not None:
+            lines.append(f"  Dashboard: {hint}")
     if report.migration_candidates:
         lines.append("")
         lines.append(

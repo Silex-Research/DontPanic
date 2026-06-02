@@ -93,10 +93,28 @@ class DashboardAffordance:
     start_command: str = DASHBOARD_START_COMMAND
     affordance_id: str = DASHBOARD_AFFORDANCE_ID
 
+    def as_status(self) -> Any:
+        """Adapt this affordance to a :class:`dashboard.DashboardStatus` so the
+        response-level hint routes through the shared once-per-response renderer
+        (codex F010 i1 architecture finding)."""
+        from dontpanic_orchestrate import dashboard
+
+        return dashboard.DashboardStatus(
+            is_running=self.is_running,
+            url=self.url,
+            start_command=self.start_command,
+        )
+
     def text(self) -> str:
-        if self.is_running and self.url:
-            return f"Dashboard is running — open {self.url}"
-        return f"Dashboard is not running — start it with `{self.start_command}`"
+        # Single-sourced wording: delegate to the canonical dashboard helper
+        # rather than re-spelling the hint here (codex F010 i1).
+        from dontpanic_orchestrate import dashboard
+
+        return dashboard.render_hint_line(
+            is_running=self.is_running,
+            url=self.url,
+            start_command=self.start_command,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1022,8 +1040,19 @@ def render_text(guidance: Guidance) -> str:
         if c.references_affordance:
             lines.append(f"     → see dashboard affordance [{c.references_affordance}]")
     if guidance.affordance is not None:
-        lines.append("")
-        lines.append(f"  Dashboard: {guidance.affordance.text()}")
+        # Emit the dashboard pointer exactly once per response through the shared
+        # dedup helper, keyed on how many choices need a human (AC5 / codex F010
+        # i1). The helper returns None when nothing needs a human, so an all-clear
+        # response shows no pointer.
+        from dontpanic_orchestrate import dashboard
+
+        human_required = sum(1 for c in guidance.choices if c.requires_human)
+        hint = dashboard.render_dashboard_hint_once(
+            guidance.affordance.as_status(), human_required_count=human_required
+        )
+        if hint is not None:
+            lines.append("")
+            lines.append(f"  Dashboard: {hint}")
     return "\n".join(lines) + "\n"
 
 
@@ -1033,8 +1062,23 @@ def render_text(guidance: Guidance) -> str:
 def collect_dashboard_affordance(*, url: str | None = None) -> DashboardAffordance:
     """Build the response-level affordance. ``url`` (when a dashboard singleton
     is known to be running) yields the active-URL form; otherwise the start
-    command form. The dashboard singleton guard is owned by another feature, so
-    callers pass the URL when they have it."""
+    command form.
+
+    F010 step 6: when the caller does not thread a ``url``, this routes through
+    the single :func:`dashboard.dashboard_status` helper to auto-detect a running
+    singleton — rather than re-implementing dashboard discovery here — so the
+    what-now affordance and the config-inventory hint agree on whether a
+    dashboard is live. Detection is best-effort: any failure degrades to the
+    not-running (start-command) form."""
+    if not url:
+        try:
+            from dontpanic_orchestrate import dashboard
+
+            status = dashboard.dashboard_status()
+            if status.is_running and status.url:
+                url = status.url
+        except Exception:  # noqa: BLE001 — detection is advisory; degrade to "not running"
+            url = None
     if url:
         return DashboardAffordance(is_running=True, url=url)
     return DashboardAffordance(is_running=False)

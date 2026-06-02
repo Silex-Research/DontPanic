@@ -112,9 +112,15 @@ class DashboardHint:
     hint_id: str = DASHBOARD_HINT_ID
 
     def text(self) -> str:
-        if self.is_running and self.url:
-            return f"Dashboard is running — open {self.url}"
-        return f"Dashboard is not running — start it with `{self.start_command}`"
+        # Single-sourced wording: delegate to the canonical dashboard helper
+        # rather than re-spelling the hint here (codex F010 i1).
+        from dontpanic_orchestrate import dashboard
+
+        return dashboard.render_hint_line(
+            is_running=self.is_running,
+            url=self.url,
+            start_command=self.start_command,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -2016,15 +2022,17 @@ def _detect_dashboard_hint(*, dashboard_url: str | None = None) -> DashboardHint
     """
     if dashboard_url:
         return DashboardHint(is_running=True, url=dashboard_url)
-    active_url: str | None = None
+    # F010 step 6: route discovery through the single dashboard status helper
+    # rather than re-deriving it here, so "is a dashboard running?" has one
+    # answer shared with operations guidance.
     try:
         from dontpanic_orchestrate import dashboard
 
-        active_url = dashboard.detect_active_url()
+        status = dashboard.dashboard_status()
     except Exception:  # noqa: BLE001 — detection is best-effort; degrade to "not running"
-        active_url = None
-    if active_url:
-        return DashboardHint(is_running=True, url=active_url)
+        return DashboardHint(is_running=False)
+    if status.is_running and status.url:
+        return DashboardHint(is_running=True, url=status.url)
     return DashboardHint(is_running=False)
 
 

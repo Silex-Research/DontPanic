@@ -204,7 +204,7 @@ def test_detect_active_dashboard_roundtrip(tmp_path):
     dash_dir = tmp_path / "dashboard"
     dash_dir.mkdir()
     dashboard._write_singleton_record(
-        dashboard_dir=dash_dir,
+        home=dash_dir,
         host="127.0.0.1",
         port=8123,
         url="http://127.0.0.1:8123/",
@@ -362,6 +362,9 @@ def test_serve_project_renders_selected_project_inventory_with_active_url(
 
 
 def test_serve_records_and_shutdown_clears_singleton(tmp_path):
+    # The serve-singleton is keyed by the canonical DontPanic home (conftest
+    # redirects DONTPANIC_HOME to a per-test tmp dir), NOT the served dashboard
+    # dir — so detection here reads the home via the no-argument default.
     dash_dir = tmp_path / "dashboard"
     plans_root = tmp_path / "plans"
     plans_root.mkdir()
@@ -373,12 +376,12 @@ def test_serve_records_and_shutdown_clears_singleton(tmp_path):
         watch=False,
     )
     try:
-        url = dashboard.detect_active_url(dash_dir)
+        url = dashboard.detect_active_url()
         assert url == handle.url
         assert os.getpid() == json.loads(
-            dashboard._singleton_record_path(dash_dir).read_text()
+            dashboard._singleton_record_path().read_text()
         )["pid"]
     finally:
         handle.shutdown()
     # Shutdown prunes the singleton so a later detection reports "not running".
-    assert dashboard.detect_active_url(dash_dir) is None
+    assert dashboard.detect_active_url() is None

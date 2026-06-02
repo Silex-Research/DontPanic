@@ -40,6 +40,8 @@ import ipaddress
 import json
 import os
 import platform
+import secrets
+import signal
 import socket
 import socketserver
 import subprocess  # noqa: S404 — invoked with fixed args + shell=False; see _default_opener
@@ -148,17 +150,27 @@ def local_what_now_cache_path() -> Path:
 
 # ── dashboard serve singleton detection (F013 AC2) ──────────────────────
 #
-# A running `dashboard serve` records a small JSON singleton under its dashboard
-# home so config inventory / operations guidance can AUTO-DETECT the live URL for
-# the response-level dashboard hint without the caller threading a URL through.
-# F010 builds the full refuse-second-serve / --replace behavior on top of this
-# detection primitive; F013 only needs "is a dashboard live, and at what URL?".
+# A running `dashboard serve` records a small JSON singleton under the canonical
+# DontPanic HOME (``global_config.dontpanic_home()``) — NOT the served
+# ``dashboard_dir`` / cwd — so config inventory / operations guidance can
+# AUTO-DETECT the live URL for the response-level dashboard hint without the
+# caller threading a URL through. Keying by the home (rather than the dashboard
+# dir) is what makes the "one dashboard server per DontPanic home" guarantee
+# (F010 AC1) impossible to bypass by serving the same home from a different
+# working directory or ``--dashboard-dir``. F010 builds the full
+# refuse-second-serve / --replace behavior on top of this detection primitive;
+# F013 only needs "is a dashboard live, and at what URL?".
+#
+# Every singleton helper takes an optional ``home`` directory (defaulting to the
+# canonical home) so tests can drive a hermetic per-test home. The autouse
+# conftest fixture already redirects ``DONTPANIC_HOME`` to a tmp dir, so a
+# no-argument call is isolated per test without any explicit threading.
 
 DEFAULT_SINGLETON_FILENAME = ".serve-singleton.json"
 
 
-def _singleton_record_path(dashboard_dir: Path | None = None) -> Path:
-    base = dashboard_dir if dashboard_dir is not None else default_dashboard_dir()
+def _singleton_record_path(home: Path | None = None) -> Path:
+    base = home if home is not None else global_config.dontpanic_home()
     return base / DEFAULT_SINGLETON_FILENAME
 
 
@@ -177,16 +189,16 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-def detect_active_dashboard(dashboard_dir: Path | None = None) -> dict[str, Any] | None:
-    """Return the live serve-singleton record for this dashboard home, or None.
+def detect_active_dashboard(home: Path | None = None) -> dict[str, Any] | None:
+    """Return the live serve-singleton record for this DontPanic home, or None.
 
-    Reads the record written by :func:`serve_start`, verifies the recorded pid is
-    still alive, and prunes a stale record (dead pid) so a crashed serve never
-    advertises a phantom URL. This is the detection primitive the config
-    inventory uses to auto-populate the response-level dashboard hint's
-    ``active_url`` (F013 AC2).
+    Reads the record written by :func:`serve_start` under the canonical DontPanic
+    home, verifies the recorded pid is still alive, and prunes a stale record
+    (dead pid) so a crashed serve never advertises a phantom URL. This is the
+    detection primitive the config inventory uses to auto-populate the
+    response-level dashboard hint's ``active_url`` (F013 AC2).
     """
-    path = _singleton_record_path(dashboard_dir)
+    path = _singleton_record_path(home)
     if not path.is_file():
         return None
     try:
@@ -204,19 +216,302 @@ def detect_active_dashboard(dashboard_dir: Path | None = None) -> dict[str, Any]
     return record
 
 
-def detect_active_url(dashboard_dir: Path | None = None) -> str | None:
+def detect_active_url(home: Path | None = None) -> str | None:
     """Active dashboard URL when a serve singleton is live for this home, else None."""
-    record = detect_active_dashboard(dashboard_dir)
+    record = detect_active_dashboard(home)
     if not record:
         return None
     url = record.get("url")
     return url if isinstance(url, str) and url else None
 
 
+# ── dashboard status helper + singleton guard (F010) ────────────────────
+#
+# F013 added the detection primitive (detect_active_dashboard / detect_active_url).
+# F010 layers the operator-facing surface on top: a single status helper that
+# CLI/agent guidance routes through (so dashboard discovery is implemented once),
+# a refuse-second-serve / --replace guard so local servers do not accumulate, and
+# a shared render helper that emits the dashboard hint once per response.
+
+DASHBOARD_START_COMMAND = "dontpanic dashboard serve"
+
+
+def render_hint_line(
+    *,
+    is_running: bool,
+    url: str | None,
+    start_command: str = DASHBOARD_START_COMMAND,
+) -> str:
+    """Canonical single source for the dashboard-pointer wording (F010).
+
+    Every response surface — operations guidance, skill recommendation, and
+    config inventory — renders its dashboard hint through this one function (via
+    their ``text()`` methods, which delegate here), so the wording lives in
+    exactly one place rather than being re-spelled at each call site (codex F010
+    i1 architecture finding). :meth:`DashboardStatus.hint_text` and
+    :func:`render_dashboard_hint_once` route through it too.
+    """
+    if is_running and url:
+        return f"Dashboard is running — open {url}"
+    return f"Dashboard is not running — start it with `{start_command}`"
+
+
+class DashboardAlreadyRunningError(RuntimeError):
+    """Raised when ``dashboard serve`` is requested for a DontPanic home that
+    already has a live singleton and the caller did not pass ``replace=True``
+    (F010 AC1).
+
+    Carries the existing ``url`` (when recorded) and the ``home`` the live
+    singleton belongs to so the CLI can print an actionable refusal — open the
+    running dashboard or pass ``--replace``. Keyed by the canonical DontPanic
+    home, not the served dashboard dir, so launching from a different cwd /
+    ``--dashboard-dir`` against the same home is still refused."""
+
+    def __init__(
+        self,
+        url: str | None,
+        home: Path,
+        project: str | None = None,
+    ) -> None:
+        self.url = url
+        self.home = home
+        self.project = project
+        super().__init__(
+            f"a dashboard is already serving this home at {url or home}"
+        )
+
+
+class SameProcessReplaceError(RuntimeError):
+    """Raised when ``replace=True`` is requested but the live singleton is owned
+    by THIS process (``record["pid"] == os.getpid()``) (F010 fix#2).
+
+    Silently clearing the record and binding a second server would leave the old
+    in-process server still bound and serving — two live servers, one record. We
+    cannot SIGTERM ourselves to stop it, so we refuse honestly: the in-process
+    dashboard must be shut down (``handle.shutdown()``) before re-serving in the
+    same process. Carries the existing ``url`` so the caller can report it."""
+
+    def __init__(self, url: str | None, home: Path) -> None:
+        self.url = url
+        self.home = home
+        super().__init__(
+            "a dashboard is already running in THIS process at "
+            f"{url or home}; stop it (handle.shutdown()) before re-serving — "
+            "--replace cannot supersede an in-process server"
+        )
+
+
+@dataclass(frozen=True)
+class DashboardStatus:
+    """Lightweight running-state of the dashboard for CLI/agent guidance (F010 AC4).
+
+    When a singleton is live this carries the active ``url`` plus the recorded
+    ``project`` and the ``scope`` (the dashboard home the record belongs to).
+    When nothing is running ``is_running`` is False and ``start_command`` is the
+    exact command to launch it. config inventory and operations guidance both
+    route their dashboard discovery through :func:`dashboard_status` rather than
+    re-deriving it, so the "is it running, and where?" question has one answer.
+    """
+
+    is_running: bool
+    url: str | None = None
+    project: str | None = None
+    # ``scope`` is the DontPanic home the singleton record belongs to (str(home)).
+    scope: str | None = None
+    start_command: str = DASHBOARD_START_COMMAND
+
+    def hint_text(self) -> str:
+        return render_hint_line(
+            is_running=self.is_running,
+            url=self.url,
+            start_command=self.start_command,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "is_running": self.is_running,
+            "url": self.url if self.is_running else None,
+            "project": self.project,
+            "scope": self.scope,
+            "start_command": None if self.is_running else self.start_command,
+            "text": self.hint_text(),
+        }
+
+
+def dashboard_status(home: Path | None = None) -> DashboardStatus:
+    """Single source of truth for "is a dashboard running, and at what URL?" (AC4).
+
+    Keyed by the canonical DontPanic home (``global_config.dontpanic_home()`` when
+    ``home`` is None) — the same location :func:`serve_start` records its
+    singleton — so config inventory and operations guidance, which both call this
+    with no argument, discover a live serve regardless of which cwd / dashboard
+    dir it was launched from. Routes through :func:`detect_active_url` (so
+    callers/tests that monkeypatch detection keep working) and
+    :func:`detect_active_dashboard` for the recorded project. Both prune a
+    stale/dead-pid record as a side effect (AC2). Returns a not-running status
+    carrying the exact serve command when no singleton is live.
+    """
+    base = home if home is not None else global_config.dontpanic_home()
+    url = detect_active_url(base)
+    if not url:
+        return DashboardStatus(is_running=False, scope=str(base))
+    project: str | None = None
+    record = detect_active_dashboard(base)
+    if record:
+        proj = record.get("project")
+        project = proj if isinstance(proj, str) and proj else None
+    return DashboardStatus(
+        is_running=True,
+        url=url,
+        project=project,
+        scope=str(base),
+    )
+
+
+def render_dashboard_hint_once(
+    status: DashboardStatus, *, human_required_count: int
+) -> str | None:
+    """Emit the dashboard hint text exactly once per response (AC5).
+
+    Returns the single hint line when at least one item in the response requires
+    human input — regardless of HOW MANY do, so the dedup lives in this shared
+    helper rather than at each call site. Returns ``None`` when nothing needs a
+    human (no dashboard pointer is shown for an all-clear response).
+    """
+    if human_required_count <= 0:
+        return None
+    return status.hint_text()
+
+
+# --replace supersede: how long to wait for the old server to exit and release
+# its port before the fresh serve binds, and how often to poll. SIGTERM is
+# asynchronous, so binding immediately races the old listener's socket release
+# (codex F010 i1). We poll for the pid to exit, escalate to SIGKILL if it ignores
+# SIGTERM within the window, and only then let the bind proceed (with a few
+# reuse-address retries to absorb the final kernel release).
+_SUPERSEDE_TIMEOUT_SECONDS = 5.0
+_SUPERSEDE_POLL_INTERVAL_SECONDS = 0.1
+
+
+# --replace identity guard: before SIGTERM/SIGKILLing the recorded pid, POSITIVELY
+# confirm that the live pid is actually a dontpanic dashboard server. A reused PID
+# (the old dashboard died and the OS reassigned its number to an unrelated process)
+# must never be killed by --replace (codex F010 i2 high). We inspect the live
+# process's command line via `ps` (shell=False, fixed args) and only treat it as
+# ours when the command line carries a dashboard-serve signature.
+_PS_PROCESS_PROBE_TIMEOUT_SECONDS = 3.0
+
+# A live process counts as "our dashboard" when its command line contains BOTH
+# tokens of any one of these pairs (case-insensitive). This is intentionally a
+# small module-level constant so tests can read/extend it and so the signature
+# rule lives in exactly one place.
+_DASHBOARD_PROCESS_SIGNATURES: tuple[tuple[str, ...], ...] = (
+    ("dashboard", "serve"),
+    ("dontpanic", "serve"),
+)
+
+
+def _command_matches_dashboard_signature(command: str) -> bool:
+    """True when ``command`` (a process command line) looks like a dontpanic
+    dashboard serve — every token of at least one signature pair is present
+    (case-insensitive). Pure/string-only so tests can drive it directly."""
+    lowered = command.lower()
+    return any(
+        all(token in lowered for token in signature)
+        for signature in _DASHBOARD_PROCESS_SIGNATURES
+    )
+
+
+def _pid_is_dashboard_process(pid: int) -> bool:
+    """POSITIVELY confirm ``pid`` is a live dontpanic dashboard server (macOS/no /proc).
+
+    Runs ``ps -p <pid> -o command=`` (shell=False, fixed args) and returns True
+    ONLY when the resulting command line matches a dashboard-serve signature
+    (:data:`_DASHBOARD_PROCESS_SIGNATURES`). On ANY failure — ps missing,
+    non-zero exit (pid gone), timeout, or empty output — returns False: we cannot
+    confirm the process is ours, so we treat it as NOT our dashboard and never
+    signal it. Module-level so tests can monkeypatch it to simulate an
+    "alive but foreign" pid without spawning a real process.
+    """
+    if pid <= 0:
+        return False
+    try:
+        # noqa S603/S607: fixed args, shell=False; `ps` is PATH-resolved by design.
+        ps_argv = ["ps", "-p", str(pid), "-o", "command="]  # noqa: S607
+        result = subprocess.run(  # noqa: S603
+            ps_argv,
+            capture_output=True,
+            text=True,
+            timeout=_PS_PROCESS_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if result.returncode != 0:
+        return False
+    command = (result.stdout or "").strip()
+    if not command:
+        return False
+    return _command_matches_dashboard_signature(command)
+
+
+def _wait_for_pid_exit(pid: int, *, timeout: float) -> bool:
+    """Poll until ``pid`` is gone or ``timeout`` elapses. True if it exited."""
+    deadline = time.monotonic() + timeout
+    while _pid_alive(pid):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(_SUPERSEDE_POLL_INTERVAL_SECONDS)
+    return True
+
+
+def _supersede_existing_singleton(
+    home: Path, record: dict[str, Any]
+) -> None:
+    """Stop a live singleton so ``--replace`` can take over its port (AC3).
+
+    SIGTERMs the recorded pid ONLY when it is alive, is NOT the current process
+    (we never signal ourselves), AND :func:`_pid_is_dashboard_process` POSITIVELY
+    confirms the live pid really is a dontpanic dashboard server (codex F010 i2
+    high). A reused PID — the old dashboard died and the OS reassigned its number
+    to an unrelated process — is alive but NOT confirmed as ours, so we never
+    signal it: we just clear the stale record and let the fresh serve proceed.
+    For the confirmed-dashboard case we WAIT for it to exit so the old server
+    releases its listening socket before the fresh serve binds, escalating to
+    SIGKILL within :data:`_SUPERSEDE_TIMEOUT_SECONDS` so the operator's explicit
+    ``--replace`` is honored rather than silently leaving two servers. The record
+    is cleared regardless so the new server records its own.
+    """
+    pid = record.get("pid")
+    if (
+        isinstance(pid, int)
+        and pid > 0
+        and pid != os.getpid()
+        and _pid_alive(pid)
+        and _pid_is_dashboard_process(pid)
+    ):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:  # noqa: S110 — best-effort supersede; record is still cleared
+            pass
+        else:
+            if not _wait_for_pid_exit(pid, timeout=_SUPERSEDE_TIMEOUT_SECONDS):
+                # Graceful stop ignored — escalate so the replace actually frees
+                # the port instead of racing a still-live old server.
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError:  # noqa: S110 — already gone is fine
+                    pass
+                _wait_for_pid_exit(pid, timeout=_SUPERSEDE_TIMEOUT_SECONDS)
+    # Alive-but-not-confirmed (PID reuse / foreign process) falls through here:
+    # no signal is sent; we only drop the stale record so the fresh serve proceeds.
+    _clear_singleton_record(home)
+
+
 def _write_singleton_record(
-    *, dashboard_dir: Path, host: str, port: int, url: str, project: str | None
+    *, home: Path, host: str, port: int, url: str, project: str | None
 ) -> Path:
-    path = _singleton_record_path(dashboard_dir)
+    path = _singleton_record_path(home)
     path.parent.mkdir(parents=True, exist_ok=True)
     record = {
         "pid": os.getpid(),
@@ -225,6 +520,12 @@ def _write_singleton_record(
         "url": url,
         "project": project,
         "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        # Dashboard-specific identity for the --replace guard: a unique token so a
+        # record can be matched to the process/handle that wrote it, independent of
+        # the OS-recyclable pid (codex F010 i2 high). Combined with the positive
+        # ps-based process confirmation, this keeps --replace from ever signaling a
+        # reused PID belonging to an unrelated process.
+        "guard_token": secrets.token_hex(16),
     }
     path.write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -232,8 +533,8 @@ def _write_singleton_record(
     return path
 
 
-def _clear_singleton_record(dashboard_dir: Path | None = None) -> None:
-    path = _singleton_record_path(dashboard_dir)
+def _clear_singleton_record(home: Path | None = None) -> None:
+    path = _singleton_record_path(home)
     try:
         if path.is_file():
             path.unlink()
@@ -1100,13 +1401,32 @@ class _SilentRequestHandler(http.server.SimpleHTTPRequestHandler):
         return
 
 
+class _ReusableTCPServer(socketserver.TCPServer):
+    """TCPServer that sets ``SO_REUSEADDR`` (like :class:`http.server.HTTPServer`).
+
+    Without this, a fresh ``--replace`` serve on the SAME port a just-superseded
+    server held can fail with ``EADDRINUSE`` while that port lingers in
+    ``TIME_WAIT`` even though the old process has already exited (codex F010 i1).
+    Reuse-address still REFUSES to bind a port with a live competing LISTEN
+    socket, so the ordinary same-port conflict (AC6) still raises ``OSError``.
+    """
+
+    allow_reuse_address = True
+
+
 def _make_server(
-    *, host: str, port: int, directory: Path
+    *, host: str, port: int, directory: Path, bind_attempts: int = 1
 ) -> socketserver.TCPServer:
     """Construct a TCPServer rooted at ``directory``.
 
     Uses functools.partial-style binding via a thin subclass so the
     handler reaches the right cwd without changing the process cwd.
+
+    ``bind_attempts`` > 1 retries the bind on ``OSError`` with a short backoff —
+    used only when we have just superseded a live singleton (``--replace``) so
+    the kernel has a brief window to release the old listener's socket before we
+    claim the same port. With the default of 1 attempt an ordinary same-port
+    conflict surfaces immediately (AC6).
     """
 
     dir_str = str(directory)
@@ -1114,7 +1434,21 @@ def _make_server(
     def handler_factory(*args: Any, **kwargs: Any) -> _SilentRequestHandler:
         return _SilentRequestHandler(*args, directory=dir_str, **kwargs)
 
-    return socketserver.TCPServer((host, port), handler_factory)
+    attempts = max(1, bind_attempts)
+    last_err: OSError | None = None
+    for attempt in range(attempts):
+        try:
+            return _ReusableTCPServer((host, port), handler_factory)
+        except OSError as err:
+            last_err = err
+            if attempt + 1 < attempts:
+                time.sleep(_SUPERSEDE_POLL_INTERVAL_SECONDS)
+    if last_err is None:
+        # Unreachable: attempts >= 1, so a returned-or-raised path was taken above.
+        raise RuntimeError(
+            "dashboard server bind exhausted all attempts without an error"
+        )
+    raise last_err
 
 
 @dataclass
@@ -1129,8 +1463,8 @@ class ServeHandle:
     thread: threading.Thread | None = None
     watcher_stop: threading.Event | None = None
     watcher_thread: threading.Thread | None = None
-    # Dashboard home whose serve-singleton record this handle owns, set by
-    # serve_start so shutdown() can prune it (F013 AC2 detection primitive).
+    # Canonical DontPanic home whose serve-singleton record this handle owns, set
+    # by serve_start so shutdown() can prune it (F013 AC2 detection primitive).
     singleton_dir: Path | None = None
 
     @property
@@ -1169,6 +1503,7 @@ def serve_start(
     repo_root: Path | None = None,
     warn: Callable[[str], None] | None = None,
     project: str | None = None,
+    replace: bool = False,
 ) -> ServeHandle:
     """Bind a localhost-only HTTP server and (optionally) start the watch
     loop. Returns immediately — tests/operator code can poll
@@ -1202,6 +1537,36 @@ def serve_start(
     state_out_dir = state_out_dir if state_out_dir is not None else (dashboard_dir / DEFAULT_STATE_SUBDIR_NAME)
     warn = warn if warn is not None else (lambda _msg: None)
 
+    # F010 AC1/AC2/AC3 — singleton guard, keyed by the canonical DontPanic HOME
+    # (NOT the served dashboard_dir / cwd). Keying by the home is what enforces
+    # "one dashboard server per DontPanic home": a second serve launched from a
+    # different working directory or --dashboard-dir against the SAME home still
+    # resolves the same singleton and is refused. detect_active_dashboard prunes a
+    # stale (dead-pid) record as a side effect, so a crashed serve never blocks a
+    # fresh one (AC2). A LIVE record refuses the second serve (AC1) unless the
+    # caller asked to supersede it, in which case we SIGTERM the old process and
+    # clear the record before binding our own (AC3). This runs BEFORE the initial
+    # build and socket bind so a refused serve does no work.
+    singleton_home = global_config.dontpanic_home()
+    existing = detect_active_dashboard(singleton_home)
+    just_superseded = False
+    if existing is not None:
+        existing_url = existing.get("url") if isinstance(existing, dict) else None
+        if not replace:
+            raise DashboardAlreadyRunningError(
+                url=existing_url,
+                home=singleton_home,
+                project=existing.get("project") if isinstance(existing, dict) else None,
+            )
+        existing_pid = existing.get("pid") if isinstance(existing, dict) else None
+        if isinstance(existing_pid, int) and existing_pid == os.getpid():
+            # Same-process replace cannot stop the old in-process server (we never
+            # SIGTERM ourselves), so silently clearing the record would leave two
+            # live servers. Refuse honestly instead (F010 fix#2).
+            raise SameProcessReplaceError(url=existing_url, home=singleton_home)
+        _supersede_existing_singleton(singleton_home, existing)
+        just_superseded = True
+
     # Always run an initial build so the first request sees fresh data.
     # Resolves --project up-front so an unknown name raises before we
     # bind the socket (operators don't want a server they then have to
@@ -1220,7 +1585,18 @@ def serve_start(
             initial_result, state_out_dir=state_out_dir
         )
 
-    server = _make_server(host=host, port=port, directory=dashboard_dir)
+    # When we just superseded a live singleton, the old process has exited but
+    # the kernel may still be releasing its listener socket; retry the bind for a
+    # short window (reuse-address absorbs TIME_WAIT). A normal serve uses a single
+    # attempt so an ordinary same-port conflict surfaces immediately (AC6).
+    bind_attempts = (
+        int(_SUPERSEDE_TIMEOUT_SECONDS / _SUPERSEDE_POLL_INTERVAL_SECONDS)
+        if just_superseded
+        else 1
+    )
+    server = _make_server(
+        host=host, port=port, directory=dashboard_dir, bind_attempts=bind_attempts
+    )
     bound_host, bound_port = server.server_address[:2]
 
     serve_thread = threading.Thread(
@@ -1236,15 +1612,16 @@ def serve_start(
         port=int(bound_port),
         directory=dashboard_dir,
         thread=serve_thread,
-        singleton_dir=dashboard_dir,
+        singleton_dir=singleton_home,
     )
 
-    # Record the live serve singleton so config inventory / operations guidance
-    # auto-detect this URL for the dashboard hint (F013 AC2). Best-effort: a
-    # recording failure must never sink a successfully-bound server.
+    # Record the live serve singleton under the canonical DontPanic home so config
+    # inventory / operations guidance auto-detect this URL for the dashboard hint
+    # (F013 AC2) regardless of cwd. Best-effort: a recording failure must never
+    # sink a successfully-bound server.
     try:
         _write_singleton_record(
-            dashboard_dir=dashboard_dir,
+            home=singleton_home,
             host=handle.host,
             port=handle.port,
             url=handle.url,
@@ -1543,6 +1920,17 @@ def build_parser() -> argparse.ArgumentParser:
             "multi-project registries, else current-repo single-project."
         ),
     )
+    serve_parser.add_argument(
+        "--replace",
+        "--force-single",
+        dest="replace",
+        action="store_true",
+        help=(
+            "Supersede an existing live dashboard serving the same home — stop "
+            "it and take over — instead of refusing. Use this to recover when a "
+            "previous serve is still holding the singleton for this home."
+        ),
+    )
 
     return parser
 
@@ -1754,7 +2142,19 @@ def _serve_main(args: argparse.Namespace) -> int:
             allow_remote=args.allow_remote,
             warn=_warn,
             project=requested,
+            replace=getattr(args, "replace", False),
         )
+    except DashboardAlreadyRunningError as exc:
+        # F010 AC1 — refuse the second serve with an actionable message: the
+        # existing URL to open, or how to take over.
+        loc = exc.url or exc.home
+        print(
+            f"dashboard serve: REFUSED: a dashboard is already running for this "
+            f"home at {loc}. Open it in your browser, or pass --replace "
+            f"(alias --force-single) to stop it and serve here instead.",
+            file=sys.stderr,
+        )
+        return 2
     except projects_dashboard.UnknownProjectError as exc:
         print(f"dashboard serve: {exc}", file=sys.stderr)
         return 2
@@ -1793,17 +2193,25 @@ __all__ = [
     "DEFAULT_PORT",
     "DEFAULT_STATE_SUBDIR_NAME",
     "DEFAULT_WATCH_INTERVAL_SECONDS",
+    "DASHBOARD_START_COMMAND",
+    "DashboardAlreadyRunningError",
+    "DashboardStatus",
     "LOCAL_LOOPBACK_ADDRESSES",
     "ServeHandle",
     "V0_DASHBOARD_EXCLUDED_CATEGORIES",
     "build",
     "build_parser",
+    "dashboard_status",
     "default_dashboard_dir",
     "default_plans_root",
     "default_state_out_dir",
+    "detect_active_dashboard",
+    "detect_active_url",
     "local_what_now_cache_path",
     "main",
     "open_dashboard",
+    "render_dashboard_hint_once",
+    "render_hint_line",
     "serve_start",
     "write_config_inventory",
     "write_skill_recommendations",

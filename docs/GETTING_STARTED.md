@@ -130,6 +130,139 @@ firebase login
 dontpanic doctor
 ```
 
+## Onboarding A New Agent Or A New Repo
+
+DontPanic distinguishes two roles, and the onboarding path differs for each:
+
+- **Operator** — a human (or an interactive agent like Claude Code / Cursor)
+  who *runs* DontPanic: locks plans, approves gates, reads guidance, opens the
+  dashboard. An operator does not need a registered worker executor.
+- **Worker** — an agent that DontPanic *dispatches* to do implementation or
+  audit work (claude / codex). A worker must have a registered executor; an
+  operator-only agent cannot be assigned to the `implementer`/`auditor` roles.
+
+**New agent — get the operating brief.** Any agent operating DontPanic should
+read the generated brief first; it states the current command set, executors,
+and conventions so nobody works from stale assumptions:
+
+```bash
+dontpanic agent brief            # human-readable operating brief
+dontpanic doctor --agent         # agent-level readiness (CLI, manifest, roles, homes)
+```
+
+**New repo — register and onboard in one step.** `--onboard` writes the managed
+`AGENTS.md` block (the in-repo brief) at registration time so a fresh clone is
+agent-ready immediately:
+
+```bash
+dontpanic projects add myapp /absolute/path/to/myapp --onboard
+dontpanic doctor --project myapp     # this project's onboarding/config/roles surface
+```
+
+Re-onboarding an already-registered repo (after a generator-version bump or to
+refresh a drifted block) requires the explicit overwrite flags:
+
+```bash
+dontpanic projects add myapp /absolute/path/to/myapp --onboard --force --yes
+```
+
+**Assign roles.** Roles resolve from project config, then global config, then
+defaults. Set them per project (workers must be registered executors):
+
+```bash
+dontpanic project config set roles.implementer claude
+dontpanic project config set roles.auditor codex
+```
+
+## Configuration Inventory / Setup Cockpit
+
+`config inventory` is the one-screen answer to "what is configured, what still
+needs setup, and what only a human can decide" — across machine and project
+scope. It is the same data the dashboard Settings/Setup cards render:
+
+```bash
+dontpanic config inventory               # current repo / machine scope
+dontpanic config inventory --project myapp
+```
+
+Items are classed `ok` / `needs_setup` / `missing` / `human_required`. When any
+item needs a human, the response carries exactly **one** dashboard hint (the
+active URL if a dashboard is running, otherwise the start command) — it is never
+repeated per item.
+
+## What-Now: Operations Guidance For Blocked Work
+
+When a dispatch is blocked — quota cooldown, budget ceiling, iteration cap, a
+cleared `pre_merge` signoff waiting to finalize, a tripped breaker, or a setup
+gap — `what-now` turns it into a short, ranked decision set with an exact
+command where one is safe to emit:
+
+```bash
+dontpanic what-now <plan-id> --feature F001
+```
+
+It recommends the safer default (usually wait-then-redispatch), names the
+alternatives, and marks any choice that needs a human judgment call. Like the
+inventory, it shows the dashboard pointer **once per response** even when many
+choices require human input.
+
+## Skill Invocation Recommendations
+
+For a plan whose repo ships `claude/skills`, DontPanic can recommend which
+skills to invoke for the current work (and which are not yet ready):
+
+```bash
+dontpanic skills recommend <plan-id>
+```
+
+The CLI and the dashboard render the same recommendation data, so guidance never
+drifts between surfaces.
+
+## Dispatch With `orchestrate`
+
+`orchestrate` runs the supervised implement→audit loop for a plan/feature.
+It is dry-run until you confirm:
+
+```bash
+dontpanic orchestrate <plan-id>            # preview the resolved dispatch
+dontpanic orchestrate <plan-id> --confirm  # run the volley
+```
+
+Budget and iteration limits come from the plan's `loop_caps`; when a cap is
+reached, `what-now` (above) is where you decide whether to wait, raise the cap,
+finalize, or close.
+
+## Dashboard: When And How To Open It
+
+The dashboard is **operator-local by definition** — it binds `127.0.0.1` only.
+Decision flow:
+
+1. **Is one already running?** Guidance and inventory tell you: if a dashboard
+   is live they print its URL; if not, they print `dontpanic dashboard serve`.
+2. **Start it** when you want the visual console:
+
+   ```bash
+   dontpanic dashboard serve                 # build + serve + file-watch refresh
+   dontpanic dashboard serve --project all   # fleet view across registered repos
+   ```
+
+3. **One server per home.** Starting a second `serve` for the same DontPanic
+   home is refused with the existing URL — open that instead of stacking
+   servers. To intentionally take over (e.g. a previous server is stuck):
+
+   ```bash
+   dontpanic dashboard serve --replace        # stop the old one, serve here
+   ```
+
+   A crashed server leaves a stale record; the next `serve` prunes it
+   automatically, so you only need `--replace` when the old server is genuinely
+   still alive. Ordinary same-port conflicts still surface as a normal bind
+   error.
+
+4. **Headless / CI?** Use `dontpanic dashboard build` to write state without
+   binding a server, or `dontpanic dashboard open --no-launch` to print the
+   local path.
+
 ## Try A Safe Plan
 
 The sample plan is exempt from goal governance and never dispatches agents.

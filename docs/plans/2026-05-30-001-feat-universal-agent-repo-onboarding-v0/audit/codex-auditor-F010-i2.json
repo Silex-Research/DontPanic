@@ -1,0 +1,56 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-02T17:22:54Z",
+  "completed_at": "2026-06-02T17:27:22Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F010-i2.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-0v6xrc04 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 335413 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3157029,
+    "tokens_out": 16051,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F010] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; structured `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, security): `--replace` can signal an arbitrary live local process if the singleton record contains a reused or non-dashboard PID. Evidence: `detect_active_dashboard()` only checks `os.kill(pid, 0)` liveness, the record stores no process identity beyond PID, and `_supersede_existing_singleton()` sends SIGTERM/SIGKILL to that PID. Recommendation: store and verify a dashboard-specific identity before refusing/replacing, and prune records whose PID no longer matches the recorded dashboard process.\n\nFINDING (medium, correctness): same-process `replace=True` does not actually replace the live singleton server. Evidence: `_supersede_existing_singleton()` skips `pid == os.getpid()`, clears the record, then `serve_start()` binds a second server; `test_second_serve_with_replace_supersedes_same_process` only asserts the new record, not that the old server stopped. Recommendation: either refuse same-process replacement unless the existing handle can be closed, or keep a handle registry and shut down the prior server before admitting the new one.\n\nFINDING (low, style): targeted Ruff lint is red on newly introduced code. Evidence: `ruff check --no-cache ...` reports new `S101` at `dashboard.py:1345` and new `I001` in `test_dashb",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -q ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py ../scripts/dontpanic_orchestrate/tests/test_dashboard_inventory_f013.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -q -s ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py ../scripts/dontpanic_orchestrate/tests/test_dashboard_inventory_f013.py -p no:cacheprovider",
+      "PYTHONPATH=../scripts ruff check --no-cache ../scripts/dontpanic_orchestrate/dashboard.py ../scripts/dontpanic_orchestrate/config_inventory.py ../scripts/dontpanic_orchestrate/operations_guidance.py ../scripts/dontpanic_orchestrate/skill_recommendation.py ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py",
+      "git diff --check HEAD~1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F010",
+      "issue": "`--replace` can signal an arbitrary live local process if the singleton record contains a reused or non-dashboard PID. Evidence: `detect_active_dashboard()` only checks `os.kill(pid, 0)` liveness, the record stores no process identity beyond PID, and `_supersede_existing_singleton()` sends SIGTERM/SIGKILL to that PID. Recommendation: store and verify a dashboard-specific identity before refusing/replacing, and prune records whose PID no longer matches the recorded dashboard process.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F010",
+      "issue": "same-process `replace=True` does not actually replace the live singleton server. Evidence: `_supersede_existing_singleton()` skips `pid == os.getpid()`, clears the record, then `serve_start()` binds a second server; `test_second_serve_with_replace_supersedes_same_process` only asserts the new record, not that the old server stopped. Recommendation: either refuse same-process replacement unless the existing handle can be closed, or keep a handle registry and shut down the prior server before admi",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F010",
+      "issue": "targeted Ruff lint is red on newly introduced code. Evidence: `ruff check --no-cache ...` reports new `S101` at `dashboard.py:1345` and new `I001` in `test_dashboard_singleton_f010.py`; other reported lint appears pre-existing. Recommendation: replace the production `assert` with explicit control flow and sort the new test imports. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -q ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py ../scripts/dontpanic_o",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
