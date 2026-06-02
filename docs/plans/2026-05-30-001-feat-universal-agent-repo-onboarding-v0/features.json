@@ -412,11 +412,27 @@
         "Tests: command-allowlist enforcement (allowed vs absent vs prefix-mismatch), approval-required skills never invoked, and doctor/reconcile/F008 allowlist-visibility output."
       ],
       "acceptance": "(4) Read-only bounded skills auto-run (or become auto-runnable) ONLY when required inputs exist AND the exact command is present in a versioned, auditable auto-run allowlist. (5) The allowlist has owner/approval metadata, version/hash, rationale, and command template/prefix fields; doctor/reconcile AND the F008 config inventory expose missing/stale/conflicting allowlist state. (7) Mutating, credentialed, networked, paid, external-write, or indefinite-loop skills require approval or are suggested — never silently executed. (14b) Tests prove command-allowlist enforcement, doctor/reconcile allowlist visibility, and that approval-required skills are never invoked by the recommender.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F011",
         "F008"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F015-i1.json",
+          "note": "signed_off auditor envelope (codex, iteration 1) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T15:26:53Z"
     },
     {
       "id": "F016",
