@@ -1,8 +1,8 @@
 {
   "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
-  "feature_id": "F002",
-  "class": "evidence_shape_disagreement",
+  "feature_id": "F014",
+  "class": "operator_judgment",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-05-30T19:41:33Z"
+  "resolved_at": "2026-06-02T14:19:29Z"
 }
