@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-02T15:05:41Z",
+  "completed_at": "2026-06-02T15:14:11Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-d3yita7w target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4231 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 8988831,
+    "tokens_out": 36577,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F015] All checks pass. F015 is complete.\n\n## Summary\n\nI implemented F015 — the skill auto-run ALLOWLIST artifact and approval gating that the F011 evaluator consults via its injected predicate. The new `scripts/dontpanic_orchestrate/skill_allowlist.py` defines a versioned, content-hashed, auditable `skill-autorun-allowlist.json` artifact (each entry records skill name, exact command_template *or* command_prefix, an auto-only `allowed_mode`, owner/approved_by/approved_at metadata, and rationale), a `classify_allowlist()` that reports `missing/unloadable/stale/conflicting/ok`, and `build_predicate()` — the `is_command_allowlisted` callable F011 injects. The predicate authorizes a command **only** when the allowlist is trusted (status OK), an entry matches the exact/prefix command, and that entry carries no risk flag; a missing/stale/conflicting/unloadable allowlist (or any risk-flagged entry) denies everything, so mutating/credentialed/networked/paid/external-write/indefinite-loop skills are never silently executed (AC4/AC7). For visibility (AC5) I added a `provider_skill_allowlist` to the F008 config inventory (with a matching non-optimistic-status invariant case so a stale/conflicting allowlist never reports `ok`), a `check_skill_allowlist()` doctor check wired into `check_agent_onboarding` (missing→OK advisory, stale/conflicting→WARN, unloadable→FAIL), and added the allowlist filename to `home_reconcile.RECONCILE_FILENAMES` so `reconcile homes` surfaces legacy-only/divergent allow",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_skill_allowlist_f015.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_skill_invocation_f011.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py scripts/dontpanic_orchestrate/tests/test_f006_home_reconcile.py scripts/dontpanic_orchestrate/tests/test_f005_doctor_onboarding.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py scripts/dontpanic_orchestrate/tests/test_skill_allowlist_f015.py -q",
+      "ruff check scripts/dontpanic_orchestrate/skill_allowlist.py scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/home_reconcile.py scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/tests/test_skill_allowlist_f015.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

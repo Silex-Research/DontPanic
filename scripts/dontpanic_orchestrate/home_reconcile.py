@@ -45,6 +45,10 @@ RECONCILE_FILENAMES: tuple[str, ...] = (
     "config.json",
     "projects.json",
     "agent-manifest.json",
+    # Plan 2026-05-30-001 F015 (AC5): the skill auto-run allowlist is a durable
+    # per-user config artifact, so reconcile classifies + migrates it across the
+    # two homes and surfaces a divergent (conflicting) allowlist as split-brain.
+    "skill-autorun-allowlist.json",
 )
 
 # Classification states.
@@ -205,3 +209,64 @@ def split_brain_summary(states: list[FileState]) -> tuple[list[str], list[str]]:
     legacy_only = [s.name for s in states if s.status == LEGACY_ONLY]
     divergent = [s.name for s in states if s.status == DIVERGENT]
     return legacy_only, divergent
+
+
+@dataclass(frozen=True)
+class AllowlistHomeState:
+    """The auto-run allowlist's VALIDITY in one home (Plan 2026-05-30-001 F015).
+
+    ``classify_homes`` compares file bytes across homes — that catches a
+    split-brain (``legacy_only`` / ``divergent``) but is blind to a single home
+    holding a STALE (hash-mismatched) or internally CONFLICTING allowlist whose
+    bytes are nonetheless identical in both homes. This carries the per-home
+    classification from :func:`skill_allowlist.classify_allowlist` so reconcile
+    surfaces missing/stale/conflicting allowlist state (F015 AC5), not just
+    byte-level split-brain.
+    """
+
+    home: str  # "canonical" | "legacy"
+    path: Path
+    status: str  # a skill_allowlist.AllowlistStatus value
+    detail: str
+    conflicts: tuple[str, ...] = ()
+
+    @property
+    def is_present(self) -> bool:
+        """True iff the allowlist artifact exists in this home."""
+        return self.status != "missing"
+
+    @property
+    def is_trusted(self) -> bool:
+        """True iff this home's allowlist may authorize auto-run (status ok)."""
+        return self.status == "ok"
+
+
+def classify_allowlist_homes(
+    *, canonical: Path | None = None, legacy: Path | None = None
+) -> list[AllowlistHomeState]:
+    """Classify the auto-run allowlist artifact's validity in each home.
+
+    Returns one :class:`AllowlistHomeState` per home (canonical then legacy).
+    Delegates to :func:`skill_allowlist.classify_allowlist` so the single source
+    of truth for missing/unloadable/stale/conflicting is shared with doctor and
+    the F008 inventory. Imported lazily to keep this F006 module importable
+    without the F015 dependency graph on the hot path."""
+    from dontpanic_orchestrate import skill_allowlist as sa
+
+    chome = canonical if canonical is not None else canonical_home()
+    lhome = legacy if legacy is not None else legacy_home()
+
+    out: list[AllowlistHomeState] = []
+    for label, home in (("canonical", chome), ("legacy", lhome)):
+        path = home / sa.ALLOWLIST_FILENAME
+        state = sa.classify_allowlist(path)
+        out.append(
+            AllowlistHomeState(
+                home=label,
+                path=path,
+                status=state.status.value,
+                detail=state.detail,
+                conflicts=tuple(state.conflicts),
+            )
+        )
+    return out

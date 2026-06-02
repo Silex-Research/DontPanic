@@ -853,6 +853,15 @@ def _homes_main(args: argparse.Namespace) -> int:
     plan = hr.plan_reconcile(states)
     result = hr.apply_reconcile(plan, confirm=confirm)
 
+    # Plan 2026-05-30-001 F015 (AC5): byte-comparison above catches split-brain
+    # but is blind to a single home holding a STALE or internally CONFLICTING
+    # allowlist (bytes can match across homes yet still be untrusted). Classify
+    # each home's allowlist validity and surface present-but-untrusted state.
+    allowlist_homes = hr.classify_allowlist_homes()
+    untrusted_allowlists = [
+        a for a in allowlist_homes if a.is_present and not a.is_trusted
+    ]
+
     if args.format == "json":
         payload = {
             "canonical_home": str(hr.canonical_home()),
@@ -864,6 +873,16 @@ def _homes_main(args: argparse.Namespace) -> int:
             "planned_migrations": [a.name for a in plan.migrations],
             "migrated": result.migrated,
             "refused_divergent": result.refused,
+            "allowlist_validity": [
+                {
+                    "home": a.home,
+                    "path": str(a.path),
+                    "status": a.status,
+                    "detail": a.detail,
+                    "conflicts": list(a.conflicts),
+                }
+                for a in allowlist_homes
+            ],
         }
         sys.stdout.write(json.dumps(payload, indent=2) + "\n")
     else:
@@ -879,14 +898,24 @@ def _homes_main(args: argparse.Namespace) -> int:
                 "\n[refused] divergent (not merged — resolve by hand): "
                 f"{', '.join(s.name for s in plan.conflicts)}\n"
             )
+        if untrusted_allowlists:
+            sys.stdout.write(
+                "\n[allowlist] untrusted auto-run allowlist (fix + re-approve "
+                "before any skill auto-runs):\n"
+            )
+            for a in untrusted_allowlists:
+                sys.stdout.write(f"  {a.status:12} ({a.home}) {a.detail}\n")
+                for c in a.conflicts:
+                    sys.stdout.write(f"               - {c}\n")
         if result.dry_run and (plan.migrations or plan.conflicts):
             sys.stdout.write("\n[preview] nothing written. Re-run with `--confirm` to migrate.\n")
-        if plan.is_empty:
+        if plan.is_empty and not untrusted_allowlists:
             sys.stdout.write("\n[ok] homes are reconciled — nothing to do.\n")
 
-    # Divergent conflicts are the only non-clean terminal: surface as exit 1 so
-    # scripts can detect an unresolved ambiguous merge.
-    return 1 if plan.conflicts else 0
+    # Non-clean terminals (exit 1): divergent same-name files (ambiguous merge)
+    # OR a present-but-untrusted allowlist (stale/conflicting/unloadable) in
+    # either home — both demand operator attention before auto-run is trusted.
+    return 1 if plan.conflicts or untrusted_allowlists else 0
 
 
 __all__ = [

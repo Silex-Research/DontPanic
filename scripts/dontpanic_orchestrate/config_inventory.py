@@ -1835,6 +1835,79 @@ def provider_pm_credentials(ctx: InventoryContext) -> InventoryItem:
     )
 
 
+def provider_skill_allowlist(ctx: InventoryContext) -> InventoryItem:
+    """Plan 2026-05-30-001 F015: surface the skill auto-run allowlist artifact
+    and its missing/stale/conflicting state (AC5).
+
+    The allowlist is what authorizes any unattended skill auto-run. A MISSING
+    allowlist is the safe zero-state (auto-run disabled, never blocks core use →
+    optional). A PRESENT-but-unloadable/stale/conflicting allowlist is an
+    untrusted defect the operator must fix + re-approve → non-ok, never `ok`.
+    """
+    from dontpanic_orchestrate import skill_allowlist as sa
+
+    def _build() -> InventoryItem:
+        state = sa.classify_allowlist()
+        status_enum = state.status
+        missing = status_enum is sa.AllowlistStatus.MISSING
+        # UNLOADABLE = present-but-broken JSON/schema → hard defect (loadable
+        # False routes to NEEDS_SETUP via the shared helper). STALE/CONFLICTING
+        # parse fine but are untrusted → present + loadable + invalid. Both are
+        # non-ok; an OK status only rides a present + trusted artifact.
+        unloadable = status_enum is sa.AllowlistStatus.UNLOADABLE
+        trusted = status_enum is sa.AllowlistStatus.OK
+        summary = state.detail
+        if state.conflicts:
+            summary = f"{summary}: {'; '.join(state.conflicts)}"
+        return InventoryItem(
+            id="skill_allowlist",
+            title="Skill auto-run allowlist",
+            scope=Scope.MACHINE,
+            status=derive_status(
+                StatusFacts(
+                    # A MISSING allowlist is optional (auto-run is opt-in); a
+                    # PRESENT-but-defective one is a required fix.
+                    optional=missing,
+                    present=not missing,
+                    loadable=not unloadable,
+                    valid=trusted,
+                )
+            ),
+            editable=True,
+            human_required=False,
+            optional=missing,
+            current_value_summary=summary,
+            owner_file_or_env=str(state.path),
+            # Editing the allowlist is an approval-bearing review action, not a
+            # single placeholder-free CLI edit; no safe_command. The artifact is
+            # hand-curated + content-hashed, so there is no auto-edit affordance.
+            safe_command=None,
+            dashboard_mutation_shape=None,
+            risks=(
+                "Only read-only, bounded commands belong here. A stale or "
+                "conflicting allowlist authorizes NOTHING until re-approved, so "
+                "mutating/credentialed/networked/paid skills are never silently "
+                "auto-run."
+            ),
+            doctor_probes=("doctor --agent", "reconcile homes"),
+        )
+
+    return _safe(
+        _build,
+        fallback=InventoryItem(
+            id="skill_allowlist",
+            title="Skill auto-run allowlist",
+            scope=Scope.MACHINE,
+            status=Status.UNKNOWN,
+            editable=True,
+            human_required=False,
+            optional=True,
+            current_value_summary="",
+            owner_file_or_env="~/.dontpanic/skill-autorun-allowlist.json",
+        ),
+    )
+
+
 # Ordered registry of single-item providers. Secrets/auth is a multi-item
 # provider handled separately in :func:`collect_inventory`.
 _PROVIDERS: tuple[Callable[[InventoryContext], InventoryItem], ...] = (
@@ -1854,6 +1927,7 @@ _PROVIDERS: tuple[Callable[[InventoryContext], InventoryItem], ...] = (
     provider_environments,
     provider_install_reconcile,
     provider_pm_credentials,
+    provider_skill_allowlist,
 )
 
 

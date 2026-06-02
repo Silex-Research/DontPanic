@@ -1015,6 +1015,30 @@ def _arr_projects_registry_stale(monkeypatch):
     return ci.provider_projects_registry(ci.InventoryContext())
 
 
+def _arr_skill_allowlist_conflicting(monkeypatch):
+    # F015 AC5: a PRESENT-but-CONFLICTING auto-run allowlist (two skills claim
+    # the same command) parses + validates but is untrusted — auto-run is denied
+    # — so the provider must report non-ok, never `ok`.
+    from dontpanic_orchestrate import skill_allowlist as sa
+
+    def _e(skill: str) -> sa.AllowlistEntry:
+        return sa.AllowlistEntry(
+            skill_name=skill,
+            command_template="shared-cmd",
+            allowed_mode="auto_readonly",
+            owner="t",
+            approved_by="op",
+            approved_at="2026-06-02T00:00:00Z",
+            rationale="bounded read-only",
+        )
+
+    al = sa.AutoRunAllowlist(entries=[_e("a"), _e("b")]).stamped()
+    p = sa.allowlist_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(al.model_dump_json(exclude_none=True))
+    return ci.provider_skill_allowlist(ci.InventoryContext())
+
+
 # (case_id, provider_id, arranger). Every arranger takes (monkeypatch, tmp_path)
 # — single-arg arrangers are wrapped so the signature is uniform. Each entry
 # sets up an INVALID / INCOMPLETE / UNRUNNABLE underlying state for that
@@ -1056,6 +1080,11 @@ _NON_OPTIMISTIC_CASES: list = [
     ("environments_unloadable", "environments", _arr_environments),
     ("install_reconcile_no_snapshot", "install_reconcile", lambda m, t: _arr_install_reconcile(m)),
     ("pm_credentials_unset", "pm_credentials", lambda m, t: _arr_pm_credentials(m)),
+    (
+        "skill_allowlist_conflicting",
+        "skill_allowlist",
+        lambda m, t: _arr_skill_allowlist_conflicting(m),
+    ),
     ("secret_anthropic_unconfigured", "secret_anthropic_auth", lambda m, t: _arr_secret_anthropic(m)),
     (
         "secret_anthropic_malformed_credfile",

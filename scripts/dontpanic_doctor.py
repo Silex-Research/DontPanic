@@ -942,7 +942,7 @@ def _check_managed_block(name: str, project_path: Path) -> CheckResult:
     if on_disk_hash != match.group("hash"):
         return _warn(
             cname,
-            f"managed block body was edited after generation (on-disk hash != marker hash) — content is stale/tampered",
+            "managed block body was edited after generation (on-disk hash != marker hash) — content is stale/tampered",
             remediation,
         )
     return _ok(cname, f"managed block present + current (generator {generator}, body integrity ok)")
@@ -1085,7 +1085,50 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
     # surface it (codex F005/F006 audit finding #3).
     results.append(check_config_home())
 
+    # 7. skill auto-run allowlist (Plan 2026-05-30-001 F015 AC5): surface
+    # missing/stale/conflicting/unloadable allowlist state so an operator knows
+    # whether — and which — skill commands may auto-run.
+    results.append(check_skill_allowlist())
+
     return results
+
+
+def check_skill_allowlist() -> CheckResult:
+    """Plan 2026-05-30-001 F015 (AC5): surface the skill auto-run allowlist's
+    missing/stale/conflicting state.
+
+    A MISSING allowlist is the safe zero-state (auto-run disabled) — reported OK
+    with advisory text, never escalating the doctor exit. A STALE or CONFLICTING
+    allowlist is untrusted: it authorizes nothing until fixed, so it WARNs with
+    remediation. A present-but-UNLOADABLE allowlist is a hard FAIL."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import skill_allowlist as sa
+    finally:
+        sys.path.pop(0)
+
+    state = sa.classify_allowlist()
+    status = state.status
+    if status is sa.AllowlistStatus.OK:
+        return _ok("agent:skill-allowlist", state.detail)
+    if status is sa.AllowlistStatus.MISSING:
+        # Zero-state: nothing auto-runs. Advisory only — do not fail the doctor.
+        return _ok("agent:skill-allowlist", state.detail)
+    if status is sa.AllowlistStatus.UNLOADABLE:
+        return _bad(
+            "agent:skill-allowlist",
+            f"{state.path} present but failed to load: {state.detail}",
+            f"fix or remove {state.path}; auto-run is denied until it is valid + re-approved",
+        )
+    # STALE / CONFLICTING — present but untrusted; auto-run is denied.
+    detail = state.detail
+    if state.conflicts:
+        detail = f"{detail}: {'; '.join(state.conflicts)}"
+    return _warn(
+        "agent:skill-allowlist",
+        f"auto-run allowlist is {status.value} — {detail}",
+        f"review + re-approve {state.path} (re-stamp its content_hash); auto-run stays disabled until then",
+    )
 
 
 def check_config_home() -> CheckResult:
