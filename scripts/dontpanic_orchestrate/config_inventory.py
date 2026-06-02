@@ -1003,7 +1003,11 @@ def provider_quota(ctx: InventoryContext) -> InventoryItem:
                 f"caps present at {caps_path.name}; calibration present; "
                 "observed quota state present"
             )
-            safe_command = "dontpanic quota-caps init"
+            # Fully configured → NO safe_command: `quota-caps init` refuses to
+            # overwrite an existing caps file, so emitting it here is a
+            # non-runnable affordance (codex run9 i1). Re-tuning is the arg-taking
+            # calibrate-claude route, surfaced via dashboard_mutation_shape.
+            safe_command = None
         # Shared helper (AC2e): caps is the artifact (present iff caps_present);
         # the surface is semantically VALID only when calibration AND a loadable
         # observed-state file are also present — so caps-present/calibration-
@@ -1490,12 +1494,13 @@ def _secret_provider(
     them through the SAME shared :func:`derive_status` helper as every other
     provider, so the non-optimistic invariant holds for secrets by construction.
     """
-    # human_required only for a REQUIRED secret that is ABSENT — an optional
-    # integration that is simply not set up does not "require" a human and so
-    # must not, on its own, force a dashboard hint (AC4: optional never blocks
-    # core use). A present-but-malformed required secret is a NEEDS_SETUP defect,
-    # not a human-supply gap, so it is not human_required.
-    human_required = (not present) and (not optional)
+    # human_required for a REQUIRED secret that is not fully good — ABSENT, or
+    # PRESENT-but-unloadable/invalid. Operator ruling (D050): a credential cannot
+    # be auto-repaired — a human must supply a correct value — so a malformed
+    # required secret IS a human-supply gap and must emit the dashboard hint
+    # (codex run9 i1), even though its status stays NEEDS_SETUP. An OPTIONAL
+    # integration never forces a hint (AC4: optional never blocks core use).
+    human_required = (not optional) and not (present and loadable and valid)
     # Routed through the shared helper (AC2e): present + loadable + valid → OK;
     # present-but-unloadable → NEEDS_SETUP (hard defect, even when optional);
     # present-but-invalid → NEEDS_SETUP (required) / OPTIONAL_UNCONFIGURED

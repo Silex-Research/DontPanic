@@ -336,6 +336,32 @@ def test_anthropic_auth_human_required_without_key_or_session(monkeypatch, tmp_p
     assert item.status is ci.Status.HUMAN_REQUIRED
 
 
+def test_malformed_required_secret_is_human_required_and_emits_dashboard_hint(
+    monkeypatch, tmp_path
+):
+    # Operator ruling (D050, codex run9 i1): a PRESENT-but-malformed REQUIRED
+    # secret keeps NEEDS_SETUP status BUT must be human_required (a credential
+    # cannot be auto-repaired) so the response-level dashboard hint fires. A
+    # NEEDS_SETUP item that was not human_required produced no hint before.
+    import shutil
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    cred = tmp_path / ".claude" / ".credentials.json"
+    cred.parent.mkdir(parents=True, exist_ok=True)
+    cred.write_text("}{ not json")  # present but UNLOADABLE
+    items = ci.provider_secrets_auth(ci.InventoryContext())
+    item = next(i for i in items if i.id == "secret_anthropic_auth")
+    assert item.status is ci.Status.NEEDS_SETUP  # ruling: stays NEEDS_SETUP
+    assert item.human_required is True  # ruling: but does require a human
+    # ...and the full inventory therefore emits exactly one dashboard hint.
+    inv = ci.collect_inventory()
+    hinted = next(i for i in inv.items if i.id == "secret_anthropic_auth")
+    assert hinted.human_required is True
+    assert inv.dashboard_hint is not None
+
+
 # ───────────────── (4) optional-vs-required classification ──────────────────
 
 
@@ -425,8 +451,10 @@ def test_quota_status_ok_only_when_caps_calibration_and_state_present(monkeypatc
 
     item = ci.provider_quota(ci.InventoryContext())
     assert item.status is ci.Status.OK
-    # The caps re-init route is exact + runnable, so it may carry a safe_command.
-    assert item.safe_command == "dontpanic quota-caps init"
+    # Fully configured → NO safe_command: `quota-caps init` refuses to overwrite
+    # an existing caps file, so emitting it here would be a non-runnable
+    # affordance (codex run9 i1). Re-tuning routes through the mutation shape.
+    assert item.safe_command is None
 
 
 def test_quota_status_non_ok_when_state_missing(monkeypatch):
