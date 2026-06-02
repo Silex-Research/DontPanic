@@ -1,0 +1,24 @@
+{
+  "auditor": "operator",
+  "implementer": null,
+  "hand_authored": true,
+  "provenance": "Hand-authored pre-impl sufficiency findings per D006 (goal_type=new_feature requires hand-authored findings; the agent-based auditor routes through the quota/dispatch path that F009 repairs, so it is not run here). Each of the six objective_contract.user_journeys was walked against features.json F001-F009.",
+  "journey_coverage_summary": {
+    "plan-review-report": ["F001", "F002", "F003", "F005"],
+    "pre-lock-design-gate": ["F004"],
+    "mid-dev-scope-delta": ["F006", "F008"],
+    "pre-dispatch-sizing-gate": ["F007"],
+    "config-readiness-preflight": ["F009"],
+    "close-time-journey-evidence": []
+  },
+  "findings": [
+    {
+      "severity": "low",
+      "journey_id": "close-time-journey-evidence",
+      "gap_class": "missing_feature",
+      "description": "No feature in F001-F009 implements the close-time journey-evidence visibility flow (listing each required journey and whether it has captured evidence before the goal-completion audit runs). F001-F009 are all author/lock/edit/dispatch-time scope checks; this is a distinct close-time evidence-visibility surface. This gap is DELIBERATE and operator-confirmed: the journey is recorded to encode the D065 lesson (so journey-evidence is never an afterthought again), but its implementation is deferred to a follow-up plan to keep this plan single-surface, mirroring the doctor-WARN deferral in D005. Marked low (non-blocking) because deferral is intentional and tracked, not an oversight.",
+      "feature_refs": [],
+      "recommendation": "Track as a follow-up plan (close-time journey-evidence coverage view). Do NOT add a feature to this plan; doing so would over-scope the plan-review plan and violate its own single-surface thesis. The non_goals entry and this finding together make the deferral explicit for the post-impl goal-completion audit."
+    }
+  ]
+}
