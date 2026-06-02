@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-02T19:57:43Z",
+  "captured_at": "2026-06-02T20:50:16Z",
   "decision_lines": [
     "D001\u001f8a30f39d4b8a4340572ec64c5346ab8a516290eff9b37d91fb7b2007fcb43163",
     "D002\u001ff03b74219ef3d2793f0b873c70520f2e9474b1a6f668e4aa44acf553d037082c",
@@ -7,7 +7,8 @@
     "D005\u001fec2c9618c5a66f21f052f9b033ecd27d93c5b81a39f2bd42ed42224970fb0167",
     "D005\u001fcc4fa129b5149a251ac72b19aa983c0dd098bc3af9cafc27e78f2d78ee110aa6",
     "D006\u001f969464377354e7c1c4d7f4fccd8d796e48d5c00de7d737e8b9dfcc653a6baa3c",
-    "D007\u001f3f99f5a447d9393077536985215e9b1a98e4866e3a0951d64621ff9902dd674e"
+    "D007\u001f3f99f5a447d9393077536985215e9b1a98e4866e3a0951d64621ff9902dd674e",
+    "D008\u001f5406f2f7ab46d7cb9203374e6826eaca664b9361c4d270f378a7e9b715d144f8"
   ],
   "features_semantics": {
     "by_id": {
@@ -15,7 +16,7 @@
         "acceptance": "(1) `lint_feature(feature, resolvers)` is pure (no network, no mutation) and returns a typed ScopeReport. (2) Every feature touching more than one surface yields an `over_surface` flag carrying the surface list as evidence. (3) Every acceptance string that enumerates examples (e.g./such as/including) without a co-located universal (every/all/each) yields an `exemplar_ac` flag. (4) Every acceptance string asserting equality/string-match with no round-trip or property assertion yields a `weak_test` flag. (5) Every command/flag/symbol token an acceptance names that does not resolve against the provided resolver set yields a `missing_prereq` flag naming the unresolved token. (6) Tests reproduce each of the three onboarding-v0 stall classes (multi-surface, exemplar-AC, missing-prereq) and assert the matching flag fires, with negative cases proving no false-positive on a clean single-surface feature.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
         "acceptance": "(1) `propose_split(feature, scope_report)` is pure and returns a typed SplitProposal or None. (2) A feature flagged `over_surface` yields a proposal whose children each touch exactly one surface. (3) The conservation invariant holds for every proposal: the multiset union of child acceptance criteria equals the parent's, with zero dropped and zero duplicated (asserted in code and in tests). (4) Child `depends_on` forms a valid acyclic chain. (5) A single-surface, in-budget feature yields None. (6) Tests cover a multi-surface split, the conservation invariant, dependency validity, and the no-op case.",
@@ -95,16 +96,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": null,
-    "decisions.jsonl": "b9c4816a37fa6ac8db6c2f7af11ec848b133a6d1eb223d3418835b8b7b885dc1",
-    "features.json": "749cbff5c9eb87017a76746231d031472a600ce3e39170ac74e57573297e666c",
+    "audit/gate-state.json": "01c34e46904529db75c18c1637e4e725400a843d43ace18e563de8a20395ed68",
+    "decisions.jsonl": "f32bf69ffc636fa3c8fd21d298674ea6034f2e873ed7560b323fdfdeefa98840",
+    "features.json": "4d5dd39d5cb4331c963f81bacc11a783a3fd5203d7e2b68d8bbebb4d525d0e57",
     "objective_contract.json": "713030b2b2b5c1f4b6d77a47208c8eca4510eeea0238e84e560a19adc4b19eef",
     "plan.md": "bfca097623613ca98e29b110e58578978ee4ed094cea68ca38550bd9a997b624"
   },
   "file_mtimes": {
-    "audit/gate-state.json": null,
-    "decisions.jsonl": 1780428551.2810354,
-    "features.json": 1780424246.9783652,
+    "audit/gate-state.json": 1780433407.3924918,
+    "decisions.jsonl": 1780432876.326482,
+    "features.json": 1780432876.3259952,
     "objective_contract.json": 1780428333.140978,
     "plan.md": 1780428526.252194
   },

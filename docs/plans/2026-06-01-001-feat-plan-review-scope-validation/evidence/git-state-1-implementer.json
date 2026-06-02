@@ -56,17 +56,48 @@
     {
       "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/evidence/git-state-2-implementer.json",
       "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/plan-run-fingerprint.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/plan_review/__init__.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/plan_review/lint.py",
+      "status": "M"
     }
   ],
   "untracked": [
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F010_iter3.json",
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F016_iter2.json",
-    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md",
-    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/",
-    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/evidence/git-state-0-implementer.json",
-    "scripts/dontpanic_orchestrate/plan_review/",
-    "scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py"
+    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/codex-auditor-F002-i0.json",
+    "scripts/dontpanic_orchestrate/plan_review/split.py",
+    "scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

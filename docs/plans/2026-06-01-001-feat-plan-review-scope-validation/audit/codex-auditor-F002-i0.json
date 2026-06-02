@@ -1,0 +1,49 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-02T20:53:21Z",
+  "completed_at": "2026-06-02T20:56:10Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-mdnv05ey target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 312751 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 695406,
+    "tokens_out": 10753,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; structured `target_context` is `env=dev`, `project=null`, and recorded commands are only pytest, with no forbidden command shapes.\n\nFINDING (high, correctness): `over_surface` proposals can collapse to a single child when extra surfaces are present in steps/description rather than acceptance text. Evidence: [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:105) only splits `feature[\"acceptance\"]`, and [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:138) only groups criteria; a direct probe with `description/steps` tagging `cli`, `core`, `dashboard` but generic ACs produced one `core` child. Recommendation: include steps in the surface partition or otherwise guarantee an `over_surface` report yields candidate children covering the F001-tagged surfaces.\n\nFINDING (medium, test_coverage): Multi-surface tests only cover the easy case where every AC names a distinct surface. Evidence: [test_plan_review_split_f002.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py:40) defines a fixture whose ACs explicitly mention `cli`, `dashboard`, and `pure function`, so the steps/description-only surface case is untested. Recommendation: add a regression test for an `over_sur",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.plan_review.lint import Resolvers, lint_feature; from dontpanic_orchestrate.plan_review.split import propose_split; feature={'id':'FX','description':'wire the cli and dashboard surfaces','steps':['add a cli command','render the dashboard'],'acceptance':'(1) the behavior is deterministic (2) the result is typed'}; report=lint_feature(feature, Resolvers()); proposal=propose_split(feature, report); print(report.surfaces, [f.kind for f in report.flags]); print(None if proposal is None else [(c.provisional_id, c.surfaces, c.acceptance_subset) for c in proposal.children])\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py -q",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`over_surface` proposals can collapse to a single child when extra surfaces are present in steps/description rather than acceptance text. Evidence: [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:105) only splits `feature[\"acceptance\"]`, and [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:138) only groups criteria; a direct probe with `description/steps` tagging `cli`, `core`, `dashb",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Multi-surface tests only cover the easy case where every AC names a distinct surface. Evidence: [test_plan_review_split_f002.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py:40) defines a fixture whose ACs explicitly mention `cli`, `dashboard`, and `pure function`, so the steps/description-only surface case is untested. Recommendation: add a regression test for an `over_surface` feature where surfaces come from F001 step tags and A",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

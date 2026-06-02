@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-02T20:59:15Z",
+  "completed_at": "2026-06-02T21:02:42Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-mdnv05ey target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 389561 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1090836,
+    "tokens_out": 15425,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct, and their recorded commands do not match forbidden command shapes.\n\nFINDING (high, correctness): `propose_split` can emit a child labeled as one surface while its acceptance criterion still touches multiple F001 surfaces. Evidence: in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:165), `_partition_by_surface` chooses the first matching parent surface; my probe produced a `('cli',)` child containing “the cli command and dashboard render agree”, whose tags are `('cli', 'dashboard')`. Recommendation: detect multi-surface ACs and either split/refuse the proposal explicitly, or preserve a representation that does not claim the child touches exactly one surface.\n\nFINDING (medium, style): Targeted lint fails. Evidence: `ruff check --no-cache ...` reports `S101` for the production `assert` in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:123) and `B905` for `zip()` without `strict=` in [test_plan_review_split_f002.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py:257). Recommendation: use an explicit runtime invariant check or a scoped `noqa` if literal `assert` is intentional, and add `strict=False`/`strict=True` to the test `zip`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts py",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprovider",
+      "TMPDIR=/private/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprovider",
+      "TMPDIR=/private/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -s -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from collections import Counter; from copy import deepcopy; from dontpanic_orchestrate.plan_review.lint import Resolvers, lint_feature, split_acceptance, surfaces_in; from dontpanic_orchestrate.plan_review.split import SplitProposal, propose_split; resolvers=Resolvers(commands=frozenset({'dontpanic'}), flags=frozenset({'--format'}), symbols=frozenset()); multi={'id':'F016','description':'a sprawling feature spanning several surfaces','steps':['wire the cli','render the dashboard','score in the core'],'acceptance':'(1) the cli subcommand writes results to stdout (2) the dashboard renders html for the operator (3) the pure function stays deterministic','depends_on':['F001']}; before=deepcopy(multi); report=lint_feature(multi,resolvers); proposal=propose_split(multi,report); assert isinstance(proposal, SplitProposal); assert multi==before; assert len(proposal.children)>=2; assert all(len(c.surfaces)==1 for c in proposal.children); assert Counter(sum((list(c.acceptance_subset) for c in proposal.children), []))==Counter(split_acceptance(multi['acceptance'])); assert proposal.children[0].depends_on==('F001',); assert all(nxt.depends_on==(prev.provisional_id,) for prev,nxt in zip(proposal.children, proposal.children[1:])); clean={'id':'F015','description':'a pure deterministic core module','acceptance':'(1) it scores correctly (2) it stays pure (3) it is typed'}; assert propose_split(clean, lint_feature(clean,resolvers)) is None; ambiguous={'id':'F099','description':'cli and dashboard integration','acceptance':'(1) the cli command and dashboard render agree (2) deterministic core state is preserved','depends_on':[]}; areport=lint_feature(ambiguous,resolvers); aproposal=propose_split(ambiguous, areport); print('basic_probe=ok'); print('ambiguous_surfaces', areport.surfaces); print('ambiguous_children', [(c.surfaces, c.acceptance_subset, [surfaces_in(ac) for ac in c.acceptance_subset]) for c in aproposal.children])\"",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/plan_review/split.py scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/plan_review/lint.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`propose_split` can emit a child labeled as one surface while its acceptance criterion still touches multiple F001 surfaces. Evidence: in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:165), `_partition_by_surface` chooses the first matching parent surface; my probe produced a `('cli',)` child containing “the cli command and dashboard render agree”, whose tags are `('cli', 'dashboard')`. Recommendation: detect multi-surface ACs and either",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "style",
+      "feature_id": "F002",
+      "issue": "Targeted lint fails. Evidence: `ruff check --no-cache ...` reports `S101` for the production `assert` in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/split.py:123) and `B905` for `zip()` without `strict=` in [test_plan_review_split_f002.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py:257). Recommendation: use an explicit runtime invariant check or a scoped `noqa` if literal `asser",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

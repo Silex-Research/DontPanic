@@ -32,7 +32,7 @@
         "Add tests: a multi-surface feature yields >=2 children partitioned by surface; conservation holds; a single-surface feature yields no proposal."
       ],
       "acceptance": "(1) `propose_split(feature, scope_report)` is pure and returns a typed SplitProposal or None. (2) A feature flagged `over_surface` yields a proposal whose children each touch exactly one surface. (3) The conservation invariant holds for every proposal: the multiset union of child acceptance criteria equals the parent's, with zero dropped and zero duplicated (asserted in code and in tests). (4) Child `depends_on` forms a valid acyclic chain. (5) A single-surface, in-budget feature yields None. (6) Tests cover a multi-surface split, the conservation invariant, dependency validity, and the no-op case.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ]

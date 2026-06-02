@@ -156,3 +156,210 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-
 </details>
 
 ===
+---
+timestamp: 2026-06-02T20:49:08Z
+event: gate_hit
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+unmet_gates: breaker:no_progress
+target_env: dev
+target_project: (none)
+feature_id: F002
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:no_progress']
+Cleared gates : []
+Awaiting      : ['breaker:no_progress']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-06-01-001-feat-plan-review-scope-validation <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-06-01-001-feat-plan-review-scope-validation --all
+
+===
+<!-- rendered annotation 2026-06-02T20:49:09Z -->
+**Approval needed on 2026-06-01-001-feat-plan-review-scope-validation** _(band: needs_action)_
+
+Supervisor paused at gate `upfront` (stage `upfront`). Operator must approve before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation upfront
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F002`
+- `inbox_event` = `gate_hit`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+- `subtype` = `upfront`
+- `target_env` = `dev`
+
+</details>
+
+===
+---
+timestamp: 2026-06-02T20:50:07Z
+event: gate_cleared
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-06-02T20:50:16Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F002
+---
+
+impl=claude aud=codex cap=1 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-02T20:50:16Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F002
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=1
+
+===
+---
+timestamp: 2026-06-02T21:02:42Z
+event: no_progress_classification
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+aggregate: unknown
+blocking: true
+feature_id: F002
+---
+
+Auditor verdict taxonomy [unknown] — BLOCKING.
+
+Feature: F002
+Recommended next action: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: `propose_split` can emit a child labeled as one surface while its acceptance criterion still touches multiple F001 surfaces. Evidence: in [split.py](/Users/bay…
+  - [unknown] severity=medium, category=style: Targeted lint fails. Evidence: `ruff check --no-cache ...` reports `S101` for the production `assert` in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-06-01-001-feat-plan-review-scope-validation F002 --reason unknown
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+<!-- rendered annotation 2026-06-02T21:02:42Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — no-progress taxonomy** _(band: needs_action)_
+
+Auditor verdict taxonomy `unknown` (blocking=true); recommended: review the audit envelope before re-dispatch.
+
+Run:
+
+```
+dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `aggregate_class` = `unknown`
+- `blocking` = `True`
+- `feature_id` = `F002`
+- `inbox_event` = `no_progress_classification`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+
+</details>
+
+===
+---
+timestamp: 2026-06-02T21:02:42Z
+event: breaker_tripped
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+breaker_kind: no_progress
+feature_id: F002
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+Operator clearance required: `jarvis approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress` or `jarvis resume 2026-06-01-001-feat-plan-review-scope-validation --all`.
+
+===
+<!-- rendered annotation 2026-06-02T21:02:43Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — breaker `no_progress` tripped** _(band: needs_action)_
+
+Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `no_progress`
+- `feature_id` = `F002`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+
+</details>
+
+===
+---
+timestamp: 2026-06-02T21:02:43Z
+event: volley_terminal
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F002
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F002-i0.json', 'codex-auditor-F002-i0.json', 'claude-implementer-F002-i1.json', 'codex-auditor-F002-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.
+
+===
+<!-- rendered annotation 2026-06-02T21:02:43Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — stopped no progress** _(band: needs_action)_
+
+Volley terminated after 2 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F002`
+- `final_status` = `stopped_no_progress`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+- `rounds` = `2`
+
+</details>
+
+===

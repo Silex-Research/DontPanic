@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 1,
+  "started_at": "2026-06-02T20:56:10Z",
+  "completed_at": "2026-06-02T20:59:15Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/audit/codex-auditor-F002-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-mdnv05ey target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3503 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 951435,
+    "tokens_out": 15457,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F002] Both findings are resolved and all 39 targeted tests pass; the auditor's exact probe now yields 2 children spanning `cli` and `core` instead of collapsing to a single `core` child.\n\n**Commands invoked:**\n```\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...propose_split probe (auditor's exact feature)...\"\n```\n\n**Finding 1 (high, correctness — `over_surface` proposals collapse to a single child when surfaces live in steps/description):** Root cause was twofold — `_partition_by_surface` only inspected each AC's own text via `tag_surfaces(ac)`, and `tag_surfaces` returns the default `(\"core\",)` for a generic AC, so generic ACs silently routed to one fallback surface. I added a `surfaces_in(text)` helper to `lint.py` that reports *specific* keyword matches with **no** `core` default (refactoring `tag_surfaces` to reuse it), then rewrote `_partition_by_surface` to (1) route each AC only to a surface whose keywords it genuinely matches, (2) spread the remaining generic ACs to cover the parent's F001-tagged surfaces (sorted, deterministic) that nothing claimed yet, and (3) drop any remainder onto the first surface so conservation still holds. An `over_surface` feature with ≥2 ACs now partitions across its surfaces instead of collapsing — confirmed by the probe output above.\n",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_split_f002.py scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"...propose_split probe (auditor's exact feature)...\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

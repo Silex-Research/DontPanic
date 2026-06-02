@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-06-02T21:02:42Z",
+  "feature_id": "F002",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "`propose_split` can emit a child labeled as one surface while its acceptance criterion still touches multiple F001 surfaces. Evidence: in [split.py](/Users/bay…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "unknown",
+      "severity": "medium",
+      "category": "style",
+      "issue_excerpt": "Targeted lint fails. Evidence: `ruff check --no-cache ...` reports `S101` for the production `assert` in [split.py](/Users/bayesian/Documents/GitHub/DontPanic/…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}
