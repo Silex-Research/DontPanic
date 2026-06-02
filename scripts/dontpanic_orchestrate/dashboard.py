@@ -112,6 +112,7 @@ class BuildReport:
     reconcile_status_path: Path | None
     architecture_status_path: Path | None
     architecture_view_state_path: Path | None = None
+    config_inventory_path: Path | None = None
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -142,6 +143,157 @@ def local_what_now_cache_path() -> Path:
     """Re-export so the serve loop can compare mtimes without re-deriving."""
 
     return operator_console.default_cache_path()
+
+
+# ── dashboard serve singleton detection (F013 AC2) ──────────────────────
+#
+# A running `dashboard serve` records a small JSON singleton under its dashboard
+# home so config inventory / operations guidance can AUTO-DETECT the live URL for
+# the response-level dashboard hint without the caller threading a URL through.
+# F010 builds the full refuse-second-serve / --replace behavior on top of this
+# detection primitive; F013 only needs "is a dashboard live, and at what URL?".
+
+DEFAULT_SINGLETON_FILENAME = ".serve-singleton.json"
+
+
+def _singleton_record_path(dashboard_dir: Path | None = None) -> Path:
+    base = dashboard_dir if dashboard_dir is not None else default_dashboard_dir()
+    return base / DEFAULT_SINGLETON_FILENAME
+
+
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but we cannot signal it — still alive.
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def detect_active_dashboard(dashboard_dir: Path | None = None) -> dict[str, Any] | None:
+    """Return the live serve-singleton record for this dashboard home, or None.
+
+    Reads the record written by :func:`serve_start`, verifies the recorded pid is
+    still alive, and prunes a stale record (dead pid) so a crashed serve never
+    advertises a phantom URL. This is the detection primitive the config
+    inventory uses to auto-populate the response-level dashboard hint's
+    ``active_url`` (F013 AC2).
+    """
+    path = _singleton_record_path(dashboard_dir)
+    if not path.is_file():
+        return None
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    pid = record.get("pid") if isinstance(record, dict) else None
+    if not isinstance(pid, int) or not _pid_alive(pid):
+        # Stale / malformed record — prune it.
+        try:
+            path.unlink()
+        except OSError:  # noqa: S110 — best-effort prune; nothing to recover
+            pass
+        return None
+    return record
+
+
+def detect_active_url(dashboard_dir: Path | None = None) -> str | None:
+    """Active dashboard URL when a serve singleton is live for this home, else None."""
+    record = detect_active_dashboard(dashboard_dir)
+    if not record:
+        return None
+    url = record.get("url")
+    return url if isinstance(url, str) and url else None
+
+
+def _write_singleton_record(
+    *, dashboard_dir: Path, host: str, port: int, url: str, project: str | None
+) -> Path:
+    path = _singleton_record_path(dashboard_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "pid": os.getpid(),
+        "host": host,
+        "port": port,
+        "url": url,
+        "project": project,
+        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    path.write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return path
+
+
+def _clear_singleton_record(dashboard_dir: Path | None = None) -> None:
+    path = _singleton_record_path(dashboard_dir)
+    try:
+        if path.is_file():
+            path.unlink()
+    except OSError:  # noqa: S110 — best-effort cleanup on shutdown
+        pass
+
+
+def write_config_inventory(
+    *,
+    out_dir: Path,
+    project_name: str | None,
+    dashboard_url: str | None = None,
+    warn: Callable[[str], None] | None = None,
+) -> Path | None:
+    """Render the F008 config inventory into ``out_dir/config-inventory.json``.
+
+    Shared by :func:`build` and :func:`serve_start` so the served dashboard's
+    inventory is rebuilt AFTER the serve-singleton record exists — otherwise the
+    first served inventory falls back to the start command even though the
+    dashboard is live immediately afterward (F013 AC2).
+
+    ``build`` passes ``dashboard_url=None`` so the response-level hint
+    auto-detects a running singleton via the default dashboard home — the AC2
+    "no manual URL pass-through" path. ``serve_start`` passes its freshly-bound
+    ``handle.url`` directly: it just bound that socket, so threading the known
+    URL is both correct and independent of which ``dashboard_dir`` it serves
+    (auto-detection keys off the *default* home, which a ``--dashboard-dir``
+    serve would miss).
+
+    Best-effort: a rendering failure is surfaced to ``warn`` and returns ``None``
+    rather than crashing the caller (build must tolerate optional inputs).
+    """
+
+    warn = warn if warn is not None else (lambda _msg: None)
+    try:
+        from dontpanic_orchestrate import config_inventory
+
+        try:
+            inventory = config_inventory.collect_inventory(
+                project=project_name, dashboard_url=dashboard_url
+            )
+        except config_inventory.UnresolvedProjectError:
+            # A fleet (`all`) / unresolved selector has no single project scope;
+            # fall back to machine-only so the served inventory still renders.
+            inventory = config_inventory.collect_inventory(
+                project=None, dashboard_url=dashboard_url
+            )
+        path = out_dir / "config-inventory.json"
+        path.write_text(
+            json.dumps(
+                config_inventory.to_dashboard_state(inventory),
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return path
+    except Exception as exc:  # noqa: BLE001 — surface to warn, never crash the build
+        warn(f"config inventory skipped: {exc}")
+        return None
 
 
 # ── build orchestrator ──────────────────────────────────────────────────
@@ -330,6 +482,16 @@ def build(
             warnings.append(msg)
             warn(msg)
 
+    # 6. Config inventory (F013) — render the SAME F008 inventory the CLI
+    #    `config inventory` shows as dashboard Settings/Setup cards, not merely a
+    #    generated state blob. collect_inventory auto-detects a running dashboard
+    #    singleton for the response-level hint (no manual dashboard_url needed).
+    config_inventory_path = write_config_inventory(
+        out_dir=out_dir,
+        project_name=project_name,
+        warn=lambda msg: (warnings.append(msg), warn(msg)),
+    )
+
     return BuildReport(
         out_dir=out_dir,
         state_files=tuple(state_files),
@@ -338,6 +500,7 @@ def build(
         reconcile_status_path=reconcile_status_path,
         architecture_status_path=architecture_status_path,
         architecture_view_state_path=architecture_view_state_path,
+        config_inventory_path=config_inventory_path,
         warnings=tuple(warnings),
     )
 
@@ -851,12 +1014,17 @@ class ServeHandle:
     thread: threading.Thread | None = None
     watcher_stop: threading.Event | None = None
     watcher_thread: threading.Thread | None = None
+    # Dashboard home whose serve-singleton record this handle owns, set by
+    # serve_start so shutdown() can prune it (F013 AC2 detection primitive).
+    singleton_dir: Path | None = None
 
     @property
     def url(self) -> str:
         return f"http://{self.host}:{self.port}/"
 
     def shutdown(self) -> None:
+        if self.singleton_dir is not None:
+            _clear_singleton_record(self.singleton_dir)
         if self.watcher_stop is not None:
             self.watcher_stop.set()
         if self.watcher_thread is not None and self.watcher_thread.is_alive():
@@ -953,7 +1121,58 @@ def serve_start(
         port=int(bound_port),
         directory=dashboard_dir,
         thread=serve_thread,
+        singleton_dir=dashboard_dir,
     )
+
+    # Record the live serve singleton so config inventory / operations guidance
+    # auto-detect this URL for the dashboard hint (F013 AC2). Best-effort: a
+    # recording failure must never sink a successfully-bound server.
+    try:
+        _write_singleton_record(
+            dashboard_dir=dashboard_dir,
+            host=handle.host,
+            port=handle.port,
+            url=handle.url,
+            project=project,
+        )
+        # The initial build above ran BEFORE the singleton existed, so its
+        # config-inventory.json fell back to the start command. Re-render it now
+        # that the server is live, passing the freshly-bound URL so the FIRST
+        # served inventory the dashboard loads shows its own active_url (F013
+        # AC2) regardless of which dashboard_dir is served.
+        #
+        # Keep the focused project's SCOPE (not None) so a served project
+        # dashboard's top-level inventory isn't silently rebuilt at machine
+        # scope (codex F013 i1). A fleet ("all") / current-repo selection has no
+        # single focused project, so it stays machine-scoped (write_config_inventory
+        # falls back to None on an unresolved selector anyway).
+        focused_project = (
+            initial_result.selection.project_name
+            if initial_result.selection.kind == "project"
+            else None
+        )
+        write_config_inventory(
+            out_dir=state_out_dir,
+            project_name=focused_project,
+            dashboard_url=handle.url,
+            warn=warn,
+        )
+        # The per-project mirror (state/projects/<name>/config-inventory.json)
+        # was written during the initial build, also before the singleton — so
+        # its hint fell back to the start command. The dashboard UI loads that
+        # mirror when the focused project is selected, so re-render it with the
+        # live URL too, keeping active-url detection on the per-project path.
+        if focused_project is not None:
+            project_state_dir = state_out_dir / "projects" / focused_project
+            if project_state_dir.is_dir():
+                write_config_inventory(
+                    out_dir=project_state_dir,
+                    project_name=focused_project,
+                    dashboard_url=handle.url,
+                    warn=warn,
+                )
+    except Exception as exc:  # noqa: BLE001 — recording is advisory
+        warn(f"dashboard singleton record skipped: {exc}")
 
     if watch:
         stop_event = threading.Event()
@@ -1277,6 +1496,24 @@ def _build_main(args: argparse.Namespace) -> int:
         result, state_out_dir=out_dir
     )
     selection = result.selection
+    # F013 (codex F013 i2): the fleet/project BUILD path must also write the
+    # top-level config-inventory.json — the dashboard defaults its selection to
+    # `all`, whose resolveConfigInventory() reads only the top-level file, so
+    # without this the default All-Projects view renders an EMPTY Settings
+    # inventory. Mirror the serve path: top-level scoped to the focused project
+    # (None for `all` → machine-only), plus the per-project mirror when focused.
+    focused_project = (
+        selection.project_name if selection.kind == "project" else None
+    )
+    write_config_inventory(out_dir=out_dir, project_name=focused_project, warn=_warn)
+    if focused_project is not None:
+        project_state_dir = out_dir / "projects" / focused_project
+        if project_state_dir.is_dir():
+            write_config_inventory(
+                out_dir=project_state_dir,
+                project_name=focused_project,
+                warn=_warn,
+            )
     if selection.is_default:
         print(f"dashboard build: defaulted to {_format_selection(selection)} ({selection.reason})")
     else:
@@ -1453,4 +1690,5 @@ __all__ = [
     "main",
     "open_dashboard",
     "serve_start",
+    "write_config_inventory",
 ]

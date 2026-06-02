@@ -392,3 +392,111 @@
     margin-left: 20px;
   }
 }
+
+/* ── Config inventory (F013) — Settings/Setup cards ── */
+
+.stg-config-inventory { margin-bottom: 20px; }
+
+.ci-scope-label {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Single response-level dashboard pointer (rendered once). */
+.ci-dashboard-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.ci-dashboard-hint--running { border-color: var(--green); }
+.ci-dashboard-hint--stopped { border-color: var(--yellow); }
+.ci-hint-icon { color: var(--accent); }
+.ci-hint-text { color: var(--text-primary); font-weight: 600; }
+.ci-hint-detail { color: var(--text-secondary); }
+.ci-hint-link { color: var(--accent); }
+
+.ci-section { margin-bottom: 18px; }
+.ci-section-desc { color: var(--text-secondary); font-size: 13px; margin: 4px 0 14px; }
+
+.ci-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.ci-card {
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: var(--bg-primary);
+}
+.ci-card--green  { border-left-color: var(--green); }
+.ci-card--yellow { border-left-color: var(--yellow); }
+.ci-card--red    { border-left-color: var(--red); }
+.ci-card--muted  { border-left-color: var(--text-muted); }
+
+.ci-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ci-card-title { font-weight: 600; color: var(--text-primary); flex: 1; }
+
+.ci-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.ci-status-badge--green  { background: var(--green-dim);  color: var(--green); }
+.ci-status-badge--yellow { background: var(--yellow-dim); color: var(--yellow); }
+.ci-status-badge--red    { background: var(--red-dim);    color: var(--red); }
+.ci-status-badge--muted  { background: var(--bg-secondary); color: var(--text-muted); }
+
+.ci-optional-chip {
+  font-size: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.ci-card-scope { font-size: 11px; color: var(--text-muted); margin: 4px 0; }
+.ci-card-summary { font-size: 13px; color: var(--text-secondary); margin: 6px 0; }
+.ci-card-owner { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.ci-card-detail { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+.ci-affordance { margin-top: 8px; }
+.ci-affordance-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.ci-affordance--run .ci-affordance-label { color: var(--accent); }
+
+.ci-code, .ci-edit-command, .ci-edit-template, .ci-run-action {
+  font-family: var(--font);
+  font-size: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+.ci-run-action { border-color: var(--accent); }
+.ci-edit-template { color: var(--text-secondary); }
+
+.ci-hint-ref { font-size: 12px; color: var(--red); margin-top: 8px; }

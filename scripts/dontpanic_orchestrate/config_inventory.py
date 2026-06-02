@@ -1907,11 +1907,7 @@ def collect_inventory(
     any_human = any(i.human_required for i in items)
     hint: DashboardHint | None = None
     if any_human:
-        hint = (
-            DashboardHint(is_running=True, url=dashboard_url)
-            if dashboard_url
-            else DashboardHint(is_running=False)
-        )
+        hint = _detect_dashboard_hint(dashboard_url=dashboard_url)
         # Tag human-required items with the hint id (ref only, never full text).
         items = [
             (
@@ -1934,6 +1930,28 @@ def _with_hint_ref(item: InventoryItem, hint_id: str) -> InventoryItem:
     from dataclasses import replace
 
     return replace(item, dashboard_hint_ref=hint_id)
+
+
+def _detect_dashboard_hint(*, dashboard_url: str | None = None) -> DashboardHint:
+    """Build the single response-level dashboard hint (F013 AC2).
+
+    Auto-detects a running dashboard singleton for ``active_url`` and falls back
+    to the start command when none is running — the caller no longer has to pass
+    ``dashboard_url`` manually (the F008 behavior). An explicit ``dashboard_url``
+    still overrides auto-detection so existing callers / tests keep working.
+    """
+    if dashboard_url:
+        return DashboardHint(is_running=True, url=dashboard_url)
+    active_url: str | None = None
+    try:
+        from dontpanic_orchestrate import dashboard
+
+        active_url = dashboard.detect_active_url()
+    except Exception:  # noqa: BLE001 — detection is best-effort; degrade to "not running"
+        active_url = None
+    if active_url:
+        return DashboardHint(is_running=True, url=active_url)
+    return DashboardHint(is_running=False)
 
 
 def _mutation_command_template(item: InventoryItem) -> str | None:
@@ -1981,10 +1999,47 @@ def to_dashboard_state(inventory: Inventory) -> dict[str, Any]:
     }
 
 
+# Subcommand verbs that mark a command as a build/start/serve RUN-ACTION rather
+# than a config edit. A run-action starts or regenerates a surface (e.g.
+# `dontpanic dashboard build`, `dontpanic dashboard serve`, `dontpanic mcp
+# serve`, `dontpanic dashboard open`); it is NOT an edit affordance and must
+# never render as an item's edit ``safe_command`` (F013 AC4).
+_RUN_ACTION_VERBS: frozenset[str] = frozenset({"build", "serve", "open", "start"})
+
+
+def _is_run_action_command(command: str | None) -> bool:
+    """True when ``command`` is a build/start/serve run-action, not a config edit."""
+    if not command:
+        return False
+    return any(tok in _RUN_ACTION_VERBS for tok in command.split())
+
+
 def _item_to_card(item: InventoryItem) -> dict[str, Any]:
     from dontpanic_orchestrate import state_projection
 
     scrub = state_projection.scrub_secrets
+
+    # F013 AC4 — render edit affordances DISTINCTLY from run-actions.
+    #   * ``safe_command`` is the validated, exact edit command. F008 guarantees
+    #     it is never a build/start/serve surface, so it is always a safe edit.
+    #   * An arg-taking edit route (e.g. `roles set <role> <executor>`) surfaces
+    #     as an edit *template* — info, not a runnable command.
+    #   * Build/start/serve commands surface SEPARATELY as ``run_action`` and are
+    #     never offered as an item's edit command.
+    mutation = item.dashboard_mutation_shape
+    mutation_command = (
+        (mutation.get("command") or mutation.get("command_template"))
+        if mutation
+        else None
+    )
+    run_action: dict[str, Any] | None = None
+    edit_command: str | None = item.safe_command
+    edit_command_template: str | None = None
+    if _is_run_action_command(mutation_command):
+        run_action = {"type": "run_action", "command": mutation_command}
+    elif mutation_command and item.safe_command is None:
+        edit_command_template = mutation_command
+
     return {
         "id": item.id,
         "title": item.title,
@@ -1995,8 +2050,19 @@ def _item_to_card(item: InventoryItem) -> dict[str, Any]:
         "human_required": item.human_required,
         "summary": scrub(item.current_value_summary),
         "owner": item.owner_file_or_env,
-        "safe_command": scrub(item.safe_command),
-        "mutation": item.dashboard_mutation_shape,
+        # Edit affordance (AC4): exact validated command, or a fill-in template.
+        # ``command`` is None for read-only / run-action-only / human-required
+        # items, so a build/start/serve command can never ride here.
+        "edit": {
+            "command": scrub(edit_command),
+            "command_template": edit_command_template,
+        },
+        # Run-action (AC4): build/start/serve surfaces, rendered distinctly from
+        # edits. Never carries a config edit; None when the item has no run-action.
+        "run_action": run_action,
+        # Back-compat flat fields (existing CLI/dashboard-state consumers).
+        "safe_command": scrub(edit_command),
+        "mutation": mutation,
         "dashboard_hint_ref": item.dashboard_hint_ref,
         "detail": scrub(item.detail),
     }
