@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-02T20:02:44Z",
+  "completed_at": "2026-06-02T20:06:05Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-tic0qssy target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 239440 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1438283,
+    "tokens_out": 12578,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their captured command is not forbidden.\n\nFINDING (high, correctness): `missing_prereq` only checks backticked tokens, so plain named commands/flags/symbols are silently missed. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:435) extracts only `` `...` `` spans; probe with `--nonexistent` and `missing_symbol` returned `[]`. Recommendation: extract obvious command/flag/symbol tokens from acceptance text, not just backtick spans, and add negative/positive tests.\n\nFINDING (high, correctness): exemplar detection misses `including the ...` enumerations without a universal. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:203) uses `including(?! the)`; probe with “including the implementer and auditor roles” returned no `exemplar_ac`. Recommendation: treat `including` as an exemplar marker regardless of `the`, then suppress only when a co-located universal is present.\n\nFINDING (medium, correctness): the surface tagger misses the plan’s own “engine + CLI” multi-surface shape. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:184) has no `engine`/`core` keyword, and `lint_feature(... \"engine and cli\" ...)` returned `('cli',)` with no",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff HEAD~1 -- docs/plans/2026-06-01-001-feat-plan-review-scope-validation",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=../scripts python3 -m pytest -q -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=../scripts python3 -m pytest -q -s -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.plan_review.lint import Resolvers, lint_feature; r=lint_feature({'id':'FX','acceptance':'(1) frobnicate runs with --nonexistent and calls missing_symbol.'}, Resolvers()); print([(f.kind, f.evidence) for f in r.flags])\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.plan_review.lint import Resolvers, lint_feature; r=lint_feature({'id':'FX','acceptance':'(1) validate supported roles, including the implementer and auditor roles.'}, Resolvers()); print([(f.kind, f.evidence) for f in r.flags])\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python3 -c \"from dontpanic_orchestrate.plan_review.lint import Resolvers, lint_feature; r=lint_feature({'id':'F007','description':'wire engine and cli behavior','acceptance':'(1) engine works (2) cli works'}, Resolvers()); print(r.surfaces, [(f.kind, f.evidence) for f in r.flags])\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`missing_prereq` only checks backticked tokens, so plain named commands/flags/symbols are silently missed. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:435) extracts only `` `...` `` spans; probe with `--nonexistent` and `missing_symbol` returned `[]`. Recommendation: extract obvious command/flag/symbol tokens from acceptance text, not just backtick spans, and add negative/positive tests.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "exemplar detection misses `including the ...` enumerations without a universal. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:203) uses `including(?! the)`; probe with “including the implementer and auditor roles” returned no `exemplar_ac`. Recommendation: treat `including` as an exemplar marker regardless of `the`, then suppress only when a co-located universal is present.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "the surface tagger misses the plan’s own “engine + CLI” multi-surface shape. Evidence: [lint.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_review/lint.py:184) has no `engine`/`core` keyword, and `lint_feature(... \"engine and cli\" ...)` returned `('cli',)` with no `over_surface`. Recommendation: add engine/core signals so multi-surface features named in the calibration corpus cannot collapse to one surface. Checks run: $ git status --short $ git diff HEAD~1 -- ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

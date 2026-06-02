@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "signoff_id": "2026-06-01-001-feat-plan-review-scope-validation#signoff#1",
+  "iteration": 1,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F001-i0.json",
+    "audit/codex-auditor-F001-i0.json",
+    "audit/claude-implementer-F001-i1.json",
+    "audit/codex-auditor-F001-i1.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 2,
+    "needs_changes_count": 2,
+    "blocked_count": 0,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "next_action": "remediate",
+  "decided_at": "2026-06-02T20:13:35Z"
+}

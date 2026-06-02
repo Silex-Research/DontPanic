@@ -1,0 +1,16 @@
+{
+  "plan_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "cleared_gates": [],
+  "history": [
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:no_progress",
+      "at": "2026-06-02T20:13:34Z",
+      "actor": "supervisor",
+      "reason": "auditor verdict unchanged (needs_changes) across 2 consecutive rounds\ntaxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes."
+    }
+  ],
+  "active_breakers": [
+    "breaker:no_progress"
+  ]
+}

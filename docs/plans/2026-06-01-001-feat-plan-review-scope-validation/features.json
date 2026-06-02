@@ -16,7 +16,7 @@
         "Add unit tests that feed crafted feature records reproducing each onboarding-v0 stall (F007 multi-surface, F008 exemplar-AC, F012 missing-prereq + weak-test) and assert the corresponding flag fires, plus negatives that must not flag."
       ],
       "acceptance": "(1) `lint_feature(feature, resolvers)` is pure (no network, no mutation) and returns a typed ScopeReport. (2) Every feature touching more than one surface yields an `over_surface` flag carrying the surface list as evidence. (3) Every acceptance string that enumerates examples (e.g./such as/including) without a co-located universal (every/all/each) yields an `exemplar_ac` flag. (4) Every acceptance string asserting equality/string-match with no round-trip or property assertion yields a `weak_test` flag. (5) Every command/flag/symbol token an acceptance names that does not resolve against the provided resolver set yields a `missing_prereq` flag naming the unresolved token. (6) Tests reproduce each of the three onboarding-v0 stall classes (multi-surface, exemplar-AC, missing-prereq) and assert the matching flag fires, with negative cases proving no false-positive on a clean single-surface feature.",
-      "passes": false,
+      "passes": true,
       "depends_on": []
     },
     {
