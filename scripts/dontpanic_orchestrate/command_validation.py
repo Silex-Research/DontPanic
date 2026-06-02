@@ -329,8 +329,33 @@ _DISPATCH_FROM_PLAN_SPEC = SubcommandSpec(
     ),
 )
 
+# ``skills`` subcommands per cli.py:_skills_main (Plan 2026-05-30-001 F016).
+# ``recommend <plan>`` renders the SkillAction recommendations; ``rubric``
+# proposes a starting invocation rubric (--suggest <skill>) or lists high-value
+# skills missing one (--list-missing). The migration advisory + dashboard emit
+# ``skills rubric --suggest <skill>`` and ``skills recommend <plan>``, so both
+# must validate or those affordances would fall back to advisory-only text.
+_SKILLS_SPEC = SubcommandSpec(
+    subcommands={
+        "recommend": SubcommandSpec(
+            positional_min=0,
+            positional_max=1,
+            value_flags=frozenset(
+                {"--plan", "--stage", "--skills-dir", "--dashboard-url", "--format"}
+            ),
+        ),
+        "rubric": SubcommandSpec(
+            positional_min=0,
+            positional_max=0,
+            value_flags=frozenset({"--suggest", "--plan", "--skills-dir", "--format"}),
+            bool_flags=frozenset({"--list-missing"}),
+        ),
+    },
+)
+
 _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     "ps": SubcommandSpec(),
+    "skills": _SKILLS_SPEC,
     "approve": SubcommandSpec(
         positional_min=2,
         positional_max=2,

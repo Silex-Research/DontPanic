@@ -11,6 +11,9 @@ import {
   renderConfigInventoryHTML,
   resolveConfigInventory,
 } from '../../lib/config-inventory-logic.js';
+import {
+  renderSkillRecommendationsHTML,
+} from '../../lib/skill-recommendations-logic.js';
 
 (() => {
 
@@ -82,6 +85,13 @@ import {
              Populated from state.configInventory; renders an honest empty
              state when the projection is absent. -->
         <div id="stg-config-inventory" class="stg-config-inventory"></div>
+
+        <!-- F016 skill recommendations — per-skill SkillAction cards rendered
+             from the SAME RecommendationReport the CLI
+             \`dontpanic skills recommend\` prints (AC9). Populated from
+             state.skillRecommendations; renders an honest empty state when the
+             report is absent. -->
+        <div id="stg-skill-recommendations" class="stg-skill-recommendations"></div>
 
         <!-- Dashboard Preferences -->
         <section class="panel stg-section stg-config-section">
@@ -211,6 +221,23 @@ import {
     host.innerHTML = renderConfigInventoryHTML(resolved);
   }
 
+  // ── Skill recommendations (F016) render ──
+  //
+  // Renders the per-skill SkillAction recommendations + blockers + missing-input
+  // action + migration candidates from the SAME RecommendationReport the CLI
+  // `dontpanic skills recommend` prints (AC9), loaded from
+  // `state.skillRecommendations`. Re-rendered on every state change so a fresh
+  // `dashboard build`/`serve` surfaces without a page reload; an absent report
+  // renders an honest "run build" empty state.
+
+  function renderSkillRecommendations(state) {
+    const host = _el && _el.querySelector('#stg-skill-recommendations');
+    if (!host) return;
+    host.innerHTML = renderSkillRecommendationsHTML(
+      state ? state.skillRecommendations : null
+    );
+  }
+
   // ── Page Registration ──
 
   Jarvis.registerPage({
@@ -224,15 +251,18 @@ import {
       _el.innerHTML = buildTemplate();
       setupConfigForm();
       renderConfigInventory(state);
+      renderSkillRecommendations(state);
 
       // Apply saved theme on load
       applyTheme(getTheme());
     },
 
     onActivate(state) {
-      // Preferences chrome is UI-local, but the config inventory is
-      // server-state — re-render it so build/serve refreshes surface.
+      // Preferences chrome is UI-local, but the config inventory and skill
+      // recommendations are server-state — re-render them so build/serve
+      // refreshes surface.
       renderConfigInventory(state);
+      renderSkillRecommendations(state);
     },
   });
 })();

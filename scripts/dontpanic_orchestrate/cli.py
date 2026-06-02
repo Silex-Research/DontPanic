@@ -3832,6 +3832,151 @@ def _orchestrate_main(argv: list[str]) -> int:
     return _dispatch_from_plan_main(argv)
 
 
+def _skills_main(argv: list[str]) -> int:
+    """``dontpanic skills <recommend|rubric>`` — Plan 2026-05-30-001 F016.
+
+    Surfaces the F011/F015 SkillAction set (``recommend``) with CLI/dashboard
+    parity and provides the rubric migration path (``rubric``) for high-value
+    skills that lack invocation metadata.
+    """
+    sub = argv[0] if argv else None
+    if sub == "recommend":
+        return _skills_recommend_main(argv[1:])
+    if sub == "rubric":
+        return _skills_rubric_main(argv[1:])
+    print(
+        "usage: dontpanic skills <recommend|rubric> ...\n"
+        "  recommend <plan> [--stage STAGE] [--format text|json]\n"
+        "  rubric (--suggest <skill> | --list-missing) [--plan <plan>] "
+        "[--skills-dir DIR] [--format text|json]",
+        file=sys.stderr if sub not in (None, "-h", "--help", "help") else sys.stdout,
+    )
+    return 0 if sub in (None, "-h", "--help", "help") else 2
+
+
+def _skills_recommend_main(argv: list[str]) -> int:
+    """``dontpanic skills recommend <plan> [--stage STAGE] [--format ...]``.
+
+    Renders the SkillAction recommendations for a plan: skill, recommendation,
+    reason, risk, command, approval requirement, and evidence target — the SAME
+    typed data the dashboard renders (F016 AC9). Missing inputs collapse to ONE
+    action (AC8); F008-inventory blockers explain unavailable resources (AC10).
+    """
+    parser = argparse.ArgumentParser(prog="dontpanic skills recommend")
+    parser.add_argument("plan", nargs="?", default=None, help="Plan ID or dir path")
+    parser.add_argument("--plan", dest="plan_flag", default=None, help="Plan ID or dir path")
+    parser.add_argument("--stage", default=None, help="Lifecycle stage to scope recommendations")
+    parser.add_argument("--skills-dir", default=None, help="Override the claude/skills dir")
+    parser.add_argument("--dashboard-url", default=None, help="Active dashboard URL when running")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import skill_recommendation
+
+    plan_arg = args.plan or args.plan_flag
+    if not plan_arg:
+        print("[skills recommend] a plan id/path is required", file=sys.stderr)
+        return 2
+    plan_dir = _resolve_plan_dir(plan_arg)
+    if args.skills_dir is not None:
+        skills_dir = Path(args.skills_dir)
+    else:
+        skills_dir = _resolve_skills_dir(plan_dir)
+        if skills_dir is None:
+            print(
+                "[skills recommend] no claude/skills dir found above the plan; "
+                "pass --skills-dir to point at one",
+                file=sys.stderr,
+            )
+            return 2
+    report = skill_recommendation.collect(
+        plan_dir,
+        skills_dir,
+        stage=args.stage,
+        dashboard_url=args.dashboard_url,
+    )
+    if args.format == "json":
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(skill_recommendation.render_text(report), end="")
+    return 0
+
+
+def _skills_rubric_main(argv: list[str]) -> int:
+    """``dontpanic skills rubric (--suggest <skill> | --list-missing)``.
+
+    The F016 migration path (AC11). ``--suggest`` proposes a SAFE starting
+    ``invocation:`` block for one skill; ``--list-missing`` identifies high-value
+    skills that lack a rubric. Advisory only — never blocks core use.
+    """
+    parser = argparse.ArgumentParser(prog="dontpanic skills rubric")
+    parser.add_argument("--suggest", default=None, metavar="SKILL", help="Skill to propose a rubric for")
+    parser.add_argument("--list-missing", action="store_true", help="List high-value skills lacking a rubric")
+    parser.add_argument("--plan", default=None, help="Plan to scope --list-missing applicability")
+    parser.add_argument("--skills-dir", default=None, help="Override the claude/skills dir")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import skill_recommendation
+
+    if not args.suggest and not args.list_missing:
+        print("[skills rubric] pass --suggest <skill> or --list-missing", file=sys.stderr)
+        return 2
+
+    # Resolve the skills dir: explicit override, else from the plan, else cwd.
+    skills_dir: Path | None
+    if args.skills_dir is not None:
+        skills_dir = Path(args.skills_dir)
+    elif args.plan is not None:
+        skills_dir = _resolve_skills_dir(_resolve_plan_dir(args.plan))
+    else:
+        skills_dir = _resolve_skills_dir(Path.cwd())
+    if skills_dir is None:
+        print("[skills rubric] no claude/skills dir found; pass --skills-dir", file=sys.stderr)
+        return 2
+
+    if args.suggest:
+        frontmatter = skill_recommendation._read_skill_frontmatter(skills_dir, args.suggest)
+        if frontmatter is None:
+            print(
+                f"[skills rubric] skill {args.suggest!r} has no readable SKILL.md "
+                f"in {skills_dir}",
+                file=sys.stderr,
+            )
+            return 2
+        suggestion = skill_recommendation.suggest_rubric(args.suggest, frontmatter)
+        if args.format == "json":
+            print(json.dumps(suggestion.to_dict(), indent=2))
+        else:
+            print(skill_recommendation.render_rubric_text(suggestion), end="")
+        return 0
+
+    # --list-missing
+    applicable: set[str] | None = None
+    if args.plan is not None:
+        try:
+            from dontpanic_orchestrate import skill_applicability
+
+            loaded = plan_loader.load(_resolve_plan_dir(args.plan))
+            report = skill_applicability.match(loaded, skills_dir)
+            applicable = {m.skill_name for m in report.matches}
+        except Exception:  # noqa: BLE001 — advisory; fall back to applies_to heuristic
+            applicable = None
+    missing = skill_recommendation.skills_missing_rubrics(
+        skills_dir, applicable_names=applicable
+    )
+    if args.format == "json":
+        print(json.dumps({"skills_missing_rubrics": missing}, indent=2))
+    else:
+        if not missing:
+            print("No high-value skills are missing an invocation rubric.")
+        else:
+            print("High-value skills missing an invocation rubric (advisory):")
+            for name in missing:
+                print(f"  {name} — run `dontpanic skills rubric --suggest {name}`")
+    return 0
+
+
 def _print_top_level_help(*, file) -> None:
     print(
         """usage: dontpanic <command> [args]
@@ -3844,6 +3989,7 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|register-worker  Machine agent surface (operator vs worker)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
   doctor                         Run local readiness checks
   init                           Interactive installer (default --profile=core)
@@ -3915,6 +4061,8 @@ def main(argv: list[str] | None = None) -> int:
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
         return _roles_main(raw[1:])
+    if raw and raw[0] == "skills":
+        return _skills_main(raw[1:])
     if raw and raw[0] == "mcp":
         return _mcp_main(raw[1:])
     if raw and raw[0] == "state":

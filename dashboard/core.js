@@ -100,6 +100,13 @@ function JARVIS_LITERAL() { return {
     // Settings page resolves the effective inventory for the selected project
     // and falls back to the top-level `configInventory` (codex F013 i1).
     configInventoryByProject: {},
+    // Plan 2026-05-30-001 F016 — skill recommendation report written by
+    // `dontpanic dashboard build` / `serve` to
+    // `dashboard/state/skill-recommendations.json` (the SAME
+    // RecommendationReport the CLI `dontpanic skills recommend` prints, AC9).
+    // Stays null when the file is absent so the Settings page renders an honest
+    // "run build" empty state instead of pretending recommendations exist.
+    skillRecommendations: null,
   },
 
   // ── Page Registration ──
@@ -275,6 +282,13 @@ function JARVIS_LITERAL() { return {
       // state; a fetch failure after a successful load resets to null so the
       // missing-state surfaces on next refresh instead of holding stale cards.
       { key: 'configInventory', file: 'config-inventory.json', nullableMissing: true },
+      // Plan 2026-05-30-001 F016 — skill recommendation report. Missing → null
+      // so the Settings page renders the "run dashboard build" empty state; a
+      // fetch failure after a successful load resets to null so the missing
+      // state surfaces on next refresh instead of holding a stale report. This
+      // is the SAME RecommendationReport the CLI `dontpanic skills recommend`
+      // prints, so the dashboard and CLI never drift (AC9).
+      { key: 'skillRecommendations', file: 'skill-recommendations.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),

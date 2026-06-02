@@ -2291,6 +2291,50 @@ def check_dashboard_readiness(
     return results
 
 
+# ── plan 2026-05-30-001 F016: skill-rubric migration advisory ─────────────
+
+
+def check_skill_rubrics_advisory(
+    *,
+    repo_root: Path | None = None,
+) -> list[CheckResult]:
+    """Plan 2026-05-30-001 F016 (AC11) — NON-BLOCKING advisory for high-value
+    skills that lack an invocation rubric.
+
+    Lists high-value skills (those declaring ``applies_to``) under
+    ``<repo>/claude/skills`` that have no ``invocation:`` block and suggests the
+    exact ``dontpanic skills rubric --suggest <skill>`` migration commands. This
+    is ADVISORY only — it emits a single WARN (never FAIL), so a metadata-less
+    skill never blocks the doctor battery. A missing skills dir, or all skills
+    already carrying a rubric, yields a PASS. Any error degrades to a single
+    WARN with a remediation pointer rather than crashing the battery.
+    """
+
+    repo_root = (repo_root or REPO_ROOT).resolve()
+    skills_dir = repo_root / "claude" / "skills"
+    name = "skill-rubrics"
+    if not skills_dir.is_dir():
+        return [_ok(name, f"no skills dir at {skills_dir.name}/ — nothing to advise")]
+    try:
+        sys.path.insert(0, str(repo_root / "scripts"))
+        try:
+            from dontpanic_orchestrate import skill_recommendation as _sr
+        finally:
+            sys.path.pop(0)
+        advisory = _sr.doctor_missing_rubric_advisory(skills_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory must never fail the battery
+        return [
+            _warn(
+                name,
+                f"skill-rubric advisory skipped: {exc}",
+                "run: dontpanic skills rubric --list-missing",
+            )
+        ]
+    if not advisory.has_findings:
+        return [_ok(name, advisory.message)]
+    return [_warn(name, advisory.message, advisory.remediation)]
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -2382,6 +2426,12 @@ def run_all_checks(
     # console optional (operators may legitimately not yet have run
     # `dontpanic dashboard build`).
     results.extend(check_dashboard_readiness())
+    # Plan 2026-05-30-001 F016 (AC11): advisory list of high-value skills
+    # missing an invocation rubric, with exact `skills rubric --suggest`
+    # remediation. Advisory WARN only — a metadata-less skill is a migration
+    # nudge, never a doctor failure, so it is stripped from the strict-exit
+    # computation (see cli._doctor_main).
+    results.extend(check_skill_rubrics_advisory())
     return results
 
 
@@ -2746,8 +2796,13 @@ def main(argv: list[str] | None = None) -> int:
         # Plan 2026-05-23-004 F005: dashboard readiness probes stay
         # advisory in all modes — drop them from the strict-exit
         # computation. Their WARN text + remediation still prints above.
+        # Plan 2026-05-30-001 F016 (AC11): the skill-rubric migration
+        # advisory is likewise advisory-only and is dropped here so a
+        # metadata-less skill never escalates the exit code.
         strict_inputs = [
-            r for r in results if not r.name.startswith("dashboard-")
+            r
+            for r in results
+            if not r.name.startswith("dashboard-") and r.name != "skill-rubrics"
         ]
         return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1

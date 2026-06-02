@@ -515,6 +515,10 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "reconcile",
         "dashboard",
         "next",
+        # Plan 2026-05-30-001 F016: skill recommendation surfaces + rubric
+        # migration are exposed as `dontpanic skills <recommend|rubric>`, so the
+        # validator recognizes the `skills` surface.
+        "skills",
     }
     assert known_subcommands() == expected
 

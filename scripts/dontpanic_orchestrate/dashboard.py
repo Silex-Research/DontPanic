@@ -113,6 +113,7 @@ class BuildReport:
     architecture_status_path: Path | None
     architecture_view_state_path: Path | None = None
     config_inventory_path: Path | None = None
+    skill_recommendations_path: Path | None = None
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -296,6 +297,55 @@ def write_config_inventory(
         return None
 
 
+def write_skill_recommendations(
+    *,
+    out_dir: Path,
+    plans_root: Path,
+    plan_id: str | None,
+    project_name: str | None = None,
+    dashboard_url: str | None = None,
+    warn: Callable[[str], None] | None = None,
+) -> Path | None:
+    """Render the F016 skill recommendations into ``out_dir/skill-recommendations.json``.
+
+    Renders the SAME :class:`skill_recommendation.RecommendationReport` the CLI
+    ``dontpanic skills recommend`` prints (F016 AC9), so the dashboard and CLI
+    never drift. Skill recommendations are plan-scoped (they need the plan's
+    applicable-skills + rubrics), so this is a no-op when no ``plan_id`` is in
+    scope or no ``claude/skills`` dir exists above the plan.
+
+    Best-effort: a rendering failure is surfaced to ``warn`` and returns ``None``
+    rather than crashing the build (must tolerate optional inputs)."""
+    warn = warn if warn is not None else (lambda _msg: None)
+    if not plan_id:
+        return None
+    try:
+        from dontpanic_orchestrate import cli as _cli
+        from dontpanic_orchestrate import skill_recommendation
+
+        plan_dir = plans_root / plan_id
+        if not plan_dir.is_dir():
+            return None
+        skills_dir = _cli._resolve_skills_dir(plan_dir)
+        if skills_dir is None:
+            return None
+        report = skill_recommendation.collect(
+            plan_dir,
+            skills_dir,
+            project=project_name,
+            dashboard_url=dashboard_url,
+        )
+        path = out_dir / "skill-recommendations.json"
+        path.write_text(
+            json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return path
+    except Exception as exc:  # noqa: BLE001 — surface to warn, never crash the build
+        warn(f"skill recommendations skipped: {exc}")
+        return None
+
+
 # ── build orchestrator ──────────────────────────────────────────────────
 
 
@@ -458,6 +508,7 @@ def build(
                 reconcile_result=reconcile_result,
                 arch_status=arch_status,
                 plan_id=plan_id,
+                project_name=project_name,
             )
             # Plan 2026-05-24-004 F003 (D003 + D019) — merge event-actions
             # sidecar into provider-derived items BEFORE writing what-now.json
@@ -492,6 +543,20 @@ def build(
         warn=lambda msg: (warnings.append(msg), warn(msg)),
     )
 
+    # 7. Skill recommendations (F016) — render the SAME SkillAction data the CLI
+    #    `dontpanic skills recommend` shows so CLI and dashboard reach parity
+    #    (AC9). Plan-scoped: a no-op when no plan_id or no claude/skills dir. The
+    #    missing-input ActionChoice is ALSO merged into the what-now action queue
+    #    above (see `_gather_action_items`) so the recommendation surfaces as a
+    #    real console action, not merely a state blob (AC8/AC9).
+    skill_recommendations_path = write_skill_recommendations(
+        out_dir=out_dir,
+        plans_root=plans_root,
+        plan_id=plan_id,
+        project_name=project_name,
+        warn=lambda msg: (warnings.append(msg), warn(msg)),
+    )
+
     return BuildReport(
         out_dir=out_dir,
         state_files=tuple(state_files),
@@ -501,6 +566,7 @@ def build(
         architecture_status_path=architecture_status_path,
         architecture_view_state_path=architecture_view_state_path,
         config_inventory_path=config_inventory_path,
+        skill_recommendations_path=skill_recommendations_path,
         warnings=tuple(warnings),
     )
 
@@ -585,6 +651,7 @@ def _gather_action_items(
     reconcile_result: Any | None,
     arch_status: dict[str, Any] | None,
     plan_id: str | None,
+    project_name: str | None = None,
 ) -> tuple[operator_console.ActionItem, ...]:
     """Drive each provider against already-loaded inputs."""
 
@@ -636,6 +703,14 @@ def _gather_action_items(
     # so budget/iteration/finalize decisions never drift between the two surfaces.
     operations_items = _gather_operations_items(plan_dirs_by_id)
 
+    # Plan 2026-05-30-001 F016: surface the skill-recommendation missing-input
+    # ActionChoice (and its shared dashboard affordance) as ActionItems built from
+    # the SAME typed data the CLI `dontpanic skills recommend` prints, so the
+    # recommendation is a real console action and not merely a state blob (AC8/AC9).
+    skill_items = _gather_skill_recommendation_items(
+        plan_dirs_by_id, project_name=project_name
+    )
+
     return operator_console.aggregate(
         gate_items,
         capability_items,
@@ -643,7 +718,47 @@ def _gather_action_items(
         supervisor_items,
         arch_items,
         operations_items,
+        skill_items,
     )
+
+
+def _gather_skill_recommendation_items(
+    plan_dirs_by_id: dict[str, Path],
+    *,
+    project_name: str | None = None,
+) -> tuple[operator_console.ActionItem, ...]:
+    """Build skill-recommendation ActionItems (F016 AC8/AC9) for each in-scope plan.
+
+    Drives :func:`skill_recommendation.collect` per plan and converts the resulting
+    report's ONE missing-input ActionChoice (+ shared dashboard affordance) via the
+    F007 ``Guidance.to_action_items`` converter the report reuses, so the dashboard
+    renders the SAME typed data the CLI prints. A plan whose skills are all ready
+    yields no missing-input action and contributes nothing. Each plan is isolated in
+    a try/except — a missing ``claude/skills`` dir or a malformed plan never sinks
+    the cache (advisory; never blocks core use). Items are de-duplicated by id.
+    """
+    from dontpanic_orchestrate import cli as _cli
+    from dontpanic_orchestrate import skill_recommendation
+
+    items: list[operator_console.ActionItem] = []
+    seen_ids: set[str] = set()
+    for _plan_id, plan_dir in plan_dirs_by_id.items():
+        try:
+            skills_dir = _cli._resolve_skills_dir(plan_dir)
+            if skills_dir is None:
+                continue
+            report = skill_recommendation.collect(
+                plan_dir, skills_dir, project=project_name
+            )
+            report_items = report.to_action_items()
+        except Exception:  # noqa: BLE001 — advisory surface, never sinks the cache
+            continue
+        for item in report_items:
+            if item.id in seen_ids:
+                continue
+            seen_ids.add(item.id)
+            items.append(item)
+    return tuple(items)
 
 
 def _gather_operations_items(
@@ -1691,4 +1806,5 @@ __all__ = [
     "open_dashboard",
     "serve_start",
     "write_config_inventory",
+    "write_skill_recommendations",
 ]
