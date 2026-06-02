@@ -1368,6 +1368,19 @@ def dispatch_volley(
     # No-op for plans not in status='completed' or with non-gated goal_type.
     completion_gate.enforce_completion_gate(plan_dir)
 
+    # F009 (codex #2): record the plan-run fingerprint BEFORE the plan/features
+    # are loaded into memory, so the baseline reflects true dispatch-start disk
+    # state and a pre-load edit cannot be silently baked into the baseline.
+    # FAIL CLOSED (codex #3): if a baseline cannot be recorded we cannot detect
+    # drift at all, so refuse to proceed rather than run blind on stale context.
+    try:
+        plan_drift.record_baseline(plan_dir)
+    except Exception as _fp_exc:  # noqa: BLE001 — re-raised as fail-closed
+        raise RuntimeError(
+            f"F009 plan-drift baseline could not be recorded for {plan_dir} "
+            f"({_fp_exc}); failing closed — cannot guarantee drift detection"
+        ) from _fp_exc
+
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
 
@@ -1715,13 +1728,9 @@ def dispatch_volley(
                 agents_in_panel=[impl_name, aud_name],
             )
 
-        # F009 — record the plan-run fingerprint BEFORE any paid agent call so
-        # every later drift check has a dispatch-start reference (AC1). Wrapped
-        # so a fingerprint failure never blocks the volley.
-        try:
-            plan_drift.record_baseline(loaded.plan_dir)
-        except Exception as _fp_exc:  # noqa: BLE001 — advisory baseline
-            print(f"[volley] plan-drift baseline skipped: {_fp_exc}")
+        # F009 — the plan-run fingerprint baseline is recorded EARLIER, before
+        # plan_loader.load() above (codex #2), so it reflects true dispatch-start
+        # disk state and fails closed if unrecordable.
 
         def _drift_pause_or_none(stage: str, rounds: int) -> VolleyResult | None:
             """F009 — recompute the plan fingerprint, reconcile, and either
@@ -1737,9 +1746,21 @@ def dispatch_volley(
                     feature_id=feature_id,
                     stage=stage,
                 )
-            except Exception as _drift_exc:  # noqa: BLE001 — never fatal
-                print(f"[volley] plan-drift check skipped at {stage}: {_drift_exc}")
-                return None
+            except Exception as _drift_exc:  # noqa: BLE001 — fail CLOSED, do not proceed
+                # FAIL CLOSED (codex F009 #3): a drift check that errors must NOT
+                # let the volley proceed on possibly-stale context. Pause for the
+                # operator instead of silently continuing.
+                print(
+                    f"[volley] plan-drift check ERRORED at {stage}; failing closed "
+                    f"(pause): {_drift_exc}"
+                )
+                return VolleyResult(
+                    "paused_on_drift",
+                    rounds,
+                    f"plan-drift check failed at {stage} ({_drift_exc}); paused "
+                    "fail-closed — verify plan files on disk and redispatch",
+                    audit_paths,
+                )
             if decision.proceed:
                 if decision.report.drift_class is plan_drift.DriftClass.ADDITIVE_LEDGER:
                     print(
