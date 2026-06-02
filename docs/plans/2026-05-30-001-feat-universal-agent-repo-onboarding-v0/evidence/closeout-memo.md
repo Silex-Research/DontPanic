@@ -1,46 +1,58 @@
 ---
-status: operator_resolved
-reason_class: evidence_shape_disagreement
+status: signed_off
+reason_class: feature_complete
 plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
-feature_id: F002
-closed_at: 2026-05-30T19:41:33Z
-latest_audit_status: needs_changes
+feature_id: F008
+closed_at: 2026-06-02T02:30:00Z
+latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F002
+# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F008
 
 ## Operator decision
 
-This feature was closed under class `evidence_shape_disagreement` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+F008 (CLI/dashboard config-inventory action parity) is closed `signed_off`. codex
+signed off on run10 iter0 after the operator resolved the run9 residuals (D047–D050).
+The class-wide non-optimistic-status invariant is implemented by construction via the
+shared `config_inventory.derive_status(StatusFacts)` helper, through which every
+provider — config AND secret/auth — routes its `present`/`loadable`/`valid` facts.
 
-## Latest auditor envelope summary (lifted automatically)
+## Return Condition
 
-## Target context
-- Repo: DontPanic
-- Env: dev
-- Project: (none)
-- Command: 4 (see structured target_context.commands_run)
+F008 returns complete when, by construction, **no inventory provider can report `ok`
+on an invalid/incomplete/unrunnable underlying state**, and the dashboard action
+surface is honest:
 
-[F002] Repo: DontPanic
-Env: dev
-Project: (none)
+- Every provider derives status through the single shared `derive_status` helper; a
+  registry-coverage guard test (`test_every_provider_is_listed_in_the_invariant_suite`)
+  forbids adding a provider without an invariant case.
+- The exhaustive parametrized suite (`_NON_OPTIMISTIC_CASES`) drives a real
+  invalid/incomplete/unrunnable state for EVERY provider — including present-but-
+  unloadable config, a tripped breaker, quota caps-without-calibration / state-missing /
+  state-unloadable, non-runnable global defaults, invalid manifest, stale onboarding,
+  and the secret surfaces (absent / malformed credfile / non-webhook URL / unloadable
+  SA key) — each asserting a non-ok status.
+- Anthropic auth probes a real credential artifact (API key / `~/.claude/.credentials.json`
+  / macOS keychain), never the `claude` binary on PATH (codex i2).
+- A malformed REQUIRED secret keeps `NEEDS_SETUP` but is `human_required`, so the
+  response-level dashboard hint fires (operator ruling D050).
+- `dontpanic roles set` (the dashboard safe-edit route) validates via the registered
+  `_ROLES_SPEC`; quota emits no `safe_command` when fully configured (the non-runnable
+  `quota-caps init` affordance is removed).
+- No `dashboard/*` or `settings/*` files are edited (AC2d scope held).
 
-Overall verdict: needs_changes.
+## Verification
 
-FINDING (medium, correctness): `dontpanic orchestrate <plan> --bad-flag` does not print the generated brief/canonical workflow for invalid input. Evidence: it falls through to `dispatch-from-plan` argparse and prints only dispatch usage/error, missing `DontPanic operating brief` and `CANONICAL WORKFLOW`. Recommendation: catch/handle invalid forwarded argv in the `orchestrate` gateway and append the teaching output on exit 2, or narrow the spec/tests if this shape is intentionally delegated.
-
-The implementer’s audit summary correctly declares `Repo: DontPanic`, `Env: dev`, and `Project...
-
-## Rationale (operator — fill in)
-
-**Correction to auto-lifted summary above:** the memo lifted the STALE `codex-auditor-F002-i1.json` (needs_changes, 14:02) from the *prior* volley. The actual final verdict was `codex-auditor-F002-i0.json` **signed_off** (14:26) on the re-dispatch with `--max-iterations 5`. The frontmatter `latest_audit_status: needs_changes` is wrong for the same reason — the finalizer/close path picks "latest" by iteration index, and i1 > i0 even though i1 is older wall-clock. This is the audit-filename-reuse hazard (re-dispatch reuses `iN` filenames; a later run with fewer iterations leaves a higher-index stale envelope).
-
-**Why no re-dispatch:** codex signed off the code. The volley terminated `blocked` only on the patch-completeness backstop — the new test `scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py` was untracked, so fresh-clone pytest discovery would skip it (D025 root-cause #2). Resolved out-of-band: `git add` of the F002 deliverables (`agent_surface.py`, `agent_manifest.py`, `cli.py`, the test) + confirmed 21/21 tests green before close-out.
-
-**Follow-up to file:** (1) finalizer/close "latest auditor envelope" selection should tie-break by mtime, not just iteration index, OR re-dispatch should purge stale higher-index envelopes — file as a DontPanic harness D-entry. (2) The `(latest auditor envelope not located)` evidence-ref line is a second symptom of the same lookup gap.
+- 159 F008 + command-validation tests pass; F008 source + test files are ruff-clean.
+- Independent operator check: malformed required secret → `status=needs_setup`,
+  `human_required=True`; quota fully-configured → `safe_command is None`;
+  `roles set <role> <executor> --global` → `validate_command_tokens.ok == True`.
+- Cross-agent: codex `signed_off` on run10 iter0.
 
 ## Evidence references
 
-- `audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json`
-- `(latest auditor envelope not located)`
-
+- `audit/codex-auditor-F008-i0.json` (run10) — verdict `signed_off`
+- `scripts/dontpanic_orchestrate/config_inventory.py` — `derive_status`, `_secret_provider`, `provider_quota`
+- `scripts/dontpanic_orchestrate/command_validation.py` — `_ROLES_SPEC`
+- `scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py` — `_NON_OPTIMISTIC_CASES` + coverage guard
+- decisions `D045`–`D050`

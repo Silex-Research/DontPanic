@@ -159,3 +159,8 @@ taxonomy=[unknown] blocking=True; recommended: Auditor produced findings the tax
 **2026-06-01T23:50:30Z** — feature **F008** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
 taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
 
+| 2026-06-02T00:06:21Z | F008 | i0 | claude / implementer | signed_off | 1,780,016 / 10,313 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-06-02T00:08:40Z | F008 | i0 | codex / auditor | signed_off | 873,839 / 9,155 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+
+**2026-06-02T00:08:40Z** — feature **F008** terminal: `signed_off` after 1 round(s) — auditor signed off
+
