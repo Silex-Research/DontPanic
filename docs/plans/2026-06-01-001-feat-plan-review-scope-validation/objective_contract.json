@@ -1,0 +1,25 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "scripts/dontpanic_orchestrate/ (plan_review lint module, plan-review CLI, lock + dispatch gates, design-review volley role) plus docs/plans/*/features.json as the artifacts under review",
+  "user_journeys": [
+    "As an operator authoring a plan, I run `dontpanic plan-review <plan>` and get a per-feature scope report with risk flags and concrete split proposals before I lock or dispatch anything.",
+    "As an operator locking a plan, the pre-lock design gate refuses to lock a plan whose features are over-scoped or whose acceptance criteria are exemplar/weak, unless I record an explicit override rationale.",
+    "As an operator editing a locked plan mid-development, the scope-delta check classifies my change (sharpen/expand/split) and enforces the scope-change protocol so drift cannot silently re-introduce a stall-causing defect.",
+    "As an operator dispatching a feature, the pre-dispatch sizing gate blocks an over-budget feature before any paid volley round and shows me the split proposal as remediation.",
+    "As an operator, when a config file (e.g. quota caps) is invalid or empty, DontPanic stops at pre-flight with an actionable, validated remediation command instead of crashing mid-volley with a low-level schema error."
+  ],
+  "required_evidence": [
+    "Unit tests reproducing each of the three onboarding-v0 stall classes (multi-surface F007, exemplar-AC F008, missing-prereq + weak-test F012) and asserting the matching lint flag fires, with negatives.",
+    "Tests proving the pre-lock gate refuses an over-scoped plan and allows it only with a recorded override.",
+    "Tests proving the pre-dispatch sizing gate blocks an over-budget feature and surfaces the split proposal.",
+    "A synthetic design-review-volley test (mock executor, no live paid call) proving a known-oversize decomposition yields an oversize finding.",
+    "Tests reproducing the F008->F013 cross-feature edit and the quota_caps.json == {} hard-stop, asserting the system flags/guides rather than crashes."
+  ],
+  "non_goals": [
+    "Replacing the implement->audit volley; this plan reviews plan STRUCTURE, not implementation correctness.",
+    "Eliminating all stalls; defects only discoverable by running (e.g. a provider's optimistic status) remain the implement->audit volley's job.",
+    "Auto-editing plans without operator approval; split proposals and gates are advisory/override-able, never silent mutations.",
+    "Per-plan mandatory paid design-volley; the deterministic lint is the default and the design-volley is triggered only on lint uncertainty or explicit request."
+  ],
+  "completion_test": "Running `dontpanic plan-review` over the three onboarding-v0 stall features (F007 pre-split, F008 exemplar-AC, F012 missing-prereq) flags each with the correct risk class and proposes a clean split; the pre-lock and pre-dispatch gates block those features without an override; and the plan-review plan itself passes its own lint (dogfood) with no block-severity flags."
+}
