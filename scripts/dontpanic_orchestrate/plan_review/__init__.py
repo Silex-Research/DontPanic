@@ -30,6 +30,14 @@ from dontpanic_orchestrate.plan_review.report import (
     build_plan_scope_report,
     render_text,
 )
+from dontpanic_orchestrate.plan_review.sizing_gate import (
+    SIZE_FLAG_KINDS,
+    SizingGateResult,
+    evaluate_feature,
+    record_override,
+    render_block_message,
+    render_preflight,
+)
 from dontpanic_orchestrate.plan_review.split import (
     ChildFeature,
     SplitProposal,
@@ -37,6 +45,7 @@ from dontpanic_orchestrate.plan_review.split import (
 )
 
 __all__ = [
+    "SIZE_FLAG_KINDS",
     "SURFACES",
     "ChildFeature",
     "FeatureScopeReport",
@@ -46,11 +55,16 @@ __all__ = [
     "ScopeFlag",
     "ScopeReport",
     "Severity",
+    "SizingGateResult",
     "SplitProposal",
     "build_default_resolvers",
     "build_plan_scope_report",
+    "evaluate_feature",
     "lint_feature",
     "propose_split",
+    "record_override",
+    "render_block_message",
+    "render_preflight",
     "render_text",
     "tag_surfaces",
 ]

@@ -2183,6 +2183,21 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "signoff.json under patch_completeness.unrelated_dirty_state_note."
         ),
     )
+    # Plan 2026-06-01-001 F007: pre-dispatch sizing gate operator override.
+    # Reuses the >=8-char layer-A validator the patch-completeness overrides
+    # use; the rationale lands in evidence/plan-review/pre_dispatch/.
+    parser.add_argument(
+        "--allow-oversize",
+        type=_validate_patch_reason("--allow-oversize"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Override the pre-dispatch sizing gate even when the target "
+            "feature carries a block-severity size flag. REASON must be >=8 "
+            "non-whitespace chars; lands verbatim in "
+            "evidence/plan-review/pre_dispatch/<feature>-oversize-override.json."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Plan resolution. Distinct exit code (2) from the dispatch path so
@@ -2248,6 +2263,27 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         readiness_summary=readiness_summary,
     )
 
+    # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate. Run the F001 sizing
+    # lint over the TARGET feature in the pre-flight (acceptance #1), in both
+    # dry-run and confirm modes, and print the verdict. The refusal itself is
+    # enforced only on the --confirm path, before the volley starts; the
+    # decision depends only on size flags so the (free, pure) lint needs no
+    # resolver wiring. A feature id the plan doesn't declare yet is skipped
+    # here — dispatch_volley surfaces that error on the confirm path.
+    from dontpanic_orchestrate.plan_review import sizing_gate
+
+    sizing_result = None
+    try:
+        target_feature = loaded.feature(args.feature)
+    except KeyError:
+        print(
+            f"[dispatch-from-plan] sizing-lint: feature {args.feature!r} not in "
+            f"{loaded.plan_id}; skipping size check"
+        )
+    else:
+        sizing_result = sizing_gate.evaluate_feature(target_feature)
+        print(sizing_gate.render_preflight(sizing_result))
+
     if not args.confirm:
         # Strict dry-run. Always exit 0 — no TTY check, no interactive prompt.
         # The plan's D006 leaves room for a future `--ask` flag; this branch
@@ -2307,6 +2343,32 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         if readiness_summary:
             print(f"Detail: {readiness_summary}", file=sys.stderr)
         return 3
+
+    # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate enforcement. Runs
+    # AFTER the existing quota-readiness check (acceptance #4 — existing checks
+    # still run) but BEFORE supervisor.dispatch_volley, so an over-budget
+    # feature is refused before any paid work. An explicit --allow-oversize
+    # reason records the rationale and proceeds (acceptance #3); otherwise the
+    # F002 split proposal is surfaced as the remediation and dispatch is
+    # refused with a dedicated exit code (5) so operator wrappers can
+    # disambiguate a sizing block from quota (3) / patch-completeness (4).
+    if sizing_result is not None and sizing_result.is_blocked:
+        if args.allow_oversize is None:
+            print(
+                sizing_gate.render_block_message(sizing_result), file=sys.stderr
+            )
+            return 5
+        override_path = sizing_gate.record_override(
+            plan_dir,
+            plan_id=loaded.plan_id,
+            feature_id=sizing_result.feature_id or args.feature,
+            reason=args.allow_oversize,
+            result=sizing_result,
+        )
+        print(
+            "[dispatch-from-plan] sizing gate OVERRIDDEN "
+            f"(--allow-oversize); rationale recorded to {override_path}"
+        )
 
     # In-process hand-off. NO subprocess shell-out — same interpreter, same
     # supervisor module, same active_supervisors registry entry, same

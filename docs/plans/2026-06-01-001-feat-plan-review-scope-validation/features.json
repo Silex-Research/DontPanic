@@ -125,7 +125,7 @@
         "Add tests: an over-budget feature is refused pre-dispatch with the split proposal shown; an override proceeds; an in-budget feature dispatches unchanged."
       ],
       "acceptance": "(1) dispatch-from-plan runs the F001 sizing lint in its pre-flight before any paid work. (2) A feature with a block-severity size flag is refused at confirm-dispatch, with the F002 split proposal surfaced as remediation. (3) An explicit override (>=8-char reason) records the rationale and allows dispatch. (4) Existing pre-flight checks still run; the sizing gate only adds the size check and runs before the volley starts. (5) Tests prove refusal-with-split-proposal, override-proceeds, and in-budget-dispatches-unchanged.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ]
