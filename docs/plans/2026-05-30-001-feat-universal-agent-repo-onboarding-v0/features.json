@@ -344,7 +344,7 @@
         "Add dashboard/CLI ActionChoice output that names changed files, impact, recommended action, and whether budget was protected by pausing before the next call.",
         "Add tests for concurrent edits to decisions.jsonl, features.json acceptance, loop_caps.max_iterations, human_gates, roles, allowed_paths, and objective_contract."
       ],
-      "acceptance": "(1) Dispatch records a plan-run fingerprint before work starts. (2) Plan changes during a run are detected before the next paid agent call or signoff finalization. (3) Additive decisions.jsonl drift is reconciled without stopping, with an event recorded. (4) Feature/acceptance/gate/role/loop-cap drift pauses and tells the operator how to refresh/redispatch. (5) Scope/policy drift such as allowed_paths or forbidden_decisions requires human acknowledgement. (6) CLI and dashboard show one concise reconciliation action, not repeated warnings. (7) Tests simulate another process editing plan files mid-run and prove DontPanic does not continue on stale context silently.",
+      "acceptance": "(1) Dispatch records a plan-run fingerprint BEFORE the plan/features are loaded into memory and before any paid agent call, so every later drift check compares against true dispatch-start disk state (AC1 + codex #2: baseline must precede the plan load at supervisor.py:1371, not follow it). (2) Plan changes during a run are detected before the next paid agent call or signoff finalization, on the VOLLEY dispatch path. (3) Additive decisions.jsonl drift is reconciled in-place without stopping, with an event recorded (AC3). (4) Feature/acceptance/gate/role/loop-cap drift PAUSES the volley (paused_on_drift) and tells the operator how to refresh/redispatch (AC4). (5) Drift detection FAILS CLOSED (codex #3): a fingerprint/reconcile error pauses or raises rather than swallowing the exception and continuing on possibly-stale context — a safety mechanism must not fail open. (6) Tests simulate another process editing plan files mid-run on the volley path and prove DontPanic does not continue on stale context silently, incl. a fail-closed test that the drift check raising does NOT silently proceed. (Single-agent dispatch coverage, scope/policy human-ack workflow, and CLI/dashboard one-action surfacing are SPLIT to F014 — D056.)",
       "passes": false,
       "depends_on": [
         "F007",
@@ -402,6 +402,15 @@
         "F009",
         "F011"
       ]
+    },
+    {
+      "id": "F014",
+      "title": "Plan-drift reconciliation — single-agent path + scope-ack workflow + one-action surfacing",
+      "depends_on": [
+        "F009"
+      ],
+      "passes": false,
+      "acceptance": "(1) The single-agent dispatch path (cli.py dispatch_single_agent) is guarded by the SAME F009 drift reconciliation as the volley path — no paid single-agent call proceeds on stale plan context (codex F009 #4). (2) Blocking scope/policy drift (allowed_paths / forbidden_decisions, AC5) is enforced as a real human-acknowledgement workflow: the run pauses and requires an explicit operator ack (e.g. `dontpanic approve <plan> drift:<class>` or equivalent) before any further paid call — not merely labeled human_required in plan_drift.py (codex F009 #5). (3) CLI and dashboard show ONE concise reconciliation action, not repeated warnings (F009 AC6). (4) Tests cover: single-agent path pauses on blocking drift; the scope/policy ack workflow blocks-then-resumes; and the CLI/dashboard emit exactly one reconciliation action."
     }
   ]
 }
