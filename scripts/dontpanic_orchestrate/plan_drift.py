@@ -640,6 +640,158 @@ def read_baseline(plan_dir: Path) -> PlanFingerprint | None:
         return None
 
 
+# ──────────────── blocking-drift human-acknowledgement (F014) ───────────────
+#
+# F014 (codex F009 #5): BLOCKING_POLICY scope/policy drift must be a REAL
+# human-acknowledgement workflow, not merely a ``requires_human`` label.
+# ``dispatch_volley`` records a fresh dispatch-start baseline at the top of every
+# call, so on a plain re-dispatch the new (drifted) scope would silently become
+# the accepted baseline and the volley would proceed — blessing an unreviewed
+# allowed_paths / forbidden_decisions change with zero operator sign-off. The
+# durable enforcement is this ack marker: when blocking drift is detected the
+# supervisor writes ``audit/plan-drift-ack-required.json``; both dispatch paths
+# refuse to record a new baseline or make any paid call while it is pending, and
+# only ``dontpanic approve <plan> drift:<class>`` (which deletes the marker)
+# lets the next dispatch through. Blocks → operator acks → resumes.
+
+ACK_MARKER_FILENAME = "plan-drift-ack-required.json"
+
+# Gate token prefix the operator passes to ``dontpanic approve <plan> drift:...``.
+DRIFT_GATE_PREFIX = "drift:"
+
+
+class DriftAckError(RuntimeError):
+    """Raised when an operator drift-acknowledgement request cannot be honoured —
+    no marker is pending, or the named drift class does not match the pending
+    one. Surfaces as a clear CLI refusal rather than a silent no-op so the
+    operator cannot believe a blocking-drift boundary was acknowledged when it
+    was not."""
+
+
+def ack_marker_path(plan_dir: Path) -> Path:
+    return Path(plan_dir) / "audit" / ACK_MARKER_FILENAME
+
+
+def read_ack_marker(plan_dir: Path) -> dict[str, Any] | None:
+    """Read the pending blocking-drift ack marker, or None when absent/corrupt."""
+    text = _read_text_or_none(ack_marker_path(plan_dir))
+    if text is None:
+        return None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def is_blocking_ack_pending(plan_dir: Path) -> bool:
+    """True when a blocking-drift acknowledgement is recorded and not yet cleared."""
+    marker = read_ack_marker(plan_dir)
+    return marker is not None and not marker.get("acknowledged", False)
+
+
+def record_blocking_ack_required(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    feature_id: str | None,
+    report: DriftReport,
+) -> Path:
+    """Persist (idempotently) the blocking-drift ack marker. Re-detecting the
+    SAME drift class does not rewrite the marker, so the operator sees ONE
+    pending reconciliation action, not a fresh one per stage/re-dispatch (AC6).
+    The marker carries the exact ``dontpanic approve`` command the operator must
+    run before any further paid call."""
+    path = ack_marker_path(plan_dir)
+    existing = read_ack_marker(plan_dir)
+    if (
+        existing is not None
+        and not existing.get("acknowledged", False)
+        and existing.get("drift_class") == report.drift_class.value
+    ):
+        return path
+    ack_command = f"dontpanic approve {plan_id} {DRIFT_GATE_PREFIX}{report.drift_class.value}"
+    payload = {
+        "plan_id": plan_id,
+        "feature_id": feature_id,
+        "drift_class": report.drift_class.value,
+        "changed_files": list(report.changed_files),
+        "changes": [c.to_dict() for c in report.changes],
+        "stage": report.stage,
+        "recorded_at": _now_iso(),
+        "acknowledged": False,
+        "ack_command": ack_command,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return path
+
+
+def blocking_ack_pause_reason(plan_dir: Path, plan_id: str | None = None) -> str | None:
+    """Return a single concise pause reason when a blocking-drift ack is still
+    pending (the operator must acknowledge the new scope/policy boundary before
+    any further paid call), else None. ``plan_id`` falls back to the marker's
+    stored value, so callers that have not loaded the plan yet can still call
+    this at the very top of dispatch."""
+    marker = read_ack_marker(plan_dir)
+    if marker is None or marker.get("acknowledged", False):
+        return None
+    pid = plan_id or marker.get("plan_id") or "(plan)"
+    cls = marker.get("drift_class") or DriftClass.BLOCKING_POLICY.value
+    files = ", ".join(marker.get("changed_files") or []) or "plan artifacts"
+    cmd = marker.get("ack_command") or f"dontpanic approve {pid} {DRIFT_GATE_PREFIX}{cls}"
+    return (
+        f"Plan {pid}: scope/policy drift in {files} is awaiting human "
+        f"acknowledgement. No further paid agent call will run until an operator "
+        f"acknowledges the new boundary: `{cmd}`."
+    )
+
+
+def acknowledge_blocking_drift(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    drift_class: str | None = None,
+    actor: str = "operator",
+) -> dict[str, Any]:
+    """Clear the pending blocking-drift ack marker — the operator has reviewed
+    the new scope/policy boundary and authorises work to resume against it.
+
+    Deleting the marker (rather than flipping a flag) means the NEXT dispatch
+    records a fresh dispatch-start baseline against the now-accepted scope and
+    proceeds; the same drift is not re-flagged. Raises :class:`DriftAckError`
+    when no marker is pending, or when ``drift_class`` is supplied and does not
+    match the pending marker — so an operator cannot acknowledge a boundary that
+    was never flagged. Returns the cleared marker payload for the caller's
+    INBOX/audit record.
+
+    ``drift_class`` may be passed bare (``blocking_policy``) or with the gate
+    prefix (``drift:blocking_policy``); the prefix is stripped before matching.
+    """
+    marker = read_ack_marker(plan_dir)
+    if marker is None or marker.get("acknowledged", False):
+        raise DriftAckError(
+            f"no pending blocking-drift acknowledgement for {plan_id} at "
+            f"{ack_marker_path(plan_dir)} — nothing to approve"
+        )
+    pending_class = marker.get("drift_class")
+    if drift_class is not None:
+        requested = drift_class
+        if requested.startswith(DRIFT_GATE_PREFIX):
+            requested = requested[len(DRIFT_GATE_PREFIX):]
+        if requested and requested != pending_class:
+            raise DriftAckError(
+                f"drift class {requested!r} does not match the pending "
+                f"blocking-drift marker ({pending_class!r}) for {plan_id}"
+            )
+    ack_marker_path(plan_dir).unlink(missing_ok=True)
+    cleared = dict(marker)
+    cleared["acknowledged"] = True
+    cleared["acknowledged_by"] = actor
+    cleared["acknowledged_at"] = _now_iso()
+    return cleared
+
+
 # ─────────────────────────────── guidance build ────────────────────────────
 
 
@@ -656,7 +808,15 @@ def build_guidance(plan_id: str, feature_id: str | None, report: DriftReport) ->
     files = ", ".join(report.changed_files) or "plan artifacts"
     detail_changes = "; ".join(c.summary for c in report.changes)
     redispatch_cmd = f"dontpanic orchestrate {plan_id} --confirm"
-    ack_cmd = f"dontpanic resume {plan_id} --all"
+    # Blocking scope/policy drift clears via the human-ack workflow, NOT a bare
+    # resume: only `dontpanic approve <plan> drift:<class>` removes the pending
+    # ack marker (see write_ack_marker / acknowledge_blocking_drift). A bare
+    # `resume --all` would leave the marker in place and re-pause on the next
+    # dispatch, so the operator-facing action MUST be the approve command.
+    ack_cmd = (
+        f"dontpanic approve {plan_id} "
+        f"{DRIFT_GATE_PREFIX}{DriftClass.BLOCKING_POLICY.value}"
+    )
 
     if report.drift_class is DriftClass.CONTEXT_REFRESH:
         choice = og.ActionChoice(
@@ -815,7 +975,32 @@ def check_and_reconcile(
             budget_protected=report.budget_protected,
         )
         _emit_sidecar(plan_dir, guidance)
+        # F014 — blocking scope/policy drift records a DURABLE ack marker so the
+        # pause survives a re-dispatch: the next dispatch refuses to record a
+        # fresh baseline or make any paid call until an operator runs
+        # `dontpanic approve <plan> drift:<class>`. Refresh drift does not need
+        # this (a redispatch with refreshed context is the resolution).
+        if report.drift_class is DriftClass.BLOCKING_POLICY:
+            record_blocking_ack_required(
+                plan_dir,
+                plan_id=plan_id,
+                feature_id=feature_id,
+                report=report,
+            )
+    # F014 AC3 (codex i1 #1) — fold the ONE reconciliation action into
+    # ``pause_reason`` at its single source. Every downstream consumer surfaces
+    # ``pause_reason`` and nothing else (single-agent ``PausedOnDrift`` text,
+    # volley ``VolleyResult.reason``, the mid-run pause, the INBOX body, and the
+    # CLI exception print); a bare headline left the operator with no command to
+    # run. ``build_guidance`` already computed the correct per-class action — the
+    # human-ack ``dontpanic approve <plan> drift:blocking_policy`` for
+    # BLOCKING_POLICY, redispatch for CONTEXT_REFRESH — so we reuse it as the
+    # single source of truth rather than reconstructing the command here.
     reason = report.headline(plan_id)
+    _choices = getattr(guidance, "choices", ()) or ()
+    _ack_cmd = getattr(_choices[0], "exact_command", None) if _choices else None
+    if _ack_cmd:
+        reason = f"{reason} Reconcile with: `{_ack_cmd}`."
     return ReconcileDecision(
         proceed=False, report=report, guidance=guidance, pause_reason=reason
     )
@@ -884,8 +1069,11 @@ def _emit_sidecar(plan_dir: Path, guidance: Any) -> None:
 
 
 __all__ = [
+    "ACK_MARKER_FILENAME",
     "BASELINE_FILENAME",
     "ChangeNote",
+    "DRIFT_GATE_PREFIX",
+    "DriftAckError",
     "DriftBaselineMissingError",
     "DriftClass",
     "DriftReport",
@@ -897,12 +1085,18 @@ __all__ = [
     "STAGE_IMPLEMENTER",
     "STAGE_SIGNOFF",
     "TRACKED_FILES",
+    "ack_marker_path",
+    "acknowledge_blocking_drift",
     "advance_gate_baseline",
     "baseline_path",
+    "blocking_ack_pause_reason",
     "build_guidance",
     "check_and_reconcile",
     "classify_drift",
     "compute_fingerprint",
+    "is_blocking_ack_pending",
+    "read_ack_marker",
     "read_baseline",
     "record_baseline",
+    "record_blocking_ack_required",
 ]

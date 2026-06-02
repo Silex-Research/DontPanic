@@ -76,6 +76,19 @@ class PausedOnGate(RuntimeError):
     pass
 
 
+class PausedOnDrift(RuntimeError):
+    """F014 (codex F009 #5): raised by dispatch_single_agent when the SAME F009
+    plan-drift reconciliation the volley path runs pauses the single-agent
+    dispatch — either the plan context drifted between dispatch-start baseline
+    and the paid call (no paid single-agent call proceeds on stale context), or
+    a prior BLOCKING_POLICY scope/policy drift is still awaiting human
+    acknowledgement (`dontpanic approve <plan> drift:<class>`). The volley path
+    returns ``VolleyResult(final_status="paused_on_drift")``; single-agent
+    dispatch returns Path on success, so it signals the pause via exception."""
+
+    pass
+
+
 # Plan 2026-05-08-003 F002 — operator/runtime envs that must NEVER auto-clear
 # `pre_impl` even on direct dispatch. Match is case-insensitive against
 # ``effective_env`` (the resolved string the supervisor stamps on INBOX).
@@ -1015,7 +1028,38 @@ def dispatch_single_agent(
     fallbacks 'claude' / 'codex'). The executor is then resolved through
     :data:`AGENT_REGISTRY` rather than hardcoded to Claude — this is the
     single-agent parity contract for F003.
+
+    F014 (codex F009 #4/#5): the single-agent path is guarded by the SAME F009
+    plan-drift reconciliation as ``dispatch_volley`` — an early fail-closed
+    dispatch-start baseline, a blocking-drift human-ack gate, and a
+    ``check_and_reconcile`` immediately before the (paid) executor dispatch so
+    no paid single-agent call proceeds on stale plan context. Drift pauses raise
+    :class:`PausedOnDrift`.
     """
+    # F014 (codex F009 #5) — blocking-drift human-ack gate, mirroring the volley
+    # path. A prior run that detected BLOCKING_POLICY scope/policy drift wrote a
+    # durable ack marker; until an operator clears it via
+    # `dontpanic approve <plan> drift:<class>`, refuse to record a fresh baseline
+    # or make any paid call. Runs FIRST so a plain re-dispatch cannot launder an
+    # un-acknowledged scope change.
+    _ack_reason = plan_drift.blocking_ack_pause_reason(plan_dir)
+    if _ack_reason is not None:
+        print(f"[single-agent] PAUSED — blocking-drift ack required: {_ack_reason}")
+        raise PausedOnDrift(_ack_reason)
+
+    # F014 (codex F009 #4) — record the dispatch-start plan-run fingerprint at
+    # the VERY TOP, before the sufficiency/completion backstops read plan
+    # artifacts into memory, so every later drift check compares against true
+    # untouched disk state (AC1 parity with the volley path). FAIL CLOSED: if a
+    # baseline cannot be recorded we cannot detect drift at all, so refuse.
+    try:
+        plan_drift.record_baseline(plan_dir)
+    except Exception as _fp_exc:  # noqa: BLE001 — re-raised as fail-closed
+        raise PausedOnDrift(
+            f"F009 plan-drift baseline could not be recorded for {plan_dir} "
+            f"({_fp_exc}); failing closed — cannot guarantee drift detection"
+        ) from _fp_exc
+
     # Goal Governance V1 F004: dispatch backstop. Refuse to act on any plan
     # whose declared goal_type requires a pre-impl sufficiency check unless
     # the findings are non-blocking or a valid (hash-bound) override exists.
@@ -1191,6 +1235,55 @@ def dispatch_single_agent(
         # name surfaces as a clear runtime error rather than silent
         # claude-fallback.
         executor = _resolve_executor(agent_name)
+
+        # F014 — fold any gate-state the supervisor ITSELF authored during this
+        # dispatch's setup (e.g. _sync_pre_impl_for_active_plan / admission
+        # reconcile clearing `pre_impl`) into the drift baseline before the
+        # pre-paid check, mirroring the volley's advance_gate_baseline. Without
+        # this, our own legitimate gate mutation would read as external gate
+        # tampering and falsely pause; an external edit to any OTHER tracked file
+        # (features / plan / decisions / objective) is still caught.
+        try:
+            plan_drift.advance_gate_baseline(loaded.plan_dir)
+        except Exception as _adv_exc:  # noqa: BLE001 — advisory, never fatal
+            print(f"[single-agent] gate-baseline advance skipped: {_adv_exc}")
+
+        # F014 (codex F009 #4) — plan-drift check immediately BEFORE the paid
+        # executor dispatch, using the SAME check_and_reconcile the volley path
+        # runs. No paid single-agent call proceeds on stale plan context: if the
+        # plan artifacts drifted between the dispatch-start baseline and now,
+        # pause (raise PausedOnDrift). BLOCKING_POLICY drift records the durable
+        # ack marker inside check_and_reconcile, so the pause survives re-
+        # dispatch until acknowledged. FAIL CLOSED: a drift check that itself
+        # raises (missing baseline, etc.) pauses rather than proceeding.
+        try:
+            _drift = plan_drift.check_and_reconcile(
+                loaded.plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=feature_id,
+                stage=plan_drift.STAGE_IMPLEMENTER,
+            )
+        except Exception as _drift_exc:  # noqa: BLE001 — fail CLOSED, do not proceed
+            print(
+                f"[single-agent] plan-drift check ERRORED at "
+                f"{plan_drift.STAGE_IMPLEMENTER}; failing closed (pause): {_drift_exc}"
+            )
+            raise PausedOnDrift(
+                f"plan-drift check failed at {plan_drift.STAGE_IMPLEMENTER} "
+                f"({_drift_exc}); paused fail-closed — verify plan files on disk "
+                "and redispatch"
+            ) from _drift_exc
+        if not _drift.proceed:
+            cls = _drift.report.drift_class.value
+            print(
+                f"[single-agent] PAUSED on plan drift ({cls}) at "
+                f"{plan_drift.STAGE_IMPLEMENTER}: "
+                f"{', '.join(_drift.report.changed_files)}"
+            )
+            raise PausedOnDrift(
+                _drift.pause_reason or _drift.report.headline(loaded.plan_id)
+            )
+
         result = executor.dispatch(task)
 
         audit = audit_writer.build_audit(
@@ -1403,6 +1496,18 @@ def dispatch_volley(
     # threaded into the active supervisor registration below (codex #2) so
     # active-run state records the EXACT dispatch-start disk fingerprint, not a
     # later recompute taken after plan load / gate preflight mutations.
+    # F014 (codex F009 #5) — blocking-drift human-ack gate. If a PRIOR run
+    # detected BLOCKING_POLICY scope/policy drift and the operator has not yet
+    # acknowledged it, refuse to proceed: do NOT record a fresh baseline (which
+    # would silently bless the new scope) and make NO paid call. The pause is
+    # durable across re-dispatch until `dontpanic approve <plan> drift:<class>`
+    # clears the marker. This runs BEFORE the baseline record below so a plain
+    # re-dispatch cannot launder an un-acknowledged scope change.
+    _ack_reason = plan_drift.blocking_ack_pause_reason(plan_dir)
+    if _ack_reason is not None:
+        print(f"[volley] PAUSED — blocking-drift ack required: {_ack_reason}")
+        return VolleyResult("paused_on_drift", 0, _ack_reason, [])
+
     try:
         dispatch_start_fingerprint = plan_drift.compute_fingerprint(plan_dir)
         plan_drift.record_baseline(plan_dir, dispatch_start_fingerprint)

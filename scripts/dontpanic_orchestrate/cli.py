@@ -259,6 +259,53 @@ def _approve_main(argv: list[str]) -> int:
         )
         return 2
 
+    # F014 — blocking-drift human acknowledgement. `approve <plan> drift:<class>`
+    # (or bare `drift`) clears the durable plan-drift ack marker that a prior
+    # BLOCKING_POLICY scope/policy drift recorded, authorising work to resume
+    # against the new boundary. Deleting the marker lets the NEXT dispatch record
+    # a fresh baseline against the now-accepted scope and proceed; without it the
+    # run stays paused on every re-dispatch (blocks-then-resumes).
+    if len(argv) == 2 and (
+        argv[1] == "drift" or argv[1].startswith(plan_drift.DRIFT_GATE_PREFIX)
+    ):
+        plan_arg, drift_token = argv
+        plan_dir = _resolve_plan_dir(plan_arg)
+        loaded = plan_loader.load(plan_dir)
+        requested_class = (
+            None
+            if drift_token == "drift"
+            else drift_token[len(plan_drift.DRIFT_GATE_PREFIX):] or None
+        )
+        try:
+            cleared = plan_drift.acknowledge_blocking_drift(
+                plan_dir,
+                plan_id=loaded.plan_id,
+                drift_class=requested_class,
+            )
+        except plan_drift.DriftAckError as exc:
+            print(f"[approve] REFUSED {drift_token!r}: {exc}", file=sys.stderr)
+            return 2
+        inbox.append_event(
+            plan_dir,
+            event="plan_drift_acknowledged",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Operator acknowledged blocking plan-drift "
+                f"({cleared.get('drift_class')}) via 'approve {drift_token}'.\n\n"
+                f"Changed files: {', '.join(cleared.get('changed_files') or []) or '(none)'}\n"
+                f"The next dispatch records a fresh baseline against the accepted "
+                f"scope and proceeds."
+            ),
+            drift_class=str(cleared.get("drift_class")),
+            feature_id=cleared.get("feature_id"),
+        )
+        print(
+            f"[approve] acknowledged blocking drift "
+            f"({cleared.get('drift_class')}) for {loaded.plan_id} — "
+            f"redispatch to resume"
+        )
+        return 0
+
     if len(argv) != 2:
         print("usage: dontpanic approve <plan-id> <gate>", file=sys.stderr)
         return 2
@@ -4029,6 +4076,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     except supervisor.PausedOnGate as exc:
         print(f"[supervisor] PAUSED on gate: {exc}", file=sys.stderr)
+        return 3
+    except supervisor.PausedOnDrift as exc:
+        # F014 — single-agent path paused on plan drift (stale context or a
+        # blocking scope/policy boundary awaiting `dontpanic approve <plan>
+        # drift:<class>`). No paid call was made.
+        print(f"[supervisor] PAUSED on plan drift: {exc}", file=sys.stderr)
         return 3
     except (FileNotFoundError, KeyError, ValueError) as exc:
         print(f"[supervisor] ERROR: {exc}", file=sys.stderr)
