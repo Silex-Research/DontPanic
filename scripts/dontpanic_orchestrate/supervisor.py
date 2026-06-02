@@ -33,6 +33,7 @@ from dontpanic_orchestrate import (
     notify,
     notify_event,
     patch_completeness_gate,
+    plan_drift,
     plan_loader,
     project_config,
     projects_registry,
@@ -485,12 +486,18 @@ def _registered_supervisor(
     target_env: str,
     target_project: str | None,
     config_dir: str | None,
+    plan_dir: Path | None = None,
 ):
     """F023 EC13: register the running supervisor in
     ~/.jarvis/active_supervisors.jsonl on entry, unregister on exit. Re-entrancy
     against the same plan_id surfaces a warning (not a hard block — the operator
     may legitimately want overlapping runs against different cloud projects but
-    the same plan structure)."""
+    the same plan structure).
+
+    F009 — when ``plan_dir`` is known, the registry entry also carries the
+    dispatch-start plan-run fingerprint (source file content hashes + mtimes)
+    so the active supervisor state records WHAT plan state this run is operating
+    against (AC1 + auditor finding: fingerprint persisted in active state)."""
     existing = active_supervisors.check_reentrancy(plan_id)
     if existing is not None and existing.pid != os.getpid():
         print(
@@ -499,11 +506,23 @@ def _registered_supervisor(
             f"project={existing.target_project or '(none)'}) is already active "
             f"on plan {plan_id!r}. Audits may interleave."
         )
+    fingerprint_meta: dict | None = None
+    if plan_dir is not None:
+        try:
+            fp = plan_drift.compute_fingerprint(plan_dir)
+            fingerprint_meta = {
+                "file_hashes": fp.file_hashes,
+                "file_mtimes": fp.file_mtimes,
+                "captured_at": fp.captured_at,
+            }
+        except Exception as _fp_exc:  # noqa: BLE001 — advisory metadata
+            print(f"[supervisor-registry] fingerprint capture skipped: {_fp_exc}")
     entry = active_supervisors.register(
         plan_id=plan_id,
         target_env=target_env,
         target_project=target_project,
         supervisor_config_dir=config_dir,
+        plan_fingerprint=fingerprint_meta,
     )
     cleanup_done = {"flag": False}
 
@@ -1110,7 +1129,11 @@ def dispatch_single_agent(
             target_project=effective_project,
         ) as exec_env,
         _registered_supervisor(
-            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+            loaded.plan_id,
+            effective_env,
+            effective_project,
+            str(exec_env.root),
+            plan_dir=loaded.plan_dir,
         ),
     ):
         task = DispatchTask(
@@ -1173,7 +1196,7 @@ def dispatch_single_agent(
 
 @dataclass
 class VolleyResult:
-    final_status: str  # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate"
+    final_status: str  # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate" | "paused_on_drift"
     rounds: int  # number of (implementer, auditor) pairs completed
     reason: str  # human-readable termination reason
     audit_paths: list[Path]  # all audit JSONs produced, in order
@@ -1603,7 +1626,11 @@ def dispatch_volley(
             target_project=effective_project,
         ) as exec_env,
         _registered_supervisor(
-            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+            loaded.plan_id,
+            effective_env,
+            effective_project,
+            str(exec_env.root),
+            plan_dir=loaded.plan_dir,
         ),
     ):
         print(
@@ -1688,6 +1715,74 @@ def dispatch_volley(
                 agents_in_panel=[impl_name, aud_name],
             )
 
+        # F009 — record the plan-run fingerprint BEFORE any paid agent call so
+        # every later drift check has a dispatch-start reference (AC1). Wrapped
+        # so a fingerprint failure never blocks the volley.
+        try:
+            plan_drift.record_baseline(loaded.plan_dir)
+        except Exception as _fp_exc:  # noqa: BLE001 — advisory baseline
+            print(f"[volley] plan-drift baseline skipped: {_fp_exc}")
+
+        def _drift_pause_or_none(stage: str, rounds: int) -> VolleyResult | None:
+            """F009 — recompute the plan fingerprint, reconcile, and either
+            proceed (None) or return a ``paused_on_drift`` VolleyResult. Additive
+            decisions.jsonl drift is reconciled in-place (no pause, AC3). Refresh
+            / blocking drift pauses BEFORE the next paid call so budget is
+            protected (AC2/AC4/AC5). The single INBOX event + dashboard
+            ActionChoice are emitted inside check_and_reconcile (AC6)."""
+            try:
+                decision = plan_drift.check_and_reconcile(
+                    loaded.plan_dir,
+                    plan_id=loaded.plan_id,
+                    feature_id=feature_id,
+                    stage=stage,
+                )
+            except Exception as _drift_exc:  # noqa: BLE001 — never fatal
+                print(f"[volley] plan-drift check skipped at {stage}: {_drift_exc}")
+                return None
+            if decision.proceed:
+                if decision.report.drift_class is plan_drift.DriftClass.ADDITIVE_LEDGER:
+                    print(
+                        f"[volley] plan drift reconciled (additive ledger) at "
+                        f"{stage}: {', '.join(decision.report.changed_files)}"
+                    )
+                return None
+            cls = decision.report.drift_class.value
+            print(
+                f"[volley] PAUSED on plan drift ({cls}) at {stage}: "
+                f"{', '.join(decision.report.changed_files)}"
+            )
+            try:
+                notify_event.dispatch_event(
+                    notify_event.NotifyEvent(
+                        kind="plan_drift",
+                        severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                        plan_id=loaded.plan_id,
+                        feature_id=feature_id,
+                        body=decision.pause_reason or decision.report.headline(loaded.plan_id),
+                        timestamp=dt.datetime.now(dt.timezone.utc),
+                        inbox_event="plan_drift_detected",
+                        subtype=cls,
+                        target_env=effective_env,
+                        target_project=effective_project,
+                        technical_metadata={
+                            "drift_class": cls,
+                            "changed_files": ",".join(decision.report.changed_files),
+                            "stage": stage,
+                            "budget_protected": str(decision.report.budget_protected),
+                        },
+                    ),
+                    plan_dir=loaded.plan_dir,
+                )
+            except Exception as _ne_exc:  # noqa: BLE001 — notification is advisory
+                print(f"[volley] plan-drift notify skipped: {_ne_exc}")
+            return VolleyResult(
+                "paused_on_drift",
+                rounds,
+                decision.pause_reason or decision.report.headline(loaded.plan_id),
+                audit_paths,
+            )
+
         # Plan 2026-05-12-001 v4 F003 (D025): top-level ValueError
         # backstop. The agent-output pipeline's shlex.split calls are now
         # wrapped in command_guard, but dependencies (Pydantic validators,
@@ -1766,6 +1861,14 @@ def dispatch_volley(
                     )
                     if auto_clear_reason is not None:
                         print(f"[volley] pre_impl auto-cleared: {auto_clear_reason}")
+                        # F009 — the supervisor just mutated gate-state itself.
+                        # Fold that legitimate clear into the plan-drift baseline
+                        # so the upcoming implementer drift check does not see
+                        # OUR own gate clear as external tampering and pause.
+                        try:
+                            plan_drift.advance_gate_baseline(loaded.plan_dir)
+                        except Exception as _adv_exc:  # noqa: BLE001 — advisory
+                            print(f"[volley] gate-baseline advance skipped: {_adv_exc}")
                     else:
                         pre_impl_info = gate_pause.evaluate_human_gates(
                             loaded.plan_dir, declared_gates, stage="pre_impl"
@@ -1821,6 +1924,12 @@ def dispatch_volley(
 
                 # Implementer round
                 current_stage = "implementer"
+                # F009 — plan-drift check BEFORE the (paid) implementer call.
+                _drift_pause = _drift_pause_or_none(
+                    plan_drift.STAGE_IMPLEMENTER, iteration
+                )
+                if _drift_pause is not None:
+                    return _drift_pause
                 try:
                     impl_pct, impl_quota_line = _quota_gate(impl_name)
                 except QuotaExceeded as exc:
@@ -1894,6 +2003,12 @@ def dispatch_volley(
 
                 # Auditor round
                 current_stage = "auditor"
+                # F009 — plan-drift check BEFORE the (paid) auditor call.
+                _drift_pause = _drift_pause_or_none(
+                    plan_drift.STAGE_AUDITOR, iteration
+                )
+                if _drift_pause is not None:
+                    return _drift_pause
                 try:
                     aud_pct, aud_quota_line = _quota_gate(aud_name)
                 except QuotaExceeded as exc:
@@ -2089,6 +2204,16 @@ def dispatch_volley(
                             f"`jarvis resume {loaded.plan_id} --all`",
                             audit_paths,
                         )
+
+                    # F009 — final plan-drift check BEFORE finalizing signoff.
+                    # If the plan changed during this volley, do NOT persist a
+                    # success signoff against stale context; pause for refresh /
+                    # human ack instead (AC2/AC4/AC5).
+                    _drift_pause = _drift_pause_or_none(
+                        plan_drift.STAGE_SIGNOFF, iteration + 1
+                    )
+                    if _drift_pause is not None:
+                        return _drift_pause
 
                     transcript.append_terminal(
                         loaded.plan_dir,

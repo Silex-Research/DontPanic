@@ -1,0 +1,71 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-02T03:00:00Z",
+  "completed_at": "2026-06-02T03:03:09Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F009-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-d481lm7q target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1372533 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2358433,
+    "tokens_out": 11664,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F009] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so no forbidden command-shape finding.\n\nFINDING (high, correctness): Gate-state drift is not fingerprinted despite being explicitly required. Evidence: `TRACKED_FILES` only includes `plan.md`, `features.json`, `decisions.jsonl`, and `objective_contract.json`; `audit/gate-state.json` is intentionally omitted in [plan_drift.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_drift.py:67). Recommendation: include gate-state or a stable semantic projection of it, with tests proving mid-run gate-state edits are detected.\n\nFINDING (high, correctness): The fingerprint is not recorded in active supervisor state. Evidence: `SupervisorEntry` still only stores pid/plan/env/project/start/config fields in [active_supervisors.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/active_supervisors.py:32), and registration in [supervisor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:503) passes no fingerprint metadata. Recommendation: persist the plan-run fingerprint and source file mtimes/content hashes in the active supervisor entry/state.\n\nFINDING (high, correctness): No-paid signoff finalization can still mutate stale context without a drift check. Evidence: `dontpanic finalize`",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from pathlib import Path; files=[Path('scripts/dontpanic_orchestrate/plan_drift.py'),Path('scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py')]; [compile(p.read_text(), str(p), 'exec') for p in files]; print('compiled ' + ', '.join(str(p) for p in files))\"",
+      "python -m ruff check scripts/dontpanic_orchestrate/plan_drift.py scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py scripts/dontpanic_orchestrate/supervisor.py",
+      "git diff --check HEAD~1 -- scripts/dontpanic_orchestrate/plan_drift.py scripts/dontpanic_orchestrate/tests/test_plan_drift_f009.py scripts/dontpanic_orchestrate/supervisor.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate.plan_drift import PlanFingerprint, classify_drift; b=PlanFingerprint({'decisions.jsonl':'hash-old'},{}, {}, {}, ('D001',), None, 't'); a=PlanFingerprint({'decisions.jsonl':'hash-new'},{}, {}, {}, ('D001','D002'), None, 't'); print(classify_drift(b,a).drift_class.value)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F009",
+      "issue": "Gate-state drift is not fingerprinted despite being explicitly required. Evidence: `TRACKED_FILES` only includes `plan.md`, `features.json`, `decisions.jsonl`, and `objective_contract.json`; `audit/gate-state.json` is intentionally omitted in [plan_drift.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/plan_drift.py:67). Recommendation: include gate-state or a stable semantic projection of it, with tests proving mid-run gate-state edits are detected.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F009",
+      "issue": "The fingerprint is not recorded in active supervisor state. Evidence: `SupervisorEntry` still only stores pid/plan/env/project/start/config fields in [active_supervisors.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/active_supervisors.py:32), and registration in [supervisor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/supervisor.py:503) passes no fingerprint metadata. Recommendation: persist the plan-run fingerprint and source file m",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F009",
+      "issue": "No-paid signoff finalization can still mutate stale context without a drift check. Evidence: `dontpanic finalize` calls `signed_off_finalizer.finalize_signed_off_feature` directly in [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:760), and the finalizer writes signoff/features state in [signed_off_finalizer.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/signed_off_finalizer.py:183) and [signed_off_finalizer.py](/Users/bayesi",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F009",
+      "issue": "Non-additive `decisions.jsonl` edits can be misclassified as additive-only. Evidence: `_decision_ids` tracks only ordered IDs, and `_decisions_change` treats any ID-prefix plus append as `ADDITIVE_LEDGER`; an in-memory check with changed file hash and IDs `(\"D001\") -> (\"D001\",\"D002\")` returned `additive_ledger`. Recommendation: fingerprint each decision line/content, and only classify as additive when all existing lines are byte-identical and new lines are appended.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F009",
+      "issue": "Tests do not cover required gate-state drift or actual supervisor call-boundary behavior. Evidence: `test_plan_drift_f009.py` covers the pure reconciliation helper and plan/frontmatter edits, but has no `gate-state.json` case and no dispatch-volley test proving a mocked implementer/auditor call is skipped after a concurrent edit. Recommendation: add integration-style supervisor tests for implementer, auditor, and finalization boundaries, including `gate-state.json`. Checks run: $ PYTHONDONTWRITE",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

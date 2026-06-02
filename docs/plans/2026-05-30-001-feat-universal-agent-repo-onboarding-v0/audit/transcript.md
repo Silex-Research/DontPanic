@@ -178,3 +178,11 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 
 **2026-06-02T02:40:04Z** — feature **F013** terminal: `signed_off` after 1 round(s) — auditor signed off
 
+| 2026-06-02T03:00:00Z | F009 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F009-i0.json](audit/claude-implementer-F009-i0.json) |
+| 2026-06-02T03:03:09Z | F009 | i0 | codex / auditor | needs_changes | 2,358,433 / 11,664 | [codex-auditor-F009-i0.json](audit/codex-auditor-F009-i0.json) |
+| 2026-06-02T03:13:11Z | F009 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F009-i1.json](audit/claude-implementer-F009-i1.json) |
+| 2026-06-02T03:16:04Z | F009 | i1 | codex / auditor | needs_changes | 1,155,291 / 12,529 | [codex-auditor-F009-i1.json](audit/codex-auditor-F009-i1.json) |
+
+**2026-06-02T03:16:04Z** — feature **F009** terminal: `stopped_no_progress` after 2 round(s) — auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+

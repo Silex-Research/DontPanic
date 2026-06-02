@@ -64,6 +64,7 @@ from dontpanic_orchestrate import (
     mcp_server,
     nested_orchestration,
     patch_completeness_gate,
+    plan_drift,
     plan_loader,
     project_config,
     projects_registry,
@@ -736,6 +737,7 @@ def _finalize_main(argv: list[str]) -> int:
       3 — refused: latest auditor verdict is not signed_off
       4 — refused: pre_merge gate not cleared
       5 — refused: no auditor envelope for the feature
+      6 — refused: plan drifted since dispatch; reconcile before finalizing (F009)
     """
     parser = argparse.ArgumentParser(
         prog="dontpanic finalize",
@@ -757,6 +759,35 @@ def _finalize_main(argv: list[str]) -> int:
 
     plan_dir = _resolve_plan_dir(args.plan)
     plan_id = plan_loader.load(plan_dir).plan_id
+
+    # F009 — no-paid finalization still MUTATES signoff + features.json state.
+    # If the plan drifted since dispatch recorded its baseline, finalizing would
+    # bake a success signoff against stale context. Run the same drift check the
+    # paid signoff boundary uses BEFORE any mutation and refuse on refresh/
+    # blocking drift (additive ledger drift is reconciled in-place and proceeds).
+    drift = plan_drift.check_and_reconcile(
+        plan_dir,
+        plan_id=plan_id,
+        feature_id=args.feature,
+        stage=plan_drift.STAGE_SIGNOFF,
+    )
+    if not drift.proceed:
+        guidance = drift.guidance
+        cmd = ""
+        if guidance is not None and getattr(guidance, "choices", None):
+            cmd = guidance.choices[0].exact_command or ""
+        print(
+            f"[finalize] REFUSED (plan_drift): {drift.report.headline(plan_id)}",
+            file=sys.stderr,
+        )
+        print(
+            f"[finalize]   changed: {', '.join(drift.report.changed_files) or '(none)'}",
+            file=sys.stderr,
+        )
+        if cmd:
+            print(f"[finalize]   reconcile then: {cmd}", file=sys.stderr)
+        return 6
+
     try:
         result = signed_off_finalizer.finalize_signed_off_feature(
             plan_dir, plan_id=plan_id, feature_id=args.feature
