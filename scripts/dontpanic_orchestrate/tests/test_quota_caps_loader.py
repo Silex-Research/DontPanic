@@ -160,10 +160,13 @@ def test_load_raises_on_invalid_json(tmp_path: Path) -> None:
 def test_load_raises_on_validation_errors(tmp_path: Path) -> None:
     print("\n[test] load_raises_on_validation_errors ...")
     p = tmp_path / "invalid.json"
+    # schema_version 1 (supported) so load() reaches validate(); the bad cap is
+    # what must compose into the "invalid" error. An UNSUPPORTED version is a
+    # separate normalize-stage error (see test_load_rejects_unsupported_schema_version).
     p.write_text(
         json.dumps(
             {
-                "schema_version": 99,
+                "schema_version": 1,
                 "claude": {
                     "max_20x": {"rolling_7d": {"cap": "not a number", "unit": "percent_of_plan"}}
                 },
@@ -173,6 +176,63 @@ def test_load_raises_on_validation_errors(tmp_path: Path) -> None:
     with pytest.raises(qcl.QuotaCapsError, match="invalid"):
         qcl.load(p)
     print("  ✓ load() composes validate() errors into single QuotaCapsError")
+
+
+def test_load_accepts_and_normalizes_schema_version_2(tmp_path: Path) -> None:
+    # F009 re-implemented (D047/D052): a schema_version 2 file nests vendors under
+    # a `vendors` object; load() normalizes it to canonical v1 top-level vendor
+    # keys so downstream get()/F006 are version-agnostic.
+    print("\n[test] load_accepts_and_normalizes_schema_version_2 ...")
+    p = tmp_path / "v2.json"
+    p.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "defaults": {"claude_tier": "max_20x"},
+                "vendors": {
+                    "codex": {"plus": {"rolling_5h": {"cap": 200000000, "unit": "tokens_local_proxy"}}},
+                    "claude": {"max_20x": {"rolling_7d": {"cap": 100, "unit": "percent_of_plan"}}},
+                },
+            }
+        )
+    )
+    data = qcl.load(p)
+    assert data["schema_version"] == qcl.CAPS_SCHEMA_VERSION  # normalized to canonical 1
+    assert "vendors" not in data  # wrapper stripped
+    assert data["defaults"] == {"claude_tier": "max_20x"}  # preserved
+    block = qcl.get(data, "codex", "plus", "rolling_5h")
+    assert block is not None and block["cap"] == 200000000
+    print("  ✓ v2 file normalized to canonical v1 and validated")
+
+
+def test_load_rejects_unsupported_schema_version(tmp_path: Path) -> None:
+    print("\n[test] load_rejects_unsupported_schema_version ...")
+    p = tmp_path / "v99.json"
+    p.write_text(json.dumps({"schema_version": 99, "vendors": {}}))
+    with pytest.raises(qcl.QuotaCapsError, match="unsupported caps schema_version"):
+        qcl.load(p)
+    # v2 missing its vendors object is a normalize-stage error too.
+    p.write_text(json.dumps({"schema_version": 2}))
+    with pytest.raises(qcl.QuotaCapsError, match="requires a `vendors` object"):
+        qcl.load(p)
+    print("  ✓ unsupported version + malformed v2 wrapper rejected at normalize")
+
+
+def test_starter_seeds_both_codex_windows(tmp_path: Path) -> None:
+    # F009 re-implemented: init must seed codex rolling_5h AND rolling_7d so a
+    # dispatch checking either window finds a cap (D047/D052).
+    print("\n[test] starter_seeds_both_codex_windows ...")
+    data = qcl.starter_caps(codex_observed_5h=1000, codex_observed_7d=8000)
+    codex = data["codex"]["plus"]
+    assert set(codex.keys()) == {"rolling_5h", "rolling_7d"}
+    assert codex["rolling_5h"]["cap"] == 1250  # ceil(1000 * 1.25)
+    assert codex["rolling_7d"]["cap"] == 10000  # ceil(8000 * 1.25)
+    # init_starter_file threads both samples + round-trips through load().
+    p = tmp_path / "caps.json"
+    qcl.init_starter_file(p, codex_observed_5h=1000, codex_observed_7d=8000)
+    loaded = qcl.load(p)
+    assert qcl.get(loaded, "codex", "plus", "rolling_7d")["cap"] == 10000
+    print("  ✓ both codex windows seeded + load round-trips")
 
 
 def test_get_returns_window_block_or_none() -> None:
