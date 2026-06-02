@@ -345,11 +345,27 @@
         "Add tests for concurrent edits to decisions.jsonl, features.json acceptance, loop_caps.max_iterations, human_gates, roles, allowed_paths, and objective_contract."
       ],
       "acceptance": "(1) Dispatch records a plan-run fingerprint BEFORE the plan/features are loaded into memory and before any paid agent call, so every later drift check compares against true dispatch-start disk state (AC1 + codex #2: baseline must precede the plan load at supervisor.py:1371, not follow it). (2) Plan changes during a run are detected before the next paid agent call or signoff finalization, on the VOLLEY dispatch path. (3) Additive decisions.jsonl drift is reconciled in-place without stopping, with an event recorded (AC3). (4) Feature/acceptance/gate/role/loop-cap drift PAUSES the volley (paused_on_drift) and tells the operator how to refresh/redispatch (AC4). (5) Drift detection FAILS CLOSED (codex #3): a fingerprint/reconcile error pauses or raises rather than swallowing the exception and continuing on possibly-stale context — a safety mechanism must not fail open. (6) Tests simulate another process editing plan files mid-run on the volley path and prove DontPanic does not continue on stale context silently, incl. a fail-closed test that the drift check raising does NOT silently proceed. (Single-agent dispatch coverage, scope/policy human-ack workflow, and CLI/dashboard one-action surfacing are SPLIT to F014 — D056.)",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F007",
         "F008"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F009-i2.json",
+          "note": "signed_off auditor envelope (codex, iteration 2) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T12:37:08Z"
     },
     {
       "id": "F011",
