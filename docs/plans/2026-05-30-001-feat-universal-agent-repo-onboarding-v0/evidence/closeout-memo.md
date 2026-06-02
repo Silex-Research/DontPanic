@@ -1,59 +1,83 @@
 ---
-status: signed_off
-reason_class: feature_complete
+status: operator_resolved
+reason_class: operator_judgment
 plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
-feature_id: F015
-closed_at: 2026-06-02T15:35:00Z
-latest_audit_status: signed_off
+feature_id: F016
+closed_at: 2026-06-02T16:43:01Z
+latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F015
+# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F016
 
 ## Operator decision
 
-F015 (skill auto-run ALLOWLIST artifact + approval gating — split from F011 per
-D060) is closed `signed_off` and finalized `passes:true` via the no-paid
-finalizer. codex `signed_off` on run1 iter1; the volley terminal was `blocked`
-ONLY because the two new test files were untracked (the D025 patch-completeness
-backstop) — not a quality issue. The operator staged + committed the deliverables
-(`26ed410`), independently verified, then ran `dontpanic finalize` (no paid call).
+F016 (skill recommendation SURFACES + migration — split from F011 per D060) is
+closed `operator_resolved` (class `operator_judgment`).
+
+The volley implementer **over-scoped** F016 — it TIMED OUT at 600s on BOTH rounds
+(`claude-implementer-F016-i0/i1.json`: `DISPATCH TIMED OUT after 600s`,
+`audit_status: blocked`, zero validation commands). This is the 4th over-scope
+event of the arc and the strongest evidence yet for the plan-review pre-dispatch
+sizing gate (F016 was *itself* already a split of F011). The ~80% the implementer
+landed (a 755-line `skill_recommendation.py` + CLI `skills recommend` + the
+build-side `write_skill_recommendations`) was kept; the operator finished the
+codex auditor's 6 concrete, REAL gaps (NOT a no-defect close) and independently
+verified.
+
+## Operator action (commit f1865e3)
+
+1. **AC9 dashboard parity** — `dashboard/core.js` loads `skill-recommendations.json`
+   into a pure `dashboard/lib/skill-recommendations-logic.js` render module wired
+   into the Settings page; a Python parity test asserts the JS-consumed JSON equals
+   the CLI `report.to_dict()` (mirrors F013's config-inventory pattern).
+2. **AC10 external-binary blocker** — `explain_blockers` probes the binary
+   (`shutil.which`, injectable) and synthesizes a SPECIFIC capability blocker when
+   it is absent.
+3. **AC10 blocker specificity** — only the required credential/binary/capability is
+   named, not the whole unavailable set.
+4. **AC11 doctor advisory** — non-blocking `dontpanic_doctor.check_skill_rubrics_advisory`
+   lists high-value skills missing rubrics and suggests `skills rubric --suggest`.
+5. **AC11 rubric required_inputs** — `_derive_required_inputs` harvests from
+   `argument-hint`/triggers/explicit lists (prose deliberately not parsed).
+6. **ruff** — dropped unused `field` import; justified the advisory try/except.
 
 ## Return Condition
 
 status: satisfied
 
-F015 returns complete when:
+F016 returns complete when:
 
-- The auto-run allowlist is a versioned, auditable artifact: `AllowlistEntry`
-  carries exactly one of `command_template`/`command_prefix` plus owner /
-  approved_by / approved_at / rationale; the file carries `schema_version`, a
-  monotonic `version`, and a `content_hash`. A hand-edit that does not re-stamp
-  the hash is detected as STALE/untrusted (AC4/AC5).
-- The allowlist is consumed by F011's injected `SkillInvocationContext.
-  is_command_allowlisted` predicate: a read-only skill is auto_run-eligible ONLY
-  when inputs exist AND its exact command matches an allowlist entry; deny by
-  default (AC4).
-- doctor/reconcile and the F008 config inventory surface MISSING/STALE/
-  conflicting allowlist state (`AllowlistStatus` OK/MISSING/MALFORMED/STALE)
-  (AC5).
-- Mutating/credentialed/networked/paid/external-write/indefinite-loop skills
-  resolve to approval_required or suggest and are never silently executed (AC7).
-- Tests prove command-allowlist enforcement (allowed vs absent vs prefix
-  mismatch), doctor/reconcile/F008 allowlist visibility, and that
-  approval-required skills are never invoked (AC14b).
+- Missing inputs produce ONE concise ActionChoice naming only the missing blocker
+  (AC8); the build-side merges it into the dashboard what-now action queue.
+- CLI (`dontpanic skills recommend --format text|json`) and the dashboard render the
+  SAME SkillAction data — skill, recommendation, reason, risk, exact_command,
+  approval_required, evidence_target (AC9). Proven by the JSON-shape parity test.
+- The recommender uses the F008 config inventory to explain unavailable
+  credentials/binaries/capabilities — matching the SPECIFIC required resource,
+  including external CLIs absent from PATH (AC10), via F007 dedup.
+- A migration path exists: `dontpanic skills rubric --suggest <skill>` derives safe
+  starting `required_inputs`, and a non-blocking doctor advisory flags high-value
+  skills missing rubrics (AC11).
+- Tests cover dashboard JSON shape parity, missing-input handling, the external-binary
+  blocker, blocker specificity, doctor advisory output, and rubric derivation (AC14c).
 
 ## Verification
 
-- codex `signed_off` (`audit/codex-auditor-F015-i1.json`).
-- `pytest test_skill_allowlist_f015.py test_config_inventory_f008.py` → 125 passed;
-  ruff clean on all F015 deliverables.
-- Operator independently read `skill_allowlist.py` (AllowlistEntry fields +
-  content_hash STALE detection + deny-by-default) and the F011 predicate seam.
+- 23 pytest (`test_skill_recommendation_f016.py`, 13 original + 10 new) + 8 vitest
+  (new `skill-recommendations-logic.test.js`) + 200 broader Python (skill + dashboard
+  F013 + config-inventory F008 + command-validation) all pass.
+- Dashboard full vitest suite: 936 pass (no regressions). ruff clean on the in-scope
+  Python files. `skills recommend`/`skills rubric --help` exit 0; live doctor emits a
+  non-blocking WARN.
+- Operator independently read the 4 substantive fixes (external-binary synth blocker,
+  doctor advisory, rubric derivation, JS↔CLI parity test) — real implementations, not
+  stubs or test-weakening. Mechanical multi-file implementation was delegated to a
+  subagent; verification was performed directly by the operator.
 
 ## Evidence references
 
-- `audit/codex-auditor-F015-i0.json` / `-i1.json` (i1 = `signed_off`).
-- `audit/signoff-…json` — finalize-confirmed signoff envelope (repaired=False).
-- commit `26ed410` — F015 deliverables (`skill_allowlist.py`, config_inventory/
-  doctor/reconcile/home_reconcile updates, tests).
-- decisions `D060` (F011 3-way split), `D062` (this close).
+- `audit/codex-auditor-F016-i0.json` / `-i1.json` — verdicts `needs_changes`
+  (implementer timed out both rounds).
+- `audit/signoff-…json` — operator-resolved signoff envelope (`operator_judgment`).
+- commit `f1865e3` — F016 deliverables (engine + CLI + dashboard Python/JS + doctor + tests).
+- decisions `D060` (F011 3-way split), `D063` (this close).

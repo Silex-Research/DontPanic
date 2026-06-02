@@ -448,13 +448,24 @@
         "Tests: dashboard JSON shape parity with CLI, missing-input single-action behavior, F008-explained blockers, and migration-suggestion output."
       ],
       "acceptance": "(8) Missing inputs produce ONE concise ActionChoice or dashboard action naming only the missing blocker. (9) CLI and dashboard render the SAME SkillAction data (reason, risk, command, approval requirement, evidence target). (10) The recommender uses the F008 config inventory to explain unavailable credentials/binaries/capabilities and F007 dashboard-hint deduplication for human decisions. (11) Existing skills have a migration path: a rubric suggestion command or doctor advisory identifies high-value skills missing invocation metadata and proposes safe starting rubrics WITHOUT blocking core use. (14c) Tests prove dashboard JSON shape, missing-input handling at the surface, F008-explained blockers, and migration suggestion output.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F011",
         "F015",
         "F007",
         "F008"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T16:43:01Z"
     },
     {
       "id": "F010",
