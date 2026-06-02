@@ -402,6 +402,19 @@
       "gate": "breaker:no_progress",
       "at": "2026-06-02T00:03:34Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-06-02T01:36:25Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-06-02T02:33:17Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [

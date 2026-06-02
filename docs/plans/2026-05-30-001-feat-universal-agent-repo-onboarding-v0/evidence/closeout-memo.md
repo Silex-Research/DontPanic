@@ -2,57 +2,52 @@
 status: signed_off
 reason_class: feature_complete
 plan_id: 2026-05-30-001-feat-universal-agent-repo-onboarding-v0
-feature_id: F008
-closed_at: 2026-06-02T02:30:00Z
+feature_id: F013
+closed_at: 2026-06-02T03:55:00Z
 latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F008
+# Closeout memo — 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 / F013
 
 ## Operator decision
 
-F008 (CLI/dashboard config-inventory action parity) is closed `signed_off`. codex
-signed off on run10 iter0 after the operator resolved the run9 residuals (D047–D050).
-The class-wide non-optimistic-status invariant is implemented by construction via the
-shared `config_inventory.derive_status(StatusFacts)` helper, through which every
-provider — config AND secret/auth — routes its `present`/`loadable`/`valid` facts.
+F013 (dashboard live-path) is closed `signed_off`. codex signed off on run2 iter0
+after the operator resolved the single run1 i2 finding. The dashboard build now
+renders the F008 config inventory as Settings/Setup cards (CLI parity) on every
+selection — including the default All-Projects fleet view.
 
 ## Return Condition
 
-F008 returns complete when, by construction, **no inventory provider can report `ok`
-on an invalid/incomplete/unrunnable underlying state**, and the dashboard action
-surface is honest:
+status: satisfied
 
-- Every provider derives status through the single shared `derive_status` helper; a
-  registry-coverage guard test (`test_every_provider_is_listed_in_the_invariant_suite`)
-  forbids adding a provider without an invariant case.
-- The exhaustive parametrized suite (`_NON_OPTIMISTIC_CASES`) drives a real
-  invalid/incomplete/unrunnable state for EVERY provider — including present-but-
-  unloadable config, a tripped breaker, quota caps-without-calibration / state-missing /
-  state-unloadable, non-runnable global defaults, invalid manifest, stale onboarding,
-  and the secret surfaces (absent / malformed credfile / non-webhook URL / unloadable
-  SA key) — each asserting a non-ok status.
-- Anthropic auth probes a real credential artifact (API key / `~/.claude/.credentials.json`
-  / macOS keychain), never the `claude` binary on PATH (codex i2).
-- A malformed REQUIRED secret keeps `NEEDS_SETUP` but is `human_required`, so the
-  response-level dashboard hint fires (operator ruling D050).
-- `dontpanic roles set` (the dashboard safe-edit route) validates via the registered
-  `_ROLES_SPEC`; quota emits no `safe_command` when fully configured (the non-runnable
-  `quota-caps init` affordance is removed).
-- No `dashboard/*` or `settings/*` files are edited (AC2d scope held).
+F013 returns complete when the dashboard build renders the F008 inventory as
+Settings/Setup cards (not a raw state blob) on the default selection, the
+response-level hint auto-detects a running singleton and dedups, and edit
+affordances are distinct from run-actions:
+
+- The fleet/`all` BUILD path writes the top-level `state/config-inventory.json`
+  (the operator fix for codex F013 i2 — the serve path already did; build did
+  not), so the default All-Projects view is NOT empty. Independently verified:
+  `_build_main(--project all)` writes the top-level inventory with 19 cards.
+- The response-level `dashboard_hint` auto-detects a running dashboard singleton
+  for `active_url` and falls back to the start command when none runs, without
+  the caller threading `dashboard_url` (AC2). Exactly one hint; item records
+  reference it by id rather than repeating text (AC3/AC6).
+- Edit affordances (validated `safe_command`) render distinctly from run-actions;
+  no build/start/serve command renders as an item's edit `safe_command` (AC4).
 
 ## Verification
 
-- 159 F008 + command-validation tests pass; F008 source + test files are ruff-clean.
-- Independent operator check: malformed required secret → `status=needs_setup`,
-  `human_required=True`; quota fully-configured → `safe_command is None`;
-  `roles set <role> <executor> --global` → `validate_command_tokens.ok == True`.
-- Cross-agent: codex `signed_off` on run10 iter0.
+- 17 python (`test_dashboard_inventory_f013.py`, incl. a regression test driving
+  the real `_build_main` fleet path) + 25 JS (`vitest`, config-inventory unit +
+  integration) tests pass.
+- Independent operator check: fleet/`all` build → top-level config-inventory.json,
+  kind=config_inventory, 19 cards.
+- Cross-agent: codex `signed_off` on run2 iter0.
 
 ## Evidence references
 
-- `audit/codex-auditor-F008-i0.json` (run10) — verdict `signed_off`
-- `scripts/dontpanic_orchestrate/config_inventory.py` — `derive_status`, `_secret_provider`, `provider_quota`
-- `scripts/dontpanic_orchestrate/command_validation.py` — `_ROLES_SPEC`
-- `scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py` — `_NON_OPTIMISTIC_CASES` + coverage guard
-- decisions `D045`–`D050`
+- `audit/codex-auditor-F013-i0.json` (run2) — verdict `signed_off`
+- `scripts/dontpanic_orchestrate/dashboard.py` — `_build_main` fleet path writes top-level inventory
+- `dashboard/pages/settings/settings.js`, `dashboard/lib/config-inventory-logic.js`, `dashboard/core.js`
+- `scripts/dontpanic_orchestrate/tests/test_dashboard_inventory_f013.py` + `dashboard/tests/**`

@@ -307,10 +307,26 @@
         "Add tests: dashboard cards render for >=10 providers; active vs inactive hint auto-detection; dashboard-hint dedup; no build/start command rendered as an edit affordance."
       ],
       "acceptance": "(1) The dashboard build renders the F008 inventory as Settings/Setup cards (same data the CLI `config inventory` shows), not merely a generated state blob. (2) The response-level dashboard_hint auto-detects a running dashboard singleton for active_url and falls back to the start command when none runs — without the caller manually passing dashboard_url. (3) Exactly one response-level dashboard_hint; item-level records reference it rather than repeating text. (4) Edit affordances (validated safe_command) are rendered distinctly from run-actions; build/start/serve commands never render as an item's edit safe_command. (5) Tests prove cards render for >=10 providers, active/inactive hint auto-detection, dashboard-hint dedup, and that no build/start command is emitted as an edit affordance.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F008"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-05-30-001-feat-universal-agent-repo-onboarding-v0.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F013-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T02:43:11Z"
     },
     {
       "id": "F009",

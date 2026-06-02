@@ -164,3 +164,17 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 
 **2026-06-02T00:08:40Z** — feature **F008** terminal: `signed_off` after 1 round(s) — auditor signed off
 
+| 2026-06-02T01:07:54Z | F013 | i0 | claude / implementer | signed_off | 7,745,168 / 37,547 | [claude-implementer-F013-i0.json](audit/claude-implementer-F013-i0.json) |
+| 2026-06-02T01:11:00Z | F013 | i0 | codex / auditor | needs_changes | 1,420,138 / 13,354 | [codex-auditor-F013-i0.json](audit/codex-auditor-F013-i0.json) |
+| 2026-06-02T01:21:00Z | F013 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F013-i1.json](audit/claude-implementer-F013-i1.json) |
+| 2026-06-02T01:24:36Z | F013 | i1 | codex / auditor | needs_changes | 1,573,667 / 14,203 | [codex-auditor-F013-i1.json](audit/codex-auditor-F013-i1.json) |
+| 2026-06-02T01:31:48Z | F013 | i2 | claude / implementer | signed_off | 8,956,326 / 30,301 | [claude-implementer-F013-i2.json](audit/claude-implementer-F013-i2.json) |
+| 2026-06-02T01:36:25Z | F013 | i2 | codex / auditor | needs_changes | 3,343,810 / 14,818 | [codex-auditor-F013-i2.json](audit/codex-auditor-F013-i2.json) |
+
+**2026-06-02T01:36:25Z** — feature **F013** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-06-02T02:36:53Z | F013 | i0 | claude / implementer | signed_off | 2,786,618 / 12,662 | [claude-implementer-F013-i0.json](audit/claude-implementer-F013-i0.json) |
+| 2026-06-02T02:40:04Z | F013 | i0 | codex / auditor | signed_off | 1,256,736 / 11,700 | [codex-auditor-F013-i0.json](audit/codex-auditor-F013-i0.json) |
+
+**2026-06-02T02:40:04Z** — feature **F013** terminal: `signed_off` after 1 round(s) — auditor signed off
+
