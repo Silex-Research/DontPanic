@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "ActionItem becomes the single canonical control-plane action contract. Add audience[], dedupe_key, reversible, plain_consequence, dashboard_url. Keep exact_command + automatable as the command-safety model (no safe_command). Make dedupe_key explicit and the dedup authority (not derived from id-prefix). Reconcile the operations:/supervisor: id-vs-source seam. Enforce command validation at the ActionItem boundary.",
+      "steps": [
+        "Re-confirm no producer beyond Guidance.to_action_items (operations:) and _rendered_to_action_item_dict (supervisor:) mints a divergent id scheme; record any third scheme as a finding before migrating.",
+        "Add fields to ActionItem (operator_console.py): audience: tuple[str,...] over {operator,worker,orchestrator,human}, dedupe_key: str, reversible: bool, plain_consequence: str|None, dashboard_url: str|None. Update to_dict and the JSON envelope.",
+        "Set dedupe_key explicitly in every producer (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and switch merge_with_event_sidecar + fleet aggregation to dedup on dedupe_key, not id-prefix parsing.",
+        "Resolve operations:/supervisor: per CP-D002: keep _VALID_SOURCES closed, treat the id-prefix as opaque, and document that operations-guidance items carry source=supervisor by design (dedupe_key is the identity authority).",
+        "Enforce command validation at the boundary: ActionItem.__post_init__ rejects a non-None exact_command that fails command_validation.validate_command_tokens (or document producer-ownership explicitly if boundary enforcement is infeasible).",
+        "Confirm no safe_command field is introduced anywhere."
+      ],
+      "acceptance": "A parametrized test loads ActionItems from all producer paths (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and asserts: (a) every item carries audience, dedupe_key, reversible, plain_consequence, dashboard_url; (b) no safe_command field exists and exact_command+automatable encode command safety; (c) dedupe_key is producer-set and dedup (merge_with_event_sidecar + fleet aggregation) keys on dedupe_key, not id-prefix; (d) ActionItem rejects an unvalidated exact_command at construction. Full orchestrate sweep stays green.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Classify harnesses honestly as three INDEPENDENT capability booleans — can_operate (drives DontPanic), can_be_dispatched (worker), can_orchestrate (spawns sub-agents) — superseding the flat operator-vs-worker binary. Detection and reporting ONLY: no fan-out/tree governance, budget, or undo.",
+      "steps": [
+        "Replace the binary role read with a three-boolean capability struct; a harness may report any combination (Claude Code Workflow = all three; Grok = operate-only).",
+        "Surface the three booleans in `agent status --json` and render the agent-brief wording 'can operate DontPanic but is not a dispatchable worker' from can_operate=true/can_be_dispatched=false.",
+        "Preserve D002/D006: an unsupported agent is an operator, never a worker without a registered executor.",
+        "Add a scope-guard: no orchestration-tree budget/breaker/undo code is introduced (the can_orchestrate flag is reported, not acted on)."
+      ],
+      "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok → (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker → can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Renderer parity: dashboard, CLI/JSON (what-now), and the agent-brief managed block all render from the same ActionItem contract, deduped by dedupe_key, with secrets scrubbed at the render boundary. No surface computes action state independently.",
+      "steps": [
+        "Route all three surfaces through the ActionItem envelope (dashboard build JSON, CLI what-now/JSON, agent-brief managed block).",
+        "Dedup by dedupe_key across surfaces; dashboard hint appears once per response (preserve D013).",
+        "Apply scrub_secrets / brand normalization at the render boundary (preserve D004/D010).",
+        "Write one parity test feeding a fixed ActionItem set through all three renderers."
+      ],
+      "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
+      "passes": false,
+      "depends_on": ["F001", "F002"]
+    }
+  ]
+}

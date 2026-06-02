@@ -1,0 +1,52 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator design conclusion (2026-06-02) plus code verification at HEAD c814cc9: DontPanic must be a local control plane that both humans and interactive agents operate from one shared state. ActionItem (operator_console.py:174), RenderedEvent (event_copy.py:78), and ActionChoice (operations_guidance.py:154) already triangulate into one contract via tested projections; this plan formalizes ActionItem as canonical, adds the human-facing control-plane fields, classifies harnesses honestly, and proves renderer parity — explicitly excluding orchestration-tree governance (Plan B) and the plan-quality recast (2026-06-01-001).",
+  "user_journeys": [
+    {
+      "name": "one-action-three-surfaces",
+      "description": "An operational blocker (gate, capability gap, operations recommendation, or event) is produced once and rendered consistently to a human (dashboard card), an interactive agent (CLI/JSON what-now), and an onboarding agent (agent-brief managed block) — the same action, deduped once, never recomputed per surface.",
+      "surfaces": ["dashboard", "cli", "agent-brief"],
+      "acceptance_signals": [
+        "same action matched by dedupe_key across all three renderers",
+        "consistent title/band/exact_command",
+        "deduped to one occurrence per response",
+        "secret-shaped substrings scrubbed at the render boundary"
+      ]
+    },
+    {
+      "name": "honest-agent-role",
+      "description": "An interactive agent (or human) inspecting agent status sees three independent capabilities — can it operate DontPanic, can it be dispatched as a worker, can it orchestrate sub-agents — instead of a single mutually-exclusive role, so an unsupported operator (Grok) is told it can operate but not be dispatched, and a fan-out-capable harness is reported honestly without yet being governed.",
+      "surfaces": ["cli", "agent-brief"],
+      "acceptance_signals": [
+        "three independent capability booleans in agent status --json",
+        "Grok reports can_operate=true, can_be_dispatched=false with operate-but-not-dispatch brief wording",
+        "can_orchestrate is reported, not acted on (no tree governance)"
+      ]
+    },
+    {
+      "name": "honest-command-safety",
+      "description": "Every action that carries a command has had that command validated at the ActionItem boundary, so no surface ever renders an unvalidated or unsafe exact_command, and command safety is expressed by exact_command + automatable rather than a redundant safe_command field.",
+      "surfaces": ["dashboard", "cli", "agent-brief", "backend"],
+      "acceptance_signals": [
+        "ActionItem rejects an unvalidated exact_command at construction",
+        "no safe_command field exists anywhere"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Orchestration-tree governance: tree-aware budget/breaker rollup, multi-writer checkpoint/undo, multi-writer drift (deferred to a demand-gated Plan B).",
+    "The plan-quality / readiness-gate recast (stays with 2026-06-01-001).",
+    "The native desktop app-wrapper that owns the local-server lifecycle.",
+    "Editing the locked flat operator/worker objective_contract of 2026-05-30-001 in place.",
+    "Adding a safe_command field — command safety stays exact_command + automatable."
+  ],
+  "required_evidence": [
+    "test_output: parametrized ActionItem-shape test across all producer paths (F001)",
+    "test_output: dedupe-by-dedupe_key assertion in merge_with_event_sidecar + fleet aggregation (F001)",
+    "test_output: agent status three-boolean classification with Grok and worker fixtures (F002)",
+    "test_output: renderer parity test across dashboard + CLI/JSON + agent-brief (F003)",
+    "log: full orchestrate test sweep green",
+    "diff: ActionItem field additions and validation-boundary change"
+  ],
+  "completion_test": "All three features pass with tests: ActionItem carries audience/dedupe_key/reversible/plain_consequence/dashboard_url with no safe_command, dedup keys on dedupe_key rather than id-prefix, command validation is enforced at the ActionItem boundary, agent status reports operator/worker/orchestrator as three independent booleans without any tree-governance code, and one parity test proves the same action renders consistently across dashboard, CLI/JSON, and agent-brief — with the full orchestrate sweep green."
+}
