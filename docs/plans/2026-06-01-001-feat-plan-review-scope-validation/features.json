@@ -33,7 +33,9 @@
       ],
       "acceptance": "(1) `propose_split(feature, scope_report)` is pure and returns a typed SplitProposal or None. (2) A feature flagged `over_surface` yields a proposal whose children each touch exactly one surface. (3) The conservation invariant holds for every proposal: the multiset union of child acceptance criteria equals the parent's, with zero dropped and zero duplicated (asserted in code and in tests). (4) Child `depends_on` forms a valid acyclic chain. (5) A single-surface, in-budget feature yields None. (6) Tests cover a multi-surface split, the conservation invariant, dependency validity, and the no-op case.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F003",
@@ -50,7 +52,10 @@
       ],
       "acceptance": "(1) `dontpanic plan-review <plan> [--format text|json]` runs F001+F002 and prints a report from one typed source for both formats. (2) The command is read-only and never writes plan files. (3) Exit code is non-zero iff at least one block-severity flag is present, 0 otherwise. (4) `plan-review` validates under command_validation.validate_command_tokens and appears in manifest supported_commands. (5) Tests cover text output, json output, the non-zero-on-block exit, and a clean-plan zero-flag exit.",
       "passes": false,
-      "depends_on": ["F001", "F002"]
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
     },
     {
       "id": "F004",
@@ -66,7 +71,9 @@
       ],
       "acceptance": "(1) Locking a plan runs the F001 lint as a `pre_lock` gate. (2) A plan with any block-severity scope flag is refused at lock with the flags named, and no status transition occurs. (3) An `--allow-oversize <reason>` override (>=8 chars) records the reason verbatim in decisions.jsonl and allows the lock. (4) Existing lock validation still runs; the gate only adds the scope check. (5) Tests prove refusal-without-override, lock-with-recorded-override, and clean-plan-locks-with-no-override.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F005",
@@ -81,7 +88,9 @@
       ],
       "acceptance": "(1) A design-reviewer role runs through dispatch_volley and returns the standard auditor envelope {verdict, findings}. (2) Findings are keyed to a closed design taxonomy {oversize, hidden_coupling, ac_underspecified, missing_prereq, reorder_deps}. (3) The design-volley is opt-in at `pre_lock`, triggered by F001 lint uncertainty or explicit operator request, never auto-run on every plan. (4) A synthetic test with a mock executor proves a known-oversize decomposition yields an `oversize` finding and a clean decomposition signs off, with no live paid call in the test.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F006",
@@ -98,7 +107,10 @@
       ],
       "acceptance": "(1) On a plan change, the lint runs on the changed features only, not the whole plan. (2) Each change is classified as exactly one of sharpen/expand/split. (3) An expand that pushes a locked feature past the size budget is refused until either a recorded rationale is added or the feature is split. (4) A split is accepted only when AC conservation holds; a lossy split is refused naming the dropped/duplicated criteria. (5) A sharpen that adds no surface and no exemplar passes without friction. (6) Tests cover all three classifications and both refusal paths.",
       "passes": false,
-      "depends_on": ["F001", "F004"]
+      "depends_on": [
+        "F001",
+        "F004"
+      ]
     },
     {
       "id": "F007",
@@ -114,7 +126,9 @@
       ],
       "acceptance": "(1) dispatch-from-plan runs the F001 sizing lint in its pre-flight before any paid work. (2) A feature with a block-severity size flag is refused at confirm-dispatch, with the F002 split proposal surfaced as remediation. (3) An explicit override (>=8-char reason) records the rationale and allows dispatch. (4) Existing pre-flight checks still run; the sizing gate only adds the size check and runs before the volley starts. (5) Tests prove refusal-with-split-proposal, override-proceeds, and in-budget-dispatches-unchanged.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F008",
@@ -130,7 +144,9 @@
       ],
       "acceptance": "(1) A feature->owned-paths ownership map is derived from the plan. (2) At patch-completeness, a diff touching paths owned by a different feature yields a block-severity `cross_feature_edit` finding naming the foreign feature and the paths. (3) A patch touching only its own feature's paths yields no such finding. (4) A legitimate shared-file edit can be acknowledged with a recorded rationale and then passes. (5) Tests reproduce the onboarding-v0 F008->F013 bleed and assert the finding fires, plus the clean and acknowledged cases.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F009",
@@ -142,9 +158,11 @@
         "On invalid/empty config, emit an actionable readiness failure naming the file, the precise reason, and a VALIDATED remediation command (e.g. `quota-caps init`) plus the dashboard pointer.",
         "Ensure the failure is a clean pre-flight stop with guidance, not a mid-volley low-level exception.",
         "Route the remediation command through command_validation so the emitted fix is runnable.",
-        "Add tests: an empty/invalid caps file produces the actionable readiness failure with a validated remediation command; a valid file passes."
+        "Add tests: an empty/invalid caps file produces the actionable readiness failure with a validated remediation command; a valid file passes.",
+        "Extend the readiness check to validate role config (implementer/auditor/goal_auditor) against the registered-executor id pattern; emit the same actionable readiness failure for invalid roles (D065 Grok-Builder/Codex-Auditor) with a runnable remediation command.",
+        "Add a test reproducing the invalid-roles case alongside the quota_caps=={} case; keep the doctor proactive-WARN out of scope (separate feature)."
       ],
-      "acceptance": "(1) A pre-flight config-readiness check validates required config files before any paid work, separate from the in-loop budget breaker. (2) An invalid or empty config file produces a clean readiness failure that names the file, the precise reason, and a remediation command, never a raw low-level schema exception mid-volley. (3) The emitted remediation command passes command_validation.validate_command_tokens (it is runnable). (4) The failure also references the dashboard affordance for fixing config. (5) Tests reproduce the `quota_caps.json == {}` case and assert the actionable readiness failure with a validated remediation command, plus a valid-file pass.",
+      "acceptance": "(1) A pre-flight config-readiness check validates required config files \u2014 quota caps AND role config (~/.dontpanic/config.json with the legacy ~/.jarvis fallback) \u2014 before any paid work (dispatch OR plan-close goal-completion audit), separate from the in-loop budget breaker. (2) An invalid/empty config OR an invalid role value (a role that is not a registered executor id matching ^[a-z][a-z0-9_-]*$ \u2014 e.g. the Grok-Builder/Codex-Auditor split-brain from D065) produces a clean readiness failure naming the file, the precise reason, and a remediation command \u2014 never a raw low-level schema/validation exception mid-volley or at plan-close. (3) The emitted remediation command passes command_validation.validate_command_tokens (it is runnable). (4) The failure also references the dashboard affordance for fixing config. (5) Tests reproduce BOTH the quota_caps.json == {} case AND the invalid-roles case, asserting the actionable readiness failure with a validated remediation command, plus a valid-file pass. NOTE: the proactive `doctor` WARN for bad role config (the other D065 follow-up) is deliberately kept OUT of this feature to preserve its single (config-readiness) surface \u2014 it is a separate small feature, per this plan's own surface-count discipline.",
       "passes": false,
       "depends_on": []
     }
