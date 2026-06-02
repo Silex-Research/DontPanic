@@ -427,14 +427,25 @@
       "depends_on": [
         "F009"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) The single-agent dispatch path (cli.py dispatch_single_agent) is guarded by the SAME F009 drift reconciliation as the volley path — no paid single-agent call proceeds on stale plan context (codex F009 #4). (2) Blocking scope/policy drift (allowed_paths / forbidden_decisions, AC5) is enforced as a real human-acknowledgement workflow: the run pauses and requires an explicit operator ack (e.g. `dontpanic approve <plan> drift:<class>` or equivalent) before any further paid call — not merely labeled human_required in plan_drift.py (codex F009 #5). (3) CLI and dashboard show ONE concise reconciliation action, not repeated warnings (F009 AC6). (4) Tests cover: single-agent path pauses on blocking drift; the scope/policy ack workflow blocks-then-resumes; and the CLI/dashboard emit exactly one reconciliation action.",
       "steps": [
         "Guard cli.dispatch_single_agent with the same plan_drift baseline (early, fail-closed) + check_and_reconcile as dispatch_volley; no single-agent paid call proceeds on stale plan context.",
         "Enforce a human-ack workflow for blocking scope/policy drift (allowed_paths / forbidden_decisions): pause + require an explicit operator approval before any further paid call, not merely a human_required label.",
         "Surface exactly ONE reconciliation action in CLI and dashboard (no repeated warnings).",
         "Tests: single-agent path pauses on blocking drift; scope/policy ack blocks-then-resumes; CLI/dashboard emit one reconciliation action."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-02T14:19:29Z"
     }
   ]
 }
