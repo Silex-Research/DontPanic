@@ -906,6 +906,51 @@ def _what_now_main(argv: list[str]) -> int:
     return 0
 
 
+def _plan_review_main(argv: list[str]) -> int:
+    """``dontpanic plan-review <plan> [--format text|json]`` — plan 2026-06-01-001 F003.
+
+    Read-only scope lint. Runs the F001 lint over every feature and the F002
+    split proposer over each, assembles a single typed
+    :class:`~dontpanic_orchestrate.plan_review.report.PlanScopeReport`, and
+    renders it as human ``text`` (default) or machine ``json`` from that one
+    source. Never writes a plan file (acceptance #2).
+
+    Exit code (acceptance #3): non-zero (1) iff at least one block-severity flag
+    is present across the plan; 0 otherwise. Exit 2 is reserved for usage
+    errors (argparse).
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan-review",
+        description=(
+            "Read-only scope lint for a plan: runs the deterministic F001 "
+            "lint over every feature and the F002 split proposer over each, "
+            "then prints a scope report. Exit code is non-zero iff any "
+            "block-severity flag is present. Never edits the plan."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate.plan_review import report as plan_review_report
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    loaded = plan_loader.load(plan_dir)
+
+    feature_dicts = [f.model_dump() for f in loaded.features.features]
+    resolvers = plan_review_report.build_default_resolvers()
+    scope_report = plan_review_report.build_plan_scope_report(
+        loaded.plan_id, feature_dicts, resolvers
+    )
+
+    if args.format == "json":
+        print(json.dumps(scope_report.to_dict(), indent=2))
+    else:
+        print(plan_review_report.render_text(scope_report), end="")
+
+    return 1 if scope_report.has_block() else 0
+
+
 def _close_main(argv: list[str]) -> int:
     """Plan 2026-05-11-002 v3 F004 — operator-resolved feature close-out.
 
@@ -4049,6 +4094,8 @@ def main(argv: list[str] | None = None) -> int:
         return _finalize_main(raw[1:])
     if raw and raw[0] == "what-now":
         return _what_now_main(raw[1:])
+    if raw and raw[0] == "plan-review":
+        return _plan_review_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":

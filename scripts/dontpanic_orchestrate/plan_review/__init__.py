@@ -23,14 +23,34 @@ from dontpanic_orchestrate.plan_review.lint import (
     lint_feature,
     tag_surfaces,
 )
+from dontpanic_orchestrate.plan_review.report import (
+    FeatureScopeReport,
+    PlanScopeReport,
+    build_default_resolvers,
+    build_plan_scope_report,
+    render_text,
+)
+from dontpanic_orchestrate.plan_review.split import (
+    ChildFeature,
+    SplitProposal,
+    propose_split,
+)
 
 __all__ = [
     "SURFACES",
+    "ChildFeature",
+    "FeatureScopeReport",
     "FlagKind",
+    "PlanScopeReport",
     "Resolvers",
     "ScopeFlag",
     "ScopeReport",
     "Severity",
+    "SplitProposal",
+    "build_default_resolvers",
+    "build_plan_scope_report",
     "lint_feature",
+    "propose_split",
+    "render_text",
     "tag_surfaces",
 ]

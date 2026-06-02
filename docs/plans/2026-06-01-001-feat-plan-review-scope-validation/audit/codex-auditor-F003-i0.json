@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-02T21:42:06Z",
+  "completed_at": "2026-06-02T21:45:42Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-q3d322uk target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 212674 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1462367,
+    "tokens_out": 13031,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer declared Repo/Env/Project correctly, and `target_context.commands_run` contains no forbidden command shape.\n\nFINDING (high, correctness): `plan-review` falsely reports valid `dontpanic plan-review` command references as block-severity `missing_prereq` flags. Evidence: the real plan’s JSON report flags F003 with `unresolved command: dontpanic plan-review`, and an isolated clean single-surface feature containing only ``dontpanic plan-review <plan>`` returned `has_block=True`. Recommendation: normalize CLI invocation prefixes before resolver lookup, or add resolver aliases for supported `dontpanic <subcommand>` command phrases; add a regression test for prefixed supported commands.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_review_cli_f003.py scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate plan-review 2026-06-01-001-feat-plan-review-scope-validation --format text\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate plan-review 2026-06-01-001-feat-plan-review-scope-validation --format json\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import agent_manifest, command_validation; from dontpanic_orchestrate.plan_review.report import build_de",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_plan_review_cli_f003.py scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate plan-review 2026-06-01-001-feat-plan-review-scope-validation --format text",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate plan-review 2026-06-01-001-feat-plan-review-scope-validation --format json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import agent_manifest, command_validation; from dontpanic_orchestrate.plan_review.report import build_default_resolvers, build_plan_scope_report; clean={\"id\":\"F000\",\"description\":\"small helper\",\"steps\":[\"return typed result\"],\"acceptance\":\"(1) returns typed result (2) coverage hits happy path\",\"depends_on\":[]}; report=build_plan_scope_report(\"clean\", [clean], build_default_resolvers()); print(\"clean_has_block\", report.has_block()); print(\"clean_flag_count\", report.flag_count()); print(\"validate_plan_review\", command_validation.validate_command_tokens([\"plan-review\", \"p\", \"--format\", \"json\"]).ok); print(\"manifest_plan_review\", \"plan-review\" in agent_manifest.bootstrap_manifest().supported_commands)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate.plan_review.report import build_default_resolvers, build_plan_scope_report; feat={\"id\":\"FCLI\",\"description\":\"small cli helper\",\"steps\":[\"wire cli\"],\"acceptance\":\"(1) `dontpanic plan-review <plan> [--format text|json]` exits 0 for clean input\",\"depends_on\":[]}; r=build_plan_scope_report(\"probe\",[feat],build_default_resolvers()); print(r.to_dict())'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`plan-review` falsely reports valid `dontpanic plan-review` command references as block-severity `missing_prereq` flags. Evidence: the real plan’s JSON report flags F003 with `unresolved command: dontpanic plan-review`, and an isolated clean single-surface feature containing only ``dontpanic plan-review <plan>`` returned `has_block=True`. Recommendation: normalize CLI invocation prefixes before resolver lookup, or add resolver aliases for supported `dontpanic <subcommand>` command phrases; add a",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

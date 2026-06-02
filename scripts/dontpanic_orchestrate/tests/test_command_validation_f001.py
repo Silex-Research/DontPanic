@@ -519,6 +519,9 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         # migration are exposed as `dontpanic skills <recommend|rubric>`, so the
         # validator recognizes the `skills` surface.
         "skills",
+        # Plan 2026-06-01-001 F003: the read-only `dontpanic plan-review <plan>`
+        # scope-lint surface validates here so its rendered copy is honest.
+        "plan-review",
     }
     assert known_subcommands() == expected
 

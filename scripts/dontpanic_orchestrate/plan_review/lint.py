@@ -97,9 +97,28 @@ class Resolvers:
     commands: frozenset[str] = frozenset()
     flags: frozenset[str] = frozenset()
     symbols: frozenset[str] = frozenset()
+    # The CLI binary name(s) a plan author writes before a subcommand
+    # (``dontpanic plan-review``). Stripped before subcommand lookup so an
+    # invocation phrase resolves against the bare subcommand vocabulary
+    # (``known_subcommands`` lists ``plan-review``, never ``dontpanic
+    # plan-review``).
+    cli_binaries: frozenset[str] = frozenset({"dontpanic"})
 
     def resolves_command(self, token: str) -> bool:
-        return token in self.commands
+        # An exact phrase match resolves first (a bare subcommand, or a caller
+        # that registered a full phrase like ``quota-caps init``).
+        if token in self.commands:
+            return True
+        # Otherwise treat ``token`` as an invocation phrase: drop a leading CLI
+        # binary name (``dontpanic plan-review`` -> ``plan-review``), then the
+        # first remaining word is the subcommand (``quota-caps init`` ->
+        # ``quota-caps``). This keeps a genuinely unknown command
+        # (``frobnicate widgets``) flagged while accepting the supported
+        # ``dontpanic <subcommand>`` invocation shape.
+        words = token.split()
+        if words and words[0] in self.cli_binaries:
+            words = words[1:]
+        return bool(words) and words[0] in self.commands
 
     def resolves_flag(self, token: str) -> bool:
         return token in self.flags
@@ -290,20 +309,32 @@ def lint_feature(feature: dict, resolvers: Resolvers | None = None) -> ScopeRepo
     )
 
 
+def surfaces_in(text: str) -> tuple[str, ...]:
+    """Surfaces whose keywords specifically appear in ``text`` (no fallback).
+
+    Unlike :func:`tag_surfaces`, this returns ``()`` when ``text`` matches no
+    surface keyword. Callers that must distinguish a *genuine* surface match
+    versus the ``core`` default — F002's split proposer deciding whether an AC
+    actually names a surface or is generic — use this; surface *tagging* for
+    the lint signal still goes through :func:`tag_surfaces`.
+    """
+    haystack = text.lower()
+    return tuple(
+        sorted(
+            surface
+            for surface, keywords in SURFACES.items()
+            if any(kw in haystack for kw in keywords)
+        )
+    )
+
+
 def tag_surfaces(text: str) -> tuple[str, ...]:
     """Return the sorted distinct surfaces ``text`` touches (deterministic).
 
     Defaults to ``("core",)`` when no specific surface keyword matches, so a
     feature always touches at least one surface.
     """
-    haystack = text.lower()
-    hits: set[str] = set()
-    for surface, keywords in SURFACES.items():
-        if any(kw in haystack for kw in keywords):
-            hits.add(surface)
-    if not hits:
-        hits.add(_DEFAULT_SURFACE)
-    return tuple(sorted(hits))
+    return surfaces_in(text) or (_DEFAULT_SURFACE,)
 
 
 def split_acceptance(acceptance: str) -> tuple[str, ...]:

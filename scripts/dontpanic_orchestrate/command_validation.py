@@ -496,12 +496,45 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         ),
         bool_flags=frozenset({"--include-not-ready", "--ready-only"}),
     ),
+    # ``plan-review <plan> [--format text|json]`` per cli.py:_plan_review_main
+    # (plan 2026-06-01-001 F003). Read-only scope lint surface: one plan
+    # positional plus the text/json format selector.
+    "plan-review": SubcommandSpec(
+        positional_min=1,
+        positional_max=1,
+        value_flags=frozenset({"--format"}),
+    ),
 }
 
 
 def known_subcommands() -> frozenset[str]:
     """Return the top-level subcommand vocabulary (read-only snapshot)."""
     return frozenset(_VOCABULARY.keys())
+
+
+def known_flags() -> frozenset[str]:
+    """Return every flag declared anywhere in the vocabulary (recursively).
+
+    Walks each :class:`SubcommandSpec` and its nested ``subcommands``,
+    collecting ``bool_flags``, ``value_flags``, and ``mutex_required`` members.
+    Plan-review (F003) wires this — alongside :func:`known_subcommands` — into
+    the F001 lint's :class:`~dontpanic_orchestrate.plan_review.lint.Resolvers`
+    so an AC naming a real CLI flag does not trip a spurious ``missing_prereq``.
+    """
+    flags: set[str] = set()
+
+    def _walk(spec: SubcommandSpec) -> None:
+        flags.update(spec.bool_flags)
+        flags.update(spec.value_flags)
+        for group in spec.mutex_required:
+            flags.update(group)
+        if spec.subcommands is not None:
+            for child in spec.subcommands.values():
+                _walk(child)
+
+    for spec in _VOCABULARY.values():
+        _walk(spec)
+    return frozenset(flags)
 
 
 def _is_flag(token: str) -> bool:

@@ -363,3 +363,165 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-
 </details>
 
 ===
+---
+timestamp: 2026-06-02T21:35:47Z
+event: gate_cleared
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+gate: breaker:no_progress
+---
+
+Operator cleared gate 'breaker:no_progress' via 'approve'.
+
+===
+---
+timestamp: 2026-06-02T21:36:00Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F003
+---
+
+impl=claude aud=codex cap=1 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-02T21:36:00Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F003
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=1
+
+===
+---
+timestamp: 2026-06-02T21:51:33Z
+event: no_progress_classification
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+aggregate: implementation_defect
+blocking: true
+feature_id: F003
+---
+
+Auditor verdict taxonomy [implementation_defect] — BLOCKING.
+
+Feature: F003
+Recommended next action: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Per-finding classification:
+  - [implementation_defect] severity=high, category=correctness: Required F003 files are untracked and would be omitted from a commit/patch based on tracked diff. Evidence: `git status --short` shows `?? ../scripts/dontpanic…
+
+Aggregate class blocks auto-advance. Operator must review the underlying audit envelope before declaring the volley resolved.
+
+To close-out this feature without a re-dispatch (operator accepts the finding as non-defect):
+  dontpanic close --operator-resolved 2026-06-01-001-feat-plan-review-scope-validation F003 --reason implementation_defect
+
+This generates a closeout-memo template at evidence/closeout-memo.md, clears breaker:no_progress, writes the signoff envelope, and flips features.json passes:true — all in one transaction.
+
+===
+<!-- rendered annotation 2026-06-02T21:51:34Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — no-progress taxonomy** _(band: needs_action)_
+
+Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.
+
+Run:
+
+```
+dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `aggregate_class` = `implementation_defect`
+- `blocking` = `True`
+- `feature_id` = `F003`
+- `inbox_event` = `no_progress_classification`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+
+</details>
+
+===
+---
+timestamp: 2026-06-02T21:51:34Z
+event: breaker_tripped
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+breaker_kind: no_progress
+feature_id: F003
+approval_required: true
+---
+
+Circuit breaker tripped: no_progress
+
+Reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+Operator clearance required: `jarvis approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress` or `jarvis resume 2026-06-01-001-feat-plan-review-scope-validation --all`.
+
+===
+<!-- rendered annotation 2026-06-02T21:51:34Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — breaker `no_progress` tripped** _(band: needs_action)_
+
+Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `no_progress`
+- `feature_id` = `F003`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+
+</details>
+
+===
+---
+timestamp: 2026-06-02T21:51:34Z
+event: volley_terminal
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+final_status: stopped_no_progress
+rounds: 2
+feature_id: F003
+---
+
+final_status: stopped_no_progress
+rounds: 2
+audits: ['claude-implementer-F003-i0.json', 'codex-auditor-F003-i0.json', 'claude-implementer-F003-i1.json', 'codex-auditor-F003-i1.json']
+reason: auditor verdict unchanged (needs_changes) across 2 consecutive rounds
+taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.
+
+===
+<!-- rendered annotation 2026-06-02T21:51:34Z -->
+**Blocked work on 2026-06-01-001-feat-plan-review-scope-validation — stopped no progress** _(band: needs_action)_
+
+Volley terminated after 2 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-feat-plan-review-scope-validation/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F003`
+- `final_status` = `stopped_no_progress`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-06-01-001-feat-plan-review-scope-validation`
+- `rounds` = `2`
+
+</details>
+
+===

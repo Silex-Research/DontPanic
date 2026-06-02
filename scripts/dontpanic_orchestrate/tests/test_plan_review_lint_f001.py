@@ -291,6 +291,42 @@ def test_plain_text_resolved_symbol_does_not_flag():
     assert not report.flags_of_kind("missing_prereq")
 
 
+def test_dontpanic_prefixed_supported_command_resolves():
+    # Auditor i0 finding: `dontpanic plan-review` is the supported invocation
+    # shape but `known_subcommands` lists only the bare `plan-review`. The
+    # binary-prefixed phrase must resolve, not false-flag missing_prereq.
+    feature = {
+        "id": "FX",
+        "acceptance": "(1) `dontpanic plan-review <plan> [--format text|json]` exits 0.",
+    }
+    report = lint_feature(feature, RESOLVERS)
+    assert not report.flags_of_kind("missing_prereq")
+
+
+def test_dontpanic_prefixed_unknown_subcommand_still_flags():
+    # The prefix-strip must not turn off the signal: an unknown subcommand
+    # after `dontpanic` is still a missing prereq.
+    feature = {
+        "id": "FX",
+        "acceptance": "(1) `dontpanic frobnicate <plan>` runs.",
+    }
+    report = lint_feature(feature, RESOLVERS)
+    evidence = " ".join(f.evidence for f in report.flags_of_kind("missing_prereq"))
+    assert "dontpanic frobnicate" in evidence
+
+
+def test_subcommand_with_argument_resolves_on_first_word():
+    # `quota-caps init` resolves on its subcommand (`init` is a subcommand arg,
+    # not a separate prereq); `quota-caps` is in RESOLVERS.commands.
+    feature = {
+        "id": "FX",
+        "acceptance": "(1) `quota-caps inspect` reports the caps.",
+    }
+    resolvers = Resolvers(commands=frozenset({"quota-caps"}))
+    report = lint_feature(feature, resolvers)
+    assert not report.flags_of_kind("missing_prereq")
+
+
 def test_plain_text_filename_is_not_a_symbol():
     # A dotted filename token is persistence state, not a code symbol; it must
     # not be mistaken for an unresolved symbol.

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-02T20:50:16Z",
+  "captured_at": "2026-06-02T21:36:00Z",
   "decision_lines": [
     "D001\u001f8a30f39d4b8a4340572ec64c5346ab8a516290eff9b37d91fb7b2007fcb43163",
     "D002\u001ff03b74219ef3d2793f0b873c70520f2e9474b1a6f668e4aa44acf553d037082c",
@@ -8,7 +8,9 @@
     "D005\u001fcc4fa129b5149a251ac72b19aa983c0dd098bc3af9cafc27e78f2d78ee110aa6",
     "D006\u001f969464377354e7c1c4d7f4fccd8d796e48d5c00de7d737e8b9dfcc653a6baa3c",
     "D007\u001f3f99f5a447d9393077536985215e9b1a98e4866e3a0951d64621ff9902dd674e",
-    "D008\u001f5406f2f7ab46d7cb9203374e6826eaca664b9361c4d270f378a7e9b715d144f8"
+    "D008\u001f5406f2f7ab46d7cb9203374e6826eaca664b9361c4d270f378a7e9b715d144f8",
+    "D009\u001f9d0fa7dd7ab0ba6e600900c0f9d7f1b0c7f0a52a2918e4d7547cca2cb89087ad",
+    "D010\u001f89027ae97aaaa4bbcc99a785135b37aedd47c7f02b1b610eab4f02279be65bea"
   ],
   "features_semantics": {
     "by_id": {
@@ -24,7 +26,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "(1) `dontpanic plan-review <plan> [--format text|json]` runs F001+F002 and prints a report from one typed source for both formats. (2) The command is read-only and never writes plan files. (3) Exit code is non-zero iff at least one block-severity flag is present, 0 otherwise. (4) `plan-review` validates under command_validation.validate_command_tokens and appears in manifest supported_commands. (5) Tests cover text output, json output, the non-zero-on-block exit, and a clean-plan zero-flag exit.",
@@ -96,16 +98,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "01c34e46904529db75c18c1637e4e725400a843d43ace18e563de8a20395ed68",
-    "decisions.jsonl": "f32bf69ffc636fa3c8fd21d298674ea6034f2e873ed7560b323fdfdeefa98840",
-    "features.json": "4d5dd39d5cb4331c963f81bacc11a783a3fd5203d7e2b68d8bbebb4d525d0e57",
+    "audit/gate-state.json": "37a54596956c37d64705359b60a436128bbd301cce4075621ea4d560b7a60099",
+    "decisions.jsonl": "4be2d3f615c2b9ceaf369fb69f3d6539e2995c1eb39cd58f1d96b5deed315725",
+    "features.json": "72173b0a801cd5b1c91f40c7a544ca27bd23b40a3caee2423806739abc0a784d",
     "objective_contract.json": "713030b2b2b5c1f4b6d77a47208c8eca4510eeea0238e84e560a19adc4b19eef",
     "plan.md": "bfca097623613ca98e29b110e58578978ee4ed094cea68ca38550bd9a997b624"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1780433407.3924918,
-    "decisions.jsonl": 1780432876.326482,
-    "features.json": 1780432876.3259952,
+    "audit/gate-state.json": 1780436147.7859662,
+    "decisions.jsonl": 1780436140.3533773,
+    "features.json": 1780435950.3060262,
     "objective_contract.json": 1780428333.140978,
     "plan.md": 1780428526.252194
   },

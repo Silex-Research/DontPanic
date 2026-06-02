@@ -51,7 +51,7 @@
         "Add CLI tests for text/json output, exit codes, and a clean-plan zero-flag run."
       ],
       "acceptance": "(1) `dontpanic plan-review <plan> [--format text|json]` runs F001+F002 and prints a report from one typed source for both formats. (2) The command is read-only and never writes plan files. (3) Exit code is non-zero iff at least one block-severity flag is present, 0 otherwise. (4) `plan-review` validates under command_validation.validate_command_tokens and appears in manifest supported_commands. (5) Tests cover text output, json output, the non-zero-on-block exit, and a clean-plan zero-flag exit.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
