@@ -1014,6 +1014,16 @@ def _close_main(argv: list[str]) -> int:
             "operator has already cleared the breaker manually."
         ),
     )
+    parser.add_argument(
+        "--note",
+        dest="note",
+        default=None,
+        help=(
+            "Operator rationale. REQUIRED for --reason operator_verified "
+            "(record what was verified and why the terminal is non-defect); "
+            "optional context for other terminal-finish classes."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if not args.operator_resolved:
@@ -1036,16 +1046,32 @@ def _close_main(argv: list[str]) -> int:
     if not agents:
         agents = ["claude", "codex"]
 
+    # Plan 2026-06-02-002 F002 — route honest terminal-finish classes
+    # (signed_off_adjacent / staging_blocked / operator_verified) through the
+    # operator-finish path. It does not require breaker:no_progress and records
+    # the actual terminal class instead of a stopped_no_progress pretence.
+    is_operator_finish = args.reason_class in closeout.TERMINAL_FINISH_CLASSES
     try:
-        result = closeout.run_close_out(
-            plan_dir=plan_dir,
-            plan_id=loaded.plan_id,
-            feature_id=args.feature,
-            reason_class=args.reason_class,
-            tier=tier,
-            agents_in_panel=agents,
-            require_active_breaker=not args.allow_missing_breaker,
-        )
+        if is_operator_finish:
+            result = closeout.run_operator_finish(
+                plan_dir=plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=args.feature,
+                terminal_class=args.reason_class,
+                tier=tier,
+                agents_in_panel=agents,
+                note=args.note,
+            )
+        else:
+            result = closeout.run_close_out(
+                plan_dir=plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=args.feature,
+                reason_class=args.reason_class,
+                tier=tier,
+                agents_in_panel=agents,
+                require_active_breaker=not args.allow_missing_breaker,
+            )
     except closeout.CloseoutError as exc:
         print(f"[close] REFUSED: {exc}", file=sys.stderr)
         return 3

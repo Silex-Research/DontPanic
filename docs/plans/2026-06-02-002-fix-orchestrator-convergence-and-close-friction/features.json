@@ -24,7 +24,7 @@
       "phase": 1,
       "description": "First-class operator-finish close path. `dontpanic close` accepts honest terminal classes beyond stopped_no_progress — signed-off-adjacent (auditor signed off but a downstream gate blocked, e.g. patch-completeness on untracked files), staging-blocked, and operator-verified — closing them with a recorded, accurate signoff_reason instead of forcing a stopped_no_progress / breaker:no_progress pretence. Closing writes clear evidence and triggers no paid dispatch.",
       "depends_on": [],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) ANTI-BYPASS: the signed_off_adjacent class REFUSES to close unless the latest auditor envelope's verdict is actually signed_off — it cannot relabel a needs_changes / failed audit as operator-resolved (a red test asserts refusal when the latest verdict is needs_changes). (2) With a real signed_off envelope, `dontpanic close --operator-resolved --reason signed_off_adjacent` closes WITHOUT requiring breaker:no_progress to be active and WITHOUT recording the close as stopped_no_progress. (3) staging_blocked requires a recorded downstream-gate block (e.g. patch_completeness) as its evidence; operator_verified records the operator-supplied rationale and what was verified. (4) The signoff envelope's signoff_reason and the closeout memo record the ACTUAL terminal class, never a no-progress pretence. (5) The close path performs no paid agent dispatch (a test asserts no executor is invoked). (6) The existing stopped_no_progress close behavior is unchanged.",
       "steps": [
         "Red test first: a signed-off-adjacent terminal (signoff present, patch-completeness blocked, breaker:no_progress NOT active) closes via the CLI and writes an accurate signoff_reason.",

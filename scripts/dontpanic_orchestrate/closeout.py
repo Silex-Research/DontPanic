@@ -95,6 +95,24 @@ KNOWN_CLOSEOUT_CLASSES: frozenset[str] = frozenset(
 )
 
 
+# Plan 2026-06-02-002 F002 — honest TERMINAL classes for the operator-finish
+# close path. Distinct from KNOWN_CLOSEOUT_CLASSES (which are no-progress finding
+# classes): these name WHAT terminal the operator is finishing, not a
+# classification of an auditor finding. Each carries its own eligibility check
+# (see run_operator_finish) so the close cannot be a relabel of an unresolved
+# audit:
+#   - signed_off_adjacent: auditor signed off but a downstream gate (e.g.
+#     patch-completeness on untracked files) blocked the automated finalize.
+#     ANTI-BYPASS: refuses unless the latest auditor verdict IS signed_off.
+#   - staging_blocked: a recorded downstream-gate block (e.g. patch_completeness
+#     fail) is its required evidence.
+#   - operator_verified: operator ran their own verification; the rationale note
+#     is required and recorded.
+TERMINAL_FINISH_CLASSES: frozenset[str] = frozenset(
+    {"signed_off_adjacent", "staging_blocked", "operator_verified"}
+)
+
+
 class CloseoutError(RuntimeError):
     """Raised when the close-out workflow cannot proceed safely."""
 
@@ -239,9 +257,20 @@ def render_closeout_memo(
     reason_class: str,
     auditor_envelope: dict[str, Any] | None,
     captured_at: str | None = None,
+    status_label: str = "operator_resolved",
+    decision_paragraph: str | None = None,
 ) -> str:
     """Pure renderer — returns the closeout-memo template body. Used by
-    :func:`run_close_out` and by tests that pin the template shape."""
+    :func:`run_close_out` and by tests that pin the template shape.
+
+    ``decision_paragraph`` (Plan 2026-06-02-002 F002): when supplied, replaces
+    the default ``## Operator decision`` paragraph. The default paragraph
+    describes a ``stopped_no_progress`` review + ``breaker:no_progress``
+    clearance; the operator-finish close path passes a terminal-class-specific
+    paragraph so the memo records the ACTUAL terminal (signed_off_adjacent /
+    staging_blocked / operator_verified) instead of a no-progress pretence.
+    ``status_label`` overrides the frontmatter ``status:`` line for the same
+    reason."""
     captured = captured_at or _now_iso()
     auditor_status = "unknown"
     auditor_path_hint = "(latest auditor envelope not located)"
@@ -252,9 +281,17 @@ def render_closeout_memo(
         # We don't carry the path through to here; keep the hint generic so
         # callers can attach the real path if they want.
     summary = _lift_auditor_summary(auditor_envelope)
+    default_paragraph = (
+        f"This feature was closed under class `{reason_class}` after operator "
+        f"review of a `stopped_no_progress` terminal. The audit finding is "
+        f"recorded as non-defect; the close-out workflow generated this "
+        f"template, cleared `breaker:no_progress`, wrote the signoff "
+        f"envelope, and flipped `features.json` `passes: true` for this "
+        f"feature."
+    )
     lines = [
         "---",
-        "status: operator_resolved",
+        f"status: {status_label}",
         f"reason_class: {reason_class}",
         f"plan_id: {plan_id}",
         f"feature_id: {feature_id}",
@@ -266,12 +303,7 @@ def render_closeout_memo(
         "",
         "## Operator decision",
         "",
-        f"This feature was closed under class `{reason_class}` after operator "
-        f"review of a `stopped_no_progress` terminal. The audit finding is "
-        f"recorded as non-defect; the close-out workflow generated this "
-        f"template, cleared `breaker:no_progress`, wrote the signoff "
-        f"envelope, and flipped `features.json` `passes: true` for this "
-        f"feature.",
+        decision_paragraph or default_paragraph,
         "",
         "## Latest auditor envelope summary (lifted automatically)",
         "",
@@ -629,6 +661,241 @@ def run_close_out(
     )
 
 
+def _latest_auditor_verdict(audit_paths: list[Path]) -> str | None:
+    """Return the latest auditor envelope's verdict string (``audit_status``),
+    or None when no auditor envelope is present."""
+    env = _latest_auditor_envelope(audit_paths)
+    if not isinstance(env, dict):
+        return None
+    status = env.get("audit_status")
+    return status if isinstance(status, str) else None
+
+
+def _recorded_gate_block(plan_dir: Path) -> str | None:
+    """Plan 2026-06-02-002 F002 — find a recorded downstream-gate block to use
+    as staging_blocked evidence. Returns a short evidence descriptor (the
+    artifact relpath) when a ``patch-completeness-*.json`` artifact reports a
+    ``fail`` status, else None. This keeps staging_blocked honest: it cannot be
+    claimed without an on-disk gate block."""
+    audit_dir = plan_dir / "audit"
+    if not audit_dir.is_dir():
+        return None
+    for p in sorted(audit_dir.glob("patch-completeness-*.json")):
+        try:
+            data = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict) and data.get("status") == "fail":
+            return f"audit/{p.name}"
+    return None
+
+
+def _operator_finish_signoff_reason(
+    *, terminal_class: str, evidence: str | None, note: str | None
+) -> str:
+    """Honest signoff_reason naming the ACTUAL terminal class (F002 acceptance
+    #4) — never a stopped_no_progress pretence."""
+    memo = CLOSEOUT_MEMO_RELPATH
+    if terminal_class == "signed_off_adjacent":
+        return (
+            "operator_finish (terminal=signed_off_adjacent): the auditor signed "
+            "off; a downstream gate blocked the automated finalize. Operator "
+            f"accepted the feature as merge-ready. See {memo}."
+        )
+    if terminal_class == "staging_blocked":
+        return (
+            "operator_finish (terminal=staging_blocked): blocked by a recorded "
+            f"downstream gate ({evidence}). Operator accepted as ready-to-stage. "
+            f"See {memo}."
+        )
+    # operator_verified
+    return (
+        "operator_finish (terminal=operator_verified): operator verified the "
+        f"feature out-of-band — {note}. See {memo}."
+    )
+
+
+def _operator_finish_decision_paragraph(
+    *, terminal_class: str, reason: str
+) -> str:
+    """Memo ## Operator decision paragraph naming the terminal class. Echoes the
+    signoff_reason so the memo and envelope agree; explicitly avoids any
+    no-progress / breaker:no_progress language (F002 acceptance #4)."""
+    return (
+        f"This feature was finished under terminal class `{terminal_class}` via "
+        f"the operator-finish close path (no re-dispatch, no breaker required). "
+        f"{reason} The close wrote the signoff envelope, recorded the terminal "
+        f"class in the operator-resolution sidecar, and flipped `features.json` "
+        f"`passes: true` for this feature."
+    )
+
+
+def run_operator_finish(
+    *,
+    plan_dir: Path,
+    plan_id: str,
+    feature_id: str,
+    terminal_class: str,
+    tier: str,
+    agents_in_panel: list[str],
+    note: str | None = None,
+) -> CloseoutResult:
+    """Plan 2026-06-02-002 F002 — first-class operator-finish close for honest
+    terminal classes (signed_off_adjacent / staging_blocked / operator_verified).
+
+    Unlike :func:`run_close_out` (which is bound to the stopped_no_progress
+    terminal + ``breaker:no_progress``), this path:
+      * does NOT require ``breaker:no_progress`` to be active;
+      * applies a per-class eligibility gate so the close cannot be a relabel of
+        an unresolved audit (anti-bypass);
+      * writes a signoff_reason + memo naming the ACTUAL terminal class;
+      * performs no paid agent dispatch (reads on-disk envelopes, writes files).
+
+    Eligibility per class:
+      * ``signed_off_adjacent`` — the latest auditor envelope's verdict must be
+        ``signed_off`` (else :class:`CloseoutError`).
+      * ``staging_blocked`` — a recorded downstream-gate block
+        (``patch-completeness-*.json`` with ``status: fail``) must exist.
+      * ``operator_verified`` — a non-empty ``note`` (operator rationale) is
+        required.
+
+    Commit order mirrors :func:`run_close_out` (stage-then-commit): validate +
+    build payload in memory, then memo → signoff → resolution sidecar →
+    (idempotent breaker clear if somehow active) → features.json flip.
+    """
+    if terminal_class not in TERMINAL_FINISH_CLASSES:
+        raise CloseoutError(
+            f"unknown terminal class {terminal_class!r}; valid operator-finish "
+            f"classes: {sorted(TERMINAL_FINISH_CLASSES)}. For a "
+            f"stopped_no_progress close use the no-progress taxonomy via "
+            f"run_close_out."
+        )
+
+    audit_paths = _audit_paths_for_feature(plan_dir, feature_id)
+    if not audit_paths:
+        raise CloseoutError(
+            f"no audit envelopes found for feature {feature_id!r} in "
+            f"{plan_dir / 'audit'}. The operator-finish close requires at least "
+            f"one volley round so the signoff envelope can cite audit history."
+        )
+
+    # Per-class eligibility (anti-bypass).
+    evidence: str | None = None
+    if terminal_class == "signed_off_adjacent":
+        verdict = _latest_auditor_verdict(audit_paths)
+        if verdict != "signed_off":
+            raise CloseoutError(
+                f"signed_off_adjacent refused: the latest auditor verdict is "
+                f"{verdict!r}, not 'signed_off'. This terminal class cannot "
+                f"relabel a needs_changes / failed audit as operator-resolved. "
+                f"Use staging_blocked or operator_verified, or re-dispatch."
+            )
+    elif terminal_class == "staging_blocked":
+        evidence = _recorded_gate_block(plan_dir)
+        if evidence is None:
+            raise CloseoutError(
+                "staging_blocked refused: no recorded downstream-gate block "
+                "(expected a patch-completeness-*.json artifact with "
+                "status='fail') found under audit/. staging_blocked requires "
+                "on-disk gate evidence."
+            )
+    else:  # operator_verified
+        if not (isinstance(note, str) and note.strip()):
+            raise CloseoutError(
+                "operator_verified refused: a non-empty --note rationale is "
+                "required (record what was verified and why the terminal is "
+                "non-defect)."
+            )
+
+    signoff_reason = _operator_finish_signoff_reason(
+        terminal_class=terminal_class, evidence=evidence, note=note
+    )
+    decision_paragraph = _operator_finish_decision_paragraph(
+        terminal_class=terminal_class, reason=signoff_reason
+    )
+
+    # STAGE: build + validate the signoff payload in memory before any side
+    # effect (mirrors run_close_out; an invalid payload raises before disk).
+    iteration = max(0, len([p for p in audit_paths if "auditor" in p.name]) - 1)
+    payload = signoff_writer.build_signoff_dict(
+        plan_id=plan_id,
+        tier=tier,
+        iteration=iteration,
+        agents_in_panel=agents_in_panel,
+        audit_paths=audit_paths,
+        plan_dir=plan_dir,
+        volley_status="signed_off",
+        signoff_reason=signoff_reason,
+    )
+    auditor_envelope = _latest_auditor_envelope(audit_paths)
+    memo_body = render_closeout_memo(
+        plan_id=plan_id,
+        feature_id=feature_id,
+        reason_class=terminal_class,
+        auditor_envelope=auditor_envelope,
+        status_label="operator_finished",
+        decision_paragraph=decision_paragraph,
+    )
+    resolution_payload = _build_operator_resolution_sidecar(
+        plan_id=plan_id, feature_id=feature_id, reason_class=terminal_class
+    )
+    resolution_payload["terminal_class"] = terminal_class
+    if note is not None:
+        resolution_payload["note"] = note
+    if evidence is not None:
+        resolution_payload["evidence"] = evidence
+
+    memo_path = plan_dir / CLOSEOUT_MEMO_RELPATH
+    signoff_path = signoff_writer.signoff_path(plan_dir, plan_id)
+    resolution_path = operator_resolution_path(plan_dir, plan_id)
+
+    # COMMIT memo → signoff → resolution sidecar (roll back on OSError).
+    memo_path.parent.mkdir(parents=True, exist_ok=True)
+    memo_path.write_text(memo_body)
+    signoff_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        signoff_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+    except OSError:
+        memo_path.unlink(missing_ok=True)
+        raise
+    try:
+        resolution_path.write_text(
+            json.dumps(resolution_payload, indent=2, ensure_ascii=False) + "\n"
+        )
+    except OSError:
+        signoff_path.unlink(missing_ok=True)
+        memo_path.unlink(missing_ok=True)
+        raise
+
+    # Idempotent breaker clear: operator-finish does NOT require the breaker, but
+    # if a no_progress breaker happens to be active, clear it so the plan's
+    # gate-state doesn't keep blocking dispatch after the feature is finished.
+    breaker_gate = circuit_breakers.gate_name(circuit_breakers.BreakerKind.NO_PROGRESS)
+    breaker_cleared = False
+    if breaker_gate in set(gate_pause.active_breakers(plan_dir)):
+        breaker_cleared = gate_pause.approve_gate(
+            plan_dir, breaker_gate, plan_id=plan_id, actor="operator"
+        )
+
+    features_json_path, features_changed = _flip_feature_passes(
+        plan_dir,
+        feature_id,
+        reason_class=terminal_class,
+        memo_relpath=str(CLOSEOUT_MEMO_RELPATH),
+    )
+
+    return CloseoutResult(
+        plan_id=plan_id,
+        feature_id=feature_id,
+        reason_class=terminal_class,
+        memo_path=memo_path,
+        signoff_path=signoff_path,
+        breaker_cleared=breaker_cleared,
+        features_json_path=features_json_path,
+        features_passes_flipped=features_changed,
+    )
+
+
 def format_no_progress_close_hint(
     *, plan_id: str, feature_id: str, recommended_class: str | None
 ) -> str:
@@ -656,7 +923,10 @@ __all__ = [
     "CloseoutError",
     "CloseoutResult",
     "KNOWN_CLOSEOUT_CLASSES",
+    "TERMINAL_FINISH_CLASSES",
     "format_no_progress_close_hint",
+    "operator_resolution_path",
     "render_closeout_memo",
     "run_close_out",
+    "run_operator_finish",
 ]
