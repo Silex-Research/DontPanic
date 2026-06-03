@@ -1,7 +1,7 @@
 ---
 id: 2026-06-02-002-fix-orchestrator-convergence-and-close-friction
 title: Fix orchestrator convergence-delta + close + patch-completeness friction
-status: active
+status: completed
 description: |
   Three engine-fix follow-ups banked while dogfooding the plan-review plan
   (2026-06-01-001, D010/D012): make the no_progress breaker findings-delta
