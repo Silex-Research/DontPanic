@@ -46,6 +46,49 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-03 — Plan-review scope governance + config-readiness (plan 2026-06-01-001)
+
+### Added
+- `dontpanic plan-review <plan>` — a free, deterministic scope lint over every
+  feature: flags over-scoped features (too many surfaces / acceptance criteria),
+  exemplar-or-weak acceptance criteria, and undeclared command/flag/symbol
+  prerequisites. Read-only; `--format text|json`; exits non-zero only on a
+  block-severity flag.
+- `dontpanic plan-review <plan> --since <git-ref|path>` — the mid-development
+  scope-delta lint: classifies each changed feature as **sharpen / expand /
+  split** against a prior `features.json` snapshot and exits non-zero when the
+  scope-change protocol refuses a change (a budget-busting expand of a locked
+  feature, or a lossy split).
+- `dontpanic plan lock --design-review` — opt-in cross-model design-review
+  volley that red-teams a plan's decomposition (oversize / hidden coupling /
+  underspecified AC / missing prereq / dependency order). Advisory: it prints a
+  verdict and never blocks the lock. Also auto-suggested when the lint is
+  uncertain.
+- `dontpanic dispatch-from-plan --acknowledge-cross-feature <reason>` — records a
+  rationale to pass the new cross-feature-edit check when a shared-file edit is
+  intentional.
+
+### Changed
+- **Plan lock** now runs a pre-lock scope gate: a feature carrying a
+  block-severity scope flag refuses the `draft → active` transition unless
+  `--allow-oversize <reason>` records a rationale in `decisions.jsonl`.
+- **Patch-completeness** (signoff time) now flags a `cross_feature_edit` when a
+  dispatch's diff touches files owned by a *different* feature than the one being
+  implemented, naming the foreign feature and paths.
+- **Config readiness** is now an actionable pre-flight: a malformed/empty
+  `quota_caps.json` or an invalid role value surfaces a clean failure with a
+  runnable remediation command (and dashboard pointer) before any paid work —
+  at dispatch *and* at the plan-close goal-completion audit — instead of a raw
+  schema crash mid-run.
+- README: the "Circuit breakers" line and the shipped-checklist now read **8**
+  breakers (adds `environmental_blocker`, which was already in the engine); a
+  new "Scope governance" capability row and a same-family-multi-agent
+  (Dynamic Workflows / Managed Agents) vs. cross-vendor meta-harness contrast
+  were added.
+
+Surfaces affected: CLI commands/flags (`plan-review`, `plan lock`,
+`dispatch-from-plan`), supervisor patch-completeness, plan-lock gate, README.
+
 ## 2026-06-02 — Dashboard serve singleton guard + status helper (plan 2026-05-30-001 F010)
 
 ### Added

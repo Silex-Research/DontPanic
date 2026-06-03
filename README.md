@@ -82,10 +82,11 @@ That is the gap DontPanic fills: it separates intelligence from trust.
 
 DontPanic adds trust infrastructure around AI coding:
 
-- **Immutable plans** — requirements and acceptance criteria are validated and locked before work starts.
+- **Immutable plans** — requirements and acceptance criteria are validated and locked before work starts. A locked plan still evolves *safely*: a **scope-change protocol** refuses silent drift (a budget-busting expand of a locked feature, or a lossy split) unless a rationale is recorded or the feature is split, and every decision lands in an append-only `decisions.jsonl` ledger.
+- **Scope governance** — a deterministic, free scope lint catches over-scoped features, exemplar/weak acceptance criteria, and undeclared prerequisites *before* a paid run; an optional cross-model design-review volley red-teams the decomposition; cross-feature-edit detection flags a diff that bleeds into another feature's files.
 - **Cross-model verification** — one agent builds; a different model family audits code, tests, security, docs, architecture, and plan compliance.
 - **Human approval gates** — risky work pauses until a human sees the evidence and approves, requests changes, or rejects.
-- **Circuit breakers** — budget, iteration, no-progress, diminishing-return, convergence-collapse, wall-clock, and global breakers stop waste.
+- **Circuit breakers** — eight automatic kill-switches (budget, iteration, no-progress, diminishing-returns, convergence-collapse, wall-clock, environmental-blocker, and a system-wide global breaker) stop waste and runaway loops.
 - **Evidence trails** — transcripts, audit logs, artifacts, signoff, gate state, and INBOX entries stay on disk.
 - **Budget controls** — token and cost visibility prevents runaway agent loops.
 
@@ -146,6 +147,17 @@ Skills and better prompts improve execution. They do not automatically create
 separation of duties, reproducibility, cost containment, or organizational
 trust. In production, smarter agents need stronger guardrails, not fewer.
 
+**vs. same-family multi-agent (Claude's Dynamic Workflows / Managed Agents,
+etc.):** those orchestrate a swarm of one vendor's own sub-agents for speed and
+scale — powerful, but everything shares one model family's blind spots, with no
+independent cross-check and a boss that can improvise the plan mid-run.
+DontPanic is the opposite posture: a vendor-neutral *meta-harness* that sits on
+top of any of those engines, holds the plan locked, makes a **different** model
+family audit the work, keeps a human in the approval loop, and trips circuit
+breakers when a run goes sideways. Same-family swarms optimize for velocity;
+DontPanic optimizes for code you can trust in production — and it can drive the
+swarm as one of its implementers.
+
 ## See It In Action
 
 ```text
@@ -186,6 +198,7 @@ and agents a shared operating surface:
 | Capability | What it solves | Command surface |
 |---|---|---|
 | Plan lifecycle | Turns vague work into a locked, auditable contract | `dontpanic plan lock`, `plan audit`, `plan close` |
+| Scope governance | Catches over-scope / weak ACs / undeclared prereqs before a paid run; flags scope drift, cross-feature edits, and design-decomposition risk | `dontpanic plan-review`, `plan-review --since`, `plan lock --design-review` |
 | Planning readiness | Shows which plans/features are ready, blocked, or risky to run in parallel | `dontpanic next` |
 | Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
 | Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
@@ -769,7 +782,7 @@ First-use baseline:
 Supervisor + executor panel (shipped):
 
 - [x] Single-agent + volley dispatch (Claude / Codex / Gemini / Grok / Ollama executors)
-- [x] 7 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, global_circuit_breaker)
+- [x] 8 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, environmental_blocker, global_circuit_breaker)
 - [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
 - [x] Operator caps + Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`)
 - [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)
