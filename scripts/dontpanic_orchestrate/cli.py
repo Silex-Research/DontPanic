@@ -2289,6 +2289,23 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         readiness_summary=readiness_summary,
     )
 
+    # Plan 2026-06-01-001 F009 — actionable config-readiness pre-flight, distinct
+    # from the quota-readiness/budget machinery above. Validates the quota-caps
+    # config file AND the resolved role values BEFORE any paid work, turning a
+    # malformed `{}` caps file (D039) or a bad role (D065 Grok-Builder split-brain)
+    # into a clean, actionable stop with a runnable remediation — never a raw
+    # schema crash mid-volley. Printed in both modes; enforced only on --confirm.
+    from dontpanic_orchestrate import config_readiness as _config_readiness
+    from dontpanic_orchestrate.executors import AGENT_REGISTRY as _AGENT_REGISTRY
+
+    config_ready = _config_readiness.check_config_readiness(
+        roles=[impl, aud], registered_executors=set(_AGENT_REGISTRY)
+    )
+    if config_ready.ok:
+        print("[dispatch-from-plan] config-readiness: ok")
+    else:
+        print(f"[dispatch-from-plan] config-readiness: NOT READY ({config_ready.file})")
+
     # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate. Run the F001 sizing
     # lint over the TARGET feature in the pre-flight (acceptance #1), in both
     # dry-run and confirm modes, and print the verdict. The refusal itself is
@@ -2369,6 +2386,17 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         if readiness_summary:
             print(f"Detail: {readiness_summary}", file=sys.stderr)
         return 3
+
+    # Plan 2026-06-01-001 F009 — config-readiness enforcement. A malformed caps
+    # config or an invalid role is refused with the actionable message + runnable
+    # remediation before any paid call (exit 6, distinct from quota=3 / patch=4 /
+    # sizing=5), so the operator is never stranded by a low-level schema crash.
+    if not config_ready.ok:
+        print(
+            f"[dispatch-from-plan] BLOCKED: config not ready.\n{config_ready.render()}",
+            file=sys.stderr,
+        )
+        return 6
 
     # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate enforcement. Runs
     # AFTER the existing quota-readiness check (acceptance #4 — existing checks
