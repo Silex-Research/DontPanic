@@ -235,7 +235,20 @@ def _resolve_module(repo_root: Path, importing_file: str, module: str, level: in
     return candidates
 
 
-def _match_dirty(cand: str, dirty_paths: set[str]) -> set[str]:
+def _source_root_prefixes(importing_file: str) -> list[str]:
+    """Candidate source-root prefixes under which ``importing_file`` could be
+    imported: every ancestor directory of the importing file.
+
+    For ``scripts/dontpanic_orchestrate/plan_review/report.py`` this is
+    ``['scripts', 'scripts/dontpanic_orchestrate', 'scripts/dontpanic_orchestrate/plan_review']``.
+    A module imported by this file is on disk at ``<root>/<dotted/path.py>`` for
+    one of these roots (the package's import root is an ANCESTOR of any file in
+    the package). Used to bound suffix matching to plausible roots (F003 D005)."""
+    parts = Path(importing_file).parent.parts
+    return ["/".join(parts[:i]) for i in range(1, len(parts) + 1)]
+
+
+def _match_dirty(cand: str, dirty_paths: set[str], importing_file: str) -> set[str]:
     """Return the dirty paths a resolved import candidate matches.
 
     Plan 2026-06-02-002 F003 (D005 — source-root awareness): a dotted import
@@ -243,24 +256,28 @@ def _match_dirty(cand: str, dirty_paths: set[str]) -> set[str]:
     repo-relative candidate ``dontpanic_orchestrate/plan_review/sizing_gate.py``,
     but the package lives under a source root on PYTHONPATH (``scripts/``), so
     the real git path is ``scripts/dontpanic_orchestrate/.../sizing_gate.py``.
-    Exact equality alone misses it. We additionally accept a SOURCE-ROOT-PREFIX
-    suffix match — a dirty path ``d`` where ``d.endswith('/' + cand)`` — so a
-    module imported by a changed file is surfaced regardless of how many source-
-    root segments prefix it on disk.
+    Exact equality alone misses it. We additionally accept a match where the
+    candidate is prefixed by a SOURCE ROOT — but only a root that is an ANCESTOR
+    DIRECTORY OF THE IMPORTING FILE (the package's real import root always is).
 
-    Guard against over-reach: suffix matching applies ONLY to multi-segment
-    (package-qualified) candidates. A bare ``import sizing_gate`` (single
-    segment) must NOT suffix-match an unrelated ``other_pkg/sizing_gate.py`` —
-    a single-name import carries no package context, so only exact equality
-    qualifies it (acceptance #3 / #4: no blanket untracked scan)."""
+    This bound (codex batched-audit i0 finding) prevents the over-reach of a
+    bare ``endswith`` suffix test: an unrelated untracked mirror such as
+    ``docs/generated/dontpanic_orchestrate/plan_review/sizing_gate.py`` shares
+    the candidate's tail but its prefix ``docs/generated`` is NOT an ancestor of
+    the importer under ``scripts/``, so it does NOT match (acceptance #3/#4: no
+    flagging of unrelated untracked output).
+
+    Guard preserved: prefix matching applies ONLY to multi-segment (package-
+    qualified) candidates — a bare ``import sizing_gate`` carries no package
+    context, so only exact equality qualifies it."""
     matched: set[str] = set()
     if cand in dirty_paths:
         matched.add(cand)
     if len(Path(cand).parts) >= 2:
-        suffix = "/" + cand
-        for d in dirty_paths:
-            if d != cand and d.endswith(suffix):
-                matched.add(d)
+        for root in _source_root_prefixes(importing_file):
+            prefixed = f"{root}/{cand}"
+            if prefixed != cand and prefixed in dirty_paths:
+                matched.add(prefixed)
     return matched
 
 
@@ -286,19 +303,19 @@ def _extract_resolved_imports(
         if isinstance(node, ast.Import):
             for alias in node.names:
                 for cand in _resolve_module(repo_root, importing_file, alias.name, 0):
-                    hits |= _match_dirty(cand, dirty_paths)
+                    hits |= _match_dirty(cand, dirty_paths, importing_file)
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
             level = node.level or 0
             base_cands = _resolve_module(repo_root, importing_file, module, level)
             for cand in base_cands:
-                hits |= _match_dirty(cand, dirty_paths)
+                hits |= _match_dirty(cand, dirty_paths, importing_file)
             # Also try resolving each `from x import name` where `name` is a submodule
             # path: `from x import y` could mean `x/y.py` even if x.py exists.
             for alias in node.names:
                 full = f"{module}.{alias.name}" if module else alias.name
                 for cand in _resolve_module(repo_root, importing_file, full, level):
-                    hits |= _match_dirty(cand, dirty_paths)
+                    hits |= _match_dirty(cand, dirty_paths, importing_file)
     return hits
 
 

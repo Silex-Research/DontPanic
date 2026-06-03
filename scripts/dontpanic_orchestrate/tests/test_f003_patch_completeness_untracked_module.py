@@ -158,3 +158,30 @@ def test_suffix_match_does_not_overreach_on_single_name_import() -> None:
         assert unrelated not in flagged, (
             f"single-segment import must not suffix-match unrelated file: {flagged}"
         )
+
+
+def test_nonimportable_mirror_prefix_does_not_match() -> None:
+    """Codex batched-audit i0 finding (D006): a bare endswith suffix test would
+    match an unrelated untracked MIRROR whose prefix is NOT an importable source
+    root — e.g. docs/generated/dontpanic_orchestrate/plan_review/sizing_gate.py
+    shares the imported candidate's tail. The prefix must be an ANCESTOR of the
+    importer (scripts/...) to match; docs/generated is not, so the mirror is NOT
+    flagged (acceptance #3/#4: no flagging of unrelated untracked output)."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        consumer_rel = "scripts/dontpanic_orchestrate/plan_review/report.py"
+        real_module = "scripts/dontpanic_orchestrate/plan_review/sizing_gate.py"
+        mirror = "docs/generated/dontpanic_orchestrate/plan_review/sizing_gate.py"
+        _write(root, consumer_rel,
+               "from dontpanic_orchestrate.plan_review.sizing_gate import evaluate_feature\n")
+        _write(root, real_module, "def evaluate_feature():\n    return None\n")
+        _write(root, mirror, "def evaluate_feature():\n    return None\n")
+        # Only the non-importable mirror is dirty; the real module is committed.
+        git_state = _git_state(untracked=[mirror], unstaged=[consumer_rel])
+        report = pc.check(git_state, root, touched_files={consumer_rel})
+
+        flagged = {f for fnd in report.findings for f in fnd.files}
+        assert mirror not in flagged, (
+            f"non-importable mirror prefix must NOT match the import: {flagged}"
+        )
+        assert report.status == "pass", report.to_dict()
