@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 
 from dontpanic_orchestrate.plan_review.lint import (
     Resolvers,
@@ -184,26 +185,79 @@ def _split_to_dict(split: SplitProposal | None) -> dict | None:
     }
 
 
+def _gather_codebase_vocabulary(package_dir: Path) -> tuple[frozenset[str], frozenset[str]]:
+    """Collect the real symbol + flag vocabulary the ``dontpanic_orchestrate``
+    package actually declares, by AST-walking its sources.
+
+    Returns ``(symbols, flags)``:
+
+      * ``symbols`` — every ``def`` / ``class`` name, module- and class-level
+        assignment target, and ``Literal[...]`` string member (so a feature
+        naming a real function like ``lint_feature`` or a declared taxonomy
+        value like ``over_surface`` resolves instead of false-flagging
+        ``missing_prereq``).
+      * ``flags`` — every ``--name`` string literal in the sources (catches CLI
+        flags the curated ``known_flags`` list hasn't caught up to, e.g.
+        ``--allow-oversize``).
+
+    This is the "resolve against what the system really declares" step. A token
+    that exists *nowhere* in the package still fails to resolve — so the F012
+    silent-prerequisite signal (a stale/undeclared capability) is preserved.
+    Tests directories are skipped so test-only helpers don't pollute the set.
+    """
+    import ast
+
+    symbols: set[str] = set()
+    flags: set[str] = set()
+    for path in package_dir.rglob("*.py"):
+        parts = set(path.parts)
+        if "__pycache__" in parts or "tests" in parts:
+            continue
+        try:
+            tree = ast.parse(path.read_text(), filename=str(path))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                symbols.add(node.name)
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                symbols.add(node.target.id)
+            elif isinstance(node, ast.Assign):
+                for tgt in node.targets:
+                    if isinstance(tgt, ast.Name):
+                        symbols.add(tgt.id)
+            elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "Literal":
+                for const in ast.walk(node.slice):
+                    if isinstance(const, ast.Constant) and isinstance(const.value, str):
+                        symbols.add(const.value)
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                if node.value.startswith("--") and len(node.value) > 2:
+                    flags.add(node.value.split()[0])
+    return frozenset(symbols), frozenset(flags)
+
+
 def build_default_resolvers() -> Resolvers:
     """Wire the three real resolver sources F003 consults (lint.Resolvers doc).
 
-    NOT pure — it reads the live CLI grammar and the package module list, which
-    is exactly the "wire in the real sources" step the CLI layer performs once
+    NOT pure — it reads the live CLI grammar and the package sources, which is
+    exactly the "wire in the real sources" step the CLI layer performs once
     before the pure :func:`build_plan_scope_report` runs:
 
       * ``commands`` — the CLI subcommand vocabulary
         (:func:`command_validation.known_subcommands`).
       * ``flags`` — every flag the CLI declares
-        (:func:`command_validation.known_flags`).
-      * ``symbols`` — the ``dontpanic_orchestrate`` submodule names, so an AC
-        naming e.g. ``command_validation.validate_command_tokens`` resolves via
-        its module root (mirrors :meth:`Resolvers.resolves_symbol`).
+        (:func:`command_validation.known_flags`) plus any ``--name`` literal the
+        sources declare (so a freshly-added flag resolves before the curated
+        list catches up).
+      * ``symbols`` — the package's real declared vocabulary: module names plus
+        every ``def`` / ``class`` / constant / ``Literal`` member the sources
+        define (so an AC naming ``lint_feature`` or ``over_surface`` resolves
+        against the capability that really exists).
 
     A token an AC names that resolves against none of these stays a
-    ``missing_prereq`` block — the silent-prerequisite signal F001 scores for.
+    ``missing_prereq`` block — the silent-prerequisite signal F001 scores for
+    (the token genuinely exists nowhere in the system).
     """
-    from pathlib import Path
-
     from dontpanic_orchestrate import command_validation
 
     package_dir = Path(__file__).resolve().parents[1]
@@ -212,10 +266,11 @@ def build_default_resolvers() -> Resolvers:
         for path in package_dir.glob("*.py")
         if not path.stem.startswith("_")
     }
+    gathered_symbols, gathered_flags = _gather_codebase_vocabulary(package_dir)
     return Resolvers(
         commands=command_validation.known_subcommands(),
-        flags=command_validation.known_flags(),
-        symbols=frozenset(module_names),
+        flags=command_validation.known_flags() | gathered_flags,
+        symbols=frozenset(module_names) | gathered_symbols,
     )
 
 

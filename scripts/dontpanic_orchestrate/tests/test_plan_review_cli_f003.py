@@ -257,3 +257,40 @@ def test_dontpanic_prefixed_command_does_not_block_via_default_resolvers(tmp_pat
     ]
     assert missing == [], f"unexpected missing_prereq flags: {missing}"
     assert report.has_block() is False
+
+
+# ───────────── self-lint calibration (D013) — resolver vocabulary ───────────
+
+
+def test_self_lint_resolver_resolves_built_deliverable_symbols():
+    """D013 calibration: build_default_resolvers must resolve the plan's own
+    BUILT deliverables (real codebase symbols + flag-kind vocabulary), so the
+    plan-review plan stops false-flagging missing_prereq on symbols it defines.
+    """
+    from dontpanic_orchestrate.plan_review.report import build_default_resolvers
+
+    resolvers = build_default_resolvers()
+    for symbol in (
+        "lint_feature",      # F001 def
+        "propose_split",     # F002 def
+        "evaluate_feature",  # F007 def
+        "over_surface",      # FlagKind Literal value
+        "weak_test",
+        "exemplar_ac",
+        "missing_prereq",
+    ):
+        assert resolvers.resolves_symbol(symbol), symbol
+    assert resolvers.resolves_flag("--allow-oversize")  # F007 flag, not yet curated
+
+
+def test_self_lint_resolver_keeps_silent_prereq_signal_intact():
+    """F012 silent-prerequisite detection survives the broadening: a token that
+    exists NOWHERE in the package (a genuinely-absent / forward-referenced
+    capability) still fails to resolve and would flag missing_prereq.
+    """
+    from dontpanic_orchestrate.plan_review.report import build_default_resolvers
+
+    resolvers = build_default_resolvers()
+    assert not resolvers.resolves_symbol("totally_made_up_capability_xyz")
+    # Forward-refs to unbuilt plan-review features remain unresolved (honest):
+    assert not resolvers.resolves_symbol("cross_feature_edit")  # F008 (unbuilt)
