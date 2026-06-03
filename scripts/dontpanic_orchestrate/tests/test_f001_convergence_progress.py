@@ -16,6 +16,30 @@ breaker trips, even if some findings persist. This fixes convergence while
 preserving every existing breaker test (distinct-but-flat findings still trip
 no_progress; identical findings still trip diminishing_returns).
 
+──────────────────────────────────────────────────────────────────────────────
+Plan 2026-06-02-002 F001 (D003 — operator-confirmed 2026-06-02) SUPERSEDES the
+count-based carve-out above AND 2026-05-04-003 F003 AC#6's "distinct-but-flat
+findings trip no_progress" contract. New rule:
+
+    no_progress trips ONLY when no prior blocking-finding signature is resolved.
+
+Resolving one finding and exposing a new one (flat or even growing count,
+complete turnover) is PROGRESS and does NOT trip. New-finding churn — every
+prior signature persisting — still trips. The dogfood (plan-review F001-F007)
+showed the old distinct-but-flat rule was wrong for audit-driven convergence.
+
+SUBSUMPTION CONSEQUENCE (flagged for the batched codex audit): for sound-
+signature envelopes the no_progress trip condition (nothing resolved → every
+prior signature persists) is now a strict SUBSET of diminishing_returns'
+condition (non-empty signature intersection, non-decreasing), and the supervisor
+checks diminishing_returns FIRST. So `stopped_no_progress` is unreachable for
+signed findings — it is subsumed by `stopped_diminishing_returns`. no_progress
+remains independently reachable ONLY via the LEGACY VERDICT-STRING fallback,
+which D003 preserves unchanged: when any finding lacks usable issue text,
+``compute_audit_finding_signature`` returns None, the signature carve-out is
+skipped, and no_progress falls back to verdict-string equality. The
+``test_no_progress_fallback_*`` tests below pin that preserved path.
+
 Run: PYTHONPATH=scripts pytest \\
   scripts/dontpanic_orchestrate/tests/test_f001_convergence_progress.py
 """
@@ -161,13 +185,57 @@ def test_no_progress_envelope_shrinking_does_not_trip() -> None:
     assert tripped is False
 
 
-def test_no_progress_envelope_flat_count_still_trips() -> None:
-    """Flat finding count across rounds (same verdict, not shrinking) → no
-    progress → still trips, matching the existing distinct-findings contract
-    (plan 2026-05-04-003 F003 AC#6)."""
+def test_no_progress_complete_turnover_is_progress() -> None:
+    """Plan 2026-06-02-002 F001 (D003 — SUPERSEDES 2026-05-04-003 F003 AC#6).
+
+    Complete turnover at a flat count (prior {finding 0} -> current {finding 100})
+    means the prior blocking finding was RESOLVED and a new one exposed. The old
+    rule (AC#6) treated 'same count, different finding' as no-progress and
+    tripped — the dogfood (plan-review F001-F007) showed that is WRONG for
+    audit-driven convergence. New rule: no_progress trips ONLY when no prior
+    blocking-finding signature is resolved; here finding 0 is resolved, so this
+    is PROGRESS and must NOT trip.
+    """
     tripped, _ = cb.check_no_progress(
         _aud_env(1, issue_offset=0), _aud_env(1, issue_offset=100)
     )
+    assert tripped is False
+
+
+def test_no_progress_one_resolved_one_new_is_progress() -> None:
+    """{0,1} -> {1,2}: finding 0 resolved (absent), finding 2 new. A prior
+    signature was resolved -> progress -> must NOT trip (D003)."""
+    tripped, _ = cb.check_no_progress(
+        _aud_env(2, issue_offset=0), _aud_env(2, issue_offset=1)
+    )
+    assert tripped is False
+
+
+def test_no_progress_persist_plus_new_finding_trips() -> None:
+    """{0} -> {0,1}: finding 0 PERSISTS, finding 1 is new. NOTHING was resolved
+    -> new findings alone are not progress -> still trips (D003 acceptance #2)."""
+    tripped, _ = cb.check_no_progress(
+        _aud_env(1, issue_offset=0), _aud_env(2, issue_offset=0)
+    )
+    assert tripped is True
+
+
+def test_no_progress_reworded_identical_finding_trips() -> None:
+    """A finding reworded only in case/whitespace yields the SAME normalized
+    signature (compute_finding_signature normalizes), so nothing is resolved
+    -> trips (D003 acceptance #3: a reworded-but-identical finding is not
+    progress)."""
+    prior = {
+        "agent": "codex", "agent_role": "auditor", "audit_status": "needs_changes",
+        "findings": [{"severity": "high", "category": "correctness",
+                      "issue": "finding 0-aaaaaaa"}],
+    }
+    current = {
+        "agent": "codex", "agent_role": "auditor", "audit_status": "needs_changes",
+        "findings": [{"severity": "high", "category": "correctness",
+                      "issue": "  FINDING   0-AAAAAAA  "}],
+    }
+    tripped, _ = cb.check_no_progress(prior, current)
     assert tripped is True
 
 
@@ -175,3 +243,52 @@ def test_no_progress_envelope_identical_still_trips() -> None:
     """Identical finding set, same verdict → no progress → trips."""
     tripped, _ = cb.check_no_progress(_aud_env(2), _aud_env(2))
     assert tripped is True
+
+
+# ──────────────────────────────  D003 subsumption: legacy fallback path  ──────────────────────────────
+
+
+def _unsigned_env(n_findings: int, *, status: str = "needs_changes") -> dict:
+    """Auditor envelope whose findings carry NO usable issue text, so
+    compute_audit_finding_signature returns None and the D003 signature
+    carve-out is skipped — check_no_progress falls back to verdict-string
+    equality (the path D003 preserves)."""
+    return {
+        "agent": "codex", "agent_role": "auditor", "audit_status": status,
+        "findings": [
+            {"severity": "high", "category": "correctness", "issue": ""}
+            for _ in range(n_findings)
+        ],
+    }
+
+
+def test_no_progress_fallback_unsigned_findings_trips_on_verdict() -> None:
+    """D003 subsumption note: for sound-signature envelopes no_progress is
+    subsumed by diminishing_returns (nothing-resolved ⊂ non-empty-intersection,
+    and the supervisor checks DR first). no_progress stays independently
+    reachable ONLY via the legacy verdict-string fallback — when findings lack
+    usable issue text. Two identical needs_changes verdicts whose findings have
+    empty issue text MUST still trip no_progress via that preserved path."""
+    tripped, reason = cb.check_no_progress(_unsigned_env(1), _unsigned_env(1))
+    assert tripped is True
+    assert "needs_changes" in reason
+
+
+def test_no_progress_fallback_decreasing_unsigned_counts_still_trips() -> None:
+    """The fallback path is verdict-only: it ignores finding COUNT entirely.
+    Even with a strictly-decreasing unsigned count (2 → 1) — which keeps the
+    diminishing-returns count-fallback quiet — no_progress still trips on the
+    identical needs_changes verdict. This is the exact shape
+    TestPriorAudStatusCarryOver.test_timeout_with_work_round_does_not_advance_baseline
+    relies on to isolate no_progress under D003."""
+    tripped, _ = cb.check_no_progress(_unsigned_env(2), _unsigned_env(1))
+    assert tripped is True
+
+
+def test_no_progress_fallback_signed_off_does_not_trip() -> None:
+    """The preserved fallback keeps the signed_off / blocked exclusion: an
+    unsigned signed_off pair must not trip."""
+    tripped, _ = cb.check_no_progress(
+        _unsigned_env(1, status="signed_off"), _unsigned_env(1, status="signed_off")
+    )
+    assert tripped is False

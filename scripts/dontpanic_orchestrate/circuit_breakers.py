@@ -960,15 +960,19 @@ def check_no_progress(
     rather than ``stopped_no_progress`` because no-progress never trips on
     those rounds.
 
-    Plan 2026-05-30-002 F001 (D029 fix, Design B): ``prior_status`` and
-    ``current_status`` may now be auditor ENVELOPES (dicts) rather than bare
-    verdict strings. When both are envelopes with usable finding signatures,
-    a STRICTLY SHRINKING blocking-finding set across the window is PROGRESS and
-    does NOT trip — even when both verdicts are ``needs_changes`` and some
-    findings persist. A flat or growing finding count with the same verdict is
-    still no-progress and trips. When envelopes are absent or any finding lacks
-    usable issue text, the legacy verdict-string equality path is preserved
-    unchanged (distinct-but-flat findings still trip via that fallback).
+    Plan 2026-06-02-002 F001 (D003 — SUPERSEDES 2026-05-30-002 F001's count
+    carve-out AND 2026-05-04-003 F003 AC#6's distinct-but-flat contract):
+    ``prior_status`` / ``current_status`` may be auditor ENVELOPES (dicts). When
+    both are envelopes with usable finding signatures, a round makes PROGRESS
+    iff at least one prior-round blocking-finding signature is RESOLVED (absent
+    in the current round). The new rule: **no_progress trips only when no prior
+    blocking-finding signature is resolved.** Resolving one finding while a new
+    one is exposed (flat or growing count, complete turnover) is PROGRESS and
+    does NOT trip — the dogfood (plan-review F001-F007) showed the old
+    "distinct-but-flat findings trip" rule was wrong for audit-driven
+    convergence. New-finding churn alone (every prior finding persists) still
+    trips. When envelopes are absent or any finding lacks usable issue text, the
+    legacy verdict-string equality path is preserved unchanged.
     """
     if _envelope_is_timeout_with_work(current_impl_envelope):
         return False, ""
@@ -980,13 +984,23 @@ def check_no_progress(
         _envelope_verdict(current_status) if isinstance(current_status, dict) else current_status
     )
 
-    # Progress-aware carve-out: only when BOTH sides are envelopes with sound
-    # signatures. A strictly shrinking finding set is progress → never trips.
+    # Progress-aware carve-out (Plan 2026-06-02-002 F001, D003 — SUPERSEDES the
+    # count-based carve-out of 2026-05-30-002 F001 and the distinct-but-flat
+    # contract of 2026-05-04-003 F003 AC#6): only when BOTH sides are envelopes
+    # with sound signatures. A round makes PROGRESS iff at least one prior-round
+    # blocking-finding signature is RESOLVED (absent in the current round) —
+    # ``prior_sigs - current_sigs`` is non-empty. New rule: no_progress trips
+    # ONLY when no prior blocking-finding signature is resolved. Resolving one
+    # finding and exposing a new one (flat or even growing count) is progress;
+    # new-finding churn alone (every prior finding persists) still trips.
+    # Strictly-shrinking count is the special case where current ⊊ prior.
+    # New-finding *churn* (something resolved every round forever) is bounded by
+    # max_iterations / diminishing_returns, not by no_progress.
     if isinstance(prior_status, dict) and isinstance(current_status, dict):
         prior_sigs = _envelope_finding_signatures(prior_status)
         current_sigs = _envelope_finding_signatures(current_status)
         if prior_sigs is not None and current_sigs is not None:
-            if len(current_sigs) < len(prior_sigs):
+            if prior_sigs - current_sigs:
                 return False, ""
 
     if prior_verdict == current_verdict and current_verdict not in {"signed_off", "blocked"}:

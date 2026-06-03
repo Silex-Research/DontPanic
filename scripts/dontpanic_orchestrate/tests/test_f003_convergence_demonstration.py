@@ -13,10 +13,12 @@ signed_off). Before the F001 fix this tripped ``stopped_diminishing_returns``
 (verdict-string equality) at round 2. After the fix the strictly-shrinking
 finding set is recognized as progress, the volley reaches round 3, and signs off.
 
-The regression guard (``test_flat_distinct_findings_still_terminates``) proves the
-fix is surgical: a NON-shrinking volley (same count, different findings each
-round, verdict held at needs_changes) must STILL terminate at round 2 — the
-breakers are not blanket-disabled.
+The D003 guard (``test_complete_turnover_findings_run_as_progress``, Plan
+2026-06-02-002 F001) records the supersede: a complete-turnover volley (same
+count, fully distinct findings each round, verdict held at needs_changes) is now
+treated as PROGRESS — it no longer early-stops at round 2 the way the pre-D003
+rule did. Churn is bounded by diminishing_returns / max_iterations instead: once
+a finding SET repeats unchanged, diminishing_returns trips (here at round 4).
 
 Run: PYTHONPATH=scripts pytest \\
   scripts/dontpanic_orchestrate/tests/test_f003_convergence_demonstration.py -s
@@ -223,15 +225,38 @@ def test_shrinking_volley_converges_to_signed_off(capsys) -> None:
         )
 
 
-def test_flat_distinct_findings_still_terminates(capsys) -> None:
-    """Regression guard: a NON-shrinking volley — same count (2) but DISTINCT
-    findings each round, verdict held at needs_changes — must STILL terminate at
-    round 2. The F001 carve-out is for *shrinking* sets only; it must not blanket
-    -disable no_progress / diminishing_returns."""
+def test_complete_turnover_findings_run_as_progress(capsys) -> None:
+    """D003 supersede (Plan 2026-06-02-002 F001, operator-confirmed 2026-06-02)
+    of 2026-05-04-003 F003 AC#6 + 2026-05-30-002 F001's count carve-out.
+
+    A volley whose findings COMPLETELY TURN OVER each round (same count, fully
+    distinct issue text, verdict held at needs_changes) is now treated as
+    PROGRESS — each round resolves the prior round's blocking findings and
+    exposes new ones. The pre-D003 rule treated 'same count, different findings'
+    as no-progress and early-stopped at round 2; that is now WRONG for
+    audit-driven convergence. New rule: no_progress trips ONLY when no prior
+    blocking-finding signature is resolved. Complete-turnover churn does NOT
+    early-stop; it is bounded instead by diminishing_returns / max_iterations.
+
+    Here rounds 0/1/2 carry distinct finding sets (offset 0/100/200) — each is
+    progress, so no breaker trips at round 2. The forced script then repeats its
+    last envelope (offset 200) for every subsequent round, so rounds 2 & 3 carry
+    IDENTICAL signatures → diminishing_returns trips at round 4. The volley still
+    terminates; only the early no_progress stop is gone.
+
+    Subsumption note (flagged for the batched codex audit): under D003,
+    stopped_no_progress is unreachable for sound-signature envelopes — the
+    nothing-resolved condition is a strict subset of diminishing_returns, which
+    the supervisor checks first. no_progress remains reachable only via the
+    legacy verdict-string fallback (see test_no_progress_fallback_* in
+    test_f001_convergence_progress.py)."""
     with tempfile.TemporaryDirectory() as td:
         plan_dir = _make_plan(Path(td))
         _register_scripted()
         _disable_quota_gate()
+        # max_iterations=3 → iters 0..3 (range(cap+1)). Script offsets 0/100/200
+        # are distinct (progress); the 4th round repeats script[-1] (offset 200),
+        # so iters 2 & 3 carry identical signatures → diminishing_returns @ round 4.
         _patch_force_auditor_envelopes([
             ("needs_changes", _findings(2, issue_offset=0)),
             ("needs_changes", _findings(2, issue_offset=100)),
@@ -240,12 +265,15 @@ def test_flat_distinct_findings_still_terminates(capsys) -> None:
 
         result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=3)
 
-        print(f"\n[regression] flat-distinct volley → {result.final_status} @ round {result.rounds}")
-        assert result.final_status in {
-            "stopped_no_progress", "stopped_diminishing_returns",
-        }, f"flat-distinct findings must still terminate, got {result.final_status}"
-        assert result.rounds == 2, (
-            f"non-progress volley must stop at round 2, got {result.rounds}"
+        print(f"\n[D003] complete-turnover volley → {result.final_status} @ round {result.rounds}")
+        assert result.final_status == "stopped_diminishing_returns", (
+            f"complete-turnover churn must NOT early-stop at round 2 (D003); it "
+            f"terminates via diminishing_returns once a finding set repeats, got "
+            f"{result.final_status}"
+        )
+        assert result.rounds == 4, (
+            f"distinct rounds 0-2 are progress (no early stop); DR trips at the "
+            f"first repeated set (round 4), got {result.rounds}"
         )
 
 
