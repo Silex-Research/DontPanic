@@ -99,6 +99,45 @@ def test_completion_audit_blocks_before_executor_on_bad_caps(tmp_path, monkeypat
         )
 
 
+def test_completion_audit_bad_role_raises_config_not_ready_before_name_check(
+    tmp_path, monkeypatch
+):
+    """codex F009 audit i0: a bad ROLE at plan-close must surface the actionable
+    ConfigNotReady BEFORE the lower-level auditor-name validation and before the
+    paid executor. Driven through dispatch_completion_audit with valid caps so
+    only the role check fails."""
+    caps = _valid_caps(tmp_path)
+    plan_dir = tmp_path / "plan"
+    plan_dir.mkdir()
+
+    # Resolve a structurally-bad auditor (the D065 split-brain shape).
+    monkeypatch.setattr(
+        completion_dispatch,
+        "_resolve_auditor_or_translate_same_vendor",
+        lambda plan_dir, impl: "Codex-Auditor",
+    )
+
+    def _name_check_must_not_run(_a):
+        raise AssertionError("auditor-name validation ran before readiness gate")
+
+    monkeypatch.setattr(completion_dispatch, "_validate_auditor_name", _name_check_must_not_run)
+
+    def _executor_must_not_run(*a, **k):
+        raise AssertionError("paid executor reached despite invalid role")
+
+    monkeypatch.setattr(completion_dispatch, "_dispatch_via_executor", _executor_must_not_run)
+
+    with pytest.raises(completion_dispatch.ConfigNotReady) as exc:
+        completion_dispatch.dispatch_completion_audit(
+            plan_dir,
+            findings=[],
+            implementer_agent="claude",
+            dispatch=None,
+            caps_path=caps,
+        )
+    assert "Codex-Auditor" in str(exc.value)
+
+
 def test_completion_audit_proceeds_when_config_ready(tmp_path, monkeypatch):
     """A valid caps file + valid roles lets the audit reach the executor (the
     readiness gate did not raise)."""

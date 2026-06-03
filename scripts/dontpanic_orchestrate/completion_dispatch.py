@@ -726,9 +726,22 @@ def dispatch_completion_audit(
         raise CompletionDispatchError(f"plan_dir does not exist: {plan_dir}")
 
     auditor = _resolve_auditor_or_translate_same_vendor(plan_dir, implementer_agent)
+
+    _offline = _is_truthy_env(os.environ.get(_OFFLINE_ENV))
+    # Plan 2026-06-01-001 F009 — config-readiness pre-flight runs BEFORE the
+    # lower-level auditor-name validation on the real paid path, so a bad role
+    # (e.g. the D065 `Codex-Auditor` split-brain) surfaces the actionable
+    # ConfigNotReady (file/reason/remediation/dashboard) rather than the raw
+    # name-format CompletionDispatchError (codex F009 audit i0, acceptance
+    # #1/#2). Offline + the injected ``dispatch=`` test seam are not paid work
+    # and intentionally bypass the gate.
+    if dispatch is None and not _offline:
+        _assert_config_ready_for_completion(
+            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
+        )
     _validate_auditor_name(auditor)
 
-    if _is_truthy_env(os.environ.get(_OFFLINE_ENV)):
+    if _offline:
         return _emit_offline_envelope(plan_dir, auditor, iteration, implementer_agent)
 
     contract = _load_objective_contract(plan_dir)
@@ -739,16 +752,8 @@ def dispatch_completion_audit(
     if dispatch is not None:
         raw_response = dispatch(auditor, prompt)
     else:
-        # Plan 2026-06-01-001 F009 — config-readiness pre-flight before the
-        # real paid plan-close goal-completion audit (acceptance #1 names this
-        # site alongside dispatch). Validates quota caps AND the resolved role
-        # values; a malformed `{}` caps file (D039) or a bad role (D065) becomes
-        # a clean ConfigNotReady with a runnable remediation, never a raw schema
-        # crash mid-audit. The injected ``dispatch=`` test seam is NOT paid work
-        # and intentionally bypasses this gate.
-        _assert_config_ready_for_completion(
-            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
-        )
+        # Real paid path. Config-readiness was already enforced above (F009),
+        # before auditor-name validation.
         raw_response = _dispatch_via_executor(auditor, prompt, plan_dir=plan_dir)
 
     status, dispositions = _parse_audit_response(raw_response, findings)

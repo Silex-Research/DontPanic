@@ -1438,11 +1438,16 @@ def _emit_volley_terminal(
                 git_state_path = (
                     plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
                 )
+                # The dispatch DIFF is the git-state sidecar only (staged ∪
+                # unstaged_modified ∪ untracked). `affected_paths` is a plan
+                # DECLARATION, not what the patch actually touched, so it is
+                # deliberately NOT folded in here — including it would flag
+                # foreign-owned paths the dispatch never touched (codex F008
+                # audit i0, acceptance #2/#3 "diff touching").
                 touched: set[str] = set()
                 if git_state_path.is_file():
                     git_state = json.loads(git_state_path.read_text())
                     touched = cross_feature.touched_paths_from_git_state(git_state)
-                touched |= {str(p) for p in (affected_paths or [])}
             except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
                 print(
                     f"[volley] WARN: cross-feature edit detection skipped "

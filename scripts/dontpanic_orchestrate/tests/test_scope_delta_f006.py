@@ -177,3 +177,40 @@ def test_lossy_split_is_refused_naming_dropped_and_duplicated():
     assert report.is_blocked
     msg = sd.render_block_message(report)
     assert "F1" in msg and "lossy" in msg.lower()
+
+
+# ─────────────── codex F006 audit i0 follow-ups (post-audit fixes) ──────────
+
+
+def test_pure_add_is_classified_as_expand():
+    """A brand-new feature is a change and must be classified (acceptance #2);
+    it is an expand of the plan, not silently skipped."""
+    prior = [{"id": "F1", "description": "cli subcommand", "acceptance": "(1) runs"}]
+    current = prior + [
+        {"id": "F2", "description": "new cli feature", "acceptance": "(1) does X"}
+    ]
+    report = sd.review_scope_delta(prior, current)
+    add = next(d for d in report.deltas if d.feature_id == "F2")
+    assert add.kind == "expand"
+    assert add.evidence["new_feature"] is True
+
+
+def test_exemplar_added_is_not_frictionless_sharpen():
+    """Adding an exemplar AC (no new surface, no new AC count) is NOT a
+    frictionless sharpen — acceptance #5 grants that only with no exemplar."""
+    prior = [
+        {"id": "F1", "description": "cli subcommand", "acceptance": "(1) the command runs"}
+    ]
+    current = [
+        {
+            "id": "F1",
+            "description": "cli subcommand",
+            # same AC count + surface, but now an exemplar enumeration with no
+            # co-located universal -> exemplar_ac flag fires.
+            "acceptance": "(1) the command runs e.g. fast mode and slow mode",
+        }
+    ]
+    report = sd.review_scope_delta(prior, current)
+    delta = report.deltas[0]
+    assert delta.evidence["new_exemplar"] is True
+    assert delta.kind == "expand"  # NOT frictionless sharpen

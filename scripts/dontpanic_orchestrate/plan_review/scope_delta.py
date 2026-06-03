@@ -151,7 +151,11 @@ def _classify_modify(
     added_acs = cur_report.ac_count - prior_report.ac_count
     new_exemplar = _has_exemplar(cur_report) and not _has_exemplar(prior_report)
 
-    is_expand = bool(added_surfaces) or added_acs > 0
+    # A newly-introduced exemplar AC is a precision regression, so it is NOT a
+    # frictionless sharpen (acceptance #5 grants frictionless sharpen only when
+    # NO surface AND NO exemplar is added) — treat it as an expand (codex F006
+    # audit i0).
+    is_expand = bool(added_surfaces) or added_acs > 0 or new_exemplar
     evidence = {
         "added_surfaces": added_surfaces,
         "added_acs": added_acs,
@@ -161,13 +165,13 @@ def _classify_modify(
     }
 
     if not is_expand:
-        # sharpen — narrowed/concretised, no new surface, no added ACs.
+        # sharpen — narrowed/concretised, no new surface, no added ACs, no new exemplar.
         return ScopeDelta(
             feature_id=fid,
             kind="sharpen",
             refused=False,
             reason=(
-                f"{fid}: sharpen — no surface added, AC count "
+                f"{fid}: sharpen — no surface added, no exemplar added, AC count "
                 f"{prior_report.ac_count}→{cur_report.ac_count}; passes without friction."
             ),
             evidence=evidence,
@@ -181,23 +185,66 @@ def _classify_modify(
     if has_rationale:
         evidence["scope_change_rationale"] = rationale
 
+    delta_desc = (
+        f"added surfaces={added_surfaces or '∅'}, added ACs={added_acs}"
+        + (", new exemplar AC" if new_exemplar else "")
+    )
     refused = locked and crosses_budget and not has_rationale
     if refused:
         reason = (
             f"{fid}: expand REFUSED — a locked feature was pushed past the size "
-            f"budget (added surfaces={added_surfaces or '∅'}, added ACs={added_acs}). "
-            "Scope-change protocol: add a recorded rationale (>=8 chars) OR split "
-            "the feature before this expand can land."
+            f"budget ({delta_desc}). Scope-change protocol: add a recorded "
+            "rationale (>=8 chars) OR split the feature before this expand can land."
         )
     elif locked and crosses_budget and has_rationale:
         reason = (
             f"{fid}: expand allowed with recorded rationale despite crossing the "
-            f"size budget (added surfaces={added_surfaces or '∅'}, added ACs={added_acs})."
+            f"size budget ({delta_desc})."
+        )
+    else:
+        reason = f"{fid}: expand within budget ({delta_desc})."
+    return ScopeDelta(
+        feature_id=fid, kind="expand", refused=refused, reason=reason, evidence=evidence
+    )
+
+
+def _classify_add(
+    cur_feat: dict,
+    *,
+    locked: bool,
+    rationale: str | None,
+    resolvers: Resolvers | None,
+) -> ScopeDelta:
+    """Classify a brand-new feature (present in current, absent in prior, and
+    NOT a declared split child) as an ``expand`` — the plan's scope grew
+    (codex F006 audit i0: every change must be classified, not silently
+    skipped). Refusal follows the same budget rule as an in-place expand."""
+    fid = str(cur_feat.get("id") or "(unnamed)")
+    report = lint_feature(cur_feat, resolvers)
+    crosses_budget = _has_block_size_flag(report)
+    has_rationale = rationale is not None and len(rationale.strip()) >= MIN_REASON_LEN
+    evidence = {
+        "added_surfaces": list(report.surfaces),
+        "added_acs": report.ac_count,
+        "prior_ac_count": 0,
+        "current_ac_count": report.ac_count,
+        "new_feature": True,
+        "crosses_size_budget": crosses_budget,
+    }
+    if has_rationale:
+        evidence["scope_change_rationale"] = rationale
+    refused = locked and crosses_budget and not has_rationale
+    if refused:
+        reason = (
+            f"{fid}: new feature REFUSED — added to a locked plan and it exceeds "
+            f"the size budget ({report.ac_count} ACs across "
+            f"{', '.join(report.surfaces)}). Add a recorded rationale (>=8 chars) "
+            "or split it."
         )
     else:
         reason = (
-            f"{fid}: expand within budget (added surfaces={added_surfaces or '∅'}, "
-            f"added ACs={added_acs})."
+            f"{fid}: expand — new feature added to the plan "
+            f"({report.ac_count} AC(s), surfaces {', '.join(report.surfaces)})."
         )
     return ScopeDelta(
         feature_id=fid, kind="expand", refused=refused, reason=reason, evidence=evidence
@@ -301,19 +348,30 @@ def review_scope_delta(
             continue
         prior_feat = prior_map.get(fid)
         cur_feat = cur_map.get(fid)
-        if prior_feat is None or cur_feat is None:
-            # A pure add (child of a split is handled above) or a pure removal
-            # is not one of the three in-scope change classes; skip silently.
-            continue
-        deltas.append(
-            _classify_modify(
-                prior_feat,
-                cur_feat,
-                locked=fid in locked_ids,
-                rationale=rationales.get(fid),
-                resolvers=resolvers,
+        if prior_feat is not None and cur_feat is not None:
+            deltas.append(
+                _classify_modify(
+                    prior_feat,
+                    cur_feat,
+                    locked=fid in locked_ids,
+                    rationale=rationales.get(fid),
+                    resolvers=resolvers,
+                )
             )
-        )
+        elif cur_feat is not None:
+            # Pure ADD of a brand-new feature (split children are handled above
+            # and already in `handled`) — classify as an expand of the plan so
+            # every change is classified (acceptance #2; codex F006 audit i0).
+            deltas.append(
+                _classify_add(
+                    cur_feat,
+                    locked=fid in locked_ids,
+                    rationale=rationales.get(fid),
+                    resolvers=resolvers,
+                )
+            )
+        # else: pure REMOVAL — no current record to classify as
+        # sharpen/expand/split; surfaced via changed_feature_ids only.
 
     deltas.sort(key=lambda d: d.feature_id)
     return ScopeDeltaReport(deltas=tuple(deltas))
