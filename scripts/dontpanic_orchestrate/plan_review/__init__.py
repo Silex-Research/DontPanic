@@ -37,6 +37,13 @@ from dontpanic_orchestrate.plan_review.report import (
     build_plan_scope_report,
     render_text,
 )
+from dontpanic_orchestrate.plan_review.scope_delta import (
+    ChangeKind,
+    ScopeDelta,
+    ScopeDeltaReport,
+    changed_feature_ids,
+    review_scope_delta,
+)
 from dontpanic_orchestrate.plan_review.sizing_gate import (
     SIZE_FLAG_KINDS,
     SizingGateResult,
@@ -54,13 +61,18 @@ from dontpanic_orchestrate.plan_review.split import (
 __all__ = [
     "SIZE_FLAG_KINDS",
     "SURFACES",
+    "ChangeKind",
     "ChildFeature",
     "CrossFeatureEditError",
     "CrossFeatureFinding",
     "FeatureScopeReport",
     "FlagKind",
+    "ScopeDelta",
+    "ScopeDeltaReport",
+    "changed_feature_ids",
     "check_cross_feature_edit",
     "derive_ownership_map",
+    "review_scope_delta",
     "touched_paths_from_git_state",
     "PlanScopeReport",
     "Resolvers",
