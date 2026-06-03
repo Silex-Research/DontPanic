@@ -29,7 +29,7 @@
       "surfaces": ["dashboard", "cli", "agent-brief", "backend"],
       "acceptance_signals": [
         "ActionItem rejects an unvalidated exact_command at construction",
-        "no safe_command field exists anywhere"
+        "no safe_command field is added to ActionItem / the control-plane spine (pre-existing safe_command in config_inventory.py and skill_recommendation.py is out of scope and left untouched)"
       ]
     }
   ],
@@ -38,7 +38,7 @@
     "The plan-quality / readiness-gate recast (stays with 2026-06-01-001).",
     "The native desktop app-wrapper that owns the local-server lifecycle.",
     "Editing the locked flat operator/worker objective_contract of 2026-05-30-001 in place.",
-    "Adding a safe_command field — command safety stays exact_command + automatable."
+    "Adding a safe_command field to ActionItem — command safety stays exact_command + automatable. Pre-existing safe_command usage in config_inventory.py and skill_recommendation.py is a separate contract, out of scope, and not migrated here."
   ],
   "required_evidence": [
     "test_output: parametrized ActionItem-shape test across all producer paths (F001)",
@@ -48,5 +48,5 @@
     "log: full orchestrate test sweep green",
     "diff: ActionItem field additions and validation-boundary change"
   ],
-  "completion_test": "All three features pass with tests: ActionItem carries audience/dedupe_key/reversible/plain_consequence/dashboard_url with no safe_command, dedup keys on dedupe_key rather than id-prefix, command validation is enforced at the ActionItem boundary, agent status reports operator/worker/orchestrator as three independent booleans without any tree-governance code, and one parity test proves the same action renders consistently across dashboard, CLI/JSON, and agent-brief — with the full orchestrate sweep green."
+  "completion_test": "All three features pass with tests: ActionItem carries audience/dedupe_key/reversible/plain_consequence/dashboard_url with no safe_command on ActionItem, dedup keys on dedupe_key rather than id-prefix, command validation is enforced at the ActionItem boundary, agent status reports operator/worker/orchestrator as three independent booleans without any tree-governance code, and one parity test proves the same action renders consistently across dashboard, CLI/JSON, and agent-brief — with the full orchestrate sweep green."
 }

@@ -9,7 +9,7 @@ description: |
   only; no new execution, review, architecture, or configuration surfaces.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-05-24"
 goal_type: new_feature
 surfaces:

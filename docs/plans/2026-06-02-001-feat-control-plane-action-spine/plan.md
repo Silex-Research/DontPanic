@@ -3,7 +3,7 @@ id: 2026-06-02-001-feat-control-plane-action-spine
 title: Control-plane action spine — one ActionItem contract, honest agent roles, renderer parity
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-02"
 goal_type: new_feature
 description: >
@@ -42,6 +42,15 @@ links:
 ---
 
 # Control-plane action spine
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
+
+DontPanic-internal orchestration-engine plan. No external service setup is required.
 
 ## Problem / Motivation
 

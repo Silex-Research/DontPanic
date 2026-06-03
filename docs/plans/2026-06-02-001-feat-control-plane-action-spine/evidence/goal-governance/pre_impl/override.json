@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "CP-D006: critical safe_command over-claim FIXED in objective_contract; 8 acceptance-sharpening findings routed to operator-authorized implement->audit volley.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-03T21:21:56Z",
+  "plan_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:c05fcbf45d29d9f8723594636597f469a0b118baf152cdb3604ff3d9c3e97849",
+  "objective_contract_hash": "sha256:cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
+  "sufficiency_findings_hash": "sha256:2587dab69aa94fbc7c01698df6923d9933f90164a1952fce5b5cfd676527bf2d"
+}
