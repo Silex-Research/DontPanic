@@ -1,0 +1,54 @@
+{
+  "task_id": "2026-06-02-002-fix-orchestrator-convergence-and-close-friction",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Convergence-delta no_progress breaker. The no_progress breaker treats a round whose auditor findings CHANGE materially from the prior round as progress, not as a no-progress stall — extending the convergence-bugs-v2 Design B carve-out from strictly-shrinking finding COUNT to changing finding CONTENT. True no-progress (findings repeat materially unchanged across consecutive rounds) is preserved.",
+      "depends_on": [],
+      "passes": false,
+      "acceptance": "(1) check_no_progress does not trip when consecutive rounds carry distinct blocking findings (a different finding-content signature), even if the auditor verdict string is unchanged and the count is equal. (2) check_no_progress STILL trips when consecutive rounds carry the same blocking findings (a materially-unchanged finding-content signature). (3) The finding-content comparison reuses the existing per-finding signature (compute_audit_finding_signature) rather than the verdict string. (4) The strictly-shrinking-count carve-out from convergence-bugs-v2 (D003 Design B) is preserved unchanged. (5) Every existing circuit_breakers / supervisor convergence test stays green.",
+      "steps": [
+        "Red test first: a 2-round fixture where round N and N+1 carry DISTINCT blocking findings must NOT terminate no_progress; a fixture where they repeat unchanged MUST terminate.",
+        "Read circuit_breakers.check_no_progress, compute_audit_finding_signature, and the convergence-bugs-v2 Design B carve-out (2026-05-30-002 F001).",
+        "Make check_no_progress compute progress from the finding-content signature delta across rounds, not the verdict string.",
+        "Preserve the strictly-shrinking-count carve-out and the materially-unchanged path.",
+        "Run the full circuit_breakers + supervisor convergence test modules (local pytest)."
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 1,
+      "description": "First-class operator-finish close path. `dontpanic close` accepts honest terminal classes beyond stopped_no_progress — signed-off-adjacent (auditor signed off but a downstream gate blocked, e.g. patch-completeness on untracked files), staging-blocked, and operator-verified — closing them with a recorded, accurate signoff_reason instead of forcing a stopped_no_progress / breaker:no_progress pretence. Closing writes clear evidence and triggers no paid dispatch.",
+      "depends_on": [],
+      "passes": false,
+      "acceptance": "(1) `dontpanic close --operator-resolved --reason <class>` closes a feature whose terminal was a clean auditor signoff blocked only by a downstream gate, WITHOUT requiring breaker:no_progress to be active and WITHOUT recording the close as stopped_no_progress. (2) The signoff envelope's signoff_reason and the closeout memo record the actual terminal class (signed_off_adjacent / staging_blocked / operator_verified), not a no-progress pretence. (3) The close path performs no paid agent dispatch. (4) The existing stopped_no_progress close behavior is unchanged for that terminal class. (5) A red test asserts each new terminal class closes and writes evidence; a test asserts no executor/dispatch is invoked.",
+      "steps": [
+        "Red test first: a signed-off-adjacent terminal (signoff present, patch-completeness blocked, breaker:no_progress NOT active) closes via the CLI and writes an accurate signoff_reason.",
+        "Read the close CLI + closeout / signoff_writer + the breaker-active safety check.",
+        "Add the honest terminal classes + reasons; relax the breaker-active precondition for them while keeping the stopped_no_progress path intact.",
+        "Assert the close path invokes no executor (no paid dispatch).",
+        "Run the close / closeout / signoff test modules (local pytest)."
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 1,
+      "description": "Patch-completeness untracked-module gap. The patch-completeness gate surfaces an untracked IMPLEMENTATION module (e.g. a new plan_review/sizing_gate.py imported by the change) alongside an untracked test, so a fresh clone neither fails to run a test nor import-fails on a missing module — while continuing to ignore unrelated generated/runtime output (the standing onboarding-v0 noise) rather than reporting it broadly.",
+      "depends_on": [],
+      "passes": false,
+      "acceptance": "(1) When a dispatch adds an untracked test AND an untracked implementation module that the change imports, the gate surfaces BOTH (the F007 case where only the test was reported). (2) Unrelated untracked generated/runtime files (evidence/audit output, pre-existing noise outside the change's touched set) are NOT reported as completeness blockers. (3) The signal is scoped to the change's own touched/imported set, not a blanket untracked-file scan. (4) A red test reproduces the F007 untracked-module miss and asserts it is now surfaced; a negative test asserts unrelated runtime output is not flagged.",
+      "steps": [
+        "Red test first: a change adding an untracked module imported by the change is surfaced; an unrelated untracked runtime file is not.",
+        "Read patch_completeness_gate's untracked-file detection + how it scopes to the change.",
+        "Extend detection to the change's imported/implementation modules, scoped to the touched set.",
+        "Keep unrelated generated/runtime output out of the report.",
+        "Run the patch_completeness test module (local pytest)."
+      ]
+    }
+  ]
+}
