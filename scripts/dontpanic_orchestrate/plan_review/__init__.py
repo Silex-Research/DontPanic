@@ -13,6 +13,13 @@ proposer, F003 ``plan-review`` CLI, the lock/dispatch gates) build on it.
 
 from __future__ import annotations
 
+from dontpanic_orchestrate.plan_review.cross_feature import (
+    CrossFeatureEditError,
+    CrossFeatureFinding,
+    check_cross_feature_edit,
+    derive_ownership_map,
+    touched_paths_from_git_state,
+)
 from dontpanic_orchestrate.plan_review.lint import (
     SURFACES,
     FlagKind,
@@ -48,8 +55,13 @@ __all__ = [
     "SIZE_FLAG_KINDS",
     "SURFACES",
     "ChildFeature",
+    "CrossFeatureEditError",
+    "CrossFeatureFinding",
     "FeatureScopeReport",
     "FlagKind",
+    "check_cross_feature_edit",
+    "derive_ownership_map",
+    "touched_paths_from_git_state",
     "PlanScopeReport",
     "Resolvers",
     "ScopeFlag",

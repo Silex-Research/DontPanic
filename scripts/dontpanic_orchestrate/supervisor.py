@@ -57,6 +57,7 @@ from dontpanic_orchestrate.executors.base import (
     DispatchTask,
     _derive_permission_policy,
 )
+from dontpanic_orchestrate.plan_review import cross_feature
 
 QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
 SOFT_THRESHOLD_PERCENT = 90.0
@@ -1338,6 +1339,7 @@ def _emit_volley_terminal(
     agents_in_panel: list[str],
     allow_incomplete_patch_reason: str | None = None,
     unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
 ) -> VolleyResult:
     """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
     any volley terminal state. Returns the input result unchanged so callers
@@ -1423,6 +1425,40 @@ def _emit_volley_terminal(
                 unrelated_dirty_state_note=unrelated_dirty_state_note,
                 dry_run=False,
             )
+            # Plan 2026-06-01-001 F008 — cross-feature edit detection. Runs at
+            # patch-completeness on the signed_off terminal, alongside the F003
+            # patch gate. Additive + degrades-never-blocks on lint-infra failure
+            # (cannot load features / git-state) — mirrors the F004 pre-lock
+            # gate's D005 contract; only a genuine bleed
+            # (CrossFeatureEditError) blocks. The feature->owned-paths map is
+            # derived from the plan's own features; the diff surface is the F001
+            # git-state sidecar.
+            try:
+                feature_dicts = [f.model_dump() for f in loaded.features.features]
+                git_state_path = (
+                    plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
+                )
+                touched: set[str] = set()
+                if git_state_path.is_file():
+                    git_state = json.loads(git_state_path.read_text())
+                    touched = cross_feature.touched_paths_from_git_state(git_state)
+                touched |= {str(p) for p in (affected_paths or [])}
+            except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
+                print(
+                    f"[volley] WARN: cross-feature edit detection skipped "
+                    f"({exc!r}); detector did not run"
+                )
+                feature_dicts = None
+                touched = set()
+            if feature_dicts is not None and touched:
+                cross_feature.enforce(
+                    plan_dir,
+                    plan_id=loaded.plan_id,
+                    current_feature_id=feature_id,
+                    features=feature_dicts,
+                    touched_paths=touched,
+                    acknowledge_reason=cross_feature_ack_reason,
+                )
         try:
             signoff_writer.write_signoff(
                 plan_id=loaded.plan_id,
@@ -1467,6 +1503,7 @@ def dispatch_volley(
     allow_depth: int | None = None,
     allow_incomplete_patch_reason: str | None = None,
     unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
     direct_dispatch: bool = False,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
@@ -2480,6 +2517,8 @@ def dispatch_volley(
                         # _emit_volley_terminal's final_status check.
                         allow_incomplete_patch_reason=allow_incomplete_patch_reason,
                         unrelated_dirty_state_note=unrelated_dirty_state_note,
+                        # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement.
+                        cross_feature_ack_reason=cross_feature_ack_reason,
                     )
 
                 if aud_status == "blocked":

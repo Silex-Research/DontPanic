@@ -2224,6 +2224,21 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "evidence/plan-review/pre_dispatch/<feature>-oversize-override.json."
         ),
     )
+    # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement override.
+    # Reuses the >=8-char layer-A validator; the rationale lands in
+    # evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json.
+    parser.add_argument(
+        "--acknowledge-cross-feature",
+        type=_validate_patch_reason("--acknowledge-cross-feature"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Acknowledge a legitimate edit to files owned by another feature, "
+            "passing the patch-completeness cross-feature-edit gate. REASON "
+            "must be >=8 non-whitespace chars; lands verbatim in "
+            "evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Plan resolution. Distinct exit code (2) from the dispatch path so
@@ -2441,6 +2456,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             mode=args.mode,
             allow_incomplete_patch_reason=args.allow_incomplete_patch,
             unrelated_dirty_state_note=args.unrelated_dirty_state_note,
+            # Plan 2026-06-01-001 F008 — cross-feature-edit acknowledgement.
+            cross_feature_ack_reason=args.acknowledge_cross_feature,
             # Plan 2026-05-08-003 F002 — operator-initiated CLI dispatch
             # is the canonical "direct dispatch" surface that the narrow
             # pre_impl auto-clear targets.
