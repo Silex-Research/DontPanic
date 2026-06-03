@@ -930,6 +930,19 @@ def _plan_review_main(argv: list[str]) -> int:
     )
     parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
     parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--since",
+        metavar="REF_OR_PATH",
+        default=None,
+        help=(
+            "Plan 2026-06-01-001 F006 — run the mid-development scope-delta lint "
+            "against a PRIOR snapshot of this plan's features.json. Accepts a "
+            "git ref (e.g. HEAD) OR a path to a prior features.json. Classifies "
+            "each changed feature as sharpen/expand/split and exits non-zero "
+            "when the scope-change protocol refuses a change (budget-busting "
+            "expand on a locked feature, or a lossy split)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     from dontpanic_orchestrate.plan_review import report as plan_review_report
@@ -948,7 +961,92 @@ def _plan_review_main(argv: list[str]) -> int:
     else:
         print(plan_review_report.render_text(scope_report), end="")
 
-    return 1 if scope_report.has_block() else 0
+    exit_code = 1 if scope_report.has_block() else 0
+
+    # Plan 2026-06-01-001 F006 — scope-delta lint invoked here on a plan-artifact
+    # change (prior snapshot via --since). The concrete integration path proving
+    # review_scope_delta runs on a plan change (operator decision D019: first
+    # reachable wiring, minimal + bounded — no file watcher, no dashboard).
+    if args.since is not None:
+        delta_code = _run_scope_delta_review(
+            plan_dir, loaded, feature_dicts, since=args.since, fmt=args.format
+        )
+        exit_code = exit_code or delta_code
+
+    return exit_code
+
+
+def _load_prior_features(plan_dir: Path, since: str) -> list[dict]:
+    """Load a prior ``features.json`` for the F006 scope-delta lint. ``since`` is
+    either a path to a prior features.json OR a git ref (resolved via
+    ``git show <ref>:<repo-relative features.json>``). Returns ``[]`` when the
+    prior cannot be loaded (first snapshot / unknown ref) so the delta lint
+    reports no changes rather than erroring."""
+    candidate = Path(since)
+    if candidate.is_file():
+        try:
+            blob = json.loads(candidate.read_text())
+        except (OSError, json.JSONDecodeError):
+            return []
+        if isinstance(blob, list):
+            return list(blob)
+        return list(blob.get("features", []))
+    import subprocess  # noqa: PLC0415 — keep optional dependency local
+
+    features_path = plan_dir / "features.json"
+    try:
+        rel = subprocess.run(  # noqa: S603,S607
+            ["git", "-C", str(plan_dir), "ls-files", "--full-name", str(features_path)],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+        if not rel:
+            return []
+        out = subprocess.run(  # noqa: S603,S607
+            ["git", "-C", str(plan_dir), "show", f"{since}:{rel}"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if out.returncode != 0 or not out.stdout.strip():
+            return []
+        return list(json.loads(out.stdout).get("features", []))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _run_scope_delta_review(
+    plan_dir: Path,
+    loaded: plan_loader.LoadedPlan,
+    current_features: list[dict],
+    *,
+    since: str,
+    fmt: str,
+) -> int:
+    """F006 wiring helper: load the prior snapshot, run the changed-feature-only
+    scope-delta lint, render it, and return non-zero iff the scope-change
+    protocol refused a change. A LOCKED (active) plan treats all current
+    features as locked so a budget-busting expand is refused (acceptance #3)."""
+    from dontpanic_orchestrate.plan_review import scope_delta
+
+    prior_features = _load_prior_features(plan_dir, since)
+    status = getattr(getattr(loaded.plan, "status", None), "value", None) or str(
+        getattr(loaded.plan, "status", "")
+    )
+    locked_ids = (
+        {str(f.get("id")) for f in current_features if f.get("id")}
+        if status == "active"
+        else set()
+    )
+    report = scope_delta.review_scope_delta(
+        prior_features, current_features, locked_ids=locked_ids
+    )
+    if fmt == "json":
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(scope_delta.render_text(report), end="")
+    return 1 if report.is_blocked else 0
 
 
 def _close_main(argv: list[str]) -> int:
@@ -2596,6 +2694,87 @@ def _run_pre_lock_scope_gate(
     return None
 
 
+def _resolve_design_executor(plan_dir: Path):
+    """Best-effort: resolve the plan's goal_auditor and return its executor for
+    the F005 design-volley. Returns ``None`` (recommend, don't run) when no
+    auditor/executor can be resolved — so an opt-in lock never crashes on a
+    missing executor."""
+    try:
+        from dontpanic_orchestrate import completion_dispatch
+        from dontpanic_orchestrate.executors import get_executor
+
+        auditor = completion_dispatch._resolve_goal_auditor_agent(plan_dir)
+        executor = get_executor(auditor)
+        return executor if executor.is_available() else None
+    except Exception:  # noqa: BLE001 — best-effort; recommend instead of crash
+        return None
+
+
+def _run_pre_lock_design_volley(
+    plan_dir: Path,
+    *,
+    operator_requested: bool,
+    executor=None,
+    run_volley=None,
+) -> None:
+    """Plan 2026-06-01-001 F005 — opt-in design-review volley at pre_lock
+    (operator decision D019: minimal, bounded, advisory). Runs ONLY when the
+    F001 lint reports uncertainty (warn flags) OR the operator passes
+    ``--design-review``; never auto-runs on a clean plan. Advisory: prints the
+    verdict + findings; it does NOT block the lock (the F004 deterministic gate
+    owns blocking). Degrades-never-blocks. Tests inject ``executor`` +
+    ``run_volley`` so there is no live paid call."""
+    try:
+        from dontpanic_orchestrate.plan_review import (
+            design_review,
+        )
+        from dontpanic_orchestrate.plan_review import (
+            report as plan_review_report,
+        )
+
+        loaded = plan_loader.load(plan_dir)
+        feature_dicts = [f.model_dump() for f in loaded.features.features]
+        report = plan_review_report.build_plan_scope_report(
+            loaded.plan_id, feature_dicts, plan_review_report.build_default_resolvers()
+        )
+        if not design_review.should_run_design_volley(
+            report, operator_requested=operator_requested
+        ):
+            print(
+                "[plan lock] design-review: skipped (lint not uncertain, "
+                "--design-review not set)"
+            )
+            return
+        auditor = executor if executor is not None else _resolve_design_executor(plan_dir)
+        if auditor is None:
+            print(
+                "[plan lock] design-review: RECOMMENDED (lint uncertain or "
+                "requested) but no goal_auditor executor is available; re-run "
+                "after configuring roles.goal_auditor."
+            )
+            return
+        contract = None
+        contract_path = plan_dir / "objective_contract.json"
+        if contract_path.is_file():
+            try:
+                contract = json.loads(contract_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                contract = None
+        runner = run_volley if run_volley is not None else design_review.run_design_volley
+        envelope = runner(
+            loaded.plan_id,
+            feature_dicts,
+            auditor=auditor,
+            objective_contract=contract,
+            plan_dir=plan_dir,
+        )
+        print(f"[plan lock] design-review volley: verdict={envelope.verdict}")
+        for f in envelope.findings:
+            print(f"  [{f.kind}/{f.severity}] {f.feature_id}: {f.evidence}")
+    except Exception as exc:  # noqa: BLE001 — advisory; never block the lock
+        print(f"[plan lock] WARN: design-review volley skipped ({exc!r})")
+
+
 def _plan_lock_main(argv: list[str]) -> int:
     """``dontpanic plan lock`` — canonical lock-time entry point for Goal
     Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
@@ -2636,6 +2815,18 @@ def _plan_lock_main(argv: list[str]) -> int:
             "verbatim in the plan's decisions.jsonl."
         ),
     )
+    # Plan 2026-06-01-001 F005 — opt-in design-review volley at pre_lock.
+    parser.add_argument(
+        "--design-review",
+        action="store_true",
+        dest="design_review",
+        help=(
+            "Run the F005 design-review volley at lock (advisory red-team of the "
+            "feature decomposition). Opt-in: it also auto-runs when the F001 "
+            "lint reports uncertainty, but this flag forces it. Never blocks the "
+            "lock; prints the verdict + findings."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.override_reason is not None and not args.override_reason.strip():
@@ -2674,6 +2865,10 @@ def _plan_lock_main(argv: list[str]) -> int:
     gate_rc = _run_pre_lock_scope_gate(plan_dir, allow_oversize=args.allow_oversize)
     if gate_rc is not None:
         return gate_rc
+
+    # Plan 2026-06-01-001 F005 — opt-in design-review volley (advisory, never
+    # blocks the lock). Runs on lint uncertainty OR --design-review.
+    _run_pre_lock_design_volley(plan_dir, operator_requested=args.design_review)
 
     try:
         plan_md = sufficiency_gate.lock_plan(

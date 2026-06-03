@@ -377,6 +377,24 @@ def review_scope_delta(
     return ScopeDeltaReport(deltas=tuple(deltas))
 
 
+def render_text(report: ScopeDeltaReport) -> str:
+    """Human-readable scope-delta report: one line per classified change, with
+    refusals flagged. Empty (no deltas) renders a single 'no scope changes'
+    line. Used by ``dontpanic plan-review --since`` (F006 wiring)."""
+    if not report.deltas:
+        return "[scope-delta] no scope changes vs the prior plan snapshot.\n"
+    lines = ["[scope-delta] changes vs the prior plan snapshot:"]
+    for d in report.deltas:
+        marker = "REFUSED" if d.refused else "ok"
+        lines.append(f"  [{d.kind}/{marker}] {d.reason}")
+    if report.is_blocked:
+        lines.append(
+            f"  → {len(report.refusals)} refusal(s) — the scope-change protocol "
+            "blocks this change set."
+        )
+    return "\n".join(lines) + "\n"
+
+
 def render_block_message(report: ScopeDeltaReport) -> str:
     """Refusal message naming every refused delta (the scope-change-protocol
     violations) — the budget-busting expands and the lossy splits."""
