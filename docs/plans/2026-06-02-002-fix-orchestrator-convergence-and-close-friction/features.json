@@ -40,7 +40,7 @@
       "phase": 1,
       "description": "Patch-completeness untracked-module gap. The patch-completeness gate surfaces an untracked IMPLEMENTATION module (e.g. a new plan_review/sizing_gate.py imported by the change) alongside an untracked test, so a fresh clone neither fails to run a test nor import-fails on a missing module — while continuing to ignore unrelated generated/runtime output (the standing onboarding-v0 noise) rather than reporting it broadly.",
       "depends_on": [],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) RELEVANCE is defined structurally: an untracked path is a completeness blocker IFF it is (a) within the dispatch's touched set OR (b) a first-party module imported by a file the dispatch adds or modifies — NOT a blanket untracked-file scan. (2) When a dispatch adds an untracked test AND an untracked implementation module imported by a changed file, the gate surfaces BOTH (the F007 sizing_gate.py case where only the test was reported). (3) Unrelated untracked generated/runtime output (evidence/audit artifacts, pre-existing noise outside the touched/imported set) is NOT reported as a completeness blocker. (4) A red test reproduces the F007 untracked-module miss and asserts it is surfaced; a negative test asserts an unrelated untracked runtime file (outside the touched/imported set) is NOT flagged.",
       "steps": [
         "Red test first: a change adding an untracked module imported by the change is surfaced; an unrelated untracked runtime file is not.",
