@@ -10,7 +10,7 @@ description: |
   any implementation round is spent.
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-01"
 goal_type: new_feature
 links:
