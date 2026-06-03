@@ -20,6 +20,13 @@ from dontpanic_orchestrate.plan_review.cross_feature import (
     derive_ownership_map,
     touched_paths_from_git_state,
 )
+from dontpanic_orchestrate.plan_review.design_review import (
+    DESIGN_TAXONOMY,
+    DesignFinding,
+    DesignVolleyEnvelope,
+    run_design_volley,
+    should_run_design_volley,
+)
 from dontpanic_orchestrate.plan_review.lint import (
     SURFACES,
     FlagKind,
@@ -61,10 +68,13 @@ from dontpanic_orchestrate.plan_review.split import (
 __all__ = [
     "SIZE_FLAG_KINDS",
     "SURFACES",
+    "DESIGN_TAXONOMY",
     "ChangeKind",
     "ChildFeature",
     "CrossFeatureEditError",
     "CrossFeatureFinding",
+    "DesignFinding",
+    "DesignVolleyEnvelope",
     "FeatureScopeReport",
     "FlagKind",
     "ScopeDelta",
@@ -73,6 +83,8 @@ __all__ = [
     "check_cross_feature_edit",
     "derive_ownership_map",
     "review_scope_delta",
+    "run_design_volley",
+    "should_run_design_volley",
     "touched_paths_from_git_state",
     "PlanScopeReport",
     "Resolvers",
