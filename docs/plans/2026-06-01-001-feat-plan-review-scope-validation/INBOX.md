@@ -659,3 +659,78 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-01-001-
 </details>
 
 ===
+---
+timestamp: 2026-06-03T12:09:57Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F004
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-03T12:09:57Z
+event: volley_start
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-06-03T12:19:57Z
+event: error
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F004
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-06-03T12:19:57Z
+event: plan_drift_detected
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F004
+drift_class: context_refresh
+changed_files: features.json
+budget_protected: True
+stage: before_auditor_call
+---
+
+Plan 2026-06-01-001-feat-plan-review-scope-validation: context-refresh drift in features.json — paused before the next paid call; redispatch with refreshed context.
+
+Stage: before_auditor_call
+Changed files: features.json
+Budget protected (paused before next paid call): True
+
+Changes:
+  - [context_refresh] features.F004: feature F004 changed (acceptance / depends_on / roles) — refresh context before next call
+
+===
+---
+timestamp: 2026-06-03T13:18:48Z
+event: feature_operator_resolved
+plan_id: 2026-06-01-001-feat-plan-review-scope-validation
+feature_id: F004
+reason_class: operator_verified
+---
+
+Operator closed feature F004 as operator_resolved (class=operator_verified).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-06-01-001-feat-plan-review-scope-validation.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

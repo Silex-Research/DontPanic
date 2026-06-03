@@ -38,3 +38,4 @@ taxonomy=[implementation_defect] blocking=True; recommended: Inspect the auditor
 Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_plan_review_sizing_gate_f007.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_plan_review_sizing_gate_f007.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
 
+| 2026-06-03T12:19:57Z | F004 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |

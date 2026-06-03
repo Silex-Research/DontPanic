@@ -2494,6 +2494,63 @@ def _plan_main(argv: list[str]) -> int:
     return 2
 
 
+def _run_pre_lock_scope_gate(
+    plan_dir: Path, *, allow_oversize: str | None
+) -> int | None:
+    """Plan 2026-06-01-001 F004 — pre-lock design gate.
+
+    Runs the F001 scope lint over every feature in the plan. Returns:
+
+      * ``3`` — the plan carries a block-severity scope flag and no
+        ``--allow-oversize`` override was supplied: prints the refusal message
+        naming the flags and refuses the lock (no status transition occurs).
+      * ``None`` — the lock may proceed. Either the plan is clean, or an
+        override was supplied (in which case the verbatim rationale is recorded
+        to the plan's ``decisions.jsonl`` first).
+    """
+    from dontpanic_orchestrate.plan_review import pre_lock_gate
+    from dontpanic_orchestrate.plan_review import report as plan_review_report
+
+    # Load + lint is wrapped: a lint-infrastructure failure (unloadable plan,
+    # resolver build error) must NEVER block the lock (D005 — the gate degrades
+    # gracefully and is additive). A genuine block-severity flag is the only
+    # thing that refuses; everything else proceeds with a one-line WARN.
+    try:
+        loaded = plan_loader.load(plan_dir)
+        feature_dicts = [f.model_dump() for f in loaded.features.features]
+        resolvers = plan_review_report.build_default_resolvers()
+        result = pre_lock_gate.evaluate_plan(loaded.plan_id, feature_dicts, resolvers)
+    except Exception as exc:  # noqa: BLE001 — degrade, never block on lint infra
+        print(
+            f"[plan lock] WARN: pre-lock design gate skipped ({exc!r}); "
+            "lint did not run — proceeding with the lock",
+            file=sys.stderr,
+        )
+        return None
+
+    if not result.is_blocked:
+        return None
+
+    if allow_oversize is None:
+        print(pre_lock_gate.render_block_message(result), file=sys.stderr)
+        return 3
+
+    # Override supplied: record the verbatim rationale to decisions.jsonl,
+    # then allow the lock to proceed.
+    decisions_path = pre_lock_gate.record_override(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        reason=allow_oversize,
+        result=result,
+    )
+    print(
+        "[plan lock] pre-lock design gate OVERRIDDEN (--allow-oversize); "
+        f"flags: {', '.join(result.flag_names())}"
+    )
+    print(f"[plan lock] override rationale recorded at {decisions_path}")
+    return None
+
+
 def _plan_lock_main(argv: list[str]) -> int:
     """``dontpanic plan lock`` — canonical lock-time entry point for Goal
     Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
@@ -2516,6 +2573,22 @@ def _plan_lock_main(argv: list[str]) -> int:
             "recorded reason. Writes evidence/goal-governance/pre_impl/"
             "override.json (durable but invalidated by changes to "
             "features.json / objective contract / sufficiency findings)."
+        ),
+    )
+    # Plan 2026-06-01-001 F004: pre-lock design gate operator override.
+    # Reuses the >=8-char layer-A validator the patch-completeness / sizing
+    # overrides use; the rationale lands verbatim in the plan's decisions.jsonl.
+    parser.add_argument(
+        "--allow-oversize",
+        type=_validate_patch_reason("--allow-oversize"),
+        default=None,
+        metavar="REASON",
+        dest="allow_oversize",
+        help=(
+            "Override the pre-lock design gate even when a feature carries a "
+            "block-severity scope flag (over_surface / over_ac / exemplar_ac / "
+            "missing_prereq). REASON must be >=8 non-whitespace chars; lands "
+            "verbatim in the plan's decisions.jsonl."
         ),
     )
     args = parser.parse_args(argv)
@@ -2547,6 +2620,15 @@ def _plan_lock_main(argv: list[str]) -> int:
     except Exception as exc:  # noqa: BLE001 — surfaced as REFUSED
         print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
         return 3
+
+    # Plan 2026-06-01-001 F004 — pre-lock design gate. Runs the F001 scope lint
+    # over every feature BEFORE the status flip; a block-severity scope flag
+    # refuses the lock unless --allow-oversize <reason> records a rationale in
+    # decisions.jsonl. Additive: the existing external_refs / requires_
+    # capabilities / sufficiency validation above and below is untouched.
+    gate_rc = _run_pre_lock_scope_gate(plan_dir, allow_oversize=args.allow_oversize)
+    if gate_rc is not None:
+        return gate_rc
 
     try:
         plan_md = sufficiency_gate.lock_plan(

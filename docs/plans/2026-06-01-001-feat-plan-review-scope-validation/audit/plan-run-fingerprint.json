@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-02T22:15:05Z",
+  "captured_at": "2026-06-03T12:09:57Z",
   "decision_lines": [
     "D001\u001f8a30f39d4b8a4340572ec64c5346ab8a516290eff9b37d91fb7b2007fcb43163",
     "D002\u001ff03b74219ef3d2793f0b873c70520f2e9474b1a6f668e4aa44acf553d037082c",
@@ -11,7 +11,9 @@
     "D008\u001f5406f2f7ab46d7cb9203374e6826eaca664b9361c4d270f378a7e9b715d144f8",
     "D009\u001f9d0fa7dd7ab0ba6e600900c0f9d7f1b0c7f0a52a2918e4d7547cca2cb89087ad",
     "D010\u001f89027ae97aaaa4bbcc99a785135b37aedd47c7f02b1b610eab4f02279be65bea",
-    "D011\u001fe3945e61f7e7430b6147e6a4af28514a9da1be25a313ff3eea34e61406554f6d"
+    "D011\u001fe3945e61f7e7430b6147e6a4af28514a9da1be25a313ff3eea34e61406554f6d",
+    "D012\u001f3b5e4a33fa22d5f820ee6c051fb8f651c3ddcd23c98b7d64173816422cefc66a",
+    "D013\u001fcd917d101c0401971102543efe132a47f9a5bfed213137b795fce22fc846efcb"
   ],
   "features_semantics": {
     "by_id": {
@@ -69,7 +71,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F008": {
         "acceptance": "(1) A feature->owned-paths ownership map is derived from the plan. (2) At patch-completeness, a diff touching paths owned by a different feature yields a block-severity `cross_feature_edit` finding naming the foreign feature and the paths. (3) A patch touching only its own feature's paths yields no such finding. (4) A legitimate shared-file edit can be acknowledged with a recorded rationale and then passes. (5) Tests reproduce the onboarding-v0 F008->F013 bleed and assert the finding fires, plus the clean and acknowledged cases.",
@@ -100,15 +102,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "e885d282701296ec07bcac2087140655cd791b23586affdf3c8bfe81c30120aa",
-    "decisions.jsonl": "b3662bdb8fa7c0d4d003053481dd6ce0105fb2f5246d004678ef56780363979e",
-    "features.json": "47e6035b8fb39ddfe28d4e2b52675b6cc16d42b21f747957775c1affcbd0a24c",
+    "decisions.jsonl": "45b0a284148697c9a461f313b96001c62b4130083de8ff175550e2e7e0201476",
+    "features.json": "d337e820f727e1480b235fb305060b7dea46c611c0262e7af8cbb50116143695",
     "objective_contract.json": "713030b2b2b5c1f4b6d77a47208c8eca4510eeea0238e84e560a19adc4b19eef",
     "plan.md": "bfca097623613ca98e29b110e58578978ee4ed094cea68ca38550bd9a997b624"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1780438464.6802917,
-    "decisions.jsonl": 1780437524.5970092,
-    "features.json": 1780437524.5967867,
+    "decisions.jsonl": 1780459195.5880287,
+    "features.json": 1780439517.2823215,
     "objective_contract.json": 1780428333.140978,
     "plan.md": 1780428526.252194
   },
