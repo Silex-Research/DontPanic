@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:gate_state_reconciliation_failed:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:gate_state_reconciliation_failed:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 gate state inconsistent",
       "updated_at": "2026-05-24T00:00:00Z"

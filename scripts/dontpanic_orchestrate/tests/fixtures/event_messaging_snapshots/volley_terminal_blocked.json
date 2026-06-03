@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Volley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Volley terminated after 3 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress",
       "updated_at": "2026-05-24T00:00:00Z"

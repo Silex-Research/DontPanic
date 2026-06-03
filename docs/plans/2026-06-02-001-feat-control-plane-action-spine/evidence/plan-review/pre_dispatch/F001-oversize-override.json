@@ -1,0 +1,25 @@
+{
+  "gate": "pre_dispatch_sizing",
+  "plan_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "feature_id": "F001",
+  "reason": "CP-D007: cohesive single-ActionItem-contract spine; missing_prereq flags are the symbols F001 introduces; max_iterations=2 is the 600s timeout backstop",
+  "surfaces": [
+    "dashboard",
+    "orchestration",
+    "validator"
+  ],
+  "ac_count": 1,
+  "overridden_flags": [
+    {
+      "kind": "over_surface",
+      "severity": "block",
+      "evidence": "surfaces: dashboard, orchestration, validator"
+    },
+    {
+      "kind": "likely_timeout",
+      "severity": "block",
+      "evidence": "3 surfaces x 1 ACs exceeds a single 600s dispatch"
+    }
+  ],
+  "recorded_at": "2026-06-03T21:40:55Z"
+}

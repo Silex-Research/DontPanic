@@ -16,23 +16,47 @@
         "Confirm no safe_command field is introduced anywhere."
       ],
       "acceptance": "A parametrized test loads ActionItems from all producer paths (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and asserts: (a) every item carries audience, dedupe_key, reversible, plain_consequence, dashboard_url; (b) no safe_command field exists and exact_command+automatable encode command safety; (c) dedupe_key is producer-set and dedup (merge_with_event_sidecar + fleet aggregation) keys on dedupe_key, not id-prefix; (d) ActionItem rejects an unvalidated exact_command at construction. Full orchestrate sweep stays green.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-03T21:40:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i2.json",
+          "note": "codex auditor signed_off (iter2)"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i2.json",
+          "note": "claude implementer final iteration"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_spine_f001.py",
+          "note": "F001 + operator_console/event_copy/dashboard_relevance suites: 119 passed"
+        }
+      ]
     },
     {
       "id": "F002",
       "category": "functional",
       "phase": 1,
-      "description": "Classify harnesses honestly as three INDEPENDENT capability booleans — can_operate (drives DontPanic), can_be_dispatched (worker), can_orchestrate (spawns sub-agents) — superseding the flat operator-vs-worker binary. Detection and reporting ONLY: no fan-out/tree governance, budget, or undo.",
+      "description": "Classify harnesses honestly as three INDEPENDENT capability booleans \u2014 can_operate (drives DontPanic), can_be_dispatched (worker), can_orchestrate (spawns sub-agents) \u2014 superseding the flat operator-vs-worker binary. Detection and reporting ONLY: no fan-out/tree governance, budget, or undo.",
       "steps": [
         "Replace the binary role read with a three-boolean capability struct; a harness may report any combination (Claude Code Workflow = all three; Grok = operate-only).",
         "Surface the three booleans in `agent status --json` and render the agent-brief wording 'can operate DontPanic but is not a dispatchable worker' from can_operate=true/can_be_dispatched=false.",
         "Preserve D002/D006: an unsupported agent is an operator, never a worker without a registered executor.",
         "Add a scope-guard: no orchestration-tree budget/breaker/undo code is introduced (the can_orchestrate flag is reported, not acted on)."
       ],
-      "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok → (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker → can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
+      "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok \u2192 (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker \u2192 can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
       "passes": false,
-      "depends_on": ["F001"]
+      "depends_on": [
+        "F001"
+      ]
     },
     {
       "id": "F003",
@@ -47,7 +71,10 @@
       ],
       "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
       "passes": false,
-      "depends_on": ["F001", "F002"]
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
     }
   ]
 }

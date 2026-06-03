@@ -949,6 +949,15 @@ def _load_project_what_now_items(
         }
         project_tag = project_name if source in scoped_sources else None
         display_tag = display_name if project_tag is not None else None
+        # Carry the control-plane spine fields (CP-D001/CP-D002) through the
+        # fleet projection so the fleet view renders the same one contract and
+        # dedups on the producer-set dedupe_key.
+        raw_audience = raw.get("audience")
+        audience = (
+            tuple(str(a) for a in raw_audience)
+            if isinstance(raw_audience, (list, tuple)) and raw_audience
+            else (operator_console.AUDIENCE_OPERATOR,)
+        )
         try:
             items.append(
                 operator_console.ActionItem(
@@ -964,6 +973,11 @@ def _load_project_what_now_items(
                     updated_at=str(raw.get("updated_at", "")),
                     project_name=project_tag,
                     display_name=display_tag,
+                    audience=audience,
+                    dedupe_key=str(raw.get("dedupe_key") or raw.get("id", "")),
+                    reversible=bool(raw.get("reversible", False)),
+                    plain_consequence=raw.get("plain_consequence"),
+                    dashboard_url=raw.get("dashboard_url"),
                 )
             )
         except (TypeError, ValueError):
@@ -1080,16 +1094,20 @@ def build_fleet_what_now(
             }
         )
 
-    # Coalesce by (project_name || "__global__", id). Two project sweeps
-    # may emit the same id (e.g. ``architecture:stale``) and we must keep
-    # both — collapsing on the bare id would drop project-scoped items
-    # whose id collides across the fleet. Within one project an id still
-    # round-trips through last-write-wins (matches operator_console.
-    # aggregate semantics).
+    # Coalesce by (project_name || "__global__", dedupe_key). Two project
+    # sweeps may emit the same dedupe_key (e.g. ``architecture:stale``) and we
+    # must keep both — collapsing on the bare key would drop project-scoped
+    # items whose key collides across the fleet. Within one project a
+    # dedupe_key still round-trips through last-write-wins (matches
+    # operator_console.aggregate semantics).
+    #
+    # Plan 2026-06-02-001 F001 (CP-D002): the dedup authority is the
+    # producer-set ``dedupe_key``, NOT the id-prefix. For current producers
+    # ``dedupe_key == id`` so the fleet grouping is unchanged.
     merged: dict[tuple[str, str], operator_console.ActionItem] = {}
     for it in all_items:
         scope_key = it.project_name or "__global__"
-        merged[(scope_key, it.id)] = it
+        merged[(scope_key, it.dedupe_key)] = it
     sorted_items = operator_console._sort(merged.values())  # noqa: SLF001
 
     payload: dict[str, Any] = {

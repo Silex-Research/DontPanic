@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:unit_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Quota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:unit_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Quota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota cap unit mismatch",
       "updated_at": "2026-05-24T00:00:00Z"

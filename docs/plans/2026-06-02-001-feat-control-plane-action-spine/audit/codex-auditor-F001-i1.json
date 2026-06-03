@@ -1,0 +1,57 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "audit_id": "2026-06-02-001-feat-control-plane-action-spine#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-03T22:05:54Z",
+  "completed_at": "2026-06-03T22:11:11Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-02-001-feat-control-plane-action-spine-t84r7cqw target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 248617 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2330780,
+    "tokens_out": 19887,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer’s structured target context is valid (`env=dev`, `project=null`) and `commands_run` is empty, so no forbidden command shapes were present.\n\nFINDING (high, test_coverage): Required validation is not evidenced. Evidence: implementer audit says `DISPATCH TIMED OUT after 600s`, `audit_status=blocked`, and `target_context.commands_run=[]`; my pytest attempts also could not start because the sandbox has no usable writable temp directory. Recommendation: rerun the acceptance test and full orchestrate sweep in an environment with writable temp space and attach the passing output.\n\nFINDING (medium, correctness): Some dashboard gatherers still pre-deduplicate by `id`, weakening `dedupe_key` as the identity authority. Evidence: `dashboard.py` uses `seen_ids` and `item.id` at lines 1039-1060 and 1077-1121 before final aggregation can see distinct `dedupe_key` values. Recommendation: switch those local seen sets to `dedupe_key` or remove the pre-dedup and rely on `operator_console.aggregate`.\n\nFINDING (low, documentation): `_VALID_SOURCES` documentation still says ActionItem ids are prefixed with valid sources, contradicting CP-D002’s opaque id-prefix rule and the intentional `operations:` id with `source=supervisor`. Evidence: `operator_console.py:147` vs operations items observed as `id` prefix `operations`, `source=supervisor`. Recommendation: update the comment/docstring to say `source` is closed whi",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest -q ../scripts/dontpanic_orchestrate/tests/test_action_spine_f001.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest -q ../scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py ../scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py ../scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate.tests import test_action_spine_f001 as t; items=t._all_producer_items(); print(len(items)); print([label for label, _ in items]); assert all(i.dedupe_key for _, i in items); assert all('safe_command' not in i.to_dict() for _, i in items)\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -c \"from dontpanic_orchestrate.tests import test_action_spine_f001 as t; t.test_aggregate_coalesces_on_dedupe_key(); print('aggregate ok')\"",
+      "git -C docs diff --check HEAD~1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F001",
+      "issue": "Required validation is not evidenced. Evidence: implementer audit says `DISPATCH TIMED OUT after 600s`, `audit_status=blocked`, and `target_context.commands_run=[]`; my pytest attempts also could not start because the sandbox has no usable writable temp directory. Recommendation: rerun the acceptance test and full orchestrate sweep in an environment with writable temp space and attach the passing output.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "Some dashboard gatherers still pre-deduplicate by `id`, weakening `dedupe_key` as the identity authority. Evidence: `dashboard.py` uses `seen_ids` and `item.id` at lines 1039-1060 and 1077-1121 before final aggregation can see distinct `dedupe_key` values. Recommendation: switch those local seen sets to `dedupe_key` or remove the pre-dedup and rely on `operator_console.aggregate`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "`_VALID_SOURCES` documentation still says ActionItem ids are prefixed with valid sources, contradicting CP-D002’s opaque id-prefix rule and the intentional `operations:` id with `source=supervisor`. Evidence: `operator_console.py:147` vs operations items observed as `id` prefix `operations`, `source=supervisor`. Recommendation: update the comment/docstring to say `source` is closed while `id` prefix is opaque. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts python -m pytest -q ../s",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

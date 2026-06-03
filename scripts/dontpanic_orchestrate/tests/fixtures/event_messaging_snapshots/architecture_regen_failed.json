@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "advisory",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:architecture_regen_failed:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "dontpanic architecture regen",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:architecture_regen_failed:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "System warning on 2026-05-24-004-feat-event-messaging-v1 \u2014 architecture map may be stale",
       "updated_at": "2026-05-24T00:00:00Z"

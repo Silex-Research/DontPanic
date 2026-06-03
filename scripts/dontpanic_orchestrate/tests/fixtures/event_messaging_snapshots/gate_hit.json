@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Approval needed on 2026-05-24-004-feat-event-messaging-v1",
       "updated_at": "2026-05-24T00:00:00Z"

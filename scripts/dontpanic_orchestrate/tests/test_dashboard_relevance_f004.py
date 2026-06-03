@@ -68,6 +68,7 @@ class TestRelevanceTable:
             human_required_reason="capability setup incomplete",
             evidence_uri=None,
             updated_at=_FIXED_ISO,
+            dedupe_key=f"capability:{capability_id}",
         )
 
     def _reconcile_item(self, kind: str) -> oc.ActionItem:
@@ -82,6 +83,7 @@ class TestRelevanceTable:
             human_required_reason="capability set diverged from baseline",
             evidence_uri=None,
             updated_at=_FIXED_ISO,
+            dedupe_key=f"reconcile:{kind}",
         )
 
     def test_row1_capability_relevant_when_declared(self) -> None:
@@ -155,6 +157,7 @@ class TestRelevanceTable:
             updated_at=_FIXED_ISO,
             project_name="alpha",
             display_name="Alpha",
+            dedupe_key="architecture:stale",
         )
         decl_alpha = rel.ProjectDeclarations(project_name="alpha")
         decl_beta = rel.ProjectDeclarations(project_name="beta")
@@ -312,6 +315,7 @@ class TestFilterItemsForProject:
                 updated_at=_FIXED_ISO,
                 project_name="alpha",
                 display_name="Alpha",
+                dedupe_key="gate:plan-a:pre_impl",
             ),
             # Project-scoped: beta's architecture
             oc.ActionItem(
@@ -327,6 +331,7 @@ class TestFilterItemsForProject:
                 updated_at=_FIXED_ISO,
                 project_name="beta",
                 display_name="Beta",
+                dedupe_key="architecture:stale",
             ),
             # Global doctor: python
             oc.ActionItem(
@@ -340,6 +345,7 @@ class TestFilterItemsForProject:
                 human_required_reason="capability setup incomplete",
                 evidence_uri=None,
                 updated_at=_FIXED_ISO,
+                dedupe_key="capability:python",
             ),
             # Global capability that only alpha declares
             oc.ActionItem(
@@ -353,6 +359,7 @@ class TestFilterItemsForProject:
                 human_required_reason="capability setup incomplete",
                 evidence_uri=None,
                 updated_at=_FIXED_ISO,
+                dedupe_key="capability:firebase-dashboard",
             ),
             # Reconcile (always universally relevant)
             oc.ActionItem(
@@ -366,6 +373,7 @@ class TestFilterItemsForProject:
                 human_required_reason="capability set diverged from baseline",
                 evidence_uri=None,
                 updated_at=_FIXED_ISO,
+                dedupe_key="reconcile:new_capabilities",
             ),
         ]
 

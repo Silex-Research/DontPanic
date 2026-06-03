@@ -144,7 +144,12 @@ _BAND_PRIORITY: dict[Band, int] = {
 }
 
 
-# Stable source vocabulary. ``id`` strings are prefixed with one of these.
+# Stable, CLOSED source vocabulary (CP-D002): ``source`` MUST be one of these.
+# The ``id`` prefix is OPAQUE and is NOT constrained to this set — e.g. an
+# operations-guidance item carries ``id`` prefix ``operations:`` while its
+# ``source`` is ``supervisor`` by design. Identity/dedup authority is the
+# producer-set ``dedupe_key``, never the id-prefix. Do not parse the id-prefix
+# to infer source.
 SOURCE_GATE = "gate"
 SOURCE_CAPABILITY = "capability"
 SOURCE_RECONCILE = "reconcile"
@@ -168,6 +173,79 @@ _SOURCE_PRIORITY: dict[str, int] = {
     SOURCE_SUPERVISOR: 3,
     SOURCE_ARCHITECTURE: 4,
 }
+
+
+# Plan 2026-06-02-001 F001 (CP-D001) — control-plane audience vocabulary.
+# ``audience`` declares WHO an ActionItem is for. The four roles are
+# independent capabilities, not a ranking: an item may target several at
+# once (e.g. a gate approval is for the human operator). Closed set —
+# adding a role is a deliberate edit, mirroring ``_VALID_SOURCES``.
+AUDIENCE_OPERATOR = "operator"
+AUDIENCE_WORKER = "worker"
+AUDIENCE_ORCHESTRATOR = "orchestrator"
+AUDIENCE_HUMAN = "human"
+
+_VALID_AUDIENCES: frozenset[str] = frozenset(
+    {
+        AUDIENCE_OPERATOR,
+        AUDIENCE_WORKER,
+        AUDIENCE_ORCHESTRATOR,
+        AUDIENCE_HUMAN,
+    }
+)
+
+
+def _validate_exact_command_or_raise(exact_command: str, *, item_id: str) -> None:
+    """Plan 2026-06-02-001 F001 (CP-D001) — boundary command validation.
+
+    Enforce the honest-commands rule (D008) at the ActionItem construction
+    boundary rather than only producer-side: any non-None ``exact_command``
+    must pass :func:`command_validation.validate_command_tokens`. Producers
+    that cannot determine a safe, validated command must emit
+    ``exact_command=None`` (and explanation-only copy) instead of a broken
+    copy-paste target.
+
+    The invocation prefixes ``dontpanic`` / ``python -m dontpanic_orchestrate``
+    are stripped before tokenizing, matching the renderer's contract
+    (event_copy._validate_exact_command). Raises ``ValueError`` on failure.
+    """
+    import shlex
+
+    from dontpanic_orchestrate import command_validation
+
+    stripped = exact_command.strip()
+    body = stripped
+    for prefix in ("python -m dontpanic_orchestrate ", "dontpanic "):
+        if body.startswith(prefix):
+            body = body[len(prefix) :]
+            break
+    try:
+        tokens = shlex.split(body)
+    except ValueError as exc:
+        raise ValueError(
+            f"ActionItem id={item_id!r} exact_command {exact_command!r} is not "
+            f"shell-parseable: {exc}"
+        ) from exc
+    result = command_validation.validate_command_tokens(tokens)
+    if not result.ok:
+        raise ValueError(
+            f"ActionItem id={item_id!r} exact_command {exact_command!r} failed "
+            f"command validation: {result.reason}"
+        )
+
+
+def _command_is_valid(exact_command: str) -> bool:
+    """Non-raising form of :func:`_validate_exact_command_or_raise`.
+
+    Producers use this to decide whether to emit a candidate command or fall
+    back to ``None`` (honest-commands rule) BEFORE construction, so a future /
+    unknown command shape never trips the boundary validator.
+    """
+    try:
+        _validate_exact_command_or_raise(exact_command, item_id="<candidate>")
+    except ValueError:
+        return False
+    return True
 
 
 @dataclasses.dataclass(frozen=True)
@@ -201,6 +279,33 @@ class ActionItem:
     updated_at: str
     project_name: str | None = None
     display_name: str | None = None
+    # Plan 2026-06-02-001 F001 (CP-D001) — control-plane spine fields. Additive
+    # over the durable F001 envelope so every surface (dashboard, CLI/JSON,
+    # agent-brief) renders one contract.
+    #   * ``audience``        — closed-set roles this item is FOR (see
+    #                           :data:`_VALID_AUDIENCES`). Defaults to
+    #                           ``(operator,)``; producers narrow/widen it.
+    #   * ``dedupe_key``      — the producer-set identity authority used for
+    #                           dedup (CP-D002). REQUIRED: construction rejects
+    #                           an empty value rather than silently aliasing it
+    #                           to ``id``, so "producer-set dedupe_key is the
+    #                           identity authority" is enforced, not assumed. The
+    #                           id-prefix is treated as opaque. Boundaries that
+    #                           rehydrate persisted entries (sidecar / fleet
+    #                           cache) supply ``entry["id"]`` as the explicit
+    #                           fallback for pre-field data before constructing.
+    #   * ``reversible``      — True iff taking the action is safe to undo /
+    #                           re-run (read-only or idempotent). Conservative
+    #                           default False.
+    #   * ``plain_consequence`` — one plain-language line a non-technical human
+    #                           can read for "what happens if I do this".
+    #   * ``dashboard_url``   — pointer to the live dashboard view for this item,
+    #                           populated at the render boundary (F003); None here.
+    audience: tuple[str, ...] = (AUDIENCE_OPERATOR,)
+    dedupe_key: str = ""
+    reversible: bool = False
+    plain_consequence: str | None = None
+    dashboard_url: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -219,6 +324,33 @@ class ActionItem:
             raise ValueError(
                 "ActionItem.human_required_reason is required when automatable=False"
             )
+        # CP-D001 audience: must be a non-empty tuple of known roles.
+        if not isinstance(self.audience, tuple):
+            object.__setattr__(self, "audience", tuple(self.audience))
+        if not self.audience:
+            raise ValueError("ActionItem.audience must name at least one role")
+        invalid = [a for a in self.audience if a not in _VALID_AUDIENCES]
+        if invalid:
+            raise ValueError(
+                f"ActionItem.audience members {invalid!r} not in "
+                f"{sorted(_VALID_AUDIENCES)}"
+            )
+        # CP-D002 dedupe_key: producer-set identity authority. REQUIRED — an
+        # empty value is rejected rather than silently aliased to ``id``, so the
+        # "producer-set dedupe_key is the identity authority" invariant is
+        # enforced at the boundary. Dedup keys on this, never on parsing the
+        # id-prefix. Rehydration boundaries (sidecar / fleet cache) pass
+        # ``entry["id"]`` as the explicit fallback for pre-field persisted data.
+        if not self.dedupe_key:
+            raise ValueError(
+                "ActionItem.dedupe_key is required and must be non-empty "
+                "(producer-set identity authority); pass dedupe_key explicitly"
+            )
+        # CP-D001 boundary command validation (D008 honest-commands): a non-None
+        # exact_command must pass token-shape validation. Producers that cannot
+        # determine a safe command must emit None instead of a broken target.
+        if self.exact_command is not None:
+            _validate_exact_command_or_raise(self.exact_command, item_id=self.id)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -234,6 +366,11 @@ class ActionItem:
             "updated_at": self.updated_at,
             "project_name": self.project_name,
             "display_name": self.display_name,
+            "audience": list(self.audience),
+            "dedupe_key": self.dedupe_key,
+            "reversible": self.reversible,
+            "plain_consequence": self.plain_consequence,
+            "dashboard_url": self.dashboard_url,
         }
 
 
@@ -284,9 +421,10 @@ def provide_gate_actions(
             detail_parts.append(f"kind={kind_val}")
         detail = "; ".join(detail_parts) or None
         command = f"dontpanic approve {plan_id} {gate_name}"
+        item_id = f"{SOURCE_GATE}:{plan_id}:{gate_name}"
         items.append(
             ActionItem(
-                id=f"{SOURCE_GATE}:{plan_id}:{gate_name}",
+                id=item_id,
                 source=SOURCE_GATE,
                 band=Band.NEEDS_ACTION,
                 title=title,
@@ -296,6 +434,12 @@ def provide_gate_actions(
                 human_required_reason="gate approval",
                 evidence_uri=evidence_uri,
                 updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR, AUDIENCE_HUMAN),
+                dedupe_key=item_id,
+                reversible=False,
+                plain_consequence=(
+                    f"Approving lets dispatch continue past the {gate_name} gate."
+                ),
             )
         )
     return _sort(items)
@@ -372,9 +516,10 @@ def provide_capability_actions(
 
         evidence_uri = str(cache_path) if cache_path is not None else None
 
+        cap_item_id = f"{SOURCE_CAPABILITY}:{cap_id}"
         items.append(
             ActionItem(
-                id=f"{SOURCE_CAPABILITY}:{cap_id}",
+                id=cap_item_id,
                 source=SOURCE_CAPABILITY,
                 band=band,
                 title=title,
@@ -384,6 +529,12 @@ def provide_capability_actions(
                 human_required_reason=reason,
                 evidence_uri=evidence_uri,
                 updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR, AUDIENCE_HUMAN),
+                dedupe_key=cap_item_id,
+                reversible=True,  # `capabilities status` is read-only
+                plain_consequence=(
+                    f"Shows the current status detail for capability {cap_id}."
+                ),
             )
         )
     return _sort(items)
@@ -469,12 +620,19 @@ def provide_reconcile_actions(
             # on ``id`` prefix.
             band = Band.ADVISORY
             title = f"Reconcile drift: {kind_str}"
-            command = next_commands[0] if next_commands else None
+            # CP-D001 honest-commands: a next_command from a future schema may
+            # not validate against the closed CLI vocabulary. Drop it to None
+            # rather than minting a broken copy-paste target that would also
+            # trip the ActionItem boundary validator.
+            command = None
+            if next_commands and _command_is_valid(str(next_commands[0])):
+                command = str(next_commands[0])
             reason = "unrecognized drift kind"
 
+        recon_item_id = f"{SOURCE_RECONCILE}:{kind_str}"
         items.append(
             ActionItem(
-                id=f"{SOURCE_RECONCILE}:{kind_str}",
+                id=recon_item_id,
                 source=SOURCE_RECONCILE,
                 band=band,
                 title=title,
@@ -484,6 +642,13 @@ def provide_reconcile_actions(
                 human_required_reason=reason,
                 evidence_uri=str(snapshot_path) if snapshot_path else None,
                 updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR, AUDIENCE_HUMAN),
+                dedupe_key=recon_item_id,
+                reversible=False,
+                plain_consequence=(
+                    "Re-baselines the install snapshot so drift detection is "
+                    "meaningful again."
+                ),
             )
         )
     return _sort(items)
@@ -518,9 +683,10 @@ def provide_supervisor_actions(
         if target_env:
             detail_parts.append(f"env={target_env}")
         detail = ", ".join(detail_parts) or None
+        sup_item_id = f"{SOURCE_SUPERVISOR}:{pid}:{plan_id}"
         items.append(
             ActionItem(
-                id=f"{SOURCE_SUPERVISOR}:{pid}:{plan_id}",
+                id=sup_item_id,
                 source=SOURCE_SUPERVISOR,
                 band=Band.INFO,
                 title=f"Supervisor active on {plan_id}",
@@ -530,6 +696,10 @@ def provide_supervisor_actions(
                 human_required_reason=None,
                 evidence_uri=None,
                 updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR,),
+                dedupe_key=sup_item_id,
+                reversible=True,  # `ps` is read-only
+                plain_consequence="Lists the running supervisor processes.",
             )
         )
     return _sort(items)
@@ -556,9 +726,10 @@ def provide_architecture_actions(
         title = "Architecture snapshot is missing"
     else:
         title = "Architecture snapshot is stale"
+    arch_item_id = f"{SOURCE_ARCHITECTURE}:{state}"
     return (
         ActionItem(
-            id=f"{SOURCE_ARCHITECTURE}:{state}",
+            id=arch_item_id,
             source=SOURCE_ARCHITECTURE,
             band=Band.ADVISORY,
             title=title,
@@ -568,6 +739,10 @@ def provide_architecture_actions(
             human_required_reason=None,
             evidence_uri=str(output_path) if output_path else None,
             updated_at=updated_at,
+            audience=(AUDIENCE_OPERATOR,),
+            dedupe_key=arch_item_id,
+            reversible=True,  # regen rebuilds a derived artifact; re-runnable
+            plain_consequence="Regenerates the architecture snapshot from the repo.",
         ),
     )
 
@@ -577,15 +752,19 @@ def provide_architecture_actions(
 
 def aggregate(*provider_outputs: Iterable[ActionItem]) -> tuple[ActionItem, ...]:
     """Merge ActionItems from multiple providers and apply deterministic
-    ordering. Duplicate ids are coalesced — last writer wins so a
-    caller that wants to override a provider entry can do so by passing
-    its tuple after the original.
+    ordering. Duplicate ``dedupe_key`` values are coalesced — last writer
+    wins so a caller that wants to override a provider entry can do so by
+    passing its tuple after the original.
+
+    Plan 2026-06-02-001 F001 (CP-D002): dedup keys on the producer-set
+    ``dedupe_key`` (the identity authority), NOT on parsing the id-prefix.
+    For current producers ``dedupe_key == id`` so ordering is unchanged.
     """
 
     merged: dict[str, ActionItem] = {}
     for outputs in provider_outputs:
         for item in outputs:
-            merged[item.id] = item
+            merged[item.dedupe_key] = item
     return _sort(merged.values())
 
 
@@ -730,6 +909,12 @@ def _rendered_to_action_item_dict(
         automatable = False
         human_reason = "operator action surfaced by dispatch_event"
 
+    # CP-D001 audience: an event surfaced by dispatch is for the operator;
+    # needs_action items additionally call for a human decision.
+    if automatable:
+        audience = [AUDIENCE_OPERATOR]
+    else:
+        audience = [AUDIENCE_OPERATOR, AUDIENCE_HUMAN]
     return {
         "id": item_id,
         "source": source,
@@ -743,6 +928,13 @@ def _rendered_to_action_item_dict(
         "updated_at": updated_at,
         "project_name": tech.get("target_project") if isinstance(tech, Mapping) else None,
         "display_name": None,
+        # CP-D001/CP-D002 control-plane spine fields. dedupe_key is the
+        # producer-set identity authority (== id for this producer).
+        "audience": audience,
+        "dedupe_key": item_id,
+        "reversible": False,
+        "plain_consequence": getattr(rendered, "detail", None),
+        "dashboard_url": None,
     }
 
 
@@ -812,6 +1004,12 @@ def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | Non
     try:
         band_str = entry.get("band") or "advisory"
         band = Band(band_str)
+        raw_audience = entry.get("audience")
+        audience = (
+            tuple(str(a) for a in raw_audience)
+            if isinstance(raw_audience, (list, tuple)) and raw_audience
+            else (AUDIENCE_OPERATOR,)
+        )
         return ActionItem(
             id=entry["id"],
             source=entry.get("source") or SOURCE_SUPERVISOR,
@@ -825,6 +1023,11 @@ def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | Non
             updated_at=entry.get("updated_at") or _now_iso(),
             project_name=entry.get("project_name"),
             display_name=entry.get("display_name"),
+            audience=audience,
+            dedupe_key=entry.get("dedupe_key") or entry["id"],
+            reversible=bool(entry.get("reversible", False)),
+            plain_consequence=entry.get("plain_consequence"),
+            dashboard_url=entry.get("dashboard_url"),
         )
     except (KeyError, ValueError, TypeError):
         return None
@@ -848,7 +1051,9 @@ def merge_with_event_sidecar(
     """
     target = sidecar_path if sidecar_path is not None else default_event_sidecar_path()
     provider_list = list(provider_items)
-    provider_ids = {item.id for item in provider_list}
+    # CP-D002: dedup on the producer-set dedupe_key (identity authority), not
+    # the id-prefix. Provider items win on conflict — the sidecar is advisory.
+    provider_keys = {item.dedupe_key for item in provider_list}
     if not target.is_file():
         return _sort(provider_list)
     sidecar_items: list[ActionItem] = []
@@ -869,12 +1074,12 @@ def merge_with_event_sidecar(
         item = _action_item_from_sidecar_dict(entry)
         if item is None:
             continue
-        if item.id in provider_ids:
+        if item.dedupe_key in provider_keys:
             # Provider items win on conflict — sidecar is advisory.
             continue
         # Dedupe within the sidecar itself (re-fires of the same event
         # append additional lines; keep the most recent).
-        sidecar_items = [si for si in sidecar_items if si.id != item.id]
+        sidecar_items = [si for si in sidecar_items if si.dedupe_key != item.dedupe_key]
         sidecar_items.append(item)
     return _sort(provider_list + sidecar_items)
 
@@ -951,6 +1156,10 @@ def _walk_strings(node: Any, path: tuple[Any, ...]):
 
 __all__ = [
     "ActionItem",
+    "AUDIENCE_HUMAN",
+    "AUDIENCE_OPERATOR",
+    "AUDIENCE_ORCHESTRATOR",
+    "AUDIENCE_WORKER",
     "Band",
     "CACHE_FILENAME",
     "CACHE_FILE_MODE",

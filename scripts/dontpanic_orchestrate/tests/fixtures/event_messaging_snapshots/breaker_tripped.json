@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped",
       "updated_at": "2026-05-24T00:00:00Z"

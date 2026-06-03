@@ -150,6 +150,14 @@ class DashboardAffordance:
                 human_required_reason="dashboard pointer",
                 evidence_uri=self.url,
                 updated_at=ts,
+                audience=(
+                    operator_console.AUDIENCE_OPERATOR,
+                    operator_console.AUDIENCE_HUMAN,
+                ),
+                dedupe_key=DASHBOARD_AFFORDANCE_ITEM_ID,
+                reversible=True,
+                plain_consequence="Open the running dashboard to act on these items.",
+                dashboard_url=self.url,
             )
         return operator_console.ActionItem(
             id=DASHBOARD_AFFORDANCE_ITEM_ID,
@@ -162,6 +170,10 @@ class DashboardAffordance:
             human_required_reason=None,
             evidence_uri=None,
             updated_at=ts,
+            audience=(operator_console.AUDIENCE_OPERATOR,),
+            dedupe_key=DASHBOARD_AFFORDANCE_ITEM_ID,
+            reversible=True,
+            plain_consequence="Starts the local dashboard server.",
         )
 
 
@@ -263,6 +275,15 @@ class Guidance:
                 item_id = f"operations:{self.plan_id}:{self.feature_id}:{choice.id}"
             else:
                 item_id = f"operations:{self.plan_id}:{choice.id}"
+            # CP-D001 audience: automatable choices target the operator; choices
+            # that require a human decision additionally carry the human role.
+            if automatable:
+                audience = (operator_console.AUDIENCE_OPERATOR,)
+            else:
+                audience = (
+                    operator_console.AUDIENCE_OPERATOR,
+                    operator_console.AUDIENCE_HUMAN,
+                )
             items.append(
                 operator_console.ActionItem(
                     id=item_id,
@@ -279,6 +300,13 @@ class Guidance:
                     human_required_reason=human_reason,
                     evidence_uri=None,
                     updated_at=ts,
+                    # CP-D002: operations-guidance items carry source=supervisor by
+                    # design (CP-D002); dedupe_key — not the operations: id-prefix —
+                    # is the identity authority. Set it explicitly to the item id.
+                    audience=audience,
+                    dedupe_key=item_id,
+                    reversible=False,
+                    plain_consequence=choice.rationale,
                 )
             )
         return items

@@ -1036,13 +1036,14 @@ def _gather_skill_recommendation_items(
     renders the SAME typed data the CLI prints. A plan whose skills are all ready
     yields no missing-input action and contributes nothing. Each plan is isolated in
     a try/except — a missing ``claude/skills`` dir or a malformed plan never sinks
-    the cache (advisory; never blocks core use). Items are de-duplicated by id.
+    the cache (advisory; never blocks core use). Items are de-duplicated on the
+    producer-set ``dedupe_key`` (CP-D002 identity authority), not the id-prefix.
     """
     from dontpanic_orchestrate import cli as _cli
     from dontpanic_orchestrate import skill_recommendation
 
     items: list[operator_console.ActionItem] = []
-    seen_ids: set[str] = set()
+    seen_keys: set[str] = set()
     for _plan_id, plan_dir in plan_dirs_by_id.items():
         try:
             skills_dir = _cli._resolve_skills_dir(plan_dir)
@@ -1055,9 +1056,9 @@ def _gather_skill_recommendation_items(
         except Exception:  # noqa: BLE001 — advisory surface, never sinks the cache
             continue
         for item in report_items:
-            if item.id in seen_ids:
+            if item.dedupe_key in seen_keys:
                 continue
-            seen_ids.add(item.id)
+            seen_keys.add(item.dedupe_key)
             items.append(item)
     return tuple(items)
 
@@ -1074,13 +1075,14 @@ def _gather_operations_items(
     in-flight feature) appears, not a hard-coded ``F001``. A plan/feature with no
     operational blockers yields no choices and contributes nothing. Each plan and
     feature is isolated in a try/except — a single malformed plan never sinks the
-    cache. Items are de-duplicated by id (a plan-level blocker that surfaces under
-    several features collapses to one ActionItem).
+    cache. Items are de-duplicated on the producer-set ``dedupe_key`` (CP-D002
+    identity authority), not the id-prefix (a plan-level blocker that surfaces
+    under several features collapses to one ActionItem).
     """
     from dontpanic_orchestrate import operations_guidance
 
     items: list[operator_console.ActionItem] = []
-    seen_ids: set[str] = set()
+    seen_keys: set[str] = set()
     # AC7d: when any guidance references the response-level dashboard affordance,
     # the affordance itself must be PRESENT in the cache (not just named in detail
     # text). Capture one affordance across all plans and append exactly one item.
@@ -1106,9 +1108,9 @@ def _gather_operations_items(
             except Exception:  # noqa: BLE001
                 continue
             for item in feature_items:
-                if item.id in seen_ids:
+                if item.dedupe_key in seen_keys:
                     continue
-                seen_ids.add(item.id)
+                seen_keys.add(item.dedupe_key)
                 items.append(item)
     # Append the single dashboard affordance item iff at least one operations
     # item referenced it (i.e. some choice required human input).
@@ -1117,8 +1119,8 @@ def _gather_operations_items(
             hint = affordance.to_action_item()
         except Exception:  # noqa: BLE001
             hint = None
-        if hint is not None and hint.id not in seen_ids:
-            seen_ids.add(hint.id)
+        if hint is not None and hint.dedupe_key not in seen_keys:
+            seen_keys.add(hint.dedupe_key)
             items.append(hint)
     return tuple(items)
 
