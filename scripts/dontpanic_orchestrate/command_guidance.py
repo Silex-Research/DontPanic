@@ -412,6 +412,8 @@ def root_help_agent_snippet() -> str:
             f"  dontpanic {cmd} brief       Generated operating brief — read this first.",
             f"  dontpanic {cmd} commands    Machine command guidance as stable JSON",
             "                               (class, risk, examples, predecessor hints).",
+            f"  dontpanic {cmd} guide       Version-matched local operating guide (offline",
+            "                               'start here'); `--path` prints its locator.",
             "  Inspect recommended actions (`next` / `what-now`) before mutating state",
             "  or dispatching paid work.",
         )
@@ -431,6 +433,16 @@ _CLASS_HELP_TITLE: dict[CommandClass, str] = {
 }
 
 
+def command_class_label(command_class: CommandClass) -> str:
+    """Human-readable label for a command class.
+
+    Shared by the F005 per-command help footer and the F006 local guide so the
+    class vocabulary is rendered from one closed table; a new class cannot ship
+    a help/guide label without a deliberate entry in ``_CLASS_HELP_TITLE``.
+    """
+    return _CLASS_HELP_TITLE[command_class]
+
+
 def command_help_agent_snippet(command: str) -> str:
     """Class-specific agent-guidance footer for a command's ``--help``.
 
@@ -448,7 +460,7 @@ def command_help_agent_snippet(command: str) -> str:
     stale snippet.
     """
     entry = command_guidance_by_command()[command]
-    title = _CLASS_HELP_TITLE[entry.command_class]
+    title = command_class_label(entry.command_class)
     lines = [f"Agent guidance ({title}):"]
     lines.extend(f"  - {hint}" for hint in entry.predecessor_hints)
     lines.append(f"  Human escalation: {entry.human_escalation_rule}")
@@ -511,6 +523,7 @@ __all__ = [
     "CommandExample",
     "CommandGuidance",
     "SCHEMA_VERSION",
+    "command_class_label",
     "command_guidance_by_command",
     "command_guidance_inventory",
     "inventory_public_payload",

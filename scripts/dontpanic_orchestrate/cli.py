@@ -4072,6 +4072,9 @@ subcommands:
   commands [--json]           Print the command-guidance inventory as a stable,
                               versioned JSON envelope (read-only; never runs a
                               guided command handler)
+  guide [--path|--write]      Print the version-matched local operating guide
+                              (offline 'start here'); --path prints its on-disk
+                              locator, --write materializes it under the home
   register-worker <name>      Assign a registered executor to a role (guarded —
                               refuses agents with no executor)
 
@@ -4086,7 +4089,7 @@ def _agent_main(argv: list[str]) -> int:
     emit setup guidance, and (guarded) register a worker role. None of these
     invoke a real agent CLI — they read the executor registry and config only.
     """
-    from dontpanic_orchestrate import agent_brief, agent_surface
+    from dontpanic_orchestrate import agent_brief, agent_guide, agent_surface
 
     if not argv or argv[0] in ("-h", "--help", "help"):
         # Bare `agent` is a teaching surface, not an error: print the brief so a
@@ -4187,6 +4190,41 @@ def _agent_main(argv: list[str]) -> int:
 
         payload = command_guidance.inventory_public_payload()
         print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+        return 0
+
+    if sub == "guide":
+        parser = argparse.ArgumentParser(prog="dontpanic agent guide", add_help=True)
+        locate = parser.add_mutually_exclusive_group()
+        locate.add_argument(
+            "--path",
+            action="store_true",
+            dest="as_path",
+            help="Print the on-disk guide locator path (<dontpanic_home>/"
+            f"{agent_guide.GUIDE_FILENAME}) instead of the guide body",
+        )
+        locate.add_argument(
+            "--write",
+            action="store_true",
+            dest="do_write",
+            help="Materialize the guide to the locator path and print where it "
+            "was written",
+        )
+        args = parser.parse_args(rest)
+        # Plan 2026-06-03-001 F006 — versioned local guide artifact. The guide is
+        # generated from the operating brief + the F002 command-guidance
+        # inventory (no second manual). Default prints the body; --path prints the
+        # locator (no write); --write materializes it under the DontPanic home.
+        from dontpanic_orchestrate import global_config
+
+        if args.do_write:
+            home = global_config.ensure_dontpanic_home()
+            written = agent_guide.write_guide(home)
+            print(str(written))
+            return 0
+        if args.as_path:
+            print(str(agent_guide.guide_path(global_config.dontpanic_home())))
+            return 0
+        print(agent_guide.render_guide().text, end="")
         return 0
 
     if sub == "register-worker":
@@ -4653,7 +4691,7 @@ Public-alpha command surface:
   project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
-  agent brief|status|setup|commands|register-worker  Machine agent surface (operator vs worker; `commands` = read-only JSON guidance)
+  agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan

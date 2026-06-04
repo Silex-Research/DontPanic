@@ -176,14 +176,30 @@
         "F002",
         "F003"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) A version-stamped local guide artifact exists and can be located or printed by an existing DontPanic surface. (2) The guide contains the start-here flow, role distinction, command classes, safe examples, local-decision handoff rule, and 'do not ask between features unless DontPanic requires human input' policy. (3) The guide is generated from or validated against the generated brief and command inventory. (4) Root help or the generated brief points to the guide locator. (5) Tests prove guide existence, required policy text, and command-inventory parity.",
       "steps": [
         "Choose a package path and locator that fit existing DontPanic surfaces.",
         "Create or generate the local guide artifact.",
         "Validate guide content against the inventory.",
         "Add tests for required policies and parity."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F006-i1.json",
+          "note": "signed_off auditor envelope (codex, iteration 1) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T14:54:57Z"
     },
     {
       "id": "F007",

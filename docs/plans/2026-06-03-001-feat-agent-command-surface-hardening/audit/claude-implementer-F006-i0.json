@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "audit_id": "2026-06-03-001-feat-agent-command-surface-hardening#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-04T14:37:45Z",
+  "completed_at": "2026-06-04T14:43:36Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-03-001-feat-agent-command-surface-hardening-jxjpfmub target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3313 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3764949,
+    "tokens_out": 25850,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-agent-command-surface\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F006] All checks pass (15 F006 tests + 55 guidance-surface tests + 392 agent/brief-related tests, all green). ruff isn't installed in this environment, so I relied on the test suite.\n\n## Summary\n\nI implemented **F006 (versioned local guide artifact)** for plan `2026-06-03-001`. The new module `scripts/dontpanic_orchestrate/agent_guide.py` renders a version-stamped (`GUIDE_VERSION` + runtime + brief-generator version) DontPanic operating guide that is *generated* — never a second hand-maintained manual: it embeds the live operating brief verbatim (role distinction, supported commands, canonical workflow) and projects the F002 command-guidance inventory into COMMAND CLASSES, one-SAFE-EXAMPLE-per-class, and a LOCAL DECISION HANDOFF section, plus a new canonical `NO_INTER_FEATURE_PROMPT_POLICY` (\"do not ask between features unless DontPanic requires human input\"). It's exposed through the existing agent surface as `dontpanic agent guide` (prints), `--path` (prints the `<dontpanic_home>/agent-guide.md` locator), and `--write` (materializes it); I also added a public `command_class_label()` helper to `command_guidance.py`, pointed the root-help \"Start here\" snippet at the guide locator, and updated the `agent`/usage listings. The 15-test TDD suite (`test_f006_agent_guide.py`) proves guide existence, version-stamping, deterministic rendering, every required policy/section, brief+inventory parity (rendered examples must be real inventory argv; the guide changes when the inventory grows), t",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m dontpanic_orchestrate agent guide --write   # (DONTPANIC_HOME=<tmpdir>, smoke test only)"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}
