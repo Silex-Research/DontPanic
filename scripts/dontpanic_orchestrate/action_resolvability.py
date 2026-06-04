@@ -138,6 +138,35 @@ def evaluate_clears_when(
     return bool(fn(clears_when.params, live_state))
 
 
+# ── F002 suppress-at-source ───────────────────────────────────────────────────
+def suppress_resolved(
+    items: "tuple[Any, ...] | list[Any]", live_state: Mapping[str, Any]
+) -> "tuple[tuple[Any, ...], tuple[dict[str, Any], ...]]":
+    """Drop every item whose ``clears_when`` is already satisfied against
+    *live_state* (D002.2 suppress-at-source). Returns ``(kept, audit)`` where
+    ``audit`` records each suppression ``{id, dedupe_key, predicate}`` for
+    debuggability — a suppressed card was provably resolved, not hidden.
+
+    Items with ``clears_when is None`` are always kept (they declare no
+    resolution predicate, so recompute cannot prove them resolved).
+    """
+    kept: list[Any] = []
+    audit: list[dict[str, Any]] = []
+    for it in items:
+        cw = getattr(it, "clears_when", None)
+        if cw is not None and evaluate_clears_when(cw, live_state):
+            audit.append(
+                {
+                    "id": getattr(it, "id", None),
+                    "dedupe_key": getattr(it, "dedupe_key", None),
+                    "predicate": cw.predicate,
+                }
+            )
+            continue
+        kept.append(it)
+    return tuple(kept), tuple(audit)
+
+
 # ── seed predicates (mechanism proof; F002/F003/F004 wire live assembly) ──────
 @register_predicate("gate_no_longer_actionable")
 def _gate_no_longer_actionable(

@@ -66,6 +66,7 @@ from dontpanic_orchestrate import (
     state_projection,
 )
 from dontpanic_orchestrate import gate_pause as _gp
+from dontpanic_orchestrate import action_resolvability as _ar
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 0  # 0 = pick a free ephemeral port; tests rely on this
@@ -968,6 +969,11 @@ def _gather_action_items(
     # the same set state_projection does.
     gate_inputs: list[Any] = []
     plan_dirs_by_id: dict[str, Path] = {}
+    # F002 LiveState inputs: plan lifecycle status + cleared gates, captured for
+    # EVERY loaded plan (incl. completed/abandoned), so clears_when predicates can
+    # suppress resolved/phantom items at source.
+    plan_status_by_id: dict[str, str | None] = {}
+    cleared_gates_by_id: dict[str, list[str]] = {}
     if plans_root.exists() and plans_root.is_dir():
         for child in sorted(plans_root.iterdir()):
             if not (child.is_dir() and (child / "plan.md").is_file()):
@@ -979,10 +985,14 @@ def _gather_action_items(
             except Exception:  # noqa: BLE001, S112 — malformed plan dirs skipped silently for dashboard
                 continue
             plan_dirs_by_id[loaded.plan_id] = loaded.plan_dir
+            plan_status_by_id[loaded.plan_id] = getattr(loaded.plan, "status", None)
             declared = list(loaded.plan.human_gates or [])
             if not declared:
                 continue
             unmet = _gp.unmet_gates(loaded.plan_dir, declared)
+            cleared_gates_by_id[loaded.plan_id] = [
+                g for g in declared if g not in unmet
+            ]
             for gate_name in unmet:
                 gate_inputs.append(
                     _GateView(
@@ -1020,7 +1030,7 @@ def _gather_action_items(
         plan_dirs_by_id, project_name=project_name
     )
 
-    return operator_console.aggregate(
+    aggregated = operator_console.aggregate(
         gate_items,
         capability_items,
         reconcile_items,
@@ -1029,6 +1039,15 @@ def _gather_action_items(
         operations_items,
         skill_items,
     )
+    # F002 suppress-at-source: drop any item whose clears_when is already
+    # satisfied against live state. Items with clears_when=None are kept
+    # unchanged, so this is a no-op until emitters opt in (F003 wires gates).
+    live_state = {
+        "plan_status": plan_status_by_id,
+        "cleared_gates": cleared_gates_by_id,
+    }
+    kept, _suppressed = _ar.suppress_resolved(aggregated, live_state)
+    return kept
 
 
 def _gather_skill_recommendation_items(

@@ -50,9 +50,33 @@
         "Tests: an already-satisfied condition yields no item; a global predicate evaluates with no project capabilities/ dir present; re-running the producer after the condition flips drops the item"
       ],
       "acceptance": "State production assembles one LiveState snapshot and emits an ActionItem only when its clears_when is false (SUPPRESS-AT-SOURCE), recording an audit note for each suppression; global predicates evaluate at fleet scope regardless of per-project dirs; re-running after a condition resolves drops the item. Verified by tests including the no-project-capabilities-dir global case + a suppression-audit assertion.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-04T22:21:08Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/action_resolvability.py",
+          "note": "suppress_resolved(items, live_state) -> (kept, audit): drops items whose clears_when evaluates True; None clears_when always kept; per-suppression audit {id, dedupe_key, predicate}"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "_gather_action_items routes operator_console.aggregate(...) through _ar.suppress_resolved with one fleet LiveState (plan_status + cleared_gates captured during the plan walk) — single evaluate-and-filter seam at the state producer"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_resolvability_f002.py",
+          "note": "suppress drops satisfied / keeps unsatisfied+None; audit recorded; abandoned-plan gate suppressed; global predicate (install_snapshot_fresh) evaluates with no per-project capabilities/ dir"
+        },
+        {
+          "type": "test_output",
+          "uri": "full orchestrate sweep",
+          "note": "3758 passed, 7 skipped in 204.48s — F002's change to the live state producer (dashboard.py) breaks nothing"
+        }
       ]
     },
     {
