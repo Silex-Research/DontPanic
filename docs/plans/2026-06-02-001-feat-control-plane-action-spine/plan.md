@@ -3,7 +3,7 @@ id: 2026-06-02-001-feat-control-plane-action-spine
 title: Control-plane action spine — one ActionItem contract, honest agent roles, renderer parity
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-02"
 goal_type: new_feature
 description: >
