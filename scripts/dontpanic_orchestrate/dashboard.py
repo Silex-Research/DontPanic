@@ -985,13 +985,24 @@ def _gather_action_items(
             except Exception:  # noqa: BLE001, S112 — malformed plan dirs skipped silently for dashboard
                 continue
             plan_dirs_by_id[loaded.plan_id] = loaded.plan_dir
-            plan_status_by_id[loaded.plan_id] = getattr(loaded.plan, "status", None)
+            # Coerce enum-valued status/gates to plain strings so clears_when
+            # predicates (which compare against string status/gate sets) match.
+            # plan_loader returns Status/HumanGate enums; leaking them into
+            # live_state would make `Status.active not in {"active", ...}` True
+            # and wrongly suppress live plans' gate cards.
+            _status = getattr(loaded.plan, "status", None)
+            plan_status_by_id[loaded.plan_id] = (
+                _status.value if hasattr(_status, "value") else _status
+            )
             declared = list(loaded.plan.human_gates or [])
             if not declared:
                 continue
             unmet = _gp.unmet_gates(loaded.plan_dir, declared)
+            unmet_set = set(unmet)
             cleared_gates_by_id[loaded.plan_id] = [
-                g for g in declared if g not in unmet
+                (g.value if hasattr(g, "value") else str(g))
+                for g in declared
+                if (g.value if hasattr(g, "value") else str(g)) not in unmet_set
             ]
             for gate_name in unmet:
                 gate_inputs.append(

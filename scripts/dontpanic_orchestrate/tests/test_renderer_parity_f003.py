@@ -261,12 +261,20 @@ def test_dashboard_build_writes_what_now_through_the_render_boundary(
     )
 
     written = (out_dir / "what-now.json").read_text(encoding="utf-8")
+    payload = json.loads(written)
     # 1. The written build JSON is byte-identical to the CLI/JSON surface.
-    assert written == ar.render_cli_what_now(items, fmt="json")
+    #    build() stamps captured_at from live time; pin the comparison render to
+    #    the written file's own captured_at so the assertion tests boundary
+    #    parity, not whether both calls landed in the same wall-clock second.
+    built_captured_at = _dt.datetime.strptime(
+        payload["captured_at"], "%Y-%m-%dT%H:%M:%SZ"
+    ).replace(tzinfo=_dt.timezone.utc)
+    assert written == ar.render_cli_what_now(
+        items, fmt="json", captured_at=built_captured_at
+    )
     # 2. Secret scrubbed + duplicate collapsed in the ACTUAL written file.
     assert _SECRET not in written
     assert "[REDACTED]" in written
-    payload = json.loads(written)
     assert _count_key(payload["items"], _GATE_KEY) == 1
     # 3. D013: single dashboard affordance once in the written response.
     from dontpanic_orchestrate import operations_guidance as _og

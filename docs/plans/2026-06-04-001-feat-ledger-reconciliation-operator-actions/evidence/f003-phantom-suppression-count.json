@@ -1,0 +1,18 @@
+{
+  "feature": "F003",
+  "measured_against": "docs/plans (live ledger)",
+  "measured_at": "2026-06-04T22:21:08Z",
+  "method": "provide_gate_actions over every plan's unmet declared gates, then action_resolvability.suppress_resolved with a fleet LiveState (plan_status + cleared_gates). Same path dashboard._gather_action_items uses.",
+  "gate_cards_before_suppression": 65,
+  "gate_cards_after_suppression": 1,
+  "suppressed": 64,
+  "suppressed_by_plan_status": {
+    "completed": 47,
+    "abandoned": 11,
+    "draft": 6
+  },
+  "kept_by_plan_status": {
+    "active": 1
+  },
+  "interpretation": "Before F003, 65 gate/approve NEEDS-ACTION cards were emitted, 64 of them pointing at plans that cannot act on the gate (completed/abandoned terminal, or draft pre-lock). With clears_when=gate_no_longer_actionable on the gate emitter, recompute (F002 suppress-at-source) drops all 64 phantoms; only the 1 genuinely-live plan's gate remains. This is the dashboard's 'Needs Action' count dropping to live-relevant work."
+}

@@ -462,6 +462,15 @@ def provide_gate_actions(
                 plain_consequence=(
                     f"Approving lets dispatch continue past the {gate_name} gate."
                 ),
+                # F003 phantom suppression: a gate card is only honest while the
+                # plan is live-but-unfinished AND the gate is still uncleared.
+                # suppress_resolved (F002) drops it the moment the plan goes
+                # completed/abandoned or the gate clears — so cards no longer
+                # point at closed plans.
+                clears_when=ClearsWhen(
+                    "gate_no_longer_actionable",
+                    {"plan_id": plan_id, "gate": gate_name},
+                ),
             )
         )
     return _sort(items)

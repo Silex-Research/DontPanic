@@ -91,9 +91,33 @@
         "Capture before/after NEEDS-ACTION counts as evidence"
       ],
       "acceptance": "After rebuild, zero gate/approve ActionItems exist for completed/abandoned/superseded plans; gates for active plans remain; a fixture reproducing the 54/57 phantom case goes to 0 phantom. Evidence records the count drop.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-04T22:21:08Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/operator_console.py",
+          "note": "provide_gate_actions sets clears_when=gate_no_longer_actionable(plan_id, gate) on every gate/approve card"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "_gather_action_items coerces Status/HumanGate enums to string values before assembling LiveState, so the predicate matches (fixes the enum-vs-string leak that would wrongly suppress live plans' gates)"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_resolvability_f003.py",
+          "note": "contract: 57 gate cards (54 on completed plans) collapse to 3 live; integration: dashboard._gather_action_items drops a completed plan's gate, keeps an active plan's gate"
+        },
+        {
+          "type": "metric",
+          "uri": "docs/plans/2026-06-04-001-feat-ledger-reconciliation-operator-actions/evidence/f003-phantom-suppression-count.json",
+          "note": "live ledger: 65 gate cards -> 1 after suppression (64 suppressed: 47 completed + 11 abandoned + 6 draft); 1 kept (active)"
+        }
       ]
     },
     {
