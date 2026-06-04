@@ -14,7 +14,7 @@
         "Serialize the new fields in to_dict(); keep reversible/plain_consequence",
         "Unit tests: each predicate true/false; resolution_class round-trips; evaluate() is pure (no I/O)"
       ],
-      "acceptance": "ActionItem carries clears_when + resolution_class; evaluate_clears_when() is a pure function returning the correct boolean for each registered predicate; to_dict() serializes the fields; resolution_class is constrained to the four-value enum. Verified by unit tests with zero I/O.",
+      "acceptance": "ActionItem carries clears_when (a reference into a CLOSED named-predicate registry + bound params; no expression eval) and resolution_class constrained to exactly {command_resolvable, chained, operator_attested, blocked_external}; evaluate_clears_when() is a pure function (zero I/O) returning the correct boolean for each registered predicate; to_dict() serializes the fields. Verified by unit tests covering every registry predicate true/false.",
       "passes": false,
       "depends_on": []
     },
@@ -30,7 +30,7 @@
         "Stamp each emitted item + the state envelope with the live-state generated_at used for evaluation",
         "Tests: an already-satisfied condition yields no item; a global predicate evaluates with no project capabilities/ dir present; re-running the producer after the condition flips drops the item"
       ],
-      "acceptance": "State production emits an ActionItem only when its clears_when is currently false against live state; global predicates evaluate at fleet scope regardless of per-project dirs; re-running the producer after a condition is resolved drops the item. Verified by tests including the no-project-capabilities-dir case.",
+      "acceptance": "State production assembles one LiveState snapshot and emits an ActionItem only when its clears_when is false (SUPPRESS-AT-SOURCE), recording an audit note for each suppression; global predicates evaluate at fleet scope regardless of per-project dirs; re-running after a condition resolves drops the item. Verified by tests including the no-project-capabilities-dir global case + a suppression-audit assertion.",
       "passes": false,
       "depends_on": [
         "F001"
