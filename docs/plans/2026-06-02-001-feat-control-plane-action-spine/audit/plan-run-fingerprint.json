@@ -1,0 +1,88 @@
+{
+  "captured_at": "2026-06-04T03:41:40Z",
+  "decision_lines": [
+    "CP-D001\u001fb8f19f5b7196b0551135979915837c0d65853b522e6d9ac5ae50d456db3d0635",
+    "CP-D002\u001fa4ec507e0ea86a6aaf6ae56084f22ae0923a85c27e1ab360d744c1282578d1c3",
+    "CP-D003\u001f19ef49a1a9555e7b6a11fbc39177e057597622a32ee9b452dae950a5afda6f1c",
+    "CP-D004\u001fbb3266278dd0acba34d5d197eee245c0d30efffd6de33bd47d13e738e76f2d9c",
+    "CP-D005\u001f605a35298732400450e4ea4f18c8d1941515201b70209e28941b434903ab3c69",
+    "CP-D006\u001f6fe20468d1d361c105b7cf682e9b12f75d9e64c5ee6dc375c27a13bf9e18d018",
+    "D001\u001f4b410e167017a831da1f0d04d55e0e1097e4b992e05c824aba156c6f769e53f4",
+    "D002\u001f22acdb889ce95df1b77c841aa10ea732c0524e8b9b97b4497f62cdb5f7dcb060"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "A parametrized test loads ActionItems from all producer paths (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and asserts: (a) every item carries audience, dedupe_key, reversible, plain_consequence, dashboard_url; (b) no safe_command field exists and exact_command+automatable encode command safety; (c) dedupe_key is producer-set and dedup (merge_with_event_sidecar + fleet aggregation) keys on dedupe_key, not id-prefix; (d) ActionItem rejects an unvalidated exact_command at construction. Full orchestrate sweep stays green.",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": true
+      },
+      "F002": {
+        "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok \u2192 (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker \u2192 can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": true
+      },
+      "F003": {
+        "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F002"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "174e0d8f8ccceb9c5b89baad9763d914763e87354ca721f63c6fa0a6516e8fe5",
+    "decisions.jsonl": "3ac209175bba22d67f99c99f09db673c5e50f260a4665bd6cbd98c80976748cf",
+    "features.json": "cb1f0f6f12148f64207f6eb2f8d46afa63bee9301f2939c9ba977e48a70bcca0",
+    "objective_contract.json": "cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
+    "plan.md": "7cadcd0a97d4756e09a5691e7cfd6d80cd58d57d9627fb995f01b1e07132fe4c"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1780544499.6902027,
+    "decisions.jsonl": 1780543679.395391,
+    "features.json": 1780544409.8224905,
+    "objective_contract.json": 1780521652.9047234,
+    "plan.md": 1780521716.7072031
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_impl"
+    ],
+    "completed_stages": [
+      "pre_impl"
+    ]
+  },
+  "objective_hash": "cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
+  "plan_semantics": {
+    "agents_required": [
+      "claude"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-05-30-001-feat-universal-agent-repo-onboarding-v0"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 2
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}

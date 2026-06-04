@@ -54,7 +54,12 @@ from pathlib import Path
 from typing import Any
 
 CAPS_FILE = Path.home() / ".jarvis" / "quota_caps.json"
+# Canonical INTERNAL form: top-level vendor keys (schema_version 1). The loader
+# also ACCEPTS schema_version 2 on disk — a friendlier shape that nests vendors
+# under a `vendors` object — and normalizes it to the canonical v1 form before
+# validation, so downstream `get()`/F006 consumers never see the v2 wrapper.
 CAPS_SCHEMA_VERSION = 1
+SUPPORTED_INPUT_SCHEMA_VERSIONS = (1, 2)
 
 
 def effective_caps_path(path: Path | None = None) -> Path:
@@ -133,26 +138,42 @@ class QuotaCapsError(Exception):
     """Raised by load/validate when the caps file is malformed."""
 
 
-def starter_caps(*, codex_observed_5h: int | None = None) -> dict[str, Any]:
+def _codex_window_cap(observed: int | None, window: str) -> dict[str, Any]:
+    """Derive a codex {cap, unit, _note} block for a window from an observed
+    sample (cap = ceil(observed * 1.25)) or a high provisional fallback."""
+    if observed is not None and observed > 0:
+        return {
+            "cap": math.ceil(observed * 1.25),
+            "unit": "tokens_local_proxy",
+            "_note": (
+                f"derived from observed {window} ({observed}) * 1.25 at init; "
+                "re-run `quota-caps init` to refresh"
+            ),
+        }
+    return {
+        "cap": CODEX_PROVISIONAL_CAP,
+        "unit": "tokens_local_proxy",
+        "_note": (
+            f"high provisional ({CODEX_PROVISIONAL_CAP}); tune to ~1.25x observed "
+            f"{window} or re-run `quota-caps init` after some Codex usage exists"
+        ),
+    }
+
+
+def starter_caps(
+    *,
+    codex_observed_5h: int | None = None,
+    codex_observed_7d: int | None = None,
+) -> dict[str, Any]:
     """Compose a starter caps file dict.
 
-    For Codex, derive cap from current observed rolling_5h * 1.25 if a sample
-    is provided; else use a high provisional value (1B tokens) with a note.
-    Operator re-runs `quota-caps init` (or edits directly) to refresh.
+    For Codex, seed BOTH rolling windows (rolling_5h AND rolling_7d) so a
+    dispatch checking either window finds a cap — the breaker reads whichever
+    window applies, and seeding only one left the other uncapped (D047/D052,
+    re-implemented). Each window's cap derives from its observed sample * 1.25
+    if provided, else a high provisional value the operator refreshes via
+    `quota-caps init`.
     """
-    if codex_observed_5h is not None and codex_observed_5h > 0:
-        codex_cap = math.ceil(codex_observed_5h * 1.25)
-        codex_note = (
-            f"derived from observed rolling_5h ({codex_observed_5h}) * 1.25 at init; "
-            "re-run `quota-caps init` to refresh"
-        )
-    else:
-        codex_cap = CODEX_PROVISIONAL_CAP
-        codex_note = (
-            f"high provisional ({CODEX_PROVISIONAL_CAP}); tune to ~1.25x observed "
-            "rolling_5h or re-run `quota-caps init` after some Codex usage exists"
-        )
-
     return {
         "schema_version": CAPS_SCHEMA_VERSION,
         "defaults": {"claude_tier": "max_20x"},
@@ -183,11 +204,8 @@ def starter_caps(*, codex_observed_5h: int | None = None) -> dict[str, Any]:
         },
         "codex": {
             "plus": {
-                "rolling_5h": {
-                    "cap": codex_cap,
-                    "unit": "tokens_local_proxy",
-                    "_note": codex_note,
-                },
+                "rolling_5h": _codex_window_cap(codex_observed_5h, "rolling_5h"),
+                "rolling_7d": _codex_window_cap(codex_observed_7d, "rolling_7d"),
             },
         },
         "gemini": {
@@ -270,8 +288,47 @@ def validate(data: Any) -> list[str]:
     return errors
 
 
+def normalize(data: Any) -> dict[str, Any]:
+    """Normalize an accepted on-disk shape to the canonical v1 form.
+
+    Accepts ``schema_version`` 1 (already canonical: top-level vendor keys) and
+    2 (vendors nested under a ``vendors`` object). v2 is lifted to top-level
+    vendor keys with ``schema_version`` reset to the canonical 1 so every
+    downstream consumer (``validate``/``get``/F006) is version-agnostic. A
+    missing ``schema_version`` is passed through unchanged so ``validate`` emits
+    the precise version error rather than this normalizer guessing. Raises
+    QuotaCapsError only for an explicitly unsupported version or a v2 file
+    missing its ``vendors`` object.
+    """
+    if not isinstance(data, dict):
+        raise QuotaCapsError("caps file must be a JSON object")
+    sv = data.get("schema_version")
+    if sv == 2:
+        vendors = data.get("vendors")
+        if not isinstance(vendors, dict):
+            raise QuotaCapsError(
+                "schema_version 2 requires a `vendors` object mapping "
+                "vendor -> tier -> window -> {cap, unit}"
+            )
+        canonical: dict[str, Any] = {"schema_version": CAPS_SCHEMA_VERSION}
+        if isinstance(data.get("defaults"), dict):
+            canonical["defaults"] = data["defaults"]
+        for key, val in data.items():
+            if key.startswith("_"):  # preserve inline top-level comments
+                canonical[key] = val
+        for vendor, vblock in vendors.items():
+            canonical[vendor] = vblock
+        return canonical
+    if sv not in (1, None) and sv not in SUPPORTED_INPUT_SCHEMA_VERSIONS:
+        raise QuotaCapsError(
+            f"unsupported caps schema_version {sv!r}; supported: "
+            f"{list(SUPPORTED_INPUT_SCHEMA_VERSIONS)}"
+        )
+    return data
+
+
 def load(path: Path | None = None) -> dict[str, Any]:
-    """Read + validate caps file. Raises QuotaCapsError on any issue."""
+    """Read, normalize (v1/v2), and validate the caps file. Raises QuotaCapsError."""
     p = _effective_caps_path(path)
     if not p.is_file():
         raise QuotaCapsError(
@@ -281,6 +338,7 @@ def load(path: Path | None = None) -> dict[str, Any]:
         data = json.loads(p.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise QuotaCapsError(f"failed to read caps file at {p}: {exc}") from exc
+    data = normalize(data)
     errors = validate(data)
     if errors:
         raise QuotaCapsError(f"caps file at {p} invalid:\n  " + "\n  ".join(errors))
@@ -305,9 +363,10 @@ def init_starter_file(
     path: Path | None = None,
     *,
     codex_observed_5h: int | None = None,
+    codex_observed_7d: int | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
-    """Write starter caps file. Returns the data written.
+    """Write starter caps file (seeds BOTH codex windows). Returns the data written.
 
     Refuses to overwrite an existing file unless overwrite=True. Caller is
     responsible for sampling codex usage (keeps loader decoupled from
@@ -320,7 +379,10 @@ def init_starter_file(
             f"caps file already exists at {p}; pass overwrite=True or delete first"
         )
     p.parent.mkdir(parents=True, exist_ok=True)
-    data = starter_caps(codex_observed_5h=codex_observed_5h)
+    data = starter_caps(
+        codex_observed_5h=codex_observed_5h,
+        codex_observed_7d=codex_observed_7d,
+    )
     p.write_text(json.dumps(data, indent=2) + "\n")
     return data
 

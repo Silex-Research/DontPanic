@@ -736,6 +736,33 @@ def _build_parser() -> argparse.ArgumentParser:
         default="text",
         help="Output format (default: text).",
     )
+
+    # Plan 2026-05-30-001 F006 — config-home reconciliation.
+    homes = sub.add_parser(
+        "homes",
+        help=(
+            "Reconcile the canonical ~/.dontpanic home against the legacy "
+            "~/.jarvis home: surface split-brain config files and migrate "
+            "legacy-only files canonical-ward. Dry-run by default; --confirm "
+            "to migrate. Divergent same-name files are always refused."
+        ),
+    )
+    homes.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Perform the migration (default is a dry-run that writes nothing).",
+    )
+    homes.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Explicit dry-run (the default). Mutually exclusive with --confirm.",
+    )
+    homes.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
     return parser
 
 
@@ -801,8 +828,94 @@ def reconcile_main(argv: Sequence[str] | None = None) -> int:
         return _baseline_main(args)
     if args.subcommand == "check":
         return _check_main(args)
+    if args.subcommand == "homes":
+        return _homes_main(args)
     parser.print_help(sys.stderr)  # pragma: no cover - argparse already restricts
     return 2
+
+
+def _homes_main(args: argparse.Namespace) -> int:
+    """``dontpanic reconcile homes`` — Plan 2026-05-30-001 F006.
+
+    Exit codes:
+      0 — clean (homes reconciled) OR migrations applied with no conflicts
+      1 — divergent same-name files remain (ambiguous merge refused)
+      2 — usage error (handled by argparse / mutually-exclusive guard)
+    """
+    from dontpanic_orchestrate import home_reconcile as hr
+
+    if args.confirm and args.dry_run:
+        print("reconcile homes: --confirm and --dry-run are mutually exclusive", file=sys.stderr)
+        return 2
+    confirm = bool(args.confirm)
+
+    states = hr.classify_homes()
+    plan = hr.plan_reconcile(states)
+    result = hr.apply_reconcile(plan, confirm=confirm)
+
+    # Plan 2026-05-30-001 F015 (AC5): byte-comparison above catches split-brain
+    # but is blind to a single home holding a STALE or internally CONFLICTING
+    # allowlist (bytes can match across homes yet still be untrusted). Classify
+    # each home's allowlist validity and surface present-but-untrusted state.
+    allowlist_homes = hr.classify_allowlist_homes()
+    untrusted_allowlists = [
+        a for a in allowlist_homes if a.is_present and not a.is_trusted
+    ]
+
+    if args.format == "json":
+        payload = {
+            "canonical_home": str(hr.canonical_home()),
+            "legacy_home": str(hr.legacy_home()),
+            "dry_run": result.dry_run,
+            "files": [
+                {"name": s.name, "status": s.status} for s in states
+            ],
+            "planned_migrations": [a.name for a in plan.migrations],
+            "migrated": result.migrated,
+            "refused_divergent": result.refused,
+            "allowlist_validity": [
+                {
+                    "home": a.home,
+                    "path": str(a.path),
+                    "status": a.status,
+                    "detail": a.detail,
+                    "conflicts": list(a.conflicts),
+                }
+                for a in allowlist_homes
+            ],
+        }
+        sys.stdout.write(json.dumps(payload, indent=2) + "\n")
+    else:
+        sys.stdout.write(f"canonical: {hr.canonical_home()}\n")
+        sys.stdout.write(f"legacy:    {hr.legacy_home()}\n\n")
+        for s in states:
+            sys.stdout.write(f"  {s.status:14} {s.name}\n")
+        if plan.migrations:
+            verb = "migrated" if not result.dry_run else "would migrate"
+            sys.stdout.write(f"\n{verb}: {', '.join(a.name for a in plan.migrations)}\n")
+        if plan.conflicts:
+            sys.stdout.write(
+                "\n[refused] divergent (not merged — resolve by hand): "
+                f"{', '.join(s.name for s in plan.conflicts)}\n"
+            )
+        if untrusted_allowlists:
+            sys.stdout.write(
+                "\n[allowlist] untrusted auto-run allowlist (fix + re-approve "
+                "before any skill auto-runs):\n"
+            )
+            for a in untrusted_allowlists:
+                sys.stdout.write(f"  {a.status:12} ({a.home}) {a.detail}\n")
+                for c in a.conflicts:
+                    sys.stdout.write(f"               - {c}\n")
+        if result.dry_run and (plan.migrations or plan.conflicts):
+            sys.stdout.write("\n[preview] nothing written. Re-run with `--confirm` to migrate.\n")
+        if plan.is_empty and not untrusted_allowlists:
+            sys.stdout.write("\n[ok] homes are reconciled — nothing to do.\n")
+
+    # Non-clean terminals (exit 1): divergent same-name files (ambiguous merge)
+    # OR a present-but-untrusted allowlist (stale/conflicting/unloadable) in
+    # either home — both demand operator attention before auto-run is trusted.
+    return 1 if plan.conflicts or untrusted_allowlists else 0
 
 
 __all__ = [

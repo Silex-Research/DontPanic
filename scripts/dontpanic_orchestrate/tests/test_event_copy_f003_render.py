@@ -624,6 +624,7 @@ class TestDualMergePath:
             human_required_reason="provider win",
             evidence_uri=None,
             updated_at="2026-05-24T12:00:00Z",
+            dedupe_key="supervisor:gate_hit:p1:F001",
         )
         merged = operator_console.merge_with_event_sidecar(
             (provider_item,), sidecar_path=sidecar

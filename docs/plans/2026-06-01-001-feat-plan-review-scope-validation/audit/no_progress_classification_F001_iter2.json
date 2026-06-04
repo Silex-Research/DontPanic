@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-06-02T20:13:34Z",
+  "feature_id": "F001",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "plain-text command tokens are not checked for `missing_prereq`; evidence: `lint.py` only extracts command phrases from backtick spans, and a direct probe of `f…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "weak-test detection misses ordinary “string matches expected” assertions; evidence: direct probe returned no `weak_test`, and `_EQUALITY_RE` does not cover `st…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "surface tagging false-positives on role examples like `implementer`/`auditor`; evidence: a pure role-validation feature with universal AC `every role is valida…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

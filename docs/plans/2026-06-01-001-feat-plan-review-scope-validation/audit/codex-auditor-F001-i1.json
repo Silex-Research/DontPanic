@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-02T20:10:14Z",
+  "completed_at": "2026-06-02T20:13:33Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-tic0qssy target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 217258 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1045538,
+    "tokens_out": 14574,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. The implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and `target_context.commands_run` contains only the targeted pytest command with no forbidden command shape. FINDING (high, correctness): plain-text command tokens are not checked for `missing_prereq`; evidence: `lint.py` only extracts command phrases from backtick spans, and a direct probe of `frobnicate runs with --format` returned no flags; recommendation: detect explicit command names in AC prose, especially hyphenated command tokens, and add positive/negative tests. FINDING (high, correctness): weak-test detection misses ordinary “string matches expected” assertions; evidence: direct probe returned no `weak_test`, and `_EQUALITY_RE` does not cover `string matches`; recommendation: expand equality/string-match patterns and test that phrasing. FINDING (medium, correctness): surface tagging false-positives on role examples like `implementer`/`auditor`; evidence: a pure role-validation feature with universal AC `every role is validated, including implementer and auditor` produced `('core', 'orchestration')` plus `over_surface`; recommendation: avoid treating role names alone as orchestration surface evidence.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=script",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprovider -s",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from pathlib import Path; [compile(Path(p).read_text(), p, \"exec\") for p in [\"scripts/dontpanic_orchestrate/plan_review/lint.py\", \"scripts/dontpanic_orchestrate/plan_review/__init__.py\", \"scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py\"]]; print(\"compile ok\")'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "plain-text command tokens are not checked for `missing_prereq`; evidence: `lint.py` only extracts command phrases from backtick spans, and a direct probe of `frobnicate runs with --format` returned no flags; recommendation: detect explicit command names in AC prose, especially hyphenated command tokens, and add positive/negative tests.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "weak-test detection misses ordinary “string matches expected” assertions; evidence: direct probe returned no `weak_test`, and `_EQUALITY_RE` does not cover `string matches`; recommendation: expand equality/string-match patterns and test that phrasing.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "surface tagging false-positives on role examples like `implementer`/`auditor`; evidence: a pure role-validation feature with universal AC `every role is validated, including implementer and auditor` produced `('core', 'orchestration')` plus `over_surface`; recommendation: avoid treating role names alone as orchestration surface evidence. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q -p no:cacheprov",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

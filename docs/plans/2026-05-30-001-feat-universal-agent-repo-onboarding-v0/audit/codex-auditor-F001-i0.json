@@ -1,0 +1,32 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-30T13:07:42Z",
+  "completed_at": "2026-05-30T13:09:48Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=None",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-3rx0r5yo target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 107701 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 346365,
+    "tokens_out": 9803,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. No findings. The implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, and `Project: (none)`, and their structured `target_context` matches. Their recorded command uses no forbidden shape. I audited the untracked F001 files directly because `git diff HEAD~1` only showed unrelated tracked changes.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f001_agent_brief.py -q  \nThis could not start because the sandbox has no usable temp directory for pytest capture/tmp fixtures.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import agent_brief as ab, agent_manifest as am, executors; live=ab.collect_brief_inputs(); assert live.supported_commands == am.bootstrap_manifest().supported_commands; assert live.worker_executors == sorted(executors.AGENT_REGISTRY); base=ab.render_brief(ab.BriefInputs(dontpanic_version='x', supported_commands=['projects'], worker_executors=['claude'], config_home='/tmp/home/.dontpanic', using_legacy_home=False, legacy_home_present=False)); mutated=ab.render_brief(ab.BriefInputs(dontpanic_version='x', supported_commands=['projects','agent','orchestrate'], worker_executors=['claude','codex-extra'], config_home='/tmp/home/.dontpanic', using_legacy_home=False, legacy_home_present=False)); assert 'OPERATOR vs WORKER' in base.text; assert 'not Kubernetes, Air",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f001_agent_brief.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import agent_brief as ab, agent_manifest as am, executors; live=ab.collect_brief_inputs(); assert live.supported_commands == am.bootstrap_manifest().supported_commands; assert live.worker_executors == sorted(executors.AGENT_REGISTRY); base=ab.render_brief(ab.BriefInputs(dontpanic_version='x', supported_commands=['projects'], worker_executors=['claude'], config_home='/tmp/home/.dontpanic', using_legacy_home=False, legacy_home_present=False)); mutated=ab.render_brief(ab.BriefInputs(dontpanic_version='x', supported_commands=['projects','agent','orchestrate'], worker_executors=['claude','codex-extra'], config_home='/tmp/home/.dontpanic', using_legacy_home=False, legacy_home_present=False)); assert 'OPERATOR vs WORKER' in base.text; assert 'not Kubernetes, Airflow, or IT' in base.text; assert 'projects add' in base.text and 'approve/resume/close' in base.text; assert '  - agent' in mutated.text and 'codex-extra' in mutated.text; assert base.content_hash != mutated.content_hash; print('manual agent_brief smoke ok')\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

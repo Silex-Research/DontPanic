@@ -82,10 +82,11 @@ That is the gap DontPanic fills: it separates intelligence from trust.
 
 DontPanic adds trust infrastructure around AI coding:
 
-- **Immutable plans** — requirements and acceptance criteria are validated and locked before work starts.
+- **Immutable plans** — requirements and acceptance criteria are validated and locked before work starts. A locked plan still evolves *safely*: a **scope-change protocol** refuses silent drift (a budget-busting expand of a locked feature, or a lossy split) unless a rationale is recorded or the feature is split, and every decision lands in an append-only `decisions.jsonl` ledger.
+- **Scope governance** — a deterministic, free scope lint catches over-scoped features, exemplar/weak acceptance criteria, and undeclared prerequisites *before* a paid run; an optional cross-model design-review volley red-teams the decomposition; cross-feature-edit detection flags a diff that bleeds into another feature's files.
 - **Cross-model verification** — one agent builds; a different model family audits code, tests, security, docs, architecture, and plan compliance.
 - **Human approval gates** — risky work pauses until a human sees the evidence and approves, requests changes, or rejects.
-- **Circuit breakers** — budget, iteration, no-progress, diminishing-return, convergence-collapse, wall-clock, and global breakers stop waste.
+- **Circuit breakers** — eight automatic kill-switches (budget, iteration, no-progress, diminishing-returns, convergence-collapse, wall-clock, environmental-blocker, and a system-wide global breaker) stop waste and runaway loops.
 - **Evidence trails** — transcripts, audit logs, artifacts, signoff, gate state, and INBOX entries stay on disk.
 - **Budget controls** — token and cost visibility prevents runaway agent loops.
 
@@ -146,6 +147,17 @@ Skills and better prompts improve execution. They do not automatically create
 separation of duties, reproducibility, cost containment, or organizational
 trust. In production, smarter agents need stronger guardrails, not fewer.
 
+**vs. same-family multi-agent (Claude's Dynamic Workflows / Managed Agents,
+etc.):** those orchestrate a swarm of one vendor's own sub-agents for speed and
+scale — powerful, but everything shares one model family's blind spots, with no
+independent cross-check and a boss that can improvise the plan mid-run.
+DontPanic is the opposite posture: a vendor-neutral *meta-harness* that sits on
+top of any of those engines, holds the plan locked, makes a **different** model
+family audit the work, keeps a human in the approval loop, and trips circuit
+breakers when a run goes sideways. Same-family swarms optimize for velocity;
+DontPanic optimizes for code you can trust in production — and it can drive the
+swarm as one of its implementers.
+
 ## See It In Action
 
 ```text
@@ -186,6 +198,7 @@ and agents a shared operating surface:
 | Capability | What it solves | Command surface |
 |---|---|---|
 | Plan lifecycle | Turns vague work into a locked, auditable contract | `dontpanic plan lock`, `plan audit`, `plan close` |
+| Scope governance | Catches over-scope / weak ACs / undeclared prereqs before a paid run; flags scope drift, cross-feature edits, and design-decomposition risk | `dontpanic plan-review`, `plan-review --since`, `plan lock --design-review` |
 | Planning readiness | Shows which plans/features are ready, blocked, or risky to run in parallel | `dontpanic next` |
 | Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
 | Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
@@ -222,7 +235,15 @@ dontpanic --version
 dontpanic --help
 ```
 
-### 2. Configure Roles
+### 2. Orient A New Agent, Then Configure Roles
+
+A new agent (human or AI) starts by reading the generated operating brief — the
+operator-vs-worker distinction, role catalog, and the canonical command flow:
+
+```bash
+dontpanic agent brief          # the onboarding brief; `dontpanic agent` alone prints it too
+dontpanic agent whoami         # classify THIS agent (operator vs registered worker)
+```
 
 `dontpanic setup` is preview-only by default. It writes no secrets; it stores
 agent role names and project runtime pointers only.
@@ -254,21 +275,54 @@ dontpanic manifest show --json
 
 Agent CLIs authenticate themselves. DontPanic does not store API keys.
 
-### 3. Register A Project
+### 3. Onboard An Agent And A Repo
+
+DontPanic distinguishes two roles: an **operator** (a human or interactive agent
+that *runs* DontPanic — locks plans, approves gates, reads guidance) and a
+**worker** (an agent DontPanic *dispatches* to implement or audit, e.g.
+claude / codex). A worker must be a registered executor; an operator-only agent
+cannot be assigned the `implementer`/`auditor` roles.
+
+**New agent — read the operating brief and check agent readiness:**
 
 ```bash
-dontpanic projects add myapp /absolute/path/to/myapp --init-config
+dontpanic agent brief            # human-readable operating brief
+dontpanic doctor --agent         # CLI, manifest, roles, homes readiness
+```
+
+**New repo — register and onboard in one step.** `--onboard` writes the managed
+`AGENTS.md` block so a fresh clone is agent-ready immediately:
+
+```bash
+dontpanic projects add myapp /absolute/path/to/myapp --onboard
+dontpanic doctor --project myapp     # this project's onboarding/config/roles
+```
+
+Re-onboarding an already-registered repo requires the explicit overwrite flags
+(`--onboard --force --yes`).
+
+**Assign roles** (workers must be registered executors) and set project-scoped
+runtime evidence:
+
+```bash
 cd /absolute/path/to/myapp
 dontpanic project config set roles.implementer claude
 dontpanic project config set roles.auditor codex
-```
-
-Runtime evidence defaults are also project-scoped:
-
-```bash
-cd /absolute/path/to/myapp
 dontpanic project config set runtime_evidence.web.base_url http://localhost:3000
 ```
+
+**See what is configured and what still needs setup** — across machine and
+project scope, classed `ok` / `needs_setup` / `missing` / `human_required`:
+
+```bash
+dontpanic config inventory               # current repo / machine scope
+dontpanic config inventory --project myapp
+```
+
+When any item needs a human, the response carries exactly **one** dashboard hint
+(the active URL if a dashboard is running, otherwise the start command). The full
+new-agent / new-repo / role-assignment / inventory walkthrough lives in
+[`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md).
 
 ### 4. Run The Doctor
 
@@ -300,6 +354,16 @@ For a live localhost view while you work:
 ```bash
 dontpanic dashboard serve
 ```
+
+The dashboard binds `127.0.0.1` only and runs **one server per DontPanic home**.
+A second `serve` for the same home is refused with the URL of the one already
+running — open that instead of stacking servers. Pass `--replace` (alias
+`--force-single`) to intentionally stop a stuck server and take over; a crashed
+server's stale record is pruned automatically on the next `serve`. When work is
+blocked, `dontpanic what-now <plan>` and `dontpanic config inventory` tell you
+whether a dashboard is already running (and its URL) or print the start command
+— see [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) for the full
+new-agent / new-repo onboarding and dashboard decision flow.
 
 ### 6. Try A Safe Sample Plan
 
@@ -339,6 +403,20 @@ capability requirements, active supervisors, and release-impact signals. It
 does not dispatch anything. It explains which work is ready, which work is
 blocked, where parallel work may collide, and which public docs or changelog
 surfaces may need attention before merge.
+
+For a per-stage skill rubric, and a ranked decision set when work is blocked:
+
+```bash
+dontpanic skills recommend <plan-id>      # which skills to invoke for this stage
+dontpanic what-now <plan-id> --feature F001   # ranked moves when blocked
+```
+
+`what-now` turns a blocked dispatch (quota cooldown, budget ceiling, iteration
+cap, a cleared `pre_merge` signoff, a tripped breaker, a setup gap) into a short
+list with an exact command where one is safe to emit. The supervised
+implement→audit loop is `dontpanic orchestrate <plan-id>` (preview) /
+`--confirm` (run); the lower-level `dispatch-from-plan` below is the same engine
+with explicit per-step control.
 
 Preview dispatch:
 
@@ -486,6 +564,21 @@ It returns the canonical command surface, including the local MCP server:
   ]
 }
 ```
+
+An interactive agent that can run the CLI should start with the agent surface,
+which is self-describing and needs no source-reading:
+
+```bash
+dontpanic agent brief       # generated operating brief — read this first
+dontpanic agent commands    # machine command guidance as stable JSON
+dontpanic agent guide       # version-matched, offline "start here" guide
+dontpanic agent status      # can_operate / can_be_dispatched / can_orchestrate
+```
+
+`agent status` reports three independent capabilities: any agent that can run
+the commands can **operate** DontPanic; only agents registered as executors can
+be **dispatched** as workers. If you are an unsupported agent, operate DontPanic
+— do not configure yourself as a worker.
 
 See [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) for the non-goals and caller
 patterns, [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md) for the
@@ -704,7 +797,7 @@ First-use baseline:
 Supervisor + executor panel (shipped):
 
 - [x] Single-agent + volley dispatch (Claude / Codex / Gemini / Grok / Ollama executors)
-- [x] 7 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, global_circuit_breaker)
+- [x] 8 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, environmental_blocker, global_circuit_breaker)
 - [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
 - [x] Operator caps + Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`)
 - [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)

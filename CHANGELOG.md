@@ -46,6 +46,168 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-04 — Agent command surface + skill guidance (plan 2026-06-03-001)
+
+### Added
+- `dontpanic agent commands` — read-only command that prints DontPanic's command
+  inventory as stable JSON (path, class, audience, examples, prerequisites) so an
+  outer harness or interactive agent can discover what's automatable without
+  scraping `--help`.
+- `dontpanic agent guide` — a version-matched, offline "start here" operating
+  guide for agent/harness environments that can't reach the live brief.
+- Bare `dontpanic` / `dontpanic --help` now opens with a "Start here (for AI
+  agents)" block pointing at `agent brief` / `agent commands` / `agent guide`,
+  and the most-touched workflow help pages (lock, dispatch, approve, …) carry
+  class-specific agent guidance (read-only vs mutating vs gated).
+- `doctor` gains an advisory `skill-rubrics` probe: it flags high-value skills
+  that lack an invocation rubric. Advisory only — it never blocks readiness or
+  escalates the doctor exit code.
+
+### Changed
+- A regression gate now refuses to ship a new top-level command (or a newly
+  automatable example) without a matching entry in the command-guidance
+  inventory, so the agent surface can't silently drift from the real CLI.
+
+Surfaces affected: CLI commands, CLI help, doctor, capability/skill manifests
+
+## 2026-06-03 — Control-plane action spine + honest agent roles (plan 2026-06-02-001)
+
+### Added
+- `ActionItem` — DontPanic's single canonical control-plane action contract —
+  gains five human-facing fields: `audience[]`, `dedupe_key`, `reversible`,
+  `plain_consequence`, and `dashboard_url`. `dedupe_key` (not `id`) is now the
+  dedup authority across surfaces.
+- `dontpanic agent status` now reports three INDEPENDENT capability booleans —
+  `can_operate` (drives DontPanic), `can_be_dispatched` (worker executor), and
+  `can_orchestrate` (spawns sub-agents) — instead of conflating operator and
+  worker. Detection/reporting only.
+
+### Changed
+- The dashboard, CLI/JSON (`what-now`), and the onboarding agent-brief managed
+  block now all render from the same `ActionItem` contract, deduped by
+  `dedupe_key`, with secret-shape scrubbing enforced at the render boundary.
+  This closes a gap where `what-now --format json` previously emitted an
+  unsanitized legacy payload.
+
+Surfaces affected: CLI commands, CLI/JSON output, dashboard, agent-brief / AGENTS.md
+
+## 2026-06-03 — Operator-finish close path + convergence-delta breaker (plan 2026-06-02-002)
+
+### Added
+- `dontpanic close` accepts honest terminal classes beyond
+  `stopped_no_progress` — including the operator-finish close for work an
+  auditor signed off but that never reached an automated `passes:true` — so a
+  legitimately-done plan no longer has to be forced through the no-progress
+  path.
+
+### Changed
+- The `no_progress` circuit breaker now treats a round whose auditor findings
+  change materially from the prior round as **progress**, not stagnation —
+  preventing premature stops while real iteration is still happening.
+- The patch-completeness gate now surfaces a new IMPLEMENTATION module that a
+  dispatch imports but never tracked in git (e.g. a freshly-added helper),
+  catching "it works on my machine" gaps before close.
+
+Surfaces affected: CLI commands, supervisor close/convergence behavior
+
+## 2026-06-03 — Plan-review scope governance + config-readiness (plan 2026-06-01-001)
+
+### Added
+- `dontpanic plan-review <plan>` — a free, deterministic scope lint over every
+  feature: flags over-scoped features (too many surfaces / acceptance criteria),
+  exemplar-or-weak acceptance criteria, and undeclared command/flag/symbol
+  prerequisites. Read-only; `--format text|json`; exits non-zero only on a
+  block-severity flag.
+- `dontpanic plan-review <plan> --since <git-ref|path>` — the mid-development
+  scope-delta lint: classifies each changed feature as **sharpen / expand /
+  split** against a prior `features.json` snapshot and exits non-zero when the
+  scope-change protocol refuses a change (a budget-busting expand of a locked
+  feature, or a lossy split).
+- `dontpanic plan lock --design-review` — opt-in cross-model design-review
+  volley that red-teams a plan's decomposition (oversize / hidden coupling /
+  underspecified AC / missing prereq / dependency order). Advisory: it prints a
+  verdict and never blocks the lock. Also auto-suggested when the lint is
+  uncertain.
+- `dontpanic dispatch-from-plan --acknowledge-cross-feature <reason>` — records a
+  rationale to pass the new cross-feature-edit check when a shared-file edit is
+  intentional.
+
+### Changed
+- **Plan lock** now runs a pre-lock scope gate: a feature carrying a
+  block-severity scope flag refuses the `draft → active` transition unless
+  `--allow-oversize <reason>` records a rationale in `decisions.jsonl`.
+- **Patch-completeness** (signoff time) now flags a `cross_feature_edit` when a
+  dispatch's diff touches files owned by a *different* feature than the one being
+  implemented, naming the foreign feature and paths.
+- **Config readiness** is now an actionable pre-flight: a malformed/empty
+  `quota_caps.json` or an invalid role value surfaces a clean failure with a
+  runnable remediation command (and dashboard pointer) before any paid work —
+  at dispatch *and* at the plan-close goal-completion audit — instead of a raw
+  schema crash mid-run.
+- README: the "Circuit breakers" line and the shipped-checklist now read **8**
+  breakers (adds `environmental_blocker`, which was already in the engine); a
+  new "Scope governance" capability row and a same-family-multi-agent
+  (Dynamic Workflows / Managed Agents) vs. cross-vendor meta-harness contrast
+  were added.
+
+Surfaces affected: CLI commands/flags (`plan-review`, `plan lock`,
+`dispatch-from-plan`), supervisor patch-completeness, plan-lock gate, README.
+
+## 2026-06-02 — Dashboard serve singleton guard + status helper (plan 2026-05-30-001 F010)
+
+### Added
+- `dontpanic dashboard serve --replace` (alias `--force-single`): intentionally
+  stop a live dashboard serving the same DontPanic home and take over. Use it to
+  recover when a previous server is stuck. It waits for the old process to exit
+  (escalating to SIGKILL if it ignores the graceful stop) before binding, so
+  replacing a server on the same port no longer races the port release.
+- A dashboard status helper that one-answers "is a dashboard running, and at what
+  URL?" — returning the active URL plus recorded project/scope when live, or the
+  exact `dontpanic dashboard serve` command when not. `dontpanic config
+  inventory` and `dontpanic what-now` now route their dashboard discovery through
+  this single helper, so the two surfaces never disagree.
+
+### Changed
+- Starting a second `dontpanic dashboard serve` for the same home is now refused
+  with an actionable message naming the already-running URL (open it, or pass
+  `--replace`), instead of silently stacking another local server. The guard is
+  per-home, so an ordinary same-port conflict in a different home still surfaces
+  as a normal bind error.
+- A crashed serve leaves a stale singleton record; the next `serve` prunes the
+  dead-pid record automatically and is admitted, so `--replace` is only needed
+  when the old server is genuinely still alive. `--once` and Ctrl-C shutdown both
+  clear the record.
+- README "Onboard An Agent And A Repo" / "Dispatch Real Work" and
+  `docs/GETTING_STARTED.md` now document the complete new-agent / new-repo
+  onboarding flow (`agent brief`, `projects add --onboard`, role assignment,
+  `config inventory`, `doctor --agent|--project`, `skills recommend`, `what-now`,
+  `orchestrate`) and the operator-vs-worker distinction plus the dashboard
+  decision flow. The README quickstart's `projects add` example now uses
+  `--onboard` (was the stale `--init-config`).
+
+Surfaces affected: ux, infra, readme
+
+## 2026-05-30 — Operations guidance + no-paid finalizer (plan 2026-05-30-001 F007)
+
+### Added
+- `dontpanic what-now <plan> [--feature F] [--format text|json] [--dashboard-url URL]`:
+  read-only operations guidance that turns a blocked unit of work into a short
+  typed decision set — recommended action plus alternatives, an exact command
+  where one is safe and validated, a rationale, a risk band, and whether a human
+  must confirm. Covers quota cooldown (wait-until + redispatch + raise-ceiling
+  alternative), budget ceiling, admission threshold, max_iterations
+  remaining/exhausted, a signed_off feature paused at `pre_merge` (offers the
+  no-paid finalize once `pre_merge` is cleared), no-progress stops, and setup
+  friction (register/onboard, refresh brief, reconcile homes, unsupported worker
+  role, human-required config).
+- One response-level dashboard affordance per `what-now` output: the active URL
+  when a dashboard is running, otherwise the `dontpanic dashboard serve` start
+  command — shown once, referenced (not repeated) by individual choices.
+- The same typed `ActionChoice` data backs both the CLI text and the dashboard
+  ActionItems, so budget/iteration guidance never drifts between the two.
+
+Surfaces affected: ux, infra
+
 ## 2026-05-24 — Event messaging v1 (plan 2026-05-24-004)
 
 Layered, value-first notifications across every operator-visible sink. The

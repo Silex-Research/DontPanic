@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-05-30T21:30:59Z",
+  "completed_at": "2026-05-30T21:33:03Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=12.638534100000001",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-gb_y08q7 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 156348 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 956952,
+    "tokens_out": 9059,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (medium, correctness): Dashboard “safe mutation commands” are not safe for project paths containing spaces. Evidence: `dashboard_projection()` builds `--project {project_arg}` without shell quoting at `scripts/dontpanic_orchestrate/role_assignment.py:269` and `:282-284`; a scope path like `/tmp/my repo` produces `dontpanic roles set implementer <executor> --project /tmp/my repo`, which would parse incorrectly if copied/run. Recommendation: shell-quote path-based project arguments, or emit argv arrays alongside display strings and test paths with spaces.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f004_role_assignment.py  \nResult: could not start because the sandbox has no usable temporary directory.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import cli; raise SystemExit(cli.main(['roles','show','--json']))\"\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate.role_assignment import ProjectScope, dashboard_projection; p=dashboard_projection(ProjectScope(Path('/tmp/my repo'), None)); print(p['roles'][0]['mutation_commands']['proje",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f004_role_assignment.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import cli; raise SystemExit(cli.main(['roles','show','--json']))\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from pathlib import Path; from dontpanic_orchestrate.role_assignment import ProjectScope, dashboard_projection; p=dashboard_projection(ProjectScope(Path('/tmp/my repo'), None)); print(p['roles'][0]['mutation_commands']['project'])\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Dashboard “safe mutation commands” are not safe for project paths containing spaces. Evidence: `dashboard_projection()` builds `--project {project_arg}` without shell quoting at `scripts/dontpanic_orchestrate/role_assignment.py:269` and `:282-284`; a scope path like `/tmp/my repo` produces `dontpanic roles set implementer <executor> --project /tmp/my repo`, which would parse incorrectly if copied/run. Recommendation: shell-quote path-based project arguments, or emit argv arrays alongside display",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

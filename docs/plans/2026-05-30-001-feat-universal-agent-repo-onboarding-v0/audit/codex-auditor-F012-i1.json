@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-01T16:12:00Z",
+  "completed_at": "2026-06-01T16:16:05Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F012-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-96mvrwkw target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 983127 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3915398,
+    "tokens_out": 15809,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F012] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): `collect_state()` does not actually derive the real `doctor --agent` onboarding state. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1358) calls only `config.doctor_registry.run_all_checks()`, while the CLI `dontpanic doctor --agent` path runs `check_agent_onboarding()` with CLI, manifest, executor, commands, global roles, and config-home checks in [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:951) and is wired at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2643). Recommendation: derive this state from the same `check_agent_onboarding()` surface, or a shared helper with equivalent results, instead of the unrelated registry-only checks.\n\nFINDING (medium, correctness): Registered projects with missing `AGENTS.md` or no managed onboarding block still produce no setup guidance. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1407) returns `(False, False)` when `AGENTS.md` is absent or the managed block is absent, while `doctor --project` explicitly reports those as onboarding WARN states with an exact re-onboard remediation in [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import operations_guidance as og; g1=og.build_guidance('p', feature_id='F001', iteration=og.IterationState(3,1)); g2=og.build_guidance('p', feature_id='F002', iteration=og.IterationState(3,1)); print(g1.to_action_items(updated_at='2026-06-01T00:00:00Z')[0].id); print(g2.to_action_items(updated_at='2026-06-01T00:00:00Z')[0].id)\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts DONTPANIC_HOME=/nonexistent/dontpanic JARVIS_HOME=/nonexistent/jarvis JARVIS_QUOTA_STATE_PATH=/nonexistent/quota.json python -m dontpanic_orchestrate.cli what-now docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --feature F012 --format json"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F012",
+      "issue": "`collect_state()` does not actually derive the real `doctor --agent` onboarding state. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1358) calls only `config.doctor_registry.run_all_checks()`, while the CLI `dontpanic doctor --agent` path runs `check_agent_onboarding()` with CLI, manifest, executor, commands, global roles, and config-home checks in [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F012",
+      "issue": "Registered projects with missing `AGENTS.md` or no managed onboarding block still produce no setup guidance. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1407) returns `(False, False)` when `AGENTS.md` is absent or the managed block is absent, while `doctor --project` explicitly reports those as onboarding WARN states with an exact re-onboard remediation in [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F012",
+      "issue": "The new F012 reachability tests stub the leaf detectors, so they do not prove the real live derivation paths work. Evidence: [test_operations_guidance_f007.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py:847) monkeypatches `_detect_agent_doctor`, `_detect_onboarding_drift`, `_detect_stale_project_config`, and related probes before asserting `collect_state()` and dashboard output. Recommendation: add at least focused live-fixture",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

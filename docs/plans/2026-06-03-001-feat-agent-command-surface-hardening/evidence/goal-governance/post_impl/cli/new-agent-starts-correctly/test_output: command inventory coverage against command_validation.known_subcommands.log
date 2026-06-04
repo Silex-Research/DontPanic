@@ -1,0 +1,16 @@
+Evidence for journey: new-agent-starts-correctly
+Required evidence: test_output: command inventory coverage against command_validation.known_subcommands
+
+Command run locally:
+  PYTHONPATH=scripts pytest -q scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py scripts/dontpanic_orchestrate/tests/test_f007_command_guidance_gate.py
+
+Result:
+  The relevant suites passed locally during closeout. The tests assert:
+  - command_guidance_inventory covers command_validation.known_subcommands
+  - command_guidance_by_command has exact parity with the validator vocabulary
+  - missing_guidance_commands() is empty for the shipped vocabulary
+  - adding an unguided validator command causes a loud test failure
+
+Related feature evidence:
+  - F002 finalized command inventory: audit/codex-auditor-F002-i1.json
+  - F007 finalized future-command gate: audit/codex-auditor-F007-i0.json

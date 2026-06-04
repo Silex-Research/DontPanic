@@ -1,0 +1,34 @@
+{
+  "plan_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "cleared_gates": [
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-06-04T13:51:32Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-06-04T13:52:04Z",
+      "actor": "operator"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-06-04T13:52:04Z",
+      "cleared_by": "operator"
+    }
+  ],
+  "completed_stages": [
+    "pre_merge"
+  ]
+}

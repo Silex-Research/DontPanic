@@ -149,6 +149,15 @@ class CompletionDispatchError(RuntimeError):
     not an availability failure)."""
 
 
+class ConfigNotReady(CompletionDispatchError):
+    """Plan 2026-06-01-001 F009 — raised when the pre-flight config-readiness
+    check (quota caps + role config) fails BEFORE the plan-close goal-completion
+    audit spends a paid call. Carries the actionable readiness message (the
+    file, the precise reason, and a runnable remediation command) so the
+    operator is never stranded by a raw ``{}``-style schema crash at plan-close,
+    mirroring the dispatch-from-plan readiness gate."""
+
+
 # ──────────────────────────────  pydantic models  ──────────────────────────────
 
 
@@ -658,6 +667,30 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
     return result.raw_response or ""
 
 
+def _assert_config_ready_for_completion(
+    *,
+    implementer_agent: str | None,
+    auditor: str,
+    caps_path: Path | None = None,
+) -> None:
+    """Plan 2026-06-01-001 F009 — raise :class:`ConfigNotReady` if the quota-caps
+    config or the resolved role values are not usable, BEFORE the plan-close
+    goal-completion audit spends a paid call. Reuses the same readiness module
+    as the dispatch-from-plan gate so the actionable message + runnable
+    remediation are identical at both pre-flight sites."""
+    from dontpanic_orchestrate import config_readiness
+    from dontpanic_orchestrate.executors import AGENT_REGISTRY
+
+    roles = [r for r in (implementer_agent, auditor) if r]
+    result = config_readiness.check_config_readiness(
+        roles=roles,
+        registered_executors=set(AGENT_REGISTRY),
+        caps_path=caps_path,
+    )
+    if not result.ok:
+        raise ConfigNotReady(result.render())
+
+
 def dispatch_completion_audit(
     plan_dir: Path,
     *,
@@ -665,6 +698,7 @@ def dispatch_completion_audit(
     implementer_agent: str | None = None,
     iteration: int = 1,
     dispatch: DispatchFn | None = None,
+    caps_path: Path | None = None,
 ) -> CompletionAuditTranscript:
     """Run a cross-vendor goal audit on a v1 completion-findings list.
 
@@ -692,9 +726,22 @@ def dispatch_completion_audit(
         raise CompletionDispatchError(f"plan_dir does not exist: {plan_dir}")
 
     auditor = _resolve_auditor_or_translate_same_vendor(plan_dir, implementer_agent)
+
+    _offline = _is_truthy_env(os.environ.get(_OFFLINE_ENV))
+    # Plan 2026-06-01-001 F009 — config-readiness pre-flight runs BEFORE the
+    # lower-level auditor-name validation on the real paid path, so a bad role
+    # (e.g. the D065 `Codex-Auditor` split-brain) surfaces the actionable
+    # ConfigNotReady (file/reason/remediation/dashboard) rather than the raw
+    # name-format CompletionDispatchError (codex F009 audit i0, acceptance
+    # #1/#2). Offline + the injected ``dispatch=`` test seam are not paid work
+    # and intentionally bypass the gate.
+    if dispatch is None and not _offline:
+        _assert_config_ready_for_completion(
+            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
+        )
     _validate_auditor_name(auditor)
 
-    if _is_truthy_env(os.environ.get(_OFFLINE_ENV)):
+    if _offline:
         return _emit_offline_envelope(plan_dir, auditor, iteration, implementer_agent)
 
     contract = _load_objective_contract(plan_dir)
@@ -705,6 +752,8 @@ def dispatch_completion_audit(
     if dispatch is not None:
         raw_response = dispatch(auditor, prompt)
     else:
+        # Real paid path. Config-readiness was already enforced above (F009),
+        # before auditor-name validation.
         raw_response = _dispatch_via_executor(auditor, prompt, plan_dir=plan_dir)
 
     status, dispositions = _parse_audit_response(raw_response, findings)

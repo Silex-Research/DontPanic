@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "advisory",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:quota_warn:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Quota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:quota_warn:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Quota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Budget guardrail on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota soft warn",
       "updated_at": "2026-05-24T00:00:00Z"

@@ -615,15 +615,24 @@ class TestPlanBRetroactive:
                 f"got {result.final_status!r} reason={result.reason!r}"
             )
 
-    def test_legitimate_no_progress_still_terminates_stopped_no_progress(self) -> None:
-        """Both rounds: blocked-without-worktree-changes + auditor needs_changes.
-        F003 must NOT over-correct: this is the original correct trip path.
+    def test_distinct_findings_churn_terminates_at_cap(self) -> None:
+        """D003 supersede (Plan 2026-06-02-002 F001, operator-confirmed
+        2026-06-02) of this test's pre-D003 contract. Both rounds:
+        blocked-without-worktree-changes + auditor needs_changes, with a DISTINCT
+        finding signature each round.
 
-        AC #6 requires *exact* `stopped_no_progress` — diminishing_returns is a
-        separate trip with its own semantic (signature-identity collapse). To
-        isolate no-progress (status-identity), this test gives each round a
-        DIFFERENT finding signature so DR's window stays unmatched and the
-        supervisor falls through to the no-progress check.
+        Pre-D003 this tripped `stopped_no_progress` (the test used distinct
+        findings to keep DR quiet and isolate the status-identity no-progress
+        trip). Under D003 a round whose findings completely turn over is PROGRESS
+        — each prior signature is resolved — so neither no_progress nor DR trips,
+        and the volley walks off the end at the iteration cap. This is the
+        operator-named safety trade: distinct-finding churn is bounded by
+        max_iterations, not no_progress. The volley STILL terminates.
+
+        no_progress's own status-identity coverage now lives on the legacy
+        verdict-string path — see
+        TestPriorAudStatusCarryOver.test_timeout_with_work_round_does_not_advance_baseline
+        and test_f001_convergence_progress.test_no_progress_fallback_*.
         """
         with tempfile.TemporaryDirectory() as td:
             plan_dir = _make_test_plan(Path(td))
@@ -668,10 +677,10 @@ class TestPlanBRetroactive:
             finally:
                 _restore_supervisor()
 
-            assert result.final_status == "stopped_no_progress", (
-                f"blocked-without-work both rounds with distinct findings must "
-                f"terminate at stopped_no_progress (the status-identity trip); "
-                f"got {result.final_status!r} reason={result.reason!r}"
+            assert result.final_status == "stopped_cap", (
+                f"distinct-finding churn is progress under D003 (no early "
+                f"no_progress stop); it terminates at the iteration cap, got "
+                f"{result.final_status!r} reason={result.reason!r}"
             )
 
 
@@ -691,7 +700,20 @@ class TestPriorAudStatusCarryOver:
         """When iteration 0 is timeout-with-work and iterations 1 & 2 are
         legitimate, no-progress trips on the *second* legitimate round, not
         the first — proving the timeout-with-work round did not set the
-        baseline. Findings differ across iterations so DR cannot trip first."""
+        baseline.
+
+        D003-preserve (Plan 2026-06-02-002 F001): this test must keep no_progress
+        ITSELF as the trip to demonstrate the prior_aud_status carry-over
+        mechanic. Under D003 the old "distinct findings each round" technique no
+        longer trips no_progress (distinct findings = progress). So the auditor
+        findings here carry NO usable issue text (empty ``issue``) — that makes
+        ``compute_audit_finding_signature`` return None, the D003 signature
+        carve-out is skipped, and no_progress falls back to verdict-string
+        equality (the path D003 explicitly preserves). Finding COUNTS strictly
+        decrease across the two legitimate rounds (iter1=2 → iter2=1) so the
+        diminishing-returns count-fallback stays quiet and no_progress remains the
+        isolated trip — exactly the isolation the pre-D003 distinct-signature
+        technique provided."""
         # Custom patch wrapping `_run_round` per-iteration: iter 0 = TWW, iters
         # 1+ = legitimate.
         orig = supervisor._run_round
@@ -714,16 +736,24 @@ class TestPriorAudStatusCarryOver:
                 data["validation_performed"] = markers
             elif role == "auditor":
                 data["audit_status"] = "needs_changes"
-                # Distinct findings per iter so DR's signature window cannot
-                # match — isolates the no-progress (status-identity) detector.
+                # D003-preserve: empty issue text → unsigned findings →
+                # compute_audit_finding_signature returns None → no_progress
+                # falls back to verdict-string equality (the preserved path).
+                # Counts strictly DECREASE across the legitimate rounds
+                # (iter1=2 → iter2=1) so the diminishing-returns count-fallback
+                # stays quiet and no_progress is the isolated trip. iter0 is
+                # timeout-with-work, excluded from both detectors, so its count
+                # is irrelevant.
+                n = 2 if i == 1 else 1
                 data["findings"] = [
                     {
                         "severity": "high",
                         "category": "correctness",
                         "feature_id": "F001",
-                        "issue": f"distinct issue text for iter {i}",
-                        "evidence": f"evidence-{i}",
+                        "issue": "",
+                        "evidence": f"evidence-{i}-{k}",
                     }
+                    for k in range(n)
                 ]
             path.write_text(json.dumps(data, indent=2) + "\n")
             return path

@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-01T23:47:20Z",
+  "completed_at": "2026-06-01T23:50:28Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F008-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-flqxpocg target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 275143 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1765723,
+    "tokens_out": 12978,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \n\nOverall verdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), structured `target_context` is valid, and their recorded commands contain no forbidden command shapes. Diff does not touch `dashboard/*`.\n\nFINDING (high, correctness): Required secret/auth repair can require human input without producing `human_required` or the required dashboard hint. Evidence: `_secret_provider` sets `human_required = (not present) and (not optional)` at `scripts/dontpanic_orchestrate/config_inventory.py:1498`, so present-but-unloadable Anthropic auth becomes `needs_setup` with no safe command but `human_required=False`; `collect_inventory` only emits the response-level dashboard hint when `any(i.human_required for i in items)` at `config_inventory.py:1902`. Targeted check returned `needs_setup False None False`. Recommendation: required secret/auth items that are absent, unloadable, or invalid should be human-required, while optional integrations remain optional/non-blocking.\n\nFINDING (medium, correctness): Quota emits a non-runnable `safe_command` in the already-configured state. Evidence: `provider_quota` sets `safe_command = \"dontpanic quota-caps init\"` when caps, calibration, and quota state are present at `config_inventory.py:1001-1006`, but `quota_caps_loader.init_caps` refuses if the caps file exists without overwrite at `scripts/dontpanic_orchestrate/quota_caps_loader.py:317-32",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate import config_inventory as ci; ci._anthropic_auth_facts = lambda: (True, False, False); inv = ci.collect_inventory(); item = next(i for i in inv.items if i.id == 'secret_anthropic_auth'); print(item.status.value, item.human_required, item.safe_command, inv.dashboard_hint is not None)\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "Required secret/auth repair can require human input without producing `human_required` or the required dashboard hint. Evidence: `_secret_provider` sets `human_required = (not present) and (not optional)` at `scripts/dontpanic_orchestrate/config_inventory.py:1498`, so present-but-unloadable Anthropic auth becomes `needs_setup` with no safe command but `human_required=False`; `collect_inventory` only emits the response-level dashboard hint when `any(i.human_required for i in items)` at `config_in",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "Quota emits a non-runnable `safe_command` in the already-configured state. Evidence: `provider_quota` sets `safe_command = \"dontpanic quota-caps init\"` when caps, calibration, and quota state are present at `config_inventory.py:1001-1006`, but `quota_caps_loader.init_caps` refuses if the caps file exists without overwrite at `scripts/dontpanic_orchestrate/quota_caps_loader.py:317-320`. Recommendation: emit no quota `safe_command` for the OK state, or emit a validated exact overwrite command only",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

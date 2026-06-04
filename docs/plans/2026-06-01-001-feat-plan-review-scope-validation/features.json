@@ -1,0 +1,225 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Scope-signal lint core. A pure, deterministic module that scores each feature record (description/steps/acceptance) for the three plan-authoring defect classes that caused the onboarding-v0 stalls: over-scope (size), exemplar/weak acceptance (precision), and silent prerequisites (coupling). It emits a typed ScopeReport per feature with risk flags and the evidence for each flag. No paid calls, no I/O beyond reading the plan files.",
+      "steps": [
+        "Define a SURFACES taxonomy (e.g. core, cli, dashboard, validator, schema, persistence, orchestration) and a deterministic tagger that maps each AC/step to the surface(s) it touches from keyword + referenced-symbol signals.",
+        "Compute size signals: distinct-surface count and acceptance-criterion count per feature.",
+        "Compute precision signals: detect exemplar-only acceptance (an 'e.g./such as/including' enumeration with no co-located 'every/all/each' universal) and weak-test acceptance (equality/string-match assertions with no round-trip or property assertion).",
+        "Compute coupling signals: extract command/flag/symbol tokens an AC names and check each resolves against a provided resolver set (CLI grammar, registry, schema); unresolved => missing-prereq flag.",
+        "Return a typed ScopeReport(feature_id, surfaces[], ac_count, flags[{kind, severity, evidence}]) where kind in {over_surface, over_ac, exemplar_ac, weak_test, missing_prereq, likely_timeout}.",
+        "Add unit tests that feed crafted feature records reproducing each onboarding-v0 stall (F007 multi-surface, F008 exemplar-AC, F012 missing-prereq + weak-test) and assert the corresponding flag fires, plus negatives that must not flag."
+      ],
+      "acceptance": "(1) `lint_feature(feature, resolvers)` is pure (no network, no mutation) and returns a typed ScopeReport. (2) Every feature touching more than one surface yields an `over_surface` flag carrying the surface list as evidence. (3) Every acceptance string that enumerates examples (e.g./such as/including) without a co-located universal (every/all/each) yields an `exemplar_ac` flag. (4) Every acceptance string asserting equality/string-match with no round-trip or property assertion yields a `weak_test` flag. (5) Every command/flag/symbol token an acceptance names that does not resolve against the provided resolver set yields a `missing_prereq` flag naming the unresolved token. (6) Tests reproduce each of the three onboarding-v0 stall classes (multi-surface, exemplar-AC, missing-prereq) and assert the matching flag fires, with negative cases proving no false-positive on a clean single-surface feature.",
+      "passes": true,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Suggested-split proposer. A pure function that, given a feature flagged over_surface or over_ac by F001, proposes a partition into smaller features: it allocates each acceptance criterion and step to a child feature by surface, rewires depends_on so children chain correctly, and guarantees no acceptance criterion is dropped or duplicated. Advisory output the operator accepts/edits; it does not mutate the plan itself.",
+      "steps": [
+        "Group a flagged feature's ACs/steps by their F001 surface tags into candidate child features.",
+        "Assign child ids and depends_on so the partition forms a valid chain (later children depend on earlier ones where ACs reference their outputs).",
+        "Assert a conservation invariant: the union of child ACs equals the parent ACs with no loss or duplication.",
+        "Emit a SplitProposal(parent_id, children[{provisional_id, surfaces, acceptance_subset, depends_on}], conservation_ok) as data only.",
+        "Add tests: a multi-surface feature yields >=2 children partitioned by surface; conservation holds; a single-surface feature yields no proposal."
+      ],
+      "acceptance": "(1) `propose_split(feature, scope_report)` is pure and returns a typed SplitProposal or None. (2) A feature flagged `over_surface` yields a proposal whose children each touch exactly one surface. (3) The conservation invariant holds for every proposal: the multiset union of child acceptance criteria equals the parent's, with zero dropped and zero duplicated (asserted in code and in tests). (4) Child `depends_on` forms a valid acyclic chain. (5) A single-surface, in-budget feature yields None. (6) Tests cover a multi-surface split, the conservation invariant, dependency validity, and the no-op case.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 2,
+      "description": "`dontpanic plan-review <plan>` CLI surface. Runs the F001 lint and F002 split proposer over a plan and renders a scope report in text and json, exit-coding non-zero only when block-severity flags exist. Read-only: it never edits the plan.",
+      "steps": [
+        "Add a `plan-review` subcommand accepting a plan id/path and `--format text|json`.",
+        "Run F001 over every feature and F002 over every flagged feature; assemble a PlanScopeReport.",
+        "Render text (human triage) and json (machine) from the same typed data.",
+        "Exit 0 when no block-severity flags, non-zero when any block-severity flag exists; never mutate plan files.",
+        "Register `plan-review` in command_validation.py and the agent manifest supported_commands.",
+        "Add CLI tests for text/json output, exit codes, and a clean-plan zero-flag run."
+      ],
+      "acceptance": "(1) `dontpanic plan-review <plan> [--format text|json]` runs F001+F002 and prints a report from one typed source for both formats. (2) The command is read-only and never writes plan files. (3) Exit code is non-zero iff at least one block-severity flag is present, 0 otherwise. (4) `plan-review` validates under command_validation.validate_command_tokens and appears in manifest supported_commands. (5) Tests cover text output, json output, the non-zero-on-block exit, and a clean-plan zero-flag exit.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 3,
+      "description": "Pre-lock design gate. Wires the F001 lint into plan lock so a plan cannot transition draft->active while any feature carries a block-severity scope flag, unless the operator overrides with a recorded rationale that lands in decisions.jsonl. This is the shift-left enforcement point for feature sizing and AC precision.",
+      "steps": [
+        "Add a `pre_lock` gate that runs F001 over the plan at lock time.",
+        "Block the lock when any feature has a block-severity flag (over_surface/over_ac/exemplar_ac/missing_prereq) and no override is supplied.",
+        "Accept an explicit `--allow-oversize <reason>` (>=8 non-whitespace chars) override that records the reason verbatim into decisions.jsonl and proceeds.",
+        "Preserve all existing lock validation; the gate is additive.",
+        "Add tests: a plan with a multi-surface feature is refused at lock; the same plan locks with a recorded override; a clean plan locks with no override."
+      ],
+      "acceptance": "(1) Locking a plan runs the F001 lint as a `pre_lock` gate. (2) A plan with any block-severity scope flag is refused at lock with the flags named, and no status transition occurs. (3) An `--allow-oversize <reason>` override (>=8 chars) records the reason verbatim in decisions.jsonl and allows the lock. (4) Existing lock validation still runs; the gate only adds the scope check. (5) Tests prove refusal-without-override, lock-with-recorded-override, and clean-plan-locks-with-no-override.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-03T13:18:48Z"
+    },
+    {
+      "id": "F005",
+      "category": "infra",
+      "phase": 5,
+      "description": "Design-review volley. Reuses the existing dispatch_volley harness with a design-reviewer auditor role (instead of a code auditor) to red-team a plan's feature decomposition for sizing, hidden coupling, testability traps, dependency order, and missing prerequisites. Returns the standard auditor envelope so it plugs into the existing taxonomy and breaker machinery. Reserved for plans the deterministic lint cannot fully judge.",
+      "steps": [
+        "Add a design-reviewer role/prompt template that consumes the plan's features.json + objective_contract and emits findings keyed to {oversize, hidden_coupling, ac_underspecified, missing_prereq, reorder_deps}.",
+        "Run it through dispatch_volley as the auditor slot against a planner implementer slot, producing the standard {verdict, findings} envelope.",
+        "Expose it as an opt-in `pre_lock` design-volley invoked only when the F001 lint reports uncertainty (or on explicit operator request).",
+        "Add a synthetic test using a mock executor that asserts a known-oversize decomposition produces an `oversize` finding and a clean one signs off (no live paid call in tests)."
+      ],
+      "acceptance": "(1) A design-reviewer role runs through dispatch_volley and returns the standard auditor envelope {verdict, findings}. (2) Findings are keyed to a closed design taxonomy {oversize, hidden_coupling, ac_underspecified, missing_prereq, reorder_deps}. (3) The design-volley is opt-in at `pre_lock`, triggered by F001 lint uncertainty or explicit operator request, never auto-run on every plan. (4) A synthetic test with a mock executor proves a known-oversize decomposition yields an `oversize` finding and a clean decomposition signs off, with no live paid call in the test.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-03T19:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/codex-batch-audit-i0.txt",
+          "note": "batched codex audit i0 (needs_changes->fixed); operator_verified close per D018/D019/D020"
+        }
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "infra",
+      "phase": 4,
+      "description": "Mid-development scope-delta lint. On any change to features.json/objective_contract, re-runs the F001 lint on the changed features only (the diff, not the whole plan) and classifies the change as sharpen / expand / split, enforcing the scope-change protocol: an expand that pushes a locked feature past budget is refused until split-or-justified, and a split is verified for AC conservation. This keeps scope honest as plans evolve, which is when most drift is introduced.",
+      "steps": [
+        "Detect changed feature ids between the prior and current plan state.",
+        "Re-run F001 on changed features only and diff their flag sets against the prior state.",
+        "Classify each change: sharpen (narrowed/concretized AC, no new surface), expand (added AC/surface to a locked feature), or split (one feature became several).",
+        "For expand on a locked feature crossing budget: refuse with the scope-change protocol message and require a recorded rationale or a split.",
+        "For split: verify AC conservation via F002's invariant; refuse a lossy split.",
+        "Add tests for each classification and the refusal paths."
+      ],
+      "acceptance": "(1) On a plan change, the lint runs on the changed features only, not the whole plan. (2) Each change is classified as exactly one of sharpen/expand/split. (3) An expand that pushes a locked feature past the size budget is refused until either a recorded rationale is added or the feature is split. (4) A split is accepted only when AC conservation holds; a lossy split is refused naming the dropped/duplicated criteria. (5) A sharpen that adds no surface and no exemplar passes without friction. (6) Tests cover all three classifications and both refusal paths.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F004"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-03T19:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/codex-batch-audit-i0.txt",
+          "note": "batched codex audit i0 (needs_changes->fixed); operator_verified close per D018/D019/D020"
+        }
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "infra",
+      "phase": 3,
+      "description": "Pre-dispatch sizing gate. Wires the F001 lint into dispatch-from-plan so a feature that currently violates the size budget cannot be dispatched without an override. This catches scope drift at the exact moment it would otherwise cause a stall, converting 'stall -> operator splits -> re-volley' into 'blocked pre-flight -> split proposed -> dispatch clean'.",
+      "steps": [
+        "Run F001 on the target feature in the dispatch-from-plan strict-dry-run pre-flight.",
+        "Refuse to confirm-dispatch a feature with a block-severity size flag and surface the F002 split proposal as the remediation.",
+        "Accept an explicit override flag (>=8-char reason) that records the rationale and proceeds.",
+        "Keep all existing pre-flight checks (quota readiness, patch completeness) intact; the sizing gate is additive and runs before paid work.",
+        "Add tests: an over-budget feature is refused pre-dispatch with the split proposal shown; an override proceeds; an in-budget feature dispatches unchanged."
+      ],
+      "acceptance": "(1) dispatch-from-plan runs the F001 sizing lint in its pre-flight before any paid work. (2) A feature with a block-severity size flag is refused at confirm-dispatch, with the F002 split proposal surfaced as remediation. (3) An explicit override (>=8-char reason) records the rationale and allows dispatch. (4) Existing pre-flight checks still run; the sizing gate only adds the size check and runs before the volley starts. (5) Tests prove refusal-with-split-proposal, override-proceeds, and in-budget-dispatches-unchanged.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "infra",
+      "phase": 3,
+      "description": "Cross-feature edit detection. At patch-completeness/audit time, detects when a dispatch's diff touches files owned by a DIFFERENT feature than the one being implemented (the F008-touches-F013-dashboard bleed codex caught manually), and flags it. Requires a lightweight feature->owned-paths ownership map derived from the plan, and surfaces the bleed as a block-severity patch finding so scope-creep is caught by the system rather than only by a vigilant auditor.",
+      "steps": [
+        "Derive a feature->owned-paths map (from declared touched paths / surface tags / explicit ownership in the plan).",
+        "At patch-completeness, compute the diff's touched paths and intersect against other features' owned paths.",
+        "Emit a block-severity `cross_feature_edit` finding naming the foreign feature and the offending paths when the intersection is non-empty.",
+        "Allow an explicit acknowledgement (recorded rationale) for legitimate shared-file edits.",
+        "Add tests: a patch touching another feature's owned paths flags; a same-feature patch does not; an acknowledged shared edit passes."
+      ],
+      "acceptance": "(1) A feature->owned-paths ownership map is derived from the plan. (2) At patch-completeness, a diff touching paths owned by a different feature yields a block-severity `cross_feature_edit` finding naming the foreign feature and the paths. (3) A patch touching only its own feature's paths yields no such finding. (4) A legitimate shared-file edit can be acknowledged with a recorded rationale and then passes. (5) Tests reproduce the onboarding-v0 F008->F013 bleed and assert the finding fires, plus the clean and acknowledged cases.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-03T19:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/codex-batch-audit-i0.txt",
+          "note": "batched codex audit i0 (needs_changes->fixed); operator_verified close per D018/D019/D020"
+        }
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "infra",
+      "phase": 2,
+      "description": "Actionable config-readiness, not raw schema hard-stops. DontPanic must not abort a dispatch with a low-level schema crash when a config file (e.g. quota_caps.json) is invalid or empty; it must surface the problem at pre-flight readiness with a specific remediation (the exact command to seed/repair it, and the dashboard pointer) so the operator is never stranded by a `{}`-style failure mid-volley. Born from the onboarding-v0 caps-file hard-stop (D039).",
+      "steps": [
+        "Add a pre-flight config-readiness check that validates required config files (quota caps, etc.) before dispatch, distinct from the in-loop budget breaker.",
+        "On invalid/empty config, emit an actionable readiness failure naming the file, the precise reason, and a VALIDATED remediation command (e.g. `quota-caps init`) plus the dashboard pointer.",
+        "Ensure the failure is a clean pre-flight stop with guidance, not a mid-volley low-level exception.",
+        "Route the remediation command through command_validation so the emitted fix is runnable.",
+        "Add tests: an empty/invalid caps file produces the actionable readiness failure with a validated remediation command; a valid file passes.",
+        "Extend the readiness check to validate role config (implementer/auditor/goal_auditor) against the registered-executor id pattern; emit the same actionable readiness failure for invalid roles (D065 Grok-Builder/Codex-Auditor) with a runnable remediation command.",
+        "Add a test reproducing the invalid-roles case alongside the quota_caps=={} case; keep the doctor proactive-WARN out of scope (separate feature)."
+      ],
+      "acceptance": "(1) A pre-flight config-readiness check validates required config files — quota caps AND role config (~/.dontpanic/config.json with the legacy ~/.jarvis fallback) — before any paid work (dispatch OR plan-close goal-completion audit), separate from the in-loop budget breaker. (2) An invalid/empty config OR an invalid role value (a role that is not a registered executor id matching ^[a-z][a-z0-9_-]*$ — e.g. the Grok-Builder/Codex-Auditor split-brain from D065) produces a clean readiness failure naming the file, the precise reason, and a remediation command — never a raw low-level schema/validation exception mid-volley or at plan-close. (3) The emitted remediation command passes command_validation.validate_command_tokens (it is runnable). (4) The failure also references the dashboard affordance for fixing config. (5) Tests reproduce BOTH the quota_caps.json == {} case AND the invalid-roles case, asserting the actionable readiness failure with a validated remediation command, plus a valid-file pass. NOTE: the proactive `doctor` WARN for bad role config (the other D065 follow-up) is deliberately kept OUT of this feature to preserve its single (config-readiness) surface — it is a separate small feature, per this plan's own surface-count discipline.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-03T19:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/codex-batch-audit-i0.txt",
+          "note": "batched codex audit i0 (needs_changes->fixed); operator_verified close per D018/D019/D020"
+        }
+      ]
+    }
+  ]
+}

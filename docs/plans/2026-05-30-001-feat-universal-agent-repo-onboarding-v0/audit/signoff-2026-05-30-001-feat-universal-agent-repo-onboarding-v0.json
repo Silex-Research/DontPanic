@@ -1,0 +1,28 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "signoff_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#signoff#2",
+  "iteration": 2,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F010-i0.json",
+    "audit/codex-auditor-F010-i0.json",
+    "audit/claude-implementer-F010-i1.json",
+    "audit/codex-auditor-F010-i1.json",
+    "audit/claude-implementer-F010-i2.json",
+    "audit/codex-auditor-F010-i2.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 3,
+    "blocked_count": 3,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "operator_resolved (class=operator_judgment): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
+  "next_action": "merge",
+  "decided_at": "2026-06-02T17:39:38Z"
+}

@@ -1,0 +1,35 @@
+{
+  "task_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "audit_id": "2026-06-03-001-feat-agent-command-surface-hardening#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-04T14:34:00Z",
+  "completed_at": "2026-06-04T14:36:49Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F005-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-03-001-feat-agent-command-surface-hardening-a2brx58l target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1250150 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 681983,
+    "tokens_out": 13282,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-agent-command-surface\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic-agent-command-surface  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. No FINDINGs. The implementer’s Repo/Env/Project declaration matches the structured `target_context`, and `target_context.commands_run` contains only ruff/pytest commands with no forbidden command shapes. The F005 code wires representative command help through the shared inventory/helper, and the rendered snippets satisfy the class guidance requirements.\n\nChecks run:\n$ ruff check --no-cache scripts/dontpanic_orchestrate/command_guidance.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/dashboard.py scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py\n$ ruff check --no-cache scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.tests import test_f005_workflow_help_snippets as t; [t.test_help_embeds_shared_snippet_verbatim(c, cls, argv) for c, cls, argv in t._REPRESENTATIVES]; t.test_each_class_has_a_distinct_snippet(); t.test_snippet_is_built_from_inventory_fields_not_ad_hoc(); t.test_readonly_help_says_safe_to_inspect_before_mutation(); t.test_dispatch_he",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "ruff check --no-cache scripts/dontpanic_orchestrate/command_guidance.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/dashboard.py scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c \"from dontpanic_orchestrate.tests import test_f005_workflow_help_snippets as t; [t.test_help_embeds_shared_snippet_verbatim(c, cls, argv) for c, cls, argv in t._REPRESENTATIVES]; t.test_each_class_has_a_distinct_snippet(); t.test_snippet_is_built_from_inventory_fields_not_ad_hoc(); t.test_readonly_help_says_safe_to_inspect_before_mutation(); t.test_dispatch_help_warns_against_auto_running_paid_work(); t.test_lifecycle_help_warns_against_auto_mutating(); t.test_human_handoff_help_points_to_local_decision_surface(); t.test_diagnostic_help_carries_diagnostic_guidance(); t.test_config_help_carries_config_guidance(); t.test_snippet_helper_raises_for_unknown_command(); print('direct F005 test-function checks passed')\""
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

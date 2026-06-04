@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:verdict_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:verdict_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict mismatch",
       "updated_at": "2026-05-24T00:00:00Z"

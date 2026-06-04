@@ -64,12 +64,14 @@ from dontpanic_orchestrate import (
     mcp_server,
     nested_orchestration,
     patch_completeness_gate,
+    plan_drift,
     plan_loader,
     project_config,
     projects_registry,
     quota_admission,
     quota_caps_loader,
     release_impact,
+    repo_onboarding,
     skill_applicability,
     sufficiency_gate,
     supervisor,
@@ -178,6 +180,73 @@ def _resolve_plan_dir(plan_arg: str) -> Path:
     raise SystemExit(f"plan not found: {plan_arg}")
 
 
+def _resolve_default_actions_plan_dir() -> Path | None:
+    """Best-effort cwd-anchored default plan for the ``agent brief`` actions block.
+
+    Plan 2026-06-02-001 F003: the agent-brief surface renders the managed
+    ActionItem block by default. With no explicit ``--actions PLAN`` the plan is
+    resolved here — the cwd project's most-recent (lexicographically-greatest,
+    i.e. latest date-prefixed) plan directory that still has at least one
+    in-flight feature (``passes`` != ``true``), or ``None`` when no project/plan
+    resolves. Fully guarded — never raises — so the default brief path stays
+    robust even on an un-registered repo or unreadable plan metadata."""
+    try:
+        cwd = Path.cwd().resolve()
+        match = project_config.find_project_for_plan_dir(cwd)
+        if match is None:
+            return None
+        proj_path = match[0]
+        cfg = project_config.load_project_config(proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        root = proj_path / plans_dir
+        if not root.is_dir():
+            return None
+        in_flight: list[Path] = []
+        for child in sorted(root.iterdir()):
+            if not child.is_dir():
+                continue
+            try:
+                data = json.loads((child / "features.json").read_text())
+            except (OSError, ValueError):
+                continue
+            features = data.get("features") if isinstance(data, dict) else None
+            if not isinstance(features, list):
+                continue
+            if any(isinstance(f, dict) and f.get("passes") is not True for f in features):
+                in_flight.append(child)
+        return in_flight[-1] if in_flight else None
+    except Exception:  # noqa: BLE001 — default resolution is advisory, never fatal
+        return None
+
+
+def _resolve_brief_action_items(actions_plan: str | None) -> list[Any]:
+    """Resolve the ActionItem list for the ``agent brief`` managed actions block.
+
+    Plan 2026-06-02-001 F003: the agent-brief surface ALWAYS renders the managed
+    block from the ActionItem spine. ``actions_plan`` (the explicit
+    ``--actions PLAN`` flag) pins a specific plan and intentionally propagates a
+    ``SystemExit`` when that plan id does not resolve (a typed operator error,
+    exit 2). Without the flag the plan is auto-resolved from the cwd project; any
+    failure THERE degrades to an empty list so the block renders as
+    "No actions pending" rather than crashing the brief."""
+    from dontpanic_orchestrate import operations_guidance
+
+    if actions_plan is not None:
+        # Explicit plan: let an unresolved id raise SystemExit (exit 2) — the
+        # operator named a plan that does not exist and should be told so.
+        plan_dir: Path | None = _resolve_plan_dir(actions_plan)
+    else:
+        plan_dir = _resolve_default_actions_plan_dir()
+    if plan_dir is None:
+        return []
+    try:
+        plan_id = plan_loader.load(plan_dir).plan_id
+        guidance = operations_guidance.collect_state(plan_dir, plan_id=plan_id)
+        return guidance.to_action_items()
+    except Exception:  # noqa: BLE001 — the brief must render even if collection fails
+        return []
+
+
 def _ps_main(argv: list[str]) -> int:
     """F023 EC13: list live supervisors registered in
     ~/.jarvis/active_supervisors.jsonl. Filters dead PIDs and prunes the file
@@ -256,6 +325,53 @@ def _approve_main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 2
+
+    # F014 — blocking-drift human acknowledgement. `approve <plan> drift:<class>`
+    # (or bare `drift`) clears the durable plan-drift ack marker that a prior
+    # BLOCKING_POLICY scope/policy drift recorded, authorising work to resume
+    # against the new boundary. Deleting the marker lets the NEXT dispatch record
+    # a fresh baseline against the now-accepted scope and proceed; without it the
+    # run stays paused on every re-dispatch (blocks-then-resumes).
+    if len(argv) == 2 and (
+        argv[1] == "drift" or argv[1].startswith(plan_drift.DRIFT_GATE_PREFIX)
+    ):
+        plan_arg, drift_token = argv
+        plan_dir = _resolve_plan_dir(plan_arg)
+        loaded = plan_loader.load(plan_dir)
+        requested_class = (
+            None
+            if drift_token == "drift"
+            else drift_token[len(plan_drift.DRIFT_GATE_PREFIX):] or None
+        )
+        try:
+            cleared = plan_drift.acknowledge_blocking_drift(
+                plan_dir,
+                plan_id=loaded.plan_id,
+                drift_class=requested_class,
+            )
+        except plan_drift.DriftAckError as exc:
+            print(f"[approve] REFUSED {drift_token!r}: {exc}", file=sys.stderr)
+            return 2
+        inbox.append_event(
+            plan_dir,
+            event="plan_drift_acknowledged",
+            plan_id=loaded.plan_id,
+            body=(
+                f"Operator acknowledged blocking plan-drift "
+                f"({cleared.get('drift_class')}) via 'approve {drift_token}'.\n\n"
+                f"Changed files: {', '.join(cleared.get('changed_files') or []) or '(none)'}\n"
+                f"The next dispatch records a fresh baseline against the accepted "
+                f"scope and proceeds."
+            ),
+            drift_class=str(cleared.get("drift_class")),
+            feature_id=cleared.get("feature_id"),
+        )
+        print(
+            f"[approve] acknowledged blocking drift "
+            f"({cleared.get('drift_class')}) for {loaded.plan_id} — "
+            f"redispatch to resume"
+        )
+        return 0
 
     if len(argv) != 2:
         print("usage: dontpanic approve <plan-id> <gate>", file=sys.stderr)
@@ -722,6 +838,319 @@ def _claude_touch_main(argv: list[str]) -> int:
     return 0
 
 
+def _finalize_main(argv: list[str]) -> int:
+    """``dontpanic finalize <plan> --feature <F>`` — Plan 2026-05-30-001 F007.
+
+    No-paid finalization of a cleanly auditor-signed_off + pre_merge-cleared
+    feature: repairs the signoff envelope if the pre_merge pause skipped it and
+    flips only that feature's ``passes: true``. Never re-runs a paid volley.
+
+    Exit codes (distinct per refusal so scripts/dashboard can branch):
+      0 — finalized (or idempotent no-op)
+      2 — usage error
+      3 — refused: latest auditor verdict is not signed_off
+      4 — refused: pre_merge gate not cleared
+      5 — refused: no auditor envelope for the feature
+      6 — refused: plan drifted since dispatch; reconcile before finalizing (F009)
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic finalize",
+        description=(
+            "Finalize a signed_off + pre_merge-cleared feature with no paid "
+            "agent calls: repair the signoff envelope if missing and flip only "
+            "that feature's passes:true. Refuses (no mutation) when the latest "
+            "auditor verdict is not signed_off, pre_merge is uncleared, or no "
+            "auditor envelope exists."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--feature", required=True, help="Feature ID, e.g. F001")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import signed_off_finalizer
+
+    _refusal_exit = {"not_signed_off": 3, "pre_merge_uncleared": 4, "no_audit": 5}
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    plan_id = plan_loader.load(plan_dir).plan_id
+
+    # F009 — no-paid finalization still MUTATES signoff + features.json state.
+    # If the plan drifted since dispatch recorded its baseline, finalizing would
+    # bake a success signoff against stale context. Run the same drift check the
+    # paid signoff boundary uses BEFORE any mutation and refuse on refresh/
+    # blocking drift (additive ledger drift is reconciled in-place and proceeds).
+    try:
+        drift = plan_drift.check_and_reconcile(
+            plan_dir,
+            plan_id=plan_id,
+            feature_id=args.feature,
+            stage=plan_drift.STAGE_SIGNOFF,
+        )
+    except plan_drift.DriftBaselineMissingError as exc:
+        # FAIL CLOSED (F009 codex #1): no readable dispatch-start baseline means
+        # we cannot prove the plan has not drifted. Refuse to finalize against
+        # unverifiable context rather than baking a signoff blind.
+        print(
+            f"[finalize] REFUSED (plan_drift): {exc}",
+            file=sys.stderr,
+        )
+        return 6
+    if not drift.proceed:
+        guidance = drift.guidance
+        cmd = ""
+        if guidance is not None and getattr(guidance, "choices", None):
+            cmd = guidance.choices[0].exact_command or ""
+        print(
+            f"[finalize] REFUSED (plan_drift): {drift.report.headline(plan_id)}",
+            file=sys.stderr,
+        )
+        print(
+            f"[finalize]   changed: {', '.join(drift.report.changed_files) or '(none)'}",
+            file=sys.stderr,
+        )
+        if cmd:
+            print(f"[finalize]   reconcile then: {cmd}", file=sys.stderr)
+        return 6
+
+    try:
+        result = signed_off_finalizer.finalize_signed_off_feature(
+            plan_dir, plan_id=plan_id, feature_id=args.feature
+        )
+    except signed_off_finalizer.FinalizeError as exc:
+        print(f"[finalize] REFUSED ({exc.code}): {exc}", file=sys.stderr)
+        return _refusal_exit.get(exc.code, 3)
+
+    if result.already_finalized:
+        print(f"[finalize] {args.feature} already finalized — no-op")
+    else:
+        print(f"[finalize] {args.feature} finalized (no paid calls)")
+    print(f"[finalize]   signoff: {result.signoff_path} (repaired={result.signoff_repaired})")
+    print(f"[finalize]   features.json passes flipped: {result.features_passes_flipped}")
+    return 0
+
+
+def _what_now_main(argv: list[str]) -> int:
+    """``dontpanic what-now <plan> [--feature F]`` — Plan 2026-05-30-001 F007.
+
+    Read-only operations guidance: collects the plan's quota / iteration / gate /
+    signoff state and prints a short decision set (recommended action +
+    alternatives, exact commands where safe, one dashboard affordance). The same
+    typed ActionChoice data feeds the dashboard ActionItems via
+    ``Guidance.to_action_items``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic what-now",
+        description=(
+            "Operations guidance for blocked work: wait/redispatch, "
+            "raise-ceiling, finalize a cleared signoff, resume/close, onboard, "
+            "or reconcile — with exact commands where safe."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--feature", default="F001", help="Feature ID (default F001)")
+    parser.add_argument(
+        "--dashboard-url",
+        default=None,
+        help="Active dashboard URL when a singleton is running (omit when not).",
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import operations_guidance
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    plan_id = plan_loader.load(plan_dir).plan_id
+    guidance = operations_guidance.collect_state(
+        plan_dir,
+        plan_id=plan_id,
+        feature_id=args.feature,
+        dashboard_url=args.dashboard_url,
+    )
+    # Plan 2026-06-02-001 F003 — BOTH the text and JSON surfaces render the
+    # ActionItem spine, not an independently-computed shape. The guidance is
+    # projected once into the canonical ActionItem envelope and both formats
+    # render from the same `action_renderers` boundary (deduped by dedupe_key,
+    # scrubbed + brand-normalized at the render boundary), so the CLI text, the
+    # CLI JSON, and the dashboard can never drift.
+    from dontpanic_orchestrate import action_renderers
+
+    action_items = guidance.to_action_items()
+    if args.format == "json":
+        # F003 fix (codex audit i2 — high/security): the legacy guidance JSON shape
+        # (`choices`, etc.) is preserved for back-compat, but EVERY human-facing
+        # string is scrubbed + brand-normalized at the output boundary so the JSON
+        # surface can no longer leak secret-shaped substrings or brand drift the way
+        # the prior raw `guidance.to_dict()` did. `action_items` is the canonical
+        # spine list, rendered through the same shared boundary so it stays
+        # byte-consistent with the dashboard and the agent brief.
+        payload = _scrub_json_payload(guidance.to_dict())
+        payload["action_items"] = action_renderers.render_dashboard(action_items)["items"]
+        print(json.dumps(payload, indent=2))
+    else:
+        print(action_renderers.render_cli_what_now(action_items, fmt="text"), end="")
+    return 0
+
+
+def _scrub_json_payload(value: Any) -> Any:
+    """Recursively scrub every string in a JSON-able structure through the shared
+    render boundary (secret-shape redaction + brand-drift normalization).
+
+    F003 fix (codex audit i2): applied to the legacy what-now JSON surface so no
+    field leaks, while preserving the structural shape consumers depend on."""
+    from dontpanic_orchestrate import action_renderers as _ar
+
+    if isinstance(value, str):
+        return _ar.scrub_render_text(value)
+    if isinstance(value, dict):
+        return {k: _scrub_json_payload(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_scrub_json_payload(v) for v in value]
+    return value
+
+
+def _plan_review_main(argv: list[str]) -> int:
+    """``dontpanic plan-review <plan> [--format text|json]`` — plan 2026-06-01-001 F003.
+
+    Read-only scope lint. Runs the F001 lint over every feature and the F002
+    split proposer over each, assembles a single typed
+    :class:`~dontpanic_orchestrate.plan_review.report.PlanScopeReport`, and
+    renders it as human ``text`` (default) or machine ``json`` from that one
+    source. Never writes a plan file (acceptance #2).
+
+    Exit code (acceptance #3): non-zero (1) iff at least one block-severity flag
+    is present across the plan; 0 otherwise. Exit 2 is reserved for usage
+    errors (argparse).
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan-review",
+        description=(
+            "Read-only scope lint for a plan: runs the deterministic F001 "
+            "lint over every feature and the F002 split proposer over each, "
+            "then prints a scope report. Exit code is non-zero iff any "
+            "block-severity flag is present. Never edits the plan."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--since",
+        metavar="REF_OR_PATH",
+        default=None,
+        help=(
+            "Plan 2026-06-01-001 F006 — run the mid-development scope-delta lint "
+            "against a PRIOR snapshot of this plan's features.json. Accepts a "
+            "git ref (e.g. HEAD) OR a path to a prior features.json. Classifies "
+            "each changed feature as sharpen/expand/split and exits non-zero "
+            "when the scope-change protocol refuses a change (budget-busting "
+            "expand on a locked feature, or a lossy split)."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate.plan_review import report as plan_review_report
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    loaded = plan_loader.load(plan_dir)
+
+    feature_dicts = [f.model_dump() for f in loaded.features.features]
+    resolvers = plan_review_report.build_default_resolvers()
+    scope_report = plan_review_report.build_plan_scope_report(
+        loaded.plan_id, feature_dicts, resolvers
+    )
+
+    if args.format == "json":
+        print(json.dumps(scope_report.to_dict(), indent=2))
+    else:
+        print(plan_review_report.render_text(scope_report), end="")
+
+    exit_code = 1 if scope_report.has_block() else 0
+
+    # Plan 2026-06-01-001 F006 — scope-delta lint invoked here on a plan-artifact
+    # change (prior snapshot via --since). The concrete integration path proving
+    # review_scope_delta runs on a plan change (operator decision D019: first
+    # reachable wiring, minimal + bounded — no file watcher, no dashboard).
+    if args.since is not None:
+        delta_code = _run_scope_delta_review(
+            plan_dir, loaded, feature_dicts, since=args.since, fmt=args.format
+        )
+        exit_code = exit_code or delta_code
+
+    return exit_code
+
+
+def _load_prior_features(plan_dir: Path, since: str) -> list[dict]:
+    """Load a prior ``features.json`` for the F006 scope-delta lint. ``since`` is
+    either a path to a prior features.json OR a git ref (resolved via
+    ``git show <ref>:<repo-relative features.json>``). Returns ``[]`` when the
+    prior cannot be loaded (first snapshot / unknown ref) so the delta lint
+    reports no changes rather than erroring."""
+    candidate = Path(since)
+    if candidate.is_file():
+        try:
+            blob = json.loads(candidate.read_text())
+        except (OSError, json.JSONDecodeError):
+            return []
+        if isinstance(blob, list):
+            return list(blob)
+        return list(blob.get("features", []))
+    import subprocess  # noqa: PLC0415 — keep optional dependency local
+
+    features_path = plan_dir / "features.json"
+    try:
+        rel = subprocess.run(  # noqa: S603,S607
+            ["git", "-C", str(plan_dir), "ls-files", "--full-name", str(features_path)],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+        if not rel:
+            return []
+        out = subprocess.run(  # noqa: S603,S607
+            ["git", "-C", str(plan_dir), "show", f"{since}:{rel}"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if out.returncode != 0 or not out.stdout.strip():
+            return []
+        return list(json.loads(out.stdout).get("features", []))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _run_scope_delta_review(
+    plan_dir: Path,
+    loaded: plan_loader.LoadedPlan,
+    current_features: list[dict],
+    *,
+    since: str,
+    fmt: str,
+) -> int:
+    """F006 wiring helper: load the prior snapshot, run the changed-feature-only
+    scope-delta lint, render it, and return non-zero iff the scope-change
+    protocol refused a change. A LOCKED (active) plan treats all current
+    features as locked so a budget-busting expand is refused (acceptance #3)."""
+    from dontpanic_orchestrate.plan_review import scope_delta
+
+    prior_features = _load_prior_features(plan_dir, since)
+    status = getattr(getattr(loaded.plan, "status", None), "value", None) or str(
+        getattr(loaded.plan, "status", "")
+    )
+    locked_ids = (
+        {str(f.get("id")) for f in current_features if f.get("id")}
+        if status == "active"
+        else set()
+    )
+    report = scope_delta.review_scope_delta(
+        prior_features, current_features, locked_ids=locked_ids
+    )
+    if fmt == "json":
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(scope_delta.render_text(report), end="")
+    return 1 if report.is_blocked else 0
+
+
 def _close_main(argv: list[str]) -> int:
     """Plan 2026-05-11-002 v3 F004 — operator-resolved feature close-out.
 
@@ -785,6 +1214,16 @@ def _close_main(argv: list[str]) -> int:
             "operator has already cleared the breaker manually."
         ),
     )
+    parser.add_argument(
+        "--note",
+        dest="note",
+        default=None,
+        help=(
+            "Operator rationale. REQUIRED for --reason operator_verified "
+            "(record what was verified and why the terminal is non-defect); "
+            "optional context for other terminal-finish classes."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if not args.operator_resolved:
@@ -807,16 +1246,32 @@ def _close_main(argv: list[str]) -> int:
     if not agents:
         agents = ["claude", "codex"]
 
+    # Plan 2026-06-02-002 F002 — route honest terminal-finish classes
+    # (signed_off_adjacent / staging_blocked / operator_verified) through the
+    # operator-finish path. It does not require breaker:no_progress and records
+    # the actual terminal class instead of a stopped_no_progress pretence.
+    is_operator_finish = args.reason_class in closeout.TERMINAL_FINISH_CLASSES
     try:
-        result = closeout.run_close_out(
-            plan_dir=plan_dir,
-            plan_id=loaded.plan_id,
-            feature_id=args.feature,
-            reason_class=args.reason_class,
-            tier=tier,
-            agents_in_panel=agents,
-            require_active_breaker=not args.allow_missing_breaker,
-        )
+        if is_operator_finish:
+            result = closeout.run_operator_finish(
+                plan_dir=plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=args.feature,
+                terminal_class=args.reason_class,
+                tier=tier,
+                agents_in_panel=agents,
+                note=args.note,
+            )
+        else:
+            result = closeout.run_close_out(
+                plan_dir=plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=args.feature,
+                reason_class=args.reason_class,
+                tier=tier,
+                agents_in_panel=agents,
+                require_active_breaker=not args.allow_missing_breaker,
+            )
     except closeout.CloseoutError as exc:
         print(f"[close] REFUSED: {exc}", file=sys.stderr)
         return 3
@@ -872,24 +1327,29 @@ def _quota_caps_main(argv: list[str]) -> int:
 
     if sub == "init":
         overwrite = "--overwrite" in rest
-        # Sample codex rolling_5h via quota_check (sibling of dontpanic_orchestrate
+        # Sample Codex windows via quota_check (sibling of dontpanic_orchestrate
         # under scripts/). Lazy-import to keep the loader decoupled.
-        codex_observed: int | None = None
+        codex_observed_5h: int | None = None
+        codex_observed_7d: int | None = None
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
             import quota_check as qc
 
-            sample = qc._codex_usage_v2("rolling_5h")
-            codex_observed = int(sample.get("observed_native") or 0) or None
+            sample_5h = qc._codex_usage_v2("rolling_5h")
+            sample_7d = qc._codex_usage_v2("rolling_7d")
+            codex_observed_5h = int(sample_5h.get("observed_native") or 0) or None
+            codex_observed_7d = int(sample_7d.get("observed_native") or 0) or None
         except (ImportError, OSError, RuntimeError) as exc:
             print(
                 f"[quota-caps] codex sample failed ({exc}); using high provisional cap",
                 file=sys.stderr,
             )
-            codex_observed = None
+            codex_observed_5h = None
+            codex_observed_7d = None
         try:
             data = quota_caps_loader.init_starter_file(
-                codex_observed_5h=codex_observed,
+                codex_observed_5h=codex_observed_5h,
+                codex_observed_7d=codex_observed_7d,
                 overwrite=overwrite,
             )
         except quota_caps_loader.QuotaCapsError as exc:
@@ -898,12 +1358,17 @@ def _quota_caps_main(argv: list[str]) -> int:
         # Print the resolved path (honors JARVIS_QUOTA_CAPS_PATH) so the
         # operator sees exactly what was written, not the default constant.
         print(f"[quota-caps] wrote {quota_caps_loader.effective_caps_path()}")
-        if codex_observed is not None:
+        if codex_observed_5h is not None:
             cap = data["codex"]["plus"]["rolling_5h"]["cap"]
             print(
-                f"[quota-caps] codex.plus.rolling_5h cap={cap} (observed {codex_observed} * 1.25)"
+                f"[quota-caps] codex.plus.rolling_5h cap={cap} (observed {codex_observed_5h} * 1.25)"
             )
-        else:
+        if codex_observed_7d is not None:
+            cap = data["codex"]["plus"]["rolling_7d"]["cap"]
+            print(
+                f"[quota-caps] codex.plus.rolling_7d cap={cap} (observed {codex_observed_7d} * 1.25)"
+            )
+        if codex_observed_5h is None and codex_observed_7d is None:
             print(
                 "[quota-caps] codex cap = high provisional; re-run after some "
                 "usage exists to derive a tighter cap"
@@ -922,6 +1387,7 @@ def _quota_caps_main(argv: list[str]) -> int:
 _PROJECTS_USAGE = (
     "usage: dontpanic projects {add|list|show|remove} [args] [--json]\n"
     "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
+    "                    [--onboard] [--dry-run]\n"
     "  list\n"
     "  show <name>\n"
     "  remove <name> [--yes]    (default is dry-run preview)"
@@ -996,8 +1462,44 @@ def _projects_add(argv: list[str]) -> int:
             "want a per-project config opt in explicitly to avoid surprise."
         ),
     )
+    parser.add_argument(
+        "--onboard",
+        action="store_true",
+        help=(
+            "Plan 2026-05-30-001 F003: scaffold repo onboarding after "
+            "registration — write .dontpanic/dontpanic.json with explicit "
+            "defaults, insert a generated DontPanic brief block into AGENTS.md, "
+            "and a pointer block into CLAUDE.md. Content outside the managed "
+            "markers is never touched; re-running refreshes only stale blocks."
+        ),
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help=(
+            "Preview all intended writes (registration + --onboard scaffolding) "
+            "without changing any file."
+        ),
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
+
+    # --onboard already writes a full .dontpanic/dontpanic.json with explicit
+    # defaults. --init-config (which scaffolds a bare `{}`) would run first and
+    # then suppress onboarding's richer config write — leaving the empty stub.
+    # Reject the combination rather than silently degrading to `{}`.
+    if args.onboard and args.init_config:
+        print(
+            "[projects add] --onboard and --init-config are mutually exclusive: "
+            "--onboard already writes .dontpanic/dontpanic.json with explicit "
+            "defaults. Use --onboard alone.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.dry_run:
+        return _projects_add_dry_run(args)
 
     if args.force and not args.yes:
         # Non-interactive: refuse without --yes. Keeps the surface scriptable
@@ -1041,6 +1543,14 @@ def _projects_add(argv: list[str]) -> int:
         elif scaffold_path is not None:
             payload["scaffold"] = str(scaffold_path)
 
+    onboard_plan = None
+    if args.onboard:
+        # F003: apply repo onboarding after registration. Writes the explicit-
+        # defaults config + managed AGENTS.md / CLAUDE.md blocks; content outside
+        # the markers is never touched.
+        onboard_plan = repo_onboarding.apply_onboarding(Path(entry.path), dry_run=False)
+        payload["onboard"] = repo_onboarding.plan_to_public_dict(onboard_plan)
+
     if args.as_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
@@ -1053,6 +1563,68 @@ def _projects_add(argv: list[str]) -> int:
                 )
             elif scaffold_path is not None:
                 print(f"[projects add] scaffolded empty per-project config at {scaffold_path}")
+        if onboard_plan is not None:
+            _print_onboarding_actions(onboard_plan, dry_run=False)
+    return 0
+
+
+def _print_onboarding_actions(plan: repo_onboarding.OnboardingPlan, *, dry_run: bool) -> None:
+    """Human-readable rendering of an onboarding plan's actions (shared by the
+    apply + dry-run paths)."""
+    prefix = "[projects add] would" if dry_run else "[projects add]"
+    verb = {
+        "create": "create",
+        "update": "update",
+        "noop": "skip (current)",
+        "warn": "WARNING",
+    }
+    for action in plan.actions:
+        label = verb.get(action.action, action.action)
+        print(f"{prefix} {label}: {action.path} — {action.detail}")
+
+
+def _projects_add_dry_run(args: argparse.Namespace) -> int:
+    """``projects add ... --dry-run`` — preview registration + (optional)
+    onboarding writes without changing any file (F003 acceptance #1).
+
+    Resolves and validates the path the same way ``add_project`` would (must be
+    an existing directory) but writes nothing: not the registry, not the config,
+    not AGENTS.md / CLAUDE.md.
+    """
+    proj_path = Path(args.path).expanduser().resolve()
+    if not proj_path.is_dir():
+        print(
+            f"[projects add] path does not exist or is not a directory: {proj_path}",
+            file=sys.stderr,
+        )
+        return 2
+    if not projects_registry.PROJECT_NAME_PATTERN.fullmatch(args.name):
+        print(
+            f"[projects add] project name {args.name!r} does not match "
+            f"{projects_registry.PROJECT_NAME_PATTERN.pattern}",
+            file=sys.stderr,
+        )
+        return 2
+
+    onboard_plan = None
+    if args.onboard:
+        onboard_plan = repo_onboarding.apply_onboarding(proj_path, dry_run=True)
+
+    if args.as_json:
+        payload: dict[str, object] = {
+            "action": "dry_run",
+            "project": {"name": args.name, "path": str(proj_path)},
+        }
+        if onboard_plan is not None:
+            payload["onboard"] = repo_onboarding.plan_to_public_dict(onboard_plan)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(
+            f"[projects add] dry-run: would register {args.name!r} → {proj_path}. "
+            "Pass without --dry-run to apply."
+        )
+        if onboard_plan is not None:
+            _print_onboarding_actions(onboard_plan, dry_run=True)
     return 0
 
 
@@ -1411,6 +1983,10 @@ def _doctor_main(argv: list[str]) -> int:
     wrapper is the new canonical surface; the legacy script remains for
     backward compatibility per AC#5.
     """
+    # F005: diagnostic-class agent-guidance footer, projected from the F002
+    # inventory (run diagnostics before changing config or dispatching work).
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic doctor",
         description=(
@@ -1418,6 +1994,8 @@ def _doctor_main(argv: list[str]) -> int:
             "preflight). Output structured PASS / WARN / FAIL per check; "
             "exit 0 if all PASS, 1 if any WARN, 2 if any FAIL."
         ),
+        epilog=command_guidance.command_help_agent_snippet("doctor"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--json",
@@ -1518,6 +2096,26 @@ def _doctor_main(argv: list[str]) -> int:
             "path. Default = <repo>/docs/install-report.html."
         ),
     )
+    parser.add_argument(
+        "--agent",
+        action="store_true",
+        help=(
+            "Plan 2026-05-30-001 F005: validate the machine onboarding layer "
+            "(CLI, agent-manifest, registered executors, global roles.*) and "
+            "list registered worker executors."
+        ),
+    )
+    parser.add_argument(
+        "--project",
+        type=str,
+        default=None,
+        metavar="NAME_OR_PATH",
+        help=(
+            "Plan 2026-05-30-001 F005: validate ONE project's onboarding "
+            "(config / agents / roles.* / managed AGENTS.md block) by "
+            "registry name or filesystem path."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Lazy import: scripts/ may not be on sys.path when the console script
@@ -1536,6 +2134,12 @@ def _doctor_main(argv: list[str]) -> int:
     # render_text/render_json + report wiring in one place rather than
     # forking the logic between cli.py and dontpanic_doctor.py.
     if args.profile is not None or args.report:
+        return jd.main(argv)
+
+    # Plan 2026-05-30-001 F005: the agent / project onboarding surfaces are
+    # owned by jd.main (single place for render + strict-exit). Delegate the
+    # raw argv so the new flags + their 0/1/2 matrix flow through unchanged.
+    if args.agent or args.project is not None:
         return jd.main(argv)
 
     results = jd.run_all_checks(
@@ -1570,6 +2174,13 @@ def _doctor_main(argv: list[str]) -> int:
     # unconditionally; the WARN text + remediation still renders.
     exit_inputs = [
         r for r in exit_inputs if not r.name.startswith("dashboard-")
+    ]
+    # 2026-06-03-001 agent-command-surface: the skill-rubrics probe is
+    # self-describing advisory ("core use is not blocked") — a high-value
+    # skill missing an invocation rubric is guidance, not a readiness
+    # blocker, so it must not escalate the canonical exit code either.
+    exit_inputs = [
+        r for r in exit_inputs if not r.name.startswith("skill-rubrics")
     ]
     return jd.compute_strict_exit(exit_inputs)
 
@@ -1644,12 +2255,13 @@ def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | No
 
     try:
         caps = quota_caps_loader.load()
-    except quota_caps_loader.QuotaCapsError:
-        return "config_required", None
+    except quota_caps_loader.QuotaCapsError as exc:
+        return "config_required", str(exc)
 
     vendors = state.get("vendors") or {}
     agents = sorted({implementer, auditor})
     primary_pct: dict[str, int] = {}
+    config_details: list[str] = []
     for agent in agents:
         report = cb.collect_agent_coverage(agent=agent, vendors=vendors, caps=caps)
         if report.terminal is not None:
@@ -1660,7 +2272,20 @@ def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | No
                 return "unit_mismatch", None
             # TRIPPED: fall through, dispatch_volley owns the runtime breaker
         if report.config_cause is not None:
-            return "config_required", None
+            if report.config_cause == "missing_vendor_block":
+                config_details.append(
+                    f"{agent}: missing quota_state vendor block; run `python scripts/quota_check.py`"
+                )
+            else:
+                for ev in report.evaluations:
+                    if ev.outcome == cb.WindowOutcome.NO_CAP:
+                        config_details.append(
+                            f"{ev.agent}.{ev.tier}.{ev.window}: add cap in ~/.jarvis/quota_caps.json "
+                            f"(observed {int(ev.observed_native or 0)} {ev.observed_unit})"
+                        )
+                if not config_details:
+                    config_details.append(f"{agent}: quota cap configuration incomplete")
+            return "config_required", "; ".join(config_details)
         if report.primary is not None and report.primary.pct_of_cap is not None:
             primary_pct[agent] = int(round(report.primary.pct_of_cap * 100))
 
@@ -1700,7 +2325,7 @@ def _print_preflight_block(
     iters_render = str(max_iterations) if max_iterations is not None else "(plan default)"
     print(f"  max_iterations: {iters_render}")
     print(f"  quota_readiness: {readiness}")
-    if readiness == "ok" and readiness_summary:
+    if readiness_summary:
         print(f"    {readiness_summary}")
 
 
@@ -1715,6 +2340,12 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     the existing top-level CLI surfaces. Same module, same enforcement, same
     audit/INBOX/transcript artifacts.
     """
+    # F005: dispatch/paid-class agent-guidance footer, projected from the F002
+    # inventory so the help says not to auto-run paid dispatch unless DontPanic
+    # surfaced a ready candidate or the human explicitly approved it. Appended
+    # to the existing quota-readiness epilog rather than restated inline.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic dispatch-from-plan",
         description=(
@@ -1734,7 +2365,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "  unit_mismatch         non-Claude vendor cap.unit ≠ observed_unit\n"
             "                        → edit ~/.jarvis/quota_caps.json so cap.unit matches observed_unit\n"
             "Stale calibration is warning-only (not blocking). Dry-run mode prints the\n"
-            "label without refusal."
+            "label without refusal.\n\n"
+            + command_guidance.command_help_agent_snippet("dispatch-from-plan")
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1795,6 +2427,36 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "Acknowledge unstaged-modified files outside the plan's touched "
             "set. REASON must be >=8 non-whitespace chars; lands verbatim in "
             "signoff.json under patch_completeness.unrelated_dirty_state_note."
+        ),
+    )
+    # Plan 2026-06-01-001 F007: pre-dispatch sizing gate operator override.
+    # Reuses the >=8-char layer-A validator the patch-completeness overrides
+    # use; the rationale lands in evidence/plan-review/pre_dispatch/.
+    parser.add_argument(
+        "--allow-oversize",
+        type=_validate_patch_reason("--allow-oversize"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Override the pre-dispatch sizing gate even when the target "
+            "feature carries a block-severity size flag. REASON must be >=8 "
+            "non-whitespace chars; lands verbatim in "
+            "evidence/plan-review/pre_dispatch/<feature>-oversize-override.json."
+        ),
+    )
+    # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement override.
+    # Reuses the >=8-char layer-A validator; the rationale lands in
+    # evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json.
+    parser.add_argument(
+        "--acknowledge-cross-feature",
+        type=_validate_patch_reason("--acknowledge-cross-feature"),
+        default=None,
+        metavar="REASON",
+        help=(
+            "Acknowledge a legitimate edit to files owned by another feature, "
+            "passing the patch-completeness cross-feature-edit gate. REASON "
+            "must be >=8 non-whitespace chars; lands verbatim in "
+            "evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json."
         ),
     )
     args = parser.parse_args(argv)
@@ -1862,6 +2524,44 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         readiness_summary=readiness_summary,
     )
 
+    # Plan 2026-06-01-001 F009 — actionable config-readiness pre-flight, distinct
+    # from the quota-readiness/budget machinery above. Validates the quota-caps
+    # config file AND the resolved role values BEFORE any paid work, turning a
+    # malformed `{}` caps file (D039) or a bad role (D065 Grok-Builder split-brain)
+    # into a clean, actionable stop with a runnable remediation — never a raw
+    # schema crash mid-volley. Printed in both modes; enforced only on --confirm.
+    from dontpanic_orchestrate import config_readiness as _config_readiness
+    from dontpanic_orchestrate.executors import AGENT_REGISTRY as _AGENT_REGISTRY
+
+    config_ready = _config_readiness.check_config_readiness(
+        roles=[impl, aud], registered_executors=set(_AGENT_REGISTRY)
+    )
+    if config_ready.ok:
+        print("[dispatch-from-plan] config-readiness: ok")
+    else:
+        print(f"[dispatch-from-plan] config-readiness: NOT READY ({config_ready.file})")
+
+    # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate. Run the F001 sizing
+    # lint over the TARGET feature in the pre-flight (acceptance #1), in both
+    # dry-run and confirm modes, and print the verdict. The refusal itself is
+    # enforced only on the --confirm path, before the volley starts; the
+    # decision depends only on size flags so the (free, pure) lint needs no
+    # resolver wiring. A feature id the plan doesn't declare yet is skipped
+    # here — dispatch_volley surfaces that error on the confirm path.
+    from dontpanic_orchestrate.plan_review import sizing_gate
+
+    sizing_result = None
+    try:
+        target_feature = loaded.feature(args.feature)
+    except KeyError:
+        print(
+            f"[dispatch-from-plan] sizing-lint: feature {args.feature!r} not in "
+            f"{loaded.plan_id}; skipping size check"
+        )
+    else:
+        sizing_result = sizing_gate.evaluate_feature(target_feature)
+        print(sizing_gate.render_preflight(sizing_result))
+
     if not args.confirm:
         # Strict dry-run. Always exit 0 — no TTY check, no interactive prompt.
         # The plan's D006 leaves room for a future `--ask` flag; this branch
@@ -1918,7 +2618,46 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         )
         if remediation:
             print(remediation, file=sys.stderr)
+        if readiness_summary:
+            print(f"Detail: {readiness_summary}", file=sys.stderr)
         return 3
+
+    # Plan 2026-06-01-001 F009 — config-readiness enforcement. A malformed caps
+    # config or an invalid role is refused with the actionable message + runnable
+    # remediation before any paid call (exit 6, distinct from quota=3 / patch=4 /
+    # sizing=5), so the operator is never stranded by a low-level schema crash.
+    if not config_ready.ok:
+        print(
+            f"[dispatch-from-plan] BLOCKED: config not ready.\n{config_ready.render()}",
+            file=sys.stderr,
+        )
+        return 6
+
+    # Plan 2026-06-01-001 F007 — pre-dispatch sizing gate enforcement. Runs
+    # AFTER the existing quota-readiness check (acceptance #4 — existing checks
+    # still run) but BEFORE supervisor.dispatch_volley, so an over-budget
+    # feature is refused before any paid work. An explicit --allow-oversize
+    # reason records the rationale and proceeds (acceptance #3); otherwise the
+    # F002 split proposal is surfaced as the remediation and dispatch is
+    # refused with a dedicated exit code (5) so operator wrappers can
+    # disambiguate a sizing block from quota (3) / patch-completeness (4).
+    if sizing_result is not None and sizing_result.is_blocked:
+        if args.allow_oversize is None:
+            print(
+                sizing_gate.render_block_message(sizing_result), file=sys.stderr
+            )
+            return 5
+        override_path = sizing_gate.record_override(
+            plan_dir,
+            plan_id=loaded.plan_id,
+            feature_id=sizing_result.feature_id or args.feature,
+            reason=args.allow_oversize,
+            result=sizing_result,
+        )
+        print(
+            "[dispatch-from-plan] sizing gate OVERRIDDEN "
+            f"(--allow-oversize); rationale recorded to {override_path}"
+        )
 
     # In-process hand-off. NO subprocess shell-out — same interpreter, same
     # supervisor module, same active_supervisors registry entry, same
@@ -1937,6 +2676,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             mode=args.mode,
             allow_incomplete_patch_reason=args.allow_incomplete_patch,
             unrelated_dirty_state_note=args.unrelated_dirty_state_note,
+            # Plan 2026-06-01-001 F008 — cross-feature-edit acknowledgement.
+            cross_feature_ack_reason=args.acknowledge_cross_feature,
             # Plan 2026-05-08-003 F002 — operator-initiated CLI dispatch
             # is the canonical "direct dispatch" surface that the narrow
             # pre_impl auto-clear targets.
@@ -2018,9 +2759,152 @@ def _plan_main(argv: list[str]) -> int:
     return 2
 
 
+def _run_pre_lock_scope_gate(
+    plan_dir: Path, *, allow_oversize: str | None
+) -> int | None:
+    """Plan 2026-06-01-001 F004 — pre-lock design gate.
+
+    Runs the F001 scope lint over every feature in the plan. Returns:
+
+      * ``3`` — the plan carries a block-severity scope flag and no
+        ``--allow-oversize`` override was supplied: prints the refusal message
+        naming the flags and refuses the lock (no status transition occurs).
+      * ``None`` — the lock may proceed. Either the plan is clean, or an
+        override was supplied (in which case the verbatim rationale is recorded
+        to the plan's ``decisions.jsonl`` first).
+    """
+    from dontpanic_orchestrate.plan_review import pre_lock_gate
+    from dontpanic_orchestrate.plan_review import report as plan_review_report
+
+    # Load + lint is wrapped: a lint-infrastructure failure (unloadable plan,
+    # resolver build error) must NEVER block the lock (D005 — the gate degrades
+    # gracefully and is additive). A genuine block-severity flag is the only
+    # thing that refuses; everything else proceeds with a one-line WARN.
+    try:
+        loaded = plan_loader.load(plan_dir)
+        feature_dicts = [f.model_dump() for f in loaded.features.features]
+        resolvers = plan_review_report.build_default_resolvers()
+        result = pre_lock_gate.evaluate_plan(loaded.plan_id, feature_dicts, resolvers)
+    except Exception as exc:  # noqa: BLE001 — degrade, never block on lint infra
+        print(
+            f"[plan lock] WARN: pre-lock design gate skipped ({exc!r}); "
+            "lint did not run — proceeding with the lock",
+            file=sys.stderr,
+        )
+        return None
+
+    if not result.is_blocked:
+        return None
+
+    if allow_oversize is None:
+        print(pre_lock_gate.render_block_message(result), file=sys.stderr)
+        return 3
+
+    # Override supplied: record the verbatim rationale to decisions.jsonl,
+    # then allow the lock to proceed.
+    decisions_path = pre_lock_gate.record_override(
+        loaded.plan_dir,
+        plan_id=loaded.plan_id,
+        reason=allow_oversize,
+        result=result,
+    )
+    print(
+        "[plan lock] pre-lock design gate OVERRIDDEN (--allow-oversize); "
+        f"flags: {', '.join(result.flag_names())}"
+    )
+    print(f"[plan lock] override rationale recorded at {decisions_path}")
+    return None
+
+
+def _resolve_design_executor(plan_dir: Path):
+    """Best-effort: resolve the plan's goal_auditor and return its executor for
+    the F005 design-volley. Returns ``None`` (recommend, don't run) when no
+    auditor/executor can be resolved — so an opt-in lock never crashes on a
+    missing executor."""
+    try:
+        from dontpanic_orchestrate import completion_dispatch
+        from dontpanic_orchestrate.executors import get_executor
+
+        auditor = completion_dispatch._resolve_goal_auditor_agent(plan_dir)
+        executor = get_executor(auditor)
+        return executor if executor.is_available() else None
+    except Exception:  # noqa: BLE001 — best-effort; recommend instead of crash
+        return None
+
+
+def _run_pre_lock_design_volley(
+    plan_dir: Path,
+    *,
+    operator_requested: bool,
+    executor=None,
+    run_volley=None,
+) -> None:
+    """Plan 2026-06-01-001 F005 — opt-in design-review volley at pre_lock
+    (operator decision D019: minimal, bounded, advisory). Runs ONLY when the
+    F001 lint reports uncertainty (warn flags) OR the operator passes
+    ``--design-review``; never auto-runs on a clean plan. Advisory: prints the
+    verdict + findings; it does NOT block the lock (the F004 deterministic gate
+    owns blocking). Degrades-never-blocks. Tests inject ``executor`` +
+    ``run_volley`` so there is no live paid call."""
+    try:
+        from dontpanic_orchestrate.plan_review import (
+            design_review,
+        )
+        from dontpanic_orchestrate.plan_review import (
+            report as plan_review_report,
+        )
+
+        loaded = plan_loader.load(plan_dir)
+        feature_dicts = [f.model_dump() for f in loaded.features.features]
+        report = plan_review_report.build_plan_scope_report(
+            loaded.plan_id, feature_dicts, plan_review_report.build_default_resolvers()
+        )
+        if not design_review.should_run_design_volley(
+            report, operator_requested=operator_requested
+        ):
+            print(
+                "[plan lock] design-review: skipped (lint not uncertain, "
+                "--design-review not set)"
+            )
+            return
+        auditor = executor if executor is not None else _resolve_design_executor(plan_dir)
+        if auditor is None:
+            print(
+                "[plan lock] design-review: RECOMMENDED (lint uncertain or "
+                "requested) but no goal_auditor executor is available; re-run "
+                "after configuring roles.goal_auditor."
+            )
+            return
+        contract = None
+        contract_path = plan_dir / "objective_contract.json"
+        if contract_path.is_file():
+            try:
+                contract = json.loads(contract_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                contract = None
+        runner = run_volley if run_volley is not None else design_review.run_design_volley
+        envelope = runner(
+            loaded.plan_id,
+            feature_dicts,
+            auditor=auditor,
+            objective_contract=contract,
+            plan_dir=plan_dir,
+        )
+        print(f"[plan lock] design-review volley: verdict={envelope.verdict}")
+        for f in envelope.findings:
+            print(f"  [{f.kind}/{f.severity}] {f.feature_id}: {f.evidence}")
+    except Exception as exc:  # noqa: BLE001 — advisory; never block the lock
+        print(f"[plan lock] WARN: design-review volley skipped ({exc!r})")
+
+
 def _plan_lock_main(argv: list[str]) -> int:
     """``dontpanic plan lock`` — canonical lock-time entry point for Goal
     Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
+    # F005: lifecycle-mutation agent-guidance footer, projected from the F002
+    # inventory so the help says not to auto-run this lifecycle mutation unless
+    # DontPanic surfaced the action or the human approved it.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic plan lock",
         description=(
@@ -2028,6 +2912,8 @@ def _plan_lock_main(argv: list[str]) -> int:
             "draft to active. For plans without goal_type, the gate is a no-op "
             "but the status flip still proceeds."
         ),
+        epilog=command_guidance.command_help_agent_snippet("plan"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
     parser.add_argument(
@@ -2040,6 +2926,34 @@ def _plan_lock_main(argv: list[str]) -> int:
             "recorded reason. Writes evidence/goal-governance/pre_impl/"
             "override.json (durable but invalidated by changes to "
             "features.json / objective contract / sufficiency findings)."
+        ),
+    )
+    # Plan 2026-06-01-001 F004: pre-lock design gate operator override.
+    # Reuses the >=8-char layer-A validator the patch-completeness / sizing
+    # overrides use; the rationale lands verbatim in the plan's decisions.jsonl.
+    parser.add_argument(
+        "--allow-oversize",
+        type=_validate_patch_reason("--allow-oversize"),
+        default=None,
+        metavar="REASON",
+        dest="allow_oversize",
+        help=(
+            "Override the pre-lock design gate even when a feature carries a "
+            "block-severity scope flag (over_surface / over_ac / exemplar_ac / "
+            "missing_prereq). REASON must be >=8 non-whitespace chars; lands "
+            "verbatim in the plan's decisions.jsonl."
+        ),
+    )
+    # Plan 2026-06-01-001 F005 — opt-in design-review volley at pre_lock.
+    parser.add_argument(
+        "--design-review",
+        action="store_true",
+        dest="design_review",
+        help=(
+            "Run the F005 design-review volley at lock (advisory red-team of the "
+            "feature decomposition). Opt-in: it also auto-runs when the F001 "
+            "lint reports uncertainty, but this flag forces it. Never blocks the "
+            "lock; prints the verdict + findings."
         ),
     )
     args = parser.parse_args(argv)
@@ -2071,6 +2985,19 @@ def _plan_lock_main(argv: list[str]) -> int:
     except Exception as exc:  # noqa: BLE001 — surfaced as REFUSED
         print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
         return 3
+
+    # Plan 2026-06-01-001 F004 — pre-lock design gate. Runs the F001 scope lint
+    # over every feature BEFORE the status flip; a block-severity scope flag
+    # refuses the lock unless --allow-oversize <reason> records a rationale in
+    # decisions.jsonl. Additive: the existing external_refs / requires_
+    # capabilities / sufficiency validation above and below is untouched.
+    gate_rc = _run_pre_lock_scope_gate(plan_dir, allow_oversize=args.allow_oversize)
+    if gate_rc is not None:
+        return gate_rc
+
+    # Plan 2026-06-01-001 F005 — opt-in design-review volley (advisory, never
+    # blocks the lock). Runs on lint uncertainty OR --design-review.
+    _run_pre_lock_design_volley(plan_dir, operator_requested=args.design_review)
 
     try:
         plan_md = sufficiency_gate.lock_plan(
@@ -2740,6 +3667,71 @@ def _plan_resync_main(argv: list[str]) -> int:
 # ─────────────────────────  config / project / setup (F006)  ─────────────────────────
 
 
+def _config_inventory_main(argv: list[str]) -> int:
+    """``dontpanic config inventory`` — the configuration setup cockpit.
+
+    Plan 2026-05-30-001 F008. One command surfaces every DontPanic config
+    surface and its status, the exact safe command to edit each one, the
+    human-required (secret/auth) steps with NO secret values, and exactly one
+    response-level dashboard hint when any item needs human input. ``--setup-plan``
+    emits the typed ActionChoice list + draft DontPanic plan for the incomplete
+    areas instead of forcing the agent to invent next steps.
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic config inventory",
+        description=(
+            "Configuration inventory and setup cockpit: assess, configure, and "
+            "update every core DontPanic surface without spelunking files."
+        ),
+    )
+    parser.add_argument(
+        "--project",
+        default=None,
+        help="Project NAME (registry) or PATH for project-scoped surfaces.",
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--dashboard-url",
+        default=None,
+        help="Active dashboard URL when a singleton is running (omit when not).",
+    )
+    parser.add_argument(
+        "--setup-plan",
+        action="store_true",
+        help="Emit ActionChoices + a draft DontPanic plan for incomplete setup areas.",
+    )
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import config_inventory as ci
+
+    try:
+        inventory = ci.collect_inventory(
+            project=args.project, dashboard_url=args.dashboard_url
+        )
+    except ci.UnresolvedProjectError as exc:
+        # Hard-refuse an unresolved --project selector (D003): never silently
+        # degrade to machine-only inventory for a project the caller asked about.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.setup_plan:
+        plan = ci.build_setup_plan(inventory)
+        if args.format == "json":
+            print(json.dumps(plan, indent=2))
+        else:
+            print(f"Setup plan: {plan['draft_plan']['summary']}")
+            for choice in plan["choices"]:
+                cmd = choice["exact_command"] or "(human action required)"
+                print(f"  - {choice['title']}: {cmd}")
+            if plan["dashboard_hint"]:
+                print(f"  dashboard: {plan['dashboard_hint']['text']}")
+        return 0
+    if args.format == "json":
+        print(json.dumps(inventory.to_dict(), indent=2))
+    else:
+        print(ci.render_text(inventory), end="")
+    return 0
+
+
 def _config_main(argv: list[str]) -> int:
     """``dontpanic config <subcommand>`` — global config CRUD (Plan G F006)."""
     if not argv or argv[0] in ("-h", "--help"):
@@ -2752,12 +3744,18 @@ def _config_main(argv: list[str]) -> int:
             "                    roles.goal_auditor. Legacy default_implementer /\n"
             "                    default_auditor still accepted.\n"
             "                    runtime_evidence.* refused at global tier (D015 — use\n"
-            "                    `dontpanic project config set` instead).",
+            "                    `dontpanic project config set` instead).\n"
+            "  inventory         Setup cockpit: every config surface + status, safe\n"
+            "                    commands, human-required steps, dashboard hint\n"
+            "                    [--project NAME|PATH] [--format text|json]\n"
+            "                    [--setup-plan] [--dashboard-url URL]",
             file=sys.stderr,
         )
         return 2
     sub = argv[0]
     rest = argv[1:]
+    if sub == "inventory":
+        return _config_inventory_main(rest)
     from dontpanic_orchestrate import global_config as _gc
     from dontpanic_orchestrate.config import cli_helpers as _ch
 
@@ -2873,12 +3871,19 @@ def _project_config_main(argv: list[str]) -> int:
 
 def _setup_main(argv: list[str]) -> int:
     """``dontpanic setup`` — preview-by-default; mutation requires ``--yes``."""
+    # F005: configuration-mutation agent-guidance footer, projected from the
+    # F002 inventory (inspect status/doctor before changing config; ask before
+    # persistent changes unless DontPanic surfaced an automatable action).
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic setup",
         description=(
             "Bootstrap operator config: roles + per-project runtime evidence "
             "defaults. Preview-by-default; use --yes to actually write."
         ),
+        epilog=command_guidance.command_help_agent_snippet("setup"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--implementer", help="Set roles.implementer (global)")
     parser.add_argument("--auditor", help="Set roles.auditor (global)")
@@ -2959,6 +3964,11 @@ def _next_main(argv: list[str]) -> int:
     default so operators see the blockers next to the unblocked work;
     pass ``--ready-only`` to suppress the not-ready section.
     """
+    # F005: class-specific agent-guidance footer, projected from the F002
+    # inventory so read-only help teaches that this surface is safe to inspect
+    # before mutation.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic next",
         description=(
@@ -2966,6 +3976,8 @@ def _next_main(argv: list[str]) -> int:
             "analyzes one plans root; fleet scope aggregates per-project "
             "analyses from the project registry."
         ),
+        epilog=command_guidance.command_help_agent_snippet("next"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--scope",
@@ -3048,9 +4060,637 @@ def _next_main(argv: list[str]) -> int:
     return 0
 
 
-def _print_top_level_help(*, file) -> None:
+# ──────────────────────────  agent surface + orchestrate gateway (F002)  ──────────────────────────
+
+_AGENT_USAGE = """usage: dontpanic agent <subcommand>
+
+Machine agent surface — bootstrap a newly installed interactive agent and
+classify it as operator-only or worker-capable.
+
+subcommands:
+  brief                       Print the generated DontPanic operating brief
+  status [<name>] [--json]    Show worker executors, known operator-only agents,
+                              effective roles, and the classification of the
+                              named agent (or the current agent when no <name>).
+                              --json emits the three INDEPENDENT capability
+                              booleans (can_operate / can_be_dispatched /
+                              can_orchestrate)
+  setup <name>                Operator + worker setup guidance for a named agent
+  commands [--json]           Print the command-guidance inventory as a stable,
+                              versioned JSON envelope (read-only; never runs a
+                              guided command handler)
+  guide [--path|--write]      Print the version-matched local operating guide
+                              (offline 'start here'); --path prints its on-disk
+                              locator, --write materializes it under the home
+  register-worker <name>      Assign a registered executor to a role (guarded —
+                              refuses agents with no executor)
+
+Any agent can OPERATE DontPanic by running these commands; only agents with a
+registered executor can be DISPATCHED as workers."""
+
+
+def _agent_main(argv: list[str]) -> int:
+    """``dontpanic agent <subcommand>`` — machine agent surface (F002).
+
+    Subcommands print the generated brief, classify the current/named agent,
+    emit setup guidance, and (guarded) register a worker role. None of these
+    invoke a real agent CLI — they read the executor registry and config only.
+    """
+    from dontpanic_orchestrate import agent_brief, agent_guide, agent_surface
+
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        # Bare `agent` is a teaching surface, not an error: print the brief so a
+        # freshly installed interactive agent learns the command set, then the
+        # subcommand usage. Help exits 0; this matches the orchestrate gateway.
+        print(agent_brief.generate_brief().text, end="")
+        print()
+        print(_AGENT_USAGE)
+        return 0
+
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "brief":
+        parser = argparse.ArgumentParser(prog="dontpanic agent brief", add_help=True)
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        parser.add_argument(
+            "--actions",
+            metavar="PLAN",
+            default=None,
+            help="Plan 2026-06-02-001 F003 — pin which plan the agent-brief "
+            "managed actions block renders from. The block is rendered by "
+            "DEFAULT (auto-resolved from the cwd project's most-recent in-flight "
+            "plan); this flag overrides that with a specific PLAN. Always "
+            "rendered from the ActionItem spine — deduped by dedupe_key, scrubbed "
+            "+ brand-normalized at the render boundary.",
+        )
+        args = parser.parse_args(rest)
+        from dontpanic_orchestrate import action_renderers
+
+        brief = agent_brief.generate_brief()
+        # F003: the agent-brief surface ALWAYS carries the managed ActionItem
+        # block — routed through the spine, never an independently-computed
+        # shape. The plan is the explicit --actions PLAN when given, else the cwd
+        # project's current in-flight plan; when neither resolves the block
+        # renders empty ("No actions pending") rather than being omitted, so the
+        # surface is always present and always spine-sourced.
+        action_items = _resolve_brief_action_items(args.actions)
+        block = action_renderers.render_agent_brief_block(action_items)
+        if args.as_json:
+            payload = agent_brief.to_public_dict(brief)
+            payload["actions_block"] = block
+            payload["action_items"] = action_renderers.render_dashboard(action_items)["items"]
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(brief.text, end="")
+            print()
+            print(block, end="")
+        return 0
+
+    if sub == "status":
+        parser = argparse.ArgumentParser(prog="dontpanic agent status", add_help=True)
+        parser.add_argument(
+            "name",
+            nargs="?",
+            default=None,
+            help="Optional agent name to classify (operator-only vs worker-capable)",
+        )
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            dest="as_json",
+            help="Emit the three INDEPENDENT capability booleans (can_operate / "
+            "can_be_dispatched / can_orchestrate) as JSON",
+        )
+        args = parser.parse_args(rest)
+        if args.as_json:
+            payload = agent_surface.status_payload(Path.cwd().resolve(), name=args.name)
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(agent_surface.render_status(Path.cwd().resolve(), name=args.name), end="")
+        return 0
+
+    if sub == "setup":
+        parser = argparse.ArgumentParser(prog="dontpanic agent setup", add_help=True)
+        parser.add_argument("name", help="Agent name to produce setup guidance for")
+        args = parser.parse_args(rest)
+        print(agent_surface.render_setup(args.name), end="")
+        return 0
+
+    if sub == "commands":
+        parser = argparse.ArgumentParser(prog="dontpanic agent commands", add_help=True)
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            dest="as_json",
+            help="(default, and the only supported format) emit the command-guidance "
+            "inventory as a versioned JSON envelope",
+        )
+        parser.parse_args(rest)
+        # Plan 2026-06-03-001 F003 — read-only machine guidance surface. Prints the
+        # F002 command-guidance inventory as a stable, versioned JSON envelope
+        # (schema version + source summary + per-command entries) so an outer
+        # harness can inspect DontPanic's affordances without scraping help text.
+        # This reads command_guidance metadata ONLY — it never resolves a command
+        # path back to a handler or invokes a guided command.
+        from dontpanic_orchestrate import command_guidance
+
+        payload = command_guidance.inventory_public_payload()
+        print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+        return 0
+
+    if sub == "guide":
+        parser = argparse.ArgumentParser(prog="dontpanic agent guide", add_help=True)
+        locate = parser.add_mutually_exclusive_group()
+        locate.add_argument(
+            "--path",
+            action="store_true",
+            dest="as_path",
+            help="Print the on-disk guide locator path (<dontpanic_home>/"
+            f"{agent_guide.GUIDE_FILENAME}) instead of the guide body",
+        )
+        locate.add_argument(
+            "--write",
+            action="store_true",
+            dest="do_write",
+            help="Materialize the guide to the locator path and print where it "
+            "was written",
+        )
+        args = parser.parse_args(rest)
+        # Plan 2026-06-03-001 F006 — versioned local guide artifact. The guide is
+        # generated from the operating brief + the F002 command-guidance
+        # inventory (no second manual). Default prints the body; --path prints the
+        # locator (no write); --write materializes it under the DontPanic home.
+        from dontpanic_orchestrate import global_config
+
+        if args.do_write:
+            home = global_config.ensure_dontpanic_home()
+            written = agent_guide.write_guide(home)
+            print(str(written))
+            return 0
+        if args.as_path:
+            print(str(agent_guide.guide_path(global_config.dontpanic_home())))
+            return 0
+        print(agent_guide.render_guide().text, end="")
+        return 0
+
+    if sub == "register-worker":
+        return _agent_register_worker(rest)
+
+    print(f"[agent] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_AGENT_USAGE, file=sys.stderr)
+    return 2
+
+
+def _agent_register_worker(argv: list[str]) -> int:
+    """``dontpanic agent register-worker <name> [--role ROLE] [--project|--global]``.
+
+    Guarded write path: refuses (exit 3, no write) when ``<name>`` has no
+    executor in AGENT_REGISTRY. Otherwise writes only ``roles.<role> = <name>``
+    via the shared dotted-key writer — global by default, project-scoped with
+    ``--project`` (which requires an initialized per-project config)."""
+    from dontpanic_orchestrate import agent_surface
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+
+    parser = argparse.ArgumentParser(prog="dontpanic agent register-worker", add_help=True)
+    parser.add_argument("name", help="Worker executor to register (must be in AGENT_REGISTRY)")
+    parser.add_argument(
+        "--role",
+        choices=list(agent_surface.ROLES),
+        default="implementer",
+        help="Role to assign the executor to (default: implementer)",
+    )
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument(
+        "--global",
+        action="store_true",
+        dest="is_global",
+        help="Write to ~/.dontpanic/config.json (default scope)",
+    )
+    scope.add_argument(
+        "--project",
+        action="store_true",
+        dest="is_project",
+        help="Write to <cwd>/.dontpanic/dontpanic.json (requires project config init)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the intended write without changing any file",
+    )
+    args = parser.parse_args(argv)
+
+    # Guard FIRST — never touch config for an agent with no executor.
+    try:
+        agent_surface.assert_registrable(args.name)
+    except agent_surface.RegisterWorkerError as exc:
+        print(f"[agent register-worker] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    key = f"roles.{args.role}"
+    scope_label = "project" if args.is_project else "global"
+
+    if args.dry_run:
+        target = (
+            "<cwd>/.dontpanic/dontpanic.json" if args.is_project else "~/.dontpanic/config.json"
+        )
+        print(
+            f"[agent register-worker] DRY-RUN: would set {key} → {args.name} "
+            f"in {scope_label} config ({target})"
+        )
+        return 0
+
+    try:
+        if args.is_project:
+            path = _ch.write_project_dotted_key(Path.cwd().resolve(), key, args.name)
+        else:
+            path = _ch.write_global_dotted_key(key, args.name)
+    except _ch.InvalidKeyError as exc:
+        print(f"[agent register-worker] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    print(f"[agent register-worker] wrote {key} → {args.name} ({scope_label}: {path})")
+    return 0
+
+
+_ROLES_USAGE = """usage: dontpanic roles <subcommand>
+
+Simple worker role assignment — the low-friction path for "use Codex as
+auditor for this project" without hand-editing JSON.
+
+subcommands:
+  show [--project NAME|PATH] [--json]
+      List available worker executors and the effective implementer /
+      auditor / goal_auditor with the source layer each value came from.
+  set <role> <executor> [--global | --project NAME|PATH] [--dry-run] [--yes]
+      Assign a worker executor to a role. Guarded — refuses any agent with
+      no executor in AGENT_REGISTRY (operator-only agents can operate
+      DontPanic but cannot be assigned as workers). Default scope is global;
+      --project writes <repo>/.dontpanic/dontpanic.json roles.*; --global
+      writes ~/.dontpanic/config.json roles.*. Preview-by-default is shown
+      with --dry-run; otherwise the write happens immediately."""
+
+
+def _roles_usage_with_workers() -> str:
+    """``_ROLES_USAGE`` plus the live worker-executor roster.
+
+    The static usage text describes ``AGENT_REGISTRY`` generically; the
+    teaching output (``roles --help`` / no-arg / unknown-subcommand) also
+    names the executors a human can actually assign — ``available_worker_executors()``
+    — so the help is self-contained without running ``roles show`` (F004 #1/#6)."""
+    from dontpanic_orchestrate import role_assignment as _ra
+
+    workers = _ra.available_worker_executors()
+    worker_line = ", ".join(workers) if workers else "(none registered)"
+    return (
+        f"{_ROLES_USAGE}\n\n"
+        f"available worker executors (assignable to a role): {worker_line}"
+    )
+
+
+def _resolve_roles_scope(project_arg: str | None):
+    """Resolve a ``--project NAME|PATH`` (or cwd when absent) to a
+    :class:`role_assignment.ProjectScope`. Returns the scope, or ``None``
+    when an explicit identifier resolves to neither a registered project
+    nor an existing directory (the caller maps this to exit 2)."""
+    from dontpanic_orchestrate import project_config as _pc
+    from dontpanic_orchestrate import role_assignment as _ra
+
+    if project_arg is None:
+        cwd = Path.cwd().resolve()
+        match = _pc.find_project_for_plan_dir(cwd)
+        if match is not None:
+            return _ra.ProjectScope(path=match[0], name=match[1])
+        return _ra.ProjectScope(path=cwd, name=None)
+    resolved = _pc.resolve_project_path(project_arg)
+    if resolved is None:
+        return None
+    path, name = resolved
+    return _ra.ProjectScope(path=path, name=name)
+
+
+def _roles_main(argv: list[str]) -> int:
+    """``dontpanic roles <subcommand>`` — worker role assignment surface (F004).
+
+    ``show`` reports effective roles + source layers + available executors;
+    ``set`` writes a single ``roles.<role>`` key after guarding the executor
+    against AGENT_REGISTRY. Neither path invokes a real agent CLI — the
+    registry is read for classification only."""
+    from dontpanic_orchestrate import agent_surface
+    from dontpanic_orchestrate import role_assignment as _ra
+    from dontpanic_orchestrate.config import cli_helpers as _ch
+
+    if argv and argv[0] in ("-h", "--help", "help"):
+        print(_roles_usage_with_workers())
+        return 0
+    if not argv:
+        # No-arg is an actionable error (CLI convention): teach on stderr, exit 2.
+        print(_roles_usage_with_workers(), file=sys.stderr)
+        return 2
+
+    sub = argv[0]
+    rest = argv[1:]
+
+    if sub == "show":
+        parser = argparse.ArgumentParser(prog="dontpanic roles show", add_help=True)
+        parser.add_argument(
+            "--project",
+            default=None,
+            help="Registered project NAME or filesystem PATH (default: cwd)",
+        )
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        args = parser.parse_args(rest)
+        scope = _resolve_roles_scope(args.project)
+        if scope is None:
+            print(
+                f"[roles show] could not resolve --project {args.project!r} to a "
+                "registered project or an existing directory",
+                file=sys.stderr,
+            )
+            return 2
+        if args.as_json:
+            print(json.dumps(_ra.dashboard_projection(scope), indent=2, ensure_ascii=False))
+        else:
+            print(_ra.render_show(scope), end="")
+        return 0
+
+    if sub == "set":
+        parser = argparse.ArgumentParser(prog="dontpanic roles set", add_help=True)
+        parser.add_argument("role", choices=list(_ra.ROLES), help="Role slot to assign")
+        parser.add_argument("executor", help="Worker executor (must be in AGENT_REGISTRY)")
+        target = parser.add_mutually_exclusive_group()
+        target.add_argument(
+            "--global",
+            action="store_true",
+            dest="is_global",
+            help="Write ~/.dontpanic/config.json roles.* (default scope)",
+        )
+        target.add_argument(
+            "--project",
+            default=None,
+            help="Write <repo>/.dontpanic/dontpanic.json roles.* (NAME or PATH)",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Preview the exact file + value change without writing",
+        )
+        parser.add_argument(
+            "--yes",
+            action="store_true",
+            help="Accepted for symmetry with other mutating commands (writes are "
+            "explicit here; no interactive prompt to confirm)",
+        )
+        args = parser.parse_args(rest)
+
+        is_global = args.is_global or args.project is None
+
+        # Guard FIRST — never touch config for an agent with no executor
+        # (acceptance #5/#6). The message distinguishes operator-only from
+        # worker-capable, identical to `agent register-worker`.
+        try:
+            _ra.assert_assignable(args.executor)
+        except agent_surface.RegisterWorkerError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+
+        scope = None
+        if not is_global:
+            scope = _resolve_roles_scope(args.project)
+            if scope is None:
+                print(
+                    f"[roles set] could not resolve --project {args.project!r} to a "
+                    "registered project or an existing directory",
+                    file=sys.stderr,
+                )
+                return 2
+
+        preview = _ra.render_set_preview(
+            args.role, args.executor, is_global=is_global, scope=scope
+        )
+        if args.dry_run:
+            print(f"[roles set] DRY-RUN: would {preview}")
+            return 0
+
+        key = f"roles.{args.role}"
+        try:
+            if is_global:
+                path = _ch.write_global_dotted_key(key, args.executor)
+            else:
+                assert scope is not None
+                path = _ch.write_project_dotted_key(scope.path, key, args.executor)
+        except _ch.InvalidKeyError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
+
+        scope_label = "global" if is_global else "project"
+        print(f"[roles set] wrote {key} → {args.executor} ({scope_label}: {path})")
+        return 0
+
+    print(f"[roles] unknown subcommand: {sub!r}", file=sys.stderr)
+    print(_roles_usage_with_workers(), file=sys.stderr)
+    return 2
+
+
+def _orchestrate_main(argv: list[str]) -> int:
+    """``dontpanic orchestrate`` — teaching gateway over ``dispatch-from-plan``.
+
+    No args, ``--help``, or an invalid shape (a leading flag with no plan)
+    prints the generated brief plus the canonical workflow. A plan id/path
+    forwards verbatim to :func:`_dispatch_from_plan_main`, so dry-run-by-default
+    and ``--confirm`` semantics are preserved exactly (F002 acceptance #5-7)."""
+    from dontpanic_orchestrate import agent_brief
+
+    def _teach(*, file) -> None:
+        brief = agent_brief.generate_brief()
+        print(brief.text, end="", file=file)
+        print("", file=file)
+        print("CANONICAL WORKFLOW", file=file)
+        print(agent_brief.CANONICAL_WORKFLOW, file=file)
+        print("", file=file)
+        print(
+            "Run `dontpanic orchestrate <plan-id-or-path>` to dry-run a dispatch, "
+            "or add --confirm to commit. This forwards to dispatch-from-plan.",
+            file=file,
+        )
+
+    # No args or explicit help → teaching output on stdout, exit 0.
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        _teach(file=sys.stdout)
+        return 0
+
+    # Invalid shape: a leading flag means no plan id/path was supplied. Print
+    # the teaching output to stderr and exit 2 (actionable, per CLI convention).
+    if argv[0].startswith("-"):
+        print(
+            f"[orchestrate] no plan id/path supplied (saw {argv[0]!r} first).\n",
+            file=sys.stderr,
+        )
+        _teach(file=sys.stderr)
+        return 2
+
+    # Plan id/path present → forward verbatim, preserving dry-run/--confirm.
+    return _dispatch_from_plan_main(argv)
+
+
+def _skills_main(argv: list[str]) -> int:
+    """``dontpanic skills <recommend|rubric>`` — Plan 2026-05-30-001 F016.
+
+    Surfaces the F011/F015 SkillAction set (``recommend``) with CLI/dashboard
+    parity and provides the rubric migration path (``rubric``) for high-value
+    skills that lack invocation metadata.
+    """
+    sub = argv[0] if argv else None
+    if sub == "recommend":
+        return _skills_recommend_main(argv[1:])
+    if sub == "rubric":
+        return _skills_rubric_main(argv[1:])
     print(
-        """usage: dontpanic <command> [args]
+        "usage: dontpanic skills <recommend|rubric> ...\n"
+        "  recommend <plan> [--stage STAGE] [--format text|json]\n"
+        "  rubric (--suggest <skill> | --list-missing) [--plan <plan>] "
+        "[--skills-dir DIR] [--format text|json]",
+        file=sys.stderr if sub not in (None, "-h", "--help", "help") else sys.stdout,
+    )
+    return 0 if sub in (None, "-h", "--help", "help") else 2
+
+
+def _skills_recommend_main(argv: list[str]) -> int:
+    """``dontpanic skills recommend <plan> [--stage STAGE] [--format ...]``.
+
+    Renders the SkillAction recommendations for a plan: skill, recommendation,
+    reason, risk, command, approval requirement, and evidence target — the SAME
+    typed data the dashboard renders (F016 AC9). Missing inputs collapse to ONE
+    action (AC8); F008-inventory blockers explain unavailable resources (AC10).
+    """
+    parser = argparse.ArgumentParser(prog="dontpanic skills recommend")
+    parser.add_argument("plan", nargs="?", default=None, help="Plan ID or dir path")
+    parser.add_argument("--plan", dest="plan_flag", default=None, help="Plan ID or dir path")
+    parser.add_argument("--stage", default=None, help="Lifecycle stage to scope recommendations")
+    parser.add_argument("--skills-dir", default=None, help="Override the claude/skills dir")
+    parser.add_argument("--dashboard-url", default=None, help="Active dashboard URL when running")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import skill_recommendation
+
+    plan_arg = args.plan or args.plan_flag
+    if not plan_arg:
+        print("[skills recommend] a plan id/path is required", file=sys.stderr)
+        return 2
+    plan_dir = _resolve_plan_dir(plan_arg)
+    if args.skills_dir is not None:
+        skills_dir = Path(args.skills_dir)
+    else:
+        skills_dir = _resolve_skills_dir(plan_dir)
+        if skills_dir is None:
+            print(
+                "[skills recommend] no claude/skills dir found above the plan; "
+                "pass --skills-dir to point at one",
+                file=sys.stderr,
+            )
+            return 2
+    report = skill_recommendation.collect(
+        plan_dir,
+        skills_dir,
+        stage=args.stage,
+        dashboard_url=args.dashboard_url,
+    )
+    if args.format == "json":
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(skill_recommendation.render_text(report), end="")
+    return 0
+
+
+def _skills_rubric_main(argv: list[str]) -> int:
+    """``dontpanic skills rubric (--suggest <skill> | --list-missing)``.
+
+    The F016 migration path (AC11). ``--suggest`` proposes a SAFE starting
+    ``invocation:`` block for one skill; ``--list-missing`` identifies high-value
+    skills that lack a rubric. Advisory only — never blocks core use.
+    """
+    parser = argparse.ArgumentParser(prog="dontpanic skills rubric")
+    parser.add_argument("--suggest", default=None, metavar="SKILL", help="Skill to propose a rubric for")
+    parser.add_argument("--list-missing", action="store_true", help="List high-value skills lacking a rubric")
+    parser.add_argument("--plan", default=None, help="Plan to scope --list-missing applicability")
+    parser.add_argument("--skills-dir", default=None, help="Override the claude/skills dir")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args(argv)
+
+    from dontpanic_orchestrate import skill_recommendation
+
+    if not args.suggest and not args.list_missing:
+        print("[skills rubric] pass --suggest <skill> or --list-missing", file=sys.stderr)
+        return 2
+
+    # Resolve the skills dir: explicit override, else from the plan, else cwd.
+    skills_dir: Path | None
+    if args.skills_dir is not None:
+        skills_dir = Path(args.skills_dir)
+    elif args.plan is not None:
+        skills_dir = _resolve_skills_dir(_resolve_plan_dir(args.plan))
+    else:
+        skills_dir = _resolve_skills_dir(Path.cwd())
+    if skills_dir is None:
+        print("[skills rubric] no claude/skills dir found; pass --skills-dir", file=sys.stderr)
+        return 2
+
+    if args.suggest:
+        frontmatter = skill_recommendation._read_skill_frontmatter(skills_dir, args.suggest)
+        if frontmatter is None:
+            print(
+                f"[skills rubric] skill {args.suggest!r} has no readable SKILL.md "
+                f"in {skills_dir}",
+                file=sys.stderr,
+            )
+            return 2
+        suggestion = skill_recommendation.suggest_rubric(args.suggest, frontmatter)
+        if args.format == "json":
+            print(json.dumps(suggestion.to_dict(), indent=2))
+        else:
+            print(skill_recommendation.render_rubric_text(suggestion), end="")
+        return 0
+
+    # --list-missing
+    applicable: set[str] | None = None
+    if args.plan is not None:
+        try:
+            from dontpanic_orchestrate import skill_applicability
+
+            loaded = plan_loader.load(_resolve_plan_dir(args.plan))
+            report = skill_applicability.match(loaded, skills_dir)
+            applicable = {m.skill_name for m in report.matches}
+        except Exception:  # noqa: BLE001 — advisory; fall back to applies_to heuristic
+            applicable = None
+    missing = skill_recommendation.skills_missing_rubrics(
+        skills_dir, applicable_names=applicable
+    )
+    if args.format == "json":
+        print(json.dumps({"skills_missing_rubrics": missing}, indent=2))
+    else:
+        if not missing:
+            print("No high-value skills are missing an invocation rubric.")
+        else:
+            print("High-value skills missing an invocation rubric (advisory):")
+            for name in missing:
+                print(f"  {name} — run `dontpanic skills rubric --suggest {name}`")
+    return 0
+
+
+def _print_top_level_help(*, file) -> None:
+    # The "Start here (for AI agents)" block is the F004 discovery pointer. It is
+    # rendered from the shared guidance helper (projected over the F002 inventory)
+    # rather than hand-maintained here, so the entrypoint can never drift from the
+    # real command surface, and it deliberately points at the generated brief
+    # instead of restating it.
+    from dontpanic_orchestrate import command_guidance
+
+    agent_snippet = command_guidance.root_help_agent_snippet()
+    print(
+        f"""usage: dontpanic <command> [args]
+
+{agent_snippet}
 
 Public-alpha command surface:
   setup                         Preview or write global roles + project runtime defaults
@@ -3058,6 +4698,10 @@ Public-alpha command surface:
   project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
+  agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
+  roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
+  orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
   doctor                         Run local readiness checks
   init                           Interactive installer (default --profile=core)
   smoke                          Mocked supervisor-plumbing smoke test (no real CLI)
@@ -3112,12 +4756,26 @@ def main(argv: list[str] | None = None) -> int:
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "close":
         return _close_main(raw[1:])
+    if raw and raw[0] == "finalize":
+        return _finalize_main(raw[1:])
+    if raw and raw[0] == "what-now":
+        return _what_now_main(raw[1:])
+    if raw and raw[0] == "plan-review":
+        return _plan_review_main(raw[1:])
     if raw and raw[0] == "quota-caps":
         return _quota_caps_main(raw[1:])
     if raw and raw[0] == "projects":
         return _projects_main(raw[1:])
     if raw and raw[0] == "manifest":
         return _manifest_main(raw[1:])
+    if raw and raw[0] == "agent":
+        return _agent_main(raw[1:])
+    if raw and raw[0] == "orchestrate":
+        return _orchestrate_main(raw[1:])
+    if raw and raw[0] == "roles":
+        return _roles_main(raw[1:])
+    if raw and raw[0] == "skills":
+        return _skills_main(raw[1:])
     if raw and raw[0] == "mcp":
         return _mcp_main(raw[1:])
     if raw and raw[0] == "state":
@@ -3279,6 +4937,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     except supervisor.PausedOnGate as exc:
         print(f"[supervisor] PAUSED on gate: {exc}", file=sys.stderr)
+        return 3
+    except supervisor.PausedOnDrift as exc:
+        # F014 — single-agent path paused on plan drift (stale context or a
+        # blocking scope/policy boundary awaiting `dontpanic approve <plan>
+        # drift:<class>`). No paid call was made.
+        print(f"[supervisor] PAUSED on plan drift: {exc}", file=sys.stderr)
         return 3
     except (FileNotFoundError, KeyError, ValueError) as exc:
         print(f"[supervisor] ERROR: {exc}", file=sys.stderr)

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "CP-D006 (regenerated for F003 dispatch after F002 passes-flip changed features_hash).",
+  "approved_by": "operator:multi-feature-seq-override",
+  "approved_at": "2026-06-04T03:40:44Z",
+  "plan_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:cb1f0f6f12148f64207f6eb2f8d46afa63bee9301f2939c9ba977e48a70bcca0",
+  "objective_contract_hash": "sha256:cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
+  "sufficiency_findings_hash": "sha256:2587dab69aa94fbc7c01698df6923d9933f90164a1952fce5b5cfd676527bf2d"
+}

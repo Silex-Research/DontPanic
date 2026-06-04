@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-02T17:09:50Z",
+  "completed_at": "2026-06-02T17:12:52Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F010-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-0v6xrc04 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 129858 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1035534,
+    "tokens_out": 13509,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F010] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. Target declaration in the implementer audit is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` is empty, so I found no forbidden command shapes.\n\nFINDING (high, correctness): `--replace` can fail to replace a real live dashboard because it sends `SIGTERM` and immediately proceeds to bind without waiting for the old server to release the port. Evidence: `dashboard.py:343-359`, `dashboard.py:1371`, `dashboard.py:1391`; the foreign-pid test uses a sleeping process that does not bind the dashboard port (`test_dashboard_singleton_f010.py:186-215`). Recommendation: wait/poll for pid exit and port release before binding, or fail with an actionable error while preserving the singleton; add a test using an actual old dashboard process/server on the same port.\n\nFINDING (medium, documentation): README does not show the complete required onboarding flow. Evidence: `README.md:268` still documents `projects add ... --init-config`, and the README quickstart omits command examples for `projects add --onboard`, `doctor --agent`, `doctor --project`, `config inventory`, `skills recommend`, `what-now`, and `orchestrate`; `GETTING_STARTED.md` does cover these. Recommendation: update README with the same complete new-agent/new-repo/dashboard decision flow, even if concise.\n\nFINDING (medium, architecture): the new shared `render_dashboard_hint_once` helper is effectively dead code outside",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=../scripts pytest -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py ../scripts/dontpanic_orchestrate/tests/test_dashboard_inventory_f013.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F010",
+      "issue": "`--replace` can fail to replace a real live dashboard because it sends `SIGTERM` and immediately proceeds to bind without waiting for the old server to release the port. Evidence: `dashboard.py:343-359`, `dashboard.py:1371`, `dashboard.py:1391`; the foreign-pid test uses a sleeping process that does not bind the dashboard port (`test_dashboard_singleton_f010.py:186-215`). Recommendation: wait/poll for pid exit and port release before binding, or fail with an actionable error while preserving the",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F010",
+      "issue": "README does not show the complete required onboarding flow. Evidence: `README.md:268` still documents `projects add ... --init-config`, and the README quickstart omits command examples for `projects add --onboard`, `doctor --agent`, `doctor --project`, `config inventory`, `skills recommend`, `what-now`, and `orchestrate`; `GETTING_STARTED.md` does cover these. Recommendation: update README with the same complete new-agent/new-repo/dashboard decision flow, even if concise.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F010",
+      "issue": "the new shared `render_dashboard_hint_once` helper is effectively dead code outside tests, so hint rendering is still implemented separately by response renderers. Evidence: `rg` only finds the helper in `dashboard.py`, `__all__`, and tests; `operations_guidance.py:1026` and `skill_recommendation.py:903` append dashboard lines directly, while config inventory keeps a separate `DashboardHint`. Recommendation: route response-level dashboard hint rendering through the shared helper or consolidate t",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

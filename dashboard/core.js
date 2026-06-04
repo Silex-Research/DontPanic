@@ -87,6 +87,26 @@ function JARVIS_LITERAL() { return {
     // per-project builds have run. The page resolves the effective
     // envelope at render time and falls back to single-repo state.
     architectureViewStateByProject: {},
+    // Plan 2026-05-30-001 F013 — config inventory projection written by
+    // `dontpanic dashboard build` / `serve` to
+    // `dashboard/state/config-inventory.json` (the same data the CLI
+    // `dontpanic config inventory` shows). Stays null when the file is
+    // absent so the Settings page renders an honest "run build" empty
+    // state instead of pretending an inventory exists.
+    configInventory: null,
+    // Per-project config inventories: project + fleet builds mirror each
+    // project's inventory under `state/projects/<name>/config-inventory.json`.
+    // Keyed by project name; empty when no per-project builds have run. The
+    // Settings page resolves the effective inventory for the selected project
+    // and falls back to the top-level `configInventory` (codex F013 i1).
+    configInventoryByProject: {},
+    // Plan 2026-05-30-001 F016 — skill recommendation report written by
+    // `dontpanic dashboard build` / `serve` to
+    // `dashboard/state/skill-recommendations.json` (the SAME
+    // RecommendationReport the CLI `dontpanic skills recommend` prints, AC9).
+    // Stays null when the file is absent so the Settings page renders an honest
+    // "run build" empty state instead of pretending recommendations exist.
+    skillRecommendations: null,
   },
 
   // ── Page Registration ──
@@ -257,6 +277,18 @@ function JARVIS_LITERAL() { return {
       // load resets to null so the missing banner surfaces on next
       // refresh instead of holding stale view-state.
       { key: 'architectureViewState', file: 'architecture-view-state.json', nullableMissing: true },
+      // Plan 2026-05-30-001 F013 — config inventory projection. Missing →
+      // null so the Settings page shows the "run dashboard build" empty
+      // state; a fetch failure after a successful load resets to null so the
+      // missing-state surfaces on next refresh instead of holding stale cards.
+      { key: 'configInventory', file: 'config-inventory.json', nullableMissing: true },
+      // Plan 2026-05-30-001 F016 — skill recommendation report. Missing → null
+      // so the Settings page renders the "run dashboard build" empty state; a
+      // fetch failure after a successful load resets to null so the missing
+      // state surfaces on next refresh instead of holding a stale report. This
+      // is the SAME RecommendationReport the CLI `dontpanic skills recommend`
+      // prints, so the dashboard and CLI never drift (AC9).
+      { key: 'skillRecommendations', file: 'skill-recommendations.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
@@ -287,6 +319,13 @@ function JARVIS_LITERAL() { return {
     // when `selectedProject !== 'all'` and falls back honestly to the
     // single-repo cache loaded above (or to the missing-state shell).
     await this._loadArchitectureViewStatesByProject();
+
+    // Plan 2026-05-30-001 F013 — load per-project config inventories. Project
+    // and fleet builds write `state/projects/<name>/config-inventory.json`
+    // through the per-project cache mirror; the Settings page picks the
+    // per-project envelope when `selectedProject !== 'all'` and falls back to
+    // the top-level `configInventory` (codex F013 i1).
+    await this._loadConfigInventoriesByProject();
 
     // Projection load order (F002 acceptance #1, post-audit i0):
     //   1. state-snapshot.json envelope — preferred, carries metadata.
@@ -359,6 +398,41 @@ function JARVIS_LITERAL() { return {
       }
     }));
     this.state.architectureViewStateByProject = byProject;
+  },
+
+  /**
+   * Load per-project config inventories into
+   * `state.configInventoryByProject` (a map keyed by project name). Project
+   * and fleet builds mirror each project's inventory under
+   * `state/projects/<name>/config-inventory.json`; the Settings page resolves
+   * the effective inventory for the selected project and falls back to the
+   * top-level `configInventory` when no per-project entry exists.
+   *
+   * Project list comes from the fleet summary loaded above; when the fleet
+   * summary is absent there are no per-project caches to fetch and the map
+   * stays empty (single-repo build path uses the top-level file).
+   */
+  async _loadConfigInventoriesByProject() {
+    const byProject = {};
+    const envelope = normalizeFleetSummary(this.state.fleetSummary);
+    if (envelope == null) {
+      this.state.configInventoryByProject = byProject;
+      return;
+    }
+    await Promise.all(envelope.projects.map(async (project) => {
+      // Encode the project name segment — same path-traversal defense as the
+      // per-project architecture loader above. Names come from projects.json.
+      const segment = encodeURIComponent(project.name);
+      try {
+        const resp = await fetch(`state/projects/${segment}/config-inventory.json`);
+        if (resp.ok) {
+          byProject[project.name] = await resp.json();
+        }
+      } catch {
+        // Missing per-project cache — Settings falls back to the top-level file.
+      }
+    }));
+    this.state.configInventoryByProject = byProject;
   },
 
   async refreshState() {

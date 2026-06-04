@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:calibration_required:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Calibration sample required for `claude.7d` so the breaker can convert local proxy units into percent-of-plan.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window 7d --dashboard-pct 0",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:calibration_required:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Calibration sample required for `claude.7d` so the breaker can convert local proxy units into percent-of-plan.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Budget guardrail on 2026-05-24-004-feat-event-messaging-v1 \u2014 calibration required",
       "updated_at": "2026-05-24T00:00:00Z"

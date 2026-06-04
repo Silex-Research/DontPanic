@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-01T15:25:43Z",
+  "completed_at": "2026-06-01T15:29:56Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F007-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-s3oube56 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 334021 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2944830,
+    "tokens_out": 17107,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F007] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. FINDING (high, correctness): signoff/pre_merge guidance emits `dontpanic approve <plan> pre_merge` without validating that `pre_merge` is actually pending, so the exact command can exit 2 and violates AC7’s “respects current state” rule. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1043) only stores `pre_merge_cleared`, and [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:611) treats any uncleared state as “PENDING” with an approve command; but [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:326) refuses lifecycle gate approval unless the gate is currently pending. Recommendation: include pending/current gate state in `SignoffState`, emit the approve command only when `gate_pause.is_gate_currently_pending(..., \"pre_merge\")` or equivalent pending-stage validation passes, and otherwise return human-required advisory text with no exact command.\n\nThe implementer’s target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their recorded command is not forbidden. Checks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py -q -p no:cacheprovider\n$ python ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py -q -p no:cacheprovider",
+      "python -c \"from pathlib import Path; import ast; [ast.parse(Path(p).read_text(), filename=p) for p in ['scripts/dontpanic_orchestrate/operations_guidance.py','scripts/dontpanic_orchestrate/signed_off_finalizer.py','scripts/dontpanic_orchestrate/cli.py','scripts/dontpanic_orchestrate/dashboard.py','scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py','scripts/dontpanic_orchestrate/tests/test_signed_off_finalizer.py']]; print('ast-ok')\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli what-now docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --feature F007 --format json",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli finalize --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli resume --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli reconcile homes --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli projects add --help",
+      "PYTHONDONTWRITEBYTECODE=1 python -m dontpanic_orchestrate.cli doctor --help"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F007",
+      "issue": "signoff/pre_merge guidance emits `dontpanic approve <plan> pre_merge` without validating that `pre_merge` is actually pending, so the exact command can exit 2 and violates AC7’s “respects current state” rule. Evidence: [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance.py:1043) only stores `pre_merge_cleared`, and [operations_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/operations_guidance",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

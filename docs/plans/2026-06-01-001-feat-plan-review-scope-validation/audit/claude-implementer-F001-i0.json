@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "audit_id": "2026-06-01-001-feat-plan-review-scope-validation#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-02T19:57:44Z",
+  "completed_at": "2026-06-02T20:02:44Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-01-001-feat-plan-review-scope-validation-tic0qssy target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3207 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1776705,
+    "tokens_out": 23482,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F001] F001 is complete. The feature is purely additive — a new `plan_review/` package plus its test file — so there's no regression surface in existing code, and the acceptance doesn't require a full sweep, so I stopped at the targeted run per the cost-control discipline.\n\nSide-effect commands invoked (host-local, no cloud):\n```\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q\n```\n\n## Summary\n\nI implemented F001, the scope-signal lint core, as a new pure package `scripts/dontpanic_orchestrate/plan_review/` (`lint.py` + `__init__.py`). The module exposes `lint_feature(feature, resolvers)` — a pure function (no network, no I/O, no argument mutation) that returns a typed `ScopeReport(feature_id, surfaces, ac_count, flags)` whose flags carry `kind ∈ {over_surface, over_ac, exemplar_ac, weak_test, missing_prereq, likely_timeout}`, a severity band, and the evidence that fired each one. It scores the three onboarding-v0 defect classes: **size** (a deterministic SURFACES tagger plus AC-count, weighting surface-count above AC-count so a 3-surface feature blocks even at low AC load — the F016 calibration — while `over_surface` still fires for *any* multi-surface feature per acceptance #2), **precision** (`exemplar_ac` for an e.g./such-as/including enumeration lacking a co-located every/all/each universal, and `weak_test` for bare equality/string-match assertions with no round-trip or property check), and **coupling** (`missing_prereq",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_plan_review_lint_f001.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

@@ -1,0 +1,17 @@
+Evidence for journey: new-agent-starts-correctly
+Required evidence: test_output: root help and representative workflow command help include agent guidance
+
+Commands/tests run locally:
+  PYTHONPATH=scripts pytest -q scripts/dontpanic_orchestrate/tests/test_f004_root_help_agent_entrypoint.py scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py
+
+Result:
+  The relevant suites passed locally during closeout. The tests assert:
+  - dontpanic --help includes "Start here (for AI agents)"
+  - bare dontpanic usage also carries the entrypoint
+  - root help points to dontpanic agent brief, agent commands, and agent guide
+  - representative workflow command help pages render Agent guidance footers
+  - help snippets are projected from command_guidance, not hand-copied text
+
+Related feature evidence:
+  - F004 root help signoff: audit/codex-auditor-F004-i0.json
+  - F005 workflow help snippets signoff: audit/codex-auditor-F005-i2.json

@@ -263,13 +263,21 @@ def test_case_d_supervisor_missing_target_context_raises_no_file_landed() -> Non
         assert "envelope" in msg and "for plan" in msg, msg
         assert plan_loader.load(plan_dir).plan_id in msg, msg
 
-        # No implementer/auditor audit file landed (no partial artifact).
+        # No implementer/auditor audit ENVELOPE landed (no partial artifact).
+        # The F009 plan-drift baseline (plan-run-fingerprint.json) and the
+        # engine-managed gate-state.json are recorded at dispatch start BY
+        # DESIGN — before any agent runs — so they are legitimately present even
+        # on the fail-fast path. They are infrastructure, not the partial audit
+        # envelope this case guards against; exclude them from the assertion.
+        _ENGINE_INFRA = {"plan-run-fingerprint.json", "gate-state.json"}
         if audit_dir.exists():
-            stragglers = sorted(audit_dir.iterdir())
+            stragglers = sorted(
+                p for p in audit_dir.iterdir() if p.name not in _ENGINE_INFRA
+            )
         else:
             stragglers = []
         assert stragglers == [], (
-            f"case-d must produce no audit files; got {[p.name for p in stragglers]}"
+            f"case-d must produce no audit envelope files; got {[p.name for p in stragglers]}"
         )
 
 
@@ -323,12 +331,17 @@ def test_case_d_cli_main_returns_nonzero_on_invalid_target_context() -> None:
         assert rc != 0, f"cli.main must return non-zero on case-d; got rc={rc}"
 
         # No implementer audit landed (no-partial-artifact contract carried
-        # through from audit_writer.write into the CLI surface).
+        # through from audit_writer.write into the CLI surface). The F009 drift
+        # baseline + engine-managed gate-state.json are dispatch-start infra, not
+        # partial audit envelopes — exclude them (see the supervisor-path twin).
+        _ENGINE_INFRA = {"plan-run-fingerprint.json", "gate-state.json"}
         audit_dir = plan_dir / "audit"
         if audit_dir.exists():
-            stragglers = sorted(p.name for p in audit_dir.iterdir())
+            stragglers = sorted(
+                p.name for p in audit_dir.iterdir() if p.name not in _ENGINE_INFRA
+            )
         else:
             stragglers = []
         assert stragglers == [], (
-            f"case-d via cli.main must produce no audit files; got {stragglers}"
+            f"case-d via cli.main must produce no audit envelope files; got {stragglers}"
         )

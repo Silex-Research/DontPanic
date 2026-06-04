@@ -1,0 +1,74 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "scripts/dontpanic_orchestrate/ command surfaces: cli.py, agent_brief.py, agent_surface.py, agent_manifest.py, command_validation.py, operator_console.py / ActionItem command model, and the completed onboarding-v0 + control-plane action spine plans.",
+  "user_journeys": [
+    {
+      "name": "new-agent-starts-correctly",
+      "description": "An interactive agent installed after DontPanic runs `dontpanic --help`, sees the AI-agent entrypoint immediately, and starts with `dontpanic agent brief` / machine JSON instead of guessing workflow from flag docs.",
+      "surfaces": [
+        "cli",
+        "agent-brief"
+      ],
+      "acceptance_signals": [
+        "root help includes the AI-agent start-here section",
+        "agent brief points to command guidance JSON",
+        "agent does not need repo-specific prior knowledge to find the safe flow"
+      ]
+    },
+    {
+      "name": "agent-lands-on-workflow-command",
+      "description": "An agent that opens a specific command help page such as dispatch-from-plan, next, close, finalize, plan lock, or plan-review sees the command's role in the safe workflow and whether it is read-only, mutating, dispatching/paid, or human-gated.",
+      "surfaces": [
+        "cli"
+      ],
+      "acceptance_signals": [
+        "workflow command help includes class-specific agent guidance",
+        "read-only commands tell agents they are safe to inspect before mutation",
+        "mutating/dispatching commands warn not to auto-run without an automatable ActionItem or explicit approval"
+      ]
+    },
+    {
+      "name": "agent-uses-json-not-help-scraping",
+      "description": "An outer harness such as Claude Code, Codex CLI, Gemini CLI, Grok CLI, Cursor, OpenClaw, Hermes, or a local model runner can request a stable JSON command guidance envelope and follow DontPanic's policy without scraping terminal help text.",
+      "surfaces": [
+        "cli-json",
+        "agent"
+      ],
+      "acceptance_signals": [
+        "JSON envelope covers all known top-level commands",
+        "entries include command class, audience, examples, and human escalation rule",
+        "schema is versioned and read-only"
+      ]
+    },
+    {
+      "name": "agent-loads-versioned-guide",
+      "description": "A harness that supports loadable skills/guides can locate or print a version-matched DontPanic guide that explains workflow patterns, command classes, dashboard handoff, and the operator/worker/orchestrator distinction.",
+      "surfaces": [
+        "cli",
+        "docs",
+        "agent"
+      ],
+      "acceptance_signals": [
+        "guide artifact exists without network access",
+        "guide content is validated against the command inventory",
+        "root help and agent brief point to the guide/locator"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Autonomous-safe cross-feature run loop.",
+    "Fleet scheduler / auto-parallel dispatch.",
+    "Same-plan worktree isolation or multi-writer undo.",
+    "Native desktop wrapper.",
+    "Changing command behavior beyond help, guidance, and read-only metadata surfaces.",
+    "Replacing ActionItem or the control-plane action spine."
+  ],
+  "required_evidence": [
+    "test_output: command inventory coverage against command_validation.known_subcommands",
+    "test_output: root help and representative workflow command help include agent guidance",
+    "test_output: machine JSON command-guidance envelope schema and coverage",
+    "test_output: packaged guide parity with command inventory",
+    "test_output: future-command coverage gate fails on missing guidance"
+  ],
+  "completion_test": "A fresh interactive agent can run `dontpanic --help`, discover the AI-agent entrypoint, inspect `dontpanic agent brief` and the command-guidance JSON, see agent-safe help for workflow commands, and locate a versioned DontPanic guide. Tests prove every known top-level command has guidance, workflow-critical commands carry class-specific safety text, and new commands cannot ship without adding guidance."
+}

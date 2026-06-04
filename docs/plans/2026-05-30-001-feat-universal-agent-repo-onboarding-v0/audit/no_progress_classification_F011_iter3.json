@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-06-02T14:56:17Z",
+  "feature_id": "F011",
+  "aggregate": "implementation_defect",
+  "blocking": true,
+  "recommended_action": "Inspect the auditor's findings against the implementer's diff and decide between (a) sending another implementer round with revised guidance, or (b) closing the volley as blocked pending design changes.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "`evidence_target` is not validated as a required part of `invocation:` metadata except for auto modes. Evidence: F011 AC1 defines schema fields as “risk flags,…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    }
+  ]
+}

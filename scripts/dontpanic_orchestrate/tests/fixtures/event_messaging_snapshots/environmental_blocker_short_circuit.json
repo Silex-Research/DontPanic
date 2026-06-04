@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "needs_action",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:environmental_blocker_short_circuit:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:environmental_blocker_short_circuit:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 environmental blocker",
       "updated_at": "2026-05-24T00:00:00Z"

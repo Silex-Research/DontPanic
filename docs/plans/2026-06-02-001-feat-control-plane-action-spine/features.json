@@ -1,0 +1,124 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "ActionItem becomes the single canonical control-plane action contract. Add audience[], dedupe_key, reversible, plain_consequence, dashboard_url. Keep exact_command + automatable as the command-safety model (no safe_command). Make dedupe_key explicit and the dedup authority (not derived from id-prefix). Reconcile the operations:/supervisor: id-vs-source seam. Enforce command validation at the ActionItem boundary.",
+      "steps": [
+        "Re-confirm no producer beyond Guidance.to_action_items (operations:) and _rendered_to_action_item_dict (supervisor:) mints a divergent id scheme; record any third scheme as a finding before migrating.",
+        "Add fields to ActionItem (operator_console.py): audience: tuple[str,...] over {operator,worker,orchestrator,human}, dedupe_key: str, reversible: bool, plain_consequence: str|None, dashboard_url: str|None. Update to_dict and the JSON envelope.",
+        "Set dedupe_key explicitly in every producer (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and switch merge_with_event_sidecar + fleet aggregation to dedup on dedupe_key, not id-prefix parsing.",
+        "Resolve operations:/supervisor: per CP-D002: keep _VALID_SOURCES closed, treat the id-prefix as opaque, and document that operations-guidance items carry source=supervisor by design (dedupe_key is the identity authority).",
+        "Enforce command validation at the boundary: ActionItem.__post_init__ rejects a non-None exact_command that fails command_validation.validate_command_tokens (or document producer-ownership explicitly if boundary enforcement is infeasible).",
+        "Confirm no safe_command field is introduced anywhere."
+      ],
+      "acceptance": "A parametrized test loads ActionItems from all producer paths (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and asserts: (a) every item carries audience, dedupe_key, reversible, plain_consequence, dashboard_url; (b) no safe_command field exists and exact_command+automatable encode command safety; (c) dedupe_key is producer-set and dedup (merge_with_event_sidecar + fleet aggregation) keys on dedupe_key, not id-prefix; (d) ActionItem rejects an unvalidated exact_command at construction. Full orchestrate sweep stays green.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-03T21:40:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i2.json",
+          "note": "codex auditor signed_off (iter2)"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/claude-implementer-F001-i2.json",
+          "note": "claude implementer final iteration"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_spine_f001.py",
+          "note": "F001 + operator_console/event_copy/dashboard_relevance suites: 119 passed"
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Classify harnesses honestly as three INDEPENDENT capability booleans \u2014 can_operate (drives DontPanic), can_be_dispatched (worker), can_orchestrate (spawns sub-agents) \u2014 superseding the flat operator-vs-worker binary. Detection and reporting ONLY: no fan-out/tree governance, budget, or undo.",
+      "steps": [
+        "Replace the binary role read with a three-boolean capability struct; a harness may report any combination (Claude Code Workflow = all three; Grok = operate-only).",
+        "Surface the three booleans in `agent status --json` and render the agent-brief wording 'can operate DontPanic but is not a dispatchable worker' from can_operate=true/can_be_dispatched=false.",
+        "Preserve D002/D006: an unsupported agent is an operator, never a worker without a registered executor.",
+        "Add a scope-guard: no orchestration-tree budget/breaker/undo code is introduced (the can_orchestrate flag is reported, not acted on)."
+      ],
+      "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok \u2192 (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker \u2192 can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-04T03:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i2.json",
+          "note": "codex: functional shape satisfied (Capabilities + 3 booleans + Grok (true,false,false) + import-absence); needs_changes was environmental_reproduction_failure only (auditor sandbox had no writable temp dir to run pytest)"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/no_progress_classification_F002_iter3.json",
+          "note": "classified environmental_reproduction_failure (blocking:false); recommended action = re-run locally + operator-verified close"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py",
+          "note": "local run: 27 passed; + 306 passed agent-surface/brief/capability regression"
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Renderer parity: dashboard, CLI/JSON (what-now), and the agent-brief managed block all render from the same ActionItem contract, deduped by dedupe_key, with secrets scrubbed at the render boundary. No surface computes action state independently.",
+      "steps": [
+        "Route all three surfaces through the ActionItem envelope (dashboard build JSON, CLI what-now/JSON, agent-brief managed block).",
+        "Dedup by dedupe_key across surfaces; dashboard hint appears once per response (preserve D013).",
+        "Apply scrub_secrets / brand normalization at the render boundary (preserve D004/D010).",
+        "Write one parity test feeding a fixed ActionItem set through all three renderers."
+      ],
+      "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-04T04:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i2.json",
+          "note": "codex found real high/security leak: what-now --format json emitted unsanitized guidance.to_dict() (legacy_secret_leaks=True) \u2014 exactly the pre-impl sufficiency F003 wiring_gap prediction"
+        },
+        {
+          "type": "diff",
+          "uri": "scripts/dontpanic_orchestrate/cli.py",
+          "note": "fix (codex option-2): _scrub_json_payload recursively scrubs+brand-normalizes the legacy JSON shape in place; legacy `choices` contract preserved, leak closed"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py",
+          "note": "new CLI-level parity test (codex medium/test_coverage gap) drives real _what_now_main; 227 passed across renderer_parity/what_now/operations_guidance_f007/dashboard/operator_console/event_copy"
+        }
+      ]
+    }
+  ]
+}

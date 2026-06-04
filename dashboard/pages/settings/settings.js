@@ -7,6 +7,13 @@
 // surfaced through the Tools & Setup page when capability-backed.
 
 import { renderProvenanceFooterHTML } from '../../lib/provenance.js';
+import {
+  renderConfigInventoryHTML,
+  resolveConfigInventory,
+} from '../../lib/config-inventory-logic.js';
+import {
+  renderSkillRecommendationsHTML,
+} from '../../lib/skill-recommendations-logic.js';
 
 (() => {
 
@@ -72,6 +79,19 @@ import { renderProvenanceFooterHTML } from '../../lib/provenance.js';
 
     return `
       <div class="stg-layout">
+
+        <!-- F013 config inventory — Settings/Setup cards rendered from the
+             same F008 inventory the CLI \`dontpanic config inventory\` shows.
+             Populated from state.configInventory; renders an honest empty
+             state when the projection is absent. -->
+        <div id="stg-config-inventory" class="stg-config-inventory"></div>
+
+        <!-- F016 skill recommendations — per-skill SkillAction cards rendered
+             from the SAME RecommendationReport the CLI
+             \`dontpanic skills recommend\` prints (AC9). Populated from
+             state.skillRecommendations; renders an honest empty state when the
+             report is absent. -->
+        <div id="stg-skill-recommendations" class="stg-skill-recommendations"></div>
 
         <!-- Dashboard Preferences -->
         <section class="panel stg-section stg-config-section">
@@ -177,25 +197,72 @@ import { renderProvenanceFooterHTML } from '../../lib/provenance.js';
     }
   }
 
+  // ── Config inventory (F013) render ──
+  //
+  // Renders the F008 configuration inventory as Settings/Setup cards. The
+  // effective inventory is resolved for the selected project: project and
+  // fleet builds mirror each project's inventory under
+  // `state/projects/<name>/config-inventory.json` (loaded into
+  // `state.configInventoryByProject`), and the top-level
+  // `state.config-inventory.json` (`state.configInventory`) is the single-repo
+  // / focused fallback. Re-rendered on every state change so a fresh
+  // `dashboard build`/`serve` (which rewrites the projection — including the
+  // auto-detected dashboard hint) and a project-selector switch both surface
+  // without a page reload.
+
+  function renderConfigInventory(state) {
+    const host = _el && _el.querySelector('#stg-config-inventory');
+    if (!host) return;
+    const resolved = resolveConfigInventory({
+      selectedProject: state ? state.selectedProject : null,
+      single: state ? state.configInventory : null,
+      byProject: state ? state.configInventoryByProject : null,
+    });
+    host.innerHTML = renderConfigInventoryHTML(resolved);
+  }
+
+  // ── Skill recommendations (F016) render ──
+  //
+  // Renders the per-skill SkillAction recommendations + blockers + missing-input
+  // action + migration candidates from the SAME RecommendationReport the CLI
+  // `dontpanic skills recommend` prints (AC9), loaded from
+  // `state.skillRecommendations`. Re-rendered on every state change so a fresh
+  // `dashboard build`/`serve` surfaces without a page reload; an absent report
+  // renders an honest "run build" empty state.
+
+  function renderSkillRecommendations(state) {
+    const host = _el && _el.querySelector('#stg-skill-recommendations');
+    if (!host) return;
+    host.innerHTML = renderSkillRecommendationsHTML(
+      state ? state.skillRecommendations : null
+    );
+  }
+
   // ── Page Registration ──
 
   Jarvis.registerPage({
     id: 'settings',
     label: 'Preferences',
 
-    init() {
+    init(state) {
       _el = Jarvis.getPageEl('settings');
       if (!_el) return;
 
       _el.innerHTML = buildTemplate();
       setupConfigForm();
+      renderConfigInventory(state);
+      renderSkillRecommendations(state);
 
       // Apply saved theme on load
       applyTheme(getTheme());
     },
 
-    onActivate() {
-      // Preferences is UI-local only; nothing to re-render on state change.
+    onActivate(state) {
+      // Preferences chrome is UI-local, but the config inventory and skill
+      // recommendations are server-state — re-render them so build/serve
+      // refreshes surface.
+      renderConfigInventory(state);
+      renderSkillRecommendations(state);
     },
   });
 })();

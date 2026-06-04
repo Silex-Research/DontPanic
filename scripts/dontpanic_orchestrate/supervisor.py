@@ -33,6 +33,7 @@ from dontpanic_orchestrate import (
     notify,
     notify_event,
     patch_completeness_gate,
+    plan_drift,
     plan_loader,
     project_config,
     projects_registry,
@@ -56,6 +57,7 @@ from dontpanic_orchestrate.executors.base import (
     DispatchTask,
     _derive_permission_policy,
 )
+from dontpanic_orchestrate.plan_review import cross_feature
 
 QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
 SOFT_THRESHOLD_PERCENT = 90.0
@@ -71,6 +73,19 @@ class PausedOnGate(RuntimeError):
     volley path returns a VolleyResult instead since it has a structured
     terminal type; single-agent dispatch returns Path on success, so the
     pause case is signaled via exception instead."""
+
+    pass
+
+
+class PausedOnDrift(RuntimeError):
+    """F014 (codex F009 #5): raised by dispatch_single_agent when the SAME F009
+    plan-drift reconciliation the volley path runs pauses the single-agent
+    dispatch — either the plan context drifted between dispatch-start baseline
+    and the paid call (no paid single-agent call proceeds on stale context), or
+    a prior BLOCKING_POLICY scope/policy drift is still awaiting human
+    acknowledgement (`dontpanic approve <plan> drift:<class>`). The volley path
+    returns ``VolleyResult(final_status="paused_on_drift")``; single-agent
+    dispatch returns Path on success, so it signals the pause via exception."""
 
     pass
 
@@ -485,12 +500,27 @@ def _registered_supervisor(
     target_env: str,
     target_project: str | None,
     config_dir: str | None,
+    plan_dir: Path | None = None,
+    dispatch_fingerprint: plan_drift.PlanFingerprint | None = None,
 ):
     """F023 EC13: register the running supervisor in
     ~/.jarvis/active_supervisors.jsonl on entry, unregister on exit. Re-entrancy
     against the same plan_id surfaces a warning (not a hard block — the operator
     may legitimately want overlapping runs against different cloud projects but
-    the same plan structure)."""
+    the same plan structure).
+
+    F009 (codex #2) — the active supervisor state records the dispatch-start
+    plan-run fingerprint (source file content hashes + mtimes + capture time) so
+    it captures WHAT plan state this run is operating against. When the volley
+    path passes ``dispatch_fingerprint`` (the fingerprint recorded BEFORE plan
+    load, at dispatch start), that EXACT fingerprint is persisted — not a later
+    recompute taken after plan load / gate preflight mutations, which would
+    record post-mutation state and defeat true dispatch-start accountability.
+    On the volley path this is also FAIL CLOSED: if the dispatch-start
+    fingerprint cannot be persisted into active state, registration raises
+    rather than running with no recorded baseline-of-record. The single-agent
+    path (no ``dispatch_fingerprint``) keeps the advisory recompute fallback —
+    F009's drift contract is volley-only (single-agent SPLIT to F014)."""
     existing = active_supervisors.check_reentrancy(plan_id)
     if existing is not None and existing.pid != os.getpid():
         print(
@@ -499,12 +529,50 @@ def _registered_supervisor(
             f"project={existing.target_project or '(none)'}) is already active "
             f"on plan {plan_id!r}. Audits may interleave."
         )
-    entry = active_supervisors.register(
-        plan_id=plan_id,
-        target_env=target_env,
-        target_project=target_project,
-        supervisor_config_dir=config_dir,
-    )
+    fingerprint_meta: dict | None = None
+    require_fingerprint = dispatch_fingerprint is not None
+    if dispatch_fingerprint is not None:
+        # Persist the dispatch-start fingerprint verbatim (codex #2).
+        fingerprint_meta = {
+            "file_hashes": dispatch_fingerprint.file_hashes,
+            "file_mtimes": dispatch_fingerprint.file_mtimes,
+            "captured_at": dispatch_fingerprint.captured_at,
+        }
+    elif plan_dir is not None:
+        # Single-agent / fallback path: advisory recompute (best-effort).
+        try:
+            fp = plan_drift.compute_fingerprint(plan_dir)
+            fingerprint_meta = {
+                "file_hashes": fp.file_hashes,
+                "file_mtimes": fp.file_mtimes,
+                "captured_at": fp.captured_at,
+            }
+        except Exception as _fp_exc:  # noqa: BLE001 — advisory metadata
+            print(f"[supervisor-registry] fingerprint capture skipped: {_fp_exc}")
+    try:
+        entry = active_supervisors.register(
+            plan_id=plan_id,
+            target_env=target_env,
+            target_project=target_project,
+            supervisor_config_dir=config_dir,
+            plan_fingerprint=fingerprint_meta,
+        )
+    except Exception as _reg_exc:  # noqa: BLE001 — fail closed when required
+        if require_fingerprint:
+            raise RuntimeError(
+                f"F009 fail-closed: could not persist dispatch-start plan-run "
+                f"fingerprint into active supervisor state for {plan_id!r} "
+                f"({_reg_exc})"
+            ) from _reg_exc
+        raise
+    # FAIL CLOSED (codex #2): on the volley path the dispatch-start fingerprint
+    # is the baseline-of-record for active-run accountability. If it did not
+    # round-trip into the persisted entry, refuse to run blind.
+    if require_fingerprint and not getattr(entry, "plan_fingerprint", None):
+        raise RuntimeError(
+            f"F009 fail-closed: active supervisor entry for {plan_id!r} did not "
+            "persist the dispatch-start plan-run fingerprint"
+        )
     cleanup_done = {"flag": False}
 
     def _cleanup() -> None:
@@ -961,7 +1029,38 @@ def dispatch_single_agent(
     fallbacks 'claude' / 'codex'). The executor is then resolved through
     :data:`AGENT_REGISTRY` rather than hardcoded to Claude — this is the
     single-agent parity contract for F003.
+
+    F014 (codex F009 #4/#5): the single-agent path is guarded by the SAME F009
+    plan-drift reconciliation as ``dispatch_volley`` — an early fail-closed
+    dispatch-start baseline, a blocking-drift human-ack gate, and a
+    ``check_and_reconcile`` immediately before the (paid) executor dispatch so
+    no paid single-agent call proceeds on stale plan context. Drift pauses raise
+    :class:`PausedOnDrift`.
     """
+    # F014 (codex F009 #5) — blocking-drift human-ack gate, mirroring the volley
+    # path. A prior run that detected BLOCKING_POLICY scope/policy drift wrote a
+    # durable ack marker; until an operator clears it via
+    # `dontpanic approve <plan> drift:<class>`, refuse to record a fresh baseline
+    # or make any paid call. Runs FIRST so a plain re-dispatch cannot launder an
+    # un-acknowledged scope change.
+    _ack_reason = plan_drift.blocking_ack_pause_reason(plan_dir)
+    if _ack_reason is not None:
+        print(f"[single-agent] PAUSED — blocking-drift ack required: {_ack_reason}")
+        raise PausedOnDrift(_ack_reason)
+
+    # F014 (codex F009 #4) — record the dispatch-start plan-run fingerprint at
+    # the VERY TOP, before the sufficiency/completion backstops read plan
+    # artifacts into memory, so every later drift check compares against true
+    # untouched disk state (AC1 parity with the volley path). FAIL CLOSED: if a
+    # baseline cannot be recorded we cannot detect drift at all, so refuse.
+    try:
+        plan_drift.record_baseline(plan_dir)
+    except Exception as _fp_exc:  # noqa: BLE001 — re-raised as fail-closed
+        raise PausedOnDrift(
+            f"F009 plan-drift baseline could not be recorded for {plan_dir} "
+            f"({_fp_exc}); failing closed — cannot guarantee drift detection"
+        ) from _fp_exc
+
     # Goal Governance V1 F004: dispatch backstop. Refuse to act on any plan
     # whose declared goal_type requires a pre-impl sufficiency check unless
     # the findings are non-blocking or a valid (hash-bound) override exists.
@@ -1110,7 +1209,11 @@ def dispatch_single_agent(
             target_project=effective_project,
         ) as exec_env,
         _registered_supervisor(
-            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+            loaded.plan_id,
+            effective_env,
+            effective_project,
+            str(exec_env.root),
+            plan_dir=loaded.plan_dir,
         ),
     ):
         task = DispatchTask(
@@ -1133,6 +1236,55 @@ def dispatch_single_agent(
         # name surfaces as a clear runtime error rather than silent
         # claude-fallback.
         executor = _resolve_executor(agent_name)
+
+        # F014 — fold any gate-state the supervisor ITSELF authored during this
+        # dispatch's setup (e.g. _sync_pre_impl_for_active_plan / admission
+        # reconcile clearing `pre_impl`) into the drift baseline before the
+        # pre-paid check, mirroring the volley's advance_gate_baseline. Without
+        # this, our own legitimate gate mutation would read as external gate
+        # tampering and falsely pause; an external edit to any OTHER tracked file
+        # (features / plan / decisions / objective) is still caught.
+        try:
+            plan_drift.advance_gate_baseline(loaded.plan_dir)
+        except Exception as _adv_exc:  # noqa: BLE001 — advisory, never fatal
+            print(f"[single-agent] gate-baseline advance skipped: {_adv_exc}")
+
+        # F014 (codex F009 #4) — plan-drift check immediately BEFORE the paid
+        # executor dispatch, using the SAME check_and_reconcile the volley path
+        # runs. No paid single-agent call proceeds on stale plan context: if the
+        # plan artifacts drifted between the dispatch-start baseline and now,
+        # pause (raise PausedOnDrift). BLOCKING_POLICY drift records the durable
+        # ack marker inside check_and_reconcile, so the pause survives re-
+        # dispatch until acknowledged. FAIL CLOSED: a drift check that itself
+        # raises (missing baseline, etc.) pauses rather than proceeding.
+        try:
+            _drift = plan_drift.check_and_reconcile(
+                loaded.plan_dir,
+                plan_id=loaded.plan_id,
+                feature_id=feature_id,
+                stage=plan_drift.STAGE_IMPLEMENTER,
+            )
+        except Exception as _drift_exc:  # noqa: BLE001 — fail CLOSED, do not proceed
+            print(
+                f"[single-agent] plan-drift check ERRORED at "
+                f"{plan_drift.STAGE_IMPLEMENTER}; failing closed (pause): {_drift_exc}"
+            )
+            raise PausedOnDrift(
+                f"plan-drift check failed at {plan_drift.STAGE_IMPLEMENTER} "
+                f"({_drift_exc}); paused fail-closed — verify plan files on disk "
+                "and redispatch"
+            ) from _drift_exc
+        if not _drift.proceed:
+            cls = _drift.report.drift_class.value
+            print(
+                f"[single-agent] PAUSED on plan drift ({cls}) at "
+                f"{plan_drift.STAGE_IMPLEMENTER}: "
+                f"{', '.join(_drift.report.changed_files)}"
+            )
+            raise PausedOnDrift(
+                _drift.pause_reason or _drift.report.headline(loaded.plan_id)
+            )
+
         result = executor.dispatch(task)
 
         audit = audit_writer.build_audit(
@@ -1173,7 +1325,7 @@ def dispatch_single_agent(
 
 @dataclass
 class VolleyResult:
-    final_status: str  # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate"
+    final_status: str  # "signed_off" | "needs_changes" | "blocked" | "stopped_quota" | "stopped_cap" | "stopped_no_progress" | "paused_on_gate" | "paused_on_drift"
     rounds: int  # number of (implementer, auditor) pairs completed
     reason: str  # human-readable termination reason
     audit_paths: list[Path]  # all audit JSONs produced, in order
@@ -1187,6 +1339,7 @@ def _emit_volley_terminal(
     agents_in_panel: list[str],
     allow_incomplete_patch_reason: str | None = None,
     unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
 ) -> VolleyResult:
     """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
     any volley terminal state. Returns the input result unchanged so callers
@@ -1272,6 +1425,45 @@ def _emit_volley_terminal(
                 unrelated_dirty_state_note=unrelated_dirty_state_note,
                 dry_run=False,
             )
+            # Plan 2026-06-01-001 F008 — cross-feature edit detection. Runs at
+            # patch-completeness on the signed_off terminal, alongside the F003
+            # patch gate. Additive + degrades-never-blocks on lint-infra failure
+            # (cannot load features / git-state) — mirrors the F004 pre-lock
+            # gate's D005 contract; only a genuine bleed
+            # (CrossFeatureEditError) blocks. The feature->owned-paths map is
+            # derived from the plan's own features; the diff surface is the F001
+            # git-state sidecar.
+            try:
+                feature_dicts = [f.model_dump() for f in loaded.features.features]
+                git_state_path = (
+                    plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
+                )
+                # The dispatch DIFF is the git-state sidecar only (staged ∪
+                # unstaged_modified ∪ untracked). `affected_paths` is a plan
+                # DECLARATION, not what the patch actually touched, so it is
+                # deliberately NOT folded in here — including it would flag
+                # foreign-owned paths the dispatch never touched (codex F008
+                # audit i0, acceptance #2/#3 "diff touching").
+                touched: set[str] = set()
+                if git_state_path.is_file():
+                    git_state = json.loads(git_state_path.read_text())
+                    touched = cross_feature.touched_paths_from_git_state(git_state)
+            except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
+                print(
+                    f"[volley] WARN: cross-feature edit detection skipped "
+                    f"({exc!r}); detector did not run"
+                )
+                feature_dicts = None
+                touched = set()
+            if feature_dicts is not None and touched:
+                cross_feature.enforce(
+                    plan_dir,
+                    plan_id=loaded.plan_id,
+                    current_feature_id=feature_id,
+                    features=feature_dicts,
+                    touched_paths=touched,
+                    acknowledge_reason=cross_feature_ack_reason,
+                )
         try:
             signoff_writer.write_signoff(
                 plan_id=loaded.plan_id,
@@ -1316,6 +1508,7 @@ def dispatch_volley(
     allow_depth: int | None = None,
     allow_incomplete_patch_reason: str | None = None,
     unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
     direct_dispatch: bool = False,
 ) -> VolleyResult:
     """F005a: sequential build/audit volley.
@@ -1333,6 +1526,39 @@ def dispatch_volley(
     cleanup runs on volley terminate. target_env / target_project remain
     optional until EC2 lands a plan-level Target contract.
     """
+    # F009 (codex #2 i1): record the plan-run fingerprint at the VERY TOP of
+    # dispatch — before the sufficiency/completion backstops below, which read
+    # plan.md and (when gated) features/objective inputs into memory. AC1
+    # requires the baseline to reflect true dispatch-start disk state captured
+    # BEFORE any plan/feature load, so every later drift check compares against
+    # untouched disk state. Capturing after the gates would let a pre-gate edit
+    # be silently baked into the baseline. FAIL CLOSED (codex #3): if a baseline
+    # cannot be recorded we cannot detect drift at all, so refuse to proceed
+    # rather than run blind on stale context. The captured fingerprint is also
+    # threaded into the active supervisor registration below (codex #2) so
+    # active-run state records the EXACT dispatch-start disk fingerprint, not a
+    # later recompute taken after plan load / gate preflight mutations.
+    # F014 (codex F009 #5) — blocking-drift human-ack gate. If a PRIOR run
+    # detected BLOCKING_POLICY scope/policy drift and the operator has not yet
+    # acknowledged it, refuse to proceed: do NOT record a fresh baseline (which
+    # would silently bless the new scope) and make NO paid call. The pause is
+    # durable across re-dispatch until `dontpanic approve <plan> drift:<class>`
+    # clears the marker. This runs BEFORE the baseline record below so a plain
+    # re-dispatch cannot launder an un-acknowledged scope change.
+    _ack_reason = plan_drift.blocking_ack_pause_reason(plan_dir)
+    if _ack_reason is not None:
+        print(f"[volley] PAUSED — blocking-drift ack required: {_ack_reason}")
+        return VolleyResult("paused_on_drift", 0, _ack_reason, [])
+
+    try:
+        dispatch_start_fingerprint = plan_drift.compute_fingerprint(plan_dir)
+        plan_drift.record_baseline(plan_dir, dispatch_start_fingerprint)
+    except Exception as _fp_exc:  # noqa: BLE001 — re-raised as fail-closed
+        raise RuntimeError(
+            f"F009 plan-drift baseline could not be recorded for {plan_dir} "
+            f"({_fp_exc}); failing closed — cannot guarantee drift detection"
+        ) from _fp_exc
+
     # Goal Governance V1 F004: dispatch backstop. Refuse to act on any plan
     # whose declared goal_type requires a pre-impl sufficiency check unless
     # the findings are non-blocking or a valid (hash-bound) override exists.
@@ -1348,6 +1574,51 @@ def dispatch_volley(
     loaded = plan_loader.load(plan_dir)
     feature = loaded.feature(feature_id)
 
+    # F009 — dispatch-boundary plan-drift check (BEFORE gate finalization).
+    # The baseline was recorded above against true dispatch-start disk state;
+    # recompute now so a plan artifact edited between baseline capture and the
+    # plan load — including a mid-run hand-edit to audit/gate-state.json — is
+    # surfaced as a graceful ``paused_on_drift`` here, ahead of the fail-loud
+    # gate-state reconciliation below. Without this, an externally-mutated
+    # gate-state would crash _reconcile_gate_state_or_raise with an
+    # undeclared-gate error instead of pausing the volley cleanly before any
+    # paid call. FAIL CLOSED (codex F009 #3): a drift check that itself errors
+    # pauses rather than proceeding on possibly-stale context.
+    try:
+        _dispatch_drift = plan_drift.check_and_reconcile(
+            loaded.plan_dir,
+            plan_id=loaded.plan_id,
+            feature_id=feature_id,
+            stage=plan_drift.STAGE_DISPATCH,
+        )
+    except Exception as _drift_exc:  # noqa: BLE001 — fail CLOSED, do not proceed
+        print(
+            f"[volley] plan-drift check ERRORED at {plan_drift.STAGE_DISPATCH}; "
+            f"failing closed (pause): {_drift_exc}"
+        )
+        return VolleyResult(
+            "paused_on_drift",
+            0,
+            f"plan-drift check failed at {plan_drift.STAGE_DISPATCH} "
+            f"({_drift_exc}); paused fail-closed — verify plan files on disk "
+            "and redispatch",
+            [],
+        )
+    if not _dispatch_drift.proceed:
+        cls = _dispatch_drift.report.drift_class.value
+        print(
+            f"[volley] PAUSED on plan drift ({cls}) at "
+            f"{plan_drift.STAGE_DISPATCH}: "
+            f"{', '.join(_dispatch_drift.report.changed_files)}"
+        )
+        return VolleyResult(
+            "paused_on_drift",
+            0,
+            _dispatch_drift.pause_reason
+            or _dispatch_drift.report.headline(loaded.plan_id),
+            [],
+        )
+
     # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation. Mirrors
     # the dispatch_single_agent placement so volley dispatch refuses to
     # proceed when persisted gate-state contradicts the plan declaration.
@@ -1361,6 +1632,15 @@ def dispatch_volley(
     # dispatch_single_agent so a status=active plan dispatched via the
     # volley path also benefits from the implicit pre_impl clearance.
     _sync_pre_impl_for_active_plan(loaded, feature_id=feature_id)
+    # The reconcile + pre_impl auto-clear above are the supervisor's OWN
+    # legitimate gate-state mutations, made AFTER the dispatch-start baseline was
+    # recorded. Fold them into the drift baseline now — mirroring the
+    # dispatch_single_agent placement — so the first _drift_pause_or_none check
+    # below does not see the supervisor's own gate write as external
+    # context_refresh drift and spuriously pause before the first paid call.
+    # Gate-only advance: a concurrent edit to features/decisions/plan/objective
+    # in the same window is still caught (plan_drift.advance_gate_baseline).
+    plan_drift.advance_gate_baseline(loaded.plan_dir)
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)
@@ -1400,6 +1680,11 @@ def dispatch_volley(
     audit_paths: list[Path] = []
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
+    # Plan 2026-05-30-002 F001 (D029 fix): retain the prior round's full auditor
+    # envelope so check_no_progress can compare finding-signature SETS, not just
+    # verdict strings — a shrinking blocking-finding set is progress and must not
+    # trip no-progress even when both verdicts stay ``needs_changes``.
+    prior_aud_envelope: dict[str, Any] | None = None
 
     effective_env = target_env if target_env is not None else loaded.target_env
     effective_project = target_project if target_project is not None else loaded.target_project
@@ -1598,7 +1883,12 @@ def dispatch_volley(
             target_project=effective_project,
         ) as exec_env,
         _registered_supervisor(
-            loaded.plan_id, effective_env, effective_project, str(exec_env.root)
+            loaded.plan_id,
+            effective_env,
+            effective_project,
+            str(exec_env.root),
+            plan_dir=loaded.plan_dir,
+            dispatch_fingerprint=dispatch_start_fingerprint,
         ),
     ):
         print(
@@ -1683,6 +1973,82 @@ def dispatch_volley(
                 agents_in_panel=[impl_name, aud_name],
             )
 
+        # F009 — the plan-run fingerprint baseline is recorded EARLIER, before
+        # plan_loader.load() above (codex #2), so it reflects true dispatch-start
+        # disk state and fails closed if unrecordable.
+
+        def _drift_pause_or_none(stage: str, rounds: int) -> VolleyResult | None:
+            """F009 — recompute the plan fingerprint, reconcile, and either
+            proceed (None) or return a ``paused_on_drift`` VolleyResult. Additive
+            decisions.jsonl drift is reconciled in-place (no pause, AC3). Refresh
+            / blocking drift pauses BEFORE the next paid call so budget is
+            protected (AC2/AC4/AC5). The single INBOX event + dashboard
+            ActionChoice are emitted inside check_and_reconcile (AC6)."""
+            try:
+                decision = plan_drift.check_and_reconcile(
+                    loaded.plan_dir,
+                    plan_id=loaded.plan_id,
+                    feature_id=feature_id,
+                    stage=stage,
+                )
+            except Exception as _drift_exc:  # noqa: BLE001 — fail CLOSED, do not proceed
+                # FAIL CLOSED (codex F009 #3): a drift check that errors must NOT
+                # let the volley proceed on possibly-stale context. Pause for the
+                # operator instead of silently continuing.
+                print(
+                    f"[volley] plan-drift check ERRORED at {stage}; failing closed "
+                    f"(pause): {_drift_exc}"
+                )
+                return VolleyResult(
+                    "paused_on_drift",
+                    rounds,
+                    f"plan-drift check failed at {stage} ({_drift_exc}); paused "
+                    "fail-closed — verify plan files on disk and redispatch",
+                    audit_paths,
+                )
+            if decision.proceed:
+                if decision.report.drift_class is plan_drift.DriftClass.ADDITIVE_LEDGER:
+                    print(
+                        f"[volley] plan drift reconciled (additive ledger) at "
+                        f"{stage}: {', '.join(decision.report.changed_files)}"
+                    )
+                return None
+            cls = decision.report.drift_class.value
+            print(
+                f"[volley] PAUSED on plan drift ({cls}) at {stage}: "
+                f"{', '.join(decision.report.changed_files)}"
+            )
+            try:
+                notify_event.dispatch_event(
+                    notify_event.NotifyEvent(
+                        kind="plan_drift",
+                        severity=notify_event.SEVERITY_ACTION_REQUIRED,
+                        plan_id=loaded.plan_id,
+                        feature_id=feature_id,
+                        body=decision.pause_reason or decision.report.headline(loaded.plan_id),
+                        timestamp=dt.datetime.now(dt.timezone.utc),
+                        inbox_event="plan_drift_detected",
+                        subtype=cls,
+                        target_env=effective_env,
+                        target_project=effective_project,
+                        technical_metadata={
+                            "drift_class": cls,
+                            "changed_files": ",".join(decision.report.changed_files),
+                            "stage": stage,
+                            "budget_protected": str(decision.report.budget_protected),
+                        },
+                    ),
+                    plan_dir=loaded.plan_dir,
+                )
+            except Exception as _ne_exc:  # noqa: BLE001 — notification is advisory
+                print(f"[volley] plan-drift notify skipped: {_ne_exc}")
+            return VolleyResult(
+                "paused_on_drift",
+                rounds,
+                decision.pause_reason or decision.report.headline(loaded.plan_id),
+                audit_paths,
+            )
+
         # Plan 2026-05-12-001 v4 F003 (D025): top-level ValueError
         # backstop. The agent-output pipeline's shlex.split calls are now
         # wrapped in command_guard, but dependencies (Pydantic validators,
@@ -1761,6 +2127,14 @@ def dispatch_volley(
                     )
                     if auto_clear_reason is not None:
                         print(f"[volley] pre_impl auto-cleared: {auto_clear_reason}")
+                        # F009 — the supervisor just mutated gate-state itself.
+                        # Fold that legitimate clear into the plan-drift baseline
+                        # so the upcoming implementer drift check does not see
+                        # OUR own gate clear as external tampering and pause.
+                        try:
+                            plan_drift.advance_gate_baseline(loaded.plan_dir)
+                        except Exception as _adv_exc:  # noqa: BLE001 — advisory
+                            print(f"[volley] gate-baseline advance skipped: {_adv_exc}")
                     else:
                         pre_impl_info = gate_pause.evaluate_human_gates(
                             loaded.plan_dir, declared_gates, stage="pre_impl"
@@ -1816,6 +2190,12 @@ def dispatch_volley(
 
                 # Implementer round
                 current_stage = "implementer"
+                # F009 — plan-drift check BEFORE the (paid) implementer call.
+                _drift_pause = _drift_pause_or_none(
+                    plan_drift.STAGE_IMPLEMENTER, iteration
+                )
+                if _drift_pause is not None:
+                    return _drift_pause
                 try:
                     impl_pct, impl_quota_line = _quota_gate(impl_name)
                 except QuotaExceeded as exc:
@@ -1889,6 +2269,12 @@ def dispatch_volley(
 
                 # Auditor round
                 current_stage = "auditor"
+                # F009 — plan-drift check BEFORE the (paid) auditor call.
+                _drift_pause = _drift_pause_or_none(
+                    plan_drift.STAGE_AUDITOR, iteration
+                )
+                if _drift_pause is not None:
+                    return _drift_pause
                 try:
                     aud_pct, aud_quota_line = _quota_gate(aud_name)
                 except QuotaExceeded as exc:
@@ -2085,6 +2471,16 @@ def dispatch_volley(
                             audit_paths,
                         )
 
+                    # F009 — final plan-drift check BEFORE finalizing signoff.
+                    # If the plan changed during this volley, do NOT persist a
+                    # success signoff against stale context; pause for refresh /
+                    # human ack instead (AC2/AC4/AC5).
+                    _drift_pause = _drift_pause_or_none(
+                        plan_drift.STAGE_SIGNOFF, iteration + 1
+                    )
+                    if _drift_pause is not None:
+                        return _drift_pause
+
                     transcript.append_terminal(
                         loaded.plan_dir,
                         feature_id,
@@ -2135,6 +2531,8 @@ def dispatch_volley(
                         # _emit_volley_terminal's final_status check.
                         allow_incomplete_patch_reason=allow_incomplete_patch_reason,
                         unrelated_dirty_state_note=unrelated_dirty_state_note,
+                        # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement.
+                        cross_feature_ack_reason=cross_feature_ack_reason,
                     )
 
                 if aud_status == "blocked":
@@ -2490,9 +2888,15 @@ def dispatch_volley(
                 # Plan 2026-05-04-003 F003: pass the implementer envelope so the
                 # detector skips counting timeout-with-work iterations (D008 +
                 # audit-focus item 1).
+                # Plan 2026-05-30-002 F001 (D029 fix): pass the prior + current
+                # auditor ENVELOPES (not bare verdict strings) so the breaker can
+                # compare finding-signature SETS. A shrinking blocking-finding set
+                # is progress and must not trip even when both verdicts stay
+                # ``needs_changes``. Falls back to verdict-string semantics when an
+                # envelope is missing or any finding lacks usable issue text.
                 np_tripped, np_reason = circuit_breakers.check_no_progress(
-                    prior_aud_status,
-                    aud_status,
+                    prior_aud_envelope if prior_aud_envelope is not None else prior_aud_status,
+                    aud_data,
                     current_impl_envelope=impl_envelope,
                 )
                 if np_tripped:
@@ -2606,6 +3010,10 @@ def dispatch_volley(
                 # (orthogonal to counter accumulation).
                 if not is_timeout_with_work:
                     prior_aud_status = aud_status
+                    # Plan 2026-05-30-002 F001 — advance the envelope baseline in
+                    # lockstep with prior_aud_status so the next round's
+                    # no-progress check compares finding-signature sets.
+                    prior_aud_envelope = aud_data
 
         except ValueError as _backstop_exc:
             # F003 backstop catches ValueError for D025 root cause #1, but

@@ -1,0 +1,10 @@
+{
+  "plan_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "feature_id": "F004",
+  "class": "operator_verified",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-06-03T13:18:48Z",
+  "terminal_class": "operator_verified",
+  "note": "F004 implementer dispatch timed out at 600s (harness 0-byte capture) but landed complete code; verified out-of-band by a direct codex audit (evidence/codex-f004-audit-i0.txt = signed_off, all 5 ACs traced) + 12/12 local tests green + ruff clean. No in-flow auditor envelope, so closed operator_verified."
+}

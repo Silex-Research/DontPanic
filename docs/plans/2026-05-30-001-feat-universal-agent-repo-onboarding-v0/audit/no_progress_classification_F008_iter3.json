@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "no_progress_classification",
+  "captured_at": "2026-06-01T21:21:32Z",
+  "feature_id": "F008",
+  "aggregate": "unknown",
+  "blocking": true,
+  "recommended_action": "Auditor produced findings the taxonomy could not place. Inspect the audit envelope manually before deciding whether to retry, escalate, or close as blocked.",
+  "saved_evidence_paths": [],
+  "findings": [
+    {
+      "finding_index": 0,
+      "classification": "implementation_defect",
+      "severity": "high",
+      "category": "correctness",
+      "issue_excerpt": "Anthropic auth status is optimistic. Evidence: `config_inventory._anthropic_auth_configured()` treats `executors.get_executor(\"claude\").is_available()` as auth…",
+      "rationale": "severity=high, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 1,
+      "classification": "implementation_defect",
+      "severity": "medium",
+      "category": "correctness",
+      "issue_excerpt": "the acceptance-listed `roles set` edit route is not a validated command surface. Evidence: inventory emits `dontpanic roles set <role> <executor>` in `dashboar…",
+      "rationale": "severity=medium, category=correctness — substantive finding with no environmental/shape/scope marker; treat as a real implementation defect."
+    },
+    {
+      "finding_index": 2,
+      "classification": "unknown",
+      "severity": "low",
+      "category": "style",
+      "issue_excerpt": "changed F008 tests are not ruff-clean despite the implementer claim. Evidence: `ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts…",
+      "rationale": "no taxonomy pattern matched and severity/category are not substantive; remains blocking pending operator review."
+    }
+  ]
+}

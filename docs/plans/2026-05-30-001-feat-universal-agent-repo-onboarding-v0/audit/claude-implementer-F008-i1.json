@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 1,
+  "started_at": "2026-06-01T23:40:52Z",
+  "completed_at": "2026-06-01T23:47:20Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/codex-auditor-F008-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-flqxpocg target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4270 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3739695,
+    "tokens_out": 28150,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F008] Both findings are addressed and verified. Here's the summary:\n\n## Side-effect commands run\n```\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider \"scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py::test_no_provider_reports_ok_on_invalid_or_incomplete_state\" -q\n$ PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q\n```\n\n---\n\n**Finding 1 (high, correctness) — secrets/auth reported `ok` from mere presence.** Fixed by making every secret item reduce to `present`/`loadable`/`valid` facts that route through the *same* shared `derive_status` helper as all other providers, so the non-optimistic invariant now holds for secrets by construction. `_secret_provider` no longer takes a single `configured` bool — it takes `present`, `loadable`, `valid`. I added `_anthropic_auth_facts()` which actually parses `~/.claude/.credentials.json` and returns non-ok for an empty/malformed (non-JSON) file instead of accepting any non-empty file; `_is_discord_webhook_url()` which validates the webhook URL shape so a set-but-bogus value is `present-but",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider \"scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py::test_no_provider_reports_ok_on_invalid_or_incomplete_state\" -q",
+      "PYTHONPATH=scripts ruff check --no-cache scripts/dontpanic_orchestrate/config_inventory.py scripts/dontpanic_orchestrate/tests/test_config_inventory_f008.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_command_validation_f001.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

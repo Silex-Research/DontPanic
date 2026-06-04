@@ -1,0 +1,14 @@
+{
+  "task_id": "2026-05-30-002-fix-orchestrator-convergence-bugs",
+  "schema_version": "1.0",
+  "objective": "Fix the orchestration-engine convergence/audit bugs surfaced dogfooding 2026-05-30-001 and the failed first implementation attempt: progress-making multi-round volleys must not be terminated by no_progress verdict-string equality, diminishing_returns false positives, or stale latest-audit selection.",
+  "non_goals": [
+    "Rewriting unrelated breaker classes outside no_progress, diminishing_returns, and the minimum supervisor precedence needed to keep progress-making rounds alive",
+    "Touching the onboarding-v0 feature set"
+  ],
+  "evidence_required": [
+    "codex cross-model signoff per feature",
+    "full orchestrate pytest sweep green under raw pytest",
+    "synthetic 3-round convergence demonstration with shrinking/changing findings"
+  ]
+}

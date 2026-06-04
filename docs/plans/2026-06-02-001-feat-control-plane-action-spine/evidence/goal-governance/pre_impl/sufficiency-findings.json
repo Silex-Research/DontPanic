@@ -1,0 +1,99 @@
+{
+  "auditor": "codex",
+  "implementer": "claude",
+  "findings": [
+    {
+      "severity": "critical",
+      "journey_id": "honest-command-safety",
+      "gap_class": "integration_gap",
+      "description": "The objective says no safe_command field exists anywhere, but the plan only prevents adding safe_command to ActionItem while existing config-inventory, skill-recommendation, dashboard fixture, and dashboard-rendering contracts still emit or consume safe_command.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Either narrow the objective to \"no safe_command on ActionItem/control-plane actions\" or add an explicit migration/rename/removal step for every existing safe_command contract and its tests."
+    },
+    {
+      "severity": "high",
+      "journey_id": "one-action-three-surfaces",
+      "gap_class": "wiring_gap",
+      "description": "F003 does not define an authoritative shared ActionItem read path for CLI what-now, dashboard, and agent-brief; without that, the surfaces can still recompute actions independently at different times and merely pass a synthetic parity test.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Define one collection/cache API or envelope loader that all three renderers must consume, and make the parity test fail if any surface calls its own state collector."
+    },
+    {
+      "severity": "high",
+      "journey_id": "one-action-three-surfaces",
+      "gap_class": "parity_gap",
+      "description": "The agent-brief managed block currently renders a general operating brief, and F003 does not explicitly extend BriefInputs, RenderedBrief, or repo_onboarding._agents_body to include rendered ActionItems.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Add a concrete agent-brief action section and data path, then assert the managed AGENTS.md block contains the same dedupe_key/title/band/exact_command as dashboard and CLI JSON."
+    },
+    {
+      "severity": "high",
+      "journey_id": "one-action-three-surfaces",
+      "gap_class": "coverage_gap",
+      "description": "The F001 producer-path test matrix names provider functions, Guidance.to_action_items, and _rendered_to_action_item_dict, but live ActionItem creation/rehydration also occurs in DashboardAffordance.to_action_item, dashboard_relevance build-warning actions, sidecar rehydration, and fleet cache loading.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Enumerate every non-test ActionItem construction and rehydration site in the acceptance test, including dashboard_relevance.py and projects_dashboard.py."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "one-action-three-surfaces",
+      "gap_class": "wiring_gap",
+      "description": "The dedupe_key authority is specified, but its project/fleet scoping semantics are not; fleet aggregation can accidentally collapse distinct project-scoped actions if producers choose the same logical dedupe_key.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Define dedupe_key composition rules for global versus project-scoped actions and add a fleet test with two projects producing the same logical action."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-agent-role",
+      "gap_class": "coverage_gap",
+      "description": "F002 requires can_orchestrate to be reported honestly, but the acceptance only proves Grok operate-only and registered worker dispatchability; it does not require a positive fan-out-capable harness fixture or a source of truth for can_orchestrate.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Add an explicit capability source and tests for can_orchestrate=true and can_orchestrate=false independent of worker dispatchability."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-agent-role",
+      "gap_class": "integration_gap",
+      "description": "The no-tree-governance absence assertion is under-scoped because the CLI module already imports nested orchestration and breaker code for unrelated commands, so a broad import assertion will be noisy or impossible.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Scope the guard to the new classification/reporting module and assert agent status does not invoke governance paths, rather than asserting the whole CLI process imports none of them."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-command-safety",
+      "gap_class": "integration_gap",
+      "description": "ActionItem boundary command validation is under-specified at the string boundary: validate_command_tokens expects tokenized command bodies, while existing exact_command values include allowed invocation prefixes and need shlex error handling.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Introduce one shared validate_exact_command_string helper that strips supported prefixes, shlex-splits, validates tokens, and is used by ActionItem and event rendering."
+    },
+    {
+      "severity": "low",
+      "journey_id": "one-action-three-surfaces",
+      "gap_class": "wiring_gap",
+      "description": "The new audience field names operator, worker, orchestrator, and human, but the plan does not define how those values map to dashboard, CLI, and onboarding-agent renderers or whether human and operator overlap.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Document audience semantics and renderer filtering rules before implementation, with at least one test proving an action intended for humans and interactive agents appears on the right surfaces."
+    }
+  ]
+}

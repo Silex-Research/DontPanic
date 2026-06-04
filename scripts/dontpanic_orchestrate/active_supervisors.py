@@ -37,6 +37,12 @@ class SupervisorEntry:
     target_project: str | None
     started_at: str
     supervisor_config_dir: str | None  # ExecutionEnvironment root, when known
+    # F009 — the plan-run fingerprint captured at dispatch start: source file
+    # content hashes + mtimes + capture timestamp. Lets `dontpanic ps` and any
+    # external reconciler see WHAT plan state this run is operating against
+    # without re-reading the plan dir. Optional/default None so registry lines
+    # written before this field still parse.
+    plan_fingerprint: dict | None = None
 
 
 def _now_iso() -> str:
@@ -91,6 +97,7 @@ def register(
     target_project: str | None,
     supervisor_config_dir: str | None,
     pid: int | None = None,
+    plan_fingerprint: dict | None = None,
 ) -> SupervisorEntry:
     """Append a fresh entry for the current process to the registry."""
     entry = SupervisorEntry(
@@ -100,6 +107,7 @@ def register(
         target_project=target_project,
         started_at=_now_iso(),
         supervisor_config_dir=supervisor_config_dir,
+        plan_fingerprint=plan_fingerprint,
     )
     entries = _read_all()
     entries.append(entry)

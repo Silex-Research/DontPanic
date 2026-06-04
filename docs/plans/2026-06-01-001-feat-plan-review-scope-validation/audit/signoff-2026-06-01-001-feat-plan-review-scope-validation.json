@@ -1,0 +1,23 @@
+{
+  "task_id": "2026-06-01-001-feat-plan-review-scope-validation",
+  "signoff_id": "2026-06-01-001-feat-plan-review-scope-validation#signoff#0",
+  "iteration": 0,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F004-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 0,
+    "blocked_count": 1,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — F004 implementer dispatch timed out at 600s (harness 0-byte capture) but landed complete code; verified out-of-band by a direct codex audit (evidence/codex-f004-audit-i0.txt = signed_off, all 5 ACs traced) + 12/12 local tests green + ruff clean. No in-flow auditor envelope, so closed operator_verified.. See evidence/closeout-memo.md.",
+  "next_action": "merge",
+  "decided_at": "2026-06-03T13:18:48Z"
+}

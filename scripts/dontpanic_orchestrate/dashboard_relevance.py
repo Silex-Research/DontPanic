@@ -350,9 +350,12 @@ def build_warning_action_items(
             detail = f"{reason}: {'; '.join(warnings_list)}"
         else:
             detail = reason
+        skipped_id = (
+            f"{operator_console.SOURCE_ARCHITECTURE}:build-warning:{project_name}:skipped"
+        )
         items.append(
             operator_console.ActionItem(
-                id=f"{operator_console.SOURCE_ARCHITECTURE}:build-warning:{project_name}:skipped",
+                id=skipped_id,
                 source=operator_console.SOURCE_ARCHITECTURE,
                 band=operator_console.Band.ADVISORY,
                 title=f"Project {display_name!r} build skipped",
@@ -364,14 +367,24 @@ def build_warning_action_items(
                 updated_at=now_iso,
                 project_name=project_name,
                 display_name=display_name,
+                audience=(
+                    operator_console.AUDIENCE_OPERATOR,
+                    operator_console.AUDIENCE_HUMAN,
+                ),
+                dedupe_key=skipped_id,
+                reversible=False,
+                plain_consequence=None,
             )
         )
         return tuple(items)
 
     for idx, warning in enumerate(warnings_list):
+        warning_id = (
+            f"{operator_console.SOURCE_ARCHITECTURE}:build-warning:{project_name}:{idx}"
+        )
         items.append(
             operator_console.ActionItem(
-                id=f"{operator_console.SOURCE_ARCHITECTURE}:build-warning:{project_name}:{idx}",
+                id=warning_id,
                 source=operator_console.SOURCE_ARCHITECTURE,
                 band=operator_console.Band.ADVISORY,
                 title=f"Build warning ({display_name})",
@@ -383,6 +396,13 @@ def build_warning_action_items(
                 updated_at=now_iso,
                 project_name=project_name,
                 display_name=display_name,
+                audience=(
+                    operator_console.AUDIENCE_OPERATOR,
+                    operator_console.AUDIENCE_HUMAN,
+                ),
+                dedupe_key=warning_id,
+                reversible=False,
+                plain_consequence=None,
             )
         )
     return tuple(items)

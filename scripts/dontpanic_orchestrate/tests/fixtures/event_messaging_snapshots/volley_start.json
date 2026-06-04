@@ -1,15 +1,23 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator",
+        "human"
+      ],
       "automatable": false,
       "band": "info",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
       "updated_at": "2026-05-24T00:00:00Z"

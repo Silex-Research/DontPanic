@@ -1,0 +1,47 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-02T01:21:00Z",
+  "completed_at": "2026-06-02T01:24:36Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F013-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-lxlkw5md target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 414945 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1573667,
+    "tokens_out": 14203,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F013] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Target context was declared correctly in the implementer summary, and `target_context.commands_run` is empty, so no forbidden command shape was present.\n\nFINDING (high, correctness): Project/fleet dashboard builds and serves do not render the selected project’s F008 inventory in Settings. Evidence: project builds mirror `config-inventory.json` under `state/projects/<name>/` (`projects_dashboard.py:1152-1170`), but `core.js` only loads top-level `state/config-inventory.json` (`core.js:267-271`) and Settings only renders `state.configInventory` (`settings.js:195-198`). `serve_start()` then overwrites the top-level inventory with `project_name=None` (`dashboard.py:1143-1146`), so served project dashboards show machine-scope inventory. Recommendation: load per-project config inventories keyed by selected project, or write the focused project inventory to the top-level served state without dropping project scope.\n\nFINDING (medium, test_coverage): The new tests miss the project/fleet path where the bug occurs. Evidence: Python coverage exercises `dashboard.build()` current-repo mode and `serve_start()` without `project=` (`test_dashboard_inventory_f013.py:50-58`, `244-250`), while the JS integration only fetches top-level `state/config-inventory.json`. Recommendation: add tests for `dashboard build --project <name>` / `serve_start(project=<name>)` proving Settings renders the selected project inventory an",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest scripts/dontpanic_orchestrate/tests/test_dashboard_inventory_f013.py",
+      "npm test -- tests/unit/config-inventory-logic.test.js tests/integration/config-inventory-page.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F013",
+      "issue": "Project/fleet dashboard builds and serves do not render the selected project’s F008 inventory in Settings. Evidence: project builds mirror `config-inventory.json` under `state/projects/<name>/` (`projects_dashboard.py:1152-1170`), but `core.js` only loads top-level `state/config-inventory.json` (`core.js:267-271`) and Settings only renders `state.configInventory` (`settings.js:195-198`). `serve_start()` then overwrites the top-level inventory with `project_name=None` (`dashboard.py:1143-1146`), ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F013",
+      "issue": "The new tests miss the project/fleet path where the bug occurs. Evidence: Python coverage exercises `dashboard.build()` current-repo mode and `serve_start()` without `project=` (`test_dashboard_inventory_f013.py:50-58`, `244-250`), while the JS integration only fetches top-level `state/config-inventory.json`. Recommendation: add tests for `dashboard build --project <name>` / `serve_start(project=<name>)` proving Settings renders the selected project inventory and keeps active-url detection. Test",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -1,0 +1,26 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/plans/2026-05-23-001-infra-install-lifecycle-reconciliation-roadmap-v0/events.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/claude-implementer-F008-i0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/gate-state.json",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-06-01-001-feat-plan-review-scope-validation/"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

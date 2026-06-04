@@ -1,0 +1,64 @@
+{
+  "task_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+  "audit_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-02T16:56:36Z",
+  "completed_at": "2026-06-02T16:59:50Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F010-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-05-30-001-feat-universal-agent-repo-onboarding-v0-0v6xrc04 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1118011 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3105582,
+    "tokens_out": 12611,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F010] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nVerdict: needs_changes. No EC5 finding: the implementer audit declares Repo/Env/Project correctly in the summary, structured `target_context` is `env=dev`, `project=null`, and `commands_run` is empty, so there are no forbidden command shapes.\n\nFINDING (high, correctness): The dashboard singleton is keyed by `dashboard_dir`, not the canonical DontPanic home, so the “one server per DontPanic home” requirement can be bypassed by serving the same home from a different cwd or `--dashboard-dir`. Evidence: `_singleton_record_path()` writes `<dashboard_dir>/.serve-singleton.json`, and `serve_start()` checks `detect_active_dashboard(dashboard_dir)` before binding; it does not use `global_config.dontpanic_home()` or `active_supervisors`. Recommendation: store/check the singleton under the canonical DontPanic home, keyed as dashboard kind, with dashboard dir/project/url as record fields.\n\nFINDING (medium, documentation): `README.md` does not show the complete required onboarding flow. Evidence: README still documents `projects add ... --init-config` and role config set commands, but does not itself cover `agent brief`, `projects add --onboard`, `doctor --agent`, `doctor --project`, config inventory/setup, skill recommendations, or orchestrate flow; `docs/GETTING_STARTED.md` does. Recommendation: update README with the full abbreviated flow, not only a pointer to Getting Started.\n\nFINDING (medium, test_coverage): The new focused F010 test file is",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py -q",
+      "python -c \"import ast, pathlib; files=['scripts/dontpanic_orchestrate/dashboard.py','scripts/dontpanic_orchestrate/config_inventory.py','scripts/dontpanic_orchestrate/operations_guidance.py','scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py']; [ast.parse(pathlib.Path(f).read_text(), filename=f) for f in files]; print('syntax ok')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F010",
+      "issue": "The dashboard singleton is keyed by `dashboard_dir`, not the canonical DontPanic home, so the “one server per DontPanic home” requirement can be bypassed by serving the same home from a different cwd or `--dashboard-dir`. Evidence: `_singleton_record_path()` writes `<dashboard_dir>/.serve-singleton.json`, and `serve_start()` checks `detect_active_dashboard(dashboard_dir)` before binding; it does not use `global_config.dontpanic_home()` or `active_supervisors`. Recommendation: store/check the sin",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F010",
+      "issue": "`README.md` does not show the complete required onboarding flow. Evidence: README still documents `projects add ... --init-config` and role config set commands, but does not itself cover `agent brief`, `projects add --onboard`, `doctor --agent`, `doctor --project`, config inventory/setup, skill recommendations, or orchestrate flow; `docs/GETTING_STARTED.md` does. Recommendation: update README with the full abbreviated flow, not only a pointer to Getting Started.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F010",
+      "issue": "The new focused F010 test file is untracked, so the targeted singleton/status/hint tests may not ship in the actual patch. Evidence: `git status --short` reports `?? ../scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py`. Recommendation: add the test file to the tracked change set and rerun the targeted suite.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "style",
+      "feature_id": "F010",
+      "issue": "Generated dashboard state was left untracked under `scripts/dashboard/state`. Evidence: `git status --short` reports `?? ../scripts/dashboard/`, containing generated JSON state files. Recommendation: remove the generated artifact tree or add an intentional ignore rule if it is expected. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-only HEAD~1 $ PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

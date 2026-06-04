@@ -1,0 +1,457 @@
+{
+  "dashboard_hint": {
+    "active_url": null,
+    "hint_id": "config-inventory-dashboard",
+    "is_running": false,
+    "start_command": "dontpanic dashboard serve",
+    "text": "Dashboard is not running \u2014 start it with `dontpanic dashboard serve`"
+  },
+  "kind": "config_inventory",
+  "project_name": null,
+  "project_path": null,
+  "settings_cards": [
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": "dontpanic project config init",
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "project_config",
+      "mutation": null,
+      "optional": false,
+      "owner": "<repo>/.dontpanic/dontpanic.json",
+      "run_action": null,
+      "safe_command": "dontpanic project config init",
+      "scope": "project",
+      "status": "unknown",
+      "summary": "no project in scope \u2014 pass --project NAME|PATH",
+      "title": "Project config"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic projects add <name> <path> --onboard"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "projects_registry",
+      "mutation": {
+        "command_template": "dontpanic projects add <name> <path> --onboard",
+        "type": "command_template"
+      },
+      "optional": false,
+      "owner": "/home/operator/.dontpanic/projects.json",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "machine",
+      "status": "ok",
+      "summary": "2 project(s) registered",
+      "title": "Project registry"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic project config set runtime_evidence.<key> <value>"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "runtime_evidence",
+      "mutation": {
+        "command_template": "dontpanic project config set runtime_evidence.<key> <value>",
+        "type": "key_value"
+      },
+      "optional": true,
+      "owner": "<repo>/.dontpanic/dontpanic.json runtime_evidence.*",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "runtime",
+      "status": "optional_unconfigured",
+      "summary": "project-scoped only \u2014 pass --project to inspect",
+      "title": "Runtime evidence defaults"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic project config set <key> <value>"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "gates_paths",
+      "mutation": {
+        "command_template": "dontpanic project config set <key> <value>",
+        "keys": [
+          "plans_dir",
+          "default_target_env",
+          "human_gates",
+          "protected_paths"
+        ],
+        "type": "key_value"
+      },
+      "optional": true,
+      "owner": "<repo>/.dontpanic/dontpanic.json",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "project",
+      "status": "optional_unconfigured",
+      "summary": "using defaults (plans_dir=docs/plans, no extra gates)",
+      "title": "Human gates / protected paths / plans_dir / default target env"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic quota-caps init"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "quota",
+      "mutation": {
+        "command": "dontpanic quota-caps init",
+        "command_template": "dontpanic calibrate-claude --window <window> --dashboard-pct <pct>",
+        "secondary": "dontpanic calibrate-claude",
+        "type": "command"
+      },
+      "optional": false,
+      "owner": "/home/operator/.jarvis/quota_caps.json",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "machine",
+      "status": "ok",
+      "summary": "caps present at quota_caps.json; calibration present; observed quota state present",
+      "title": "Quota caps / calibration / admission thresholds"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": false,
+      "id": "circuit_breakers",
+      "mutation": null,
+      "optional": false,
+      "owner": "~/.dontpanic/ breaker history + per-plan gate-state",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "machine",
+      "status": "ok",
+      "summary": "global breaker clear (1 hit(s) in window)",
+      "title": "Circuit breaker state / history"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional. INBOX.md is the always-on durable channel; Discord and terminal-notifier are best-effort sinks and never block core use.",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "notifications",
+      "mutation": null,
+      "optional": true,
+      "owner": "DONTPANIC_DISCORD_WEBHOOK_URL env + terminal-notifier binary",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "capability",
+      "status": "optional_unconfigured",
+      "summary": "terminal-notifier unavailable; discord webhook unset (INBOX is always on)",
+      "title": "Notification settings"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional local-first operator console. Core CLI works without it.",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "dashboard",
+      "mutation": {
+        "command": "dontpanic dashboard build",
+        "type": "command"
+      },
+      "optional": true,
+      "owner": "/repo/dashboard/state",
+      "run_action": {
+        "command": "dontpanic dashboard build",
+        "type": "run_action"
+      },
+      "safe_command": null,
+      "scope": "machine",
+      "status": "ok",
+      "summary": "dashboard state present at /repo/dashboard/state",
+      "title": "Dashboard (local / generated state)"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional integrations. Unready adapters never block core use.",
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic capabilities setup <capability> --print-steps"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "capabilities",
+      "mutation": {
+        "command_template": "dontpanic capabilities setup <capability> --print-steps",
+        "type": "command_template"
+      },
+      "optional": true,
+      "owner": "capability manifests + adapters/",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "capability",
+      "status": "optional_unconfigured",
+      "summary": "4 capabilities/adapters known, 0 ready",
+      "title": "Capabilities / adapters"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional. Exposes read-only plan state to MCP clients.",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": false,
+      "id": "mcp",
+      "mutation": {
+        "command": "dontpanic mcp serve",
+        "type": "command"
+      },
+      "optional": true,
+      "owner": "dontpanic mcp serve",
+      "run_action": {
+        "command": "dontpanic mcp serve",
+        "type": "run_action"
+      },
+      "safe_command": null,
+      "scope": "capability",
+      "status": "optional_unconfigured",
+      "summary": "MCP server module available \u2014 start with `dontpanic mcp serve`",
+      "title": "MCP server readiness"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "environments",
+      "mutation": null,
+      "optional": true,
+      "owner": "<repo>/environments.json + .firebaserc",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "project",
+      "status": "optional_unconfigured",
+      "summary": "project-scoped \u2014 pass --project to inspect",
+      "title": "environments.json / Firebase target"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional. PM-tool sync is off by default; core use never needs it.",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": false,
+      "id": "pm_credentials",
+      "mutation": null,
+      "optional": true,
+      "owner": "LINEAR_API_KEY (and other PM-tool env vars)",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "secret",
+      "status": "optional_unconfigured",
+      "summary": "no PM-tool credentials (optional)",
+      "title": "PM-tool credentials (Linear, \u2026)"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional. Enables Discord notifications; INBOX works without it. Verify with: dontpanic doctor",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": false,
+      "id": "secret_discord_webhook",
+      "mutation": null,
+      "optional": true,
+      "owner": "DONTPANIC_DISCORD_WEBHOOK_URL",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "secret",
+      "status": "optional_unconfigured",
+      "summary": "not configured",
+      "title": "Discord webhook URL"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": "Optional. Only repos deploying to Firebase/GCP need this. Verify with: dontpanic doctor --project <name>",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": false,
+      "id": "secret_gcp_sa_key",
+      "mutation": null,
+      "optional": true,
+      "owner": "~/.dontpanic/.secrets/*.json or <repo>/.secrets/*.json",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "secret",
+      "status": "ok",
+      "summary": "configured",
+      "title": "GCP / Firebase service-account key"
+    }
+  ],
+  "setup_cards": [
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic roles set <role> <executor> --global"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "global_config",
+      "mutation": {
+        "command_template": "dontpanic roles set <role> <executor> --global",
+        "roles": [
+          "implementer",
+          "auditor",
+          "goal_auditor"
+        ],
+        "type": "role_picker"
+      },
+      "optional": false,
+      "owner": "/home/operator/.dontpanic/config.json",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "machine",
+      "status": "needs_setup",
+      "summary": "global default(s) not a worker executor: implementer=Grok-Builder, auditor=Codex-Auditor (not in AGENT_REGISTRY). Reassign with `dontpanic roles set <role> <executor> --global`. Resolved: implementer=Grok-Builder, auditor=Codex-Auditor",
+      "title": "Global config (per-user defaults)"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": "dontpanic manifest init",
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "agent_manifest",
+      "mutation": {
+        "command": "dontpanic manifest init",
+        "type": "command"
+      },
+      "optional": false,
+      "owner": "/home/operator/.dontpanic/agent-manifest.json",
+      "run_action": null,
+      "safe_command": "dontpanic manifest init",
+      "scope": "machine",
+      "status": "needs_setup",
+      "summary": "no agent-manifest.json \u2014 run `dontpanic manifest init`",
+      "title": "Agent manifest"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": null,
+        "command_template": "dontpanic roles set <role> <executor>"
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "roles",
+      "mutation": {
+        "available_executors": [
+          "claude",
+          "codex"
+        ],
+        "command_template": "dontpanic roles set <role> <executor>",
+        "roles": [
+          "implementer",
+          "auditor",
+          "goal_auditor"
+        ],
+        "type": "role_picker"
+      },
+      "optional": false,
+      "owner": "roles.* in global/project config",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "machine",
+      "status": "needs_setup",
+      "summary": "unrunnable role(s): implementer=Grok-Builder, auditor=Codex-Auditor, goal_auditor=Codex-Auditor (not in AGENT_REGISTRY). Reassign with `dontpanic roles set <role> <executor>`. Resolved chain: implementer=Grok-Builder (global roles block (~/.dontpanic/config.json roles.*)) \u2014 NOT a worker executor; auditor=Codex-Auditor (global roles block (~/.dontpanic/config.json roles.*)) \u2014 NOT a worker executor; goal_auditor=Codex-Auditor (inherited from resolved auditor (no goal_auditor set)) \u2014 NOT a worker executor",
+      "title": "Worker role assignments"
+    },
+    {
+      "dashboard_hint_ref": null,
+      "detail": null,
+      "edit": {
+        "command": "dontpanic reconcile homes --dry-run",
+        "command_template": null
+      },
+      "editable": true,
+      "human_required": false,
+      "id": "install_reconcile",
+      "mutation": {
+        "command": "dontpanic reconcile homes --dry-run",
+        "type": "command"
+      },
+      "optional": false,
+      "owner": "~/.dontpanic/install-snapshot.json",
+      "run_action": null,
+      "safe_command": "dontpanic reconcile homes --dry-run",
+      "scope": "machine",
+      "status": "needs_setup",
+      "summary": "split config homes detected (~/.dontpanic vs ~/.jarvis)",
+      "title": "Install snapshot / reconcile state"
+    },
+    {
+      "dashboard_hint_ref": "config-inventory-dashboard",
+      "detail": "Required to dispatch the claude worker executor. Satisfied by ANTHROPIC_API_KEY or a logged-in `claude` session. Verify with: dontpanic doctor --agent",
+      "edit": {
+        "command": null,
+        "command_template": null
+      },
+      "editable": false,
+      "human_required": true,
+      "id": "secret_anthropic_auth",
+      "mutation": null,
+      "optional": false,
+      "owner": "ANTHROPIC_API_KEY env var or an authenticated `claude` CLI session",
+      "run_action": null,
+      "safe_command": null,
+      "scope": "secret",
+      "status": "human_required",
+      "summary": "not configured",
+      "title": "Anthropic / Claude CLI auth"
+    }
+  ]
+}

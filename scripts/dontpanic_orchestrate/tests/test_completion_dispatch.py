@@ -777,6 +777,12 @@ class TestProductionDispatchPath:
         # Belt and suspenders — also patch the registry entry directly so
         # any other path that calls into ex_mod sees the same stub.
         monkeypatch.setitem(ex_mod.AGENT_REGISTRY, "codex", _RecordingStub)
+        # Plan 2026-06-01-001 F009 added a config-readiness gate on the
+        # production (dispatch=None) path; this test exercises executor
+        # *resolution*, not readiness, so neutralise that gate here.
+        monkeypatch.setattr(
+            cd_mod, "_assert_config_ready_for_completion", lambda **_: None
+        )
 
         transcript = dispatch_completion_audit(
             plan_dir,
@@ -811,6 +817,11 @@ class TestProductionDispatchPath:
         from dontpanic_orchestrate import completion_dispatch as cd_mod
 
         monkeypatch.setattr(cd_mod, "get_executor", lambda name: _UnavailableStub())
+        # Plan 2026-06-01-001 F009: neutralise the production-path config-
+        # readiness gate so this test reaches the executor-availability check.
+        monkeypatch.setattr(
+            cd_mod, "_assert_config_ready_for_completion", lambda **_: None
+        )
 
         with pytest.raises(CompletionDispatchError) as exc_info:
             dispatch_completion_audit(

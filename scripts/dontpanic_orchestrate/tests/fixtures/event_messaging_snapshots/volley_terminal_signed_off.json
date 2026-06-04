@@ -1,15 +1,22 @@
 {
   "channels": {
     "dashboard_sidecar": {
+      "audience": [
+        "operator"
+      ],
       "automatable": true,
       "band": "ready",
+      "dashboard_url": null,
+      "dedupe_key": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
       "detail": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
       "display_name": null,
       "evidence_uri": "/tmp/INBOX.md",
       "exact_command": null,
       "human_required_reason": null,
       "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
+      "plain_consequence": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
       "project_name": null,
+      "reversible": false,
       "source": "supervisor",
       "title": "AI work finished on 2026-05-24-004-feat-event-messaging-v1",
       "updated_at": "2026-05-24T00:00:00Z"

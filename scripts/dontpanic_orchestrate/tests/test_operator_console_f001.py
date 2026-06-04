@@ -334,6 +334,7 @@ def test_aggregate_dedupes_by_id_last_wins() -> None:
         human_required_reason="gate approval",
         evidence_uri=None,
         updated_at=_FIXED_NOW_ISO,
+        dedupe_key="gate:plan-a:pre_impl",
     )
     second = dataclasses.replace(first, title="second")
     merged = oc.aggregate((first,), (second,))
@@ -358,6 +359,7 @@ def test_render_rejects_secret_shaped_string_in_action_field(tmp_path: Path) -> 
         human_required_reason="manual review",
         evidence_uri=None,
         updated_at=_FIXED_NOW_ISO,
+        dedupe_key="reconcile:custom",
     )
     with pytest.raises(ValueError, match="matched secret pattern"):
         oc.render_envelope((bad_item,), captured_at=_FIXED_NOW)
@@ -375,6 +377,7 @@ def test_render_clean_payload_passes_invariant() -> None:
         human_required_reason="gate approval",
         evidence_uri=None,
         updated_at=_FIXED_NOW_ISO,
+        dedupe_key="gate:p:pre_impl",
     )
     payload = oc.render_envelope((item,), captured_at=_FIXED_NOW)
     # Round-trip JSON to confirm it serializes cleanly.
@@ -402,6 +405,7 @@ def test_write_cache_lands_at_dontpanic_dashboard_what_now_json(tmp_path: Path) 
             human_required_reason="gate approval",
             evidence_uri=None,
             updated_at=_FIXED_NOW_ISO,
+            dedupe_key="gate:p:pre_impl",
         ),
     )
     target = oc.write_cache(items, captured_at=_FIXED_NOW)

@@ -164,7 +164,11 @@ _CAPABILITIES_SPEC = SubcommandSpec(
     },
 )
 
-# ``reconcile`` ships ``baseline`` and ``check`` per reconcile.py:_build_parser.
+# ``reconcile`` ships ``baseline``, ``check``, and ``homes`` per
+# reconcile.py:_build_parser. ``homes`` (Plan 2026-05-30-001 F006) reconciles
+# the canonical ~/.dontpanic home against the legacy ~/.jarvis home: dry-run by
+# default, ``--confirm`` to migrate. operations_guidance emits
+# ``reconcile homes --dry-run`` (AC7c) — bare ``reconcile`` exits 2.
 _RECONCILE_SPEC = SubcommandSpec(
     subcommands={
         "baseline": SubcommandSpec(
@@ -173,6 +177,10 @@ _RECONCILE_SPEC = SubcommandSpec(
         ),
         "check": SubcommandSpec(
             value_flags=frozenset({"--area", "--format"}),
+        ),
+        "homes": SubcommandSpec(
+            bool_flags=frozenset({"--confirm", "--dry-run"}),
+            value_flags=frozenset({"--format"}),
         ),
     },
 )
@@ -224,7 +232,9 @@ _PROJECTS_SPEC = SubcommandSpec(
             positional_min=2,
             positional_max=2,
             value_flags=frozenset({"--implementer", "--auditor", "--notes"}),
-            bool_flags=frozenset({"--force", "--yes", "--init-config", "--json"}),
+            bool_flags=frozenset(
+                {"--force", "--yes", "--init-config", "--json", "--onboard", "--dry-run"}
+            ),
         ),
         "list": SubcommandSpec(bool_flags=frozenset({"--json"})),
         "show": SubcommandSpec(
@@ -259,8 +269,93 @@ _MCP_SPEC = SubcommandSpec(
     },
 )
 
+# ``agent`` subcommands per cli.py:_agent_main (F002). operations_guidance emits
+# ``agent brief`` (the refresh-brief setup choice). ``brief`` takes only --json;
+# ``status``/``setup`` take a name positional; ``register-worker`` is the guarded
+# role-assignment write path.
+_AGENT_SPEC = SubcommandSpec(
+    subcommands={
+        "brief": SubcommandSpec(bool_flags=frozenset({"--json"})),
+        "status": SubcommandSpec(positional_min=0, positional_max=1),
+        "setup": SubcommandSpec(positional_min=1, positional_max=1),
+        "register-worker": SubcommandSpec(
+            positional_min=1,
+            positional_max=1,
+            value_flags=frozenset({"--role"}),
+            bool_flags=frozenset({"--global", "--project", "--dry-run"}),
+        ),
+    },
+)
+
+# ``roles`` subcommands per cli.py:_roles_main (F004). config_inventory emits
+# ``dontpanic roles set <role> <executor> --global`` as the safe edit route in
+# dashboard_mutation_shape.command_template, so the validator must recognize it
+# (codex i2 — the acceptance-listed edit route was not a validated surface).
+# ``set`` takes <role> <executor> positionals; ``show`` takes none.
+_ROLES_SPEC = SubcommandSpec(
+    subcommands={
+        "show": SubcommandSpec(
+            value_flags=frozenset({"--project"}),
+            bool_flags=frozenset({"--json"}),
+        ),
+        "set": SubcommandSpec(
+            positional_min=2,
+            positional_max=2,
+            value_flags=frozenset({"--project"}),
+            bool_flags=frozenset({"--global", "--dry-run", "--yes"}),
+        ),
+    },
+)
+
+# ``dispatch-from-plan`` and its teaching gateway ``orchestrate`` share one
+# shape: ``orchestrate`` (cli.py:_orchestrate_main) forwards its argv verbatim to
+# ``_dispatch_from_plan_main``. operations_guidance emits the redispatch command
+# ``orchestrate <plan> --confirm`` (AC7a), so the validator recognizes both
+# spellings against the identical spec.
+_DISPATCH_FROM_PLAN_SPEC = SubcommandSpec(
+    positional_min=1,
+    positional_max=1,
+    bool_flags=frozenset({"--confirm"}),
+    value_flags=frozenset(
+        {
+            "--feature",
+            "--implementer",
+            "--auditor",
+            "--max-iterations",
+            "--mode",
+            "--allow-incomplete-patch",
+            "--unrelated-dirty-state-note",
+        }
+    ),
+)
+
+# ``skills`` subcommands per cli.py:_skills_main (Plan 2026-05-30-001 F016).
+# ``recommend <plan>`` renders the SkillAction recommendations; ``rubric``
+# proposes a starting invocation rubric (--suggest <skill>) or lists high-value
+# skills missing one (--list-missing). The migration advisory + dashboard emit
+# ``skills rubric --suggest <skill>`` and ``skills recommend <plan>``, so both
+# must validate or those affordances would fall back to advisory-only text.
+_SKILLS_SPEC = SubcommandSpec(
+    subcommands={
+        "recommend": SubcommandSpec(
+            positional_min=0,
+            positional_max=1,
+            value_flags=frozenset(
+                {"--plan", "--stage", "--skills-dir", "--dashboard-url", "--format"}
+            ),
+        ),
+        "rubric": SubcommandSpec(
+            positional_min=0,
+            positional_max=0,
+            value_flags=frozenset({"--suggest", "--plan", "--skills-dir", "--format"}),
+            bool_flags=frozenset({"--list-missing"}),
+        ),
+    },
+)
+
 _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     "ps": SubcommandSpec(),
+    "skills": _SKILLS_SPEC,
     "approve": SubcommandSpec(
         positional_min=2,
         positional_max=2,
@@ -329,27 +424,37 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     # (--volley, --role, --iteration, --allow-depth, --allow-incomplete-patch-reason)
     # belong to ``python -m dontpanic_orchestrate <plan-id>`` (no subcommand
     # token), NOT to dispatch-from-plan. Removing them per the F001 audit.
-    "dispatch-from-plan": SubcommandSpec(
+    "dispatch-from-plan": _DISPATCH_FROM_PLAN_SPEC,
+    # ``orchestrate`` is the teaching gateway that forwards to dispatch-from-plan
+    # (cli.py:_orchestrate_main); same shape. operations_guidance's redispatch
+    # command ``orchestrate <plan> --confirm`` (AC7a) validates here.
+    "orchestrate": _DISPATCH_FROM_PLAN_SPEC,
+    # ``finalize <plan> --feature <F>`` per cli.py:_finalize_main — --feature is
+    # required. operations_guidance's no-paid finalize choice emits this (AC6).
+    "finalize": SubcommandSpec(
         positional_min=1,
         positional_max=1,
-        bool_flags=frozenset({"--confirm"}),
-        value_flags=frozenset(
-            {
-                "--feature",
-                "--implementer",
-                "--auditor",
-                "--max-iterations",
-                "--mode",
-                "--allow-incomplete-patch",
-                "--unrelated-dirty-state-note",
-            }
-        ),
+        value_flags=frozenset({"--feature"}),
+        required_flags=frozenset({"--feature"}),
     ),
+    # ``what-now <plan> [--feature F]`` per cli.py:_what_now_main. Listed in the
+    # AC6 command set; read-only guidance surface.
+    "what-now": SubcommandSpec(
+        positional_min=1,
+        positional_max=1,
+        value_flags=frozenset({"--feature", "--dashboard-url", "--format"}),
+    ),
+    "agent": _AGENT_SPEC,
+    "roles": _ROLES_SPEC,
     # ``doctor`` per cli.py:_doctor_main (parser at cli.py:1422-1520). The
     # earlier validator listed --strict, which does not exist; the real
     # promote-WARN-to-FAIL flags are --validate-plans-strict /
     # --architecture-drift-strict / --profile-strict. Adding --json plus the
     # full profile/report/validation flag surface.
+    # ``--agent`` (bool) and ``--project NAME_OR_PATH`` (value) per cli.py F005
+    # (cli.py:1724-1743). operations_guidance emits ``doctor --agent`` and
+    # ``doctor --project <name>`` (F012 setup/doctor surface), so both must
+    # validate or those choices would fall back to requires_human (AC6/AC7).
     "doctor": SubcommandSpec(
         bool_flags=frozenset(
             {
@@ -360,6 +465,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
                 "--architecture-drift-strict",
                 "--profile-strict",
                 "--report",
+                "--agent",
             }
         ),
         value_flags=frozenset(
@@ -368,6 +474,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
                 "--architecture-json",
                 "--profile",
                 "--report-path",
+                "--project",
             }
         ),
     ),
@@ -389,12 +496,45 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         ),
         bool_flags=frozenset({"--include-not-ready", "--ready-only"}),
     ),
+    # ``plan-review <plan> [--format text|json]`` per cli.py:_plan_review_main
+    # (plan 2026-06-01-001 F003). Read-only scope lint surface: one plan
+    # positional plus the text/json format selector.
+    "plan-review": SubcommandSpec(
+        positional_min=1,
+        positional_max=1,
+        value_flags=frozenset({"--format"}),
+    ),
 }
 
 
 def known_subcommands() -> frozenset[str]:
     """Return the top-level subcommand vocabulary (read-only snapshot)."""
     return frozenset(_VOCABULARY.keys())
+
+
+def known_flags() -> frozenset[str]:
+    """Return every flag declared anywhere in the vocabulary (recursively).
+
+    Walks each :class:`SubcommandSpec` and its nested ``subcommands``,
+    collecting ``bool_flags``, ``value_flags``, and ``mutex_required`` members.
+    Plan-review (F003) wires this — alongside :func:`known_subcommands` — into
+    the F001 lint's :class:`~dontpanic_orchestrate.plan_review.lint.Resolvers`
+    so an AC naming a real CLI flag does not trip a spurious ``missing_prereq``.
+    """
+    flags: set[str] = set()
+
+    def _walk(spec: SubcommandSpec) -> None:
+        flags.update(spec.bool_flags)
+        flags.update(spec.value_flags)
+        for group in spec.mutex_required:
+            flags.update(group)
+        if spec.subcommands is not None:
+            for child in spec.subcommands.values():
+                _walk(child)
+
+    for spec in _VOCABULARY.values():
+        _walk(spec)
+    return frozenset(flags)
 
 
 def _is_flag(token: str) -> bool:

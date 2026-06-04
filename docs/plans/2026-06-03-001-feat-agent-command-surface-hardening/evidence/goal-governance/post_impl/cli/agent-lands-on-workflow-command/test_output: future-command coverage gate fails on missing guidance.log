@@ -1,0 +1,17 @@
+Evidence for journey: agent-lands-on-workflow-command
+Required evidence: test_output: future-command coverage gate fails on missing guidance
+
+Command/test run locally:
+  PYTHONPATH=scripts pytest -q scripts/dontpanic_orchestrate/tests/test_f007_command_guidance_gate.py
+
+Result:
+  The F007 guidance-gate suite passed locally during closeout. The tests assert:
+  - every validator command has guidance today
+  - adding a synthetic unguided command makes missing_guidance_commands() name it
+  - building the guidance inventory raises on the unguided synthetic command
+  - workflow-critical help pages carry agent guidance sections
+  - surfaced examples validate against command_validation
+  - docs/AGENT_COMMAND_GUIDANCE_CHECKLIST.md references the real source anchors
+
+Related feature evidence:
+  - F007 future-command gate signoff: audit/codex-auditor-F007-i0.json

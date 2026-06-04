@@ -1,0 +1,2161 @@
+You are a meticulous cross-vendor code AUDITOR. Audit FOUR features of the DontPanic plan-review capability, each built operator-style (local TDD). For EACH feature, decide a verdict: signed_off (acceptance fully met, code correct) or needs_changes (with specific, actionable findings). Be adversarial: check the acceptance criteria literally against the diff. Note any correctness bug, missed acceptance clause, or purity violation. Keep findings tied to acceptance clauses.
+Return your verdict per feature as: `### <FID>: signed_off|needs_changes` followed by findings (or 'no findings').
+
+===== F008 ACCEPTANCE =====
+(1) A feature->owned-paths ownership map is derived from the plan. (2) At patch-completeness, a diff touching paths owned by a different feature yields a block-severity `cross_feature_edit` finding naming the foreign feature and the paths. (3) A patch touching only its own feature's paths yields no such finding. (4) A legitimate shared-file edit can be acknowledged with a recorded rationale and then passes. (5) Tests reproduce the onboarding-v0 F008->F013 bleed and assert the finding fires, plus the clean and acknowledged cases.
+
+===== F006 ACCEPTANCE =====
+(1) On a plan change, the lint runs on the changed features only, not the whole plan. (2) Each change is classified as exactly one of sharpen/expand/split. (3) An expand that pushes a locked feature past the size budget is refused until either a recorded rationale is added or the feature is split. (4) A split is accepted only when AC conservation holds; a lossy split is refused naming the dropped/duplicated criteria. (5) A sharpen that adds no surface and no exemplar passes without friction. (6) Tests cover all three classifications and both refusal paths.
+
+===== F005 ACCEPTANCE =====
+(1) A design-reviewer role runs through dispatch_volley and returns the standard auditor envelope {verdict, findings}. (2) Findings are keyed to a closed design taxonomy {oversize, hidden_coupling, ac_underspecified, missing_prereq, reorder_deps}. (3) The design-volley is opt-in at `pre_lock`, triggered by F001 lint uncertainty or explicit operator request, never auto-run on every plan. (4) A synthetic test with a mock executor proves a known-oversize decomposition yields an `oversize` finding and a clean decomposition signs off, with no live paid call in the test.
+
+===== F009 ACCEPTANCE =====
+(1) A pre-flight config-readiness check validates required config files — quota caps AND role config (~/.dontpanic/config.json with the legacy ~/.jarvis fallback) — before any paid work (dispatch OR plan-close goal-completion audit), separate from the in-loop budget breaker. (2) An invalid/empty config OR an invalid role value (a role that is not a registered executor id matching ^[a-z][a-z0-9_-]*$ — e.g. the Grok-Builder/Codex-Auditor split-brain from D065) produces a clean readiness failure naming the file, the precise reason, and a remediation command — never a raw low-level schema/validation exception mid-volley or at plan-close. (3) The emitted remediation command passes command_validation.validate_command_tokens (it is runnable). (4) The failure also references the dashboard affordance for fixing config. (5) Tests reproduce BOTH the quota_caps.json == {} case AND the invalid-roles case, asserting the actionable readiness failure with a validated remediation command, plus a valid-file pass. NOTE: the proactive `doctor` WARN for bad role config (the other D065 follow-up) is deliberately kept OUT of this feature to preserve its single (config-readiness) surface — it is a separate small feature, per this plan's own surface-count discipline.
+
+NOTE on F009: only the PLAN-CLOSE goal-completion-audit wiring is under audit here (acceptance #1's plan-close site). The dispatch-from-plan site + the config_readiness module itself were audited earlier; focus on completion_dispatch._assert_config_ready_for_completion + its wiring + tests.
+
+===== IMPLEMENTATION DIFF (git diff e21f61f..HEAD) =====
+diff --git a/scripts/dontpanic_orchestrate/cli.py b/scripts/dontpanic_orchestrate/cli.py
+index 59e061e..05cd3ee 100644
+--- a/scripts/dontpanic_orchestrate/cli.py
++++ b/scripts/dontpanic_orchestrate/cli.py
+@@ -2224,6 +2224,21 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
+             "evidence/plan-review/pre_dispatch/<feature>-oversize-override.json."
+         ),
+     )
++    # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement override.
++    # Reuses the >=8-char layer-A validator; the rationale lands in
++    # evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json.
++    parser.add_argument(
++        "--acknowledge-cross-feature",
++        type=_validate_patch_reason("--acknowledge-cross-feature"),
++        default=None,
++        metavar="REASON",
++        help=(
++            "Acknowledge a legitimate edit to files owned by another feature, "
++            "passing the patch-completeness cross-feature-edit gate. REASON "
++            "must be >=8 non-whitespace chars; lands verbatim in "
++            "evidence/plan-review/cross_feature/<feature>-cross-feature-ack.json."
++        ),
++    )
+     args = parser.parse_args(argv)
+ 
+     # Plan resolution. Distinct exit code (2) from the dispatch path so
+@@ -2441,6 +2456,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
+             mode=args.mode,
+             allow_incomplete_patch_reason=args.allow_incomplete_patch,
+             unrelated_dirty_state_note=args.unrelated_dirty_state_note,
++            # Plan 2026-06-01-001 F008 — cross-feature-edit acknowledgement.
++            cross_feature_ack_reason=args.acknowledge_cross_feature,
+             # Plan 2026-05-08-003 F002 — operator-initiated CLI dispatch
+             # is the canonical "direct dispatch" surface that the narrow
+             # pre_impl auto-clear targets.
+diff --git a/scripts/dontpanic_orchestrate/completion_dispatch.py b/scripts/dontpanic_orchestrate/completion_dispatch.py
+index a480f7c..c3368f1 100644
+--- a/scripts/dontpanic_orchestrate/completion_dispatch.py
++++ b/scripts/dontpanic_orchestrate/completion_dispatch.py
+@@ -149,6 +149,15 @@ class CompletionDispatchError(RuntimeError):
+     not an availability failure)."""
+ 
+ 
++class ConfigNotReady(CompletionDispatchError):
++    """Plan 2026-06-01-001 F009 — raised when the pre-flight config-readiness
++    check (quota caps + role config) fails BEFORE the plan-close goal-completion
++    audit spends a paid call. Carries the actionable readiness message (the
++    file, the precise reason, and a runnable remediation command) so the
++    operator is never stranded by a raw ``{}``-style schema crash at plan-close,
++    mirroring the dispatch-from-plan readiness gate."""
++
++
+ # ──────────────────────────────  pydantic models  ──────────────────────────────
+ 
+ 
+@@ -658,6 +667,30 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
+     return result.raw_response or ""
+ 
+ 
++def _assert_config_ready_for_completion(
++    *,
++    implementer_agent: str | None,
++    auditor: str,
++    caps_path: Path | None = None,
++) -> None:
++    """Plan 2026-06-01-001 F009 — raise :class:`ConfigNotReady` if the quota-caps
++    config or the resolved role values are not usable, BEFORE the plan-close
++    goal-completion audit spends a paid call. Reuses the same readiness module
++    as the dispatch-from-plan gate so the actionable message + runnable
++    remediation are identical at both pre-flight sites."""
++    from dontpanic_orchestrate import config_readiness
++    from dontpanic_orchestrate.executors import AGENT_REGISTRY
++
++    roles = [r for r in (implementer_agent, auditor) if r]
++    result = config_readiness.check_config_readiness(
++        roles=roles,
++        registered_executors=set(AGENT_REGISTRY),
++        caps_path=caps_path,
++    )
++    if not result.ok:
++        raise ConfigNotReady(result.render())
++
++
+ def dispatch_completion_audit(
+     plan_dir: Path,
+     *,
+@@ -665,6 +698,7 @@ def dispatch_completion_audit(
+     implementer_agent: str | None = None,
+     iteration: int = 1,
+     dispatch: DispatchFn | None = None,
++    caps_path: Path | None = None,
+ ) -> CompletionAuditTranscript:
+     """Run a cross-vendor goal audit on a v1 completion-findings list.
+ 
+@@ -705,6 +739,16 @@ def dispatch_completion_audit(
+     if dispatch is not None:
+         raw_response = dispatch(auditor, prompt)
+     else:
++        # Plan 2026-06-01-001 F009 — config-readiness pre-flight before the
++        # real paid plan-close goal-completion audit (acceptance #1 names this
++        # site alongside dispatch). Validates quota caps AND the resolved role
++        # values; a malformed `{}` caps file (D039) or a bad role (D065) becomes
++        # a clean ConfigNotReady with a runnable remediation, never a raw schema
++        # crash mid-audit. The injected ``dispatch=`` test seam is NOT paid work
++        # and intentionally bypasses this gate.
++        _assert_config_ready_for_completion(
++            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
++        )
+         raw_response = _dispatch_via_executor(auditor, prompt, plan_dir=plan_dir)
+ 
+     status, dispositions = _parse_audit_response(raw_response, findings)
+diff --git a/scripts/dontpanic_orchestrate/plan_review/__init__.py b/scripts/dontpanic_orchestrate/plan_review/__init__.py
+index 0c4db74..a1b80ea 100644
+--- a/scripts/dontpanic_orchestrate/plan_review/__init__.py
++++ b/scripts/dontpanic_orchestrate/plan_review/__init__.py
+@@ -13,6 +13,20 @@ proposer, F003 ``plan-review`` CLI, the lock/dispatch gates) build on it.
+ 
+ from __future__ import annotations
+ 
++from dontpanic_orchestrate.plan_review.cross_feature import (
++    CrossFeatureEditError,
++    CrossFeatureFinding,
++    check_cross_feature_edit,
++    derive_ownership_map,
++    touched_paths_from_git_state,
++)
++from dontpanic_orchestrate.plan_review.design_review import (
++    DESIGN_TAXONOMY,
++    DesignFinding,
++    DesignVolleyEnvelope,
++    run_design_volley,
++    should_run_design_volley,
++)
+ from dontpanic_orchestrate.plan_review.lint import (
+     SURFACES,
+     FlagKind,
+@@ -30,6 +44,13 @@ from dontpanic_orchestrate.plan_review.report import (
+     build_plan_scope_report,
+     render_text,
+ )
++from dontpanic_orchestrate.plan_review.scope_delta import (
++    ChangeKind,
++    ScopeDelta,
++    ScopeDeltaReport,
++    changed_feature_ids,
++    review_scope_delta,
++)
+ from dontpanic_orchestrate.plan_review.sizing_gate import (
+     SIZE_FLAG_KINDS,
+     SizingGateResult,
+@@ -47,9 +68,24 @@ from dontpanic_orchestrate.plan_review.split import (
+ __all__ = [
+     "SIZE_FLAG_KINDS",
+     "SURFACES",
++    "DESIGN_TAXONOMY",
++    "ChangeKind",
+     "ChildFeature",
++    "CrossFeatureEditError",
++    "CrossFeatureFinding",
++    "DesignFinding",
++    "DesignVolleyEnvelope",
+     "FeatureScopeReport",
+     "FlagKind",
++    "ScopeDelta",
++    "ScopeDeltaReport",
++    "changed_feature_ids",
++    "check_cross_feature_edit",
++    "derive_ownership_map",
++    "review_scope_delta",
++    "run_design_volley",
++    "should_run_design_volley",
++    "touched_paths_from_git_state",
+     "PlanScopeReport",
+     "Resolvers",
+     "ScopeFlag",
+diff --git a/scripts/dontpanic_orchestrate/plan_review/cross_feature.py b/scripts/dontpanic_orchestrate/plan_review/cross_feature.py
+new file mode 100644
+index 0000000..b29219a
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/plan_review/cross_feature.py
+@@ -0,0 +1,378 @@
++"""Cross-feature edit detection (F008).
++
++Detects when a dispatch's diff touches files **owned by a different feature**
++than the one being implemented — the ``F008-touches-F013-dashboard`` bleed a
++human auditor caught by hand during onboarding-v0. The point of F008 is to make
++that scope-creep a *system* finding (block-severity, surfaced at
++patch-completeness) rather than something only a vigilant reviewer catches.
++
++Two layers, mirroring the other plan-review gates (F004 / F007):
++
++  * **pure detection** — :func:`derive_ownership_map` builds a
++    ``feature_id -> owned-paths`` map from the plan's features, and
++    :func:`check_cross_feature_edit` intersects a dispatch's touched paths
++    against *other* features' owned paths, returning a typed
++    :class:`CrossFeatureFinding` per foreign feature whose paths were touched.
++    No network, no filesystem, no mutation.
++  * **enforcement seam** — :func:`enforce` runs the detection at
++    patch-completeness time and either raises :class:`CrossFeatureEditError`
++    (block) or, when the operator supplied an acknowledgement rationale for a
++    legitimate shared-file edit, records the rationale to an evidence sidecar
++    and passes. ``record_acknowledgement`` is the one I/O seam.
++
++Ownership derivation
++--------------------
++A feature owns a path if it **declares** it (an explicit ``owned_paths`` list on
++the feature record) or, lacking that, if its ``description`` / ``steps`` /
++``acceptance`` text **names** the path as a file token (``cli.py``,
++``dashboard/app.js``, ``quota_caps.json``). The text heuristic is intentionally
++conservative: only tokens ending in a known source extension count, so a dotted
++code symbol (``command_validation.validate_command_tokens``) is NOT mistaken for
++a path while its module file (``command_validation.py``) is.
++
++Known limitation (documented, not silently swallowed): two features may name the
++same shared file (e.g. both touch ``cli.py``). A path matched by BOTH the current
++feature and a foreign one is treated as co-owned and never flagged; a path matched
++only by a foreign feature is flagged. A feature that edits a shared file it never
++declared can therefore false-positive — that is exactly what the operator
++acknowledgement override (recorded rationale) exists to clear.
++"""
++
++from __future__ import annotations
++
++import json
++import re
++from collections.abc import Iterable, Mapping, Sequence
++from dataclasses import dataclass
++from datetime import datetime, timezone
++from pathlib import Path
++
++# Minimum non-whitespace length of an acknowledgement rationale. Mirrors
++# patch_completeness_gate.MIN_REASON_LEN / the F004 / F007 override bar so every
++# operator-override surface shares one length contract.
++MIN_REASON_LEN = 8
++
++# A path token is any dotted filename — optionally directory-qualified — ending
++# in a known source extension. The trailing-extension anchor is what separates a
++# *path* (``command_validation.py``) from a dotted code *symbol*
++# (``command_validation.validate_command_tokens``): the latter has no source
++# extension at its tail, so it never matches. The extension set mirrors lint.py's
++# ``_FILE_EXT_RE`` plus the mobile/web source kinds a plan might own.
++_PATH_TOKEN_RE = re.compile(
++    r"(?<![\w/.-])"
++    r"((?:[\w.-]+/)*[\w.-]+"
++    r"\.(?:jsonl?|ya?ml|md|txt|py|tsx?|jsx?|sh|toml|csv|html?|cfg|ini|lock|swift|rb|sql|css|kt))"
++    r"\b",
++    re.IGNORECASE,
++)
++
++
++# ─────────────────────────────── public types ──────────────────────────────
++
++
++@dataclass(frozen=True)
++class CrossFeatureFinding:
++    """One feature's paths bled into by the current dispatch.
++
++    ``foreign_feature_id`` owns ``paths`` (per the ownership map) but the
++    dispatch implementing ``current_feature_id`` touched them. ``mode`` /
++    ``severity`` mirror the patch-completeness ``Finding`` shape so the finding
++    renders/serialises consistently with the rest of the gate output.
++    """
++
++    current_feature_id: str
++    foreign_feature_id: str
++    paths: tuple[str, ...]
++    severity: str = "block"
++    mode: str = "cross_feature_edit"
++
++    def to_dict(self) -> dict:
++        return {
++            "mode": self.mode,
++            "severity": self.severity,
++            "current_feature_id": self.current_feature_id,
++            "foreign_feature_id": self.foreign_feature_id,
++            "paths": list(self.paths),
++            "reason": (
++                f"Dispatch for {self.current_feature_id} touched "
++                f"{len(self.paths)} path(s) owned by {self.foreign_feature_id}: "
++                f"{', '.join(self.paths)}. Cross-feature edits leak scope between "
++                "features and should be split out or explicitly acknowledged."
++            ),
++            "recommendation": (
++                "Revert the foreign-owned paths from this dispatch and land them "
++                f"under {self.foreign_feature_id}, OR re-run with "
++                "--acknowledge-cross-feature <reason> (>=8 chars) if the shared "
++                "edit is legitimate."
++            ),
++        }
++
++
++class CrossFeatureEditError(RuntimeError):
++    """Raised at patch-completeness when an unacknowledged cross-feature edit is
++    found. The string form renders one foreign feature per block so the operator
++    can act without parsing JSON."""
++
++    def __init__(self, findings: Sequence[CrossFeatureFinding], plan_dir: Path) -> None:
++        self.findings = list(findings)
++        self.plan_dir = plan_dir
++        super().__init__(render_block_message(self.findings))
++
++
++# ─────────────────────────────── pure detection ────────────────────────────
++
++
++def _feature_text(feature: Mapping) -> str:
++    parts: list[str] = [str(feature.get("description") or "")]
++    steps = feature.get("steps") or []
++    if isinstance(steps, (list, tuple)):
++        parts.extend(str(s) for s in steps)
++    parts.append(str(feature.get("acceptance") or ""))
++    return "\n".join(parts)
++
++
++def _extract_path_tokens(text: str) -> set[str]:
++    """Return the file-path tokens named in ``text`` (extension-anchored)."""
++    out: set[str] = set()
++    for match in _PATH_TOKEN_RE.finditer(text):
++        token = match.group(1).strip().strip("`'\"().,;:")
++        if token:
++            out.add(_normalize(token))
++    return out
++
++
++def _normalize(path: str) -> str:
++    """Canonicalise a path for comparison: strip whitespace and a leading
++    ``./``. Trailing/duplicate separators are left as-is (git never emits them).
++    """
++    return str(path).strip().lstrip("/").removeprefix("./") if path else ""
++
++
++def derive_ownership_map(features: Iterable[Mapping]) -> dict[str, set[str]]:
++    """Build a ``feature_id -> {owned path token}`` map from the plan.
++
++    An explicit ``owned_paths`` list on a feature record wins; otherwise the
++    owned set is the file-path tokens named in the feature's
++    description/steps/acceptance text. Pure — never mutates ``features``.
++    Features without an ``id`` are skipped.
++    """
++    result: dict[str, set[str]] = {}
++    for feature in features:
++        fid = feature.get("id")
++        if not fid:
++            continue
++        explicit = feature.get("owned_paths")
++        if explicit:
++            owned = {_normalize(p) for p in explicit if _normalize(p)}
++        else:
++            owned = _extract_path_tokens(_feature_text(feature))
++        result[str(fid)] = owned
++    return result
++
++
++def _path_matches_token(repo_path: str, token: str) -> bool:
++    """True iff git ``repo_path`` is, or ends with, owned ``token``.
++
++    Ownership tokens extracted from prose are often partial (``cli.py``,
++    ``dashboard/app.js``) while git paths are full and source-root prefixed
++    (``scripts/dontpanic_orchestrate/cli.py``). A token matches on an exact
++    equality OR a path-component-aligned suffix (``.../<token>``) so a partial
++    token still resolves to the real file, while ``my_cli.py`` does NOT match
++    token ``cli.py`` (the boundary ``/`` is required)."""
++    rp = _normalize(repo_path)
++    tk = _normalize(token)
++    if not rp or not tk:
++        return False
++    return rp == tk or rp.endswith("/" + tk)
++
++
++def check_cross_feature_edit(
++    touched_paths: Iterable[str],
++    current_feature_id: str,
++    ownership_map: Mapping[str, Iterable[str]],
++    *,
++    acknowledged_paths: Iterable[str] | None = None,
++) -> list[CrossFeatureFinding]:
++    """Return one finding per foreign feature whose owned paths were touched.
++
++    A touched path is a bleed iff it matches a *foreign* feature's owned token
++    AND does NOT match the current feature's owned tokens (co-owned/shared paths
++    are never flagged) AND is not in ``acknowledged_paths``. Pure.
++    """
++    ack = {_normalize(a) for a in (acknowledged_paths or []) if _normalize(a)}
++    own_tokens = set(ownership_map.get(current_feature_id, set()))
++
++    foreign_hits: dict[str, set[str]] = {}
++    for raw in touched_paths:
++        path = _normalize(raw)
++        if not path:
++            continue
++        # The current feature's own (or co-owned) paths are never a bleed.
++        if any(_path_matches_token(path, t) for t in own_tokens):
++            continue
++        # Operator-acknowledged shared edits are exempt.
++        if path in ack or any(_path_matches_token(path, a) for a in ack):
++            continue
++        for fid, tokens in ownership_map.items():
++            if fid == current_feature_id:
++                continue
++            if any(_path_matches_token(path, t) for t in tokens):
++                foreign_hits.setdefault(fid, set()).add(path)
++
++    return [
++        CrossFeatureFinding(
++            current_feature_id=current_feature_id,
++            foreign_feature_id=fid,
++            paths=tuple(sorted(foreign_hits[fid])),
++        )
++        for fid in sorted(foreign_hits)
++    ]
++
++
++def touched_paths_from_git_state(git_state: Mapping) -> set[str]:
++    """Extract the dispatch's touched paths from an F001 git-state sidecar.
++
++    The diff surface is ``staged ∪ unstaged_modified ∪ untracked`` — every file
++    the dispatch added or changed. Tolerant of both the ``{"path": ...}`` entry
++    shape (staged/unstaged_modified) and the bare-string shape (untracked)."""
++    out: set[str] = set()
++    for key in ("staged", "unstaged_modified"):
++        for entry in git_state.get(key, []) or []:
++            path = entry.get("path") if isinstance(entry, Mapping) else entry
++            if path:
++                out.add(_normalize(path))
++    for entry in git_state.get("untracked", []) or []:
++        if entry:
++            out.add(_normalize(entry))
++    return out
++
++
++# ─────────────────────────────── rendering ─────────────────────────────────
++
++
++def render_block_message(findings: Sequence[CrossFeatureFinding]) -> str:
++    """The refusal message shown when an unacknowledged cross-feature edit is
++    found. Names each foreign feature and the offending paths (acceptance #2),
++    plus the acknowledgement override affordance (acceptance #4)."""
++    if not findings:
++        return "[patch-completeness] no cross-feature edits detected."
++    current = findings[0].current_feature_id
++    lines = [
++        f"[patch-completeness] BLOCKED by cross-feature edit detection: the "
++        f"dispatch for {current} touched paths owned by other feature(s):",
++    ]
++    for f in findings:
++        lines.append(f"  {f.foreign_feature_id} owns:")
++        for path in f.paths:
++            lines.append(f"    {path}")
++    lines.append(
++        "  remediation — revert the foreign-owned paths from this dispatch and "
++        "land them under the owning feature."
++    )
++    lines.append(
++        "  override — re-run with `--acknowledge-cross-feature <reason>` "
++        "(>=8 non-whitespace chars) to record a rationale and pass anyway."
++    )
++    return "\n".join(lines)
++
++
++def validate_reason(reason: str) -> str:
++    """Layer-B re-check that an acknowledgement ``reason`` has >=8 non-whitespace
++    chars (defense-in-depth mirror of the CLI argparse validator). Raises
++    ``ValueError`` on rejection."""
++    stripped = (reason or "").strip()
++    if len(stripped) < MIN_REASON_LEN:
++        raise ValueError(
++            f"--acknowledge-cross-feature reason must be at least {MIN_REASON_LEN} "
++            f"non-whitespace characters; got {len(stripped)} ({reason!r})."
++        )
++    return reason
++
++
++# ─────────────────────────────── I/O seam ──────────────────────────────────
++
++
++def record_acknowledgement(
++    plan_dir: Path,
++    *,
++    plan_id: str,
++    current_feature_id: str,
++    reason: str,
++    findings: Sequence[CrossFeatureFinding],
++    now: datetime | None = None,
++) -> Path:
++    """Persist a cross-feature-edit acknowledgement rationale to an evidence
++    sidecar (mirrors the F007 ``record_override`` convention) so the
++    acknowledged shared edit is auditable. Returns the path written."""
++    out_dir = plan_dir / "evidence" / "plan-review" / "cross_feature"
++    out_dir.mkdir(parents=True, exist_ok=True)
++    out_path = out_dir / f"{current_feature_id}-cross-feature-ack.json"
++
++    stamp = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
++    payload = {
++        "gate": "patch_completeness_cross_feature",
++        "plan_id": plan_id,
++        "current_feature_id": current_feature_id,
++        "reason": reason,
++        "acknowledged_findings": [f.to_dict() for f in findings],
++        "recorded_at": stamp,
++    }
++    out_path.write_text(json.dumps(payload, indent=2) + "\n")
++    return out_path
++
++
++# ─────────────────────────────── enforcement ───────────────────────────────
++
++
++def enforce(
++    plan_dir: Path,
++    *,
++    plan_id: str,
++    current_feature_id: str,
++    features: Iterable[Mapping],
++    touched_paths: Iterable[str],
++    acknowledge_reason: str | None = None,
++    dry_run: bool = False,
++    now: datetime | None = None,
++) -> dict | None:
++    """Run cross-feature detection at patch-completeness and decide signoff fate.
++
++    Returns ``None`` when no bleed is detected (gate is a no-op). When a bleed is
++    found:
++
++      * ``acknowledge_reason`` supplied — validates + records the rationale and
++        returns a pass block (acceptance #4);
++      * ``dry_run`` — returns the finding block without raising (preview);
++      * otherwise — raises :class:`CrossFeatureEditError` (acceptance #2).
++    """
++    ownership_map = derive_ownership_map(features)
++    findings = check_cross_feature_edit(
++        touched_paths, current_feature_id, ownership_map
++    )
++    if not findings:
++        return None
++
++    block: dict = {
++        "status": "fail",
++        "findings": [f.to_dict() for f in findings],
++    }
++
++    if acknowledge_reason is not None:
++        validate_reason(acknowledge_reason)
++        ack_path = record_acknowledgement(
++            plan_dir,
++            plan_id=plan_id,
++            current_feature_id=current_feature_id,
++            reason=acknowledge_reason,
++            findings=findings,
++            now=now,
++        )
++        block["status"] = "acknowledged"
++        block["acknowledge_reason"] = acknowledge_reason
++        block["acknowledgement_path"] = str(ack_path)
++        return block
++
++    if dry_run:
++        return block
++
++    raise CrossFeatureEditError(findings, plan_dir)
+diff --git a/scripts/dontpanic_orchestrate/plan_review/design_review.py b/scripts/dontpanic_orchestrate/plan_review/design_review.py
+new file mode 100644
+index 0000000..5918799
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/plan_review/design_review.py
+@@ -0,0 +1,324 @@
++"""Design-review volley (F005).
++
++Layer-2 of the plan-review capability. Where the F001 deterministic lint is a
++free, mechanical check, this is the *paid* red-team pass reserved for the plans
++the lint cannot fully judge: it runs a **design-reviewer** auditor against a
++**planner** implementer through the existing volley machinery (the executor
++abstraction + the standard ``{verdict, findings}`` auditor envelope), red-teaming
++a plan's feature decomposition for sizing, hidden coupling, testability traps,
++dependency order, and missing prerequisites.
++
++Closed design taxonomy (acceptance #2) — every finding is keyed to exactly one:
++
++  * ``oversize``          — a feature too large for one dispatch (multi-surface / too many ACs)
++  * ``hidden_coupling``   — an undeclared dependency between features
++  * ``ac_underspecified`` — an exemplar/weak acceptance criterion (example, not invariant)
++  * ``missing_prereq``    — a capability the plan never declares
++  * ``reorder_deps``      — a dependency order that should be re-sequenced
++
++Opt-in only (acceptance #3): :func:`should_run_design_volley` returns True only
++when the F001 lint reports *uncertainty* (warn-severity flags — not clean, not a
++clear block) OR the operator explicitly requests it. It is NEVER auto-run on
++every plan; a clean plan skips it and a clearly-blocked plan is already refused
++by the F004 pre-lock gate.
++
++The volley loop here mirrors ``supervisor.dispatch_volley``'s structure — an
++auditor slot reviewing, an optional implementer (planner) slot revising on
++``needs_changes`` — but is decomposition-shaped rather than code-shaped, so it
++neither touches a git diff nor runs patch-completeness. It reuses the
++``BaseExecutor`` dispatch contract, which is what lets the synthetic test
++(acceptance #4) drive it with a mock executor and zero live paid calls.
++"""
++
++from __future__ import annotations
++
++import json
++from collections.abc import Sequence
++from dataclasses import dataclass, field
++from typing import Literal
++
++from dontpanic_orchestrate.executors.base import (
++    BaseExecutor,
++    DispatchTask,
++)
++from dontpanic_orchestrate.plan_review.report import PlanScopeReport
++
++# The closed design-review taxonomy (acceptance #2). A finding whose ``kind`` is
++# outside this set is not a valid design finding and is quarantined out of the
++# standard envelope.
++DESIGN_TAXONOMY: frozenset[str] = frozenset(
++    {"oversize", "hidden_coupling", "ac_underspecified", "missing_prereq", "reorder_deps"}
++)
++
++DesignFindingKind = Literal[
++    "oversize", "hidden_coupling", "ac_underspecified", "missing_prereq", "reorder_deps"
++]
++Verdict = Literal["signed_off", "needs_changes", "blocked"]
++
++DESIGN_REVIEWER_ROLE = "design-reviewer"
++PLANNER_ROLE = "planner"
++
++
++# ─────────────────────────────── public types ──────────────────────────────
++
++
++@dataclass(frozen=True)
++class DesignFinding:
++    kind: DesignFindingKind
++    severity: str
++    feature_id: str
++    evidence: str
++
++    def to_dict(self) -> dict:
++        return {
++            "kind": self.kind,
++            "severity": self.severity,
++            "feature_id": self.feature_id,
++            "evidence": self.evidence,
++        }
++
++    @classmethod
++    def from_dict(cls, blob: dict) -> DesignFinding:
++        return cls(
++            kind=blob["kind"],
++            severity=str(blob.get("severity", "warn")),
++            feature_id=str(blob.get("feature_id", "")),
++            evidence=str(blob.get("evidence", "")),
++        )
++
++
++@dataclass
++class DesignVolleyEnvelope:
++    """The standard auditor envelope a design volley returns (acceptance #1).
++
++    ``unrecognized`` holds any emitted finding whose ``kind`` fell outside the
++    closed taxonomy — quarantined so ``findings`` is taxonomy-pure (acceptance
++    #2) without silently discarding what the reviewer said."""
++
++    verdict: Verdict
++    findings: list[DesignFinding] = field(default_factory=list)
++    rounds: int = 1
++    unrecognized: list[dict] = field(default_factory=list)
++
++    def to_dict(self) -> dict:
++        return {
++            "verdict": self.verdict,
++            "findings": [f.to_dict() for f in self.findings],
++            "rounds": self.rounds,
++            "unrecognized": list(self.unrecognized),
++        }
++
++    def findings_of_kind(self, kind: str) -> list[DesignFinding]:
++        return [f for f in self.findings if f.kind == kind]
++
++
++# ─────────────────────────────── trigger ───────────────────────────────────
++
++
++def _has_warn_flag(report: PlanScopeReport) -> bool:
++    for fr in report.features:
++        if any(flag.severity == "warn" for flag in fr.scope.flags):
++            return True
++    return False
++
++
++def should_run_design_volley(
++    report: PlanScopeReport, *, operator_requested: bool = False
++) -> bool:
++    """Opt-in trigger (acceptance #3). True iff the operator explicitly asked OR
++    the F001 lint is *uncertain* — it surfaced warn-severity flags (the
++    ambiguous middle the deterministic lint cannot resolve). A fully clean plan
++    (no flags) never auto-triggers a paid volley."""
++    if operator_requested:
++        return True
++    return _has_warn_flag(report)
++
++
++# ─────────────────────────────── prompts ───────────────────────────────────
++
++
++def build_design_reviewer_prompt(
++    plan_id: str,
++    features: Sequence[dict],
++    objective_contract: dict | None = None,
++) -> str:
++    """The design-reviewer auditor prompt: consumes the plan's features +
++    objective_contract and instructs the reviewer to emit a strict JSON envelope
++    keyed to the closed design taxonomy."""
++    contract_block = (
++        json.dumps(objective_contract, indent=2)
++        if objective_contract
++        else "(no objective_contract provided)"
++    )
++    feature_block = json.dumps(list(features), indent=2)
++    taxonomy = ", ".join(sorted(DESIGN_TAXONOMY))
++    return f"""You are the DESIGN REVIEWER for plan {plan_id}.
++
++Red-team this plan's FEATURE DECOMPOSITION (not its code) for:
++  - oversize: a feature too large for one ~600s dispatch (spans >1 surface, or too many ACs)
++  - hidden_coupling: a feature depending on another's output without declaring depends_on
++  - ac_underspecified: an acceptance criterion that gives an example instead of an invariant
++  - missing_prereq: a capability (command/flag/symbol) the plan relies on but never declares
++  - reorder_deps: a dependency order that should be re-sequenced
++
++objective_contract:
++{contract_block}
++
++features.json:
++{feature_block}
++
++Return ONLY a JSON object:
++  {{"verdict": "signed_off" | "needs_changes" | "blocked",
++    "findings": [{{"kind": <one of: {taxonomy}>, "severity": "block"|"warn",
++                   "feature_id": "<id>", "evidence": "<one line>"}}]}}
++Sign off only when the decomposition has no design defect. Every finding's
++"kind" MUST be one of the closed taxonomy values above."""
++
++
++def build_planner_prompt(
++    plan_id: str,
++    features: Sequence[dict],
++    prior_findings: Sequence[DesignFinding],
++) -> str:
++    """The planner implementer prompt for a revision round: addresses the
++    design-reviewer's prior findings by re-decomposing the plan."""
++    findings_block = "\n".join(
++        f"  - [{f.kind}/{f.severity}] {f.feature_id}: {f.evidence}"
++        for f in prior_findings
++    ) or "  (none)"
++    feature_block = json.dumps(list(features), indent=2)
++    return f"""You are the PLANNER for plan {plan_id}.
++
++The design reviewer raised these decomposition findings:
++{findings_block}
++
++Current features.json:
++{feature_block}
++
++Revise the decomposition to resolve every finding (split oversize features,
++declare missing depends_on, sharpen exemplar ACs into invariants, declare
++prerequisites, reorder dependencies). Return the revised features as JSON."""
++
++
++# ─────────────────────────────── parsing ───────────────────────────────────
++
++
++def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
++    """Parse a design-reviewer's raw response into the standard envelope.
++
++    Findings whose ``kind`` is outside the closed taxonomy are quarantined into
++    ``unrecognized`` so the returned ``findings`` list is taxonomy-pure. A
++    response that is not valid JSON or lacks a verdict is treated as
++    ``blocked`` (the reviewer failed to produce a usable envelope)."""
++    try:
++        blob = json.loads(raw)
++    except (json.JSONDecodeError, TypeError):
++        return DesignVolleyEnvelope(verdict="blocked", rounds=rounds)
++    if not isinstance(blob, dict) or "verdict" not in blob:
++        return DesignVolleyEnvelope(verdict="blocked", rounds=rounds)
++
++    verdict = blob.get("verdict")
++    if verdict not in ("signed_off", "needs_changes", "blocked"):
++        verdict = "blocked"
++
++    findings: list[DesignFinding] = []
++    unrecognized: list[dict] = []
++    for raw_finding in blob.get("findings") or []:
++        if not isinstance(raw_finding, dict):
++            continue
++        if raw_finding.get("kind") in DESIGN_TAXONOMY:
++            findings.append(DesignFinding.from_dict(raw_finding))
++        else:
++            unrecognized.append(dict(raw_finding))
++    return DesignVolleyEnvelope(
++        verdict=verdict, findings=findings, rounds=rounds, unrecognized=unrecognized
++    )
++
++
++# ─────────────────────────────── the volley ────────────────────────────────
++
++
++def _dispatch_review(
++    auditor: BaseExecutor,
++    *,
++    plan_id: str,
++    plan_dir,
++    features: Sequence[dict],
++    objective_contract: dict | None,
++    iteration: int,
++) -> str:
++    prompt = build_design_reviewer_prompt(plan_id, features, objective_contract)
++    task = DispatchTask(
++        plan_id=plan_id,
++        plan_dir=plan_dir,
++        feature_id="(plan-decomposition)",
++        feature_description="Design review of the whole plan decomposition.",
++        feature_acceptance="No design defect in the decomposition.",
++        feature_steps=[],
++        agent_role=DESIGN_REVIEWER_ROLE,
++        iteration=iteration,
++        extra_context={"prompt_override": prompt},
++    )
++    result = auditor.dispatch(task)
++    if not result.success:
++        return ""  # parse_design_envelope → blocked
++    return result.raw_response or result.summary or ""
++
++
++def run_design_volley(
++    plan_id: str,
++    features: Sequence[dict],
++    *,
++    auditor: BaseExecutor,
++    planner: BaseExecutor | None = None,
++    objective_contract: dict | None = None,
++    plan_dir=None,
++    max_iterations: int = 2,
++) -> DesignVolleyEnvelope:
++    """Run the design-reviewer auditor (optionally against a planner implementer
++    that revises on ``needs_changes``) and return the standard envelope.
++
++    Mirrors ``dispatch_volley``'s loop shape: round 0 the auditor reviews; on
++    ``needs_changes`` with a ``planner`` supplied it revises and the auditor
++    re-reviews, up to ``max_iterations`` rounds. Terminates immediately on
++    ``signed_off`` / ``blocked`` or when no planner can make progress. Pure
++    w.r.t. the filesystem beyond what the injected executors do — which is
++    nothing in the synthetic test (acceptance #4)."""
++    current_features = list(features)
++    last: DesignVolleyEnvelope | None = None
++    for iteration in range(max(1, max_iterations)):
++        raw = _dispatch_review(
++            auditor,
++            plan_id=plan_id,
++            plan_dir=plan_dir,
++            features=current_features,
++            objective_contract=objective_contract,
++            iteration=iteration,
++        )
++        last = parse_design_envelope(raw, rounds=iteration + 1)
++        if last.verdict != "needs_changes" or planner is None:
++            return last
++        # Planner revises to resolve the findings, then we re-review.
++        plan_prompt = build_planner_prompt(plan_id, current_features, last.findings)
++        task = DispatchTask(
++            plan_id=plan_id,
++            plan_dir=plan_dir,
++            feature_id="(plan-decomposition)",
++            feature_description="Revise the plan decomposition per design findings.",
++            feature_acceptance="Every design finding resolved.",
++            feature_steps=[],
++            agent_role=PLANNER_ROLE,
++            iteration=iteration,
++            extra_context={"prompt_override": plan_prompt},
++        )
++        revised = planner.dispatch(task)
++        if revised.success and revised.raw_response:
++            try:
++                parsed = json.loads(revised.raw_response)
++                if isinstance(parsed, list):
++                    current_features = parsed
++                elif isinstance(parsed, dict) and isinstance(parsed.get("features"), list):
++                    current_features = parsed["features"]
++            except json.JSONDecodeError:
++                pass  # keep prior features; auditor will re-review unchanged
++    return last if last is not None else DesignVolleyEnvelope(verdict="blocked")
+diff --git a/scripts/dontpanic_orchestrate/plan_review/scope_delta.py b/scripts/dontpanic_orchestrate/plan_review/scope_delta.py
+new file mode 100644
+index 0000000..b5a7bcb
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/plan_review/scope_delta.py
+@@ -0,0 +1,333 @@
++"""Mid-development scope-delta lint (F006).
++
++Keeps scope honest as a plan *evolves* — the moment most drift is introduced.
++On any change to ``features.json`` / ``objective_contract``, this re-runs the
++F001 lint on the **changed features only** (the diff, not the whole plan),
++classifies each change, and enforces the scope-change protocol:
++
++  * **sharpen** — an AC was narrowed / concretised with no new surface and no
++    new exemplar. Passes without friction (acceptance #5).
++  * **expand** — an AC or surface was *added* to a feature. When the feature is
++    locked AND the expand pushes it past the size budget, it is **refused**
++    until either a recorded rationale is supplied or the feature is split
++    (acceptance #3).
++  * **split** — one feature became several (children carry the parent's ACs).
++    Accepted only when AC conservation holds; a **lossy** split is refused,
++    naming the dropped / duplicated criteria (acceptance #4).
++
++Relationship to the other plan-review gates
++-------------------------------------------
++F004 (pre-lock) and F007 (pre-dispatch) gate a *static* snapshot. F006 gates a
++*transition* between two snapshots: it is the only gate that reasons about what
++changed, so it is the one that can tell a benign sharpen from a budget-busting
++expand and a clean split from a lossy one.
++
++Purity: everything here is a pure function over the prior + current feature
++lists. No network, no filesystem, no mutation. The CLI / edit hook that calls
++it owns reading the two snapshots and recording any rationale.
++"""
++
++from __future__ import annotations
++
++from collections import Counter
++from dataclasses import dataclass, field
++from typing import Literal
++
++from dontpanic_orchestrate.plan_review.lint import (
++    Resolvers,
++    ScopeReport,
++    lint_feature,
++    split_acceptance,
++)
++from dontpanic_orchestrate.plan_review.sizing_gate import SIZE_FLAG_KINDS
++
++# Minimum non-whitespace length of a scope-change rationale that unblocks a
++# budget-busting expand. Mirrors the F004 / F007 / patch-completeness bar.
++MIN_REASON_LEN = 8
++
++ChangeKind = Literal["sharpen", "expand", "split"]
++
++
++# ─────────────────────────────── public types ──────────────────────────────
++
++
++@dataclass(frozen=True)
++class ScopeDelta:
++    """The classification + verdict for one changed feature.
++
++    ``refused`` is True only for a budget-busting expand without a rationale or
++    a lossy split — exactly the two scope-change-protocol refusal paths
++    (acceptance #3 / #4). A sharpen is never refused (#5).
++    """
++
++    feature_id: str
++    kind: ChangeKind
++    refused: bool
++    reason: str
++    evidence: dict = field(default_factory=dict)
++
++    def to_dict(self) -> dict:
++        return {
++            "feature_id": self.feature_id,
++            "kind": self.kind,
++            "refused": self.refused,
++            "reason": self.reason,
++            "evidence": dict(self.evidence),
++        }
++
++
++@dataclass
++class ScopeDeltaReport:
++    deltas: tuple[ScopeDelta, ...]
++
++    @property
++    def refusals(self) -> tuple[ScopeDelta, ...]:
++        return tuple(d for d in self.deltas if d.refused)
++
++    @property
++    def is_blocked(self) -> bool:
++        return bool(self.refusals)
++
++    def to_dict(self) -> dict:
++        return {"deltas": [d.to_dict() for d in self.deltas]}
++
++
++# ─────────────────────────────── helpers ───────────────────────────────────
++
++
++def _by_id(features: list[dict]) -> dict[str, dict]:
++    return {str(f["id"]): f for f in features if f.get("id")}
++
++
++def _acceptance_criteria(feature: dict) -> tuple[str, ...]:
++    """The feature's acceptance criteria as a normalized tuple (reuses F001's
++    ``split_acceptance`` so conservation is compared the same way F002 does)."""
++    acc = feature.get("acceptance")
++    if isinstance(acc, (list, tuple)):
++        acc = "\n".join(str(a) for a in acc)
++    return split_acceptance(str(acc or ""))
++
++
++def _has_block_size_flag(report: ScopeReport) -> bool:
++    return any(
++        f.severity == "block" and f.kind in SIZE_FLAG_KINDS for f in report.flags
++    )
++
++
++def _has_exemplar(report: ScopeReport) -> bool:
++    return any(f.kind == "exemplar_ac" for f in report.flags)
++
++
++def changed_feature_ids(prior: list[dict], current: list[dict]) -> set[str]:
++    """Ids whose record differs between the two snapshots, plus ids present in
++    only one snapshot. This is the set the lint re-runs on (acceptance #1 — the
++    changed features only, never the whole plan)."""
++    prior_map, cur_map = _by_id(prior), _by_id(current)
++    changed: set[str] = set()
++    for fid in prior_map.keys() | cur_map.keys():
++        if prior_map.get(fid) != cur_map.get(fid):
++            changed.add(fid)
++    return changed
++
++
++# ─────────────────────────────── classifiers ───────────────────────────────
++
++
++def _classify_modify(
++    prior_feat: dict,
++    cur_feat: dict,
++    *,
++    locked: bool,
++    rationale: str | None,
++    resolvers: Resolvers | None,
++) -> ScopeDelta:
++    """Classify a feature present in BOTH snapshots as sharpen or expand, and
++    decide the expand refusal."""
++    fid = str(cur_feat.get("id") or prior_feat.get("id") or "(unnamed)")
++    prior_report = lint_feature(prior_feat, resolvers)
++    cur_report = lint_feature(cur_feat, resolvers)
++
++    added_surfaces = sorted(set(cur_report.surfaces) - set(prior_report.surfaces))
++    added_acs = cur_report.ac_count - prior_report.ac_count
++    new_exemplar = _has_exemplar(cur_report) and not _has_exemplar(prior_report)
++
++    is_expand = bool(added_surfaces) or added_acs > 0
++    evidence = {
++        "added_surfaces": added_surfaces,
++        "added_acs": added_acs,
++        "prior_ac_count": prior_report.ac_count,
++        "current_ac_count": cur_report.ac_count,
++        "new_exemplar": new_exemplar,
++    }
++
++    if not is_expand:
++        # sharpen — narrowed/concretised, no new surface, no added ACs.
++        return ScopeDelta(
++            feature_id=fid,
++            kind="sharpen",
++            refused=False,
++            reason=(
++                f"{fid}: sharpen — no surface added, AC count "
++                f"{prior_report.ac_count}→{cur_report.ac_count}; passes without friction."
++            ),
++            evidence=evidence,
++        )
++
++    # expand. Refuse only when it pushes a LOCKED feature past the size budget
++    # and no rationale was recorded (acceptance #3).
++    crosses_budget = _has_block_size_flag(cur_report)
++    evidence["crosses_size_budget"] = crosses_budget
++    has_rationale = rationale is not None and len(rationale.strip()) >= MIN_REASON_LEN
++    if has_rationale:
++        evidence["scope_change_rationale"] = rationale
++
++    refused = locked and crosses_budget and not has_rationale
++    if refused:
++        reason = (
++            f"{fid}: expand REFUSED — a locked feature was pushed past the size "
++            f"budget (added surfaces={added_surfaces or '∅'}, added ACs={added_acs}). "
++            "Scope-change protocol: add a recorded rationale (>=8 chars) OR split "
++            "the feature before this expand can land."
++        )
++    elif locked and crosses_budget and has_rationale:
++        reason = (
++            f"{fid}: expand allowed with recorded rationale despite crossing the "
++            f"size budget (added surfaces={added_surfaces or '∅'}, added ACs={added_acs})."
++        )
++    else:
++        reason = (
++            f"{fid}: expand within budget (added surfaces={added_surfaces or '∅'}, "
++            f"added ACs={added_acs})."
++        )
++    return ScopeDelta(
++        feature_id=fid, kind="expand", refused=refused, reason=reason, evidence=evidence
++    )
++
++
++def _classify_split(
++    parent_feat: dict,
++    children: list[dict],
++) -> ScopeDelta:
++    """Classify a parent feature that became several children, verifying AC
++    conservation (acceptance #4). A lossy split is refused, naming the dropped
++    and duplicated criteria."""
++    parent_id = str(parent_feat.get("id") or "(unnamed)")
++    parent_ms = Counter(_acceptance_criteria(parent_feat))
++    child_ms: Counter[str] = Counter()
++    for child in children:
++        child_ms.update(_acceptance_criteria(child))
++
++    dropped = sorted((parent_ms - child_ms).elements())
++    duplicated = sorted((child_ms - parent_ms).elements())
++    conserved = parent_ms == child_ms
++
++    child_ids = [str(c.get("id") or "(unnamed)") for c in children]
++    evidence = {
++        "child_ids": child_ids,
++        "dropped": dropped,
++        "duplicated": duplicated,
++        "conservation_ok": conserved,
++    }
++    if conserved:
++        reason = (
++            f"{parent_id}: split into {len(children)} feature(s) "
++            f"[{', '.join(child_ids)}] — AC conservation holds (zero dropped, "
++            "zero duplicated)."
++        )
++        return ScopeDelta(
++            feature_id=parent_id,
++            kind="split",
++            refused=False,
++            reason=reason,
++            evidence=evidence,
++        )
++    reason = (
++        f"{parent_id}: split REFUSED — lossy partition. "
++        f"dropped={dropped or '∅'}; duplicated={duplicated or '∅'}. "
++        "A split must reproduce the parent's acceptance criteria exactly."
++    )
++    return ScopeDelta(
++        feature_id=parent_id,
++        kind="split",
++        refused=True,
++        reason=reason,
++        evidence=evidence,
++    )
++
++
++# ─────────────────────────────── public API ────────────────────────────────
++
++
++def review_scope_delta(
++    prior_features: list[dict],
++    current_features: list[dict],
++    *,
++    locked_ids: frozenset[str] | set[str] = frozenset(),
++    rationales: dict[str, str] | None = None,
++    resolvers: Resolvers | None = None,
++) -> ScopeDeltaReport:
++    """Classify every changed feature between two plan snapshots and apply the
++    scope-change protocol.
++
++    A **split** is signalled by child features carrying a ``split_of: <parent>``
++    annotation whose parent is absent from ``current_features`` — the conserving
++    set is then verified. A feature present in both snapshots is classified as
++    sharpen or expand. ``rationales`` maps a feature id to an operator-supplied
++    scope-change rationale that unblocks a budget-busting expand.
++    """
++    rationales = rationales or {}
++    prior_map = _by_id(prior_features)
++    cur_map = _by_id(current_features)
++
++    # Group split children by their declared parent.
++    split_children: dict[str, list[dict]] = {}
++    for feat in current_features:
++        parent = feat.get("split_of")
++        if parent:
++            split_children.setdefault(str(parent), []).append(feat)
++
++    deltas: list[ScopeDelta] = []
++    handled: set[str] = set()
++
++    # 1. Splits: a prior feature gone from current, with declared children.
++    for parent_id, children in split_children.items():
++        if parent_id in prior_map and parent_id not in cur_map:
++            deltas.append(_classify_split(prior_map[parent_id], children))
++            handled.add(parent_id)
++
++    # 2. Modified features present in both snapshots.
++    for fid in changed_feature_ids(prior_features, current_features):
++        if fid in handled:
++            continue
++        prior_feat = prior_map.get(fid)
++        cur_feat = cur_map.get(fid)
++        if prior_feat is None or cur_feat is None:
++            # A pure add (child of a split is handled above) or a pure removal
++            # is not one of the three in-scope change classes; skip silently.
++            continue
++        deltas.append(
++            _classify_modify(
++                prior_feat,
++                cur_feat,
++                locked=fid in locked_ids,
++                rationale=rationales.get(fid),
++                resolvers=resolvers,
++            )
++        )
++
++    deltas.sort(key=lambda d: d.feature_id)
++    return ScopeDeltaReport(deltas=tuple(deltas))
++
++
++def render_block_message(report: ScopeDeltaReport) -> str:
++    """Refusal message naming every refused delta (the scope-change-protocol
++    violations) — the budget-busting expands and the lossy splits."""
++    if not report.is_blocked:
++        return "[scope-delta] no scope-change-protocol violations."
++    lines = [
++        "[scope-delta] BLOCKED by the scope-change protocol — the following "
++        "changes are refused:",
++    ]
++    for delta in report.refusals:
++        lines.append(f"  [{delta.kind}] {delta.reason}")
++    return "\n".join(lines)
+diff --git a/scripts/dontpanic_orchestrate/supervisor.py b/scripts/dontpanic_orchestrate/supervisor.py
+index ae6feca..3249ecc 100644
+--- a/scripts/dontpanic_orchestrate/supervisor.py
++++ b/scripts/dontpanic_orchestrate/supervisor.py
+@@ -57,6 +57,7 @@ from dontpanic_orchestrate.executors.base import (
+     DispatchTask,
+     _derive_permission_policy,
+ )
++from dontpanic_orchestrate.plan_review import cross_feature
+ 
+ QUOTA_STATE_PATH = Path.home() / ".jarvis" / "quota_state.json"
+ SOFT_THRESHOLD_PERCENT = 90.0
+@@ -1338,6 +1339,7 @@ def _emit_volley_terminal(
+     agents_in_panel: list[str],
+     allow_incomplete_patch_reason: str | None = None,
+     unrelated_dirty_state_note: str | None = None,
++    cross_feature_ack_reason: str | None = None,
+ ) -> VolleyResult:
+     """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
+     any volley terminal state. Returns the input result unchanged so callers
+@@ -1423,6 +1425,40 @@ def _emit_volley_terminal(
+                 unrelated_dirty_state_note=unrelated_dirty_state_note,
+                 dry_run=False,
+             )
++            # Plan 2026-06-01-001 F008 — cross-feature edit detection. Runs at
++            # patch-completeness on the signed_off terminal, alongside the F003
++            # patch gate. Additive + degrades-never-blocks on lint-infra failure
++            # (cannot load features / git-state) — mirrors the F004 pre-lock
++            # gate's D005 contract; only a genuine bleed
++            # (CrossFeatureEditError) blocks. The feature->owned-paths map is
++            # derived from the plan's own features; the diff surface is the F001
++            # git-state sidecar.
++            try:
++                feature_dicts = [f.model_dump() for f in loaded.features.features]
++                git_state_path = (
++                    plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
++                )
++                touched: set[str] = set()
++                if git_state_path.is_file():
++                    git_state = json.loads(git_state_path.read_text())
++                    touched = cross_feature.touched_paths_from_git_state(git_state)
++                touched |= {str(p) for p in (affected_paths or [])}
++            except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
++                print(
++                    f"[volley] WARN: cross-feature edit detection skipped "
++                    f"({exc!r}); detector did not run"
++                )
++                feature_dicts = None
++                touched = set()
++            if feature_dicts is not None and touched:
++                cross_feature.enforce(
++                    plan_dir,
++                    plan_id=loaded.plan_id,
++                    current_feature_id=feature_id,
++                    features=feature_dicts,
++                    touched_paths=touched,
++                    acknowledge_reason=cross_feature_ack_reason,
++                )
+         try:
+             signoff_writer.write_signoff(
+                 plan_id=loaded.plan_id,
+@@ -1467,6 +1503,7 @@ def dispatch_volley(
+     allow_depth: int | None = None,
+     allow_incomplete_patch_reason: str | None = None,
+     unrelated_dirty_state_note: str | None = None,
++    cross_feature_ack_reason: str | None = None,
+     direct_dispatch: bool = False,
+ ) -> VolleyResult:
+     """F005a: sequential build/audit volley.
+@@ -2480,6 +2517,8 @@ def dispatch_volley(
+                         # _emit_volley_terminal's final_status check.
+                         allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+                         unrelated_dirty_state_note=unrelated_dirty_state_note,
++                        # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement.
++                        cross_feature_ack_reason=cross_feature_ack_reason,
+                     )
+ 
+                 if aud_status == "blocked":
+diff --git a/scripts/dontpanic_orchestrate/tests/test_completion_config_readiness_f009.py b/scripts/dontpanic_orchestrate/tests/test_completion_config_readiness_f009.py
+new file mode 100644
+index 0000000..74934a1
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/tests/test_completion_config_readiness_f009.py
+@@ -0,0 +1,141 @@
++"""F009 plan-close-wiring gap (D015/D016).
++
++F009 acceptance #1 names the plan-close goal-completion audit — not just
++dispatch-from-plan — as a config-readiness pre-flight site. These tests prove
++the readiness check is wired into ``completion_dispatch`` BEFORE the real paid
++executor call: a malformed `{}` caps file (D039) or an invalid role (D065)
++raises a clean ``ConfigNotReady`` with a runnable remediation, and a valid
++config lets the audit proceed to dispatch.
++"""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++import pytest
++
++from dontpanic_orchestrate import completion_dispatch, quota_caps_loader
++
++
++def _write(p: Path, obj) -> Path:
++    p.write_text(json.dumps(obj))
++    return p
++
++
++def _valid_caps(tmp_path: Path) -> Path:
++    return _write(tmp_path / "quota_caps.json", quota_caps_loader.starter_caps())
++
++
++# ─────────────────────── the readiness helper (the wired logic) ─────────────
++
++
++def test_helper_raises_config_not_ready_on_empty_caps(tmp_path):
++    caps = _write(tmp_path / "quota_caps.json", {})  # the D039 `{}` hard-stop
++    with pytest.raises(completion_dispatch.ConfigNotReady) as exc:
++        completion_dispatch._assert_config_ready_for_completion(
++            implementer_agent="claude", auditor="codex", caps_path=caps
++        )
++    msg = str(exc.value)
++    assert str(caps) in msg
++    assert "quota-caps init" in msg  # runnable remediation
++
++
++def test_helper_raises_config_not_ready_on_invalid_role(tmp_path):
++    caps = _valid_caps(tmp_path)
++    # D065 split-brain: a capitalised/spaced role is not a registered executor id.
++    with pytest.raises(completion_dispatch.ConfigNotReady) as exc:
++        completion_dispatch._assert_config_ready_for_completion(
++            implementer_agent="Grok-Builder", auditor="Codex-Auditor", caps_path=caps
++        )
++    assert "Grok-Builder" in str(exc.value)
++
++
++def test_helper_passes_on_valid_caps_and_roles(tmp_path):
++    caps = _valid_caps(tmp_path)
++    # codex/claude are registered executors; valid caps -> no raise.
++    completion_dispatch._assert_config_ready_for_completion(
++        implementer_agent="claude", auditor="codex", caps_path=caps
++    )
++
++
++# ─────────────────────── integration: gate fires before paid work ──────────
++
++
++def test_completion_audit_blocks_before_executor_on_bad_caps(tmp_path, monkeypatch):
++    """dispatch=None is the real paid path; the readiness gate must raise
++    ConfigNotReady BEFORE _dispatch_via_executor is ever reached."""
++    caps = _write(tmp_path / "quota_caps.json", {})  # empty -> not ready
++    plan_dir = tmp_path / "plan"
++    plan_dir.mkdir()
++
++    # Resolve a clean auditor + stub the prompt-build inputs so we reach the
++    # dispatch branch without a full plan on disk.
++    monkeypatch.setattr(
++        completion_dispatch,
++        "_resolve_auditor_or_translate_same_vendor",
++        lambda plan_dir, impl: "codex",
++    )
++    monkeypatch.setattr(completion_dispatch, "_validate_auditor_name", lambda a: None)
++    monkeypatch.setattr(completion_dispatch, "_load_objective_contract", lambda d: {})
++    monkeypatch.setattr(completion_dispatch, "_load_features", lambda d: [])
++    monkeypatch.setattr(completion_dispatch, "_build_evidence_manifest", lambda d: {})
++    monkeypatch.setattr(
++        completion_dispatch, "_build_audit_prompt", lambda *a, **k: "prompt"
++    )
++
++    def _must_not_run(*args, **kwargs):
++        raise AssertionError("paid executor reached despite unready config")
++
++    monkeypatch.setattr(completion_dispatch, "_dispatch_via_executor", _must_not_run)
++
++    with pytest.raises(completion_dispatch.ConfigNotReady):
++        completion_dispatch.dispatch_completion_audit(
++            plan_dir,
++            findings=[],
++            implementer_agent="claude",
++            dispatch=None,
++            caps_path=caps,
++        )
++
++
++def test_completion_audit_proceeds_when_config_ready(tmp_path, monkeypatch):
++    """A valid caps file + valid roles lets the audit reach the executor (the
++    readiness gate did not raise)."""
++    caps = _valid_caps(tmp_path)
++    plan_dir = tmp_path / "plan"
++    plan_dir.mkdir()
++
++    monkeypatch.setattr(
++        completion_dispatch,
++        "_resolve_auditor_or_translate_same_vendor",
++        lambda plan_dir, impl: "codex",
++    )
++    monkeypatch.setattr(completion_dispatch, "_validate_auditor_name", lambda a: None)
++    monkeypatch.setattr(completion_dispatch, "_load_objective_contract", lambda d: {})
++    monkeypatch.setattr(completion_dispatch, "_load_features", lambda d: [])
++    monkeypatch.setattr(completion_dispatch, "_build_evidence_manifest", lambda d: {})
++    monkeypatch.setattr(
++        completion_dispatch, "_build_audit_prompt", lambda *a, **k: "prompt"
++    )
++
++    reached = {"executor": False}
++
++    def _fake_dispatch(auditor, prompt, *, plan_dir):
++        reached["executor"] = True
++        return json.dumps({"status": "pass", "dispositions": []})
++
++    monkeypatch.setattr(completion_dispatch, "_dispatch_via_executor", _fake_dispatch)
++    monkeypatch.setattr(
++        completion_dispatch, "_parse_audit_response", lambda raw, findings: ("agree", [])
++    )
++    monkeypatch.setattr(completion_dispatch, "_write_envelope", lambda *a, **k: None)
++
++    completion_dispatch.dispatch_completion_audit(
++        plan_dir,
++        findings=[],
++        implementer_agent="claude",
++        dispatch=None,
++        caps_path=caps,
++    )
++    assert reached["executor"] is True
+diff --git a/scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py b/scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py
+index 44a0ef3..f9b20c9 100644
+--- a/scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py
++++ b/scripts/dontpanic_orchestrate/tests/test_completion_dispatch.py
+@@ -777,6 +777,12 @@ class TestProductionDispatchPath:
+         # Belt and suspenders — also patch the registry entry directly so
+         # any other path that calls into ex_mod sees the same stub.
+         monkeypatch.setitem(ex_mod.AGENT_REGISTRY, "codex", _RecordingStub)
++        # Plan 2026-06-01-001 F009 added a config-readiness gate on the
++        # production (dispatch=None) path; this test exercises executor
++        # *resolution*, not readiness, so neutralise that gate here.
++        monkeypatch.setattr(
++            cd_mod, "_assert_config_ready_for_completion", lambda **_: None
++        )
+ 
+         transcript = dispatch_completion_audit(
+             plan_dir,
+@@ -811,6 +817,11 @@ class TestProductionDispatchPath:
+         from dontpanic_orchestrate import completion_dispatch as cd_mod
+ 
+         monkeypatch.setattr(cd_mod, "get_executor", lambda name: _UnavailableStub())
++        # Plan 2026-06-01-001 F009: neutralise the production-path config-
++        # readiness gate so this test reaches the executor-availability check.
++        monkeypatch.setattr(
++            cd_mod, "_assert_config_ready_for_completion", lambda **_: None
++        )
+ 
+         with pytest.raises(CompletionDispatchError) as exc_info:
+             dispatch_completion_audit(
+diff --git a/scripts/dontpanic_orchestrate/tests/test_cross_feature_f008.py b/scripts/dontpanic_orchestrate/tests/test_cross_feature_f008.py
+new file mode 100644
+index 0000000..3ea4206
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/tests/test_cross_feature_f008.py
+@@ -0,0 +1,243 @@
++"""Tests for plan-review F008 — cross-feature edit detection.
++
++Reproduces the onboarding-v0 ``F008-touches-F013-dashboard`` bleed (a dispatch
++implementing one feature editing files owned by another), plus the clean and
++operator-acknowledged cases, and the ownership-map derivation contract.
++"""
++
++from __future__ import annotations
++
++import json
++
++import pytest
++
++from dontpanic_orchestrate.plan_review import cross_feature as cf
++
++# ─────────────────────────── ownership derivation ──────────────────────────
++
++
++def test_ownership_map_from_explicit_owned_paths():
++    features = [
++        {"id": "F001", "owned_paths": ["scripts/foo/lint.py", "./bar.py"]},
++    ]
++    omap = cf.derive_ownership_map(features)
++    assert omap["F001"] == {"scripts/foo/lint.py", "bar.py"}
++
++
++def test_ownership_map_from_text_tokens_not_symbols():
++    """File tokens are owned; dotted code symbols are NOT mistaken for paths."""
++    features = [
++        {
++            "id": "F009",
++            "description": "Validate quota_caps.json at pre-flight.",
++            "steps": ["Route remediation through command_validation.py"],
++            "acceptance": (
++                "command_validation.validate_command_tokens accepts the command "
++                "and writes dashboard/config.html"
++            ),
++        }
++    ]
++    omap = cf.derive_ownership_map(features)
++    assert "quota_caps.json" in omap["F009"]
++    assert "command_validation.py" in omap["F009"]
++    assert "dashboard/config.html" in omap["F009"]
++    # The dotted symbol (no source extension at its tail) is not a path.
++    assert "command_validation.validate_command_tokens" not in omap["F009"]
++
++
++def test_ownership_map_skips_idless_features():
++    omap = cf.derive_ownership_map([{"description": "no id here cli.py"}])
++    assert omap == {}
++
++
++# ─────────────────────── the F008 -> F013 bleed (acceptance #2/#5) ──────────
++
++
++def _onboarding_v0_features() -> list[dict]:
++    """A two-feature plan mirroring the onboarding-v0 bleed: F008 owns the
++    cross-feature engine paths, F013 owns the dashboard surface."""
++    return [
++        {
++            "id": "F008",
++            "description": "Cross-feature edit detection at patch-completeness.",
++            "steps": ["Add the ownership map in cross_feature.py"],
++            "acceptance": "A finding fires when a diff bleeds.",
++        },
++        {
++            "id": "F013",
++            "description": "Config-readiness dashboard affordance.",
++            "steps": ["Render the fix UI in dashboard/app.js"],
++            "acceptance": "dashboard/config_panel.html shows the remediation.",
++        },
++    ]
++
++
++def test_cross_feature_bleed_flags_foreign_feature_and_paths():
++    features = _onboarding_v0_features()
++    omap = cf.derive_ownership_map(features)
++    # F008's dispatch touched its own module AND bled into F013's dashboard.
++    touched = [
++        "scripts/dontpanic_orchestrate/plan_review/cross_feature.py",
++        "scripts/dontpanic_orchestrate/dashboard/app.js",
++    ]
++    findings = cf.check_cross_feature_edit(touched, "F008", omap)
++    assert len(findings) == 1
++    finding = findings[0]
++    assert finding.foreign_feature_id == "F013"
++    assert finding.current_feature_id == "F008"
++    assert finding.severity == "block"
++    assert finding.mode == "cross_feature_edit"
++    assert finding.paths == ("scripts/dontpanic_orchestrate/dashboard/app.js",)
++    # The finding names the foreign feature and the paths (acceptance #2).
++    blob = finding.to_dict()
++    assert "F013" in blob["reason"]
++    assert "dashboard/app.js" in blob["reason"]
++
++
++def test_partial_token_matches_source_root_prefixed_git_path():
++    """A bare-filename owned token (``app.js``) resolves to the full git path."""
++    features = [
++        {"id": "FX", "description": "owns nothing relevant cli.py"},
++        {"id": "FY", "description": "Render app.js"},
++    ]
++    omap = cf.derive_ownership_map(features)
++    findings = cf.check_cross_feature_edit(
++        ["packages/web/src/app.js"], "FX", omap
++    )
++    assert [f.foreign_feature_id for f in findings] == ["FY"]
++    # boundary guard: my_app.js must NOT match token app.js
++    assert cf.check_cross_feature_edit(["packages/web/my_app.js"], "FX", omap) == []
++
++
++# ─────────────────────────── clean case (acceptance #3) ─────────────────────
++
++
++def test_same_feature_patch_yields_no_finding():
++    features = _onboarding_v0_features()
++    omap = cf.derive_ownership_map(features)
++    # F013's dispatch touches only F013-owned dashboard paths.
++    touched = ["scripts/dontpanic_orchestrate/dashboard/app.js"]
++    assert cf.check_cross_feature_edit(touched, "F013", omap) == []
++
++
++def test_co_owned_path_is_not_flagged():
++    """A path named by BOTH the current and a foreign feature is co-owned."""
++    features = [
++        {"id": "FA", "description": "edits shared cli.py"},
++        {"id": "FB", "description": "also edits cli.py"},
++    ]
++    omap = cf.derive_ownership_map(features)
++    assert cf.check_cross_feature_edit(["pkg/cli.py"], "FA", omap) == []
++
++
++def test_unowned_path_is_not_flagged():
++    features = _onboarding_v0_features()
++    omap = cf.derive_ownership_map(features)
++    # A path no feature claims is not a cross-feature bleed.
++    assert cf.check_cross_feature_edit(["scripts/util/misc.py"], "F008", omap) == []
++
++
++# ─────────────────────── acknowledged case (acceptance #4) ──────────────────
++
++
++def test_acknowledged_path_is_exempt_in_pure_check():
++    features = _onboarding_v0_features()
++    omap = cf.derive_ownership_map(features)
++    touched = ["scripts/dontpanic_orchestrate/dashboard/app.js"]
++    findings = cf.check_cross_feature_edit(
++        touched, "F008", omap, acknowledged_paths=touched
++    )
++    assert findings == []
++
++
++# ─────────────────────────────── git-state extraction ──────────────────────
++
++
++def test_touched_paths_from_git_state_unions_all_surfaces():
++    git_state = {
++        "staged": [{"path": "a.py"}],
++        "unstaged_modified": [{"path": "b.py"}],
++        "untracked": ["c.py"],
++    }
++    assert cf.touched_paths_from_git_state(git_state) == {"a.py", "b.py", "c.py"}
++
++
++# ─────────────────────────────── enforce() gate ────────────────────────────
++
++
++def test_enforce_raises_on_unacknowledged_bleed(tmp_path):
++    features = _onboarding_v0_features()
++    touched = [
++        "scripts/dontpanic_orchestrate/plan_review/cross_feature.py",
++        "scripts/dontpanic_orchestrate/dashboard/app.js",
++    ]
++    with pytest.raises(cf.CrossFeatureEditError) as exc:
++        cf.enforce(
++            tmp_path,
++            plan_id="p1",
++            current_feature_id="F008",
++            features=features,
++            touched_paths=touched,
++        )
++    msg = str(exc.value)
++    assert "F013" in msg
++    assert "dashboard/app.js" in msg
++    assert "--acknowledge-cross-feature" in msg
++
++
++def test_enforce_clean_returns_none(tmp_path):
++    features = _onboarding_v0_features()
++    result = cf.enforce(
++        tmp_path,
++        plan_id="p1",
++        current_feature_id="F013",
++        features=features,
++        touched_paths=["scripts/dontpanic_orchestrate/dashboard/app.js"],
++    )
++    assert result is None
++
++
++def test_enforce_dry_run_returns_block_without_raising(tmp_path):
++    features = _onboarding_v0_features()
++    block = cf.enforce(
++        tmp_path,
++        plan_id="p1",
++        current_feature_id="F008",
++        features=features,
++        touched_paths=["scripts/dontpanic_orchestrate/dashboard/app.js"],
++        dry_run=True,
++    )
++    assert block["status"] == "fail"
++    assert block["findings"][0]["foreign_feature_id"] == "F013"
++
++
++def test_enforce_acknowledged_records_rationale_and_passes(tmp_path):
++    features = _onboarding_v0_features()
++    block = cf.enforce(
++        tmp_path,
++        plan_id="p1",
++        current_feature_id="F008",
++        features=features,
++        touched_paths=["scripts/dontpanic_orchestrate/dashboard/app.js"],
++        acknowledge_reason="shared render helper edited intentionally for F008",
++    )
++    assert block["status"] == "acknowledged"
++    ack_path = tmp_path / "evidence" / "plan-review" / "cross_feature" / "F008-cross-feature-ack.json"
++    assert ack_path.is_file()
++    payload = json.loads(ack_path.read_text())
++    assert payload["current_feature_id"] == "F008"
++    assert payload["reason"].startswith("shared render helper")
++    assert payload["acknowledged_findings"][0]["foreign_feature_id"] == "F013"
++
++
++def test_enforce_acknowledge_reason_too_short_rejected(tmp_path):
++    features = _onboarding_v0_features()
++    with pytest.raises(ValueError):
++        cf.enforce(
++            tmp_path,
++            plan_id="p1",
++            current_feature_id="F008",
++            features=features,
++            touched_paths=["scripts/dontpanic_orchestrate/dashboard/app.js"],
++            acknowledge_reason="short",
++        )
+diff --git a/scripts/dontpanic_orchestrate/tests/test_design_review_f005.py b/scripts/dontpanic_orchestrate/tests/test_design_review_f005.py
+new file mode 100644
+index 0000000..415bbe4
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/tests/test_design_review_f005.py
+@@ -0,0 +1,221 @@
++"""Tests for plan-review F005 — design-review volley.
++
++Uses a mock executor (no live paid call, acceptance #4) to drive the
++design-reviewer through the volley machinery and assert: a known-oversize
++decomposition yields an ``oversize`` finding, a clean decomposition signs off,
++the envelope is the standard ``{verdict, findings}`` keyed to the closed
++taxonomy, and the opt-in trigger only fires on lint uncertainty / operator
++request.
++"""
++
++from __future__ import annotations
++
++import datetime as dt
++import json
++
++from dontpanic_orchestrate.executors.base import (
++    BaseExecutor,
++    DispatchResult,
++    DispatchTask,
++)
++from dontpanic_orchestrate.plan_review import design_review as dr
++from dontpanic_orchestrate.plan_review.report import (
++    build_default_resolvers,
++    build_plan_scope_report,
++)
++
++
++def _iso() -> str:
++    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
++
++
++class _MockReviewer(BaseExecutor):
++    """A scripted design reviewer — returns a canned JSON envelope per dispatch.
++    No subprocess, no CLI: the whole point is a paid-call-free synthetic test."""
++
++    def __init__(self, envelopes: list[dict]) -> None:
++        super().__init__()
++        self.agent_name = "mock-design-reviewer"
++        self.cli_binary = None
++        self._envelopes = list(envelopes)
++        self._i = 0
++        self.received_prompts: list[str] = []
++
++    def is_available(self) -> bool:
++        return True
++
++    def dispatch(self, task: DispatchTask) -> DispatchResult:
++        self.received_prompts.append(
++            str((task.extra_context or {}).get("prompt_override", ""))
++        )
++        env = self._envelopes[min(self._i, len(self._envelopes) - 1)]
++        self._i += 1
++        return DispatchResult(
++            agent=self.agent_name,
++            agent_role=task.agent_role,
++            iteration=task.iteration,
++            started_at=_iso(),
++            completed_at=_iso(),
++            success=True,
++            summary="scripted design review",
++            raw_response=json.dumps(env),
++            quota_consumed={"tokens_in": 0, "tokens_out": 0},
++        )
++
++
++_OVERSIZE_FEATURES = [
++    {
++        "id": "F007",
++        "description": "Add a cli subcommand AND a dashboard html view AND a doctor preflight warn",
++        "steps": ["touch cli", "render dashboard", "doctor warn"],
++        "acceptance": "(1) runs (2) renders (3) warns",
++    }
++]
++_CLEAN_FEATURES = [
++    {
++        "id": "F015",
++        "description": "Add a single cli subcommand",
++        "steps": ["add subcommand"],
++        "acceptance": "(1) the command runs and prints a report",
++    }
++]
++
++
++# ─────────────────────────── envelope contract (acceptance #1/#2) ───────────
++
++
++def test_run_design_volley_returns_standard_envelope_with_oversize_finding():
++    reviewer = _MockReviewer(
++        [
++            {
++                "verdict": "needs_changes",
++                "findings": [
++                    {
++                        "kind": "oversize",
++                        "severity": "block",
++                        "feature_id": "F007",
++                        "evidence": "spans cli + dashboard + doctor",
++                    }
++                ],
++            }
++        ]
++    )
++    env = dr.run_design_volley("p1", _OVERSIZE_FEATURES, auditor=reviewer)
++    assert env.verdict == "needs_changes"
++    assert len(env.findings_of_kind("oversize")) == 1
++    assert env.findings[0].feature_id == "F007"
++    # standard envelope shape
++    blob = env.to_dict()
++    assert set(blob) >= {"verdict", "findings"}
++    assert blob["findings"][0]["kind"] == "oversize"
++    # the reviewer actually saw the decomposition
++    assert "F007" in reviewer.received_prompts[0]
++
++
++def test_clean_decomposition_signs_off():
++    reviewer = _MockReviewer([{"verdict": "signed_off", "findings": []}])
++    env = dr.run_design_volley("p1", _CLEAN_FEATURES, auditor=reviewer)
++    assert env.verdict == "signed_off"
++    assert env.findings == []
++
++
++def test_findings_outside_taxonomy_are_quarantined():
++    reviewer = _MockReviewer(
++        [
++            {
++                "verdict": "needs_changes",
++                "findings": [
++                    {"kind": "oversize", "severity": "block", "feature_id": "F007", "evidence": "e"},
++                    {"kind": "made_up_kind", "severity": "warn", "feature_id": "F007", "evidence": "x"},
++                ],
++            }
++        ]
++    )
++    env = dr.run_design_volley("p1", _OVERSIZE_FEATURES, auditor=reviewer)
++    # taxonomy-pure findings list
++    assert [f.kind for f in env.findings] == ["oversize"]
++    assert env.unrecognized[0]["kind"] == "made_up_kind"
++    assert all(f.kind in dr.DESIGN_TAXONOMY for f in env.findings)
++
++
++def test_blocked_on_unparseable_response():
++    reviewer = _MockReviewer([{}])  # no verdict key
++    env = dr.run_design_volley("p1", _CLEAN_FEATURES, auditor=reviewer)
++    assert env.verdict == "blocked"
++
++
++# ─────────────────────────── planner revision round ────────────────────────
++
++
++class _MockPlanner(BaseExecutor):
++    def __init__(self, revised_features: list[dict]) -> None:
++        super().__init__()
++        self.agent_name = "mock-planner"
++        self.cli_binary = None
++        self._revised = revised_features
++
++    def is_available(self) -> bool:
++        return True
++
++    def dispatch(self, task: DispatchTask) -> DispatchResult:
++        return DispatchResult(
++            agent=self.agent_name,
++            agent_role=task.agent_role,
++            iteration=task.iteration,
++            started_at=_iso(),
++            completed_at=_iso(),
++            success=True,
++            summary="scripted plan revision",
++            raw_response=json.dumps(self._revised),
++        )
++
++
++def test_planner_revision_then_signoff():
++    # round 0: needs_changes(oversize); planner revises; round 1: signed_off
++    reviewer = _MockReviewer(
++        [
++            {
++                "verdict": "needs_changes",
++                "findings": [{"kind": "oversize", "severity": "block", "feature_id": "F007", "evidence": "e"}],
++            },
++            {"verdict": "signed_off", "findings": []},
++        ]
++    )
++    planner = _MockPlanner(_CLEAN_FEATURES)
++    env = dr.run_design_volley(
++        "p1", _OVERSIZE_FEATURES, auditor=reviewer, planner=planner, max_iterations=2
++    )
++    assert env.verdict == "signed_off"
++    assert env.rounds == 2
++
++
++# ─────────────────────────── opt-in trigger (acceptance #3) ─────────────────
++
++
++def _scope_report(features: list[dict]):
++    return build_plan_scope_report("p1", features, build_default_resolvers())
++
++
++def test_trigger_fires_on_operator_request_even_when_clean():
++    report = _scope_report(_CLEAN_FEATURES)
++    assert dr.should_run_design_volley(report, operator_requested=True) is True
++
++
++def test_trigger_does_not_auto_fire_on_clean_plan():
++    # A genuinely clean single-surface feature: no warn flags -> no auto-run.
++    report = _scope_report(_CLEAN_FEATURES)
++    assert dr.should_run_design_volley(report) is False
++
++
++def test_trigger_auto_fires_on_lint_uncertainty():
++    # A 2-surface feature yields a warn-severity over_surface flag (uncertainty).
++    uncertain = [
++        {
++            "id": "FX",
++            "description": "Add a cli subcommand AND a dashboard html view",
++            "steps": [],
++            "acceptance": "(1) runs (2) renders",
++        }
++    ]
++    report = _scope_report(uncertain)
++    assert dr.should_run_design_volley(report) is True
+diff --git a/scripts/dontpanic_orchestrate/tests/test_scope_delta_f006.py b/scripts/dontpanic_orchestrate/tests/test_scope_delta_f006.py
+new file mode 100644
+index 0000000..9b6cf4c
+--- /dev/null
++++ b/scripts/dontpanic_orchestrate/tests/test_scope_delta_f006.py
+@@ -0,0 +1,179 @@
++"""Tests for plan-review F006 — mid-development scope-delta lint.
++
++Covers the three change classes (sharpen / expand / split) and both
++scope-change-protocol refusal paths (budget-busting expand on a locked feature;
++lossy split), per acceptance #2/#3/#4/#5/#6.
++"""
++
++from __future__ import annotations
++
++from dontpanic_orchestrate.plan_review import scope_delta as sd
++
++# ─────────────────────────── changed-feature detection (acceptance #1) ──────
++
++
++def test_changed_feature_ids_only_the_diff():
++    prior = [
++        {"id": "F1", "description": "a", "acceptance": "(1) x"},
++        {"id": "F2", "description": "b", "acceptance": "(1) y"},
++    ]
++    current = [
++        {"id": "F1", "description": "a", "acceptance": "(1) x"},  # unchanged
++        {"id": "F2", "description": "b CHANGED", "acceptance": "(1) y"},
++        {"id": "F3", "description": "new", "acceptance": "(1) z"},  # added
++    ]
++    assert sd.changed_feature_ids(prior, current) == {"F2", "F3"}
++
++
++def test_no_change_yields_no_deltas():
++    feats = [{"id": "F1", "description": "cli subcommand", "acceptance": "(1) runs"}]
++    report = sd.review_scope_delta(feats, feats)
++    assert report.deltas == ()
++    assert not report.is_blocked
++
++
++# ─────────────────────────── sharpen (acceptance #5) ────────────────────────
++
++
++def test_sharpen_passes_without_friction():
++    prior = [
++        {
++            "id": "F1",
++            "description": "Add a cli subcommand",
++            "acceptance": "(1) the command runs (2) exit code is 0",
++        }
++    ]
++    current = [
++        {
++            "id": "F1",
++            "description": "Add a cli subcommand",
++            # concretised wording, SAME surface (cli), SAME ac count.
++            "acceptance": "(1) the command runs and prints a report (2) exit code is non-zero only on block",
++        }
++    ]
++    report = sd.review_scope_delta(prior, current, locked_ids={"F1"})
++    assert len(report.deltas) == 1
++    delta = report.deltas[0]
++    assert delta.kind == "sharpen"
++    assert delta.refused is False
++    assert not report.is_blocked
++
++
++# ─────────────────────────── expand (acceptance #2/#3) ──────────────────────
++
++
++def test_expand_within_budget_is_allowed():
++    prior = [
++        {"id": "F1", "description": "cli subcommand", "acceptance": "(1) runs (2) exits 0"}
++    ]
++    current = [
++        {
++            "id": "F1",
++            "description": "cli subcommand",
++            "acceptance": "(1) runs (2) exits 0 (3) prints json",  # +1 AC, still 1 surface
++        }
++    ]
++    report = sd.review_scope_delta(prior, current, locked_ids={"F1"})
++    delta = report.deltas[0]
++    assert delta.kind == "expand"
++    assert delta.refused is False
++    assert delta.evidence["added_acs"] == 1
++
++
++def test_expand_past_budget_on_locked_feature_is_refused():
++    prior = [
++        {"id": "F1", "description": "Add a cli subcommand", "acceptance": "(1) runs"}
++    ]
++    current = [
++        {
++            "id": "F1",
++            # now spans 3 surfaces: cli + dashboard (html) + doctor (preflight warn)
++            "description": "Add a cli subcommand AND a dashboard html view AND a doctor preflight warn",
++            "acceptance": "(1) runs (2) renders (3) warns",
++        }
++    ]
++    report = sd.review_scope_delta(prior, current, locked_ids={"F1"})
++    delta = report.deltas[0]
++    assert delta.kind == "expand"
++    assert delta.refused is True
++    assert delta.evidence["crosses_size_budget"] is True
++    assert report.is_blocked
++    assert "F1" in sd.render_block_message(report)
++
++
++def test_expand_past_budget_with_recorded_rationale_is_allowed():
++    prior = [
++        {"id": "F1", "description": "Add a cli subcommand", "acceptance": "(1) runs"}
++    ]
++    current = [
++        {
++            "id": "F1",
++            "description": "Add a cli subcommand AND a dashboard html view AND a doctor preflight warn",
++            "acceptance": "(1) runs (2) renders (3) warns",
++        }
++    ]
++    report = sd.review_scope_delta(
++        prior,
++        current,
++        locked_ids={"F1"},
++        rationales={"F1": "intentional cross-surface widening approved by operator"},
++    )
++    delta = report.deltas[0]
++    assert delta.kind == "expand"
++    assert delta.refused is False
++    assert not report.is_blocked
++    assert delta.evidence["scope_change_rationale"].startswith("intentional")
++
++
++def test_expand_past_budget_on_UNLOCKED_feature_not_refused():
++    """The budget refusal only bites a LOCKED feature (acceptance #3)."""
++    prior = [{"id": "F1", "description": "Add a cli subcommand", "acceptance": "(1) runs"}]
++    current = [
++        {
++            "id": "F1",
++            "description": "Add a cli subcommand AND a dashboard html view AND a doctor preflight warn",
++            "acceptance": "(1) runs (2) renders (3) warns",
++        }
++    ]
++    report = sd.review_scope_delta(prior, current, locked_ids=set())  # not locked
++    assert report.deltas[0].kind == "expand"
++    assert report.deltas[0].refused is False
++
++
++# ─────────────────────────── split (acceptance #4) ─────────────────────────
++
++
++def test_conserving_split_is_accepted():
++    prior = [
++        {"id": "F1", "description": "big feature", "acceptance": "(1) A (2) B (3) C"}
++    ]
++    current = [
++        {"id": "F1a", "split_of": "F1", "description": "part a", "acceptance": "(1) A (2) B"},
++        {"id": "F1b", "split_of": "F1", "description": "part b", "acceptance": "(3) C"},
++    ]
++    report = sd.review_scope_delta(prior, current)
++    split = next(d for d in report.deltas if d.kind == "split")
++    assert split.refused is False
++    assert split.evidence["conservation_ok"] is True
++    assert sorted(split.evidence["child_ids"]) == ["F1a", "F1b"]
++    assert not report.is_blocked
++
++
++def test_lossy_split_is_refused_naming_dropped_and_duplicated():
++    prior = [
++        {"id": "F1", "description": "big feature", "acceptance": "(1) A (2) B (3) C"}
++    ]
++    current = [
++        # drops C, introduces Z (not in the parent) -> lossy
++        {"id": "F1a", "split_of": "F1", "description": "part a", "acceptance": "(1) A (2) B"},
++        {"id": "F1b", "split_of": "F1", "description": "part b", "acceptance": "(1) Z"},
++    ]
++    report = sd.review_scope_delta(prior, current)
++    split = next(d for d in report.deltas if d.kind == "split")
++    assert split.refused is True
++    assert split.evidence["conservation_ok"] is False
++    assert split.evidence["dropped"] == ["C"]
++    assert split.evidence["duplicated"] == ["Z"]
++    assert report.is_blocked
++    msg = sd.render_block_message(report)
++    assert "F1" in msg and "lossy" in msg.lower()

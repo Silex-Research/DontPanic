@@ -494,6 +494,18 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "setup",
         "calibrate-claude",
         "dispatch-from-plan",
+        # Plan 2026-05-30-001 F012: operations_guidance emits these shapes, so
+        # the validator must recognize them (AC6/AC7). orchestrate is the
+        # teaching gateway over dispatch-from-plan; agent/finalize/what-now are
+        # first-class top-level subcommands in cli.py:main.
+        "orchestrate",
+        "finalize",
+        "what-now",
+        "agent",
+        # Plan 2026-05-30-001 F008 (codex i2): config_inventory emits
+        # ``dontpanic roles set <role> <executor>`` as the dashboard safe-edit
+        # route, so the validator must recognize the ``roles`` surface.
+        "roles",
         "doctor",
         "init",
         "smoke",
@@ -503,6 +515,13 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "reconcile",
         "dashboard",
         "next",
+        # Plan 2026-05-30-001 F016: skill recommendation surfaces + rubric
+        # migration are exposed as `dontpanic skills <recommend|rubric>`, so the
+        # validator recognizes the `skills` surface.
+        "skills",
+        # Plan 2026-06-01-001 F003: the read-only `dontpanic plan-review <plan>`
+        # scope-lint surface validates here so its rendered copy is honest.
+        "plan-review",
     }
     assert known_subcommands() == expected
 

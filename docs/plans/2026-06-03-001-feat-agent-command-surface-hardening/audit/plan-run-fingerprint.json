@@ -1,0 +1,127 @@
+{
+  "captured_at": "2026-06-04T14:55:23Z",
+  "decision_lines": [
+    "D001\u001feeaabcb451f2f80f560120c13ee241d9bdb258f46a3bc008f918bcb60f967875",
+    "D002\u001f2f84598bf0093786f7bf633a3e64fbb64a94b27aa00b1c06f80f119512aa51a2",
+    "D003\u001f4ec49d98183377533710529661747bb35b8b1bcdce5835750dfd381a4bc65dcd",
+    "D004\u001f3a58ee3f51dac8f5e324cd0a11b268d74557ba77f268a119ce0d038f19d199fd"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "(1) A closed typed model exists for command guidance with fields for path, class, audience, examples, predecessor hints, and human escalation rule. (2) The command class vocabulary is closed and includes read-only inspection, lifecycle mutation, dispatch/paid work, configuration mutation, diagnostic inspection, and human handoff. (3) Model validation rejects unknown classes and malformed examples. (4) Tests cover valid construction, invalid class rejection, and serialization stability. (5) No existing command behavior changes.",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": true
+      },
+      "F002": {
+        "acceptance": "(1) The current top-level command vocabulary has guidance entries. (2) Each entry has a class, audience, examples, predecessor hints, and human escalation rule. (3) Entries cover the known workflow groups used by agents: inspection, lifecycle change, paid work, configuration change, diagnostics, and human handoff. (4) Unit tests prove inventory entries serialize through the F001 model and representative entries carry the expected metadata. (5) The inventory does not become an executable router; it is metadata only.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": true
+      },
+      "F003": {
+        "acceptance": "(1) A read-only agent subcommand returns a versioned JSON envelope containing command guidance entries from F002. (2) The envelope includes source summary, command entries, and schema version. (3) The command does not invoke any guided command handler. (4) Tests assert schema stability and coverage parity with the F002 inventory. (5) The generated operating brief points agents to this JSON surface.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F002"
+        ],
+        "passes": true
+      },
+      "F004": {
+        "acceptance": "(1) Root help includes a concise 'Start here for AI agents' section. (2) The section names the generated brief and the JSON guidance surface. (3) The section tells agents to inspect recommended actions before mutation. (4) The text is produced from shared guidance constants or F002 metadata, not a separate command list. (5) Tests assert the root help text contains the entrypoint and does not duplicate the full brief.",
+        "agents_required": null,
+        "depends_on": [
+          "F002"
+        ],
+        "passes": true
+      },
+      "F005": {
+        "acceptance": "(1) Representative help output for each command class contains class-appropriate agent guidance. (2) Dispatch/paid and lifecycle mutation help says not to auto-run unless DontPanic has surfaced an automatable action or the user explicitly approved it. (3) Read-only help says it is safe to inspect before mutation. (4) Human-handoff help points to the local decision surface when available. (5) Tests cover one representative command per class and prove snippets come from the shared inventory/helper, not ad hoc strings.",
+        "agents_required": null,
+        "depends_on": [
+          "F002",
+          "F004"
+        ],
+        "passes": true
+      },
+      "F006": {
+        "acceptance": "(1) A version-stamped local guide artifact exists and can be located or printed by an existing DontPanic surface. (2) The guide contains the start-here flow, role distinction, command classes, safe examples, local-decision handoff rule, and 'do not ask between features unless DontPanic requires human input' policy. (3) The guide is generated from or validated against the generated brief and command inventory. (4) Root help or the generated brief points to the guide locator. (5) Tests prove guide existence, required policy text, and command-inventory parity.",
+        "agents_required": null,
+        "depends_on": [
+          "F002",
+          "F003"
+        ],
+        "passes": true
+      },
+      "F007": {
+        "acceptance": "(1) A test fails when the command-validation top-level vocabulary has a command with no guidance entry. (2) A test fails when a workflow-critical help page lacks an agent guidance section. (3) Automatable examples in command guidance validate against the existing command validator. (4) A developer-facing checklist explains how to add or change an agent-facing command without drift. (5) Command-validation and representative help tests pass.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F002",
+          "F003",
+          "F004",
+          "F005",
+          "F006"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "e47f7c8915244e7c336002a4db7caf24483509cc92872aca1f9f9621667eaac3",
+    "decisions.jsonl": "b3920b438d3b8a3478b3c9b386574d5197317bf30e5db01dc525268500861d26",
+    "features.json": "5e59bdb7760c4aae6dcb982db892cbb131d4eff6cbefa7aa2674ddcc6026bed8",
+    "objective_contract.json": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
+    "plan.md": "28efe4c5cfd9e9f3f4e5335228b53c18e2a0a395b55fac4edb862836f1abbf03"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1780581124.938276,
+    "decisions.jsonl": 1780580774.162955,
+    "features.json": 1780584897.3840313,
+    "objective_contract.json": 1780580774.163773,
+    "plan.md": 1780580835.2634645
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_merge"
+    ],
+    "completed_stages": [
+      "pre_merge"
+    ]
+  },
+  "objective_hash": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
+  "plan_semantics": {
+    "agents_required": [
+      "claude",
+      "codex"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-06-02-001-feat-control-plane-action-spine"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 2
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}
