@@ -1,0 +1,49 @@
+{
+  "task_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "audit_id": "2026-06-03-001-feat-agent-command-surface-hardening#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-04T14:25:40Z",
+  "completed_at": "2026-06-04T14:29:12Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F005-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-03-001-feat-agent-command-surface-hardening-a2brx58l target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 160941 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 900639,
+    "tokens_out": 16079,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-agent-command-surface\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic-agent-command-surface  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. The implementer declared Repo/Env/Project correctly, structured `target_context` is `env=dev`, `project=null`, and `commands_run=[]`; no forbidden command shapes were present.\n\nFINDING (high, test_coverage): The new F005 test file is untracked, so the claimed tests may be omitted from the deliverable/fresh-clone test discovery. Evidence: `git status --short --untracked-files=all` reports `?? ../scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py`, and `git ls-files` returns no tracked entry for it. Recommendation: add/track [test_f005_workflow_help_snippets.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py:1).\n\nFINDING (medium, correctness): Lifecycle mutation help does not explicitly say the user must have approved the action, even though AC2 requires that wording/meaning for lifecycle mutation help. Evidence: [command_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/command_guidance.py:327) says “mutate only when DontPanic asks for it” and [command_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/command_guidance.py:349) says “otherwise explain the consequence and ask,” while the test only asserts `\"ask\"` rather than explicit approval. Recommendation: update ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short --untracked-files=all",
+      "git diff HEAD~1 --",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py -q -p no:cacheprovider",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python -c \"from dontpanic_orchestrate.tests import test_f005_workflow_help_snippets as t; [t.test_help_embeds_shared_snippet_verbatim(c, cls, argv) for c, cls, argv in t._REPRESENTATIVES]; t.test_each_class_has_a_distinct_snippet(); t.test_snippet_is_built_from_inventory_fields_not_ad_hoc(); t.test_readonly_help_says_safe_to_inspect_before_mutation(); t.test_dispatch_help_warns_against_auto_running_paid_work(); t.test_lifecycle_help_warns_against_auto_mutating(); t.test_human_handoff_help_points_to_local_decision_surface(); t.test_diagnostic_help_carries_diagnostic_guidance(); t.test_config_help_carries_config_guidance(); t.test_snippet_helper_raises_for_unknown_command(); print('direct F005 test-function checks passed')\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "The new F005 test file is untracked, so the claimed tests may be omitted from the deliverable/fresh-clone test discovery. Evidence: `git status --short --untracked-files=all` reports `?? ../scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py`, and `git ls-files` returns no tracked entry for it. Recommendation: add/track [test_f005_workflow_help_snippets.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/tests/test_f005_workflow_",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F005",
+      "issue": "Lifecycle mutation help does not explicitly say the user must have approved the action, even though AC2 requires that wording/meaning for lifecycle mutation help. Evidence: [command_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/command_guidance.py:327) says “mutate only when DontPanic asks for it” and [command_guidance.py](/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/scripts/dontpanic_orchestrate/command_guidance.p",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

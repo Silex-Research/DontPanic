@@ -479,3 +479,130 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/docs
 </details>
 
 ===
+---
+timestamp: 2026-06-04T14:20:08Z
+event: volley_start
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+feature_id: F005
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-04T14:20:08Z
+event: volley_start
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-06-04T14:36:49Z
+event: volley_terminal
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+final_status: signed_off
+rounds: 3
+feature_id: F005
+---
+
+final_status: signed_off
+rounds: 3
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json', 'claude-implementer-F005-i2.json', 'codex-auditor-F005-i2.json']
+reason: auditor signed off
+
+===
+<!-- rendered annotation 2026-06-04T14:36:50Z -->
+**AI work finished on 2026-06-03-001-feat-agent-command-surface-hardening** _(band: ready)_
+
+Volley completed after 3 round(s) with `signed_off`. No action needed.
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F005`
+- `final_status` = `signed_off`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `3`
+- `plan_id` = `2026-06-03-001-feat-agent-command-surface-hardening`
+- `rounds` = `3`
+
+</details>
+
+===
+---
+timestamp: 2026-06-04T14:36:50Z
+event: breaker:patch_incomplete
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+report_path: /Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/patch-completeness-2.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py
+  unstaged_dirty_state | block | docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-06-04T14:36:50Z
+event: volley_crash_caught
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+feature_id: F005
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py
+  unstaged_dirty_state | block | docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-06-04T14:36:50Z
+event: volley_terminal
+plan_id: 2026-06-03-001-feat-agent-command-surface-hardening
+final_status: blocked
+rounds: 3
+feature_id: F005
+---
+
+final_status: blocked
+rounds: 3
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json', 'claude-implementer-F005-i2.json', 'codex-auditor-F005-i2.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py
+  unstaged_dirty_state | block | docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/transcript.md,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-auditor.json,docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-1-implementer.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/command_guidance.py,scripts/dontpanic_orchestrate/dashboard.py,scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+<!-- rendered annotation 2026-06-04T14:36:50Z -->
+**Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening — blocked** _(band: needs_action)_
+
+Volley terminated after 3 round(s) with status `blocked`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic-agent-command-surface/docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F005`
+- `final_status` = `blocked`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `3`
+- `plan_id` = `2026-06-03-001-feat-agent-command-surface-hardening`
+- `rounds` = `3`
+
+</details>
+
+===

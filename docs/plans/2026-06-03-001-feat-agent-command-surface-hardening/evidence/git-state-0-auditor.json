@@ -24,12 +24,16 @@
     {
       "path": "scripts/dontpanic_orchestrate/command_guidance.py",
       "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/dashboard.py",
+      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F004-i0.json",
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/codex-auditor-F004-i0.json",
-    "scripts/dontpanic_orchestrate/tests/test_f004_root_help_agent_entrypoint.py"
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/codex-auditor-F005-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

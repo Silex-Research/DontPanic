@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-04T14:13:30Z",
+  "captured_at": "2026-06-04T14:20:08Z",
   "decision_lines": [
     "D001\u001feeaabcb451f2f80f560120c13ee241d9bdb258f46a3bc008f918bcb60f967875",
     "D002\u001f2f84598bf0093786f7bf633a3e64fbb64a94b27aa00b1c06f80f119512aa51a2",
@@ -37,7 +37,7 @@
         "depends_on": [
           "F002"
         ],
-        "passes": false
+        "passes": true
       },
       "F005": {
         "acceptance": "(1) Representative help output for each command class contains class-appropriate agent guidance. (2) Dispatch/paid and lifecycle mutation help says not to auto-run unless DontPanic has surfaced an automatable action or the user explicitly approved it. (3) Read-only help says it is safe to inspect before mutation. (4) Human-handoff help points to the local decision surface when available. (5) Tests cover one representative command per class and prove snippets come from the shared inventory/helper, not ad hoc strings.",
@@ -84,14 +84,14 @@
   "file_hashes": {
     "audit/gate-state.json": "e47f7c8915244e7c336002a4db7caf24483509cc92872aca1f9f9621667eaac3",
     "decisions.jsonl": "b3920b438d3b8a3478b3c9b386574d5197317bf30e5db01dc525268500861d26",
-    "features.json": "edb6c840ac85210226086f60fa0d3d273d46e66ec2be6c354cd265fcdda2739e",
+    "features.json": "2c04dcfc8dde3411787bb739cf9c928a9ae8b3caca91e75c38d783e60e63b02f",
     "objective_contract.json": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
     "plan.md": "28efe4c5cfd9e9f3f4e5335228b53c18e2a0a395b55fac4edb862836f1abbf03"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1780581124.938276,
     "decisions.jsonl": 1780580774.162955,
-    "features.json": 1780582379.6847131,
+    "features.json": 1780582790.422387,
     "objective_contract.json": 1780580774.163773,
     "plan.md": 1780580835.2634645
   },

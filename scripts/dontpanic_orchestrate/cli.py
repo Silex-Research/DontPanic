@@ -1983,6 +1983,10 @@ def _doctor_main(argv: list[str]) -> int:
     wrapper is the new canonical surface; the legacy script remains for
     backward compatibility per AC#5.
     """
+    # F005: diagnostic-class agent-guidance footer, projected from the F002
+    # inventory (run diagnostics before changing config or dispatching work).
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic doctor",
         description=(
@@ -1990,6 +1994,8 @@ def _doctor_main(argv: list[str]) -> int:
             "preflight). Output structured PASS / WARN / FAIL per check; "
             "exit 0 if all PASS, 1 if any WARN, 2 if any FAIL."
         ),
+        epilog=command_guidance.command_help_agent_snippet("doctor"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--json",
@@ -2327,6 +2333,12 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     the existing top-level CLI surfaces. Same module, same enforcement, same
     audit/INBOX/transcript artifacts.
     """
+    # F005: dispatch/paid-class agent-guidance footer, projected from the F002
+    # inventory so the help says not to auto-run paid dispatch unless DontPanic
+    # surfaced a ready candidate or the human explicitly approved it. Appended
+    # to the existing quota-readiness epilog rather than restated inline.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic dispatch-from-plan",
         description=(
@@ -2346,7 +2358,8 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "  unit_mismatch         non-Claude vendor cap.unit ≠ observed_unit\n"
             "                        → edit ~/.jarvis/quota_caps.json so cap.unit matches observed_unit\n"
             "Stale calibration is warning-only (not blocking). Dry-run mode prints the\n"
-            "label without refusal."
+            "label without refusal.\n\n"
+            + command_guidance.command_help_agent_snippet("dispatch-from-plan")
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -2880,6 +2893,11 @@ def _run_pre_lock_design_volley(
 def _plan_lock_main(argv: list[str]) -> int:
     """``dontpanic plan lock`` — canonical lock-time entry point for Goal
     Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
+    # F005: lifecycle-mutation agent-guidance footer, projected from the F002
+    # inventory so the help says not to auto-run this lifecycle mutation unless
+    # DontPanic surfaced the action or the human approved it.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic plan lock",
         description=(
@@ -2887,6 +2905,8 @@ def _plan_lock_main(argv: list[str]) -> int:
             "draft to active. For plans without goal_type, the gate is a no-op "
             "but the status flip still proceeds."
         ),
+        epilog=command_guidance.command_help_agent_snippet("plan"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
     parser.add_argument(
@@ -3844,12 +3864,19 @@ def _project_config_main(argv: list[str]) -> int:
 
 def _setup_main(argv: list[str]) -> int:
     """``dontpanic setup`` — preview-by-default; mutation requires ``--yes``."""
+    # F005: configuration-mutation agent-guidance footer, projected from the
+    # F002 inventory (inspect status/doctor before changing config; ask before
+    # persistent changes unless DontPanic surfaced an automatable action).
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic setup",
         description=(
             "Bootstrap operator config: roles + per-project runtime evidence "
             "defaults. Preview-by-default; use --yes to actually write."
         ),
+        epilog=command_guidance.command_help_agent_snippet("setup"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--implementer", help="Set roles.implementer (global)")
     parser.add_argument("--auditor", help="Set roles.auditor (global)")
@@ -3930,6 +3957,11 @@ def _next_main(argv: list[str]) -> int:
     default so operators see the blockers next to the unblocked work;
     pass ``--ready-only`` to suppress the not-ready section.
     """
+    # F005: class-specific agent-guidance footer, projected from the F002
+    # inventory so read-only help teaches that this surface is safe to inspect
+    # before mutation.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic next",
         description=(
@@ -3937,6 +3969,8 @@ def _next_main(argv: list[str]) -> int:
             "analyzes one plans root; fleet scope aggregates per-project "
             "analyses from the project registry."
         ),
+        epilog=command_guidance.command_help_agent_snippet("next"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--scope",

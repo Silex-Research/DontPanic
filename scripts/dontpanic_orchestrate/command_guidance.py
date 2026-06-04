@@ -324,7 +324,8 @@ _PREDECESSORS_BY_CLASS: dict[CommandClass, tuple[str, ...]] = {
     CommandClass.DIAGNOSTIC_INSPECTION: ("Run before changing config or dispatching work.",),
     CommandClass.CONFIG_MUTATION: ("Inspect status/doctor output before changing config.",),
     CommandClass.LIFECYCLE_MUTATION: (
-        "Inspect what-now/next first; mutate only when DontPanic asks for it.",
+        "Inspect what-now/next first; do not auto-run unless DontPanic surfaced "
+        "an automatable action or the user explicitly approved it.",
     ),
     CommandClass.DISPATCH_PAID_WORK: (
         "Inspect next/what-now first; dispatch only with an explicit ready candidate or approval.",
@@ -415,6 +416,43 @@ def root_help_agent_snippet() -> str:
             "  or dispatching paid work.",
         )
     )
+
+
+# Human-readable class label for the per-command help footer (F005). Keyed on
+# the closed :class:`CommandClass` vocabulary so a new class cannot ship a help
+# snippet without a deliberate label here.
+_CLASS_HELP_TITLE: dict[CommandClass, str] = {
+    CommandClass.READONLY_INSPECTION: "read-only inspection",
+    CommandClass.DIAGNOSTIC_INSPECTION: "diagnostic inspection",
+    CommandClass.CONFIG_MUTATION: "configuration mutation",
+    CommandClass.LIFECYCLE_MUTATION: "lifecycle mutation",
+    CommandClass.DISPATCH_PAID_WORK: "dispatch / paid work",
+    CommandClass.HUMAN_HANDOFF: "human handoff",
+}
+
+
+def command_help_agent_snippet(command: str) -> str:
+    """Class-specific agent-guidance footer for a command's ``--help``.
+
+    Plan 2026-06-03-001 F005. Projects the F002 inventory entry for ``command``
+    into a short help footer so an agent reading ``dontpanic <command> --help``
+    learns the safe operating policy for that command *class*, not just its
+    flags: read-only surfaces say it is safe to inspect before mutation;
+    lifecycle-mutation and dispatch/paid surfaces say not to auto-run unless
+    DontPanic surfaced an automatable action or the human explicitly approved
+    it; human-handoff surfaces point at the local decision surface.
+
+    The text is the inventory's own predecessor hints and escalation rule — not
+    a per-command restatement — so help and the JSON guidance surface cannot
+    drift, and a renamed/removed command raises here rather than printing a
+    stale snippet.
+    """
+    entry = command_guidance_by_command()[command]
+    title = _CLASS_HELP_TITLE[entry.command_class]
+    lines = [f"Agent guidance ({title}):"]
+    lines.extend(f"  - {hint}" for hint in entry.predecessor_hints)
+    lines.append(f"  Human escalation: {entry.human_escalation_rule}")
+    return "\n".join(lines)
 
 
 def known_command_paths() -> tuple[tuple[str, ...], ...]:

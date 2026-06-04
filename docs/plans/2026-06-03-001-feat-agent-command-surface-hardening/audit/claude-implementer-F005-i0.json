@@ -1,0 +1,38 @@
+{
+  "task_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "audit_id": "2026-06-03-001-feat-agent-command-surface-hardening#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-04T14:20:08Z",
+  "completed_at": "2026-06-04T14:25:40Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-03-001-feat-agent-command-surface-hardening-a2brx58l target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2823 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 4172752,
+    "tokens_out": 21769,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-agent-command-surface\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F005] I implemented F005 with no side-effecting commands beyond the targeted test runs (Repo: DontPanic-agent-command-surface, Env: dev, Project: (none)). I added a shared `command_help_agent_snippet(command)` helper to `command_guidance.py` that projects each command's F002 inventory entry (class label + predecessor hints + escalation rule) into a short, class-specific `--help` footer, then wired one representative command per class through it as an argparse `epilog`: `next` (read-only — \"safe to run before mutation\"), `doctor` (diagnostic), `setup` (config), `plan lock` (lifecycle — \"mutate only when DontPanic asks\"), `dispatch-from-plan` (dispatch/paid — \"do not start paid/dispatch work unless DontPanic surfaced a ready candidate or the human explicitly approved it\", appended to its existing quota epilog), and `dashboard` (human-handoff — points to the \"local decision surface when available\"); command behavior is unchanged since the snippet is help-text only. I added `test_f005_workflow_help_snippets.py` (15 tests covering all five acceptance criteria, proving the footers are embedded verbatim from the shared helper and composed from inventory fields rather than ad-hoc strings), all passing, and confirmed the F002/F003/F004 guidance suites (40 tests) plus the dashboard suites still pass — the lone renderer-parity failure is a pre-existing 1-second timestamp race that passes in isolation and is untouched by this change. I left `features.json` F005 `passes: false` for the auditor/",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

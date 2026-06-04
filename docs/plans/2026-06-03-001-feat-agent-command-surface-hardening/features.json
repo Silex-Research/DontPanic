@@ -142,14 +142,30 @@
         "F002",
         "F004"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) Representative help output for each command class contains class-appropriate agent guidance. (2) Dispatch/paid and lifecycle mutation help says not to auto-run unless DontPanic has surfaced an automatable action or the user explicitly approved it. (3) Read-only help says it is safe to inspect before mutation. (4) Human-handoff help points to the local decision surface when available. (5) Tests cover one representative command per class and prove snippets come from the shared inventory/helper, not ad hoc strings.",
       "steps": [
         "Create small class-specific help snippets from the inventory.",
         "Wire representative workflow commands through the shared snippet helper.",
         "Add tests for representative commands by class.",
         "Keep command behavior unchanged."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F005-i2.json",
+          "note": "signed_off auditor envelope (codex, iteration 2) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T14:37:27Z"
     },
     {
       "id": "F006",

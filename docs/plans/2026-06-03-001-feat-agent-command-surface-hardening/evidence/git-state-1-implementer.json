@@ -1,5 +1,10 @@
 {
-  "staged": [],
+  "staged": [
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f005_workflow_help_snippets.py",
+      "status": "A"
+    }
+  ],
   "unstaged_modified": [
     {
       "path": "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md",
@@ -22,18 +27,22 @@
       "status": "M"
     },
     {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
       "path": "scripts/dontpanic_orchestrate/command_guidance.py",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py",
+      "path": "scripts/dontpanic_orchestrate/dashboard.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F002-i1.json",
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/codex-auditor-F002-i0.json"
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F005-i1.json",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/codex-auditor-F005-i0.json"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

@@ -1790,6 +1790,11 @@ def _watch_loop(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # F005: human-handoff agent-guidance footer, projected from the F002
+    # inventory so the help points agents at this local decision surface when
+    # DontPanic requires a human decision or visual inspection.
+    from dontpanic_orchestrate import command_guidance
+
     parser = argparse.ArgumentParser(
         prog="dontpanic dashboard",
         description=(
@@ -1798,6 +1803,8 @@ def build_parser() -> argparse.ArgumentParser:
             "`open` builds and prints the local URL/path. "
             "`serve` binds localhost-only with file-watch refresh."
         ),
+        epilog=command_guidance.command_help_agent_snippet("dashboard"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="subcommand")
 
