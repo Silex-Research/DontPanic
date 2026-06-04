@@ -1,0 +1,93 @@
+{
+  "task_id": "2026-06-04-004-feat-dashboard-state-fidelity",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Real provenance: every dashboard section declares the actual source it renders from (state-snapshot.json / plans.json / inbox.json / supervisors.json / fleet-summary.json). When the canonical projection is active, legacy tasks.json/agents.json/activity.json must not be cited or rendered. Provenance is data on the section, not a hardcoded footer string.",
+      "steps": [
+        "Attach a provenance field (source file(s)) to each rendered section in the state producer",
+        "Render provenance from that field; remove the hardcoded legacy footer",
+        "Assert legacy tasks.json/agents.json/activity.json are not read when state-snapshot.json projection is active",
+        "Tests: each section's declared provenance matches the file it was built from; legacy footer absent under canonical projection"
+      ],
+      "acceptance": "Every section's displayed provenance equals the file(s) it was actually built from; with the canonical projection active, no section cites or renders legacy tasks/agents/activity.json. Verified by tests asserting provenance==source.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Lifecycle vs activity as separate axes. 'Active Plans' = count of plans with status==active (from plans/state-snapshot). 'Live Now' = count of active supervisors (from dontpanic ps / supervisors.json). Rename the misleading 'Running' label; no label may imply live execution unless sourced from supervisor state.",
+      "steps": [
+        "Source Active Plans from plan status; source Live Now from the supervisor registry",
+        "Rename 'Running' -> 'Active Plans'; add a distinct 'Live Now' indicator",
+        "Audit all labels for implied-live-execution wording; gate any such label on supervisor-sourced data",
+        "Tests: Active Plans==status-active count; Live Now==supervisors count; with 0 supervisors no label reads as 'running'"
+      ],
+      "acceptance": "Active Plans reflects status==active and Live Now reflects active supervisors, from distinct sources; with zero live supervisors nothing on the board claims live execution. Verified by tests pinning each count to its source.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Freshness + refresh contract: each major page shows generated_at / data age and offers a clear refresh action or command (e.g. the exact `dontpanic dashboard build`/serve trigger), so a stale view is visibly stale and re-fetchable.",
+      "steps": [
+        "Surface generated_at + computed data-age per major page from the state envelope",
+        "Add a refresh affordance (action/command) per page; cite the exact command",
+        "Flag stale-beyond-threshold visibly",
+        "Tests: data-age derives from generated_at; refresh trigger present on each major page"
+      ],
+      "acceptance": "Each major page shows generated_at + data age and a refresh trigger; a view past the staleness threshold is visibly flagged. Verified by tests over the rendered envelope.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Agent attribution: when supervisors are live, render which agent is working which plan / feature / kind of work, sourced from the active-supervisor registry; when none are live, render 'none'. Read-only consumption of the registry \u2014 do not redesign it.",
+      "steps": [
+        "Read the active-supervisor registry (ps/supervisors.json) for {agent, plan, feature/kind}",
+        "Render per-kind / per-plan attribution when live; explicit 'none' when empty",
+        "Reconcile against Live Now (F002) so attribution count == Live Now",
+        "Tests: N live supervisors -> N attributions with correct agent/plan; 0 -> 'none'"
+      ],
+      "acceptance": "With live supervisors the board shows which agent works which plan/kind (attribution count == Live Now); with none it says 'none'. Verified by tests over stubbed registry states.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "test",
+      "phase": 3,
+      "description": "Truthfulness invariant tests: rendered labels/counts must equal the source they claim. The render-truth analogue of 001's round-trip invariant. Covers: Live Now == supervisors.length; Active Plans == plans where status==active; Work provenance == the active projection source; stale legacy files cannot override the canonical projection.",
+      "steps": [
+        "Assert Live Now == len(active supervisors) across stubbed registry states",
+        "Assert Active Plans == count(plans status==active) across stubbed ledgers",
+        "Assert each section's provenance == its real source",
+        "Assert presence of stale tasks/agents/activity.json does NOT change the canonical-projection render",
+        "Wire into the orchestrate sweep"
+      ],
+      "acceptance": "Invariant tests prove Live Now==supervisors.length, Active Plans==status-active count, provenance==active source, and that stale legacy files cannot override the canonical projection; a divergent label/count fails the test. Runs in the sweep.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ]
+    }
+  ]
+}
