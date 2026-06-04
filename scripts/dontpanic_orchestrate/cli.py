@@ -4035,6 +4035,9 @@ subcommands:
                               booleans (can_operate / can_be_dispatched /
                               can_orchestrate)
   setup <name>                Operator + worker setup guidance for a named agent
+  commands [--json]           Print the command-guidance inventory as a stable,
+                              versioned JSON envelope (read-only; never runs a
+                              guided command handler)
   register-worker <name>      Assign a registered executor to a role (guarded —
                               refuses agents with no executor)
 
@@ -4128,6 +4131,28 @@ def _agent_main(argv: list[str]) -> int:
         parser.add_argument("name", help="Agent name to produce setup guidance for")
         args = parser.parse_args(rest)
         print(agent_surface.render_setup(args.name), end="")
+        return 0
+
+    if sub == "commands":
+        parser = argparse.ArgumentParser(prog="dontpanic agent commands", add_help=True)
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            dest="as_json",
+            help="(default, and the only supported format) emit the command-guidance "
+            "inventory as a versioned JSON envelope",
+        )
+        parser.parse_args(rest)
+        # Plan 2026-06-03-001 F003 — read-only machine guidance surface. Prints the
+        # F002 command-guidance inventory as a stable, versioned JSON envelope
+        # (schema version + source summary + per-command entries) so an outer
+        # harness can inspect DontPanic's affordances without scraping help text.
+        # This reads command_guidance metadata ONLY — it never resolves a command
+        # path back to a handler or invokes a guided command.
+        from dontpanic_orchestrate import command_guidance
+
+        payload = command_guidance.inventory_public_payload()
+        print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
         return 0
 
     if sub == "register-worker":
@@ -4584,7 +4609,7 @@ Public-alpha command surface:
   project config init|set        Inspect or edit <project>/.dontpanic/dontpanic.json
   projects add|list|show|remove  Register local projects for plan resolution
   manifest init|show             Publish the machine-readable agent manifest
-  agent brief|status|setup|register-worker  Machine agent surface (operator vs worker)
+  agent brief|status|setup|commands|register-worker  Machine agent surface (operator vs worker; `commands` = read-only JSON guidance)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan

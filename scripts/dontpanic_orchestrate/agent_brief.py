@@ -51,12 +51,16 @@ from dontpanic_orchestrate import agent_manifest
 from dontpanic_orchestrate import executors
 from dontpanic_orchestrate import global_config as gc
 
-GENERATOR_VERSION = "1.0"
+GENERATOR_VERSION = "1.1"
 """Version of the brief generator (renderer + layout), independent of the
 DontPanic runtime version. Stamped into :class:`RenderedBrief` and the F003
 managed-block markers so a layout change forces a managed-block rewrite even
 when the underlying facts are unchanged. Bump whenever the rendered structure
-changes in a way that should re-stamp downstream managed blocks."""
+changes in a way that should re-stamp downstream managed blocks.
+
+History: 1.0 → 1.1 added the MACHINE COMMAND GUIDANCE pointer (plan
+2026-06-03-001 F003) that sends agents to the read-only JSON command-guidance
+surface (`dontpanic agent commands`)."""
 
 # ──────────────────────────────  canonical strings  ──────────────────────────────
 
@@ -76,6 +80,18 @@ NOT_IT_ORCHESTRATION = (
 CANONICAL_WORKFLOW = (
     "projects add -> plan lock -> orchestrate/dispatch-from-plan ->\n"
     "cross-model implementation and audit -> approve/resume/close"
+)
+
+# Pointer to the machine-readable command-guidance surface (plan 2026-06-03-001
+# F003). The brief never duplicates the inventory itself — it sends agents to
+# the read-only JSON envelope emitted by ``dontpanic agent commands`` (the F002
+# command-guidance inventory: command class, risk, examples, predecessor hints,
+# and the human-escalation rule). Asserted for presence by tests so the pointer
+# cannot silently drift out of the brief.
+MACHINE_COMMAND_GUIDANCE = (
+    "Run `dontpanic agent commands` for a stable JSON inventory of every\n"
+    "command's class, risk, examples, predecessor hints, and human-escalation\n"
+    "rule. Inspect it before mutating state or dispatching paid work."
 )
 
 
@@ -224,6 +240,9 @@ def render_brief(inputs: BriefInputs) -> RenderedBrief:
         "CANONICAL WORKFLOW",
         CANONICAL_WORKFLOW,
         "",
+        "MACHINE COMMAND GUIDANCE",
+        MACHINE_COMMAND_GUIDANCE,
+        "",
         home_status,
     ]
     text = "\n".join(lines) + "\n"
@@ -250,6 +269,7 @@ __all__ = [
     "BriefInputs",
     "CANONICAL_WORKFLOW",
     "GENERATOR_VERSION",
+    "MACHINE_COMMAND_GUIDANCE",
     "NOT_IT_ORCHESTRATION",
     "RenderedBrief",
     "collect_brief_inputs",

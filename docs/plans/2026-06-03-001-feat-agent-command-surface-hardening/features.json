@@ -75,14 +75,30 @@
         "F001",
         "F002"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) A read-only agent subcommand returns a versioned JSON envelope containing command guidance entries from F002. (2) The envelope includes source summary, command entries, and schema version. (3) The command does not invoke any guided command handler. (4) Tests assert schema stability and coverage parity with the F002 inventory. (5) The generated operating brief points agents to this JSON surface.",
       "steps": [
         "Add the smallest read-only subcommand under the existing agent surface.",
         "Render the F002 inventory to a stable JSON envelope.",
         "Update the generated operating brief with a one-line pointer.",
         "Add tests for read-only behavior and schema stability."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F003-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T14:12:59Z"
     },
     {
       "id": "F004",

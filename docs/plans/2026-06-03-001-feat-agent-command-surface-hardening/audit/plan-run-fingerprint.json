@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-04T13:53:14Z",
+  "captured_at": "2026-06-04T14:06:26Z",
   "decision_lines": [
     "D001\u001feeaabcb451f2f80f560120c13ee241d9bdb258f46a3bc008f918bcb60f967875",
     "D002\u001f2f84598bf0093786f7bf633a3e64fbb64a94b27aa00b1c06f80f119512aa51a2",
@@ -20,7 +20,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "(1) A read-only agent subcommand returns a versioned JSON envelope containing command guidance entries from F002. (2) The envelope includes source summary, command entries, and schema version. (3) The command does not invoke any guided command handler. (4) Tests assert schema stability and coverage parity with the F002 inventory. (5) The generated operating brief points agents to this JSON surface.",
@@ -84,14 +84,14 @@
   "file_hashes": {
     "audit/gate-state.json": "e47f7c8915244e7c336002a4db7caf24483509cc92872aca1f9f9621667eaac3",
     "decisions.jsonl": "b3920b438d3b8a3478b3c9b386574d5197317bf30e5db01dc525268500861d26",
-    "features.json": "7e29c40d6990e7faf07634e83336e652ce6e8bd7e48d47d827881589dc6b1ac5",
+    "features.json": "4b57a8901c895604ba6c732b8b03be9314aa7e8292945177de18b55941c414c9",
     "objective_contract.json": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
     "plan.md": "28efe4c5cfd9e9f3f4e5335228b53c18e2a0a395b55fac4edb862836f1abbf03"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1780581124.938276,
     "decisions.jsonl": 1780580774.162955,
-    "features.json": 1780581162.320434,
+    "features.json": 1780581881.2538633,
     "objective_contract.json": 1780580774.163773,
     "plan.md": 1780580835.2634645
   },

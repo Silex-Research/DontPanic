@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "audit_id": "2026-06-03-001-feat-agent-command-surface-hardening#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-04T14:06:26Z",
+  "completed_at": "2026-06-04T14:10:37Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=13.449712237281572",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-03-001-feat-agent-command-surface-hardening-3sp657xo target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3355 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3965829,
+    "tokens_out": 16597,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-agent-command-surface\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F003] The implementation is complete and scoped. The two doc-dir files (INBOX.md, plan-run-fingerprint.json) were already modified at session start — not by me.\n\n## Summary\n\nI implemented F003, the machine-readable command-guidance surface, by adding a new read-only `dontpanic agent commands` subcommand to `_agent_main` in `cli.py` that prints the existing F002 command-guidance inventory (`command_guidance.inventory_public_payload()`) as a stable, versioned JSON envelope — schema version, source summary (vocabulary + entry count), and one entry per command — reading guidance metadata only and never resolving a command path back to a handler, dispatching, or instantiating an executor. I pointed the generated operating brief at the surface by adding a `MACHINE COMMAND GUIDANCE` section/constant to `agent_brief.py` and bumping `GENERATOR_VERSION` 1.0→1.1 (a layout change that correctly re-stamps the F003 managed AGENTS.md block), and updated the agent-usage and top-level help text to list the new subcommand. I added `test_f003_agent_commands_surface.py` (11 tests) covering the versioned-envelope shape, per-entry round-trip through the F001 model, coverage parity with the F002 inventory, byte-stable schema output, read-only behavior (no config write, no dispatch/executor calls), and the brief pointer. Targeted runs are green: the new file plus the brief, guidance, agent-surface-CLI, repo-onboarding, and architecture-view suites all pass (95 + 41 tests, 0 failures); no full sweep was ru",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f003_agent_commands_surface.py scripts/dontpanic_orchestrate/tests/test_f001_agent_brief.py scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py scripts/dontpanic_orchestrate/tests/test_f003_repo_onboarding.py -q",
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}
