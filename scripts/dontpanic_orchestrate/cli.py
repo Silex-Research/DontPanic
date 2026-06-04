@@ -3926,9 +3926,12 @@ classify it as operator-only or worker-capable.
 
 subcommands:
   brief                       Print the generated DontPanic operating brief
-  status [<name>]             Show worker executors, known operator-only agents,
+  status [<name>] [--json]    Show worker executors, known operator-only agents,
                               effective roles, and the classification of the
-                              named agent (or the current agent when no <name>)
+                              named agent (or the current agent when no <name>).
+                              --json emits the three INDEPENDENT capability
+                              booleans (can_operate / can_be_dispatched /
+                              can_orchestrate)
   setup <name>                Operator + worker setup guidance for a named agent
   register-worker <name>      Assign a registered executor to a role (guarded —
                               refuses agents with no executor)
@@ -3977,8 +3980,19 @@ def _agent_main(argv: list[str]) -> int:
             default=None,
             help="Optional agent name to classify (operator-only vs worker-capable)",
         )
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            dest="as_json",
+            help="Emit the three INDEPENDENT capability booleans (can_operate / "
+            "can_be_dispatched / can_orchestrate) as JSON",
+        )
         args = parser.parse_args(rest)
-        print(agent_surface.render_status(Path.cwd().resolve(), name=args.name), end="")
+        if args.as_json:
+            payload = agent_surface.status_payload(Path.cwd().resolve(), name=args.name)
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(agent_surface.render_status(Path.cwd().resolve(), name=args.name), end="")
         return 0
 
     if sub == "setup":

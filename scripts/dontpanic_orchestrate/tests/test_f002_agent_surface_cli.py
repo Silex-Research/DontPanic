@@ -134,6 +134,129 @@ def test_agent_status_classifies_named_operator_only(tmp_path, monkeypatch) -> N
     assert "can be dispatched as a worker: no" in out
 
 
+# ────────────────  agent status --json: three capability booleans  ────────────────
+# Plan 2026-06-02-001 F002: classify harnesses as three INDEPENDENT capability
+# booleans (can_operate / can_be_dispatched / can_orchestrate), superseding the
+# flat operator-vs-worker binary. Detection + reporting ONLY.
+
+
+def test_status_json_grok_operate_only_true_false_star(tmp_path, monkeypatch) -> None:
+    """Acceptance — Grok → (can_operate=True, can_be_dispatched=False, *).
+
+    The orchestrate axis is a don't-care for Grok (``*``); only operate=True and
+    dispatch=False are asserted. Grok has no executor, so it can operate but is
+    not a dispatchable worker."""
+    monkeypatch.chdir(tmp_path)
+    rc, out, _ = _run(["agent", "status", "grok", "--json"])
+    assert rc == 0
+    payload = json.loads(out)
+    agent = payload["agent"]
+    assert agent["name"] == "grok"
+    # Three independent booleans are all present and boolean-typed.
+    assert set(agent) == {"name", "can_operate", "can_be_dispatched", "can_orchestrate"}
+    for key in ("can_operate", "can_be_dispatched", "can_orchestrate"):
+        assert isinstance(agent[key], bool)
+    # Grok → (True, False, *)
+    assert agent["can_operate"] is True
+    assert agent["can_be_dispatched"] is False
+
+
+def test_status_json_grok_brief_renders_operate_but_not_dispatch_wording(
+    tmp_path, monkeypatch
+) -> None:
+    """Acceptance — the brief renders the exact operate-but-not-dispatch wording
+    derived from can_operate=True / can_be_dispatched=False (text status)."""
+    monkeypatch.chdir(tmp_path)
+    rc, out, _ = _run(["agent", "status", "grok"])
+    assert rc == 0
+    assert "can operate DontPanic but is not a dispatchable worker" in out
+
+
+def test_status_json_registered_worker_can_be_dispatched_true(tmp_path, monkeypatch) -> None:
+    """Acceptance — a registered worker (claude) → can_be_dispatched=True, and
+    can_operate stays True (D002/D006: workers also operate)."""
+    monkeypatch.chdir(tmp_path)
+    rc, out, _ = _run(["agent", "status", "claude", "--json"])
+    assert rc == 0
+    agent = json.loads(out)["agent"]
+    assert agent["name"] == "claude"
+    assert agent["can_be_dispatched"] is True
+    assert agent["can_operate"] is True
+
+
+def test_status_json_axes_are_independent(tmp_path, monkeypatch) -> None:
+    """The three axes are genuinely independent: every role entry carries the
+    full capability triple, and can_operate stays True for every agent
+    (D002/D006) regardless of the dispatch/orchestrate axes."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(agent_surface.CURRENT_AGENT_ENV, raising=False)
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+    rc, out, _ = _run(["agent", "status", "--json"])
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["agent"] is None  # no env signal → no current agent
+    # Each role entry carries the full capability triple.
+    for role, caps in payload["roles"].items():
+        assert set(caps) == {"name", "can_operate", "can_be_dispatched", "can_orchestrate"}
+        assert caps["can_operate"] is True  # D002/D006: always an operator
+
+
+def test_status_json_preserves_d002_d006_unsupported_is_operator(tmp_path, monkeypatch) -> None:
+    """Acceptance (D002/D006) — an unsupported agent is an operator, never a
+    worker without a registered executor. ``can_operate`` is True and
+    ``can_be_dispatched`` is False for an agent with no executor."""
+    monkeypatch.chdir(tmp_path)
+    rc, out, _ = _run(["agent", "status", "some-unknown-agent", "--json"])
+    assert rc == 0
+    agent = json.loads(out)["agent"]
+    assert agent["can_operate"] is True
+    assert agent["can_be_dispatched"] is False
+    assert "some-unknown-agent" not in agent_surface.worker_executors()
+
+
+def test_f002_imports_no_tree_governance_module() -> None:
+    """Acceptance (scope-guard / absence assertion) — F002 is detection and
+    reporting ONLY. No orchestration-tree budget / breaker / undo / governance
+    module is imported by the agent_surface module that owns the capability
+    struct. The can_orchestrate flag is reported, not acted on.
+
+    Parses the module's import statements (not a substring grep, so a docstring
+    mention does not trip it) and asserts none resolve to a tree-governance
+    module.
+    """
+    import ast
+
+    src = Path(agent_surface.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    imported: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            imported.append(base)
+            imported.extend(f"{base}.{alias.name}" for alias in node.names)
+    joined = " ".join(imported).lower()
+    forbidden = (
+        "circuit_breaker",
+        "breaker",
+        "tree_budget",
+        "fan_out",
+        "fanout",
+        "undo",
+        "governance",
+        "quota_admission",
+    )
+    for token in forbidden:
+        assert token not in joined, (
+            f"F002 agent_surface must not import a tree-governance module "
+            f"(found {token!r} in imports: {imported})"
+        )
+    # And the module exposes no symbol that would act on the orchestrate axis.
+    for attr in ("apply_tree_budget", "open_breaker", "undo", "governance"):
+        assert not hasattr(agent_surface, attr)
+
+
 # ──────────────────────────────  agent setup  ──────────────────────────────
 
 
@@ -260,6 +383,14 @@ def test_orchestrate_plan_confirm_reaches_dispatch_path(tmp_path, monkeypatch) -
     """Acceptance #7 — `orchestrate <plan> --confirm` reaches the same in-process
     dispatch path as `dispatch-from-plan <plan> --confirm`."""
     _write_plan(tmp_path)
+    # The --confirm path runs a config-readiness pre-flight (plan
+    # 2026-06-01-001 F009) that requires a valid quota_caps.json; the conftest
+    # redirects $JARVIS_QUOTA_CAPS_PATH to an empty per-test path, so seed a
+    # starter caps file there or the dispatch is blocked before dispatch_volley.
+    # (The dry-run sibling above never reaches this gate.)
+    from dontpanic_orchestrate import quota_caps_loader
+
+    quota_caps_loader.init_starter_file(overwrite=True)
     with (
         mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
         mock.patch(

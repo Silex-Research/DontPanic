@@ -1,7 +1,8 @@
 {
   "plan_id": "2026-06-02-001-feat-control-plane-action-spine",
   "cleared_gates": [
-    "pre_impl"
+    "pre_impl",
+    "pre_merge"
   ],
   "history": [
     {
@@ -33,20 +34,6 @@
       "gate": "pre_merge",
       "at": "2026-06-03T22:23:20Z",
       "actor": "operator"
-    },
-    {
-      "action": "reset",
-      "gate": "pre_merge",
-      "actor": "operator:multi-feature-seq-reconcile",
-      "at": "2026-06-03T22:45:00Z",
-      "note": "Drop F001's pre_merge completion leaking into F002 dispatch (plan-scoped gate-state limitation)."
-    },
-    {
-      "action": "breaker_trip",
-      "gate": "breaker:environmental_blocker",
-      "at": "2026-06-04T03:35:52Z",
-      "actor": "supervisor",
-      "reason": "environmental blocker — round 3 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
     }
   ],
   "gate_events": [
@@ -55,12 +42,16 @@
       "stage": "pre_impl",
       "cleared_at": "2026-06-03T21:25:02Z",
       "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-06-03T22:23:20Z",
+      "cleared_by": "operator"
     }
   ],
   "completed_stages": [
-    "pre_impl"
-  ],
-  "active_breakers": [
-    "breaker:environmental_blocker"
+    "pre_impl",
+    "pre_merge"
   ]
 }

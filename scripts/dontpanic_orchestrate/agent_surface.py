@@ -17,6 +17,7 @@ operate DontPanic, not configure itself as a worker.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -25,6 +26,14 @@ from dontpanic_orchestrate import executors
 from dontpanic_orchestrate.config import resolvers
 
 Classification = Literal["operator-only", "worker-capable"]
+
+# Agents whose harness can spawn sub-agents (an orchestrating harness). This is
+# the THIRD, independent capability axis (F002): orthogonal to can_operate and
+# can_be_dispatched. Reported only — F002 does NOT act on it (no fan-out, tree
+# budget, breaker, or undo; see the scope-guard test). Claude Code Workflow can
+# spawn sub-agents → can_orchestrate; Grok cannot. Kept conservative: an agent
+# earns this flag by being known to orchestrate, not by being a worker.
+ORCHESTRATOR_CAPABLE_AGENTS: frozenset[str] = frozenset({"claude"})
 
 # The three role slots a worker executor can be assigned to. Mirrors
 # config.roles.RolesConfig / resolvers.Role; kept as a tuple here so status
@@ -68,6 +77,90 @@ def classify(name: str) -> Classification:
     """Classify ``name`` from the executor registry alone (F002 acceptance
     #2). ``worker-capable`` iff a real executor exists; else ``operator-only``."""
     return "worker-capable" if is_worker_capable(name) else "operator-only"
+
+
+@dataclass(frozen=True)
+class Capabilities:
+    """Three INDEPENDENT capability booleans for a harness (plan
+    2026-06-02-001 F002), superseding the flat operator-vs-worker binary.
+
+    A harness may report any combination — these are orthogonal axes, not a
+    ladder:
+
+    * ``can_operate`` — drives DontPanic by running its CLI. Any named agent
+      can (D002/D006: an unsupported agent is an operator, never a worker
+      without a registered executor), so this is always True for a named agent.
+    * ``can_be_dispatched`` — has a real executor in
+      :data:`executors.AGENT_REGISTRY` and can be dispatched as a worker.
+    * ``can_orchestrate`` — the harness can spawn sub-agents (e.g. Claude Code
+      Workflow). Reported only — F002 does not act on it.
+
+    Examples: Claude Code Workflow → (True, True, True); Grok → (True, False,
+    False) i.e. operate-only.
+    """
+
+    name: str
+    can_operate: bool
+    can_be_dispatched: bool
+    can_orchestrate: bool
+
+    def as_dict(self) -> dict[str, object]:
+        """Serialise to a stable JSON-friendly dict (key order fixed)."""
+        return {
+            "name": self.name,
+            "can_operate": self.can_operate,
+            "can_be_dispatched": self.can_be_dispatched,
+            "can_orchestrate": self.can_orchestrate,
+        }
+
+    def brief_line(self) -> str:
+        """One-line, capability-derived description for the agent brief / status.
+
+        The operate-but-not-dispatch case renders the exact F002 wording
+        'can operate DontPanic but is not a dispatchable worker' from
+        ``can_operate=True`` / ``can_be_dispatched=False`` — not from a stored
+        label — so the text can never drift from the booleans."""
+        if self.can_operate and not self.can_be_dispatched:
+            tail = (
+                " and can orchestrate sub-agents"
+                if self.can_orchestrate
+                else ""
+            )
+            return (
+                f"{self.name} can operate DontPanic but is not a dispatchable "
+                f"worker{tail}."
+            )
+        if self.can_be_dispatched:
+            tail = (
+                " and can orchestrate sub-agents"
+                if self.can_orchestrate
+                else ""
+            )
+            return (
+                f"{self.name} can operate DontPanic and is a dispatchable "
+                f"worker{tail}."
+            )
+        # can_operate is always True for a named agent, so this is unreachable
+        # for real inputs; keep an honest fallback rather than asserting.
+        return f"{self.name} has no operating capability."
+
+
+def capabilities(name: str) -> Capabilities:
+    """Derive the three INDEPENDENT capability booleans for ``name`` (F002).
+
+    ``can_operate`` is always True for a named agent (D002/D006: any agent can
+    operate DontPanic). ``can_be_dispatched`` comes from the executor registry
+    alone — the SAME source as :func:`classify`, so the worker axis never
+    contradicts the operator/worker text. ``can_orchestrate`` is read from
+    :data:`ORCHESTRATOR_CAPABLE_AGENTS` and is reported, never acted on.
+    """
+    norm = name.strip().lower()
+    return Capabilities(
+        name=norm,
+        can_operate=True,
+        can_be_dispatched=is_worker_capable(norm),
+        can_orchestrate=norm in ORCHESTRATOR_CAPABLE_AGENTS,
+    )
 
 
 def resolve_roles(project_dir: Path) -> dict[str, str]:
@@ -152,16 +245,19 @@ def render_status(project_dir: Path, *, name: str | None = None) -> str:
     target = name if name is not None else detect_current_agent()
     if target is not None:
         label = "AGENT" if name is not None else "CURRENT AGENT"
+        caps = capabilities(target)
         cls = classify(target)
         dispatchable = "yes" if cls == "worker-capable" else "no"
         lines.append(f"{label}: {target}")
         lines.append(f"  classification: {cls}")
         lines.append(f"  can be dispatched as a worker: {dispatchable}")
-        if cls == "operator-only":
-            lines.append(
-                f"  {target} can operate DontPanic by running its CLI, but has no "
-                "executor and cannot be registered as a worker."
-            )
+        # Three INDEPENDENT capability booleans (F002) — the honest superset of
+        # the operator/worker binary above; can_orchestrate is reported, not
+        # acted on.
+        lines.append(f"  can_operate: {str(caps.can_operate).lower()}")
+        lines.append(f"  can_be_dispatched: {str(caps.can_be_dispatched).lower()}")
+        lines.append(f"  can_orchestrate: {str(caps.can_orchestrate).lower()}")
+        lines.append(f"  {caps.brief_line()}")
         lines.append("")
     else:
         lines.append("CURRENT AGENT: unknown")
@@ -176,6 +272,29 @@ def render_status(project_dir: Path, *, name: str | None = None) -> str:
         "be dispatched."
     )
     return "\n".join(lines) + "\n"
+
+
+def status_payload(project_dir: Path, *, name: str | None = None) -> dict[str, object]:
+    """Machine-readable ``dontpanic agent status --json`` payload (F002).
+
+    Reports the target agent's three INDEPENDENT capability booleans
+    (``can_operate`` / ``can_be_dispatched`` / ``can_orchestrate``) plus the
+    worker roster, known operator-only agents, and the effective per-role
+    capabilities. The target is the explicitly named agent, else the detected
+    current agent, else ``None`` (no env signal). Read-only — derives entirely
+    from the executor registry and layered config; no write, no dispatch.
+    """
+    target = name if name is not None else detect_current_agent()
+    roles = resolve_roles(project_dir)
+    return {
+        "worker_executors": worker_executors(),
+        "known_operator_only_agents": known_operator_only_agents(),
+        "roles": {
+            role: capabilities(roles[role]).as_dict() for role in ROLES
+        },
+        "agent": capabilities(target).as_dict() if target is not None else None,
+        "current_agent_source": "named" if name is not None else "detected",
+    }
 
 
 def render_setup(name: str) -> str:
@@ -233,17 +352,21 @@ def assert_registrable(name: str) -> None:
 
 __all__ = [
     "CURRENT_AGENT_ENV",
+    "Capabilities",
     "Classification",
     "KNOWN_OPERATOR_AGENTS",
+    "ORCHESTRATOR_CAPABLE_AGENTS",
     "ROLES",
     "RegisterWorkerError",
     "assert_registrable",
+    "capabilities",
     "classify",
     "detect_current_agent",
     "is_worker_capable",
     "known_operator_only_agents",
     "render_setup",
     "render_status",
+    "status_payload",
     "resolve_roles",
     "worker_executors",
 ]

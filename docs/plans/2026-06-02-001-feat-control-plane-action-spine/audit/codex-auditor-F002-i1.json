@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "audit_id": "2026-06-02-001-feat-control-plane-action-spine#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-04T03:19:45Z",
+  "completed_at": "2026-06-04T03:22:51Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-02-001-feat-control-plane-action-spine-h1kbf7jg target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 683474 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2018280,
+    "tokens_out": 10328,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. No EC5 declaration finding: the implementer summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context` is `env=dev`, `project=null`, `commands_run=[]`; no forbidden command shapes were present.\n\nFINDING (high, correctness): `agent status --json` is not implemented. Evidence: `scripts/dontpanic_orchestrate/cli.py:3972` only parses optional `name`; direct check exits 2 with “unrecognized arguments: --json”. Recommendation: add `--json` handling that reports `can_operate`, `can_be_dispatched`, and `can_orchestrate`.\n\nFINDING (high, correctness): F002 still uses the old binary operator/worker classification, not an independent three-boolean capability struct. Evidence: `agent_surface.py:61-70` returns only `worker-capable` vs `operator-only`; no `can_orchestrate` reporting exists. Recommendation: replace with a capability object/dataclass and derive text/JSON from it.\n\nFINDING (medium, test_coverage): Required acceptance tests are missing. Evidence: `test_f002_agent_surface_cli.py:73-135` only asserts text-mode binary classification; no Grok `(true,false,*)`, registered-worker JSON boolean, required wording, or tree-budget/governance absence assertion exists. Recommendation: add those tests before signoff.\n\nFINDING (medium, test_coverage): No green full orchestrate/F002 sweep evidence is available. Evidence: implementer audit status is `blocked`, commands_run is empty",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff HEAD~1 -- scripts/dontpanic_orchestrate/agent_surface.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import cli; raise SystemExit(cli.main([\"agent\",\"status\",\"--json\"]))'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import cli; raise SystemExit(cli.main([\"agent\",\"status\",\"grok\"]))'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "`agent status --json` is not implemented. Evidence: `scripts/dontpanic_orchestrate/cli.py:3972` only parses optional `name`; direct check exits 2 with “unrecognized arguments: --json”. Recommendation: add `--json` handling that reports `can_operate`, `can_be_dispatched`, and `can_orchestrate`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "F002 still uses the old binary operator/worker classification, not an independent three-boolean capability struct. Evidence: `agent_surface.py:61-70` returns only `worker-capable` vs `operator-only`; no `can_orchestrate` reporting exists. Recommendation: replace with a capability object/dataclass and derive text/JSON from it.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "Required acceptance tests are missing. Evidence: `test_f002_agent_surface_cli.py:73-135` only asserts text-mode binary classification; no Grok `(true,false,*)`, registered-worker JSON boolean, required wording, or tree-budget/governance absence assertion exists. Recommendation: add those tests before signoff.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "No green full orchestrate/F002 sweep evidence is available. Evidence: implementer audit status is `blocked`, commands_run is empty, and the feature record still has `passes: false` at `features.json:55-56`. Recommendation: rerun in an environment with writable temp space and attach passing output. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff HEAD~1 -- scripts/dontpanic_orchestrate/agent_surface.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/tests/te",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

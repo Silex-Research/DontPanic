@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-03T21:40:55Z",
+  "captured_at": "2026-06-04T02:56:08Z",
   "decision_lines": [
     "CP-D001\u001fb8f19f5b7196b0551135979915837c0d65853b522e6d9ac5ae50d456db3d0635",
     "CP-D002\u001fa4ec507e0ea86a6aaf6ae56084f22ae0923a85c27e1ab360d744c1282578d1c3",
@@ -7,7 +7,8 @@
     "CP-D004\u001fbb3266278dd0acba34d5d197eee245c0d30efffd6de33bd47d13e738e76f2d9c",
     "CP-D005\u001f605a35298732400450e4ea4f18c8d1941515201b70209e28941b434903ab3c69",
     "CP-D006\u001f6fe20468d1d361c105b7cf682e9b12f75d9e64c5ee6dc375c27a13bf9e18d018",
-    "D001\u001f4b410e167017a831da1f0d04d55e0e1097e4b992e05c824aba156c6f769e53f4"
+    "D001\u001f4b410e167017a831da1f0d04d55e0e1097e4b992e05c824aba156c6f769e53f4",
+    "D002\u001f22acdb889ce95df1b77c841aa10ea732c0524e8b9b97b4497f62cdb5f7dcb060"
   ],
   "features_semantics": {
     "by_id": {
@@ -15,7 +16,7 @@
         "acceptance": "A parametrized test loads ActionItems from all producer paths (provider functions, Guidance.to_action_items, _rendered_to_action_item_dict) and asserts: (a) every item carries audience, dedupe_key, reversible, plain_consequence, dashboard_url; (b) no safe_command field exists and exact_command+automatable encode command safety; (c) dedupe_key is producer-set and dedup (merge_with_event_sidecar + fleet aggregation) keys on dedupe_key, not id-prefix; (d) ActionItem rejects an unvalidated exact_command at construction. Full orchestrate sweep stays green.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
         "acceptance": "`agent status --json` reports can_operate / can_be_dispatched / can_orchestrate as three independent booleans; a test asserts Grok \u2192 (true,false,*) with the brief rendering operate-but-not-dispatch wording, a registered worker \u2192 can_be_dispatched=true, and that no tree-budget/governance module is imported or invoked by F002 code (absence assertion). Full orchestrate sweep stays green.",
@@ -42,16 +43,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "5d8d825a0c8949f0781907ff11570c17024a91236342500bed617eb53e1dc645",
-    "decisions.jsonl": "cf53b73209f5758c195fdc88973a612fc3fdcafc3ffa3130014274dd0c1882f2",
-    "features.json": "c05fcbf45d29d9f8723594636597f469a0b118baf152cdb3604ff3d9c3e97849",
+    "audit/gate-state.json": "556132f081b8a124b63d7d7469e5e654ef81129495f51dc6bc4ac07269a9f4e9",
+    "decisions.jsonl": "3ac209175bba22d67f99c99f09db673c5e50f260a4665bd6cbd98c80976748cf",
+    "features.json": "6574bce45f03e64fd871cae50b39de949713132a3b4ef94563206f7d14b2a9e5",
     "objective_contract.json": "cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
     "plan.md": "7cadcd0a97d4756e09a5691e7cfd6d80cd58d57d9627fb995f01b1e07132fe4c"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1780521902.9706297,
-    "decisions.jsonl": 1780521716.2905557,
-    "features.json": 1780411120.0046535,
+    "audit/gate-state.json": 1780534048.2786493,
+    "decisions.jsonl": 1780533072.8171148,
+    "features.json": 1780531990.3051164,
     "objective_contract.json": 1780521652.9047234,
     "plan.md": 1780521716.7072031
   },

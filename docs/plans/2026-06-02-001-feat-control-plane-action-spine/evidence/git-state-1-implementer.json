@@ -58,120 +58,52 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/agent_manifest.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/gate-state.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/dashboard_relevance.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/patch-completeness-0.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/operations_guidance.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/plan-run-fingerprint.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/operator_console.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/transcript.md",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/projects_dashboard.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/decisions.jsonl",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/architecture_regen_failed.json",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/git-state-0-auditor.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/breaker_patch_incomplete_legacy.json",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/git-state-0-implementer.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/breaker_tripped.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/calibration_required.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/config_required.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/environmental_blocker_short_circuit.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/gate_hit.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/gate_state_reconciliation_failed.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/no_progress_classification.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/quota_warn.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/unit_mismatch.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/verdict_blocked_reconciled.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/verdict_mismatch.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/volley_start.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/volley_terminal_blocked.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/event_messaging_snapshots/volley_terminal_signed_off.json",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_operator_console_f001.py",
+      "path": "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/goal-governance/pre_impl/override.json",
       "status": "M"
     }
   ],
   "untracked": [
+    ".tmp-f002/",
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F010_iter3.json",
     "docs/plans/2026-05-30-001-feat-universal-agent-repo-onboarding-v0/audit/no_progress_classification_F016_iter2.json",
     "docs/plans/2026-06-02-001-feat-control-plane-action-spine/INBOX.md",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/claude-implementer-F001-i0.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/claude-implementer-F001-i1.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/codex-auditor-F001-i0.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/gate-state.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/plan-run-fingerprint.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/transcript.md",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/git-state-0-implementer.json",
-    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/evidence/plan-review/",
+    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/claude-implementer-F002-i1.json",
+    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/codex-auditor-F002-i0.json",
+    "docs/plans/2026-06-02-001-feat-control-plane-action-spine/audit/gate-state.json.bak",
     "docs/plans/2026-06-02-002-fix-orchestrator-convergence-and-close-friction/evidence/applicable-skills.json",
     "docs/plans/2026-06-02-002-fix-orchestrator-convergence-and-close-friction/evidence/required-capabilities.json",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/",
     "scripts/_run_sufficiency_audit.py",
-    "scripts/dashboard/",
-    "scripts/dontpanic_orchestrate/tests/test_action_spine_f001.py"
+    "scripts/dashboard/"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
