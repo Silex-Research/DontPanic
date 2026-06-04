@@ -1,0 +1,16 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

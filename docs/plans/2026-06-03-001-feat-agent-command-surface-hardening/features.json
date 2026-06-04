@@ -8,14 +8,30 @@
       "phase": 0,
       "description": "Pure command guidance contract. Define the typed data shape that describes a DontPanic command for an interactive agent: path, class, audience, examples, predecessor hints, and human escalation rule. This is a pure model only; it does not render help or execute commands.",
       "depends_on": [],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) A closed typed model exists for command guidance with fields for path, class, audience, examples, predecessor hints, and human escalation rule. (2) The command class vocabulary is closed and includes read-only inspection, lifecycle mutation, dispatch/paid work, configuration mutation, diagnostic inspection, and human handoff. (3) Model validation rejects unknown classes and malformed examples. (4) Tests cover valid construction, invalid class rejection, and serialization stability. (5) No existing command behavior changes.",
       "steps": [
         "Define the pure command guidance model in a small module.",
         "Keep the vocabulary closed and documented in code.",
         "Add unit tests for validation and serialization.",
         "Do not wire command help or JSON output in this feature."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T13:52:42Z"
     },
     {
       "id": "F002",

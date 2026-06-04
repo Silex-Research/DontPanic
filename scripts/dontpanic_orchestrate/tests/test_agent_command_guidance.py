@@ -95,6 +95,24 @@ def test_guidance_model_rejects_malformed_examples() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        (),
+        ("",),
+        ("what-now", "  "),
+    ],
+)
+def test_command_example_rejects_malformed_argv(argv: tuple[str, ...]) -> None:
+    with pytest.raises(ValidationError):
+        CommandExample(argv=argv, description="Inspect current actions.")
+
+
+def test_command_example_rejects_empty_description() -> None:
+    with pytest.raises(ValidationError):
+        CommandExample(argv=("what-now",), description="   ")
+
+
 def test_inventory_covers_current_validator_vocabulary() -> None:
     inventory = command_guidance.command_guidance_by_command()
 
