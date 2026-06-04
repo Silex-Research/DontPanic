@@ -145,6 +145,59 @@ def test_representative_inventory_classification(
     assert entry.human_escalation_rule
 
 
+@pytest.mark.parametrize(
+    ("command", "expected_class"),
+    [
+        # codex F002-i0: a top-level command must advertise the class of its
+        # riskiest supported subcommand, never a read-only entry point that
+        # hides a write/side-effecting path.
+        # `agent register-worker` writes roles.<role> (a guarded config write).
+        ("agent", CommandClass.CONFIG_MUTATION),
+        # `mcp serve` starts a long-running local MCP server.
+        ("mcp", CommandClass.LIFECYCLE_MUTATION),
+    ],
+)
+def test_commands_with_riskier_subcommands_are_not_under_classified(
+    command: str,
+    expected_class: CommandClass,
+) -> None:
+    inventory = command_guidance.command_guidance_by_command()
+    entry = inventory[command]
+
+    assert entry.command_class is expected_class
+    assert entry.command_class is not CommandClass.READONLY_INSPECTION
+    # The honest, command-specific escalation/predecessor text must survive,
+    # not the generic class-derived default.
+    assert entry.predecessor_hints
+    assert entry.human_escalation_rule.strip()
+
+
+def test_inventory_covers_every_workflow_group() -> None:
+    # F002 acceptance (3): the populated inventory must represent every known
+    # workflow group an agent touches, not just a subset of the closed class
+    # vocabulary. Asserting class coverage here (not just the enum being closed)
+    # is what keeps inspection/lifecycle/paid/config/diagnostics/handoff present.
+    inventory = command_guidance.command_guidance_inventory()
+    represented = {entry.command_class for entry in inventory}
+
+    assert represented == set(CommandClass)
+
+
+def test_every_inventory_entry_carries_full_metadata() -> None:
+    # F002 acceptance (2): every entry — not only the representative sample —
+    # must carry a class, audience, examples, predecessor hints, and a human
+    # escalation rule that serialize through the F001 model.
+    for entry in command_guidance.command_guidance_inventory():
+        assert isinstance(entry.command_class, CommandClass)
+        assert entry.audience
+        assert all(isinstance(member, Audience) for member in entry.audience)
+        assert entry.examples
+        assert entry.predecessor_hints
+        assert entry.human_escalation_rule.strip()
+        # Serializing through the F001 model must round-trip without loss.
+        assert CommandGuidance.model_validate(entry.as_public_dict()) == entry
+
+
 def test_inventory_payload_is_versioned_and_stable() -> None:
     payload = command_guidance.inventory_public_payload()
 

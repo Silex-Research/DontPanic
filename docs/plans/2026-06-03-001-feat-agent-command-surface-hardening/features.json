@@ -41,14 +41,30 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) The current top-level command vocabulary has guidance entries. (2) Each entry has a class, audience, examples, predecessor hints, and human escalation rule. (3) Entries cover the known workflow groups used by agents: inspection, lifecycle change, paid work, configuration change, diagnostics, and human handoff. (4) Unit tests prove inventory entries serialize through the F001 model and representative entries carry the expected metadata. (5) The inventory does not become an executable router; it is metadata only.",
       "steps": [
         "Build the inventory entries from the current top-level command vocabulary.",
         "Classify representative command groups with the F001 model.",
         "Add unit tests for representative entries.",
         "Keep all command execution out of the inventory module."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F002-i1.json",
+          "note": "signed_off auditor envelope (codex, iteration 1) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T14:04:41Z"
     },
     {
       "id": "F003",

@@ -2,13 +2,20 @@
   "staged": [],
   "unstaged_modified": [
     {
+      "path": "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/plan-run-fingerprint.json",
+      "status": "M"
+    },
+    {
       "path": "scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/INBOX.md",
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/"
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F002-i0.json"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

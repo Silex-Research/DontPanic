@@ -124,6 +124,10 @@ def _example(command: str, *rest: str, description: str) -> CommandExample:
     return CommandExample(argv=(command, *rest), description=description)
 
 
+# Base class per top-level command — the class of the command's most common
+# (often read-only) entry point. Commands whose *riskiest* subcommand is more
+# dangerous than this base are bumped up via ``_SUBCOMMAND_CLASS_OVERRIDES``;
+# never read this table without going through :func:`_effective_class`.
 _CLASS_BY_COMMAND: dict[str, CommandClass] = {
     "agent": CommandClass.READONLY_INSPECTION,
     "approve": CommandClass.LIFECYCLE_MUTATION,
@@ -160,9 +164,53 @@ _CLASS_BY_COMMAND: dict[str, CommandClass] = {
 }
 
 
+# Subcommand surfaces that are riskier than a command's base class suggests.
+# The inventory advertises the *riskiest* supported subcommand so an agent is
+# never told a command is safer than one of its real paths (codex F002-i0):
+# ``agent register-worker`` writes ``roles.<role>`` (a guarded config write) and
+# ``mcp serve`` starts a long-running local server — neither is read-only.
+_SUBCOMMAND_CLASS_OVERRIDES: dict[str, dict[str, CommandClass]] = {
+    "agent": {"register-worker": CommandClass.CONFIG_MUTATION},
+    "mcp": {"serve": CommandClass.LIFECYCLE_MUTATION},
+}
+
+
+# Caution ordering, least → most caution an agent must exercise. Used to pick
+# the riskiest class among a command's base class and its flagged subcommands.
+_CLASS_RISK_ORDER: tuple[CommandClass, ...] = (
+    CommandClass.READONLY_INSPECTION,
+    CommandClass.DIAGNOSTIC_INSPECTION,
+    CommandClass.HUMAN_HANDOFF,
+    CommandClass.CONFIG_MUTATION,
+    CommandClass.LIFECYCLE_MUTATION,
+    CommandClass.DISPATCH_PAID_WORK,
+)
+
+
+def _effective_class(command: str) -> CommandClass:
+    """Effective class for a top-level command.
+
+    Returns the most cautious of the command's base class and any flagged
+    subcommand surface, so a command is never classified as safer than its
+    riskiest supported subcommand.
+    """
+    candidates = [_CLASS_BY_COMMAND[command]]
+    candidates.extend(_SUBCOMMAND_CLASS_OVERRIDES.get(command, {}).values())
+    return max(candidates, key=_CLASS_RISK_ORDER.index)
+
+
 _EXAMPLES_BY_COMMAND: dict[str, tuple[CommandExample, ...]] = {
     "agent": (
         _example("agent", "brief", description="Print the generated operating brief."),
+        _example(
+            "agent",
+            "register-worker",
+            "<name>",
+            "--role",
+            "implementer",
+            "--dry-run",
+            description="Preview assigning a registered worker to a role (guarded write).",
+        ),
     ),
     "approve": (
         _example("approve", "<plan>", "<gate>", description="Approve a named gate."),
@@ -309,6 +357,34 @@ _ESCALATION_BY_CLASS: dict[CommandClass, str] = {
 }
 
 
+# Per-command overrides for commands whose riskiest subcommand differs from
+# their most common entry point, so the generic class-derived text does not
+# misdescribe the surface (codex F002-i0). Commands absent here fall back to
+# the class-derived defaults above.
+_PREDECESSORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
+    "agent": (
+        "`agent brief`/`status` are read-only; inspect roles/config before the "
+        "guarded `agent register-worker` write.",
+    ),
+    "mcp": (
+        "`mcp serve` starts a long-running local MCP server; confirm the host "
+        "actually needs it before launching.",
+    ),
+}
+
+
+_ESCALATION_BY_COMMAND: dict[str, str] = {
+    "agent": (
+        "Read-only `agent brief`/`status` need no approval; ask the human before "
+        "`agent register-worker`, which assigns a worker to a role."
+    ),
+    "mcp": (
+        "Do not start the MCP server yourself — explain that `mcp serve` is a "
+        "long-running process and let the operator or host launch it."
+    ),
+}
+
+
 def known_command_paths() -> tuple[tuple[str, ...], ...]:
     """Projected top-level command paths from the validator vocabulary."""
     return tuple((command,) for command in sorted(command_validation.known_subcommands()))
@@ -322,14 +398,20 @@ def command_guidance_inventory() -> tuple[CommandGuidance, ...]:
     """
     entries: list[CommandGuidance] = []
     for command in sorted(command_validation.known_subcommands()):
-        command_class = _CLASS_BY_COMMAND[command]
+        command_class = _effective_class(command)
+        predecessor_hints = _PREDECESSORS_BY_COMMAND.get(
+            command, _PREDECESSORS_BY_CLASS[command_class]
+        )
+        human_escalation_rule = _ESCALATION_BY_COMMAND.get(
+            command, _ESCALATION_BY_CLASS[command_class]
+        )
         entries.append(
             CommandGuidance(
                 path=(command,),
                 command_class=command_class,
                 examples=_EXAMPLES_BY_COMMAND[command],
-                predecessor_hints=_PREDECESSORS_BY_CLASS[command_class],
-                human_escalation_rule=_ESCALATION_BY_CLASS[command_class],
+                predecessor_hints=predecessor_hints,
+                human_escalation_rule=human_escalation_rule,
             )
         )
     return tuple(entries)

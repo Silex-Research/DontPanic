@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-04T13:47:52Z",
+  "captured_at": "2026-06-04T13:53:14Z",
   "decision_lines": [
     "D001\u001feeaabcb451f2f80f560120c13ee241d9bdb258f46a3bc008f918bcb60f967875",
     "D002\u001f2f84598bf0093786f7bf633a3e64fbb64a94b27aa00b1c06f80f119512aa51a2",
@@ -12,7 +12,7 @@
         "acceptance": "(1) A closed typed model exists for command guidance with fields for path, class, audience, examples, predecessor hints, and human escalation rule. (2) The command class vocabulary is closed and includes read-only inspection, lifecycle mutation, dispatch/paid work, configuration mutation, diagnostic inspection, and human handoff. (3) Model validation rejects unknown classes and malformed examples. (4) Tests cover valid construction, invalid class rejection, and serialization stability. (5) No existing command behavior changes.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
         "acceptance": "(1) The current top-level command vocabulary has guidance entries. (2) Each entry has a class, audience, examples, predecessor hints, and human escalation rule. (3) Entries cover the known workflow groups used by agents: inspection, lifecycle change, paid work, configuration change, diagnostics, and human handoff. (4) Unit tests prove inventory entries serialize through the F001 model and representative entries carry the expected metadata. (5) The inventory does not become an executable router; it is metadata only.",
@@ -84,14 +84,14 @@
   "file_hashes": {
     "audit/gate-state.json": "e47f7c8915244e7c336002a4db7caf24483509cc92872aca1f9f9621667eaac3",
     "decisions.jsonl": "b3920b438d3b8a3478b3c9b386574d5197317bf30e5db01dc525268500861d26",
-    "features.json": "055707264398176230855a06d5520f6904393f588d88b5426ec16843a54f2e43",
+    "features.json": "7e29c40d6990e7faf07634e83336e652ce6e8bd7e48d47d827881589dc6b1ac5",
     "objective_contract.json": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
     "plan.md": "28efe4c5cfd9e9f3f4e5335228b53c18e2a0a395b55fac4edb862836f1abbf03"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1780581124.938276,
     "decisions.jsonl": 1780580774.162955,
-    "features.json": 1780580774.1634274,
+    "features.json": 1780581162.320434,
     "objective_contract.json": 1780580774.163773,
     "plan.md": 1780580835.2634645
   },

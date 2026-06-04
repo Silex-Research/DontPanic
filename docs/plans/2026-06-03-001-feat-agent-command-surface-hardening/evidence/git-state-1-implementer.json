@@ -14,7 +14,15 @@
       "status": "M"
     },
     {
+      "path": "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/command_guidance.py",
       "status": "M"
     },
     {
@@ -24,6 +32,7 @@
   ],
   "untracked": [
     "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F002-i0.json",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F002-i1.json",
     "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/codex-auditor-F002-i0.json"
   ],
   "deleted_staged": [],
