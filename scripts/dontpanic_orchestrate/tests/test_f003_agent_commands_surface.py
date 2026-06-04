@@ -33,11 +33,13 @@ import pytest
 HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
-from dontpanic_orchestrate import agent_brief  # noqa: E402
-from dontpanic_orchestrate import cli  # noqa: E402
-from dontpanic_orchestrate import command_guidance  # noqa: E402
-from dontpanic_orchestrate import command_validation  # noqa: E402
-from dontpanic_orchestrate import executors  # noqa: E402
+from dontpanic_orchestrate import (  # noqa: E402
+    agent_brief,
+    cli,
+    command_guidance,
+    command_validation,
+    executors,
+)
 from dontpanic_orchestrate import global_config as gc  # noqa: E402
 
 

@@ -1,0 +1,17 @@
+Evidence for journey: agent-loads-versioned-guide
+Required evidence: test_output: packaged guide parity with command inventory
+
+Command/test run locally:
+  PYTHONPATH=scripts pytest -q scripts/dontpanic_orchestrate/tests/test_f006_agent_guide.py
+
+Result:
+  The F006 guide suite passed locally during closeout. The tests assert:
+  - dontpanic agent guide prints a version-stamped generated guide
+  - dontpanic agent guide --path prints the local guide locator
+  - dontpanic agent guide --write materializes the guide under DONTPANIC_HOME
+  - guide content embeds the generated brief
+  - command examples in the guide are exact inventory examples
+  - root help points agents to the guide
+
+Related feature evidence:
+  - F006 local guide signoff: audit/codex-auditor-F006-i1.json

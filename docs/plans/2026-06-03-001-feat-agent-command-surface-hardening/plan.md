@@ -1,7 +1,7 @@
 ---
 id: 2026-06-03-001-feat-agent-command-surface-hardening
 title: Agent command-surface hardening
-status: active
+status: completed
 description: |
   Make every DontPanic command an interactive agent is likely to touch
   self-describing, policy-aware, and discoverable from the CLI. Agents should

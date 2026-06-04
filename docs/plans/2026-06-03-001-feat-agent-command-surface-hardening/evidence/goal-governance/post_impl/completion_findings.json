@@ -1,0 +1,14 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-04T15:07:03.093766+00:00",
+  "plan_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/cli-json/agent-uses-json-not-help-scraping/test_output: machine JSON command-guidance envelope schema and coverage.log",
+    "evidence/goal-governance/post_impl/cli/agent-lands-on-workflow-command/test_output: future-command coverage gate fails on missing guidance.log",
+    "evidence/goal-governance/post_impl/cli/agent-loads-versioned-guide/test_output: packaged guide parity with command inventory.log",
+    "evidence/goal-governance/post_impl/cli/new-agent-starts-correctly/test_output: command inventory coverage against command_validation.known_subcommands.log",
+    "evidence/goal-governance/post_impl/cli/new-agent-starts-correctly/test_output: root help and representative workflow command help include agent guidance.log"
+  ],
+  "findings": []
+}

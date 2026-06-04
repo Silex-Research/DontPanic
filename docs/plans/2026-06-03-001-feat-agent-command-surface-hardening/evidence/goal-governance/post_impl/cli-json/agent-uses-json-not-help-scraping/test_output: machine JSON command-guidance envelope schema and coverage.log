@@ -1,0 +1,16 @@
+Evidence for journey: agent-uses-json-not-help-scraping
+Required evidence: test_output: machine JSON command-guidance envelope schema and coverage
+
+Command/test run locally:
+  PYTHONPATH=scripts pytest -q scripts/dontpanic_orchestrate/tests/test_f003_agent_commands_surface.py scripts/dontpanic_orchestrate/tests/test_agent_command_guidance.py
+
+Result:
+  The relevant suites passed locally during closeout. The tests assert:
+  - dontpanic agent commands emits a versioned JSON envelope
+  - the envelope includes schema_version, source, and commands
+  - the envelope has coverage parity with command_validation.known_subcommands
+  - each command entry validates through the CommandGuidance model
+  - the command is read-only and never dispatches or instantiates an executor
+
+Related feature evidence:
+  - F003 machine-readable surface signoff: audit/codex-auditor-F003-i0.json

@@ -31,9 +31,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
-from dontpanic_orchestrate import agent_brief  # noqa: E402
-from dontpanic_orchestrate import cli  # noqa: E402
-from dontpanic_orchestrate import command_guidance  # noqa: E402
+from dontpanic_orchestrate import agent_brief, cli, command_guidance  # noqa: E402
 
 
 def _run(argv: list[str]) -> tuple[int, str, str]:
