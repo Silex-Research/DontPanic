@@ -46,6 +46,70 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-04 — Agent command surface + skill guidance (plan 2026-06-03-001)
+
+### Added
+- `dontpanic agent commands` — read-only command that prints DontPanic's command
+  inventory as stable JSON (path, class, audience, examples, prerequisites) so an
+  outer harness or interactive agent can discover what's automatable without
+  scraping `--help`.
+- `dontpanic agent guide` — a version-matched, offline "start here" operating
+  guide for agent/harness environments that can't reach the live brief.
+- Bare `dontpanic` / `dontpanic --help` now opens with a "Start here (for AI
+  agents)" block pointing at `agent brief` / `agent commands` / `agent guide`,
+  and the most-touched workflow help pages (lock, dispatch, approve, …) carry
+  class-specific agent guidance (read-only vs mutating vs gated).
+- `doctor` gains an advisory `skill-rubrics` probe: it flags high-value skills
+  that lack an invocation rubric. Advisory only — it never blocks readiness or
+  escalates the doctor exit code.
+
+### Changed
+- A regression gate now refuses to ship a new top-level command (or a newly
+  automatable example) without a matching entry in the command-guidance
+  inventory, so the agent surface can't silently drift from the real CLI.
+
+Surfaces affected: CLI commands, CLI help, doctor, capability/skill manifests
+
+## 2026-06-03 — Control-plane action spine + honest agent roles (plan 2026-06-02-001)
+
+### Added
+- `ActionItem` — DontPanic's single canonical control-plane action contract —
+  gains five human-facing fields: `audience[]`, `dedupe_key`, `reversible`,
+  `plain_consequence`, and `dashboard_url`. `dedupe_key` (not `id`) is now the
+  dedup authority across surfaces.
+- `dontpanic agent status` now reports three INDEPENDENT capability booleans —
+  `can_operate` (drives DontPanic), `can_be_dispatched` (worker executor), and
+  `can_orchestrate` (spawns sub-agents) — instead of conflating operator and
+  worker. Detection/reporting only.
+
+### Changed
+- The dashboard, CLI/JSON (`what-now`), and the onboarding agent-brief managed
+  block now all render from the same `ActionItem` contract, deduped by
+  `dedupe_key`, with secret-shape scrubbing enforced at the render boundary.
+  This closes a gap where `what-now --format json` previously emitted an
+  unsanitized legacy payload.
+
+Surfaces affected: CLI commands, CLI/JSON output, dashboard, agent-brief / AGENTS.md
+
+## 2026-06-03 — Operator-finish close path + convergence-delta breaker (plan 2026-06-02-002)
+
+### Added
+- `dontpanic close` accepts honest terminal classes beyond
+  `stopped_no_progress` — including the operator-finish close for work an
+  auditor signed off but that never reached an automated `passes:true` — so a
+  legitimately-done plan no longer has to be forced through the no-progress
+  path.
+
+### Changed
+- The `no_progress` circuit breaker now treats a round whose auditor findings
+  change materially from the prior round as **progress**, not stagnation —
+  preventing premature stops while real iteration is still happening.
+- The patch-completeness gate now surfaces a new IMPLEMENTATION module that a
+  dispatch imports but never tracked in git (e.g. a freshly-added helper),
+  catching "it works on my machine" gaps before close.
+
+Surfaces affected: CLI commands, supervisor close/convergence behavior
+
 ## 2026-06-03 — Plan-review scope governance + config-readiness (plan 2026-06-01-001)
 
 ### Added

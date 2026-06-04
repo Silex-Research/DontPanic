@@ -565,6 +565,21 @@ It returns the canonical command surface, including the local MCP server:
 }
 ```
 
+An interactive agent that can run the CLI should start with the agent surface,
+which is self-describing and needs no source-reading:
+
+```bash
+dontpanic agent brief       # generated operating brief — read this first
+dontpanic agent commands    # machine command guidance as stable JSON
+dontpanic agent guide       # version-matched, offline "start here" guide
+dontpanic agent status      # can_operate / can_be_dispatched / can_orchestrate
+```
+
+`agent status` reports three independent capabilities: any agent that can run
+the commands can **operate** DontPanic; only agents registered as executors can
+be **dispatched** as workers. If you are an unsupported agent, operate DontPanic
+— do not configure yourself as a worker.
+
 See [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) for the non-goals and caller
 patterns, [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md) for the
 publish-readiness checklist, and [`docs/AUTHORING_PLANS.md`](./docs/AUTHORING_PLANS.md)
