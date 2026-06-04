@@ -72,6 +72,15 @@ plan-lifecycle and agent-activity are distinct axes sourced from distinct files;
 agent attribution comes from the supervisor registry; and an invariant test proves
 every rendered count/label equals the source it claims.
 
+Freshness is not just *displayed* — for the Architecture map it is *maintained*.
+Map upkeep is owned by the dashboard/server loop, not pushed onto the user as
+routine maintenance: `dashboard serve` watches relevant repo + plan files and, on
+change, runs a **bounded** regen automatically (debounced against rapid edits;
+runtime + file scope capped; skipped during an active write/dispatch unless safe;
+never blocking the rest of the dashboard if it fails; large repos use
+incremental/hash-based refresh or are marked "stale, queued"). The manual CLI
+`architecture regen` remains as an advanced/manual refresh, not the primary UX.
+
 ## Scope (in)
 
 - F001 Real provenance: every section declares its actual source; legacy files
@@ -85,6 +94,12 @@ every rendered count/label equals the source it claims.
   plan/feature/kind; when none are live, say none.
 - F005 Truthfulness invariant tests: rendered labels/counts match their claimed
   source.
+- F006 Bounded architecture-regen daemon: `dashboard serve` watches repo + plan
+  files and auto-runs a bounded regen on change (engine only).
+- F007 Architecture tab truthful status render: fresh/stale/regenerating/failed +
+  last-generated + source commit / dirty marker + last error; manual `architecture
+  regen` stays an advanced fallback; an action shows only when human input is
+  genuinely required.
 
 ## Scope (out)
 

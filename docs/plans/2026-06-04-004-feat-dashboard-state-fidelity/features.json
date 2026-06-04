@@ -88,6 +88,42 @@
         "F003",
         "F004"
       ]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 3,
+      "description": "Bounded architecture-regen daemon in the dashboard/server loop. `dashboard serve` watches architecture-relevant repo paths + docs/plans/** and, on change, runs a BOUNDED auto-regen: debounced against rapid edits, runtime + file scope capped, deferred while an active write/dispatch is in flight unless safe, run out-of-band so failure never blocks the dashboard, and on large repos using incremental/hash-based refresh or marking 'stale, queued'. Engine only \u2014 no rendering.",
+      "steps": [
+        "Add a file-watch over architecture-relevant repo paths + docs/plans/** in dashboard serve",
+        "Debounce change bursts into a single regen; cap runtime + file scope",
+        "Defer regen while an active write/dispatch is in flight unless provably safe",
+        "Run regen out-of-band; capture status (fresh|stale|regenerating|failed) + last_generated + source_commit + dirty + last_error to a state file; never raise into the serve loop",
+        "Large-repo path: incremental/hash-based refresh or mark 'stale, queued'",
+        "Tests: a watched change triggers exactly one debounced regen; failure records 'failed'+last_error without blocking; in-flight write/dispatch defers; bounded scope honored"
+      ],
+      "acceptance": "Editing a watched repo/plan file causes serve to auto-regen the architecture map exactly once per debounced burst, within capped runtime/scope, deferred during active write/dispatch; a regen failure records failed+last_error and never blocks the serve loop; large repos mark stale/queued rather than thrash. Verified by watch\u2192debounce\u2192regen, failure-isolation, and deferral tests.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 3,
+      "description": "Architecture tab truthful status render. The Architecture tab shows the regen daemon's status (fresh | stale | regenerating | failed), last-generated time, source commit + dirty-worktree marker, and last error \u2014 consuming the F001 provenance + F003 freshness contract. The user is shown an operator action ONLY when human input is genuinely required; otherwise the map self-heals silently and the manual `architecture regen` CLI is presented as an advanced fallback.",
+      "steps": [
+        "Render Architecture status (fresh/stale/regenerating/failed) + last_generated + source_commit + dirty + last_error from the F006 state file",
+        "Apply F001 provenance + F003 data-age/refresh affordance to the tab",
+        "Emit an operator action only when human input is required; else show self-heal status + advanced manual-refresh CLI",
+        "Tests: each status renders correctly; failed shows last_error without an action unless human input required; manual CLI shown as advanced only"
+      ],
+      "acceptance": "The Architecture tab truthfully reflects the daemon's status + last-generated + source commit/dirty + last error; it surfaces an operator action only when human input is required and otherwise presents manual regen as an advanced fallback. Verified by render tests across fresh/stale/regenerating/failed.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F003",
+        "F006"
+      ]
     }
   ]
 }
