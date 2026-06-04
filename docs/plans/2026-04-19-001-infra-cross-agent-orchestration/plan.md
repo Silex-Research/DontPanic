@@ -3,7 +3,7 @@ id: 2026-04-19-001-infra-cross-agent-orchestration
 title: Cross-Agent Autonomous Orchestration System
 type: infra
 tier: architectural
-status: draft
+status: abandoned
 date: "2026-04-19"
 description: Multi-agent (Claude / Codex / Gemini / Grok / OSS) autonomous orchestration system with machine-checkable ground truth, tier-based cost control, parallel-and-reconcile audit, and pause-not-stop loop prevention.
 motivation: Today, Claude implements a plan, I hand-audit or invoke Codex manually, and context evaporates between sessions. This plan builds an executable contract — plans as directories with features.json as inviolable ground truth — so implementation, audit, and signoff become autonomous across Claude CLI, Codex CLI, Gemini CLI, Grok API, and Ollama OSS, with human attention reserved for tier-appropriate gates only.

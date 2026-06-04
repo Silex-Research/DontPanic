@@ -3,7 +3,7 @@ id: 2026-04-29-004-fix-f006-budget-semantics
 title: F006 budget semantics — quota_caps schema/breaker mismatch
 type: fix
 tier: local
-status: blocked
+status: abandoned
 date: "2026-04-29"
 description: |
   The plan-level `quota_caps` field is bounded `[0, 100]` in both `claude/shared/schemas/v1.0/plan.schema.json` (`maximum: 100`) and `claude/shared/schemas/v1.0/models/plan_model.py` (`confloat(ge=0.0, le=100.0)`), but the runtime telemetry it is compared against — `percent_weekly` from `~/.jarvis/quota_state.json` — is unbounded above 100% (the weekly cap is a soft estimate, not a hard subscription limit). When real usage exceeds 100% (claude is currently at 320.6%), no plan-declared budget can clear F006 `budget_ceiling` without violating the schema. This is a real design flaw, not a small numbers tweak. Fix: redefine the field semantics rather than blindly raise the bound.

@@ -1,0 +1,58 @@
+{
+  "task_id": "2026-06-04-001-feat-ledger-reconciliation-operator-actions",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Read-only ledger drift detector: for each plan, correlate production evidence (referenced files present on disk/commit, test signals) against plan.md status + features.json passes, and classify each drifted plan as shipped-but-unclosed / operator-gated / superseded / conditional. Pure analysis \u2014 no mutation.",
+      "steps": [
+        "Inventory plan artifacts (status, features.passes, evidence_refs, decisions) across docs/plans",
+        "Define evidence signals: referenced impl files exist on main; referenced commit reachable; tests present",
+        "Implement classifier returning {plan_id, signal, suggested_disposition, evidence[]}",
+        "Add CLI surface (e.g. `dontpanic ledger-scan --format text|json`), read-only, exits 0",
+        "Fixture tests over synthetic plan dirs (each drift class + a clean plan)"
+      ],
+      "acceptance": "Given fixture plan dirs, the detector flags each drift class with its suggested disposition and evidence, marks clean plans as clean, never mutates ledger files, and is byte-stable given fixed inputs. Exits 0; --format json validates.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Closeout ActionItems: project each drifted plan into an ActionItem (audience=operator) offering a disposition menu \u2014 Close as completed / Close as superseded / Needs deploy / Needs smoke / Create child plan \u2014 each with an exact dontpanic command, plain_consequence, reversible flag, and the evidence refs to capture. Renders on the dashboard via the existing ActionItem spine.",
+      "steps": [
+        "Map each suggested_disposition to an ActionItem with exact_command + plain_consequence + reversible + dashboard_url",
+        "Carry F001 evidence refs onto the ActionItem for capture at closeout",
+        "Dedupe by dedupe_key; classify audience=operator, requires_human=true",
+        "Renderer-parity test: same ActionItem renders in dashboard + what-now JSON",
+        "No-secret-leak assertion on rendered payloads"
+      ],
+      "acceptance": "Each drifted plan yields exactly one operator ActionItem with a valid disposition, exact command, consequence text, reversibility, and evidence refs; renders consistently across dashboard + CLI/JSON deduped by dedupe_key; no secret shapes leak.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Operator-friendly closeout wiring: extend the existing `close --operator-resolved` path to accept the detector's evidence refs and write status + evidence_refs + a decisions entry, with no agent dispatch. Makes ledger truth-restoration a one-command operator action.",
+      "steps": [
+        "Thread F001 evidence refs into the operator-resolved close path",
+        "Record status flip + evidence_refs + decisions entry atomically",
+        "Guard: refuse to close as completed without at least one evidence ref",
+        "Tests: completed/superseded/child-plan closeouts each record correct ledger state without dispatch"
+      ],
+      "acceptance": "`dontpanic close --operator-resolved` (or equivalent) flips status, records evidence_refs + a decisions entry, refuses completed-close with zero evidence, and never triggers an agent volley. Verified by fixture tests.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}

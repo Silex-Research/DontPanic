@@ -1,0 +1,74 @@
+{
+  "task_id": "2026-06-04-003-feat-integration-operator-actions",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Integration ActionItem catalog: declare the operator-owned integration steps (Firebase functions deploy, Firebase realtime smoke, static-dashboard smoke, Linear credential setup, Discord webhook setup) as ActionItems, each carrying what/why/credentials_required/exact_command/evidence_expected/reversible. Data + projection, not credential handling.",
+      "steps": [
+        "Enumerate the known operator integration steps + their exact commands",
+        "Model each as an ActionItem (audience=operator, requires_human where creds needed)",
+        "Mark credentials_required + reversible + evidence_expected per item",
+        "Dedupe by dedupe_key; no-secret-leak assertion",
+        "Fixture tests over the catalog projection"
+      ],
+      "acceptance": "The catalog emits one ActionItem per integration step with what/why/creds/exact-command/evidence/reversible populated; renders deduped across dashboard + CLI/JSON; leaks no secrets. Verified by fixture tests.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Static-dashboard smoke action (applies today): a runnable check that `dontpanic state export-dashboard` produces a static dashboard that renders, capturing the run output as evidence. Re-homes the static half of firebase-adapter F005 as an operator action.",
+      "steps": [
+        "Implement a static-smoke runner: export-dashboard \u2192 assert artifacts present + parseable",
+        "Capture run output as an evidence ref",
+        "Wire as the F001 'static-dashboard smoke' ActionItem's exact command",
+        "Test: smoke passes on a fixture state; fails loudly on missing/garbled state"
+      ],
+      "acceptance": "Running the static-dashboard smoke verifies export-dashboard artifacts render and records an evidence ref; it fails clearly on missing/garbled state; no Firebase credentials required.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Gated realtime/deploy actions: represent Firebase functions deploy + realtime smoke (code already shipped+tested in dashboard/functions/) as ActionItems gated on multi-operator need + credentials. Never auto-executes; surfaces the exact command + evidence the operator must capture. Re-homes firebase-adapter F003/F005 realtime half, parked behind its trigger.",
+      "steps": [
+        "Model deploy + realtime-smoke as gated ActionItems (requires_human=true, credentials_required=true)",
+        "Encode the trigger condition (multi-operator dashboard needed) in the item's why/availability",
+        "Reference the shipped dashboard/functions/ + firestore.rules as prerequisites met",
+        "Test: items render as gated/unavailable until trigger + creds present; never execute in-repo"
+      ],
+      "acceptance": "Firebase deploy + realtime smoke appear as gated operator ActionItems with exact commands + required evidence, marked credentials_required and reversible-as-applicable; they do not execute in-repo and surface their trigger condition. Verified by tests.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Integration status surfacing: the dashboard shows each integration as configured / deployed / smoke-passing / pending by consuming the catalog + captured evidence, so the operator sees integration readiness at a glance rather than via command archaeology.",
+      "steps": [
+        "Derive per-integration status from catalog + evidence refs",
+        "Render a dashboard integrations panel (configured/deployed/smoke-passing/pending)",
+        "Pending items link to their F001 ActionItem",
+        "Test: status reflects presence/absence of evidence; no secret leak"
+      ],
+      "acceptance": "The dashboard shows truthful per-integration status driven by catalog + evidence; pending integrations link to their ActionItem; rendering leaks no secrets. Verified by tests.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}

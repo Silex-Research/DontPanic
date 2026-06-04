@@ -1,0 +1,74 @@
+{
+  "task_id": "2026-06-04-002-feat-local-harness-adapter-runtime",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Declarative harness-profile schema + registry describing a local agent harness: name, detect command/path, workspace location, MCP wiring target, and a safe-action allowlist. Ships starter profiles for OpenClaw and Hermes. Generic by construction \u2014 no harness-specific branching in the loader.",
+      "steps": [
+        "Define harness-profile schema (name, detect, workspace, mcp_target, safe_actions[])",
+        "Implement profile loader + registry",
+        "Author OpenClaw + Hermes starter profiles",
+        "Validation: reject malformed profiles; unknown harness is a clean no-op",
+        "Fixture tests for load/validate/registry"
+      ],
+      "acceptance": "A new harness is supported by adding a profile file alone (no loader change); malformed profiles are rejected with a clear error; OpenClaw + Hermes profiles load and validate. Tests cover load/validate/registry.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 1,
+      "description": "`dontpanic harness detect` \u2014 read-only detection that reports which profiled harnesses are installed locally (via each profile's detect rule). No mutation, no execution.",
+      "steps": [
+        "Implement detection running each profile's detect rule safely",
+        "CLI surface `dontpanic harness detect --format text|json`",
+        "Absent harness \u2192 reported not-installed, never an error",
+        "Tests with stubbed detect rules (present/absent)"
+      ],
+      "acceptance": "Detection reports installed/not-installed per profiled harness without mutating anything or executing harness code; --format json validates; absent harness is a clean negative.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 2,
+      "description": "Command-surface bridge: for a detected harness, generate the config that points it at DontPanic's EXISTING surface (`agent brief|commands|guide`, `mcp serve`) per its profile \u2014 reusing shipped modules (agent_surface, command_guidance, agent_manifest, mcp), not building a new wrapper.",
+      "steps": [
+        "Generate harness-side config (e.g. MCP endpoint + brief/commands references) from a profile",
+        "Reuse agent_surface/command_guidance/mcp serve; add no parallel surface",
+        "Enforce the profile's safe-action allowlist at the bridge boundary",
+        "Tests: generated config references only allowlisted actions + the shipped surface"
+      ],
+      "acceptance": "For a detected harness, the bridge emits config wiring it to the shipped agent/MCP surface, exposing only allowlisted safe actions; no new command wrapper is introduced. Verified by tests asserting reuse + allowlist enforcement.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 2,
+      "description": "Human-required routing: when a harness invokes an action needing approval, credentials, or deploy, the bridge emits a dashboard ActionItem (requires_human=true) with exact command + consequence + reversibility instead of executing it. Keeps the human-in-the-loop boundary intact for harness-driven flows.",
+      "steps": [
+        "Classify harness-invoked actions: safe-auto vs human-required",
+        "Human-required \u2192 emit ActionItem (requires_human=true) via the shipped spine, do not execute",
+        "Renderer-parity + no-secret-leak assertions",
+        "Tests: safe action proceeds; human-required action routes to dashboard, never executes"
+      ],
+      "acceptance": "A harness-invoked safe action proceeds; an approval/credential/deploy action emits a dashboard ActionItem (requires_human=true) and is NOT executed by the harness; routed items render consistently and leak no secrets.",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    }
+  ]
+}

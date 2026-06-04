@@ -3,7 +3,7 @@ id: 2026-04-29-001-feat-changelog-skill
 title: changelog skill — first supervised orchestrator dogfood
 type: feat
 tier: local
-status: draft
+status: completed
 date: "2026-04-29"
 description: |
   Create `claude/skills/changelog/` — a deterministic, fixture-testable skill that summarizes a git revision range as operator-facing release notes. Mechanical task with a clear source-of-truth (git log + commit messages) and a deterministic output shape; the auditor's job is mechanical and the disagreement surface is narrow. Same shape as #692 (SKILL.md + Python module + tests + RESOLVER row), so any orchestrator behavior we observe during dispatch is signal about the orchestrator, not noise from the test subject.

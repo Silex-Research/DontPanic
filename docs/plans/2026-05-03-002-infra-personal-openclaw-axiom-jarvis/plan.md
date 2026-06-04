@@ -3,7 +3,7 @@ id: 2026-05-03-002-infra-personal-openclaw-axiom-jarvis
 title: Personal Axiom runtime — OpenClaw + DontPanic + dashboard + Discord
 type: infra
 tier: local
-status: active
+status: abandoned
 date: "2026-05-03"
 description: |
   Replace the current Axiom multi-tenant Cloudflare runtime direction with a
