@@ -89,6 +89,11 @@ from pathlib import Path
 from typing import Any
 
 from dontpanic_orchestrate import global_config as _gc
+from dontpanic_orchestrate.action_resolvability import (
+    RESOLUTION_COMMAND_RESOLVABLE,
+    ClearsWhen,
+    validate_resolution_class,
+)
 
 # Bind to the existing sanitization regexes so the no-secret invariant
 # matches the OSS sanitization gate. Imported lazily so test isolation
@@ -306,6 +311,19 @@ class ActionItem:
     reversible: bool = False
     plain_consequence: str | None = None
     dashboard_url: str | None = None
+    # Plan 2026-06-04-001 F001 — resolvability contract. Additive over CP-D001 so
+    # existing constructions keep working; emitters opt in, and F005's invariant
+    # test is what enforces every emitter sets a registry predicate (or marks the
+    # item operator_attested / blocked_external).
+    #   * ``clears_when``      — reference into the closed predicate registry
+    #                            (predicate name + bound params). None = "does not
+    #                            declare a resolution predicate", so recompute
+    #                            cannot suppress it (D002.1).
+    #   * ``resolution_class`` — how the item resolves; one of the four
+    #                            RESOLUTION_CLASSES (D002.3). Default
+    #                            command_resolvable.
+    clears_when: ClearsWhen | None = None
+    resolution_class: str = RESOLUTION_COMMAND_RESOLVABLE
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -351,6 +369,8 @@ class ActionItem:
         # determine a safe command must emit None instead of a broken target.
         if self.exact_command is not None:
             _validate_exact_command_or_raise(self.exact_command, item_id=self.id)
+        # F001 resolvability: resolution_class must be one of the four classes.
+        validate_resolution_class(self.resolution_class)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -371,6 +391,8 @@ class ActionItem:
             "reversible": self.reversible,
             "plain_consequence": self.plain_consequence,
             "dashboard_url": self.dashboard_url,
+            "clears_when": self.clears_when.to_dict() if self.clears_when else None,
+            "resolution_class": self.resolution_class,
         }
 
 

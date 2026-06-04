@@ -15,8 +15,27 @@
         "Unit tests: each predicate true/false; resolution_class round-trips; evaluate() is pure (no I/O)"
       ],
       "acceptance": "ActionItem carries clears_when (a reference into a CLOSED named-predicate registry + bound params; no expression eval) and resolution_class constrained to exactly {command_resolvable, chained, operator_attested, blocked_external}; evaluate_clears_when() is a pure function (zero I/O) returning the correct boolean for each registered predicate; to_dict() serializes the fields. Verified by unit tests covering every registry predicate true/false.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-04T22:08:09Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/action_resolvability.py",
+          "note": "closed predicate registry + ClearsWhen + 4 resolution classes + pure evaluate_clears_when"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/operator_console.py",
+          "note": "ActionItem gains clears_when + resolution_class (additive); validated + serialized"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_resolvability_f001.py",
+          "note": "52 passed incl operator_console + renderer-parity regression"
+        }
+      ]
     },
     {
       "id": "F002",
