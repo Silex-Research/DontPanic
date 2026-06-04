@@ -1,25 +1,30 @@
 ---
 id: 2026-06-04-001-feat-ledger-reconciliation-operator-actions
-title: Ledger reconciliation + operator-action closeouts
+title: ActionItem resolvability contract (clears_when + round-trip guarantee)
 type: feat
 tier: cross-cutting
 status: draft
 date: "2026-06-04"
 goal_type: new_feature
 description: >
-  Detect plans whose capability already exists in production but whose ledger
-  is still open (shipped-but-unclosed), and surface operator-friendly closeout
-  decisions as dashboard ActionItems instead of leaving them as phantom backlog.
-  Enforces the organizing principle: plans define capabilities (missing code →
-  feature); credentials/deploys/smokes/role-or-budget choices/human approval →
-  operator ActionItems, never modelled as implementation features.
+  Make every operator action DontPanic surfaces provably trustworthy: each
+  ActionItem must declare what condition it clears (clears_when), be recomputed
+  from live state so it disappears once that condition is gone, name the next
+  step when one action surfaces another, and — when only a human/credential can
+  resolve it — be explicitly marked operator_attested (clears on evidence, not a
+  command). The dashboard must never say "Needs Action" unless taking the action
+  will move the system forward, or it clearly states why human evidence is
+  required.
 motivation: >
-  Auditing open plans against main on 2026-06-04 found the "open" set was a mix
-  of shipped-but-unclosed (changelog skill, firebase Cloud Functions),
-  operator-gated, superseded-cleanup, and conditional integrations — not a
-  feature backlog. The harness let deliverables ship without flipping passes,
-  so they read as work remaining. This plan makes that drift detectable and
-  closeout operator-friendly, so the ledger reflects production truth.
+  Today DontPanic emits operator actions without proving they are still relevant,
+  sufficient, recomputed after action, or cleared when the condition is gone.
+  Live evidence: 54 of 57 gate-approve cards target completed/abandoned plans
+  (phantom guidance — the bulk of the dashboard's "192 NEEDS ACTION"); the
+  reconcile card offered one command for a two-step fix and could not round-trip
+  because its recompute was gated behind a per-project capabilities/ dir; the
+  ActionItem model carries reversible/plain_consequence but no machine-checkable
+  resolution predicate. This is a structural trust gap in the action model, not a
+  collection of bad cards. Fix the contract, and the symptoms collapse.
 agents_required:
   - claude
 human_gates:
@@ -32,7 +37,7 @@ links:
   decisions: ./decisions.jsonl
 ---
 
-# Ledger reconciliation + operator-action closeouts
+# ActionItem resolvability contract
 
 ## Target
 
@@ -45,42 +50,68 @@ DontPanic-internal orchestration-engine plan. No external service setup required
 
 ## Problem / Motivation
 
-The plan ledger drifts from production: deliverables ship (code + tests on
-`main`) without the plan's `status`/`features.passes` being flipped, so completed
-capabilities read as open backlog. Separately, plans model operator-owned steps
-(deploy, credentials, smoke, approval) as implementation features, which can never
-"pass" through an agent volley. Both failures were observed in the 2026-06-04 audit.
+A control-plane action is only honest if `condition → action/evidence → recompute
+→ item clears` round-trips. DontPanic does not currently guarantee that. ActionItems
+are emitted from many producers (gates, breakers, reconcile, capabilities, plan
+drift, operations guidance) with no shared contract describing **what condition the
+action resolves** or **how the system verifies it resolved**. The result:
+
+- **Not relevant:** 54/57 gate-approve cards point at completed/abandoned plans.
+- **Not sufficient:** the reconcile card gave one command for a two-step fix
+  (`baseline` cleared `missing_snapshot` but surfaced `stale_status_cache`).
+- **Not recomputed:** even after the correct action, the card persisted — its
+  recompute was gated behind a per-project `capabilities/` dir that doesn't exist,
+  and the static dashboard re-emitted the stale status.
+- **Not cleared:** no `clears_when` predicate exists, so nothing can prove (or
+  test) that doing the action removes the item.
 
 ## Proposed Approach
 
-A read-only **drift detector** that flags "production evidence exists but plan is
-still open," plus a set of **closeout ActionItems** (close-completed /
-close-superseded / needs-deploy / needs-smoke / create-child-plan) rendered on the
-dashboard with exact commands, plain consequence, reversibility, and automatic
-evidence capture. No new governance primitive — it composes the shipped ActionItem
-+ operator-console + `close --operator-resolved` surfaces.
+Establish an **ActionItem resolvability contract** as the spine, then prove it on
+the two highest-impact failures, then lock it in with a generic invariant so no
+future emitter can ship non-resolving guidance.
+
+1. **`clears_when` + resolution class** on the ActionItem model — every item
+   declares the machine-checkable condition it resolves and how it resolves:
+   `command_resolvable` / `chained` / `operator_attested` / `blocked_external`.
+2. **Round-trip recompute guarantee** — producing state re-evaluates `clears_when`
+   against live reality; an emitter MUST NOT emit an item whose `clears_when` is
+   already satisfied; global conditions are evaluated at global scope, never gated
+   behind per-project preconditions.
+3. **Proof case A — phantom suppression:** gate/approve (and sibling) items for
+   completed/abandoned/superseded plans vanish via the recompute.
+4. **Proof case B — reconcile/global readiness round-trip:** global readiness is
+   computed once at fleet scope; the offered action(s) are chained when one step
+   surfaces another; the card clears on rebuild after the action.
+5. **Generic invariant** — a property test over every emitter: emitted condition →
+   apply suggested command/evidence → recompute → item clears, OR the item is
+   explicitly `operator_attested`/`blocked_external` (and then clears on evidence).
 
 ## Scope (in)
 
-- F001 Drift detector (read-only): correlate referenced files/commits + test
-  signals against plan status/passes; emit a ranked list of suspected
-  shipped-but-unclosed / operator-gated / superseded plans.
-- F002 Closeout ActionItems: one ActionItem per drifted plan with a closeout
-  disposition menu, exact `dontpanic` command, `plain_consequence`, `reversible`,
-  and evidence-ref capture.
-- F003 Operator-friendly closeout wiring: auto-attach the detector's evidence refs
-  into the existing `close --operator-resolved` path; no agent dispatch required.
+- F001 `clears_when` + resolution-class contract on the ActionItem model.
+- F002 Round-trip recompute guarantee (suppress-if-already-clear; global scope).
+- F003 Proof A: phantom-card suppression for completed/abandoned/superseded plans.
+- F004 Proof B: global reconcile/readiness round-trip + action chaining +
+  operator-attested handling for credential/deploy steps.
+- F005 Generic round-trip invariant test across all ActionItem emitters.
 
 ## Scope (out)
 
-- Re-litigating any individual plan's design (handled per-plan).
-- Building a new close primitive (reuse `close --operator-resolved`).
-- Auto-closing without operator confirmation (always operator-gated).
+- Building NEW operator actions (Firebase/Linear/Discord) — those are the
+  integration-actions plan `2026-06-04-003`; this plan only guarantees that
+  whatever is emitted is resolvable.
+- The Local Harness Adapter (`2026-06-04-002`).
+- A new close primitive (reuse `close --operator-resolved`).
+- Auto-resolving anything without operator confirmation where a human is required.
 
 ## Acceptance
 
-Detector flags the known drift cases (e.g. shipped-but-unclosed skills, deployed-
-but-unflipped code) with zero false "all clear"; each flagged plan yields an
-ActionItem carrying exact command + consequence + reversibility + evidence; the
-operator closeout records status + evidence_refs + a decisions entry with no agent
-dispatch. Full orchestrate sweep stays green.
+The ActionItem model carries `clears_when` + resolution class; state production
+never emits an item whose `clears_when` is already satisfied; phantom gate cards
+for closed/abandoned plans disappear (dashboard NEEDS-ACTION count drops to
+live-relevant only); the reconcile/global readiness card round-trips (run the
+offered/chained action → rebuild → card clears); and a generic invariant test
+proves, for every emitter, that condition → action/evidence → recompute → clear
+holds or the item is explicitly `operator_attested`/`blocked_external`. Full
+orchestrate sweep stays green.

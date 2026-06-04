@@ -4,33 +4,33 @@
   "features": [
     {
       "id": "F001",
-      "category": "functional",
+      "category": "schema",
       "phase": 1,
-      "description": "Read-only ledger drift detector: for each plan, correlate production evidence (referenced files present on disk/commit, test signals) against plan.md status + features.json passes, and classify each drifted plan as shipped-but-unclosed / operator-gated / superseded / conditional. Pure analysis \u2014 no mutation.",
+      "description": "Add a resolution contract to the ActionItem model: a machine-checkable `clears_when` predicate (the condition whose falsity produced the item) plus a `resolution_class` enum \u2014 command_resolvable | chained | operator_attested | blocked_external. Pure model + a pure `evaluate(clears_when, live_state) -> bool` function. No emitter wiring yet.",
       "steps": [
-        "Inventory plan artifacts (status, features.passes, evidence_refs, decisions) across docs/plans",
-        "Define evidence signals: referenced impl files exist on main; referenced commit reachable; tests present",
-        "Implement classifier returning {plan_id, signal, suggested_disposition, evidence[]}",
-        "Add CLI surface (e.g. `dontpanic ledger-scan --format text|json`), read-only, exits 0",
-        "Fixture tests over synthetic plan dirs (each drift class + a clean plan)"
+        "Add clears_when (structured predicate ref + params) and resolution_class enum to the ActionItem dataclass in operator_console.py",
+        "Define the predicate vocabulary as a closed registry of named, pure checks over live state (e.g. plan_active_and_gate_uncleared, install_snapshot_present_and_cache_fresh)",
+        "Implement evaluate_clears_when(item, state) pure function returning bool",
+        "Serialize the new fields in to_dict(); keep reversible/plain_consequence",
+        "Unit tests: each predicate true/false; resolution_class round-trips; evaluate() is pure (no I/O)"
       ],
-      "acceptance": "Given fixture plan dirs, the detector flags each drift class with its suggested disposition and evidence, marks clean plans as clean, never mutates ledger files, and is byte-stable given fixed inputs. Exits 0; --format json validates.",
+      "acceptance": "ActionItem carries clears_when + resolution_class; evaluate_clears_when() is a pure function returning the correct boolean for each registered predicate; to_dict() serializes the fields; resolution_class is constrained to the four-value enum. Verified by unit tests with zero I/O.",
       "passes": false,
       "depends_on": []
     },
     {
       "id": "F002",
       "category": "functional",
-      "phase": 2,
-      "description": "Closeout ActionItems: project each drifted plan into an ActionItem (audience=operator) offering a disposition menu \u2014 Close as completed / Close as superseded / Needs deploy / Needs smoke / Create child plan \u2014 each with an exact dontpanic command, plain_consequence, reversible flag, and the evidence refs to capture. Renders on the dashboard via the existing ActionItem spine.",
+      "phase": 1,
+      "description": "Round-trip recompute guarantee in state production: when building dashboard/what-now state, every candidate ActionItem is re-evaluated against LIVE state via F001, and an item whose clears_when is already satisfied is NOT emitted (suppress-at-source). Global-scope predicates are evaluated once at fleet/home scope, never gated behind a per-project precondition (e.g. a per-project capabilities/ dir).",
       "steps": [
-        "Map each suggested_disposition to an ActionItem with exact_command + plain_consequence + reversible + dashboard_url",
-        "Carry F001 evidence refs onto the ActionItem for capture at closeout",
-        "Dedupe by dedupe_key; classify audience=operator, requires_human=true",
-        "Renderer-parity test: same ActionItem renders in dashboard + what-now JSON",
-        "No-secret-leak assertion on rendered payloads"
+        "Route all ActionItem emission in the state producer through a single evaluate-and-filter seam using F001",
+        "Suppress any item whose clears_when(live_state) is already True",
+        "Move global-scope predicate evaluation (install snapshot / capabilities readiness) to fleet/home scope, decoupled from per-project capabilities/ dirs",
+        "Stamp each emitted item + the state envelope with the live-state generated_at used for evaluation",
+        "Tests: an already-satisfied condition yields no item; a global predicate evaluates with no project capabilities/ dir present; re-running the producer after the condition flips drops the item"
       ],
-      "acceptance": "Each drifted plan yields exactly one operator ActionItem with a valid disposition, exact command, consequence text, reversibility, and evidence refs; renders consistently across dashboard + CLI/JSON deduped by dedupe_key; no secret shapes leak.",
+      "acceptance": "State production emits an ActionItem only when its clears_when is currently false against live state; global predicates evaluate at fleet scope regardless of per-project dirs; re-running the producer after a condition is resolved drops the item. Verified by tests including the no-project-capabilities-dir case.",
       "passes": false,
       "depends_on": [
         "F001"
@@ -40,18 +40,54 @@
       "id": "F003",
       "category": "functional",
       "phase": 2,
-      "description": "Operator-friendly closeout wiring: extend the existing `close --operator-resolved` path to accept the detector's evidence refs and write status + evidence_refs + a decisions entry, with no agent dispatch. Makes ledger truth-restoration a one-command operator action.",
+      "description": "Proof case A \u2014 phantom suppression. Gate/approve (and sibling) ActionItems carry clears_when = plan-is-active-and-gate-uncleared; via F002 they are suppressed for plans whose status is completed/abandoned (and superseded). Targets the live failure where 54/57 gate-approve cards point at closed plans.",
       "steps": [
-        "Thread F001 evidence refs into the operator-resolved close path",
-        "Record status flip + evidence_refs + decisions entry atomically",
-        "Guard: refuse to close as completed without at least one evidence ref",
-        "Tests: completed/superseded/child-plan closeouts each record correct ledger state without dispatch"
+        "Set clears_when on gate/approve emitters to plan_active_and_gate_uncleared",
+        "Confirm F002 suppression drops gate cards for completed/abandoned/superseded plans",
+        "Regression fixture mirroring the live ledger: assert no gate card survives for a completed/abandoned plan; active-plan gates still surface",
+        "Capture before/after NEEDS-ACTION counts as evidence"
       ],
-      "acceptance": "`dontpanic close --operator-resolved` (or equivalent) flips status, records evidence_refs + a decisions entry, refuses completed-close with zero evidence, and never triggers an agent volley. Verified by fixture tests.",
+      "acceptance": "After rebuild, zero gate/approve ActionItems exist for completed/abandoned/superseded plans; gates for active plans remain; a fixture reproducing the 54/57 phantom case goes to 0 phantom. Evidence records the count drop.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Proof case B \u2014 global reconcile/readiness round-trip. The install-snapshot/capabilities readiness item is emitted at fleet scope with clears_when = snapshot present AND status cache fresh; when one step surfaces another it is resolution_class=chained and names the next exact command (baseline \u2192 capabilities status); credential/deploy steps are resolution_class=operator_attested and clear on captured evidence, not a command. Running the offered/chained action(s) \u2192 rebuild \u2192 item clears.",
+      "steps": [
+        "Emit the readiness item at fleet scope with the composite clears_when (snapshot + fresh cache)",
+        "When clears_when stays false after the primary command, emit the chained next action (capabilities status) rather than re-emitting the same card",
+        "Mark credential/deploy actions operator_attested with an evidence_expected ref; clear on evidence presence",
+        "Test the full round-trip: simulate baseline \u2192 still flagged \u2192 capabilities status \u2192 rebuild \u2192 card cleared; operator_attested item clears only when evidence ref present"
+      ],
+      "acceptance": "The global readiness card round-trips: after running baseline (and the chained capabilities status), a rebuild clears it; if a step needs credentials/deploy it is operator_attested and clears on evidence, never silently auto-cleared. Verified by a round-trip test.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "test",
+      "phase": 3,
+      "description": "Generic round-trip invariant across ALL ActionItem emitters: a property test that, for every item an emitter can produce, applies the suggested command/evidence (simulated against live-state fixtures), recomputes via F002, and asserts the item clears \u2014 OR the item is explicitly resolution_class operator_attested/blocked_external (and then asserts it clears on evidence, and that command-resolvable items are NOT mislabeled). Makes non-resolving guidance a build-time failure.",
+      "steps": [
+        "Enumerate ActionItem emitters (gates, breakers, reconcile, capabilities, plan_drift, operations_guidance, \u2026)",
+        "For each, build a fixture that triggers the item, apply its exact_command/evidence to the fixture state, recompute, assert clears_when flips to satisfied",
+        "Allow operator_attested/blocked_external to opt out of command-clears, but require they clear on evidence and carry evidence_expected",
+        "Fail the test if any emitter yields an item that neither clears via its command nor is explicitly attested/blocked"
+      ],
+      "acceptance": "A single invariant test covers every ActionItem emitter and proves condition \u2192 action/evidence \u2192 recompute \u2192 clear, or the item is explicitly operator_attested/blocked_external with an evidence path; an emitter producing non-resolving guidance fails the test. Runs in the orchestrate sweep.",
       "passes": false,
       "depends_on": [
         "F001",
-        "F002"
+        "F002",
+        "F003",
+        "F004"
       ]
     }
   ]
