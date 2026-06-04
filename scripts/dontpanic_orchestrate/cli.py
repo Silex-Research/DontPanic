@@ -4600,8 +4600,18 @@ def _skills_rubric_main(argv: list[str]) -> int:
 
 
 def _print_top_level_help(*, file) -> None:
+    # The "Start here (for AI agents)" block is the F004 discovery pointer. It is
+    # rendered from the shared guidance helper (projected over the F002 inventory)
+    # rather than hand-maintained here, so the entrypoint can never drift from the
+    # real command surface, and it deliberately points at the generated brief
+    # instead of restating it.
+    from dontpanic_orchestrate import command_guidance
+
+    agent_snippet = command_guidance.root_help_agent_snippet()
     print(
-        """usage: dontpanic <command> [args]
+        f"""usage: dontpanic <command> [args]
+
+{agent_snippet}
 
 Public-alpha command surface:
   setup                         Preview or write global roles + project runtime defaults

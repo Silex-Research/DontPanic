@@ -108,14 +108,30 @@
       "depends_on": [
         "F002"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) Root help includes a concise 'Start here for AI agents' section. (2) The section names the generated brief and the JSON guidance surface. (3) The section tells agents to inspect recommended actions before mutation. (4) The text is produced from shared guidance constants or F002 metadata, not a separate command list. (5) Tests assert the root help text contains the entrypoint and does not duplicate the full brief.",
       "steps": [
         "Add a short shared root-help snippet for agents.",
         "Wire it into the root parser help.",
         "Add tests for the root help output.",
         "Avoid adding a long manual to the help page."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F004-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T14:19:50Z"
     },
     {
       "id": "F005",

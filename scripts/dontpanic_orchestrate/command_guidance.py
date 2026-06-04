@@ -385,6 +385,38 @@ _ESCALATION_BY_COMMAND: dict[str, str] = {
 }
 
 
+# Canonical agent entrypoint command — the read-only `agent` surface that
+# carries `agent brief` (the generated operating brief) and `agent commands`
+# (the machine guidance JSON). Projected through the inventory so a renamed or
+# removed surface raises rather than leaving a stale root-help pointer.
+_AGENT_ENTRYPOINT_COMMAND = "agent"
+
+
+def root_help_agent_snippet() -> str:
+    """Concise 'Start here for AI agents' block for the root ``--help``.
+
+    Plan 2026-06-03-001 F004. This is the discovery pointer, not the manual: it
+    names the two canonical agent entrypoints — the generated operating brief
+    and the read-only JSON guidance surface — and the inspect-before-mutate
+    rule, then stops. The full operating model lives in the generated brief
+    (``dontpanic agent brief``); this snippet must never grow into a second copy
+    of it. The command token is projected from the guidance inventory, so the
+    pointer cannot drift if the ``agent`` surface is ever renamed or dropped.
+    """
+    entry = command_guidance_by_command()[_AGENT_ENTRYPOINT_COMMAND]
+    cmd = entry.command
+    return "\n".join(
+        (
+            "Start here (for AI agents):",
+            f"  dontpanic {cmd} brief       Generated operating brief — read this first.",
+            f"  dontpanic {cmd} commands    Machine command guidance as stable JSON",
+            "                               (class, risk, examples, predecessor hints).",
+            "  Inspect recommended actions (`next` / `what-now`) before mutating state",
+            "  or dispatching paid work.",
+        )
+    )
+
+
 def known_command_paths() -> tuple[tuple[str, ...], ...]:
     """Projected top-level command paths from the validator vocabulary."""
     return tuple((command,) for command in sorted(command_validation.known_subcommands()))
