@@ -1632,6 +1632,15 @@ def dispatch_volley(
     # dispatch_single_agent so a status=active plan dispatched via the
     # volley path also benefits from the implicit pre_impl clearance.
     _sync_pre_impl_for_active_plan(loaded, feature_id=feature_id)
+    # The reconcile + pre_impl auto-clear above are the supervisor's OWN
+    # legitimate gate-state mutations, made AFTER the dispatch-start baseline was
+    # recorded. Fold them into the drift baseline now — mirroring the
+    # dispatch_single_agent placement — so the first _drift_pause_or_none check
+    # below does not see the supervisor's own gate write as external
+    # context_refresh drift and spuriously pause before the first paid call.
+    # Gate-only advance: a concurrent edit to features/decisions/plan/objective
+    # in the same window is still caught (plan_drift.advance_gate_baseline).
+    plan_drift.advance_gate_baseline(loaded.plan_dir)
 
     # Plan 2026-05-02-003 F001: nested-orchestration guards (no-op for top-level plans).
     nested_marker = _run_nested_orch_guards(plan_dir, allow_depth=allow_depth)

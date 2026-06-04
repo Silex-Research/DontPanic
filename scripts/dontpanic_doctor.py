@@ -1289,6 +1289,12 @@ _DEFERRAL_RE = re.compile(
 _RESOURCE_TOKEN_RE = re.compile(
     r"(?<![A-Za-z0-9])([a-z][a-z0-9]*-[a-z0-9-]*\d[a-z0-9-]*)(?![A-Za-z0-9])"
 )
+# Angle-bracket placeholder tokens (`<firebase-project-id>`, `<your-project-id>`).
+# The `<…>` wrapper is itself the "this is a credentialed resource I must
+# substitute" signal — independent of the digit heuristic above — so we extract
+# these even without a digit. The bracketed form is preserved so a feature's
+# acceptance and the parent_acceptance_item intersect on the same literal.
+_PLACEHOLDER_TOKEN_RE = re.compile(r"<([a-z][a-z0-9]*(?:-[a-z0-9]+)+)>", re.IGNORECASE)
 _PLAN_ID_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-\d{3}\b")
 
 # A plan is "locked" once `dontpanic plan lock` flips its frontmatter
@@ -1388,8 +1394,14 @@ def _path_matches_globs(path: str, globs: list[str]) -> bool:
 
 
 def _extract_resource_tokens(text: str) -> list[str]:
-    """Find kebab-case resource-shaped tokens that look like cloud project
-    IDs (require a digit in the suffix). Excludes plan-ID prefixes."""
+    """Find resource-shaped tokens that look like cloud project IDs.
+
+    Two shapes count: bare kebab-case identifiers with a digit in the suffix
+    (``axiom-workspace-prod1``), and angle-bracket placeholders
+    (``<firebase-project-id>``) whose ``<…>`` wrapper is the resource signal.
+    Plan-ID prefixes are excluded. Bracketed placeholders keep their brackets
+    so the parent/feature intersection matches on the same literal.
+    """
     out: list[str] = []
     seen: set[str] = set()
     for match in _RESOURCE_TOKEN_RE.findall(text):
@@ -1399,6 +1411,12 @@ def _extract_resource_tokens(text: str) -> list[str]:
             continue
         seen.add(match)
         out.append(match)
+    for inner in _PLACEHOLDER_TOKEN_RE.findall(text):
+        token = f"<{inner}>"
+        if token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
     return out
 
 

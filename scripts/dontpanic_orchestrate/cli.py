@@ -2175,6 +2175,13 @@ def _doctor_main(argv: list[str]) -> int:
     exit_inputs = [
         r for r in exit_inputs if not r.name.startswith("dashboard-")
     ]
+    # 2026-06-03-001 agent-command-surface: the skill-rubrics probe is
+    # self-describing advisory ("core use is not blocked") — a high-value
+    # skill missing an invocation rubric is guidance, not a readiness
+    # blocker, so it must not escalate the canonical exit code either.
+    exit_inputs = [
+        r for r in exit_inputs if not r.name.startswith("skill-rubrics")
+    ]
     return jd.compute_strict_exit(exit_inputs)
 
 
