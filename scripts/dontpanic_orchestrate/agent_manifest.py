@@ -235,6 +235,8 @@ def _default_supported_commands() -> list[str]:
         "resume",
         "ps",
         "dispatch-from-plan",
+        # Plan 2026-06-01-001 F003 — read-only scope-lint surface.
+        "plan-review",
     ]
     if _detect_mcp_server() is not None:
         base.append("mcp")
