@@ -180,6 +180,73 @@ def _resolve_plan_dir(plan_arg: str) -> Path:
     raise SystemExit(f"plan not found: {plan_arg}")
 
 
+def _resolve_default_actions_plan_dir() -> Path | None:
+    """Best-effort cwd-anchored default plan for the ``agent brief`` actions block.
+
+    Plan 2026-06-02-001 F003: the agent-brief surface renders the managed
+    ActionItem block by default. With no explicit ``--actions PLAN`` the plan is
+    resolved here — the cwd project's most-recent (lexicographically-greatest,
+    i.e. latest date-prefixed) plan directory that still has at least one
+    in-flight feature (``passes`` != ``true``), or ``None`` when no project/plan
+    resolves. Fully guarded — never raises — so the default brief path stays
+    robust even on an un-registered repo or unreadable plan metadata."""
+    try:
+        cwd = Path.cwd().resolve()
+        match = project_config.find_project_for_plan_dir(cwd)
+        if match is None:
+            return None
+        proj_path = match[0]
+        cfg = project_config.load_project_config(proj_path)
+        plans_dir = cfg.plans_dir if cfg is not None else project_config.DEFAULT_PLANS_DIR
+        root = proj_path / plans_dir
+        if not root.is_dir():
+            return None
+        in_flight: list[Path] = []
+        for child in sorted(root.iterdir()):
+            if not child.is_dir():
+                continue
+            try:
+                data = json.loads((child / "features.json").read_text())
+            except (OSError, ValueError):
+                continue
+            features = data.get("features") if isinstance(data, dict) else None
+            if not isinstance(features, list):
+                continue
+            if any(isinstance(f, dict) and f.get("passes") is not True for f in features):
+                in_flight.append(child)
+        return in_flight[-1] if in_flight else None
+    except Exception:  # noqa: BLE001 — default resolution is advisory, never fatal
+        return None
+
+
+def _resolve_brief_action_items(actions_plan: str | None) -> list[Any]:
+    """Resolve the ActionItem list for the ``agent brief`` managed actions block.
+
+    Plan 2026-06-02-001 F003: the agent-brief surface ALWAYS renders the managed
+    block from the ActionItem spine. ``actions_plan`` (the explicit
+    ``--actions PLAN`` flag) pins a specific plan and intentionally propagates a
+    ``SystemExit`` when that plan id does not resolve (a typed operator error,
+    exit 2). Without the flag the plan is auto-resolved from the cwd project; any
+    failure THERE degrades to an empty list so the block renders as
+    "No actions pending" rather than crashing the brief."""
+    from dontpanic_orchestrate import operations_guidance
+
+    if actions_plan is not None:
+        # Explicit plan: let an unresolved id raise SystemExit (exit 2) — the
+        # operator named a plan that does not exist and should be told so.
+        plan_dir: Path | None = _resolve_plan_dir(actions_plan)
+    else:
+        plan_dir = _resolve_default_actions_plan_dir()
+    if plan_dir is None:
+        return []
+    try:
+        plan_id = plan_loader.load(plan_dir).plan_id
+        guidance = operations_guidance.collect_state(plan_dir, plan_id=plan_id)
+        return guidance.to_action_items()
+    except Exception:  # noqa: BLE001 — the brief must render even if collection fails
+        return []
+
+
 def _ps_main(argv: list[str]) -> int:
     """F023 EC13: list live supervisors registered in
     ~/.jarvis/active_supervisors.jsonl. Filters dead PIDs and prunes the file
@@ -899,11 +966,46 @@ def _what_now_main(argv: list[str]) -> int:
         feature_id=args.feature,
         dashboard_url=args.dashboard_url,
     )
+    # Plan 2026-06-02-001 F003 — BOTH the text and JSON surfaces render the
+    # ActionItem spine, not an independently-computed shape. The guidance is
+    # projected once into the canonical ActionItem envelope and both formats
+    # render from the same `action_renderers` boundary (deduped by dedupe_key,
+    # scrubbed + brand-normalized at the render boundary), so the CLI text, the
+    # CLI JSON, and the dashboard can never drift.
+    from dontpanic_orchestrate import action_renderers
+
+    action_items = guidance.to_action_items()
     if args.format == "json":
-        print(json.dumps(guidance.to_dict(), indent=2))
+        # F003 fix (codex audit i2 — high/security): the legacy guidance JSON shape
+        # (`choices`, etc.) is preserved for back-compat, but EVERY human-facing
+        # string is scrubbed + brand-normalized at the output boundary so the JSON
+        # surface can no longer leak secret-shaped substrings or brand drift the way
+        # the prior raw `guidance.to_dict()` did. `action_items` is the canonical
+        # spine list, rendered through the same shared boundary so it stays
+        # byte-consistent with the dashboard and the agent brief.
+        payload = _scrub_json_payload(guidance.to_dict())
+        payload["action_items"] = action_renderers.render_dashboard(action_items)["items"]
+        print(json.dumps(payload, indent=2))
     else:
-        print(operations_guidance.render_text(guidance), end="")
+        print(action_renderers.render_cli_what_now(action_items, fmt="text"), end="")
     return 0
+
+
+def _scrub_json_payload(value: Any) -> Any:
+    """Recursively scrub every string in a JSON-able structure through the shared
+    render boundary (secret-shape redaction + brand-drift normalization).
+
+    F003 fix (codex audit i2): applied to the legacy what-now JSON surface so no
+    field leaks, while preserving the structural shape consumers depend on."""
+    from dontpanic_orchestrate import action_renderers as _ar
+
+    if isinstance(value, str):
+        return _ar.scrub_render_text(value)
+    if isinstance(value, dict):
+        return {k: _scrub_json_payload(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_scrub_json_payload(v) for v in value]
+    return value
 
 
 def _plan_review_main(argv: list[str]) -> int:
@@ -3964,12 +4066,38 @@ def _agent_main(argv: list[str]) -> int:
     if sub == "brief":
         parser = argparse.ArgumentParser(prog="dontpanic agent brief", add_help=True)
         parser.add_argument("--json", action="store_true", dest="as_json")
+        parser.add_argument(
+            "--actions",
+            metavar="PLAN",
+            default=None,
+            help="Plan 2026-06-02-001 F003 — pin which plan the agent-brief "
+            "managed actions block renders from. The block is rendered by "
+            "DEFAULT (auto-resolved from the cwd project's most-recent in-flight "
+            "plan); this flag overrides that with a specific PLAN. Always "
+            "rendered from the ActionItem spine — deduped by dedupe_key, scrubbed "
+            "+ brand-normalized at the render boundary.",
+        )
         args = parser.parse_args(rest)
+        from dontpanic_orchestrate import action_renderers
+
         brief = agent_brief.generate_brief()
+        # F003: the agent-brief surface ALWAYS carries the managed ActionItem
+        # block — routed through the spine, never an independently-computed
+        # shape. The plan is the explicit --actions PLAN when given, else the cwd
+        # project's current in-flight plan; when neither resolves the block
+        # renders empty ("No actions pending") rather than being omitted, so the
+        # surface is always present and always spine-sourced.
+        action_items = _resolve_brief_action_items(args.actions)
+        block = action_renderers.render_agent_brief_block(action_items)
         if args.as_json:
-            print(json.dumps(agent_brief.to_public_dict(brief), indent=2, ensure_ascii=False))
+            payload = agent_brief.to_public_dict(brief)
+            payload["actions_block"] = block
+            payload["action_items"] = action_renderers.render_dashboard(action_items)["items"]
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
             print(brief.text, end="")
+            print()
+            print(block, end="")
         return 0
 
     if sub == "status":

@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "audit_id": "2026-06-02-001-feat-control-plane-action-spine#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-04T04:15:14Z",
+  "completed_at": "2026-06-04T04:19:11Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F003-i2.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-02-001-feat-control-plane-action-spine-u7c3hod1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 247317 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1762932,
+    "tokens_out": 15917,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \nCommand: audit complete; no further command\n\nOverall verdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and I found no listed forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (high, security): CLI `what-now --format json` still emits an unsanitized legacy guidance surface alongside the ActionItem envelope. Evidence: `scripts/dontpanic_orchestrate/cli.py` builds `payload = guidance.to_dict()` and only appends scrubbed `action_items`; my reproduction showed `legacy_secret_leaks=True`, `legacy_brand_leaks=True`, while `action_items_secret_leaks=False`. Recommendation: make the JSON surface render from `action_renderers.render_cli_what_now(action_items, fmt=\"json\")`, or remove/scrub/brand-normalize every legacy field before output.\n\nFINDING (medium, test_coverage): The parity test validates `action_renderers.render_cli_what_now(fmt=\"json\")`, but not the actual `_what_now_main --format json` code path that still leaks through `guidance.to_dict()`. Evidence: `test_renderer_parity_f003.py` feeds the fixed set through helper renderers; the real CLI JSON assembly in `cli.py` uses a different path. Recommendation: add a CLI-level JSON parity test with secret-shaped and legacy-brand strings.\n\nFINDING (advisory, documentation): The implementer audit records one non-runnable placeholder command: `git stash push -- scripts/dontpanic_orchestrate/dashboard.py && pytho",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff -- scripts/dontpanic_orchestrate/action_renderers.py scripts/dontpanic_orchestrate/dashboard.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/operator_console.py scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest dontpanic_orchestrate/tests/test_renderer_parity_f003.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest dontpanic_orchestrate/tests/test_renderer_parity_f003.py -q -p no:cacheprovider --capture=no -k \"not dashboard_build and not write_cache\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"renderer smoke check for dedupe/scrub/brand-normalize\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"CLI JSON construction reproduction for legacy guidance leak\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F003",
+      "issue": "CLI `what-now --format json` still emits an unsanitized legacy guidance surface alongside the ActionItem envelope. Evidence: `scripts/dontpanic_orchestrate/cli.py` builds `payload = guidance.to_dict()` and only appends scrubbed `action_items`; my reproduction showed `legacy_secret_leaks=True`, `legacy_brand_leaks=True`, while `action_items_secret_leaks=False`. Recommendation: make the JSON surface render from `action_renderers.render_cli_what_now(action_items, fmt=\"json\")`, or remove/scrub/brand",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The parity test validates `action_renderers.render_cli_what_now(fmt=\"json\")`, but not the actual `_what_now_main --format json` code path that still leaks through `guidance.to_dict()`. Evidence: `test_renderer_parity_f003.py` feeds the fixed set through helper renderers; the real CLI JSON assembly in `cli.py` uses a different path. Recommendation: add a CLI-level JSON parity test with secret-shaped and legacy-brand strings.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "documentation",
+      "feature_id": "F003",
+      "issue": "The implementer audit records one non-runnable placeholder command: `git stash push -- scripts/dontpanic_orchestrate/dashboard.py && python -m pytest <3 failing tests> -q && git stash pop`. Evidence: `target_context.commands_run` contains `<3 failing tests>` rather than exact node IDs. Recommendation: record exact commands in audit context. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff -- scripts/dontpanic_orchestrate/action_renderers.py scripts/dontpanic_orchestrate/dashb",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

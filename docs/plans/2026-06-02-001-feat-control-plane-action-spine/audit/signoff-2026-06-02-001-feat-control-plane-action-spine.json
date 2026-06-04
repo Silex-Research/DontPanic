@@ -8,21 +8,21 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F002-i0.json",
-    "audit/codex-auditor-F002-i0.json",
-    "audit/claude-implementer-F002-i1.json",
-    "audit/codex-auditor-F002-i1.json",
-    "audit/claude-implementer-F002-i2.json",
-    "audit/codex-auditor-F002-i2.json"
+    "audit/claude-implementer-F003-i0.json",
+    "audit/codex-auditor-F003-i0.json",
+    "audit/claude-implementer-F003-i1.json",
+    "audit/codex-auditor-F003-i1.json",
+    "audit/claude-implementer-F003-i2.json",
+    "audit/codex-auditor-F003-i2.json"
   ],
   "vote_summary": {
-    "signed_off_count": 0,
+    "signed_off_count": 2,
     "needs_changes_count": 3,
-    "blocked_count": 3,
+    "blocked_count": 1,
     "inconclusive_count": 0
   },
   "signoff": false,
-  "signoff_reason": "environmental blocker — round 3 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "signoff_reason": "max_iterations=2 reached without signoff",
   "next_action": "remediate",
-  "decided_at": "2026-06-04T03:35:53Z"
+  "decided_at": "2026-06-04T04:19:11Z"
 }

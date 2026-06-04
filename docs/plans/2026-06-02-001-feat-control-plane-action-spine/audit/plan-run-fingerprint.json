@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-04T02:56:08Z",
+  "captured_at": "2026-06-04T03:41:40Z",
   "decision_lines": [
     "CP-D001\u001fb8f19f5b7196b0551135979915837c0d65853b522e6d9ac5ae50d456db3d0635",
     "CP-D002\u001fa4ec507e0ea86a6aaf6ae56084f22ae0923a85c27e1ab360d744c1282578d1c3",
@@ -24,7 +24,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
@@ -43,16 +43,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "556132f081b8a124b63d7d7469e5e654ef81129495f51dc6bc4ac07269a9f4e9",
+    "audit/gate-state.json": "174e0d8f8ccceb9c5b89baad9763d914763e87354ca721f63c6fa0a6516e8fe5",
     "decisions.jsonl": "3ac209175bba22d67f99c99f09db673c5e50f260a4665bd6cbd98c80976748cf",
-    "features.json": "6574bce45f03e64fd871cae50b39de949713132a3b4ef94563206f7d14b2a9e5",
+    "features.json": "cb1f0f6f12148f64207f6eb2f8d46afa63bee9301f2939c9ba977e48a70bcca0",
     "objective_contract.json": "cc7bae34e765e2f620ad7fd18f7bfff0ab747ee0de2d734ce93b03b6e7cc3d92",
     "plan.md": "7cadcd0a97d4756e09a5691e7cfd6d80cd58d57d9627fb995f01b1e07132fe4c"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1780534048.2786493,
-    "decisions.jsonl": 1780533072.8171148,
-    "features.json": 1780531990.3051164,
+    "audit/gate-state.json": 1780544499.6902027,
+    "decisions.jsonl": 1780543679.395391,
+    "features.json": 1780544409.8224905,
     "objective_contract.json": 1780521652.9047234,
     "plan.md": 1780521716.7072031
   },

@@ -92,10 +92,32 @@
         "Write one parity test feeding a fixed ActionItem set through all three renderers."
       ],
       "acceptance": "One test feeds a fixed ActionItem set through all three renderers and asserts the same action (matched by dedupe_key) appears in each with consistent title/band/exact_command, deduped once, with secret-shaped substrings scrubbed at the boundary. No renderer constructs ActionItems independently of the spine. Full orchestrate sweep stays green.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-04T04:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i2.json",
+          "note": "codex found real high/security leak: what-now --format json emitted unsanitized guidance.to_dict() (legacy_secret_leaks=True) \u2014 exactly the pre-impl sufficiency F003 wiring_gap prediction"
+        },
+        {
+          "type": "diff",
+          "uri": "scripts/dontpanic_orchestrate/cli.py",
+          "note": "fix (codex option-2): _scrub_json_payload recursively scrubs+brand-normalizes the legacy JSON shape in place; legacy `choices` contract preserved, leak closed"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py",
+          "note": "new CLI-level parity test (codex medium/test_coverage gap) drives real _what_now_main; 227 passed across renderer_parity/what_now/operations_guidance_f007/dashboard/operator_console/event_copy"
+        }
       ]
     }
   ]

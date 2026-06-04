@@ -1111,7 +1111,17 @@ def write_cache(
         final_items = merge_with_event_sidecar(items)
     else:
         final_items = items
-    payload = render_json(final_items, captured_at=captured_at)
+    # Plan 2026-06-02-001 F003: the dashboard cache is rendered through the
+    # shared render boundary (dedupe by dedupe_key + scrub secrets + brand
+    # normalize) so the served what-now agrees byte-for-byte with the CLI and
+    # agent-brief surfaces. Lazy import avoids an action_renderers↔operator_console
+    # import cycle. The boundary scrub is a no-op on already-clean data, so this
+    # preserves the F001 cache shape and the no-secret invariant.
+    from dontpanic_orchestrate import action_renderers as _action_renderers
+
+    payload = _action_renderers.render_dashboard_json(
+        final_items, captured_at=captured_at
+    )
     target.write_text(payload, encoding="utf-8")
     os.chmod(target, CACHE_FILE_MODE)
     mode_bits = stat.S_IMODE(target.stat().st_mode)

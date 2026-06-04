@@ -817,8 +817,16 @@ def build(
             # operator_console.write_cache's home cache) must merge or the
             # served dashboard state goes stale on whichever path skips.
             merged_items = operator_console.merge_with_event_sidecar(items)
+            # Plan 2026-06-02-001 F003 — the dashboard build JSON MUST route
+            # through the shared render boundary (action_renderers), not
+            # operator_console.render_json, so the served what-now.json is
+            # deduped-by-dedupe_key + secret-scrubbed + brand-normalized
+            # IDENTICALLY to the CLI/JSON and agent-brief surfaces. Lazy import
+            # avoids an action_renderers↔dashboard cycle at module load.
+            from dontpanic_orchestrate import action_renderers as _action_renderers
+
             (out_dir / "what-now.json").write_text(
-                operator_console.render_json(merged_items),
+                _action_renderers.render_dashboard_json(merged_items),
                 encoding="utf-8",
             )
             # write_cache merges by default (merge_event_sidecar=True); pass

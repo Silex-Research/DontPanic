@@ -1,0 +1,51 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "audit_id": "2026-06-02-001-feat-control-plane-action-spine#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-04T04:03:18Z",
+  "completed_at": "2026-06-04T04:08:22Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F003-i1.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-02-001-feat-control-plane-action-spine-u7c3hod1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1482799 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2103766,
+    "tokens_out": 17303,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \nCommand: audit complete; no further command\n\nOverall verdict: needs_changes. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and I found no forbidden command shapes in their `target_context.commands_run`.\n\nFINDING (high, correctness): Dashboard build JSON still bypasses the ActionItem render boundary. Evidence: `scripts/dontpanic_orchestrate/dashboard.py:820` writes `what-now.json` with `operator_console.render_json(merged_items)`, while `operator_console.render_json` at `operator_console.py:832` only serializes `ActionItem.to_dict()` and does not dedupe, scrub, or brand-normalize. A direct check showed `legacy_count 2` vs `spine_count 1`, and `legacy_detail run jarvis approve cleanup` vs `spine_detail run dontpanic approve cleanup`. Recommendation: route the dashboard build copy through `action_renderers.render_dashboard_json(merged_items)`.\n\nFINDING (medium, test_coverage): The parity test covers the new helper, not the actual dashboard build JSON path. Evidence: `test_renderer_parity_f003.py:112` calls `ar.render_dashboard(...)`, so it misses the still-live `dashboard.py` write path above. Recommendation: add or update a test that exercises the real dashboard build/write of `out_dir/what-now.json` and compares it against CLI JSON/text and agent brief for the same fixed `ActionItem` set.\n\nChecks run:\n$ git status --short  \n$ git diff --stat HEAD~1  \n$ git diff --name-only HEAD~1  \n$ PYTHONDONTWR",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "git diff --name-only HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py scripts/dontpanic_orchestrate/tests/test_operations_guidance_f007.py -q -p no:cacheprovider -s",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/dontpanic_orchestrate/tests/ -q -p no:cacheprovider -s"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "Dashboard build JSON still bypasses the ActionItem render boundary. Evidence: `scripts/dontpanic_orchestrate/dashboard.py:820` writes `what-now.json` with `operator_console.render_json(merged_items)`, while `operator_console.render_json` at `operator_console.py:832` only serializes `ActionItem.to_dict()` and does not dedupe, scrub, or brand-normalize. A direct check showed `legacy_count 2` vs `spine_count 1`, and `legacy_detail run jarvis approve cleanup` vs `spine_detail run dontpanic approve c",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The parity test covers the new helper, not the actual dashboard build JSON path. Evidence: `test_renderer_parity_f003.py:112` calls `ar.render_dashboard(...)`, so it misses the still-live `dashboard.py` write path above. Recommendation: add or update a test that exercises the real dashboard build/write of `out_dir/what-now.json` and compares it against CLI JSON/text and agent brief for the same fixed `ActionItem` set. Checks run: $ git status --short $ git diff --stat HEAD~1 $ git diff --name-on",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

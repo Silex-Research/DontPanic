@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-06-02-001-feat-control-plane-action-spine",
+  "audit_id": "2026-06-02-001-feat-control-plane-action-spine#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-04T03:51:42Z",
+  "completed_at": "2026-06-04T03:54:13Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=63.192670500000006",
+    "reviewing implementer audit at claude-implementer-F003-i0.json",
+    "execution_env_root=/tmp/claude-501/jarvis-exec-2026-06-02-001-feat-control-plane-action-spine-u7c3hod1 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 787496 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 896858,
+    "tokens_out": 9860,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F003] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes.\n\nFINDING (high, correctness): `what-now` text still bypasses the ActionItem render spine. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:906) still calls `operations_guidance.render_text(guidance)` for text output; only JSON adds `action_items`. Recommendation: route both `--format text` and `--format json` through `action_renderers.render_cli_what_now(guidance.to_action_items())`.\n\nFINDING (high, correctness): The agent brief surface is not routed through the managed ActionItem block by default. Evidence: [agent_brief.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/agent_brief.py:169) is unchanged, and [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:3978) only appends actions when a new optional `--actions PLAN` flag is supplied. Recommendation: integrate the managed actions block into the actual brief/update path required by F003, not as an opt-in side output.\n\nFINDING (medium, test_coverage): The parity test does not fully assert band parity across all three surfaces. Evidence: [test_renderer_parity_f003.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py:95) checks dashboard band and text title/command presence, but does not assert the matched action’s band appears consistently in CLI text and agent brief. Recommendation: as",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py /Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "`what-now` text still bypasses the ActionItem render spine. Evidence: [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:906) still calls `operations_guidance.render_text(guidance)` for text output; only JSON adds `action_items`. Recommendation: route both `--format text` and `--format json` through `action_renderers.render_cli_what_now(guidance.to_action_items())`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F003",
+      "issue": "The agent brief surface is not routed through the managed ActionItem block by default. Evidence: [agent_brief.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/agent_brief.py:169) is unchanged, and [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:3978) only appends actions when a new optional `--actions PLAN` flag is supplied. Recommendation: integrate the managed actions block into the actual brief/update path required by F003, ",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F003",
+      "issue": "The parity test does not fully assert band parity across all three surfaces. Evidence: [test_renderer_parity_f003.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_renderer_parity_f003.py:95) checks dashboard band and text title/command presence, but does not assert the matched action’s band appears consistently in CLI text and agent brief. Recommendation: assert title, band, and exact_command for the dedupe_key-matched action in each renderer output. Target",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}
