@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-04T14:37:44Z",
+  "captured_at": "2026-06-04T14:55:23Z",
   "decision_lines": [
     "D001\u001feeaabcb451f2f80f560120c13ee241d9bdb258f46a3bc008f918bcb60f967875",
     "D002\u001f2f84598bf0093786f7bf633a3e64fbb64a94b27aa00b1c06f80f119512aa51a2",
@@ -55,7 +55,7 @@
           "F002",
           "F003"
         ],
-        "passes": false
+        "passes": true
       },
       "F007": {
         "acceptance": "(1) A test fails when the command-validation top-level vocabulary has a command with no guidance entry. (2) A test fails when a workflow-critical help page lacks an agent guidance section. (3) Automatable examples in command guidance validate against the existing command validator. (4) A developer-facing checklist explains how to add or change an agent-facing command without drift. (5) Command-validation and representative help tests pass.",
@@ -84,14 +84,14 @@
   "file_hashes": {
     "audit/gate-state.json": "e47f7c8915244e7c336002a4db7caf24483509cc92872aca1f9f9621667eaac3",
     "decisions.jsonl": "b3920b438d3b8a3478b3c9b386574d5197317bf30e5db01dc525268500861d26",
-    "features.json": "ad21fca2022c7581be48394e7f7b6b7fa6785e25a841fc034a1e2e11434dc0b4",
+    "features.json": "5e59bdb7760c4aae6dcb982db892cbb131d4eff6cbefa7aa2674ddcc6026bed8",
     "objective_contract.json": "6421ffb0cb9c496f6ae8c46587c1bfb21c68b9993a29f72ba3a7b985b6448657",
     "plan.md": "28efe4c5cfd9e9f3f4e5335228b53c18e2a0a395b55fac4edb862836f1abbf03"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1780581124.938276,
     "decisions.jsonl": 1780580774.162955,
-    "features.json": 1780583847.5711215,
+    "features.json": 1780584897.3840313,
     "objective_contract.json": 1780580774.163773,
     "plan.md": 1780580835.2634645
   },

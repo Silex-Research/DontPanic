@@ -214,14 +214,30 @@
         "F005",
         "F006"
       ],
-      "passes": false,
+      "passes": true,
       "acceptance": "(1) A test fails when the command-validation top-level vocabulary has a command with no guidance entry. (2) A test fails when a workflow-critical help page lacks an agent guidance section. (3) Automatable examples in command guidance validate against the existing command validator. (4) A developer-facing checklist explains how to add or change an agent-facing command without drift. (5) Command-validation and representative help tests pass.",
       "steps": [
         "Add missing-guidance regression tests.",
         "Add representative help-section regression tests.",
         "Validate automatable examples against command validation.",
         "Document the new-command checklist."
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "audit/signoff-2026-06-03-001-feat-agent-command-surface-hardening.json",
+          "note": "operator_resolved close-out (class=signed_off_finalize)"
+        },
+        {
+          "type": "file",
+          "uri": "audit/codex-auditor-F007-i0.json",
+          "note": "signed_off auditor envelope (codex, iteration 0) that authorized the no-paid finalize"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-04T15:03:54Z"
     }
   ]
 }

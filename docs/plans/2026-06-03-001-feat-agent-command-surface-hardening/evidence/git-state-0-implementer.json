@@ -10,18 +10,14 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
-      "status": "M"
-    },
-    {
       "path": "scripts/dontpanic_orchestrate/command_guidance.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F006-i0.json",
-    "scripts/dontpanic_orchestrate/agent_guide.py",
-    "scripts/dontpanic_orchestrate/tests/test_f006_agent_guide.py"
+    "docs/AGENT_COMMAND_GUIDANCE_CHECKLIST.md",
+    "docs/plans/2026-06-03-001-feat-agent-command-surface-hardening/audit/claude-implementer-F007-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_f007_command_guidance_gate.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

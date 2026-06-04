@@ -467,6 +467,42 @@ def command_help_agent_snippet(command: str) -> str:
     return "\n".join(lines)
 
 
+# Workflow-critical command surfaces whose ``--help`` MUST carry the
+# class-specific agent-guidance footer (F005 wiring). One representative per
+# closed command class, so every risk level teaches its safe operating policy on
+# the help page an agent is most likely to land on. The F007 gate renders each
+# of these and fails if the footer is missing — so a new workflow command cannot
+# ship help without agent guidance, and removing the epilog wiring breaks the
+# build rather than silently dropping the policy text.
+WORKFLOW_CRITICAL_HELP_COMMANDS: tuple[str, ...] = (
+    "next",
+    "doctor",
+    "setup",
+    "plan",
+    "dispatch-from-plan",
+    "dashboard",
+)
+
+
+def missing_guidance_commands() -> frozenset[str]:
+    """Top-level validator commands lacking a guidance entry.
+
+    Plan 2026-06-03-001 F007 gate. The guidance inventory is a projection over
+    :func:`command_validation.known_subcommands`; a command added to the
+    validator vocabulary without a class and example entry here would otherwise
+    only surface as a ``KeyError`` deep inside
+    :func:`command_guidance_inventory`. This helper names the drift explicitly so
+    a regression test can fail with a readable message the moment a new command
+    ships without command guidance.
+    """
+    known = command_validation.known_subcommands()
+    return frozenset(
+        command
+        for command in known
+        if command not in _CLASS_BY_COMMAND or command not in _EXAMPLES_BY_COMMAND
+    )
+
+
 def known_command_paths() -> tuple[tuple[str, ...], ...]:
     """Projected top-level command paths from the validator vocabulary."""
     return tuple((command,) for command in sorted(command_validation.known_subcommands()))
@@ -523,9 +559,11 @@ __all__ = [
     "CommandExample",
     "CommandGuidance",
     "SCHEMA_VERSION",
+    "WORKFLOW_CRITICAL_HELP_COMMANDS",
     "command_class_label",
     "command_guidance_by_command",
     "command_guidance_inventory",
     "inventory_public_payload",
     "known_command_paths",
+    "missing_guidance_commands",
 ]
