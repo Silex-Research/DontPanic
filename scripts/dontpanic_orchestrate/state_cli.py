@@ -169,6 +169,13 @@ def _export_dashboard_main(argv: list[str]) -> int:
         # F002 lifecycle vs activity: distinct, separately-sourced counts so no
         # label conflates "plans with status==active" with "live agents".
         "activity": state_projection.activity_summary(snap),
+        # F003 freshness contract: generated_at + staleness threshold + the exact
+        # refresh trigger. The renderer recomputes data_age_seconds/is_stale
+        # against live time via state_projection.freshness_status; at write time
+        # the age is 0 by construction.
+        "freshness": state_projection.freshness_status(
+            snap.captured_at, now=snap.captured_at
+        ),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False)

@@ -84,9 +84,28 @@
         "Tests: data-age derives from generated_at; refresh trigger present on each major page"
       ],
       "acceptance": "Each major page shows generated_at + data age and a refresh trigger; a view past the staleness threshold is visibly flagged. Verified by tests over the rendered envelope.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T02:50:51Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_projection.py",
+          "note": "freshness_status(generated_at,now,threshold) -> {generated_at,data_age_seconds,is_stale,threshold,refresh_command}; clock-skew clamped to >=0; 15min default threshold + `dontpanic dashboard build` refresh"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_cli.py",
+          "note": "manifest freshness block"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_freshness_f003.py",
+          "note": "5 passed: fresh vs past-threshold stale, custom threshold, skew clamp, manifest block carries refresh command"
+        }
       ]
     },
     {

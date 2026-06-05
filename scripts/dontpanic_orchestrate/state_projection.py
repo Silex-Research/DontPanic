@@ -140,6 +140,39 @@ LEGACY_SOURCES: Final[frozenset[str]] = frozenset(
 )
 
 
+# Plan 2026-06-04-004 F003 — freshness contract. A view older than this is
+# visibly flagged stale and the operator is given the exact refresh trigger.
+DASHBOARD_STALENESS_THRESHOLD_SECONDS: Final[int] = 900  # 15 minutes
+DASHBOARD_REFRESH_COMMAND: Final[str] = "dontpanic dashboard build"
+
+
+def freshness_status(
+    generated_at: dt.datetime,
+    *,
+    now: dt.datetime,
+    threshold_seconds: int = DASHBOARD_STALENESS_THRESHOLD_SECONDS,
+) -> dict[str, object]:
+    """Plan 2026-06-04-004 F003 — compute the freshness envelope for a page.
+
+    Returns ``generated_at`` (ISO), ``data_age_seconds`` (>= 0), ``is_stale``
+    (age > threshold), ``staleness_threshold_seconds`` and the exact
+    ``refresh_command`` so a stale view is both visibly stale AND re-fetchable.
+    """
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=dt.timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=dt.timezone.utc)
+    age = (now - generated_at).total_seconds()
+    age = max(0.0, age)  # clock skew must never report a negative age
+    return {
+        "generated_at": generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "data_age_seconds": age,
+        "staleness_threshold_seconds": threshold_seconds,
+        "is_stale": age > threshold_seconds,
+        "refresh_command": DASHBOARD_REFRESH_COMMAND,
+    }
+
+
 def activity_summary(snapshot: "StateSnapshot") -> dict[str, object]:
     """Plan 2026-06-04-004 F002 — lifecycle vs activity as SEPARATE axes,
     each pinned to a DISTINCT source so no label conflates plan lifecycle with
