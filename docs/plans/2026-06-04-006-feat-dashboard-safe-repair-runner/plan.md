@@ -3,7 +3,7 @@ id: 2026-06-04-006-feat-dashboard-safe-repair-runner
 title: Dashboard safe-repair runner (ordered, safety-classified repair plan an agentic operator can execute)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-04"
 goal_type: new_feature
 description: >
