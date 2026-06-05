@@ -1,0 +1,72 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator autopilot directive (this conversation, 2026-06-04): 'If a human is leveraging an agentic operator, the dashboard should guide the agent to run the commands and resolve all issues across tabs to automatically clean up install/mapping/etc — interrupting the human only for credentials, spend, destructive changes, or external approval.' Three-tier execution model chosen by the operator: repair plan (emit-only, default) -> repair apply --safe-derived-state (projection/cache regen only) -> repair apply --safe --confirm (explicit allowlist of local safe mutations). Builds on 2026-06-04-005 (render/scope truth), reusing 001 resolution_class + clears_when and 004 freshness.",
+  "user_journeys": [
+    {
+      "name": "agent-operator-runs-emitted-repair-bundle",
+      "description": "A human using Codex/Claude/Grok as the operator asks DontPanic for the repair plan for a scope and receives an ordered, dependency-sorted, safety-classified JSON bundle. The agent runs the auto_safe steps itself and stops at the human_required ones, instead of being handed twenty cards with raw commands.",
+      "surfaces": ["infra", "ux"],
+      "states": ["scope_selected", "bundle_emitted", "auto_safe_runnable", "human_required_stops_surfaced"],
+      "acceptance_signals": [
+        "`dontpanic repair plan --scope <s> --format=json` emits ordered actions with command, safety_class, clears_when, plain consequence, and scope",
+        "The bundle is dependency-ordered (a prerequisite action precedes its dependent)",
+        "Emit-only performs zero mutation",
+        "human_required / blocked_external actions are present but flagged, not auto-runnable"
+      ]
+    },
+    {
+      "name": "one-button-derived-state-repair-clears-stale-cards",
+      "description": "An operator runs `repair apply --safe-derived-state` (or clicks 'Repair automatically'); DontPanic regenerates derived/projection state (rebuild dashboard state, recompute what-now, refresh capability status, refresh reconcile CHECK, regen architecture if bounded, clear replaceable generated caches, re-export, suppress resolved) and the stale/phantom cards clear, leaving only genuine human decisions.",
+      "surfaces": ["ux", "infra"],
+      "states": ["safe_derived_state_invoked", "projection_regenerated", "stale_cards_cleared", "only_human_required_remain"],
+      "acceptance_signals": [
+        "`repair apply --safe-derived-state` executes only apply_tier=derived_state actions",
+        "It refuses deploys, credential setup, paid dispatch, role changes, plan-state mutation, project-registry changes, destructive cleanup, and reconcile-baseline writes",
+        "Phantom/stale cards clear after the batch; the remaining set is human_required/blocked_external/info",
+        "Each executed action is round-trip verified"
+      ]
+    },
+    {
+      "name": "planner-recomputes-after-state-changing-step",
+      "description": "After a safe step changes state, the planner recomputes the next needed step (a fixpoint loop) rather than running a stale static list; it terminates when only human_required/blocked_external/info remain or no progress is made, and logs whatever it deferred.",
+      "surfaces": ["infra"],
+      "states": ["initial_plan_built", "safe_step_applied", "state_recomputed", "replan_to_fixpoint", "deferred_logged"],
+      "acceptance_signals": [
+        "A step whose output changes the needed next step triggers a re-plan, not a static continuation",
+        "The loop terminates at a fixpoint (only human/blocked/info left, or no progress)",
+        "Deferred actions are logged with why (safety tier, dependency, or no-progress)"
+      ]
+    },
+    {
+      "name": "unsafe-action-never-auto-runs",
+      "description": "An action that deploys, sets credentials, dispatches a paid agent, changes roles, mutates plan state or project registry, deletes files destructively, or writes a reconcile baseline is classified human_required (or only confirmed_local behind --safe --confirm with an explicit allowlist) and never auto-runs under --safe-derived-state; it appears as a human card with plain consequence text.",
+      "surfaces": ["ux", "infra"],
+      "states": ["unsafe_action_classified", "excluded_from_derived_state_tier", "human_card_with_consequence", "confirm_tier_requires_allowlist"],
+      "acceptance_signals": [
+        "None of the forbidden action kinds run under --safe-derived-state",
+        "An unclassified action defaults to human_required and never auto-runs (fail closed)",
+        "--safe --confirm runs only an explicit allowlist of confirmed_local mutations, each still safety_class + clears_when + round-trip verified",
+        "Human cards carry plain_consequence text"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "safety-taxonomy-policy-tests.log",
+    "repair-planner-fixpoint-tests.log",
+    "repair-plan-emit-bundle-snapshot.json",
+    "repair-apply-derived-state-tests.log",
+    "repair-apply-confirm-allowlist-tests.log",
+    "round-trip-verification-tests.log",
+    "forbidden-action-never-autoruns-tests.log",
+    "full-orchestrate-sweep.log"
+  ],
+  "non_goals": [
+    "No deploys, credential setup, paid agent dispatch, role changes, or destructive file cleanup under any --safe tier",
+    "No plan-state or project-registry mutation under --safe-derived-state (derived/cached projection regeneration only)",
+    "No reconcile-baseline write without explicit approval (confirmed_local allowlist + --confirm)",
+    "No remote / multi-operator execution; no hosted control plane",
+    "No new resolution predicates beyond 001/005's closed registry",
+    "No re-implementation of the render gate, scope lattice, or freshness (that is 005)"
+  ],
+  "completion_test": "`dontpanic repair plan --scope <s> --format=json` emits a dependency-ordered, safety-classified, zero-mutation bundle (command + safety_class + clears_when + plain_consequence + scope). `dontpanic repair apply --safe-derived-state` executes ONLY apply_tier=derived_state actions (projection/cache/recompute), recomputes after each step, round-trip verifies each targeted card cleared/chained/became human_required, re-plans to a fixpoint, and refuses every forbidden kind (deploy/creds/paid/role/plan-state/registry/destructive/baseline). `dontpanic repair apply --safe --confirm` additionally runs only an explicit allowlist of confirmed_local mutations, each still safety_class + clears_when + round-trip verified. Safety is producer-asserted; an unclassified action defaults to human_required and never auto-runs. The dashboard exposes 'Repair automatically' and 'Copy agent repair plan', scope-aware via 005. Full orchestrate sweep stays green."
+}

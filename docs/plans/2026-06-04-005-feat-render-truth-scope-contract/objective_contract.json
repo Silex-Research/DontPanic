@@ -1,0 +1,68 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator render-truth contract (this conversation, 2026-06-04): 'A card may render as Needs Action only if its producer can prove the issue exists for the currently selected scope — no stale fallback, no last-known-bad as live truth, no global issue disguised as project-specific.' Builds on completed plans 2026-06-04-001 (action truth: clears_when/resolution_class/suppress-at-source) and 2026-06-04-004 (render truth: provenance/freshness/architecture stale-to-uncertainty demotion). The concrete failure this closes is the QuantRE stale reconcile card: a per-project stale cache surfaced a global setup-drift card as project work even though live global reconcile was clean.",
+  "user_journeys": [
+    {
+      "name": "project-user-does-not-see-stale-global-reconcile-as-project-work",
+      "description": "An operator viewing a single project (e.g. quantre-migration) does not see global reconcile / install-drift issues rendered as project work. A global issue that genuinely applies appears only with an explicit GLOBAL badge; an issue that no longer applies (clean global reconcile) does not appear at all, even if a per-project cache still holds the old card.",
+      "surfaces": ["ux", "infra"],
+      "states": ["project_selected", "global_reconcile_clean", "stale_project_cache_present", "no_setup_drift_card_rendered"],
+      "acceptance_signals": [
+        "Global-scoped cards in a project view carry a visible GLOBAL badge",
+        "A global card whose live predicate is clean does not render even when a stale per-project cache contains it",
+        "No global card renders as if it were project-scoped (unbadged)"
+      ]
+    },
+    {
+      "name": "operator-clean-global-suppresses-stale-cache-drift-card",
+      "description": "When the live global reconcile check is clean, no setup-drift Needs Action card renders from any stale project-local output cache (what-now-cache.json). The render path re-evaluates the global predicate against live global state rather than trusting cached cards.",
+      "surfaces": ["ux", "infra"],
+      "states": ["global_reconcile_clean", "stale_what_now_cache", "predicate_reevaluated_live", "card_suppressed"],
+      "acceptance_signals": [
+        "Given selected project = quantre-migration, a stale per-project reconcile cache saying missing_snapshot, and a clean live global reconcile, the dashboard renders zero setup-drift Needs Action cards",
+        "Suppression is driven by live predicate re-evaluation, not by cache contents",
+        "The QuantRE regression fixture proves this exact case"
+      ]
+    },
+    {
+      "name": "agent-every-needs-action-card-proves-four-part-contract",
+      "description": "An agent (or invariant test) reading the rendered Needs Action set finds that every visible card proves all four: an asserted scope that applies to the selected scope, a fresh/evaluable source, an unresolved/evaluable clears_when predicate, and a set resolution_class. No card renders as Needs Action that fails any of the four.",
+      "surfaces": ["infra"],
+      "states": ["render_set_built", "four_part_invariant_checked", "no_unprovable_needs_action"],
+      "acceptance_signals": [
+        "Invariant test asserts scope_applies AND source_fresh AND predicate_unresolved AND resolution_class_set for every Needs Action card",
+        "A card with clears_when=None, a stale source, an unknown scope, or a missing resolution_class never appears as Needs Action",
+        "The check runs over a mixed fixture (global + project + stale + resolved cards)"
+      ]
+    },
+    {
+      "name": "user-stale-or-failing-producer-shows-uncertainty-not-fake-work",
+      "description": "When a producer's source is stale or its recompute fails/was skipped, the user sees a single uncertainty card ('Status could not be refreshed: <source>, last checked <t>, reason <r>') in a lower-priority section — not a fake actionable Needs Action card carrying old data.",
+      "surfaces": ["ux"],
+      "states": ["source_stale_or_failed", "cards_collapsed_to_one_uncertainty_card", "info_band_status_uncertain_section", "zero_needs_action_from_that_source"],
+      "acceptance_signals": [
+        "A stale/failed producer yields exactly one uncertainty card (band=info, section=status_uncertain) and zero Needs Action cards",
+        "The uncertainty card states source, last-checked time, and reason",
+        "Reconcile, capabilities, gates, and architecture all demote through the same shared path"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "render-gate-three-outcome-tests.log",
+    "scope-lattice-truth-table-tests.log",
+    "per-source-freshness-tests.log",
+    "stale-demotion-all-producers-tests.log",
+    "quantre-stale-cache-regression-fixture.json",
+    "render-truth-invariant-tests.log",
+    "full-orchestrate-sweep.log"
+  ],
+  "non_goals": [
+    "No new clears_when predicates beyond what producers need to assert liveness (reuse 001's closed registry; add only with a decision)",
+    "No redesign of the supervisor registry, reconcile, or capabilities engines (consume their outputs)",
+    "No Firebase realtime / multi-operator transport",
+    "No new integrations or operator actions (that is 2026-06-04-003)",
+    "No silent scope default that infers from project_name and makes legacy cards look trustworthy",
+    "No second demotion path: the render gate owns the single demote decision"
+  ],
+  "completion_test": "Every visible Needs Action card, for the currently selected scope S, provably satisfies scope_applies(card.scope,S) AND per-source-fresh AND clears_when-unresolved-and-evaluable AND resolution_class-set, decided by one deterministic render gate with three total/mutually-exclusive outcomes (render/suppress/demote). A stale or failed-to-recompute source produces exactly one info-band 'could not refresh' card in the status_uncertain section and zero Needs Action cards. A global producer emits one scope=global card shown in a project view only with a GLOBAL badge while its live predicate is unresolved and source fresh, and the QuantRE regression (selected project=quantre-migration + stale per-project missing_snapshot cache + clean live global reconcile) renders zero setup-drift cards. Full orchestrate sweep stays green."
+}
