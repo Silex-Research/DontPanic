@@ -1,0 +1,95 @@
+"""Plan 2026-06-04-005 F001 — the unified render gate.
+
+The single, deterministic decision point that every ActionItem passes through
+before it can render as Needs Action. ``render_decision`` returns exactly one of
+three total, mutually-exclusive outcomes — :data:`RENDER` / :data:`SUPPRESS` /
+:data:`DEMOTE` — via a normative 6-step order (operator-confirmed, D004):
+
+  1. scope applies to the selected scope?   else SUPPRESS  (not relevant here)
+  2. source fresh AND evaluable?             else DEMOTE
+  3. clears_when present?                     else DEMOTE
+  4. resolution_class set?                    else DEMOTE
+  5. predicate resolved?                      -> SUPPRESS
+  6. else (unresolved)                        -> RENDER
+
+This INVERTS :func:`action_resolvability.suppress_resolved` from the old
+render-unless-proven-resolved default to **suppress-unless-proven-live**: a
+Needs Action card must affirmatively prove all four obligations to earn its slot.
+
+It is the ONLY place a ``DEMOTE`` decision is made — F004 builds the demotion
+("could not refresh") card, but never decides demotion. Scope-application (F002)
+and per-source freshness (F003) are computed upstream and injected here as
+already-resolved inputs, keeping the gate pure and unit-testable in isolation.
+
+Lower-band cards (advisory/info/ready) make no Needs Action claim, so the
+fail-closed proof obligations (steps 2–4) do not apply to them: scope still
+suppresses an inapplicable card, a resolved predicate still suppresses, and
+otherwise they render in their own band. Per D005, step 3's "evaluable" nuance
+(the predicate's own inputs being present) is covered by step 2's
+source-evaluability — the closed predicate registry guarantees the predicate
+name itself is known at ``ClearsWhen`` construction time.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from . import action_resolvability as _ar
+from .operator_console import Band
+
+RENDER = "render"
+SUPPRESS = "suppress"
+DEMOTE = "demote"
+OUTCOMES: frozenset[str] = frozenset({RENDER, SUPPRESS, DEMOTE})
+
+
+def _is_needs_action(card: Any) -> bool:
+    band = getattr(card, "band", None)
+    return getattr(band, "value", band) == Band.NEEDS_ACTION.value
+
+
+def render_decision(
+    card: Any,
+    *,
+    scope_applies: bool,
+    source_fresh: bool,
+    source_evaluable: bool = True,
+    live_state: Mapping[str, Any],
+) -> str:
+    """Classify ``card`` into RENDER / SUPPRESS / DEMOTE for the selected scope.
+
+    ``scope_applies`` (F002) and ``source_fresh`` / ``source_evaluable`` (F003)
+    are resolved upstream and passed in. ``live_state`` is the fleet live-state
+    map the closed clears_when predicates evaluate against.
+    """
+    # 1. scope — universal. Not relevant to this view → suppress (NOT demote):
+    #    a card that does not belong here is not an uncertainty, it is absent.
+    if not scope_applies:
+        return SUPPRESS
+
+    if not _is_needs_action(card):
+        # Lower-band cards make no Needs Action claim and are not fail-closed
+        # gated. They still vanish when their predicate is resolved; otherwise
+        # they render in their own band.
+        cw = getattr(card, "clears_when", None)
+        if cw is not None and _ar.evaluate_clears_when(cw, live_state):
+            return SUPPRESS
+        return RENDER
+
+    # NEEDS_ACTION: must affirmatively prove all four obligations.
+    # 2. source fresh + evaluable
+    if not (source_fresh and source_evaluable):
+        return DEMOTE
+    # 3. clears_when present (predicate name is registry-guaranteed at construction)
+    cw = getattr(card, "clears_when", None)
+    if cw is None:
+        return DEMOTE
+    # 4. resolution_class set
+    if not getattr(card, "resolution_class", None):
+        return DEMOTE
+    # 5. predicate resolved → suppress (issue genuinely gone)
+    if _ar.evaluate_clears_when(cw, live_state):
+        return SUPPRESS
+    # 6. unresolved → render as Needs Action
+    return RENDER
