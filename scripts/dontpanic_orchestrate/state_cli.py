@@ -166,6 +166,9 @@ def _export_dashboard_main(argv: list[str]) -> int:
             }
             for s in state_projection.ALL_STREAMS
         ],
+        # F002 lifecycle vs activity: distinct, separately-sourced counts so no
+        # label conflates "plans with status==active" with "live agents".
+        "activity": state_projection.activity_summary(snap),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False)

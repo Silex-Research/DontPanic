@@ -139,6 +139,43 @@ LEGACY_SOURCES: Final[frozenset[str]] = frozenset(
     {"tasks.json", "agents.json", "activity.json"}
 )
 
+
+def activity_summary(snapshot: "StateSnapshot") -> dict[str, object]:
+    """Plan 2026-06-04-004 F002 — lifecycle vs activity as SEPARATE axes,
+    each pinned to a DISTINCT source so no label conflates plan lifecycle with
+    live agent execution.
+
+    * ``active_plans`` — plans whose lifecycle status == "active" (a property of
+      the plan ledger; says nothing about whether an agent is running).
+    * ``live_now`` — count of active supervisors from the registry (the ONLY
+      source that may claim live execution).
+
+    The old "Running N" label conflated these (it counted status==active plans
+    but implied N live agents). Consumers render ``active_plans`` as "Active
+    Plans" and ``live_now`` as "Live Now"; when ``live_now == 0`` nothing on the
+    board may claim live execution.
+    """
+    plans = snapshot.streams.plans
+    supervisors = snapshot.streams.supervisors
+
+    def _status_str(p: object) -> object:
+        # PlanSummary.status may be a Status enum (live model) or a plain str
+        # (dict form / stubs). Coerce so the comparison never silently fails —
+        # the same enum-vs-string trap that bit the gate predicate.
+        s = getattr(p, "status", None)
+        return s.value if hasattr(s, "value") else s
+
+    active_plans = sum(1 for p in plans if _status_str(p) == "active")
+    return {
+        "active_plans": active_plans,
+        "active_plans_source": STREAM_PROVENANCE["plans"],
+        "live_now": len(supervisors),
+        "live_now_source": STREAM_PROVENANCE["supervisors"],
+        # Explicit honesty flag the renderer keys off: only TRUE when the live
+        # registry actually reports a running supervisor.
+        "claims_live_execution": len(supervisors) > 0,
+    }
+
 _VALID_REDACT_LEVELS: Final[frozenset[str]] = frozenset(
     {"public", "operator", "full"}
 )

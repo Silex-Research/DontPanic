@@ -48,9 +48,28 @@
         "Tests: Active Plans==status-active count; Live Now==supervisors count; with 0 supervisors no label reads as 'running'"
       ],
       "acceptance": "Active Plans reflects status==active and Live Now reflects active supervisors, from distinct sources; with zero live supervisors nothing on the board claims live execution. Verified by tests pinning each count to its source.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T02:48:40Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_projection.py",
+          "note": "activity_summary(): active_plans (status==active, enum-coerced) + live_now (len supervisors) from DISTINCT sources + claims_live_execution honesty flag"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_cli.py",
+          "note": "manifest carries activity block"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_activity_axes_f002.py",
+          "note": "9 passed: active_plans pinned to status, live_now pinned to supervisors, distinct sources, zero-supervisor claims no live execution"
+        }
       ]
     },
     {
