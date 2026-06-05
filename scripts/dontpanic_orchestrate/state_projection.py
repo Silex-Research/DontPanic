@@ -173,6 +173,85 @@ def freshness_status(
     }
 
 
+def source_freshness(
+    source_id: str,
+    eval_map: "dict[str, dict[str, object]] | None",
+    *,
+    now: dt.datetime,
+    threshold_seconds: int = DASHBOARD_STALENESS_THRESHOLD_SECONDS,
+) -> dict[str, object]:
+    """Plan 2026-06-04-005 F003 — per-source freshness (NOT snapshot-wide).
+
+    ``eval_map`` is keyed by source id; each entry carries when that source last
+    evaluated (``evaluated_at`` ISO) and whether the evaluation succeeded
+    (``eval_ok``). Returns ``{source, evaluated_at, age, is_stale, eval_ok}`` for
+    one source, computed from THAT source's own stamp so a stale/failed producer
+    cannot poison fresh siblings. An unknown source fails closed
+    (``is_stale=True, eval_ok=False``): the render gate (F001 step 2) then demotes
+    only that source's cards. ``eval_ok=False`` (recompute failed/skipped) is
+    distinct from ``is_stale`` (old-but-evaluated) — both fail step 2, but for
+    different, separately-reportable reasons.
+    """
+    entry = (eval_map or {}).get(source_id)
+    if not entry:
+        return {
+            "source": source_id,
+            "evaluated_at": None,
+            "age": None,
+            "is_stale": True,
+            "eval_ok": False,
+        }
+    raw = entry.get("evaluated_at")
+    eval_ok = bool(entry.get("eval_ok", True))
+    evaluated_at: dt.datetime | None = None
+    if isinstance(raw, dt.datetime):
+        evaluated_at = raw
+    elif isinstance(raw, str) and raw:
+        try:
+            evaluated_at = dt.datetime.strptime(raw, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=dt.timezone.utc
+            )
+        except ValueError:
+            evaluated_at = None
+    if evaluated_at is None:
+        # Stamp present but unparseable → cannot prove freshness → fail closed.
+        return {
+            "source": source_id,
+            "evaluated_at": raw if isinstance(raw, str) else None,
+            "age": None,
+            "is_stale": True,
+            "eval_ok": False,
+        }
+    if evaluated_at.tzinfo is None:
+        evaluated_at = evaluated_at.replace(tzinfo=dt.timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=dt.timezone.utc)
+    age = max(0.0, (now - evaluated_at).total_seconds())  # clamp clock skew
+    return {
+        "source": source_id,
+        "evaluated_at": evaluated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "age": age,
+        "is_stale": age > threshold_seconds,
+        "eval_ok": eval_ok,
+    }
+
+
+def card_source_freshness(
+    card: object,
+    eval_map: "dict[str, dict[str, object]] | None",
+    *,
+    now: dt.datetime,
+    threshold_seconds: int = DASHBOARD_STALENESS_THRESHOLD_SECONDS,
+) -> dict[str, object]:
+    """Per-source freshness for a card, keyed by its ``source`` attribute."""
+    return source_freshness(
+        getattr(card, "source", None),
+        eval_map,
+        now=now,
+        threshold_seconds=threshold_seconds,
+    )
+
+
 def activity_summary(snapshot: "StateSnapshot") -> dict[str, object]:
     """Plan 2026-06-04-004 F002 — lifecycle vs activity as SEPARATE axes,
     each pinned to a DISTINCT source so no label conflates plan lifecycle with
