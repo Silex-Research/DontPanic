@@ -176,6 +176,9 @@ def _export_dashboard_main(argv: list[str]) -> int:
         "freshness": state_projection.freshness_status(
             snap.captured_at, now=snap.captured_at
         ),
+        # F004 agent attribution: read-only from the active-supervisor registry;
+        # who works which plan/feature, or "none" when nothing is live.
+        "attribution": state_projection.agent_attribution(snap),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False)

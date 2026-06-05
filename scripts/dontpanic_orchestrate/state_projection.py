@@ -209,6 +209,34 @@ def activity_summary(snapshot: "StateSnapshot") -> dict[str, object]:
         "claims_live_execution": len(supervisors) > 0,
     }
 
+
+def agent_attribution(snapshot: "StateSnapshot") -> dict[str, object]:
+    """Plan 2026-06-04-004 F004 — read-only agent attribution: when supervisors
+    are live, who is working which plan/feature, sourced ONLY from the
+    active-supervisor registry. When none are live, ``none`` is True and the
+    board says "none" (it must never invent attribution).
+
+    ``live_count`` equals ``activity_summary.live_now`` by construction (both are
+    the supervisor count) — the F005 invariant pins them together.
+    """
+    sups = snapshot.streams.supervisors
+    attributions = [
+        {
+            "supervisor_id": getattr(s, "supervisor_id", None),
+            "plan_id": getattr(s, "plan_id", None),
+            "feature_id": getattr(s, "feature_id", None),
+            "implementer_agent": getattr(s, "implementer_agent", None),
+            "auditor_agent": getattr(s, "auditor_agent", None),
+        }
+        for s in sups
+    ]
+    return {
+        "live_count": len(attributions),
+        "attributions": attributions,
+        "none": len(attributions) == 0,
+        "source": STREAM_PROVENANCE["supervisors"],
+    }
+
 _VALID_REDACT_LEVELS: Final[frozenset[str]] = frozenset(
     {"public", "operator", "full"}
 )

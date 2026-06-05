@@ -120,9 +120,28 @@
         "Tests: N live supervisors -> N attributions with correct agent/plan; 0 -> 'none'"
       ],
       "acceptance": "With live supervisors the board shows which agent works which plan/kind (attribution count == Live Now); with none it says 'none'. Verified by tests over stubbed registry states.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T02:56:49Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_projection.py",
+          "note": "agent_attribution(): read-only from supervisor stream; attributions[] (agent->plan/feature), live_count==activity.live_now, none=True + 'none' when empty"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_cli.py",
+          "note": "manifest attribution block"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_agent_attribution_f004.py",
+          "note": "4 passed: none-when-empty, agent->plan attribution, live_count==live_now invariant, isolated-home manifest none"
+        }
       ]
     },
     {
