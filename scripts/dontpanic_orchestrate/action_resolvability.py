@@ -199,3 +199,38 @@ def _install_snapshot_fresh(
     """
     rec = live_state.get("reconcile") or {}
     return bool(rec.get("snapshot_present")) and bool(rec.get("cache_fresh"))
+
+
+@register_predicate("reconcile_clean")
+def _reconcile_clean(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """A reconcile DRIFT card (new/removed/changed capabilities) is resolved when
+    the next reconcile check reports no drift — i.e. the operator re-baselined and
+    a fresh ``reconcile check`` is clean. Suppression fires on the REBUILD after
+    the operator acts (the live_state on the same pass still carries the drift
+    that produced the card), exactly like the gate predicate.
+
+    live_state expects ``reconcile``: {drift_kinds: [...]} (absent/empty => clean).
+    """
+    rec = live_state.get("reconcile")
+    if not rec:
+        return False  # no reconcile signal -> cannot prove clean -> keep card
+    return not (rec.get("drift_kinds") or ())
+
+
+@register_predicate("capability_ready")
+def _capability_ready(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """An operator-attested capability item (needs_setup / blocked) is resolved
+    when the capability has become ``ready`` — i.e. the operator supplied the
+    missing credential/setup EVIDENCE and a re-probe now reports ready. It is
+    NEVER cleared by running the read-only ``capabilities status`` diagnostic, so
+    this is the operator_attested resolution path (F004): clear on evidence, not
+    on a command.
+
+    live_state expects ``capabilities``: {capability_id -> status_string}.
+    """
+    cap_id = params["capability_id"]
+    return (live_state.get("capabilities") or {}).get(cap_id) == "ready"

@@ -1052,13 +1052,79 @@ def _gather_action_items(
     )
     # F002 suppress-at-source: drop any item whose clears_when is already
     # satisfied against live state. Items with clears_when=None are kept
-    # unchanged, so this is a no-op until emitters opt in (F003 wires gates).
+    # unchanged. F003 wires gate cards; F004 wires reconcile readiness +
+    # operator-attested capabilities below.
     live_state = {
         "plan_status": plan_status_by_id,
         "cleared_gates": cleared_gates_by_id,
+        # F004 reconcile readiness (global scope): snapshot present iff a
+        # reconcile result exists without a missing_snapshot drift; cache fresh
+        # iff there is no stale_status_cache drift. install_snapshot_fresh keys
+        # off both. None reconcile -> unknown -> readiness items kept (correct:
+        # we cannot prove readiness, so do not auto-hide).
+        "reconcile": _reconcile_live_state(reconcile_result),
+        # F004 operator-attested capabilities: capability_id -> status string;
+        # capability_ready suppresses a needs_setup/blocked card only once a
+        # re-probe reports the capability ready (clear on evidence).
+        "capabilities": _capabilities_live_state(capability_envelope),
     }
     kept, _suppressed = _ar.suppress_resolved(aggregated, live_state)
     return kept
+
+
+def _reconcile_live_state(reconcile_result: Any | None) -> dict[str, bool]:
+    """Derive {snapshot_present, cache_fresh} from a reconcile check result for
+    the install_snapshot_fresh predicate (F004). Returns an empty mapping when
+    no reconcile result is available, so the predicate evaluates False and the
+    readiness item is kept rather than auto-suppressed."""
+    if reconcile_result is None:
+        return {}
+    status = getattr(reconcile_result, "status", None)
+    if status is None and isinstance(reconcile_result, dict):
+        status = reconcile_result.get("status")
+    status_val = status.value if hasattr(status, "value") else status
+    if status_val in (None, "clean"):
+        return {"snapshot_present": True, "cache_fresh": True, "drift_kinds": []}
+    drift_raw = getattr(reconcile_result, "drift_kinds", None)
+    if not drift_raw and isinstance(reconcile_result, dict):
+        drift_raw = reconcile_result.get("drift_kinds")
+    drift_list = [str(d) for d in (drift_raw or (status_val,))]
+    drift = set(drift_list)
+    # Only true capability DRIFT (not the snapshot/cache readiness kinds) keys
+    # reconcile_clean; otherwise a missing-snapshot state would wrongly mark
+    # drift cards clean.
+    drift_only = [
+        d
+        for d in drift_list
+        if d in ("new_capabilities", "removed_capabilities", "changed_capabilities")
+    ]
+    return {
+        "snapshot_present": "missing_snapshot" not in drift,
+        "cache_fresh": "stale_status_cache" not in drift,
+        "drift_kinds": drift_only,
+    }
+
+
+def _capabilities_live_state(capability_envelope: Any | None) -> dict[str, str]:
+    """Derive {capability_id -> status_string} from a capabilities StatusEnvelope
+    for the capability_ready predicate (F004). Empty when no envelope."""
+    if capability_envelope is None:
+        return {}
+    caps = getattr(capability_envelope, "capabilities", None)
+    if caps is None and isinstance(capability_envelope, dict):
+        caps = capability_envelope.get("capabilities", [])
+    out: dict[str, str] = {}
+    for cap in caps or ():
+        cap_id = getattr(cap, "capability_id", None) or (
+            cap.get("capability_id") if isinstance(cap, dict) else None
+        )
+        status = getattr(cap, "status", None) or (
+            cap.get("status") if isinstance(cap, dict) else None
+        )
+        if cap_id is None or status is None:
+            continue
+        out[cap_id] = status.value if hasattr(status, "value") else str(status)
+    return out
 
 
 def _gather_skill_recommendation_items(

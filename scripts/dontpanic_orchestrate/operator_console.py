@@ -90,7 +90,9 @@ from typing import Any
 
 from dontpanic_orchestrate import global_config as _gc
 from dontpanic_orchestrate.action_resolvability import (
+    RESOLUTION_CHAINED,
     RESOLUTION_COMMAND_RESOLVABLE,
+    RESOLUTION_OPERATOR_ATTESTED,
     ClearsWhen,
     validate_resolution_class,
 )
@@ -523,14 +525,26 @@ def provide_capability_actions(
         if status_val in ("ready", "optional"):
             continue
 
+        # F004: needs_setup / blocked require the operator to supply the missing
+        # credential / setup — a read-only `capabilities status` does NOT resolve
+        # them, so they are operator_attested and clear ONLY when a re-probe
+        # reports the capability ready (clear on evidence, never on the command).
+        # not_installed is an opt-in advisory and keeps the command_resolvable
+        # default.
+        cap_clears: ClearsWhen | None = None
+        cap_class = RESOLUTION_COMMAND_RESOLVABLE
         if status_val == "blocked":
             band = Band.NEEDS_ACTION
             title = f"Capability {cap_id} is blocked"
             reason = "capability probe failed"
+            cap_clears = ClearsWhen("capability_ready", {"capability_id": cap_id})
+            cap_class = RESOLUTION_OPERATOR_ATTESTED
         elif status_val == "needs_setup":
             band = Band.NEEDS_ACTION
             title = f"Capability {cap_id} needs setup"
             reason = "capability setup incomplete"
+            cap_clears = ClearsWhen("capability_ready", {"capability_id": cap_id})
+            cap_class = RESOLUTION_OPERATOR_ATTESTED
         elif status_val == "not_installed":
             band = Band.ADVISORY
             title = f"Capability {cap_id} is not installed"
@@ -566,6 +580,8 @@ def provide_capability_actions(
                 plain_consequence=(
                     f"Shows the current status detail for capability {cap_id}."
                 ),
+                clears_when=cap_clears,
+                resolution_class=cap_class,
             )
         )
     return _sort(items)
@@ -618,33 +634,50 @@ def provide_reconcile_actions(
 
     updated_at = _now_iso(now)
     items: list[ActionItem] = []
+    # F004: the global-readiness kinds (missing snapshot / stale cache) resolve
+    # via the SAME composite predicate — snapshot present AND status cache fresh.
+    # missing_snapshot is `chained` (running baseline is step 1; refreshing the
+    # status cache is the surfaced next step), stale_status_cache is directly
+    # command_resolvable (running `capabilities status` clears it). Drift kinds
+    # (new/removed/changed) are command_resolvable and clear via reconcile_clean
+    # on the rebuild after the operator re-baselines.
+    _readiness_clears = ClearsWhen("install_snapshot_fresh")
     for kind in drift_kinds:
         kind_str = str(kind)
+        recon_clears: ClearsWhen | None = None
+        recon_class = RESOLUTION_COMMAND_RESOLVABLE
         if kind_str == "missing_snapshot":
             band = Band.ADVISORY
             title = "Install snapshot is missing"
             command = "dontpanic reconcile baseline --yes"
             reason = "no baseline to compare against"
+            recon_clears = _readiness_clears
+            recon_class = RESOLUTION_CHAINED
         elif kind_str == "new_capabilities":
             band = Band.NEEDS_ACTION
             title = "Reconcile drift: new capabilities since baseline"
             command = "dontpanic reconcile baseline --yes"
             reason = "capability set diverged from baseline"
+            recon_clears = ClearsWhen("reconcile_clean")
         elif kind_str == "removed_capabilities":
             band = Band.NEEDS_ACTION
             title = "Reconcile drift: capabilities removed since baseline"
             command = "dontpanic reconcile baseline --yes"
             reason = "capability set diverged from baseline"
+            recon_clears = ClearsWhen("reconcile_clean")
         elif kind_str == "changed_capabilities":
             band = Band.NEEDS_ACTION
             title = "Reconcile drift: capability manifests changed since baseline"
             command = "dontpanic reconcile baseline --yes"
             reason = "capability set diverged from baseline"
+            recon_clears = ClearsWhen("reconcile_clean")
         elif kind_str == "stale_status_cache":
             band = Band.ADVISORY
             title = "Capability status cache is stale relative to install snapshot"
             command = "dontpanic capabilities status"
             reason = "status cache predates baseline"
+            recon_clears = _readiness_clears
+            recon_class = RESOLUTION_COMMAND_RESOLVABLE
         else:
             # Unknown drift kind from a future schema. Surface it as
             # advisory rather than silently dropping; consumers can branch
@@ -680,6 +713,8 @@ def provide_reconcile_actions(
                     "Re-baselines the install snapshot so drift detection is "
                     "meaningful again."
                 ),
+                clears_when=recon_clears,
+                resolution_class=recon_class,
             )
         )
     return _sort(items)

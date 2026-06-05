@@ -132,9 +132,33 @@
         "Test the full round-trip: simulate baseline \u2192 still flagged \u2192 capabilities status \u2192 rebuild \u2192 card cleared; operator_attested item clears only when evidence ref present"
       ],
       "acceptance": "The global readiness card round-trips: after running baseline (and the chained capabilities status), a rebuild clears it; if a step needs credentials/deploy it is operator_attested and clears on evidence, never silently auto-cleared. Verified by a round-trip test.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-04T22:21:08Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/action_resolvability.py",
+          "note": "capability_ready predicate (clear on re-probe ready, never on command); install_snapshot_fresh already models the composite readiness"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/operator_console.py",
+          "note": "provide_reconcile_actions: missing_snapshot=chained + stale_status_cache=command_resolvable, both clears_when=install_snapshot_fresh; provide_capability_actions: needs_setup/blocked=operator_attested + clears_when=capability_ready"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "_reconcile_live_state + _capabilities_live_state derive the fleet LiveState that feeds the readiness + capability predicates"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_resolvability_f004.py",
+          "note": "round-trip: missing_snapshot -> baseline -> stale-cache chained step -> capabilities status -> cleared; operator_attested capability clears ONLY on re-probe ready, never via its diagnostic command"
+        }
       ]
     },
     {
@@ -149,12 +173,26 @@
         "Fail the test if any emitter yields an item that neither clears via its command nor is explicitly attested/blocked"
       ],
       "acceptance": "A single invariant test covers every ActionItem emitter and proves condition \u2192 action/evidence \u2192 recompute \u2192 clear, or the item is explicitly operator_attested/blocked_external with an evidence path; an emitter producing non-resolving guidance fails the test. Runs in the orchestrate sweep.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-04T22:21:08Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_action_resolvability_f005.py",
+          "note": "drives every NEEDS_ACTION-capable emitter (gates, capabilities, reconcile, supervisor, architecture, operations-guidance); asserts each NEEDS_ACTION item is resolvable via recompute (clears_when) | evidence (operator_attested/blocked_external) | reconstruction (projected source); negative guard proves a static command_resolvable+clears_when=None card FAILS; behavioral tests prove each mechanism actually clears"
+        },
+        {
+          "type": "decision",
+          "uri": "docs/plans/2026-06-04-001-feat-ledger-reconciliation-operator-actions/decisions.jsonl",
+          "note": "D006 records the reconstruction third-mechanism spec-clarification"
+        }
       ]
     }
   ]
