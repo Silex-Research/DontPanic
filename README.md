@@ -202,11 +202,11 @@ and agents a shared operating surface:
 | Planning readiness | Shows which plans/features are ready, blocked, or risky to run in parallel | `dontpanic next` |
 | Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
 | Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
-| Local dashboard | Shows What Now, status, capabilities, gates, warnings, and project scope | `dontpanic dashboard build`, `open`, `serve` |
+| Local dashboard | Shows What Now, status, capabilities, gates, warnings, and project scope — render-truth: only flags **Needs Action** it can prove is live for the selected scope; stale or unrefreshable status demotes to a "could not be refreshed" card instead of fake work, and global issues are badged, not shown as project-specific | `dontpanic dashboard build`, `open`, `serve` |
 | Multi-repo registry | Lets one DontPanic install manage many projects | `dontpanic projects add`, `list`, `show`, `remove` |
 | Capability readiness | Shows which external integrations are ready, missing setup, or blocked | `dontpanic capabilities status`, `setup` |
 | Install reconciliation | Detects stale local setup after the platform evolves | `dontpanic reconcile baseline`, `reconcile check` |
-| Architecture map | Generates a visual map and detects drift after manual edits | `dontpanic architecture regen`, `status`, `diff` |
+| Architecture map | Generates a visual map, self-maintains it during `dashboard serve` (bounded auto-regen on watched changes — debounced, runtime-capped, failure-isolated), and detects drift after manual edits | `dontpanic architecture regen`, `status`, `diff` |
 | Release impact advisory | Warns when public docs, changelog, schemas, dashboards, or onboarding may need updates | `dontpanic next`, `dontpanic plan lock` |
 | Agent access | Lets Claude Code, Cursor, OpenClaw, Codex, and MCP clients call DontPanic safely | `dontpanic manifest`, `mcp serve` |
 | State projection | Exposes read-only status for dashboards, agents, and adapters | `dontpanic state snapshot`, `state export-dashboard` |
