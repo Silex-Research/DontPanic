@@ -36,6 +36,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from . import action_resolvability as _ar
+from . import scope_lattice as _sl
 from .operator_console import Band
 
 RENDER = "render"
@@ -52,21 +53,34 @@ def _is_needs_action(card: Any) -> bool:
 def render_decision(
     card: Any,
     *,
-    scope_applies: bool,
+    scope_applies: bool | None = None,
+    scope_state: str | None = None,
     source_fresh: bool,
     source_evaluable: bool = True,
     live_state: Mapping[str, Any],
 ) -> str:
     """Classify ``card`` into RENDER / SUPPRESS / DEMOTE for the selected scope.
 
-    ``scope_applies`` (F002) and ``source_fresh`` / ``source_evaluable`` (F003)
-    are resolved upstream and passed in. ``live_state`` is the fleet live-state
-    map the closed clears_when predicates evaluate against.
+    Scope (F002) and ``source_fresh`` / ``source_evaluable`` (F003) are resolved
+    upstream and passed in. Pass the F002 tri-state via ``scope_state`` (APPLIES /
+    NOT_APPLICABLE / UNRESOLVED); the legacy ``scope_applies`` bool is still
+    accepted (True→APPLIES, False→NOT_APPLICABLE). ``live_state`` is the fleet
+    live-state map the closed clears_when predicates evaluate against.
     """
-    # 1. scope — universal. Not relevant to this view → suppress (NOT demote):
-    #    a card that does not belong here is not an uncertainty, it is absent.
-    if not scope_applies:
+    # Resolve the scope decision (tri-state preferred; bool kept for F001 compat).
+    st = scope_state
+    if st is None:
+        if scope_applies is None:
+            st = _sl.APPLIES
+        else:
+            st = _sl.APPLIES if scope_applies else _sl.NOT_APPLICABLE
+
+    # 1. scope. NOT_APPLICABLE → suppress (belongs elsewhere, it is absent here).
+    #    UNRESOLVED → demote (cannot prove which project; fail closed, not silent).
+    if st == _sl.NOT_APPLICABLE:
         return SUPPRESS
+    if st == _sl.UNRESOLVED:
+        return DEMOTE
 
     if not _is_needs_action(card):
         # Lower-band cards make no Needs Action claim and are not fail-closed

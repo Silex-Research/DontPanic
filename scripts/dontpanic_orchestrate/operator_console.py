@@ -326,6 +326,15 @@ class ActionItem:
     #                            command_resolvable.
     clears_when: ClearsWhen | None = None
     resolution_class: str = RESOLUTION_COMMAND_RESOLVABLE
+    # Plan 2026-06-04-005 F002 — explicit producer-asserted scope. Default None
+    # means "unscoped legacy": scope_lattice.resolve_card_scope_state routes such
+    # items through a LOGGED adapter and refuses to silently treat them as the
+    # selected project's work. There is intentionally NO default that infers scope
+    # from ``project_name``. New emitters set ``scope`` (one of Scope.*) explicitly;
+    # ``plan_id`` / ``feature_id`` let plan/feature-scoped cards resolve to a project.
+    scope: str | None = None
+    plan_id: str | None = None
+    feature_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
