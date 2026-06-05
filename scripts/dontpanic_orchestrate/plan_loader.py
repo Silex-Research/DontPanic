@@ -208,6 +208,21 @@ def resolve_plan_dir(
     return None
 
 
+def _normalize_features_payload(payload: dict) -> dict:
+    """Loosen ``verified_by`` at the load boundary.
+
+    The canonical (codegen'd) ``Features`` model declares ``verified_by`` as a
+    list, but the operator convention writes it as a bare string (one verifier).
+    Both ``plan_loader`` and ``state export-dashboard`` route through here, so we
+    coerce a string to a single-element list before strict validation rather than
+    hand-editing the generated subtree model or every plan's committed data.
+    """
+    for feature in payload.get("features") or []:
+        if isinstance(feature, dict) and isinstance(feature.get("verified_by"), str):
+            feature["verified_by"] = [feature["verified_by"]]
+    return payload
+
+
 def load(plan_dir: Path) -> LoadedPlan:
     plan_dir = plan_dir.resolve()
     if not plan_dir.is_dir():
@@ -252,7 +267,9 @@ def load(plan_dir: Path) -> LoadedPlan:
             commit_policy = CommitPolicy()  # default: mode='evidence_only', requires=[]
         validate_charter_policy_consistency(child_charter, commit_policy)
 
-    features = Features.model_validate(json.loads(features_json.read_text()))
+    features = Features.model_validate(
+        _normalize_features_payload(json.loads(features_json.read_text()))
+    )
 
     if features.task_id != plan.id:
         raise ValueError(f"task_id {features.task_id!r} != plan id {plan.id!r}")
