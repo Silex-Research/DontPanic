@@ -90,6 +90,7 @@ from typing import Any
 
 from dontpanic_orchestrate import global_config as _gc
 from dontpanic_orchestrate.action_resolvability import (
+    RESOLUTION_BLOCKED_EXTERNAL,
     RESOLUTION_CHAINED,
     RESOLUTION_COMMAND_RESOLVABLE,
     RESOLUTION_OPERATOR_ATTESTED,
@@ -162,6 +163,10 @@ SOURCE_CAPABILITY = "capability"
 SOURCE_RECONCILE = "reconcile"
 SOURCE_SUPERVISOR = "supervisor"
 SOURCE_ARCHITECTURE = "architecture"
+
+# Plan 2026-06-04-005 F004 — the lower-priority section uncertainty (demotion)
+# cards render under: never Needs Action, always "Status could not be refreshed".
+SECTION_STATUS_UNCERTAIN = "status_uncertain"
 
 _VALID_SOURCES: frozenset[str] = frozenset(
     {
@@ -335,6 +340,10 @@ class ActionItem:
     scope: str | None = None
     plan_id: str | None = None
     feature_id: str | None = None
+    # Plan 2026-06-04-005 F004 — render section. None = the default Needs Action /
+    # advisory placement; SECTION_STATUS_UNCERTAIN marks an uncertainty card built
+    # by build_uncertainty_card (a stale/failed source the gate demoted).
+    section: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -841,6 +850,71 @@ def aggregate(*provider_outputs: Iterable[ActionItem]) -> tuple[ActionItem, ...]
         for item in outputs:
             merged[item.dedupe_key] = item
     return _sort(merged.values())
+
+
+def build_uncertainty_card(
+    *,
+    source: str,
+    last_checked: str | None,
+    reason: str,
+    captured_at: str | None = None,
+) -> ActionItem:
+    """Plan 2026-06-04-005 F004 — one uncertainty card for a source the render
+    gate demoted (stale, or recompute failed/skipped). Never Needs Action:
+    band=INFO, resolution_class=blocked_external, section=status_uncertain. States
+    the source, last-checked time, and reason so the operator/agent sees honest
+    uncertainty instead of fake actionable work."""
+    detail = (
+        f"Last checked: {last_checked or 'unknown'}. "
+        f"Reason: {reason or 'source could not be refreshed'}."
+    )
+    return ActionItem(
+        id=f"uncertain:{source}",
+        source=source,
+        band=Band.INFO,
+        title=f"Status could not be refreshed: {source}",
+        detail=detail,
+        exact_command=None,
+        automatable=False,
+        human_required_reason=reason or "source could not be refreshed",
+        evidence_uri=None,
+        updated_at=captured_at or last_checked or "",
+        dedupe_key=f"uncertain:{source}",
+        reversible=True,
+        resolution_class=RESOLUTION_BLOCKED_EXTERNAL,
+        section=SECTION_STATUS_UNCERTAIN,
+    )
+
+
+def collapse_demoted_to_uncertainty(
+    demoted_cards: "Iterable[Any]",
+    *,
+    freshness_by_source: "Mapping[str, Mapping[str, Any]]",
+    captured_at: str | None = None,
+) -> list[ActionItem]:
+    """Plan 2026-06-04-005 F004 — collapse the gate's demoted cards into exactly
+    ONE uncertainty card per distinct source (N stale-source cards → 1). Reconcile,
+    capabilities, gates, and architecture all demote through this single path."""
+    order: list[str] = []
+    seen: set[str] = set()
+    for c in demoted_cards:
+        src = getattr(c, "source", None)
+        if src is None or src in seen:
+            continue
+        seen.add(src)
+        order.append(src)
+    cards: list[ActionItem] = []
+    for src in order:
+        info = dict(freshness_by_source.get(src) or {})
+        cards.append(
+            build_uncertainty_card(
+                source=src,
+                last_checked=info.get("evaluated_at"),
+                reason=info.get("reason") or "source stale or could not be evaluated",
+                captured_at=captured_at,
+            )
+        )
+    return cards
 
 
 def _sort(items: Iterable[ActionItem]) -> tuple[ActionItem, ...]:
