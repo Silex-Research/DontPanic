@@ -157,12 +157,21 @@
         "Wire into the orchestrate sweep"
       ],
       "acceptance": "Invariant tests prove Live Now==supervisors.length, Active Plans==status-active count, provenance==active source, and that stale legacy files cannot override the canonical projection; a divergent label/count fails the test. Runs in the sweep.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T02:57:56Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_render_truth_invariant_f005.py",
+          "note": "5 passed: active_plans==status-active count, live_now==supervisors length, attribution.live_count==live_now, section source==provenance + no legacy citation, stale legacy files cannot override canonical projection"
+        }
       ]
     },
     {
