@@ -1008,6 +1008,65 @@ def _scrub_json_payload(value: Any) -> Any:
     return value
 
 
+def _repair_main(argv: list[str]) -> int:
+    """``dontpanic repair plan [--scope S] [--format json|text]`` — Plan
+    2026-06-04-006 F003.
+
+    Emit-only by default (this is the whole of F003): gather the live 005
+    render-gate output read-only, adapt each card into a safety-classified
+    RepairAction, build the dependency-ordered agent-handoff bundle, and print it.
+    Mutates NOTHING — execution is the separate `repair apply` subcommand (F004).
+    """
+    parser = argparse.ArgumentParser(
+        prog="dontpanic repair",
+        description=(
+            "Emit the ordered, safety-classified repair plan an agentic operator "
+            "can run. `repair plan` is read-only; it never mutates state."
+        ),
+    )
+    sub = parser.add_subparsers(dest="subcmd")
+    p_plan = sub.add_parser(
+        "plan", help="Emit the safe-repair bundle for a scope (read-only)."
+    )
+    p_plan.add_argument(
+        "--scope",
+        default="fleet",
+        help="'fleet' / 'global' (aggregate) or a project name to scope to.",
+    )
+    p_plan.add_argument("--plans-root", default=None, help="Override the plans root.")
+    p_plan.add_argument(
+        "--repo-root", default=None, help="Override the repo root for provider probes."
+    )
+    p_plan.add_argument("--format", choices=["json", "text"], default="json")
+    args = parser.parse_args(argv)
+
+    if args.subcmd != "plan":
+        parser.print_help(sys.stderr)
+        return 2
+
+    from dontpanic_orchestrate import dashboard as _dashboard
+    from dontpanic_orchestrate import repair_bundle as _repair_bundle
+
+    project_name = None if args.scope in ("fleet", "global") else args.scope
+    plans_root = Path(args.plans_root) if args.plans_root else None
+    repo_root = Path(args.repo_root) if args.repo_root else None
+
+    cards = _dashboard.gather_action_items_readonly(
+        plans_root=plans_root,
+        repo_root=repo_root,
+        project_name=project_name,
+    )
+    actions = [_repair_bundle.action_to_repair_action(c) for c in cards]
+    scope = args.scope if project_name is None else f"project:{project_name}"
+    bundle = _repair_bundle.build_bundle(actions, scope=scope)
+
+    if args.format == "json":
+        print(_repair_bundle.render_json(bundle))
+    else:
+        print(_repair_bundle.render_human(bundle), end="")
+    return 0
+
+
 def _plan_review_main(argv: list[str]) -> int:
     """``dontpanic plan-review <plan> [--format text|json]`` — plan 2026-06-01-001 F003.
 
@@ -4712,6 +4771,7 @@ Public-alpha command surface:
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
   dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
+  repair plan                    Emit the ordered, safety-classified repair bundle an agent can run (read-only)
   next                          Read-only parallel-readiness recommender (text/JSON, repo|fleet)
   state snapshot|export-dashboard Read-only state projection for dashboards, agents, and adapters
   plan lock|audit|close          Goal-governed plan lifecycle gates
@@ -4760,6 +4820,8 @@ def main(argv: list[str] | None = None) -> int:
         return _finalize_main(raw[1:])
     if raw and raw[0] == "what-now":
         return _what_now_main(raw[1:])
+    if raw and raw[0] == "repair":
+        return _repair_main(raw[1:])
     if raw and raw[0] == "plan-review":
         return _plan_review_main(raw[1:])
     if raw and raw[0] == "quota-caps":

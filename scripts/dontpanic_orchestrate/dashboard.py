@@ -1142,6 +1142,58 @@ def _gather_action_items(
     return tuple(rendered) + tuple(uncertainty)
 
 
+def gather_action_items_readonly(
+    *,
+    plans_root: Path | None = None,
+    repo_root: Path | None = None,
+    project_name: str | None = None,
+    plan_id: str | None = None,
+) -> tuple[operator_console.ActionItem, ...]:
+    """Read-only sibling of :func:`build`'s gather (Plan 2026-06-04-006 F003).
+
+    Loads the same provider inputs (capabilities / reconcile / architecture /
+    gates) best-effort and runs the 005 render gate, but writes NO cache — the
+    emit-only ``dontpanic repair plan`` path must never mutate. Each loader
+    degrades to None on failure exactly as ``build`` does, so a fresh repo with
+    no install snapshot still yields a usable (smaller) candidate set."""
+    plans_root = plans_root if plans_root is not None else default_plans_root()
+
+    dashboard_capability_envelope = None
+    try:
+        capability_index = capabilities.load_capabilities(repo_root)
+        capability_envelope = capabilities_status.run_status(
+            capability_index=capability_index,
+            repo_root=repo_root,
+        )
+        dashboard_capability_envelope = _scope_envelope_to_v0_local(
+            capability_envelope, capability_index
+        )
+    except Exception:  # noqa: BLE001 — emit path degrades gracefully like build
+        dashboard_capability_envelope = None
+
+    reconcile_result = None
+    try:
+        reconcile_result = reconcile.check_capabilities(repo_root=repo_root)
+    except Exception:  # noqa: BLE001
+        reconcile_result = None
+
+    arch_status: dict[str, Any] | None = None
+    try:
+        root = repo_root if repo_root is not None else Path.cwd()
+        arch_status = architecture.status(root)
+    except Exception:  # noqa: BLE001
+        arch_status = None
+
+    return _gather_action_items(
+        plans_root=plans_root,
+        capability_envelope=dashboard_capability_envelope,
+        reconcile_result=reconcile_result,
+        arch_status=arch_status,
+        plan_id=plan_id,
+        project_name=project_name,
+    )
+
+
 def _reconcile_live_state(reconcile_result: Any | None) -> dict[str, bool]:
     """Derive {snapshot_present, cache_fresh} from a reconcile check result for
     the install_snapshot_fresh predicate (F004). Returns an empty mapping when

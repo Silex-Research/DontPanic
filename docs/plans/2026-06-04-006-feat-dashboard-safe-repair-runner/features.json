@@ -48,7 +48,9 @@
         "Tests: snapshot of the JSON bundle shape; ordering preserved; no files written / no state mutated by the emit path"
       ],
       "acceptance": "`dontpanic repair plan --scope <s> --format=json` emits the dependency-ordered, safety-classified plan (command + safety_class + apply_tier + clears_when + plain_consequence + scope) and mutates nothing. Verified by a bundle snapshot test, an ordering test, and a no-mutation assertion.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
       "phase": 2,
       "depends_on": ["F001", "F002"]
     },
