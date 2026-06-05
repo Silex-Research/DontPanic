@@ -15,6 +15,7 @@ import {
   renderFleetWhatNowHTML,
   renderProjectWhatNowHTML,
   renderWhatNowHTML,
+  renderGlobalToolsHTML,
 } from '../../lib/what-now-logic.js';
 import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
@@ -30,15 +31,21 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       : ALL_PROJECTS_VALUE;
     const fleetWhatNow = state ? state.fleetWhatNow : null;
     const fleetSummary = state ? state.fleetSummary : null;
+    // Plan 2026-06-05-001 F004 — install-level "Global tools" (the F003-labelled
+    // capability items) are not project work, so they render once at the top of
+    // every view, distinct from the project-scoped cards / tracked-projects list.
+    const env = fleetWhatNow || (state ? state.whatNow : null);
+    const items = env && Array.isArray(env.items) ? env.items : [];
+    const globalTools = renderGlobalToolsHTML(items);
     // F004 routing: prefer the fleet what-now envelope when present so
     // the All-Projects + project-filtered views actually use the new
     // renderers. Fall back to the single-repo `whatNow` payload when
     // no fleet build has run (legacy single-repo operator).
     if (fleetWhatNow != null) {
       if (selected === ALL_PROJECTS_VALUE) {
-        _el.innerHTML = renderFleetWhatNowHTML(fleetWhatNow, fleetSummary);
+        _el.innerHTML = globalTools + renderFleetWhatNowHTML(fleetWhatNow, fleetSummary);
       } else {
-        _el.innerHTML = renderProjectWhatNowHTML(
+        _el.innerHTML = globalTools + renderProjectWhatNowHTML(
           fleetWhatNow,
           fleetSummary,
           selected,
@@ -46,7 +53,7 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       }
       return;
     }
-    _el.innerHTML = renderWhatNowHTML(state ? state.whatNow : null, {
+    _el.innerHTML = globalTools + renderWhatNowHTML(state ? state.whatNow : null, {
       selectedProject: selected,
     });
   }

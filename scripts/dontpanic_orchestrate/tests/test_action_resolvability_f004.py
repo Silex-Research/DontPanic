@@ -115,8 +115,10 @@ def test_needs_setup_is_operator_attested_not_command_resolvable():
     assert item.resolution_class == ar.RESOLUTION_OPERATOR_ATTESTED
     assert item.resolution_class in ar.NON_COMMAND_RESOLUTION_CLASSES
     assert item.clears_when.predicate == "capability_ready"
-    # The command is the read-only diagnostic — it does NOT resolve the item.
-    assert item.exact_command == "dontpanic capabilities status firebase"
+    # Plan 2026-06-05-001 F001 — the command is the RESOLVING guidance ("show the
+    # setup steps"), not the read-only `capabilities status` diagnostic. It still
+    # does not itself resolve the item (clears on a later ready re-probe).
+    assert item.exact_command == "dontpanic capabilities setup firebase --print-steps"
 
 
 def test_blocked_is_operator_attested():

@@ -573,8 +573,25 @@ def provide_capability_actions(
         missing = _attr(cap, "missing") or (
             cap.get("missing") if isinstance(cap, dict) else ()
         )
-        detail = None
-        if missing:
+        # Plan 2026-06-05-001 F002 — plain-language detail from the manifest's
+        # setup steps (each carries a human-readable ``what`` + an optional
+        # human_required_reason) instead of a raw ``missing: <token, …>`` blob.
+        # Fall back to the missing summary only when no steps are available.
+        steps = _attr(cap, "next_actions")
+        if steps is None and isinstance(cap, dict):
+            steps = cap.get("next_actions")
+        step_parts: list[str] = []
+        for s in steps or ():
+            if isinstance(s, dict):
+                what, human = s.get("what"), s.get("human_required_reason")
+            else:
+                what, human = _attr(s, "what"), _attr(s, "human_required_reason")
+            if what:
+                step_parts.append(f"{what} (needs you)" if human else str(what))
+        detail: str | None = None
+        if step_parts:
+            detail = "Setup: " + "; ".join(step_parts)
+        elif missing:
             detail = "missing: " + ", ".join(str(m) for m in missing)
 
         evidence_uri = str(cache_path) if cache_path is not None else None
@@ -587,16 +604,22 @@ def provide_capability_actions(
                 band=band,
                 title=title,
                 detail=detail,
-                exact_command=f"dontpanic capabilities status {cap_id}",
+                # Plan 2026-06-05-001 F001 — surface the RESOLVING guidance
+                # command, not the read-only `capabilities status` diagnostic
+                # (which never resolves setup). `--print-steps` only PRINTS the
+                # plan, so the consequence is guidance, not an auto-fix; the card
+                # still clears on evidence (a later ready re-probe), never on this
+                # command.
+                exact_command=f"dontpanic capabilities setup {cap_id} --print-steps",
                 automatable=False,
                 human_required_reason=reason,
                 evidence_uri=evidence_uri,
                 updated_at=updated_at,
                 audience=(AUDIENCE_OPERATOR, AUDIENCE_HUMAN),
                 dedupe_key=cap_item_id,
-                reversible=True,  # `capabilities status` is read-only
+                reversible=True,  # `capabilities setup --print-steps` is read-only
                 plain_consequence=(
-                    f"Shows the current status detail for capability {cap_id}."
+                    f"Prints the setup steps for {cap_id} so you can complete it."
                 ),
                 clears_when=cap_clears,
                 resolution_class=cap_class,

@@ -58,6 +58,12 @@ _RENDER_STRING_FIELDS: tuple[str, ...] = (
 )
 
 
+# Plan 2026-06-05-001 F003 — render-time group tag for install-level capability
+# items, so the dashboard (F004) can render "Global tools" distinctly from
+# "Tracked projects". Capabilities are global by source.
+GROUP_GLOBAL_TOOL_SETUP = "global_tool_setup"
+
+
 def scrub_render_text(value: str | None) -> str | None:
     """Apply the two boundary transforms a rendered string must pass through:
     secret-shape scrubbing (D004/D011/D020) then brand-drift normalization
@@ -85,6 +91,13 @@ def action_view(item: _oc.ActionItem) -> dict[str, Any]:
     d = item.to_dict()
     for field in _RENDER_STRING_FIELDS:
         d[field] = scrub_render_text(d.get(field))
+    # F003 — tag install-level capability items so F004 groups them as
+    # "Global tools"; every other item carries no group.
+    d["group"] = (
+        GROUP_GLOBAL_TOOL_SETUP
+        if getattr(item, "source", None) == _oc.SOURCE_CAPABILITY
+        else None
+    )
     return d
 
 

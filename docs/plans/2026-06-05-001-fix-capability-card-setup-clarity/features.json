@@ -1,0 +1,79 @@
+{
+  "task_id": "2026-06-05-001-fix-capability-card-setup-clarity",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Capability cards surface the RESOLVING guidance command, not a status-refresh. In operator_console.provide_capability_actions, for a capability whose status requires setup (the needs_setup / blocked / not_installed branches) set exact_command to the guidance command `dontpanic capabilities setup <id> --print-steps` instead of `dontpanic capabilities status <id>` (a read-only diagnostic). The plain_consequence must honestly say it PRINTS the setup steps / guidance \u2014 never imply it auto-fixes. Keep the item non-automatable and keep the existing operator-attested resolution with the capability_ready clears_when (resolution is still on evidence: a later re-probe reporting ready), because --print-steps does not itself resolve the card.",
+      "steps": [
+        "operator_console.provide_capability_actions: change exact_command for the setup-requiring branches to `dontpanic capabilities setup <id> --print-steps`",
+        "Rewrite plain_consequence to 'Prints the setup steps for <id> so you can complete it.' (guidance, not fix)",
+        "Preserve automatable=False, the operator-attested resolution class, and the capability_ready clears_when (clear on re-probe); reversible=True (printing steps is read-only)",
+        "Tests: a setup-requiring capability card carries the setup --print-steps command (not status), an honest consequence, and still clears on a later ready re-probe"
+      ],
+      "acceptance": "For capability cards requiring setup, the emitted command is `dontpanic capabilities setup <id> --print-steps`; the card stays non-automatable and clears only after a later capability re-probe reports the tool ready. The consequence text says it prints the setup steps (guidance), never that it auto-fixes. Verified by producer tests over the emitted command, the non-automatable flag, and the clear-on-ready behaviour.",
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Plain-language card detail. Replace the raw `detail = 'missing: <token, token, \u2026>'` blob with a short human-legible summary built from the capability manifest's setup_steps[].what plus the human-required reasons, so a non-technical operator can read what the setup is and why a human is needed. Fall back to the existing missing-token summary only when no setup steps are available.",
+      "steps": [
+        "Resolve the capability's setup steps (from the manifest / status envelope) for the card's id",
+        "Build detail from each step's plain 'what' text (and the human-required reason for human steps), summarized and short",
+        "Fallback to the prior missing-token summary when no setup steps exist",
+        "Tests: a capability with setup steps renders what/why detail (no raw token blob); one without falls back to the missing summary"
+      ],
+      "acceptance": "Capability card detail reads as plain-language step descriptions plus human-required reasons (not a raw token list), with a graceful fallback to the missing summary when no steps exist. Verified by render tests for both the with-steps and no-steps cases.",
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Producer/data: mark install-level capability work as a global group. The capability ActionItems (and/or the exported dashboard state) carry a scope/group label such as `global_tool_setup` that identifies these as install-level GLOBAL tools, distinct from tracked projects. This is the data seam the dashboard renders in F004 \u2014 no rendering here, just the label on the producer output.",
+      "steps": [
+        "Add a stable group label (e.g. `global_tool_setup`) to capability-sourced ActionItems / exported state",
+        "Ensure the label is carried through state_projection / the served dashboard state",
+        "Tests: a producer test asserts capability items expose the global-tool group label; non-capability items do not"
+      ],
+      "acceptance": "Capability-sourced ActionItems and the exported state projection carry a group label marking them as install-level global tools, distinct from project-scoped items. Verified by a producer test asserting the label is present on capability items and absent on others.",
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Dashboard rendering: display 'Global tools' separately from 'Tracked projects'. The Health / What Now surface groups the F003-labelled install-level tools under a clearly-labelled 'Global tools' heading, distinct from the 'Tracked projects' count/list, with copy clarifying that global tools are install-level and need no project registration (so 'DontPanic isn't tracked' never reads as a capability problem).",
+      "steps": [
+        "Dashboard health/what-now: render the F003 global-tool group under a 'Global tools' label, separate from 'Tracked projects'",
+        "Add copy clarifying global tools are install-level and not per-project",
+        "Tests: a dashboard render test asserts both the 'Global tools' and 'Tracked projects' labels render distinctly"
+      ],
+      "acceptance": "The dashboard groups the install-level tools under a 'Global tools' heading, separate from the tracked-projects list, with copy clarifying global tools are install-level. Verified by a dashboard render test asserting both headings render distinctly.",
+      "passes": true,
+      "phase": 2,
+      "depends_on": [
+        "F003"
+      ],
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    }
+  ]
+}

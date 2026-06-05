@@ -890,3 +890,38 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
     </div>
   `;
 }
+
+
+// ── F004 (plan 2026-06-05-001) — "Global tools" grouping ──────────────────────
+// Install-level capabilities (the F003 `group === 'global_tool_setup'` items)
+// are NOT project work: they are global tools that need setup. Render them under
+// a clearly-labelled "Global tools" heading, distinct from the project-scoped
+// items / tracked-projects list, with copy clarifying they are install-level.
+// Returns '' when there are no global tools (quiet by absence).
+export const GLOBAL_TOOL_GROUP = 'global_tool_setup';
+
+export function renderGlobalToolsHTML(items) {
+  const list = Array.isArray(items) ? items : [];
+  const tools = list.filter((it) => it && it.group === GLOBAL_TOOL_GROUP);
+  if (tools.length === 0) return '';
+  const rows = tools
+    .map((it) => {
+      const cmd = it.exact_command
+        ? `<div class="wn-gt-cmd"><code>${esc(String(it.exact_command))}</code></div>`
+        : '';
+      const detail = it.detail ? `<div class="wn-gt-detail">${esc(String(it.detail))}</div>` : '';
+      return `
+        <div class="wn-gt-item">
+          <div class="wn-gt-title">${esc(String(it.title || it.id || ''))}</div>
+          ${detail}
+          ${cmd}
+        </div>`;
+    })
+    .join('');
+  return `
+    <section class="wn-global-tools" aria-label="Global tools">
+      <h3 class="wn-gt-heading">Global tools</h3>
+      <p class="wn-gt-note">Install-level tools — not tied to any project. Set them up once for this DontPanic install.</p>
+      ${rows}
+    </section>`;
+}
