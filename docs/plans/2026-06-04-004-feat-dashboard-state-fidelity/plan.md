@@ -3,7 +3,7 @@ id: 2026-06-04-004-feat-dashboard-state-fidelity
 title: Dashboard state fidelity (render truth — provenance, lifecycle vs activity, freshness, attribution)
 type: feat
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-04"
 goal_type: new_feature
 description: >

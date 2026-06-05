@@ -3,7 +3,7 @@ id: 2026-06-04-001-feat-ledger-reconciliation-operator-actions
 title: ActionItem resolvability contract (clears_when + round-trip guarantee)
 type: feat
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-04"
 goal_type: new_feature
 description: >
