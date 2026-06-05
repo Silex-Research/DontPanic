@@ -65,7 +65,9 @@
         "Tests: --safe-derived-state runs only derived_state and refuses every forbidden kind; --safe --confirm runs only allowlisted confirmed_local; an unclassified action is never executed by either tier"
       ],
       "acceptance": "`repair apply --safe-derived-state` executes only apply_tier=derived_state actions; `repair apply --safe --confirm` additionally executes only an explicit allowlist of confirmed_local mutations. Neither tier runs deploy/creds/paid/role/plan-state/registry/destructive/baseline actions. Every executed action is round-trip verified (F005). An unclassified action is never executed. Verified by per-tier execution tests + a forbidden-kind refusal test.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
       "phase": 2,
       "depends_on": ["F001", "F002", "F005"]
     },

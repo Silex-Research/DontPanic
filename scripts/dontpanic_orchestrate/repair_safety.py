@@ -107,6 +107,13 @@ def resolve_safety(action: Any) -> tuple[str, str | None]:
     return asserted, None
 
 
+def is_forbidden_kind(action: Any) -> bool:
+    """True iff the action's ``kind`` is in :data:`FORBIDDEN_KINDS` — a kind that
+    may NEVER auto-run at any tier. The apply runner uses this as an explicit
+    execution-time guard (defense in depth) on top of :func:`is_runnable_at`."""
+    return getattr(action, "kind", None) in FORBIDDEN_KINDS
+
+
 def is_runnable_at(action: Any, run_tier: str) -> bool:
     """True iff ``action`` may execute under the given run tier (the flag the
     operator passed). derived_state runs under both flags; confirmed_local runs

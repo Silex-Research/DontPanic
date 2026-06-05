@@ -966,8 +966,13 @@ def _gather_action_items(
     arch_status: dict[str, Any] | None,
     plan_id: str | None,
     project_name: str | None = None,
-) -> tuple[operator_console.ActionItem, ...]:
-    """Drive each provider against already-loaded inputs."""
+    return_live_state: bool = False,
+) -> Any:
+    """Drive each provider against already-loaded inputs.
+
+    With ``return_live_state=True`` returns ``(cards, live_state)`` so the F004
+    repair-apply path can round-trip-verify against the same live_state the render
+    gate used; otherwise returns just the cards tuple (default, back-compat)."""
 
     # Gates: walk plans_root, reuse gate_pause.unmet_gates so we surface
     # the same set state_projection does.
@@ -1139,25 +1144,17 @@ def _gather_action_items(
     uncertainty = operator_console.collapse_demoted_to_uncertainty(
         demoted, freshness_by_source=freshness_by_source, captured_at=now_iso
     )
-    return tuple(rendered) + tuple(uncertainty)
+    cards = tuple(rendered) + tuple(uncertainty)
+    if return_live_state:
+        return cards, live_state
+    return cards
 
 
-def gather_action_items_readonly(
-    *,
-    plans_root: Path | None = None,
-    repo_root: Path | None = None,
-    project_name: str | None = None,
-    plan_id: str | None = None,
-) -> tuple[operator_console.ActionItem, ...]:
-    """Read-only sibling of :func:`build`'s gather (Plan 2026-06-04-006 F003).
-
-    Loads the same provider inputs (capabilities / reconcile / architecture /
-    gates) best-effort and runs the 005 render gate, but writes NO cache — the
-    emit-only ``dontpanic repair plan`` path must never mutate. Each loader
-    degrades to None on failure exactly as ``build`` does, so a fresh repo with
-    no install snapshot still yields a usable (smaller) candidate set."""
-    plans_root = plans_root if plans_root is not None else default_plans_root()
-
+def _load_readonly_inputs(repo_root: Path | None) -> tuple[Any, Any, Any]:
+    """Load the capabilities / reconcile / architecture provider inputs
+    best-effort, WITHOUT writing any cache. Each degrades to None on failure
+    exactly as :func:`build` does. Shared by the read-only repair paths (F003/F004).
+    Returns ``(dashboard_capability_envelope, reconcile_result, arch_status)``."""
     dashboard_capability_envelope = None
     try:
         capability_index = capabilities.load_capabilities(repo_root)
@@ -1168,7 +1165,7 @@ def gather_action_items_readonly(
         dashboard_capability_envelope = _scope_envelope_to_v0_local(
             capability_envelope, capability_index
         )
-    except Exception:  # noqa: BLE001 — emit path degrades gracefully like build
+    except Exception:  # noqa: BLE001 — repair paths degrade gracefully like build
         dashboard_capability_envelope = None
 
     reconcile_result = None
@@ -1184,13 +1181,54 @@ def gather_action_items_readonly(
     except Exception:  # noqa: BLE001
         arch_status = None
 
+    return dashboard_capability_envelope, reconcile_result, arch_status
+
+
+def gather_action_items_readonly(
+    *,
+    plans_root: Path | None = None,
+    repo_root: Path | None = None,
+    project_name: str | None = None,
+    plan_id: str | None = None,
+) -> tuple[operator_console.ActionItem, ...]:
+    """Read-only sibling of :func:`build`'s gather (Plan 2026-06-04-006 F003).
+
+    Loads the same provider inputs best-effort and runs the 005 render gate, but
+    writes NO cache — the emit-only ``dontpanic repair plan`` path must never
+    mutate. A fresh repo with no install snapshot still yields a usable (smaller)
+    candidate set."""
+    plans_root = plans_root if plans_root is not None else default_plans_root()
+    cap_env, reconcile_result, arch_status = _load_readonly_inputs(repo_root)
     return _gather_action_items(
         plans_root=plans_root,
-        capability_envelope=dashboard_capability_envelope,
+        capability_envelope=cap_env,
         reconcile_result=reconcile_result,
         arch_status=arch_status,
         plan_id=plan_id,
         project_name=project_name,
+    )
+
+
+def gather_repair_inputs(
+    *,
+    plans_root: Path | None = None,
+    repo_root: Path | None = None,
+    project_name: str | None = None,
+    plan_id: str | None = None,
+) -> "tuple[tuple[operator_console.ActionItem, ...], dict[str, Any]]":
+    """Read-only gather for the F004 apply path: returns ``(cards, live_state)``
+    in a single pass so the apply runner can round-trip-verify (F005) against the
+    SAME live_state the render gate used. Writes no cache."""
+    plans_root = plans_root if plans_root is not None else default_plans_root()
+    cap_env, reconcile_result, arch_status = _load_readonly_inputs(repo_root)
+    return _gather_action_items(
+        plans_root=plans_root,
+        capability_envelope=cap_env,
+        reconcile_result=reconcile_result,
+        arch_status=arch_status,
+        plan_id=plan_id,
+        project_name=project_name,
+        return_live_state=True,
     )
 
 

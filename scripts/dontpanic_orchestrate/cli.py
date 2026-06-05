@@ -1008,62 +1008,181 @@ def _scrub_json_payload(value: Any) -> Any:
     return value
 
 
-def _repair_main(argv: list[str]) -> int:
-    """``dontpanic repair plan [--scope S] [--format json|text]`` — Plan
-    2026-06-04-006 F003.
+def _repair_add_common_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--scope",
+        default="fleet",
+        help="'fleet' / 'global' (aggregate) or a project name to scope to.",
+    )
+    p.add_argument("--plans-root", default=None, help="Override the plans root.")
+    p.add_argument(
+        "--repo-root", default=None, help="Override the repo root for provider probes."
+    )
+    p.add_argument("--format", choices=["json", "text"], default="json")
 
-    Emit-only by default (this is the whole of F003): gather the live 005
-    render-gate output read-only, adapt each card into a safety-classified
-    RepairAction, build the dependency-ordered agent-handoff bundle, and print it.
-    Mutates NOTHING — execution is the separate `repair apply` subcommand (F004).
+
+def _repair_main(argv: list[str]) -> int:
+    """``dontpanic repair plan|apply`` — Plan 2026-06-04-006 F003/F004.
+
+    ``repair plan`` (F003) is emit-only: gather the live 005 render-gate output
+    read-only, adapt each card to a safety-classified RepairAction, and print the
+    dependency-ordered agent-handoff bundle. Mutates NOTHING.
+
+    ``repair apply --safe-derived-state`` (F004) executes ONLY apply_tier=
+    derived_state actions; ``repair apply --safe --confirm`` additionally runs the
+    confirmed_local allowlist. No tier runs deploy/creds/paid/role/plan-state/
+    registry/destructive/baseline. Every executed action is round-trip verified.
     """
     parser = argparse.ArgumentParser(
         prog="dontpanic repair",
         description=(
-            "Emit the ordered, safety-classified repair plan an agentic operator "
-            "can run. `repair plan` is read-only; it never mutates state."
+            "Emit (plan) or run (apply) the ordered, safety-classified repair plan. "
+            "`repair plan` never mutates; `repair apply` runs only the auto_safe batch "
+            "for the explicit tier flag and refuses every forbidden kind."
         ),
     )
     sub = parser.add_subparsers(dest="subcmd")
     p_plan = sub.add_parser(
         "plan", help="Emit the safe-repair bundle for a scope (read-only)."
     )
-    p_plan.add_argument(
-        "--scope",
-        default="fleet",
-        help="'fleet' / 'global' (aggregate) or a project name to scope to.",
+    _repair_add_common_args(p_plan)
+    p_apply = sub.add_parser(
+        "apply", help="Run the auto_safe batch locally for an explicit tier flag."
     )
-    p_plan.add_argument("--plans-root", default=None, help="Override the plans root.")
-    p_plan.add_argument(
-        "--repo-root", default=None, help="Override the repo root for provider probes."
+    _repair_add_common_args(p_apply)
+    p_apply.add_argument(
+        "--safe-derived-state",
+        action="store_true",
+        help="Run ONLY apply_tier=derived_state actions (projection regeneration).",
     )
-    p_plan.add_argument("--format", choices=["json", "text"], default="json")
+    p_apply.add_argument(
+        "--safe",
+        action="store_true",
+        help="With --confirm, additionally run the confirmed_local allowlist.",
+    )
+    p_apply.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required alongside --safe to run the stronger confirmed_local tier.",
+    )
     args = parser.parse_args(argv)
 
-    if args.subcmd != "plan":
-        parser.print_help(sys.stderr)
-        return 2
+    if args.subcmd == "plan":
+        return _repair_plan_cmd(args)
+    if args.subcmd == "apply":
+        return _repair_apply_cmd(args)
+    parser.print_help(sys.stderr)
+    return 2
 
-    from dontpanic_orchestrate import dashboard as _dashboard
-    from dontpanic_orchestrate import repair_bundle as _repair_bundle
 
+def _repair_scope_roots(args: Any) -> "tuple[str | None, Path | None, Path | None, str]":
     project_name = None if args.scope in ("fleet", "global") else args.scope
     plans_root = Path(args.plans_root) if args.plans_root else None
     repo_root = Path(args.repo_root) if args.repo_root else None
+    scope = args.scope if project_name is None else f"project:{project_name}"
+    return project_name, plans_root, repo_root, scope
 
+
+def _repair_plan_cmd(args: Any) -> int:
+    from dontpanic_orchestrate import dashboard as _dashboard
+    from dontpanic_orchestrate import repair_bundle as _repair_bundle
+
+    project_name, plans_root, repo_root, scope = _repair_scope_roots(args)
     cards = _dashboard.gather_action_items_readonly(
-        plans_root=plans_root,
-        repo_root=repo_root,
-        project_name=project_name,
+        plans_root=plans_root, repo_root=repo_root, project_name=project_name
     )
     actions = [_repair_bundle.action_to_repair_action(c) for c in cards]
-    scope = args.scope if project_name is None else f"project:{project_name}"
     bundle = _repair_bundle.build_bundle(actions, scope=scope)
-
     if args.format == "json":
         print(_repair_bundle.render_json(bundle))
     else:
         print(_repair_bundle.render_human(bundle), end="")
+    return 0
+
+
+def _repair_apply_cmd(args: Any) -> int:
+    from dontpanic_orchestrate import dashboard as _dashboard
+    from dontpanic_orchestrate import repair_apply as _repair_apply
+    from dontpanic_orchestrate import repair_bundle as _repair_bundle
+    from dontpanic_orchestrate import repair_safety as _repair_safety
+
+    # Tier resolution — execution requires an explicit, escalating flag.
+    if args.safe_derived_state:
+        run_tier = _repair_safety.RUN_TIER_DERIVED
+    elif args.safe and args.confirm:
+        run_tier = _repair_safety.RUN_TIER_CONFIRM
+    elif args.safe:
+        print(
+            "error: --safe requires --confirm to run the confirmed_local tier; "
+            "use --safe-derived-state for the derived-state batch.",
+            file=sys.stderr,
+        )
+        return 2
+    else:
+        print(
+            "error: specify --safe-derived-state (derived-state batch) or "
+            "--safe --confirm (also the confirmed_local allowlist).",
+            file=sys.stderr,
+        )
+        return 2
+
+    project_name, plans_root, repo_root, scope = _repair_scope_roots(args)
+    cards, live_state = _dashboard.gather_repair_inputs(
+        plans_root=plans_root, repo_root=repo_root, project_name=project_name
+    )
+    actions = [_repair_bundle.action_to_repair_action(c) for c in cards]
+
+    def _effect_fn(action: Any) -> None:
+        # Every derived_state kind regenerates the cached projection; dashboard.build
+        # is the single idempotent regen (state/what-now/caps/reconcile/arch/export).
+        # confirmed_local effects are not wired until producers assert them, so they
+        # raise here and the runner records an honest execution_failed refusal.
+        if action.kind in _repair_safety.DERIVED_STATE_KINDS:
+            _dashboard.build(
+                plans_root=plans_root,
+                repo_root=repo_root,
+                project_name=project_name,
+            )
+            return
+        raise NotImplementedError(
+            f"no local effect wired for kind={action.kind!r}"
+        )
+
+    def _recompute_fn() -> Any:
+        _cards, ls = _dashboard.gather_repair_inputs(
+            plans_root=plans_root, repo_root=repo_root, project_name=project_name
+        )
+        return ls
+
+    report = _repair_apply.apply_repairs(
+        actions,
+        live_state,
+        run_tier=run_tier,
+        effect_fn=_effect_fn,
+        recompute_fn=_recompute_fn,
+    )
+
+    payload = {
+        "scope": scope,
+        "run_tier": run_tier,
+        "applied": [{"id": s.action_id, "outcome": s.outcome} for s in report.applied],
+        "refused": [
+            {"id": r.action_id, "reason": r.reason, "detail": r.detail}
+            for r in report.refused
+        ],
+        "deferred": [{"id": d.action_id, "reason": d.reason} for d in report.deferred],
+    }
+    if args.format == "json":
+        print(json.dumps(payload, indent=2))
+    else:
+        defective = [s for s in report.applied if s.outcome == "unchanged"]
+        print(f"repair apply ({run_tier}) for scope: {scope}")
+        print(
+            f"  applied: {len(report.applied)}  "
+            f"refused: {len(report.refused)}  "
+            f"deferred: {len(report.deferred)}  "
+            f"defective(unchanged): {len(defective)}"
+        )
     return 0
 
 
@@ -4771,7 +4890,7 @@ Public-alpha command surface:
   reconcile baseline             Build (and with `--yes` write) ~/.dontpanic/install-snapshot.json
   reconcile check                Compare current capability manifests against the install snapshot
   dashboard build|open|serve     Local-first operator console (export state, open path, localhost-only serve)
-  repair plan                    Emit the ordered, safety-classified repair bundle an agent can run (read-only)
+  repair plan|apply              Emit the ordered, safety-classified repair bundle (plan, read-only) or run the auto_safe batch (apply --safe-derived-state | --safe --confirm)
   next                          Read-only parallel-readiness recommender (text/JSON, repo|fleet)
   state snapshot|export-dashboard Read-only state projection for dashboards, agents, and adapters
   plan lock|audit|close          Goal-governed plan lifecycle gates
