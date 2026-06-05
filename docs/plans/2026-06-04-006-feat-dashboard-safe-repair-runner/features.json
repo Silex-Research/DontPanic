@@ -31,7 +31,9 @@
         "Log deferred actions with reason; tests: a step that changes the next needed step triggers a re-plan; the loop terminates at a fixpoint; cyclic/dependency-stuck input is detected and deferred, not looped"
       ],
       "acceptance": "The planner builds a dependency-ordered plan from the 005 render-gate output and runs a fixpoint loop (apply eligible -> recompute -> re-plan) that terminates when only human_required/blocked_external/info remain or no progress is made (bounded by a hard iteration cap). A state-changing step re-plans rather than continuing a static list. Deferred actions are logged with reason. Verified by fixpoint, re-plan-on-change, and no-progress/cycle-detection tests.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
       "phase": 1,
       "depends_on": ["F001"]
     },
@@ -76,7 +78,9 @@
         "Tests: a derived-state refresh clears a stale card; a chained action surfaces the next step; an action that doesn't move its predicate is flagged defective"
       ],
       "acceptance": "After each applied action the runner recomputes and classifies the targeted card as cleared / chained / human_required / unchanged, using 001's clears_when at apply time; an unchanged card is flagged defective. Verified by clear, chain, and defective-unchanged tests.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
       "phase": 1,
       "depends_on": ["F001"]
     },
