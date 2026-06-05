@@ -99,7 +99,9 @@
         "Tests: the control runs only derived_state; the copy action produces the same bundle as the CLI; the post-run summary reflects the re-evaluated render set"
       ],
       "acceptance": "The dashboard exposes 'Repair automatically' (runs only the --safe-derived-state batch for the selected scope) and 'Copy agent repair plan' (emits the F003 bundle), both scope-aware via 005, with a truthful post-run cleared/remaining summary. No stronger tier runs without an explicit confirm. Verified by a derived-state-only control test, bundle-parity test, and post-run summary test.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
       "phase": 3,
       "depends_on": ["F003", "F004"]
     }

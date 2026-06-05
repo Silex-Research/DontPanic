@@ -587,6 +587,10 @@ function JARVIS_LITERAL() { return {
 // compose it from existing readiness/security/build-warning substrate.
 const pageModules = [
   'pages/what-now/what-now.js',
+  // Plan 2026-06-04-006 F006 — safe-repair surfaces ("Repair automatically" +
+  // "Copy agent repair plan"), scope-aware via 005. Read-only: copies commands,
+  // never executes. Sits next to What Now on the read path.
+  'pages/repair/repair.js',
   'pages/mission-control/mission-control.js',
   // Plan 2026-05-24-002 F002 — Architecture tab shell, value-language
   // copy, and empty states. Slotted between Work and Tools & Setup so
