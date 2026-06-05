@@ -188,8 +188,22 @@
         "Tests: a watched change triggers exactly one debounced regen; failure records 'failed'+last_error without blocking; in-flight write/dispatch defers; bounded scope honored"
       ],
       "acceptance": "Editing a watched repo/plan file causes serve to auto-regen the architecture map exactly once per debounced burst, within capped runtime/scope, deferred during active write/dispatch; a regen failure records failed+last_error and never blocks the serve loop; large repos mark stale/queued rather than thrash. Verified by watch\u2192debounce\u2192regen, failure-isolation, and deferral tests.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T03:01:15Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/architecture_regen.py",
+          "note": "ArchitectureRegenDaemon: debounce (burst->1 regen), deferral while busy, failure isolation (failed+last_error, never raises), large-repo stale_queued guard"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_architecture_regen_f006.py",
+          "note": "6 passed: burst collapse, deferral, failure isolation, large-burst stale_queued, success records source_commit/dirty"
+        }
+      ]
     },
     {
       "id": "F007",
@@ -203,11 +217,25 @@
         "Tests: each status renders correctly; failed shows last_error without an action unless human input required; manual CLI shown as advanced only"
       ],
       "acceptance": "The Architecture tab truthfully reflects the daemon's status + last-generated + source commit/dirty + last error; it surfaces an operator action only when human input is required and otherwise presents manual regen as an advanced fallback. Verified by render tests across fresh/stale/regenerating/failed.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F003",
         "F006"
+      ],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T03:01:15Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/architecture_regen.py",
+          "note": "render_architecture_status(): fresh|stale|regenerating|failed + last_generated + source_commit + dirty_marker + last_error; operator_action_required ONLY on failed, manual regen as advanced fallback otherwise"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_architecture_render_f007.py",
+          "note": "5 passed across fresh/dirty/regenerating/stale/failed"
+        }
       ]
     }
   ]
