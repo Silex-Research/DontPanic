@@ -91,28 +91,25 @@ def render_decision(
             return SUPPRESS
         return RENDER
 
-    # NEEDS_ACTION: must affirmatively prove all four obligations.
-    # 2. source fresh + evaluable
+    # NEEDS_ACTION: must affirmatively prove liveness. Demotion is the
+    # UNCERTAINTY axis only — staleness / un-evaluability / malformed — NOT the
+    # absence of a recompute predicate (per 001's THREE mechanisms, below).
+    # 2. source fresh + evaluable (the real uncertainty axis)
     if not (source_fresh and source_evaluable):
         return DEMOTE
-    # 4. resolution_class set (checked before 3 so an evidence-class card is
-    #    recognised before the recompute-predicate requirement is applied).
-    rclass = getattr(card, "resolution_class", None)
-    if not rclass:
+    # 4. resolution_class must be set — a NEEDS_ACTION card that declares no
+    #    resolution class at all is malformed → uncertainty.
+    if not getattr(card, "resolution_class", None):
         return DEMOTE
-    # 3. A verification path must exist. Per 001's taxonomy there are two ways a
-    #    NEEDS_ACTION card proves it is still live: RECOMPUTE (a clears_when
-    #    predicate) OR EVIDENCE (operator_attested / blocked_external resolve via
-    #    human/external attestation, not recompute — they legitimately carry no
-    #    clears_when and must NOT be demoted). Only a command-resolvable / chained
-    #    card with NO predicate is unverifiable → demote.
+    # 3 / 5 / 6 — verification path (001's three mechanisms):
+    #   RECOMPUTE      — a clears_when predicate; resolved → suppress.
+    #   EVIDENCE       — operator_attested / blocked_external; no predicate,
+    #                    resolves via human/external attestation → render.
+    #   RECONSTRUCTION — re-emitted fresh each build (projected sources); its
+    #                    liveness is PROVEN by the fresh source at step 2, so a
+    #                    clears_when=None card on a fresh source is current → render.
+    # A missing predicate is therefore NOT uncertainty; only step 2 (stale) is.
     cw = getattr(card, "clears_when", None)
-    if cw is None:
-        if rclass in _ar.NON_COMMAND_RESOLUTION_CLASSES:
-            return RENDER  # awaiting human evidence — a true, live Needs Action
-        return DEMOTE  # command-resolvable but unverifiable → uncertainty
-    # 5. predicate resolved → suppress (issue genuinely gone)
-    if _ar.evaluate_clears_when(cw, live_state):
-        return SUPPRESS
-    # 6. unresolved → render as Needs Action
+    if cw is not None and _ar.evaluate_clears_when(cw, live_state):
+        return SUPPRESS  # recompute proves the issue is gone
     return RENDER

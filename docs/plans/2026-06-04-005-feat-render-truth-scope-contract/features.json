@@ -5,36 +5,44 @@
     {
       "id": "F001",
       "category": "functional",
-      "description": "Unified render gate: a single deterministic function every ActionItem passes through before it can render, returning exactly one of three total, mutually-exclusive outcomes — render (Needs Action), suppress (not relevant or resolved), or demote (cannot prove → uncertainty). It is the ONLY decision point and the ONLY demotion path; F004 owns constructing the demotion card but never decides demotion independently. The gate order is normative: (1) scope applies to selected scope? else SUPPRESS (not relevant to this view); (2) source fresh AND evaluable? else DEMOTE; (3) clears_when present AND evaluable? else DEMOTE; (4) resolution_class set? else DEMOTE; (5) predicate resolved? SUPPRESS; (6) else (unresolved) RENDER. This inverts suppress_resolved's default from render-unless-proven-resolved to suppress-unless-proven-live. Reuses 001's closed predicate registry; adds no DSL.",
+      "description": "Unified render gate: a single deterministic function every ActionItem passes through before it can render, returning exactly one of three total, mutually-exclusive outcomes \u2014 render (Needs Action), suppress (not relevant or resolved), or demote (cannot prove \u2192 uncertainty). It is the ONLY decision point and the ONLY demotion path; F004 owns constructing the demotion card but never decides demotion independently. The gate order is normative: (1) scope applies to selected scope? else SUPPRESS (not relevant to this view); (2) source fresh AND evaluable? else DEMOTE; (3) clears_when present AND evaluable? else DEMOTE; (4) resolution_class set? else DEMOTE; (5) predicate resolved? SUPPRESS; (6) else (unresolved) RENDER. This inverts suppress_resolved's default from render-unless-proven-resolved to suppress-unless-proven-live. Reuses 001's closed predicate registry; adds no DSL.",
       "steps": [
         "Define render_decision(card, *, selected_scope, live_state, now) -> Literal['render','suppress','demote'] in a render_gate module, implementing the six-step normative order exactly",
         "Wire dashboard._gather_action_items to route every card through render_decision; the rendered Needs Action set is exactly the cards returning 'render'",
         "Preserve 001's suppress audit trail; add a demote audit trail (which step triggered demotion)",
         "Tests: a truth/decision table covering each of the six steps in order, including ties (scope fails AND stale -> suppress wins because scope is checked first); the three outcomes are total and mutually exclusive; this is the only function that returns 'demote'"
       ],
-      "acceptance": "render_decision is a single function implementing the six-step normative order (scope→fresh→clears_when→resolution_class→resolved→render) and is the only path producing render/suppress/demote. The rendered Needs Action set equals exactly the cards returning 'render'. A decision table test exercises each step (including precedence ties: scope-fail short-circuits to suppress before staleness is checked) and proves the outcomes are total and mutually exclusive. No other module returns a demote decision.",
-      "passes": false,
-      "phase": 1
+      "acceptance": "render_decision is a single function implementing the six-step normative order (scope\u2192fresh\u2192clears_when\u2192resolution_class\u2192resolved\u2192render) and is the only path producing render/suppress/demote. The rendered Needs Action set equals exactly the cards returning 'render'. A decision table test exercises each step (including precedence ties: scope-fail short-circuits to suppress before staleness is checked) and proves the outcomes are total and mutually exclusive. No other module returns a demote decision.",
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F002",
       "category": "functional",
-      "description": "Explicit producer-asserted scope, no silent inference. Add scope (global|fleet|project|plan|feature) plus optional plan_id/feature_id to ActionItem; NEW producers MUST set scope explicitly (no constructor default that infers scope from project_name — that would quietly recreate the heuristic problem and make legacy cards look trustworthy). Legacy/unscoped items (scope unset) route through an explicit legacy_adapter path that logs a deprecation warning and is eligible for demotion; they are never silently treated as belonging to the selected project. A scope-applicability lattice drives render: global applies to every project/fleet view; fleet applies to the fleet view; project applies only to its own project; plan/feature scope applies ONLY IF its plan_id resolves to the selected project — if resolution fails, the gate demotes (does not render).",
+      "description": "Explicit producer-asserted scope, no silent inference. Add scope (global|fleet|project|plan|feature) plus optional plan_id/feature_id to ActionItem; NEW producers MUST set scope explicitly (no constructor default that infers scope from project_name \u2014 that would quietly recreate the heuristic problem and make legacy cards look trustworthy). Legacy/unscoped items (scope unset) route through an explicit legacy_adapter path that logs a deprecation warning and is eligible for demotion; they are never silently treated as belonging to the selected project. A scope-applicability lattice drives render: global applies to every project/fleet view; fleet applies to the fleet view; project applies only to its own project; plan/feature scope applies ONLY IF its plan_id resolves to the selected project \u2014 if resolution fails, the gate demotes (does not render).",
       "steps": [
         "Add scope (enum, required for new producers) + optional plan_id/feature_id to operator_console.ActionItem; do NOT add a project_name-inferring default",
         "Set scope explicitly in every producer: reconcile/install/global-capability -> global; per-project gates/architecture/build-warnings -> project (+project_name); plan-gate -> plan (+plan_id); feature-gate -> feature (+plan_id/feature_id)",
         "Implement scope_applies(card, *, selected_scope, selected_project, resolve_plan_to_project) lattice; plan/feature requires resolve_plan_to_project(card.plan_id) == selected_project, else the lattice returns 'unresolved' and the gate demotes",
         "Route scope-unset legacy items through legacy_adapter that logs a deprecation warning; remove reliance on is_item_relevant_to_project as the primary path (keep it only behind legacy_adapter)",
-        "Tests: lattice truth table (global->project view applies; project A card->project B view not-applies; fleet->project not-applies; plan card whose plan_id resolves to selected project applies; plan card that fails resolution demotes); a test proving NO silent project_name inference (an unscoped card does not render as project work — it logs + is demotion-eligible)"
+        "Tests: lattice truth table (global->project view applies; project A card->project B view not-applies; fleet->project not-applies; plan card whose plan_id resolves to selected project applies; plan card that fails resolution demotes); a test proving NO silent project_name inference (an unscoped card does not render as project work \u2014 it logs + is demotion-eligible)"
       ],
-      "acceptance": "Every producer emits cards with an explicit scope; there is no constructor default that infers scope from project_name. scope_applies implements the documented lattice including plan/feature → project resolution (failed resolution yields demote, not render). Scope-unset legacy items pass through a logged legacy_adapter and are demotion-eligible, never silently rendered as project work. Verified by a lattice truth-table test (incl. plan-resolution success and failure) and a no-silent-inference test.",
-      "passes": false,
-      "phase": 1
+      "acceptance": "Every producer emits cards with an explicit scope; there is no constructor default that infers scope from project_name. scope_applies implements the documented lattice including plan/feature \u2192 project resolution (failed resolution yields demote, not render). Scope-unset legacy items pass through a logged legacy_adapter and are demotion-eligible, never silently rendered as project work. Verified by a lattice truth-table test (incl. plan-resolution success and failure) and a no-silent-inference test.",
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F003",
       "category": "functional",
-      "description": "Per-source freshness: extend freshness from 004's snapshot-wide envelope to per-source/per-card stamping. Each card resolves the source it was computed from, when that source last evaluated successfully, and whether that evaluation succeeded — so one stale or failed producer demotes only its own cards without poisoning fresh siblings. Feeds F001 step 2 (source fresh AND evaluable?) and F004 (demotion).",
+      "description": "Per-source freshness: extend freshness from 004's snapshot-wide envelope to per-source/per-card stamping. Each card resolves the source it was computed from, when that source last evaluated successfully, and whether that evaluation succeeded \u2014 so one stale or failed producer demotes only its own cards without poisoning fresh siblings. Feeds F001 step 2 (source fresh AND evaluable?) and F004 (demotion).",
       "steps": [
         "Populate source_evaluated_at + source_eval_ok per source when each producer runs (a source-freshness map keyed by source id, or fields on the card)",
         "Compute per-source is_stale against DASHBOARD_STALENESS_THRESHOLD_SECONDS using the source's OWN evaluated_at, not the snapshot generated_at",
@@ -42,8 +50,12 @@
         "Tests: a card from a stale source reports is_stale while a sibling from a fresh source does not, in the same snapshot; eval_ok=False (recompute failed/skipped) is reported distinctly from is_stale (old-but-evaluated)"
       ],
       "acceptance": "Each card resolves a per-source freshness ({evaluated_at, age, is_stale, eval_ok}) from its own source's last evaluation, independent of the snapshot-wide envelope. In one snapshot, a stale-source card is is_stale while a fresh-source sibling is not; eval_ok=False is distinct from is_stale. Verified by mixed-freshness-source tests.",
-      "passes": false,
-      "phase": 1
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F004",
@@ -56,14 +68,21 @@
         "Tests: a stale reconcile source yields exactly one status_uncertain INFO card and zero reconcile Needs Action cards; capabilities and gates demote identically; the uncertainty card states source + last-checked + reason; architecture parity preserved"
       ],
       "acceptance": "For any source the gate demotes (stale or eval_ok False), its cards are replaced by exactly one uncertainty card with band=Band.INFO, resolution_class=blocked_external, section='status_uncertain', stating source + last-checked + reason, and zero of its cards appear as Needs Action. Reconcile, capabilities, gates, and architecture demote through the same build_uncertainty_card path. Verified by per-producer staleness tests including architecture parity.",
-      "passes": false,
+      "passes": true,
       "phase": 2,
-      "depends_on": ["F001", "F003"]
+      "depends_on": [
+        "F001",
+        "F003"
+      ],
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F005",
       "category": "functional",
-      "description": "Global/project separation plus the four-part render-truth invariant, with the QuantRE regression pinned. A global producer emits exactly one scope=global card; a project view shows it with a GLOBAL badge iff its live predicate is unresolved AND its source fresh, hides it when the live global predicate is clean, and NEVER resurrects a now-clean global card from a per-project output cache (what-now-cache.json) — the gate re-evaluates the global predicate against live global state, not cache contents. An invariant test asserts that for any selected scope S, every visible Needs Action card satisfies all four: scope_applies(card.scope,S) AND per-source-fresh AND clears_when unresolved-and-evaluable AND resolution_class set. The QuantRE regression is an explicit acceptance case. Depends on F001, F002, F003, F004.",
+      "description": "Global/project separation plus the four-part render-truth invariant, with the QuantRE regression pinned. A global producer emits exactly one scope=global card; a project view shows it with a GLOBAL badge iff its live predicate is unresolved AND its source fresh, hides it when the live global predicate is clean, and NEVER resurrects a now-clean global card from a per-project output cache (what-now-cache.json) \u2014 the gate re-evaluates the global predicate against live global state, not cache contents. An invariant test asserts that for any selected scope S, every visible Needs Action card satisfies all four: scope_applies(card.scope,S) AND per-source-fresh AND clears_when unresolved-and-evaluable AND resolution_class set. The QuantRE regression is an explicit acceptance case. Depends on F001, F002, F003, F004.",
       "steps": [
         "Render a GLOBAL badge for scope=global cards shown in a non-global view; suppress the global card when its live predicate evaluates clean",
         "Re-evaluate the global predicate against live global state at render time; ensure a per-project output cache cannot re-surface a global card whose predicate is now resolved",
@@ -71,10 +90,15 @@
         "QuantRE regression fixture: selected project = quantre-migration, a stale per-project reconcile cache saying missing_snapshot, and a clean live global reconcile check -> assert zero setup-drift Needs Action cards rendered",
         "Tests: a global reconcile issue shows with GLOBAL badge while unresolved+fresh, disappears when global reconcile is clean, is not resurrected from a stale per-project cache; the four-part invariant holds over a mixed global/project/stale/resolved fixture"
       ],
-      "acceptance": "Global-scoped cards render in project views only with a GLOBAL badge and only while their live predicate is unresolved and source fresh; they vanish when the live global predicate is clean and are never resurrected from a per-project cache (predicate re-evaluated live, not read from cache). The QuantRE regression — selected project=quantre-migration + stale per-project missing_snapshot cache + clean live global reconcile — renders zero setup-drift Needs Action cards, proven by a committed fixture. An invariant test proves that for the selected scope, every visible Needs Action card satisfies scope ∧ per-source-fresh ∧ unresolved ∧ resolution_class, over a mixed global/project/stale/resolved fixture. Full orchestrate sweep stays green.",
+      "acceptance": "Global-scoped cards render in project views only with a GLOBAL badge and only while their live predicate is unresolved and source fresh; they vanish when the live global predicate is clean and are never resurrected from a per-project cache (predicate re-evaluated live, not read from cache). The QuantRE regression \u2014 selected project=quantre-migration + stale per-project missing_snapshot cache + clean live global reconcile \u2014 renders zero setup-drift Needs Action cards, proven by a committed fixture. An invariant test proves that for the selected scope, every visible Needs Action card satisfies scope \u2227 per-source-fresh \u2227 unresolved \u2227 resolution_class, over a mixed global/project/stale/resolved fixture. Full orchestrate sweep stays green.",
       "passes": false,
       "phase": 3,
-      "depends_on": ["F001", "F002", "F003", "F004"]
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ]
     }
   ]
 }

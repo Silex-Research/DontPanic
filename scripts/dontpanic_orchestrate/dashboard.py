@@ -67,6 +67,10 @@ from dontpanic_orchestrate import (
 )
 from dontpanic_orchestrate import gate_pause as _gp
 from dontpanic_orchestrate import action_resolvability as _ar
+from dontpanic_orchestrate import render_gate as _rg
+from dontpanic_orchestrate import scope_lattice as _sl
+import dataclasses as _dataclasses
+import datetime as _dt
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 0  # 0 = pick a free ephemeral port; tests rely on this
@@ -1068,8 +1072,74 @@ def _gather_action_items(
         # re-probe reports the capability ready (clear on evidence).
         "capabilities": _capabilities_live_state(capability_envelope),
     }
-    kept, _suppressed = _ar.suppress_resolved(aggregated, live_state)
-    return kept
+    # Plan 2026-06-04-005 wiring: route EVERY card through the unified render gate
+    # (F001) — suppress-unless-proven-live — instead of 001's render-unless-resolved
+    # suppress_resolved. Each card's scope (F002) and per-source freshness (F003)
+    # are computed here and injected; DEMOTE'd cards collapse into F004 uncertainty
+    # cards (never silently dropped). The gate is now the ONLY path by which a
+    # Needs Action card reaches the rendered set.
+    now = _dt.datetime.now(_dt.timezone.utc)
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    selected_scope = _sl.Scope.PROJECT.value if project_name else _sl.Scope.FLEET.value
+
+    # Producer-asserted scope by source semantics (NOT project_name inference):
+    # install/reconcile/capabilities/supervisors are global install/fleet state;
+    # gates + architecture are per-repo (project), carrying their project_name.
+    _source_scope = {
+        operator_console.SOURCE_RECONCILE: _sl.Scope.GLOBAL.value,
+        operator_console.SOURCE_CAPABILITY: _sl.Scope.GLOBAL.value,
+        operator_console.SOURCE_SUPERVISOR: _sl.Scope.GLOBAL.value,
+        operator_console.SOURCE_GATE: _sl.Scope.PROJECT.value,
+        operator_console.SOURCE_ARCHITECTURE: _sl.Scope.PROJECT.value,
+    }
+    # All sources here were just evaluated at build time → fresh + ok. A source
+    # whose producer input was absent (couldn't evaluate) is marked eval_ok=False
+    # so the gate demotes only that source's cards (F003 fail-closed).
+    present_sources = {getattr(c, "source", None) for c in aggregated}
+    source_eval_map = {
+        s: {"evaluated_at": now_iso, "eval_ok": True} for s in present_sources if s
+    }
+    if reconcile_result is None and operator_console.SOURCE_RECONCILE in source_eval_map:
+        source_eval_map[operator_console.SOURCE_RECONCILE]["eval_ok"] = False
+    if capability_envelope is None and operator_console.SOURCE_CAPABILITY in source_eval_map:
+        source_eval_map[operator_console.SOURCE_CAPABILITY]["eval_ok"] = False
+
+    rendered: list[operator_console.ActionItem] = []
+    demoted: list[operator_console.ActionItem] = []
+    for card in aggregated:
+        if getattr(card, "scope", None) is None:
+            _sc = _source_scope.get(getattr(card, "source", None))
+            if _sc is not None:
+                card = _dataclasses.replace(card, scope=_sc)
+        st = _sl.resolve_card_scope_state(
+            card, selected_scope=selected_scope, selected_project=project_name
+        )
+        fr = state_projection.card_source_freshness(card, source_eval_map, now=now)
+        decision = _rg.render_decision(
+            card,
+            scope_state=st,
+            source_fresh=not fr["is_stale"],
+            source_evaluable=fr["eval_ok"],
+            live_state=live_state,
+        )
+        if decision == _rg.RENDER:
+            rendered.append(card)
+        elif decision == _rg.DEMOTE:
+            demoted.append(card)
+        # SUPPRESS → dropped (not relevant to this scope, or resolved at source)
+
+    # F004: a demoted source's cards collapse into one uncertainty card each.
+    freshness_by_source = {
+        getattr(c, "source", None): {
+            "evaluated_at": now_iso,
+            "reason": "source stale or could not be evaluated",
+        }
+        for c in demoted
+    }
+    uncertainty = operator_console.collapse_demoted_to_uncertainty(
+        demoted, freshness_by_source=freshness_by_source, captured_at=now_iso
+    )
+    return tuple(rendered) + tuple(uncertainty)
 
 
 def _reconcile_live_state(reconcile_result: Any | None) -> dict[str, bool]:

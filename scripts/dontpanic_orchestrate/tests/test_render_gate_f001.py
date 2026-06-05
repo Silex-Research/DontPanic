@@ -65,19 +65,28 @@ def test_needs_action_uneval_source_demotes():
     assert _decide(_card(), source_evaluable=False) == rg.DEMOTE
 
 
-# ── step 3: a verification path must exist (recompute OR evidence) ───────────
-def test_needs_action_command_resolvable_no_predicate_demotes():
-    # command_resolvable + no clears_when = unverifiable -> demote
-    assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_COMMAND_RESOLVABLE)) == rg.DEMOTE
+# ── step 3: verification path (recompute | evidence | reconstruction) ────────
+def test_needs_action_command_resolvable_no_predicate_renders_via_reconstruction():
+    # No clears_when, but the source is fresh (step 2 passed) -> the card is
+    # reconstruction-fresh (re-emitted this build) -> render, NOT demote. A
+    # missing predicate is not uncertainty; only a stale source is.
+    assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_COMMAND_RESOLVABLE)) == rg.RENDER
 
 
 def test_needs_action_operator_attested_no_predicate_renders():
-    # operator_attested resolves via EVIDENCE, not recompute: legit live card, not demoted
+    # operator_attested resolves via EVIDENCE, not recompute: legit live card
     assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_OPERATOR_ATTESTED)) == rg.RENDER
 
 
 def test_needs_action_blocked_external_no_predicate_renders():
     assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_BLOCKED_EXTERNAL)) == rg.RENDER
+
+
+def test_needs_action_missing_resolution_class_still_demotes():
+    # A NEEDS_ACTION card with NO resolution_class at all is malformed -> demote.
+    assert _decide(_card(clears_when=None, resolution_class="")) == rg.DEMOTE
+    # ...and a stale source still demotes regardless of predicate.
+    assert _decide(_card(clears_when=None), source_fresh=False) == rg.DEMOTE
 
 
 # ── step 4: resolution_class set ─────────────────────────────────────────────
