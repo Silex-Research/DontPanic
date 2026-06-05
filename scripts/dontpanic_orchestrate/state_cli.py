@@ -123,6 +123,10 @@ def _export_dashboard_main(argv: list[str]) -> int:
             plans_root,
             redact_level=args.redact_level,
             plan_id=args.plan_id,
+            # Mirror serve/dashboard.build: a single malformed plan must not block
+            # the whole projection. gather logs each skipped plan; the export is a
+            # truthful view of the loadable ledger, not a fail-fast validator.
+            tolerate_malformed_plans=True,
         )
     except ValueError as e:
         print(f"gather error: {e}", file=sys.stderr)

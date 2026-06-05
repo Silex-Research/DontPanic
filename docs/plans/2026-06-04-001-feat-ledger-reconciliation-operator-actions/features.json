@@ -114,7 +114,7 @@
           "note": "contract: 57 gate cards (54 on completed plans) collapse to 3 live; integration: dashboard._gather_action_items drops a completed plan's gate, keeps an active plan's gate"
         },
         {
-          "type": "metric",
+          "type": "audit_json",
           "uri": "docs/plans/2026-06-04-001-feat-ledger-reconciliation-operator-actions/evidence/f003-phantom-suppression-count.json",
           "note": "live ledger: 65 gate cards -> 1 after suppression (64 suppressed: 47 completed + 11 abandoned + 6 draft); 1 kept (active)"
         }
@@ -189,7 +189,7 @@
           "note": "drives every NEEDS_ACTION-capable emitter (gates, capabilities, reconcile, supervisor, architecture, operations-guidance); asserts each NEEDS_ACTION item is resolvable via recompute (clears_when) | evidence (operator_attested/blocked_external) | reconstruction (projected source); negative guard proves a static command_resolvable+clears_when=None card FAILS; behavioral tests prove each mechanism actually clears"
         },
         {
-          "type": "decision",
+          "type": "file",
           "uri": "docs/plans/2026-06-04-001-feat-ledger-reconciliation-operator-actions/decisions.jsonl",
           "note": "D006 records the reconstruction third-mechanism spec-clarification"
         }
