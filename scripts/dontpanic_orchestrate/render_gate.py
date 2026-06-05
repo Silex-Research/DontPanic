@@ -95,13 +95,22 @@ def render_decision(
     # 2. source fresh + evaluable
     if not (source_fresh and source_evaluable):
         return DEMOTE
-    # 3. clears_when present (predicate name is registry-guaranteed at construction)
+    # 4. resolution_class set (checked before 3 so an evidence-class card is
+    #    recognised before the recompute-predicate requirement is applied).
+    rclass = getattr(card, "resolution_class", None)
+    if not rclass:
+        return DEMOTE
+    # 3. A verification path must exist. Per 001's taxonomy there are two ways a
+    #    NEEDS_ACTION card proves it is still live: RECOMPUTE (a clears_when
+    #    predicate) OR EVIDENCE (operator_attested / blocked_external resolve via
+    #    human/external attestation, not recompute — they legitimately carry no
+    #    clears_when and must NOT be demoted). Only a command-resolvable / chained
+    #    card with NO predicate is unverifiable → demote.
     cw = getattr(card, "clears_when", None)
     if cw is None:
-        return DEMOTE
-    # 4. resolution_class set
-    if not getattr(card, "resolution_class", None):
-        return DEMOTE
+        if rclass in _ar.NON_COMMAND_RESOLUTION_CLASSES:
+            return RENDER  # awaiting human evidence — a true, live Needs Action
+        return DEMOTE  # command-resolvable but unverifiable → uncertainty
     # 5. predicate resolved → suppress (issue genuinely gone)
     if _ar.evaluate_clears_when(cw, live_state):
         return SUPPRESS

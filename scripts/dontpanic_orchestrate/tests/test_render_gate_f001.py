@@ -65,9 +65,19 @@ def test_needs_action_uneval_source_demotes():
     assert _decide(_card(), source_evaluable=False) == rg.DEMOTE
 
 
-# ── step 3: clears_when present ──────────────────────────────────────────────
-def test_needs_action_no_predicate_demotes():
-    assert _decide(_card(clears_when=None)) == rg.DEMOTE
+# ── step 3: a verification path must exist (recompute OR evidence) ───────────
+def test_needs_action_command_resolvable_no_predicate_demotes():
+    # command_resolvable + no clears_when = unverifiable -> demote
+    assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_COMMAND_RESOLVABLE)) == rg.DEMOTE
+
+
+def test_needs_action_operator_attested_no_predicate_renders():
+    # operator_attested resolves via EVIDENCE, not recompute: legit live card, not demoted
+    assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_OPERATOR_ATTESTED)) == rg.RENDER
+
+
+def test_needs_action_blocked_external_no_predicate_renders():
+    assert _decide(_card(clears_when=None, resolution_class=_ar.RESOLUTION_BLOCKED_EXTERNAL)) == rg.RENDER
 
 
 # ── step 4: resolution_class set ─────────────────────────────────────────────
