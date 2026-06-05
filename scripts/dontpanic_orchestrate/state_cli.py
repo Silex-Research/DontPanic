@@ -159,6 +159,10 @@ def _export_dashboard_main(argv: list[str]) -> int:
                 "name": s,
                 "file": f"{s}.json",
                 "count": len(streams[s]),
+                # F001 real provenance: the actual upstream source this stream is
+                # projected from, as data on the section. The canonical projection
+                # never cites the legacy tasks/agents/activity.json adapters.
+                "source": state_projection.STREAM_PROVENANCE[s],
             }
             for s in state_projection.ALL_STREAMS
         ],

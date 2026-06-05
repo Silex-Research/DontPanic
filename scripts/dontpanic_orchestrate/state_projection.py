@@ -116,6 +116,29 @@ ALL_STREAMS: Final[tuple[str, ...]] = (
     "evidence_refs",
 )
 
+# Plan 2026-06-04-004 F001 — real provenance: the actual upstream source each
+# stream is projected FROM, declared as data on the manifest (not a hardcoded
+# footer string). The canonical projection NEVER cites the legacy
+# tasks.json / agents.json / activity.json adapters — those predate the
+# state-snapshot projection and must not appear in provenance.
+STREAM_PROVENANCE: Final[dict[str, str]] = {
+    # plan-derived streams: plan_loader.load(<dir>) over docs/plans/**
+    "plans": "docs/plans/**/plan.md + features.json (plan_loader)",
+    "gates": "docs/plans/**/plan.md human_gates + audit/gate-state.json",
+    "inbox": "docs/plans/**/INBOX.md (plan_loader)",
+    "decisions": "docs/plans/**/decisions.jsonl (plan_loader)",
+    "evidence_refs": "docs/plans/**/features.json evidence_refs (plan_loader)",
+    # registry / state streams
+    "supervisors": "active-supervisor registry (~/.dontpanic/active_supervisors.jsonl)",
+    "quota": "quota_state.json (per-model rolling windows)",
+}
+
+# The legacy single-tenant adapters the canonical projection replaced. F001
+# asserts none of these are ever cited as provenance or rendered.
+LEGACY_SOURCES: Final[frozenset[str]] = frozenset(
+    {"tasks.json", "agents.json", "activity.json"}
+)
+
 _VALID_REDACT_LEVELS: Final[frozenset[str]] = frozenset(
     {"public", "operator", "full"}
 )

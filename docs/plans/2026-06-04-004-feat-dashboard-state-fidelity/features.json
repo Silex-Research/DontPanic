@@ -14,8 +14,27 @@
         "Tests: each section's declared provenance matches the file it was built from; legacy footer absent under canonical projection"
       ],
       "acceptance": "Every section's displayed provenance equals the file(s) it was actually built from; with the canonical projection active, no section cites or renders legacy tasks/agents/activity.json. Verified by tests asserting provenance==source.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": "operator-style-implementation",
+      "verified_at": "2026-06-05T02:34:23Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_projection.py",
+          "note": "STREAM_PROVENANCE (real source per stream) + LEGACY_SOURCES frozenset"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/state_cli.py",
+          "note": "manifest stream entries carry source=STREAM_PROVENANCE[name] as data, not a hardcoded footer"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_state_provenance_f001.py",
+          "note": "5 passed: provenance==source per stream; no legacy tasks/agents/activity.json cited or written; +139 state-export regression green"
+        }
+      ]
     },
     {
       "id": "F002",
