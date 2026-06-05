@@ -113,3 +113,50 @@ def render_decision(
     if cw is not None and _ar.evaluate_clears_when(cw, live_state):
         return SUPPRESS  # recompute proves the issue is gone
     return RENDER
+
+
+# ── F005: global/project separation + render-truth invariant ──────────────────
+def global_badge_for(card: Any, *, selected_scope: str) -> bool:
+    """Plan 2026-06-04-005 F005 — a scope=global card shown in a SPECIFIC project
+    view carries a GLOBAL badge (so a global issue is never mistaken for project
+    work). Aggregate views (global/fleet) show everything ungrouped and need no
+    per-card badge."""
+    return (
+        getattr(card, "scope", None) == _sl.Scope.GLOBAL.value
+        and selected_scope not in (_sl.Scope.GLOBAL.value, _sl.Scope.FLEET.value)
+    )
+
+
+def render_truth_invariant(
+    rendered: "list[Any] | tuple[Any, ...]",
+    *,
+    scope_state_of: "Any",
+    source_fresh_of: "Any",
+    live_state: Mapping[str, Any],
+) -> list[tuple[str, str]]:
+    """Plan 2026-06-04-005 F005 — assert the four-part contract over the rendered
+    Needs Action set. For every visible NEEDS_ACTION card, ALL must hold:
+    scope applies, source fresh+evaluable, resolution_class set, and the
+    clears_when predicate is NOT resolved. Returns a list of ``(card_id, reason)``
+    violations — empty iff the invariant holds. ``scope_state_of(card)`` returns a
+    scope_lattice state; ``source_fresh_of(card)`` returns ``(fresh, evaluable)``.
+    """
+    violations: list[tuple[str, str]] = []
+    for card in rendered:
+        if not _is_needs_action(card):
+            continue
+        cid = getattr(card, "id", "?")
+        if scope_state_of(card) != _sl.APPLIES:
+            violations.append((cid, "scope"))
+            continue
+        fresh, evaluable = source_fresh_of(card)
+        if not (fresh and evaluable):
+            violations.append((cid, "stale"))
+            continue
+        if not getattr(card, "resolution_class", None):
+            violations.append((cid, "resolution_class"))
+            continue
+        cw = getattr(card, "clears_when", None)
+        if cw is not None and _ar.evaluate_clears_when(cw, live_state):
+            violations.append((cid, "resolved"))
+    return violations

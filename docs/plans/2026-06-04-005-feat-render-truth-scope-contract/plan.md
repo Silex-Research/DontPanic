@@ -3,7 +3,7 @@ id: 2026-06-04-005-feat-render-truth-scope-contract
 title: Dashboard render-truth scope contract (fail-closed; scope every card, demote stale to uncertainty)
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-04"
 goal_type: new_feature
 description: >

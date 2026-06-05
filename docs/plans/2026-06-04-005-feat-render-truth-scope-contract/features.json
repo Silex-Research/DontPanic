@@ -91,14 +91,18 @@
         "Tests: a global reconcile issue shows with GLOBAL badge while unresolved+fresh, disappears when global reconcile is clean, is not resurrected from a stale per-project cache; the four-part invariant holds over a mixed global/project/stale/resolved fixture"
       ],
       "acceptance": "Global-scoped cards render in project views only with a GLOBAL badge and only while their live predicate is unresolved and source fresh; they vanish when the live global predicate is clean and are never resurrected from a per-project cache (predicate re-evaluated live, not read from cache). The QuantRE regression \u2014 selected project=quantre-migration + stale per-project missing_snapshot cache + clean live global reconcile \u2014 renders zero setup-drift Needs Action cards, proven by a committed fixture. An invariant test proves that for the selected scope, every visible Needs Action card satisfies scope \u2227 per-source-fresh \u2227 unresolved \u2227 resolution_class, over a mixed global/project/stale/resolved fixture. Full orchestrate sweep stays green.",
-      "passes": false,
+      "passes": true,
       "phase": 3,
       "depends_on": [
         "F001",
         "F002",
         "F003",
         "F004"
-      ]
+      ],
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     }
   ]
 }
