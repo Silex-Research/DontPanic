@@ -162,6 +162,11 @@ def _isolate_jarvis_state(tmp_path, monkeypatch):
     # demand.
     monkeypatch.setenv("DONTPANIC_HOME", str(tmp_path / "dontpanic_home"))
     monkeypatch.setenv("JARVIS_HOME", str(tmp_path / "jarvis_home"))
+    # Relocate the dashboard state-output dir off the repo working tree. Without
+    # this a test that runs dashboard.build() writes to `<cwd>/dashboard/state`
+    # (the repo), leaving pytest-tmp-home state in the served dashboard. Honored
+    # by dashboard.default_dashboard_dir().
+    monkeypatch.setenv("DONTPANIC_DASHBOARD_DIR", str(tmp_path / "dashboard"))
     from dontpanic_orchestrate import circuit_breakers
 
     circuit_breakers.reset_warning_cache()

@@ -135,10 +135,22 @@ def default_plans_root(cwd: Path | None = None) -> Path:
 
 
 def default_dashboard_dir(cwd: Path | None = None) -> Path:
-    """``<cwd>/dashboard`` — the checked-in static dashboard root."""
+    """``<cwd>/dashboard`` — the checked-in static dashboard root.
 
-    base = cwd if cwd is not None else Path.cwd()
-    return base / DEFAULT_DASHBOARD_DIR_NAME
+    Resolution order: an explicit ``cwd`` wins (callers that pass one have
+    already chosen where state lands); otherwise the ``DONTPANIC_DASHBOARD_DIR``
+    env override is honored as a full path; otherwise we fall back to the
+    process cwd. The env override exists so test runs (and any isolated harness)
+    write generated state to a tmp dir instead of polluting ``<repo>/dashboard``
+    — the autouse conftest fixture sets it per test.
+    """
+
+    if cwd is not None:
+        return cwd / DEFAULT_DASHBOARD_DIR_NAME
+    override = os.environ.get("DONTPANIC_DASHBOARD_DIR")
+    if override:
+        return Path(override)
+    return Path.cwd() / DEFAULT_DASHBOARD_DIR_NAME
 
 
 def default_state_out_dir(cwd: Path | None = None) -> Path:
