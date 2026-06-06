@@ -87,7 +87,11 @@
         "Tests: dry-run mutates nothing; --confirm applies only auto_safe + logs evidence; refusals hold"
       ],
       "acceptance": "triage apply --safe (command-line) applies only the auto_safe bucket, dry-run by default, with a logged reversible evidence record on --confirm, and hard refuses credentials/approvals/project mutations. Verified by tests proving dry-run is side-effect-free, --confirm applies only auto_safe items and writes evidence, and a needs_auth/needs_decision/mutation item is refused. Disabled by default; runnable by a human or agent in a terminal.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_triage_apply_f005.py (7 tests: dry-run default, confirm runs only auto_safe + evidence, refusals, real-fleet noop)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F006",

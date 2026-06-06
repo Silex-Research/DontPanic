@@ -4984,6 +4984,10 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.operator_brief import cli_main as _operator_brief_cli
 
         return _operator_brief_cli(raw[1:])
+    if raw and raw[0] == "triage":
+        from dontpanic_orchestrate.triage_apply import cli_main as _triage_apply_cli
+
+        return _triage_apply_cli(raw[1:])
     if raw and raw[0] == "orchestrate":
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
