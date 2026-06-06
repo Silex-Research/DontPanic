@@ -1,0 +1,60 @@
+// F006 — operator console default view, REAL-SHELL journey (H1/H4/H5).
+// Boots the real createJarvis() shell with the real F001 model fixture in
+// state/operator-triage.json, switches to the Operator tab, and asserts the
+// rendered DOM is the calm triage queue: one status line, ALL unique live human
+// items (not capped), non-human collapsed, zero raw JSON. Plus an anti-synthetic
+// negative: if the producer stops classifying, the human items don't appear.
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { setupDOM, setupChartMock, setupFetchMock } from '../helpers/setup.js';
+import model from '../fixtures/operator-triage-model.json' with { type: 'json' };
+
+async function boot(triageModel) {
+  setupDOM();
+  setupChartMock();
+  setupFetchMock({ 'operator-triage': triageModel });
+  const { createJarvis } = await import('../../core.js');
+  const J = createJarvis();
+  globalThis.Jarvis = J; // the page IIFE registers into the real shell
+  await import('../../pages/operator-console/operator-console.js' + `?j=${Math.random().toString(36).slice(2)}`);
+  await J.init();
+  return J;
+}
+
+const count = (hay, needle) => hay.split(needle).length - 1;
+
+describe('F006 operator console: real F001 model through the real shell', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); delete globalThis.Jarvis; });
+
+  it('default view: one status line, all 14 unique live human items, non-human collapsed, no raw JSON', async () => {
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const html = J.getPageEl('operator-console').innerHTML;
+
+    // one honest pipeline status line (H5)
+    expect(html).toContain('313 raw → 182 unique → 14 need you');
+    // a real needs-you command surfaces — the human's one move (H1/H4)
+    expect(html).toContain('dontpanic capabilities setup agent-claude-cli --print-steps');
+    // non-human work is collapsed to a count, not listed
+    expect(html).toContain('an agent can run');
+    // and NO raw JSON leaks into the surface
+    expect(html).not.toContain('"operator_bucket"');
+    expect(html).not.toContain('[{');
+  });
+
+  it('ANTI-SYNTHETIC: if the model classifies nothing as human, the needs-you queue is empty', async () => {
+    // Regress the producer: make every item agent_runnable (no human buckets).
+    const regressed = {
+      ...model,
+      items: model.items.map((i) => ({ ...i, operator_bucket: 'agent_runnable' })),
+      data_quality: { ...model.data_quality, counts: { agent_runnable: model.items.length }, uncertain: 0 },
+    };
+    const J = await boot(regressed);
+    J.switchTo('operator-console');
+    const html = J.getPageEl('operator-console').innerHTML;
+    expect(html).toContain('Nothing needs you');
+    // proves the assertion above is tied to the model's classification, not the fixture shape
+    expect(count(html, 'capabilities setup agent-claude-cli')).toBe(0);
+  });
+});

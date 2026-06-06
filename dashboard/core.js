@@ -289,6 +289,13 @@ function JARVIS_LITERAL() { return {
       // is the SAME RecommendationReport the CLI `dontpanic skills recommend`
       // prints, so the dashboard and CLI never drift (AC9).
       { key: 'skillRecommendations', file: 'skill-recommendations.json', nullableMissing: true },
+      // Plan 2026-06-06-001 F006 — operator triage model (the F001
+      // operator_triage serialization). The Operator console renders this; the
+      // SAME model the CLI `dontpanic operator brief` reads (one model, many
+      // renderers). Missing → null so the console shows the "run dashboard
+      // build" empty state; a fetch failure after a successful load resets to
+      // null so the missing state surfaces on next refresh.
+      { key: 'operatorTriage', file: 'operator-triage.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
@@ -590,6 +597,9 @@ function JARVIS_LITERAL() { return {
 // page lists). No behavior change to the running shell: the IIFE below still
 // consumes this same const.
 export const pageModules = [
+  // Plan 2026-06-06-001 F006 — the operator-console default view (triage queue +
+  // status bar) renders the F001 model and leads the nav as the primary surface.
+  'pages/operator-console/operator-console.js',
   'pages/what-now/what-now.js',
   // Plan 2026-06-04-006 F006 — safe-repair surfaces ("Repair automatically" +
   // "Copy agent repair plan"), scope-aware via 005. Read-only: copies commands,

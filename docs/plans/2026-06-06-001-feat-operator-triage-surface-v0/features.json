@@ -106,7 +106,13 @@
         "Separate fixture assertion: the real 313-item fleet collapses to its expected unique-human count (derived, not a hard cap)"
       ],
       "acceptance": "The default console view renders the F001 model as a calm queue: one health line, the FULL set of unique live needs_auth+needs_decision items (Uncertain included, deduped+gate-reconciled), a blocked-explainer, handled work collapsed to filtering counts. Verified by (1) a correctness journey test (H1/H4/H5) on real fleet state asserting the view shows exactly the unique live human items, non-human collapsed, zero raw JSON, one status line \u2014 NO hard count cap; and (2) a separate fixture assertion that the real 313-item inventory collapses to its expected unique-human count. The fleet-state serve-path dependency is resolved or explicitly deferred in decisions. Browser/GUI surface only.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/operator-console-logic.test.js (7 tests, real model)",
+        "dashboard/tests/integration/operator-console-journey.test.js (real-shell H1 + anti-synthetic)",
+        "scripts/dontpanic_orchestrate/tests/test_operator_triage_state_f006.py (state writer)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F007",

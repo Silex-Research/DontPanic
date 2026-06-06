@@ -18,6 +18,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
+from pathlib import Path
 
 # Bands that are never operator ACTIONS — surfaced only on demand.
 _QUIET_BANDS = frozenset({"info", "advisory"})
@@ -240,3 +241,24 @@ def build_triage(
     }
     model["state_revision"] = _fingerprint(model)
     return model
+
+
+def write_triage_state(
+    items: Sequence[Mapping[str, object]],
+    out_path: str | Path,
+    *,
+    dedupe: bool = True,
+    live_supervisors: Sequence[Mapping[str, object]] = (),
+) -> Path:
+    """Serialize the triage model to ``out_path`` so a renderer (the operator
+    console) can read the SAME model the CLI brief reads. Returns the path."""
+    model = build_triage(
+        items,
+        safety_class_for=lambda _it: None,  # safety_class lives in the repair projection (F001 consumes, not asserts)
+        live_supervisors=list(live_supervisors),
+        dedupe=dedupe,
+    )
+    path = Path(out_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(model, ensure_ascii=False), encoding="utf-8")
+    return path

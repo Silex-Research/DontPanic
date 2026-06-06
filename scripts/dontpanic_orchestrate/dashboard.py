@@ -846,6 +846,20 @@ def build(
                 _action_renderers.render_dashboard_json(merged_items),
                 encoding="utf-8",
             )
+            # Plan 2026-06-06-001 F006 — write the operator triage MODEL (F001)
+            # next to what-now.json so the Operator console renders the SAME
+            # model the CLI `dontpanic operator brief` reads (one model, many
+            # renderers). Best-effort: a failure here never fails the build.
+            try:
+                import json as _json
+
+                from dontpanic_orchestrate import operator_triage as _operator_triage
+
+                _wn = _json.loads((out_dir / "what-now.json").read_text(encoding="utf-8"))
+                _wn_items = _wn.get("items", []) if isinstance(_wn, dict) else _wn
+                _operator_triage.write_triage_state(_wn_items, out_dir / "operator-triage.json")
+            except Exception as _ot_exc:  # noqa: BLE001
+                warnings.append(f"operator-triage state skipped: {_ot_exc}")
             # write_cache merges by default (merge_event_sidecar=True); pass
             # the already-merged list and disable the inner merge to avoid
             # double-application that would be a no-op anyway.
