@@ -6,15 +6,16 @@
       "id": "F001",
       "category": "functional",
       "phase": 1,
-      "description": "Triage model: a single pure, total classifier that assigns every operator item exactly one operator_bucket, derived (never producer-asserted) from resolution_class + automatable + audience + reconciled gate-state + safety_class (consumed from the repair projection, not moved onto the ActionItem envelope). Buckets: needs_auth, needs_decision, agent_runnable, auto_safe, quiet, uncertain. uncertain is the fail-closed default for missing/stale inputs and is surfaced, never silently hidden. The model emits a canonical serialization plus a data_quality envelope (counts per bucket, count uncertain, staleness/source provenance). A pinned fixture of that serialization is the parity anchor so any consumer reads identical model output — model parity is asserted HERE, not inside a renderer.",
+      "description": "Triage model: a single pure, total classifier that assigns every operator item exactly one operator_bucket, derived (never producer-asserted) from resolution_class + automatable + audience + reconciled gate-state + safety_class (consumed from the repair projection, not moved onto the ActionItem envelope). Buckets: needs_auth, needs_decision, agent_runnable, auto_safe, quiet, uncertain. uncertain is the fail-closed default for missing/stale inputs and is surfaced, never silently hidden. The model emits a canonical serialization plus a data_quality envelope; a pinned fixture of that serialization is the parity anchor so any consumer reads identical model output (parity asserted HERE, not in a renderer). The model also carries CONCURRENCY/SCOPE metadata per item so every surface (brief, CLI, MCP, GUI) sees parallel work: scope (global vs project + project_name, from the active-supervisors registry target_project; null = global/install setup), a derived run_state (idle/running/conflicted by joining the item's plan_id to LIVE SupervisorEntry records; conflicted = >1 live supervisor on the plan), a coarse actor label (pid + started_at today; agent vendor + session label need a small SupervisorEntry.register enrichment, known at dispatch time), and a model state_revision fingerprint for staleness. All derived read-only from the active-supervisors registry + evidence + a model hash; the only producer change is the optional actor/session enrichment. Item-level claim/lease (reserve-before-act) is OUT (write primitive, D023).",
       "steps": [
         "Define the operator_bucket closed enum + a pure classify(item, gate_state, plan_status) returning exactly one bucket; uncertain fail-closed",
         "Keep the four axes distinct (resolution_class / automatable / safety_class / operator_bucket); document auto_safe as the reversible-derived-state subset of automatable",
         "Emit a canonical serialization + a data_quality envelope (per-bucket counts, uncertain count, per-item provenance/staleness reasons)",
+        "Add concurrency/scope metadata per item: scope (global/project + project_name), derived run_state (idle/running/conflicted from live SupervisorEntry join), coarse actor label, state_revision fingerprint — all derived read-only; enrich SupervisorEntry.register with optional agent/session",
         "Pin the serialization as a fixture (the parity anchor every consumer reads)",
-        "Test on the real 313-item fleet fixture: every item gets exactly one bucket; uncertain items carry a data-quality reason; classifier is pure and deterministic"
+        "Test on the real 313-item fleet fixture: totality, uncertain reason, determinism; scope/run_state/conflicted derived from a fixture registry; stable state_revision"
       ],
-      "acceptance": "A pure, total operator-bucket classifier, a canonical serialization, and a data_quality envelope exist as the single source of truth. Verified by unit tests over a real fleet fixture proving totality (every item exactly one bucket), the uncertain fail-closed default with a recorded reason, determinism, the four axes staying distinct (auto_safe a strict subset of automatable), and a pinned-serialization parity fixture any consumer can read. No producer asserts operator_bucket; no renderer is referenced.",
+      "acceptance": "A pure, total operator-bucket classifier, a canonical serialization, a data_quality envelope, and per-item concurrency/scope metadata (scope, derived run_state, coarse actor label, state_revision fingerprint) exist as the single source of truth. Verified by unit tests over a real fleet fixture proving totality, the uncertain fail-closed default, determinism, the four axes staying distinct, a pinned-serialization parity fixture any consumer can read, AND that run_state/scope/conflicted are derived read-only from a fixture active-supervisors registry (running = live pid on the plan_id; conflicted = >1; global = null target_project) with a stable state_revision. No producer asserts operator_bucket; no item-level claim/lease is written (deferred); no renderer is referenced.",
       "passes": false
     },
     {
@@ -47,15 +48,15 @@
       "id": "F004",
       "category": "functional",
       "phase": 2,
-      "description": "dontpanic operator brief (--json|--text): the agent-facing render. Reads the F001 canonical serialization and emits the per-bucket lists, each item carrying its exact command, dedupe_key, operator_bucket, depends_on, and an evidence reference; a top-level allow-list (agent_runnable + auto_safe, with commands) vs escalate-list (needs_auth + needs_decision); and the data_quality block. Carries an explicit honesty contract (like the agent-manifest safety_rules): narrate uncertain, never fabricate a clean bucket, never run human-gated items. Named operator brief to avoid colliding with the existing agent brief setup surface. This is a command-line surface only.",
+      "description": "dontpanic operator brief (--json|--text): the agent-facing render. Reads the F001 canonical serialization and emits the per-bucket lists, each item carrying its exact command, dedupe_key, operator_bucket, scope, run_state, depends_on, and an evidence reference; a top-level allow-list (agent_runnable + auto_safe, with commands) vs escalate-list (needs_auth + needs_decision); and the data_quality block. Carries an explicit honesty contract (like the agent-manifest safety_rules): narrate uncertain, never fabricate a clean bucket, never run human-gated items. Named operator brief to avoid colliding with the existing agent brief setup surface. Command-line surface only.",
       "steps": [
         "Add the operator-brief command reading the F001 canonical serialization",
-        "Emit --json: buckets + per-item command/deps/evidence + allow-list/escalate-list + data_quality",
+        "Emit --json: buckets + per-item command/deps/scope/run_state/evidence + allow-list/escalate-list + data_quality",
         "Emit --text: a tight agent/human-readable digest of the same",
         "Embed the honesty contract; surface uncertain + staleness as first-class",
         "Journey tests A1/A2/A3/A4 on real state: an agent derives a run-plan + escalation list; the escalate-list equals needs_auth+needs_decision; uncertainty is reported, not hidden"
       ],
-      "acceptance": "operator brief --json and --text render the F001 model with an allow-list vs escalate-list, the data_quality block, and an embedded honesty contract. Verified by journey tests on real state: an agent boots and derives a run-plan + precise escalation list (A1), the safe-to-run set excludes everything human-gated (A2), the output suffices to report back what an agent ran (A3), and incomplete classification surfaces as uncertain, never fabricated (A4). Command-line surface only.",
+      "acceptance": "operator brief --json and --text render the F001 model (incl. scope + run_state) with an allow-list vs escalate-list, the data_quality block, and an embedded honesty contract. Verified by journey tests on real state: an agent boots and derives a run-plan + precise escalation list (A1), the safe-to-run set excludes everything human-gated (A2), the output suffices to report back what an agent ran (A3), and incomplete classification surfaces as uncertain, never fabricated (A4). Command-line surface only.",
       "passes": false
     },
     {
@@ -76,13 +77,13 @@
       "id": "F006",
       "category": "functional",
       "phase": 4,
-      "description": "Operator console — default view (workbench left pane + top bar). The human-facing console renders the F001 model as a calm default screen supporting observer mode (glance while working elsewhere) and the entry to operator mode. One honest status line (H5); the needs-you list of ALL unique live needs_auth + needs_decision items (deduped + gate-reconciled, each one sentence, Uncertain riding WITH them); and a blocked-explainer (the block, the one move, the consequence, H4). Non-human buckets collapse behind a single 'handled' count whose click FILTERS the same left queue (never opens a separate grid). One accent colour for needs-you; muted otherwise; no raw JSON; no repeated banners. The human-item count is whatever is genuinely live — NOT capped. NAMED DEPENDENCY: build writes fleet state to the operator-home dashboard dir while serve reads the repo dashboard state dir — this feature resolves or explicitly defers that serve-path so real fleet data renders.",
+      "description": "Operator console — default view (workbench left pane + top bar). Renders the F001 model as a calm default screen supporting observer mode (glance) and the entry to operator mode. One honest status line (H5); the needs-you list of ALL unique live needs_auth + needs_decision items (deduped + gate-reconciled, each one sentence, Uncertain riding WITH them); and a blocked-explainer (the block, the one move, the consequence, H4). Non-human buckets collapse behind a single 'handled' count whose click FILTERS the same left queue (never opens a separate grid). One accent colour for needs-you; muted otherwise; no raw JSON; no repeated banners. The human-item count is whatever is genuinely live — NOT capped. NAMED DEPENDENCY: build writes fleet state to the operator-home dashboard dir while serve reads the repo dashboard state dir — resolve or explicitly defer that serve-path so real fleet data renders.",
       "steps": [
         "Render the default view from the F001 model: status line + the full live needs-you list (Uncertain included) + blocked-explainer; collapse handled to counts that filter the same queue",
         "Apply the calm rules: one accent, two type sizes, no raw JSON, no repeated banners",
         "Resolve or defer the fleet-state serve-path so real fleet data renders (name it in decisions)",
         "Correctness journey test H1 on real fleet state: the default view shows ALL unique live needs_auth+needs_decision (deduped+gate-reconciled), non-human buckets collapsed, zero raw JSON, one status line",
-        "Separate fixture assertion: the real 313-item fleet collapses to its expected unique-human count (derived from the data, not a hard cap)"
+        "Separate fixture assertion: the real 313-item fleet collapses to its expected unique-human count (derived, not a hard cap)"
       ],
       "acceptance": "The default console view renders the F001 model as a calm queue: one health line, the FULL set of unique live needs_auth+needs_decision items (Uncertain included, deduped+gate-reconciled), a blocked-explainer, handled work collapsed to filtering counts. Verified by (1) a correctness journey test (H1/H4/H5) on real fleet state asserting the view shows exactly the unique live human items, non-human collapsed, zero raw JSON, one status line — NO hard count cap; and (2) a separate fixture assertion that the real 313-item inventory collapses to its expected unique-human count. The fleet-state serve-path dependency is resolved or explicitly deferred in decisions. Browser/GUI surface only.",
       "passes": false
@@ -91,12 +92,12 @@
       "id": "F007",
       "category": "functional",
       "phase": 4,
-      "description": "Operator console — inspect surfaces (workbench right pane + activity strip). The decision drawer (select a gate -> its audit findings, diff summary, plan acceptance, signoff, enough to decide from evidence in place, H3); the what-was-handled log rendered as the bottom activity strip (reverse-chron, plain language: what the agent/auto ran, why safe, what changed, evidence ref, H2) carrying the '313 -> N unique -> M need you' pipeline line; and the why-hidden inspector (expand a handled count into the same queue, each item tagged with its bucket AND the reason it is there — deduped / stale-reconciled / info / agent-runnable, H6). The activity strip and the what-was-handled log are ONE evidence source rendered as ambient chrome. Browser/GUI surface only; reads evidence, executes nothing.",
+      "description": "Operator console — inspect surfaces (workbench right pane + activity strip). The decision drawer (select a gate -> its audit findings, diff summary, plan acceptance, signoff, enough to decide from evidence in place, H3); the what-was-handled log rendered as the bottom activity strip (reverse-chron, plain language: what the agent/auto ran, why safe, what changed, evidence ref, H2) carrying the '313 -> N unique -> M need you' pipeline line; and the why-hidden inspector (expand a handled count into the same queue, each item tagged with its bucket AND reason — deduped / stale-reconciled / info / agent-runnable, H6). The activity strip and the what-was-handled log are ONE evidence source rendered as ambient chrome. Browser/GUI surface only; reads evidence, executes nothing.",
       "steps": [
         "Right pane: render a gate's evidence (findings, diff, acceptance, signoff) for an in-place decision",
         "Activity strip: render the one evidence source (agent/auto actions + the pipeline line) as an ambient reverse-chron log",
         "Why-hidden: expand a handled count into the same queue with per-item bucket + reason",
-        "Journey tests H2/H3/H6 on real state: a human can decide one gate from its evidence; see what was handled + verify; see why each hidden item was hidden"
+        "Journey tests H2/H3/H6 on real state: decide one gate from its evidence; see what was handled + verify; see why each hidden item was hidden"
       ],
       "acceptance": "The console provides a right-pane decision drawer, a bottom activity strip (= the one what-was-handled evidence source, carrying the pipeline line), and a why-hidden inspector over the F001 model. Verified by journey tests on real state: a human decides a gate from its surfaced evidence without reading source (H3), audits what the agent/auto ran and confirms it (H2), and sees why each hidden item was suppressed with its bucket + reason (H6). Reads evidence only; no execution.",
       "passes": false
@@ -105,16 +106,43 @@
       "id": "F008",
       "category": "functional",
       "phase": 4,
-      "description": "Operator console — handoff actions (workbench center pane + mode switch), V0 = COPY / OPEN / MARK-RUN / REFRESH ONLY. The console NEVER originates a mutation; it expresses intent and hands the exact command to the human or a chosen agent to execute in a terminal/Cursor/Claude/Codex/Grok. Per bucket: needs_decision exposes approve/request-changes/reject INTENT, then copy the exact command (e.g. the dontpanic approve command for that gate) or open-terminal — no browser-originated approval. auto_safe exposes copy of the dry-run command and the --confirm command (the F005 engine), or open-terminal — no browser-originated apply. agent_runnable exposes copy-command, copy-run-plan, and open-in-terminal/agent (v0 'send to agent' = copy-run-plan / open-terminal, NOT live dispatch to a running agent). mark-run-externally + attach-evidence is itself a COMMAND HANDOFF (a generated command the human/agent runs to record evidence), not a GUI-originated file write. refresh re-reads the F001 model after external action. Observer mode hides the intent/handoff controls; Operator mode shows them and is visually unmistakable; either way nothing executes from the browser. Browser-originated governed mutation (real approve/apply from the console) is explicitly OUT — deferred to plan 2026-06-06-002 (D018).",
+      "description": "Operator console — per-bucket handoff affordances (workbench center pane), V0 PRESENTATION ONLY. Each card shows the item's exact command(s) as copy buttons plus an open-in-terminal button; the console originates no mutation and tracks no lifecycle (that is F009). The affordance is shaped by bucket: needs_auth shows its setup command; needs_decision shows its command behind an explicit intent confirm; agent_runnable shows its command plus a copy-the-full-sequence button; auto_safe shows both its dry-run command and its confirm command. F008 renders whatever command string the item carries — it hardcodes no command semantics. No browser-originated mutation, no mark-run, no refresh.",
       "steps": [
-        "Define the per-bucket handoff affordance model and render it on each center-pane card",
-        "needs_decision: approve/request-changes/reject intent -> copy the exact command / open-terminal (no browser mutation)",
-        "auto_safe: copy the dry-run + --confirm commands / open-terminal (no browser apply)",
-        "agent_runnable: copy-command / copy-run-plan / open-in-terminal-or-agent (copy/open, not live dispatch)",
-        "mark-run-externally: generate the evidence-recording command to hand off; refresh re-reads the F001 model",
-        "Observer/Operator mode toggle (loud); Journey tests H7 + A5 on real state: every path is copy/open/handoff and the console executes nothing"
+        "Render the item's exact command(s) on each center-pane card as copy buttons + an open-in-terminal button",
+        "Shape the affordance by bucket (needs_auth setup; needs_decision behind an intent confirm; agent_runnable command + copy-the-full-sequence; auto_safe dry-run + confirm)",
+        "Journey test H7-affordance on real state: each bucket shows the correct copy/open affordance for the item's command; nothing mutates"
       ],
-      "acceptance": "The console center pane exposes per-bucket COPY/OPEN/MARK-RUN/REFRESH handoff: needs_decision -> approve/request-changes/reject intent then copy-command/open-terminal; auto_safe -> copy dry-run + --confirm commands / open-terminal; agent_runnable -> copy-command/copy-run-plan/open-in-terminal-or-agent; mark-run-externally -> a generated evidence-recording command; refresh -> re-read the F001 model. Verified by journey tests H7 + A5 on real state proving the console ORIGINATES NO mutation (every action is copy/open/handoff), Observer mode hides the controls and Operator mode shows them (loud), and refresh re-reads the model after an external agent/terminal acted. Browser-originated governed mutation is out of scope (deferred to 2026-06-06-002).",
+      "acceptance": "The center pane renders the item's exact command(s) per bucket as copy + open-in-terminal buttons (needs_auth setup; needs_decision behind an intent confirm; agent_runnable command + copy-the-full-sequence; auto_safe dry-run + confirm), hardcoding no command semantics. Verified by a journey test on real state proving each bucket renders its correct affordance from the item and the console originates no mutation. Presentation only — no mark-run, no refresh, no lifecycle (F009).",
+      "passes": false
+    },
+    {
+      "id": "F009",
+      "category": "functional",
+      "phase": 4,
+      "description": "Operator console — handoff lifecycle + refresh (workbench: mode switch + lifecycle). The single-agent lifecycle AFTER an F008 handoff: the Observer/Operator mode switch (loud, visually unmistakable; Operator reveals the intent/handoff affordances, neither mode executes from the browser); mark-run-externally (a generated evidence-recording command the human/agent runs — a command handoff, NOT a GUI-originated file write, D019); attach-evidence by reference; refresh-triage which re-reads the F001 model; and basic stale-state handling relative to your own handoff (your view's state_revision vs current → prompt to refresh before continuing). Integrates handoff/lifecycle events into the F007 activity strip. Browser/GUI surface; originates no mutation (mark-run is a command handoff).",
+      "steps": [
+        "Observer/Operator mode switch (loud); Operator reveals F008 affordances; neither executes from the browser",
+        "mark-run-externally -> generate the evidence-recording command to hand off (no GUI file write)",
+        "refresh-triage -> re-read the F001 model; surface your-view-stale (state_revision drift) before continuing",
+        "Feed handoff/lifecycle events into the F007 activity strip",
+        "Journey test on real state: hand off (F008) -> mark-run -> refresh re-reads the model; stale view prompts refresh"
+      ],
+      "acceptance": "The console provides the Observer/Operator mode switch, mark-run-externally (as a command handoff), attach-evidence-by-reference, refresh-triage (re-reads F001), and your-own-view stale detection, feeding the F007 activity strip. Verified by a journey test on real state proving the full single-agent loop (hand off -> mark-run -> refresh re-reads the model), that a stale view prompts a refresh before continuing, and that the console originates no mutation. Multi-actor scope/conflict display is F010.",
+      "passes": false
+    },
+    {
+      "id": "F010",
+      "category": "functional",
+      "phase": 4,
+      "description": "Operator console — parallel operation awareness (workbench: multi-actor display). Renders the F001 concurrency/scope metadata so the console is honest when GUI + Cursor + multiple terminal agents act at once (local-machine multi-process; multi-machine is future, D024). Scope chips: [GLOBAL] vs [PROJECT: <name>] so global install-config work is never confused with project work, and the same config item renders across brief/CLI/MCP/GUI (one model, all surfaces). Per-item run_state display: running / conflicted (from F001's derived state) + a coarse actor label ('running elsewhere since 12:04', or agent+session when enriched). Activity strip grouped + filterable by project and by actor (All / Global / <project> ; Human / Claude / Codex / Cursor / Auto). Stale/conflict surfacing: when fleet state changed since the item opened, or >1 agent touched the same plan, the console flags it BEFORE a handoff/approval-intent — surfacing only (the enforced refusal-before-mutation is 002). Journeys P1-P6. Reads F001's derived fields; does not re-derive from the registry and writes no claim/lease.",
+      "steps": [
+        "Scope chips [GLOBAL]/[PROJECT:<name>] on items; same config item visible across all renderers",
+        "Per-item run_state + coarse actor label from F001's derived fields",
+        "Activity strip grouping + filters by project and by actor",
+        "Stale/conflict surfacing before handoff/approval-intent (surface only; refusal is 002)",
+        "Journey tests P1-P6 on fixture/real state: same-project concurrent (P1), cross-project scope separation (P2/P4), conflict + stale before approval (P3/P6), GUI<->terminal correlation by dedupe_key/run_id (P5)"
+      ],
+      "acceptance": "The console renders scope chips ([GLOBAL]/[PROJECT:x]), per-item running/conflicted state + actor label (from F001), an activity strip grouped/filterable by project and actor, and stale/conflict surfacing before a handoff or approval-intent. Verified by journey tests P1-P6 on real/fixture state: a GUI-open-while-Cursor-acts shows running then refreshes (P1); cross-project work stays scope-separated with no confusion (P2/P4); two agents on one plan surface a conflict + a stale view surfaces drift before approval (P3/P6); and GUI<->terminal work correlates by dedupe_key/run_id (P5). Surfacing only (refusal-before-mutation is 002); local-machine multi-process scope; no claim/lease written.",
       "passes": false
     }
   ]

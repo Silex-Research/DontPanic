@@ -1,22 +1,22 @@
 {
   "goal_type": "new_feature",
-  "source_of_truth": "Operator-locked product pivot (this plan's D001-D021 and the design conversation). One derived triage model is the single source of truth; the CLI operator brief, the operator-console workbench, and any agent all render the SAME model. The GUI is a dual-mode operator workbench (Observer + Operator) whose actions in v0 are COPY/OPEN/HANDOFF/REFRESH only — it originates no mutation. Browser-originated governed mutation (real approve/apply from the console) is deferred to plan 2026-06-06-002. Acceptance is operator-OUTCOME via named journeys on real producer state, not DOM-render correctness.",
-  "completion_test": "On real fleet state, one derived triage model (deduped, gate-reconciled, canonical-serialized, with a data_quality envelope) drives every surface identically. dontpanic operator brief --json exposes the buckets with an allow-list vs an escalate-list (= needs_auth + needs_decision), surfaces uncertainty instead of fabricating, and an agent can boot from it to derive a run-plan + escalation list. The safe tier is a command-line engine the human/agent runs in a terminal (auto_safe only, opt-in/dry-run/logged/reversible). The operator workbench shows ALL unique live human items (deduped + gate-reconciled, Uncertain included, non-human buckets collapsed, NOT capped), lets the human decide/inspect and hand off the exact command to a terminal/agent (the console originates no mutation), and makes hidden/handled items inspectable. Separately, the real 313-item inventory collapses to its expected unique-human count. Each proven by a named-journey test, not DOM presence.",
+  "source_of_truth": "Operator-locked product pivot (this plan's D001-D026 and the design conversation). One derived triage model is the single source of truth — carrying operator_bucket, scope, and concurrency/run_state metadata — rendered identically by the CLI operator brief, the operator-console workbench, and any agent. The GUI is a dual-mode operator workbench (Observer + Operator) whose v0 actions are COPY/OPEN/HANDOFF/REFRESH only; it originates no mutation. It is honest under PARALLEL operation (GUI + Cursor + multiple terminal agents at once, local-machine multi-process): scope chips, running/conflicted state, stale-view surfacing. Browser-originated governed mutation, item-level claim/lease, and refusal-before-mutation are deferred to plan 2026-06-06-002. Acceptance is operator-OUTCOME via named journeys on real producer state, not DOM-render correctness.",
+  "completion_test": "On real fleet state, one derived triage model (deduped, gate-reconciled, canonical-serialized, with a data_quality envelope AND per-item scope + run_state) drives every surface identically. dontpanic operator brief --json exposes buckets + scope + run_state with an allow-list vs escalate-list and surfaces uncertainty. The safe tier is a command-line engine (auto_safe only, opt-in/dry-run/logged/reversible). The operator workbench shows ALL unique live human items (deduped + gate-reconciled, Uncertain included, non-human collapsed, NOT capped), renders correct per-bucket copy/open handoff, tracks the single-agent lifecycle (mode switch, mark-run, refresh) originating no mutation, and is honest under parallel ops (scope chips, running/conflicted, stale/conflict surfaced before handoff/approval-intent) for GUI + Cursor + multiple terminals on one machine. Separately, the real 313-item inventory collapses to its expected unique-human count. Each proven by a named-journey test (incl. P1-P6), not DOM presence.",
   "user_journeys": [
     {
       "name": "human-needs-you-triage",
-      "description": "H1: a human sits down and asks 'does anything need me right now?' The default workbench view shows ALL unique live needs_auth + needs_decision items (deduped + gate-reconciled, Uncertain riding with them, each one sentence) and nothing else; everything agent-runnable/auto-safe/quiet is collapsed behind a single 'handled' count that filters the same queue.",
+      "description": "H1: a human asks 'does anything need me?' The default workbench view shows ALL unique live needs_auth + needs_decision items (deduped + gate-reconciled, Uncertain riding with them) and nothing else; agent-runnable/auto-safe/quiet collapse behind a single 'handled' count that filters the same queue.",
       "surfaces": ["frontend-ui"],
       "states": ["raw_unreconciled_inventory", "triaged_needs_you_only", "all_handled_empty"],
       "acceptance_signals": [
-        "The default view shows ALL unique live needs_auth + needs_decision items, deduped and gate-reconciled, non-human buckets collapsed (no hard count cap)",
+        "The default view shows ALL unique live needs_auth + needs_decision items, deduped and gate-reconciled, non-human collapsed (no hard count cap)",
         "Separately: the real 313-item fleet fixture collapses to its expected unique-human count",
         "Zero raw JSON and one honest status line"
       ]
     },
     {
       "name": "human-decide-a-gate",
-      "description": "H3: a gate is waiting; the human opens it and decides from its evidence (audit findings, diff summary, plan acceptance, signoff) in place, without reading source.",
+      "description": "H3: a gate is waiting; the human decides from its evidence (findings, diff, plan acceptance, signoff) in place, without reading source.",
       "surfaces": ["frontend-ui"],
       "states": ["gate_live_unreviewed", "gate_evidence_shown", "gate_decided"],
       "acceptance_signals": [
@@ -26,18 +26,18 @@
     },
     {
       "name": "human-operator-hands-off",
-      "description": "H7: the human operates from the console in Operator mode. Each item exposes intent + a COPY/OPEN handoff: approve/request-changes/reject a gate by copying the exact command or opening a terminal; copy a dry-run/--confirm command for safe-tier; copy a command/run-plan for an agent. The human stays in DontPanic to decide and hand off; execution happens in a terminal/agent. The console originates no mutation in v0.",
+      "description": "H7: in Operator mode each item exposes intent + a COPY/OPEN handoff (approve/request/reject command, dry-run/--confirm command, copy command/run-plan). The human decides and hands off; execution happens in a terminal/agent. The console originates no mutation in v0.",
       "surfaces": ["frontend-ui"],
       "states": ["item_actionable", "intent_expressed", "command_handed_off"],
       "acceptance_signals": [
         "Every action is copy/open/handoff; the console originates no mutation",
-        "Observer mode hides the intent/handoff controls; Operator mode shows them and is visually unmistakable",
-        "The handed-off command is the exact, runnable command"
+        "Observer mode hides the controls; Operator mode shows them and is visually unmistakable",
+        "After handoff, mark-run + refresh re-read the model"
       ]
     },
     {
       "name": "human-audit-what-was-handled",
-      "description": "H2/H6: the human verifies the agent's compression via the activity strip and why-hidden inspector — what the agent/auto ran and changed (with evidence), and WHY each hidden item was suppressed (bucket + reason: deduped / stale-reconciled / info / agent-runnable).",
+      "description": "H2/H6: the human verifies via the activity strip + why-hidden inspector — what the agent/auto ran (with evidence) and WHY each hidden item was suppressed (bucket + reason).",
       "surfaces": ["frontend-ui"],
       "states": ["handled_collapsed", "handled_log_expanded", "why_hidden_inspected"],
       "acceptance_signals": [
@@ -48,7 +48,7 @@
     },
     {
       "name": "human-unblock-and-glance",
-      "description": "H4/H5: when something is stuck the human sees the block, the one move, and the consequence; on a glance the install health is one honest line.",
+      "description": "H4/H5: a stuck item shows the block, the one move, the consequence; a glance shows install health as one honest line.",
       "surfaces": ["frontend-ui"],
       "states": ["blocked_unexplained", "block_with_one_move", "health_one_line"],
       "acceptance_signals": [
@@ -57,20 +57,60 @@
       ]
     },
     {
+      "name": "parallel-same-project-concurrent",
+      "description": "P1: the human has the GUI open while Cursor acts on the SAME project. The console shows that item as running (coarse actor label), then refreshes to handled/evidence once Cursor finishes.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["item_idle", "item_running_elsewhere", "item_refreshed_handled"],
+      "acceptance_signals": [
+        "An item with a live supervisor on its plan shows running, not actionable-by-you",
+        "After the external agent finishes, refresh shows it handled with evidence"
+      ]
+    },
+    {
+      "name": "parallel-cross-project-scope",
+      "description": "P2/P4: a terminal agent acts on a DIFFERENT project while a global install-config issue appears. The console separates scope with chips ([PROJECT:x] vs [GLOBAL]) so cross-project and global-vs-project work are never confused.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["mixed_scope_inventory", "scope_chipped_and_separated"],
+      "acceptance_signals": [
+        "Items carry [GLOBAL] or [PROJECT:<name>] chips and never mix",
+        "A global config item is labelled GLOBAL and kept separate from project work, and renders the same across brief/CLI/GUI"
+      ]
+    },
+    {
+      "name": "parallel-conflict-and-stale",
+      "description": "P3/P6: two agents touch the same plan/gate, and/or the GUI view is stale. The console surfaces a conflict and a stale-view (state_revision drift) BEFORE a handoff or approval-intent — surfacing only; the enforced refusal-before-mutation is 002.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["single_clean", "conflict_or_stale_detected", "refresh_prompted"],
+      "acceptance_signals": [
+        ">1 live supervisor on a plan surfaces a conflict before approval-intent",
+        "A state_revision drift surfaces 'your view is stale' and prompts refresh before continuing"
+      ]
+    },
+    {
+      "name": "parallel-gui-terminal-correlation",
+      "description": "P5: the human switches from GUI to terminal and back; command/evidence correlation survives — the same logical item updates by dedupe_key/run_id rather than appearing twice.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["handed_off_in_gui", "acted_in_terminal", "correlated_back_by_key"],
+      "acceptance_signals": [
+        "Work handed off in the GUI and done in a terminal correlates back to the same item by dedupe_key/run_id",
+        "No duplicate item appears for the same logical operation"
+      ]
+    },
+    {
       "name": "agent-boot-and-escalate",
-      "description": "A1/A2: the operator agent boots, reads operator brief --json, and derives a run-plan (agent_runnable + auto_safe, with commands, ordered by deps) plus a precise escalation list (needs_auth + needs_decision). It runs the safe set only (via the command-line safe-tier) and never touches human-gated items.",
+      "description": "A1/A2: the operator agent boots, reads operator brief --json, derives a run-plan (agent_runnable + auto_safe, ordered by deps) + a precise escalation list (needs_auth + needs_decision), runs the safe set only, never touches human-gated items.",
       "surfaces": ["command", "core"],
       "states": ["agent_uninformed", "agent_has_run_plan_and_escalation", "agent_ran_safe_set"],
       "acceptance_signals": [
-        "operator brief --json exposes per-item command/deps/evidence + allow-list vs escalate-list",
+        "operator brief --json exposes per-item command/deps/scope/run_state/evidence + allow-list vs escalate-list",
         "The escalate-list equals needs_auth + needs_decision exactly",
         "The agent runs nothing human-gated"
       ]
     },
     {
       "name": "agent-terminal-handoff",
-      "description": "A5: workbench open beside a terminal/Cursor agent. The human hands work off from the console (copy run-plan, open-in-terminal/agent), the agent executes externally, and the result is recorded via a handed-off evidence command and refreshed back into the triage model so the console re-reads reality. v0 'send to agent' is copy/open, not live dispatch.",
-      "surfaces": ["frontend-ui"],
+      "description": "A5: workbench open beside a terminal/Cursor agent. The human hands work off (copy run-plan, open-in-terminal/agent), the agent executes externally, and the result is recorded via a handed-off evidence command and refreshed back so the console re-reads reality.",
+      "surfaces": ["frontend-ui", "command", "core"],
       "states": ["work_handed_off", "executed_externally", "triage_refreshed_with_evidence"],
       "acceptance_signals": [
         "The console can hand a run-plan/command to a terminal or chosen agent (copy/open)",
@@ -80,18 +120,18 @@
     },
     {
       "name": "agent-honesty-under-uncertainty",
-      "description": "A3/A4: the agent reports back truthfully what it ran (feeding the activity log), and when classification is incomplete it narrates the uncertain items + data-quality warnings rather than fabricating a clean bucket.",
+      "description": "A3/A4: the agent reports back truthfully what it ran (feeding the activity log), and when classification is incomplete narrates the uncertain items + data-quality warnings rather than fabricating a clean bucket.",
       "surfaces": ["command", "core"],
       "states": ["classification_complete", "classification_incomplete_uncertain", "agent_reported_back"],
       "acceptance_signals": [
-        "The brief carries a data_quality block (counts, uncertain, staleness) and an embedded honesty contract",
+        "The brief carries a data_quality block and an embedded honesty contract",
         "Incomplete classification surfaces as uncertain, never fabricated",
         "What the agent ran is recorded with evidence for the human to audit"
       ]
     },
     {
       "name": "operator-applies-safe-tier",
-      "description": "Safe-tier application: a command the human (in a terminal) or an agent runs, applying only auto_safe (reversible derived-state) items, dry-run first, logged and reversible, never credentials/approvals/project mutations. Off by default. The console only hands off the command; it does not apply from the browser in v0.",
+      "description": "Safe-tier application: a command the human (in a terminal) or an agent runs, applying only auto_safe items, dry-run first, logged and reversible, never credentials/approvals/project mutations. Off by default. The console only hands off the command in v0.",
       "surfaces": ["command", "core"],
       "states": ["safe_tier_dry_run", "safe_tier_applied_logged", "unsafe_item_refused"],
       "acceptance_signals": [

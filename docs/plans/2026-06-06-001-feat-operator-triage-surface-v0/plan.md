@@ -80,6 +80,12 @@ Agent (operator-agent):
 - A4 — data incomplete → narrate uncertain, never fabricate.
 - A5 — terminal/agent handoff → console hands off a run-plan, agent executes externally, result is marked-run + evidence-attached + triage refreshed.
 
+Parallel operations (GUI + Cursor + multiple terminal agents at once, local-machine):
+- P1 — GUI open while Cursor acts on the SAME project → item shows running, then refreshes to handled/evidence.
+- P2/P4 — terminal agent on a DIFFERENT project / a global config issue appears → scope chips separate `[PROJECT:x]` vs `[GLOBAL]`; no confusion.
+- P3/P6 — two agents touch the same plan/gate, or the view is stale → conflict + stale (state_revision drift) surfaced BEFORE handoff/approval-intent.
+- P5 — GUI ↔ terminal round-trip → work correlates back by `dedupe_key`/`run_id`; no duplicate item.
+
 ## Layout — the operator workbench (D017)
 One model, three coordinated panes + status bar + activity strip + two modes.
 
@@ -130,8 +136,23 @@ One model, three coordinated panes + status bar + activity strip + two modes.
    human/agent runs in a terminal.
 4. **Operator-console workbench.** F006 left+top (triage queue, status, modes shell);
    F007 right+activity (context/evidence tabs, what-was-handled log, why-hidden);
-   F008 center COPY/OPEN/HANDOFF/REFRESH actions + the mode switch (per-bucket intent +
-   exact-command handoff; the console executes nothing; safe-tier is shown as a command to copy).
+   F008 center per-bucket COPY/OPEN handoff AFFORDANCES (presentation only, executes nothing);
+   F009 handoff LIFECYCLE + refresh (mode switch, mark-run-externally, attach-evidence,
+   refresh, your-own-view stale); F010 PARALLEL operation awareness (scope chips, running/
+   conflicted state, activity grouped by actor+project, stale/conflict surfacing, journeys P1-P6).
+
+## Parallel operations (concurrency model — D022-D024)
+The real workflow is concurrent: GUI on fleet triage, Cursor using DontPanic on one project,
+terminal-1 running Claude on a plan, terminal-2 running Codex on a feature, the human resolving
+global config in the GUI. So concurrency is a MODEL concern, not a layout one: F001 carries
+per-item `scope` (global/project), a derived `run_state` (idle/running/conflicted), a coarse
+actor label, and a `state_revision` fingerprint — all DERIVED read-only by joining each item's
+`plan_id` to live `SupervisorEntry` records in the existing active-supervisors registry (the
+only producer change is an optional `register` enrichment for agent vendor + session). Every
+surface (brief/CLI/MCP/GUI) then sees parallelism, not just the GUI. v0 SURFACES running/
+conflicted/stale; it does not COORDINATE — item-level claim/lease, conflict resolution, and
+refusal-before-mutation are deferred (D023; refusal pairs with 002). Scope is local-machine
+multi-process (the described setup); multi-machine needs a shared ledger and is future (D024).
 
 ## Constraints / decisions
 - `operator_bucket` is DERIVED by one classifier; producers stay dumb (D003).
@@ -164,6 +185,9 @@ One model, three coordinated panes + status bar + activity strip + two modes.
 - Live dispatch to a RUNNING agent (claude/codex/grok) is deferred to the OpenClaw/Hermes
   runtime; v0 `send to agent` = copy-run-plan / open-in-terminal (D017).
 - No BLOCK enforcement; v0 surfaces and hands off only (it applies nothing from the console).
+- **Item-level claim/lease, conflict RESOLUTION, and multi-machine awareness** are out (D023/D024):
+  v0 SURFACES running/conflicted/stale read-only from the local active-supervisors registry; it
+  does not reserve items, resolve conflicts, or coordinate across machines.
 - Fleet-state serve-path unification (build writes `~/.dontpanic/dashboard/`, serve reads
   `<repo>/dashboard/state/`) is a NAMED dependency of F006, resolved there or deferred (D011).
 
