@@ -1,0 +1,243 @@
+{
+  "advisory_notes": [],
+  "capabilities": [
+    {
+      "advisory_notes": [],
+      "automatable": [
+        {
+          "command_template": "npm install -g @anthropic-ai/claude-cli",
+          "id": "install_claude_cli",
+          "what": "Install the Claude CLI so DontPanic can spawn agent runs through the governed executor."
+        }
+      ],
+      "capability_id": "agent-claude-cli",
+      "configured": [
+        "claude",
+        "~/.dontpanic/config.json"
+      ],
+      "human_required": [
+        {
+          "command_template": "claude auth login --token <YOUR_CLAUDE_API_TOKEN>",
+          "human_required_reason": "Operator must approve scopes for their Claude account and treat the API token as a secret; DontPanic does not provision Claude credentials on the operator's behalf.",
+          "id": "authenticate_claude",
+          "what": "Authenticate the Claude CLI against the operator's Claude account or API key."
+        }
+      ],
+      "missing": [
+        "Claude account / Claude Code or CLI runtime",
+        "Claude CLI authenticated by operator",
+        "roles.implementer",
+        "roles.auditor",
+        "roles.goal_auditor"
+      ],
+      "next_actions": [
+        {
+          "automatable": true,
+          "command_template": "npm install -g @anthropic-ai/claude-cli",
+          "human_required_reason": null,
+          "id": "install_claude_cli",
+          "verify_probe": "cli:claude",
+          "what": "Install the Claude CLI so DontPanic can spawn agent runs through the governed executor."
+        },
+        {
+          "automatable": false,
+          "command_template": "claude auth login --token <YOUR_CLAUDE_API_TOKEN>",
+          "human_required_reason": "Operator must approve scopes for their Claude account and treat the API token as a secret; DontPanic does not provision Claude credentials on the operator's behalf.",
+          "id": "authenticate_claude",
+          "verify_probe": "agent_role_config",
+          "what": "Authenticate the Claude CLI against the operator's Claude account or API key."
+        }
+      ],
+      "owner_boundary": {
+        "adapter": [
+          "subprocess executor for claude",
+          "stream/output parsing",
+          "timeout and envelope normalization"
+        ],
+        "dontpanic_core": [
+          "agent registry entry",
+          "dispatch envelope",
+          "audit/signoff capture",
+          "quota and breaker handling",
+          "role configuration"
+        ],
+        "operator": [
+          "Claude CLI installation",
+          "account authentication",
+          "model/quota management",
+          "local CLI updates"
+        ]
+      },
+      "pending_probes": [],
+      "status": "needs_setup"
+    },
+    {
+      "advisory_notes": [],
+      "automatable": [
+        {
+          "command_template": "dontpanic notify smoke --sink discord",
+          "id": "smoke_test",
+          "what": "Send a test NotifyEvent to the configured Discord webhook to confirm end-to-end delivery."
+        }
+      ],
+      "capability_id": "discord-notify",
+      "configured": [
+        "~/.dontpanic/discord.json"
+      ],
+      "human_required": [
+        {
+          "command_template": "echo '{\"webhook_url\": \"<YOUR_DISCORD_WEBHOOK_URL>\"}' > ~/.dontpanic/discord.json && chmod 600 ~/.dontpanic/discord.json",
+          "human_required_reason": "Operator must create the Discord channel webhook and treat the URL as a secret; DontPanic cannot create webhooks in the operator's server.",
+          "id": "configure_webhook_url",
+          "what": "Configure the Discord webhook URL the sink will POST NotifyEvent messages to (env var or ~/.dontpanic/discord.json)."
+        }
+      ],
+      "missing": [
+        "DONTPANIC_DISCORD_WEBHOOK_URL",
+        "Discord webhook",
+        "Discord webhook URL",
+        "webhook_url"
+      ],
+      "next_actions": [
+        {
+          "automatable": false,
+          "command_template": "echo '{\"webhook_url\": \"<YOUR_DISCORD_WEBHOOK_URL>\"}' > ~/.dontpanic/discord.json && chmod 600 ~/.dontpanic/discord.json",
+          "human_required_reason": "Operator must create the Discord channel webhook and treat the URL as a secret; DontPanic cannot create webhooks in the operator's server.",
+          "id": "configure_webhook_url",
+          "verify_probe": "discord_webhook_config_present",
+          "what": "Configure the Discord webhook URL the sink will POST NotifyEvent messages to (env var or ~/.dontpanic/discord.json)."
+        },
+        {
+          "automatable": true,
+          "command_template": "dontpanic notify smoke --sink discord",
+          "human_required_reason": null,
+          "id": "smoke_test",
+          "verify_probe": null,
+          "what": "Send a test NotifyEvent to the configured Discord webhook to confirm end-to-end delivery."
+        }
+      ],
+      "owner_boundary": {
+        "adapter": [
+          "Discord webhook request formatting",
+          "delivery retry policy if enabled"
+        ],
+        "dontpanic_core": [
+          "NotifyEvent envelope",
+          "direct webhook sink implementation",
+          "event emission points"
+        ],
+        "operator": [
+          "Discord server/channel ownership",
+          "webhook creation",
+          "webhook URL secrecy",
+          "channel moderation"
+        ]
+      },
+      "pending_probes": [],
+      "status": "needs_setup"
+    },
+    {
+      "advisory_notes": [],
+      "automatable": [
+        {
+          "command_template": "printing-press emit --target linear --out <YOUR_ADAPTER_BIN_PATH>",
+          "id": "emit_pp_binary",
+          "what": "Generate the Printing Press Linear adapter binary the operator will register with DontPanic."
+        },
+        {
+          "command_template": "dontpanic adapters register linear --binary <YOUR_ADAPTER_BIN_PATH>",
+          "id": "register_adapter",
+          "what": "Register the emitted Linear adapter binary with DontPanic so plan close/resync can find it."
+        },
+        {
+          "command_template": "dontpanic adapters validate linear --workspace <YOUR_LINEAR_WORKSPACE>",
+          "id": "validate_mapping",
+          "what": "Validate the PM-tool category mapping (status, priority, project) resolves against the operator's Linear workspace."
+        }
+      ],
+      "capability_id": "linear",
+      "configured": [
+        "~/.dontpanic/adapters.json"
+      ],
+      "human_required": [
+        {
+          "command_template": "echo '{\"api_token\": \"<YOUR_LINEAR_API_TOKEN>\"}' > ~/.dontpanic/adapters/linear.json && chmod 600 ~/.dontpanic/adapters/linear.json",
+          "human_required_reason": "Operator must mint and paste their own Linear API token; DontPanic does not provision Linear credentials on the operator's behalf.",
+          "id": "paste_api_token",
+          "what": "Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate."
+        }
+      ],
+      "missing": [
+        "linear-pp-cli",
+        "~/.dontpanic/adapters/linear.json",
+        "Linear workspace",
+        "Printing Press generated adapter",
+        "Linear API token or adapter-managed auth",
+        "PM-tool category mapping",
+        "status mapping",
+        "priority mapping",
+        "adapter binary path and version pin"
+      ],
+      "next_actions": [
+        {
+          "automatable": true,
+          "command_template": "printing-press emit --target linear --out <YOUR_ADAPTER_BIN_PATH>",
+          "human_required_reason": null,
+          "id": "emit_pp_binary",
+          "verify_probe": "adapter:linear_binary_present",
+          "what": "Generate the Printing Press Linear adapter binary the operator will register with DontPanic."
+        },
+        {
+          "automatable": true,
+          "command_template": "dontpanic adapters register linear --binary <YOUR_ADAPTER_BIN_PATH>",
+          "human_required_reason": null,
+          "id": "register_adapter",
+          "verify_probe": "adapter:linear_registered",
+          "what": "Register the emitted Linear adapter binary with DontPanic so plan close/resync can find it."
+        },
+        {
+          "automatable": false,
+          "command_template": "echo '{\"api_token\": \"<YOUR_LINEAR_API_TOKEN>\"}' > ~/.dontpanic/adapters/linear.json && chmod 600 ~/.dontpanic/adapters/linear.json",
+          "human_required_reason": "Operator must mint and paste their own Linear API token; DontPanic does not provision Linear credentials on the operator's behalf.",
+          "id": "paste_api_token",
+          "verify_probe": null,
+          "what": "Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate."
+        },
+        {
+          "automatable": true,
+          "command_template": "dontpanic adapters validate linear --workspace <YOUR_LINEAR_WORKSPACE>",
+          "human_required_reason": null,
+          "id": "validate_mapping",
+          "verify_probe": "adapter:linear_mapping_valid",
+          "what": "Validate the PM-tool category mapping (status, priority, project) resolves against the operator's Linear workspace."
+        }
+      ],
+      "owner_boundary": {
+        "adapter": [
+          "Printing Press generated Linear CLI or MCP server",
+          "Linear field mapping",
+          "status/priority translation",
+          "redaction and response normalization"
+        ],
+        "dontpanic_core": [
+          "PM-tool category contract",
+          "external_refs[] plan binding",
+          "external_sync evidence records",
+          "dry-run close preview",
+          "plan close/resync hooks"
+        ],
+        "operator": [
+          "Linear workspace access",
+          "API token or auth setup",
+          "adapter installation approval",
+          "mapping review",
+          "token rotation"
+        ]
+      },
+      "pending_probes": [],
+      "status": "not_installed"
+    }
+  ],
+  "generated_at": "2026-06-06T00:59:21Z",
+  "schema_version": "1.0.0"
+}

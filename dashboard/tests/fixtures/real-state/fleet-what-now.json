@@ -1,0 +1,219 @@
+{
+  "schema_version": "1.0.0",
+  "captured_at": "2026-06-06T01:01:07Z",
+  "projects": [
+    {
+      "name": "spindineswift",
+      "display_name": "spindineswift",
+      "active": true,
+      "skipped": false,
+      "skipped_reason": null,
+      "warning_count": 4,
+      "required_capability_ids": [],
+      "referenced_adapter_categories": []
+    },
+    {
+      "name": "quantre-migration",
+      "display_name": "quantre-migration",
+      "active": true,
+      "skipped": false,
+      "skipped_reason": null,
+      "warning_count": 3,
+      "required_capability_ids": [],
+      "referenced_adapter_categories": []
+    }
+  ],
+  "capability_categories": {
+    "agent-claude-cli": "agent-cli",
+    "discord-notify": "notification-sink",
+    "firebase-dashboard": "dashboard-realtime",
+    "linear": "pm-tool"
+  },
+  "items": [
+    {
+      "id": "capability:agent-claude-cli",
+      "source": "capability",
+      "band": "needs_action",
+      "title": "Capability agent-claude-cli needs setup",
+      "detail": "Setup: Install the Claude CLI so DontPanic can spawn agent runs through the governed executor.; Authenticate the Claude CLI against the operator's Claude account or API key. (needs you)",
+      "exact_command": "dontpanic capabilities setup agent-claude-cli --print-steps",
+      "automatable": false,
+      "human_required_reason": "capability setup incomplete",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": null,
+      "display_name": null,
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "capability:agent-claude-cli",
+      "reversible": true,
+      "plain_consequence": "Prints the setup steps for agent-claude-cli so you can complete it.",
+      "dashboard_url": null,
+      "clears_when": {
+        "predicate": "capability_ready",
+        "params": {
+          "capability_id": "agent-claude-cli"
+        }
+      },
+      "resolution_class": "operator_attested",
+      "group": "global_tool_setup"
+    },
+    {
+      "id": "capability:discord-notify",
+      "source": "capability",
+      "band": "needs_action",
+      "title": "Capability discord-notify needs setup",
+      "detail": "Setup: Configure the Discord webhook URL the sink will POST NotifyEvent messages to (env var or ~/.dontpanic/discord.json). (needs you); Send a test NotifyEvent to the configured Discord webhook to confirm end-to-end delivery.",
+      "exact_command": "dontpanic capabilities setup discord-notify --print-steps",
+      "automatable": false,
+      "human_required_reason": "capability setup incomplete",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": null,
+      "display_name": null,
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "capability:discord-notify",
+      "reversible": true,
+      "plain_consequence": "Prints the setup steps for discord-notify so you can complete it.",
+      "dashboard_url": null,
+      "clears_when": {
+        "predicate": "capability_ready",
+        "params": {
+          "capability_id": "discord-notify"
+        }
+      },
+      "resolution_class": "operator_attested",
+      "group": "global_tool_setup"
+    },
+    {
+      "id": "capability:linear",
+      "source": "capability",
+      "band": "advisory",
+      "title": "Capability linear is not installed",
+      "detail": "Setup: Generate the Printing Press Linear adapter binary the operator will register with DontPanic.; Register the emitted Linear adapter binary with DontPanic so plan close/resync can find it.; Paste the operator's Linear API token into ~/.dontpanic/adapters/linear.json so the adapter can authenticate. (needs you); Validate the PM-tool category mapping (status, priority, project) resolves against the operator's Linear workspace.",
+      "exact_command": "dontpanic capabilities setup linear --print-steps",
+      "automatable": false,
+      "human_required_reason": "adapter not registered",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": null,
+      "display_name": null,
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "capability:linear",
+      "reversible": true,
+      "plain_consequence": "Prints the setup steps for linear so you can complete it.",
+      "dashboard_url": null,
+      "clears_when": null,
+      "resolution_class": "command_resolvable",
+      "group": "global_tool_setup"
+    },
+    {
+      "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F001:iteration-approve",
+      "source": "supervisor",
+      "band": "needs_action",
+      "title": "Raise the cap to allow one more iteration",
+      "detail": "Alternative: if a defect is fixable in one more pass, raise loop_caps.max_iterations in the plan, then redispatch. There is no single gate to resume here \u2014 `dontpanic resume` requires a specific `--gate <name>` or `--all`, and neither applies to an exhausted cap \u2014 so no command is emitted. Confirm the extra spend is worth it. Human action required. (see dashboard affordance)",
+      "exact_command": null,
+      "automatable": false,
+      "human_required_reason": "operations decision",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": "spindineswift",
+      "display_name": "spindineswift",
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F001:iteration-approve",
+      "reversible": false,
+      "plain_consequence": "Alternative: if a defect is fixable in one more pass, raise loop_caps.max_iterations in the plan, then redispatch. There is no single gate to resume here \u2014 `dontpanic resume` requires a specific `--gate <name>` or `--all`, and neither applies to an exhausted cap \u2014 so no command is emitted. Confirm the extra spend is worth it. Human action required.",
+      "dashboard_url": null,
+      "clears_when": null,
+      "resolution_class": "command_resolvable",
+      "group": null
+    },
+    {
+      "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F001:iteration-close",
+      "source": "supervisor",
+      "band": "needs_action",
+      "title": "Close the feature \u2014 iterations exhausted",
+      "detail": "max_iterations exhausted: 2/2 fix iterations used; the next fix iteration is OVER cap. Redispatch would exceed the cap. If the work is acceptable, operator-resolve the close-out with `dontpanic close --operator-resolved 2026-05-01-001-feat-android-sprint1-parity-fixes F001 --reason <class>`, choosing the <class> yourself. Human action required. (see dashboard affordance)",
+      "exact_command": null,
+      "automatable": false,
+      "human_required_reason": "operations decision",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": "spindineswift",
+      "display_name": "spindineswift",
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F001:iteration-close",
+      "reversible": false,
+      "plain_consequence": "max_iterations exhausted: 2/2 fix iterations used; the next fix iteration is OVER cap. Redispatch would exceed the cap. If the work is acceptable, operator-resolve the close-out with `dontpanic close --operator-resolved 2026-05-01-001-feat-android-sprint1-parity-fixes F001 --reason <class>`, choosing the <class> yourself. Human action required.",
+      "dashboard_url": null,
+      "clears_when": null,
+      "resolution_class": "command_resolvable",
+      "group": null
+    },
+    {
+      "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-close",
+      "source": "supervisor",
+      "band": "needs_action",
+      "title": "Close the feature as operator-resolved",
+      "detail": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-01-001-feat-android-sprint1-parity-fixes F001 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required. (see dashboard affordance)",
+      "exact_command": null,
+      "automatable": false,
+      "human_required_reason": "operations decision",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": "spindineswift",
+      "display_name": "spindineswift",
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-close",
+      "reversible": false,
+      "plain_consequence": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-01-001-feat-android-sprint1-parity-fixes F001 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required.",
+      "dashboard_url": null,
+      "clears_when": null,
+      "resolution_class": "command_resolvable",
+      "group": null
+    },
+    {
+      "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-resume",
+      "source": "supervisor",
+      "band": "needs_action",
+      "title": "Resume past breaker:no_progress after a fix",
+      "detail": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed. (see dashboard affordance)",
+      "exact_command": "dontpanic resume 2026-05-01-001-feat-android-sprint1-parity-fixes --gate breaker:no_progress",
+      "automatable": false,
+      "human_required_reason": "operations decision",
+      "evidence_uri": null,
+      "updated_at": "2026-06-06T01:01:07Z",
+      "project_name": "spindineswift",
+      "display_name": "spindineswift",
+      "audience": [
+        "operator",
+        "human"
+      ],
+      "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-resume",
+      "reversible": false,
+      "plain_consequence": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed.",
+      "dashboard_url": null,
+      "clears_when": null,
+      "resolution_class": "command_resolvable",
+      "group": null
+    }
+  ]
+}

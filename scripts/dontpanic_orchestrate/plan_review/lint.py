@@ -50,6 +50,7 @@ FlagKind = Literal[
     "weak_test",
     "missing_prereq",
     "likely_timeout",
+    "surface_proof_missing",
 ]
 
 
@@ -300,6 +301,7 @@ def lint_feature(feature: dict, resolvers: Resolvers | None = None) -> ScopeRepo
     flags.extend(_size_flags(surfaces, ac_count))
     flags.extend(_precision_flags(criteria))
     flags.extend(_coupling_flags(criteria, resolvers))
+    flags.extend(_surface_proof_flags(description, steps_text, acceptance))
 
     return ScopeReport(
         feature_id=feature_id,
@@ -356,6 +358,54 @@ def split_acceptance(acceptance: str) -> tuple[str, ...]:
 
 
 # ───────────────────────────── signal helpers ──────────────────────────────
+
+# Plan 2026-06-05-002 F006 — advisory surface-class sufficiency heuristic.
+# A feature making a surface-facing CLAIM (the human/agent SEES or drives a rendered
+# surface) must NAME an entering-surface test/evidence. This is the lint encoding of
+# docs/qa-sufficiency-contract.md. v0 is declarative + advisory (warn) — NO auto
+# surface-class inference and NO synthetic-provenance static analysis.
+_SURFACE_CLAIM_RE = re.compile(
+    r"\b(show|shows|shown|display|displays|displayed|render|renders|rendered|"
+    r"operator sees|user sees|copy button|copies the command|on[- ]screen|"
+    r"navigat\w+|the (?:tab|page|view|dashboard|screen) (?:shows|displays|renders))\b",
+    re.IGNORECASE,
+)
+# An entering-surface proof is NAMED if any of these appear in the feature text.
+_ENTERING_PROOF_RE = re.compile(
+    r"(real[- ]shell|real[- ]state|journey test|journey vitest|createjarvis|"
+    r"playwright|xcuitest|espresso|instrument\w+|simulator|emulator|"
+    r"entering[- ]surface|browser (?:test|smoke)|\.spec\.|screenshot|"
+    r"snapshot test|page\.goto|surface_class)",
+    re.IGNORECASE,
+)
+
+
+def _surface_proof_flags(
+    description: str, steps_text: str, acceptance: str
+) -> list[ScopeFlag]:
+    """Warn (advisory) when a surface-facing claim names no entering-surface proof.
+
+    Proof matches the claim: a feature with no surface-facing claim is never flagged
+    (the trigger is the *claim*, not the implementation). Honors an optional declared
+    ``surface_class`` token as a named proof reference.
+    """
+    claim_text = f"{description}\n{acceptance}"
+    if not _SURFACE_CLAIM_RE.search(claim_text):
+        return []  # no surface-facing claim → nothing required
+    full = f"{description}\n{steps_text}\n{acceptance}"
+    if _ENTERING_PROOF_RE.search(full):
+        return []  # an entering-surface proof (or surface_class) is named
+    return [
+        ScopeFlag(
+            kind="surface_proof_missing",
+            severity="warn",
+            evidence=(
+                "surface-facing claim names no entering-surface test/evidence "
+                "(real-shell/journey, simulator/emulator, browser/Playwright, …); "
+                "advisory in v0 — see docs/qa-sufficiency-contract.md"
+            ),
+        )
+    ]
 
 
 def _size_flags(surfaces: tuple[str, ...], ac_count: int) -> list[ScopeFlag]:

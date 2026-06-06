@@ -34,7 +34,11 @@
         "Test: the de-drifted tests fail under a simulated loader/page drift"
       ],
       "acceptance": "core-router.test.js exercises the real createJarvis() loader; setup.js DOM matches the real shell (DontPanic brand + selector container); the nav test references exported pageModules and would fail on a registered-page change. Verified by the updated tests passing against the real shell and failing under simulated drift.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F003",
@@ -53,7 +57,11 @@
         "Negative check: the journey test fails if the fixture's capability items lose the group / the global-tools section is dropped"
       ],
       "acceptance": "A real-state\u2192real-shell Vitest journey test, driven by producer-generated state, asserts the All-Projects \u2192 Needs Attention 'Global tools (once)' + Health 'Global tools' operator path; a Python contract test guards fixture faithfulness. The journey test demonstrably fails when the producer stops emitting the global-tools group. Verified by both tests passing green and failing under the simulated producer regression.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F004",
@@ -66,7 +74,11 @@
         "Test/check: the note exists and the dashboard surface_class maps to the F005 taxonomy"
       ],
       "acceptance": "A written dashboard QA sufficiency note exists, framed as the read-only-UI instance of the F005 model, requiring a real-state\u2192real-shell test and forbidding copied harnesses, and citing F003 as the exemplar. Verified by the note's presence + a doc/link check.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F005",
@@ -81,7 +93,11 @@
         "Check: the doc enumerates the surface classes + per-class required proof + the mobile rule"
       ],
       "acceptance": "A written surface-agnostic sufficiency model exists, enumerating the surface classes + per-class entering-surface proof + the 'enter through the real surface' principle + the governs-not-executes boundary + the iOS/Android UI-journey rule, with the dashboard read-only-UI row marked as the shipped instance. Verified by a doc/structure check over the enumerated classes and rules.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F006",
@@ -98,7 +114,11 @@
         "Tests: warns on a surface-claiming feature with no entering-surface reference; quiet when one is referenced or when there is no surface claim; non-surface features unaffected"
       ],
       "acceptance": "plan-review emits an advisory (warn) when a feature makes a surface-facing claim but names no entering-surface test/evidence, honoring an optional surface-class declaration when the plan provides one, with no false positives on non-surface features and no blocking. Verified by heuristic tests over a surface-claiming-without-proof fixture (warns), a proof-referenced fixture (quiet), and a non-surface fixture (quiet).",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     }
   ]
 }

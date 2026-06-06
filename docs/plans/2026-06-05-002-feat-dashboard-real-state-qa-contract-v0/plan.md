@@ -3,7 +3,7 @@ id: 2026-06-05-002-feat-dashboard-real-state-qa-contract-v0
 title: QA sufficiency v0 — enter through the real surface (dashboard instance + cross-surface contract)
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-05"
 goal_type: new_feature
 description: >

@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupDOM, setupFetchMock, createMockState, setupChartMock } from '../helpers/setup.js';
 import { timeAgo, formatCurrency, formatNumber } from '../../lib/formatters.js';
+import { createJarvis } from '../../core.js';
 import {
   mergeSnapshotIntoState,
   mergePerStreamIntoState,
@@ -20,163 +21,11 @@ import snapshotFixture from '../fixtures/state-snapshot.json' with { type: 'json
 // Mirrors the Jarvis object literal from core.js exactly, minus the browser-
 // global assignment and dynamic page imports. Each test gets a fresh instance.
 
-function createRouter() {
-  return {
-    pages: [],
-    currentPage: null,
-    state: {
-      agents: [],
-      tasks: [],
-      activity: [],
-      costs: null,
-      security: [],
-      // Mirrors core.js — capabilities defaults to null so the page can
-      // render its empty-state when capabilities-status.json is absent.
-      capabilities: null,
-      // F002 canonical projection keys. Empty / null until either the
-      // state-snapshot.json envelope is fetched and adapted, or the
-      // dashboard runs in legacy-only mode.
-      plans: [],
-      gates: [],
-      inbox: [],
-      supervisors: [],
-      quota: [],
-      decisions: [],
-      evidenceRefs: [],
-      snapshotMeta: null,
-      // F004 What Now cache — null sentinel until what-now.json loads.
-      whatNow: null,
-      // F004 fleet What Now cache — null sentinel until
-      // fleet-what-now.json loads.
-      fleetWhatNow: null,
-      // F003 fleet summary — null sentinel until fleet-summary.json loads.
-      fleetSummary: null,
-      // F003 selected project — defaults to All Projects until init resolves.
-      selectedProject: ALL_PROJECTS_VALUE,
-    },
-
-    registerPage(config) {
-      this.pages.push(config);
-    },
-
-    buildNav() {
-      const nav = document.getElementById('view-nav');
-      nav.innerHTML = '';
-      for (const page of this.pages) {
-        const btn = document.createElement('button');
-        btn.className = 'view-tab';
-        btn.dataset.page = page.id;
-        btn.textContent = page.label;
-        btn.addEventListener('click', () => this.switchTo(page.id));
-        nav.appendChild(btn);
-      }
-    },
-
-    buildPageContainers() {
-      const container = document.getElementById('page-container');
-      for (const page of this.pages) {
-        const div = document.createElement('div');
-        div.id = `page-${page.id}`;
-        div.className = 'page-view';
-        container.appendChild(div);
-      }
-    },
-
-    switchTo(pageId) {
-      if (pageId === this.currentPage) return;
-
-      if (this.currentPage) {
-        const prev = this.pages.find(p => p.id === this.currentPage);
-        if (prev && prev.onDeactivate) prev.onDeactivate();
-      }
-
-      this.currentPage = pageId;
-
-      document.querySelectorAll('.view-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.page === pageId);
-      });
-
-      document.querySelectorAll('.page-view').forEach(v => {
-        v.classList.toggle('active', v.id === `page-${pageId}`);
-      });
-
-      history.replaceState(null, '', '#' + pageId);
-
-      const next = this.pages.find(p => p.id === pageId);
-      if (next && next.onActivate) next.onActivate(this.state);
-    },
-
-    async loadState() {
-      // Mirrors core.js exactly: simple-name files plus aliased loaders
-      // whose on-disk name differs from the state key. `nullableMissing`
-      // aliases (whatNow, fleetSummary) reset to null on non-OK / fetch
-      // failure so a present→missing refresh actually surfaces the
-      // missing-state UI instead of holding stale data.
-      const simpleFiles = ['agents', 'tasks', 'activity', 'costs', 'security'];
-      const aliasedFiles = [
-        { key: 'capabilities', file: 'capabilities-status.json' },
-        { key: 'whatNow',      file: 'what-now.json',      nullableMissing: true },
-        { key: 'fleetWhatNow', file: 'fleet-what-now.json', nullableMissing: true },
-        { key: 'fleetSummary', file: 'fleet-summary.json', nullableMissing: true },
-      ];
-      const loaders = [
-        ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
-        ...aliasedFiles,
-      ];
-      await Promise.all(loaders.map(async ({ key, file, nullableMissing }) => {
-        try {
-          const resp = await fetch(`state/${file}`);
-          if (resp.ok) {
-            this.state[key] = await resp.json();
-          } else if (nullableMissing) {
-            this.state[key] = null;
-          }
-        } catch {
-          // file missing — keep default value (or reset to null for
-          // nullable aliased files so the missing-state UI surfaces).
-          if (nullableMissing) {
-            this.state[key] = null;
-          }
-        }
-      }));
-      // Mirrors core.js — try envelope first, then per-stream fallback.
-      let snapshotApplied = false;
-      try {
-        const snapResp = await fetch('state/state-snapshot.json');
-        if (snapResp.ok) {
-          const snap = await snapResp.json();
-          snapshotApplied = mergeSnapshotIntoState(this.state, snap);
-        }
-      } catch {
-        // Missing / malformed envelope — fall through to per-stream.
-      }
-
-      if (!snapshotApplied) {
-        const collected = {};
-        await Promise.all(PER_STREAM_FILES.map(async (name) => {
-          try {
-            const resp = await fetch(`state/${name}.json`);
-            if (resp.ok) {
-              const data = await resp.json();
-              if (Array.isArray(data)) collected[name] = data;
-            }
-          } catch {
-            // Missing per-stream file — keep going.
-          }
-        }));
-        mergePerStreamIntoState(this.state, collected);
-      }
-    },
-
-    getPageEl(pageId) {
-      return document.getElementById(`page-${pageId}`);
-    },
-
-    timeAgo(timestamp)     { return timeAgo(timestamp); },
-    formatCurrency(val)    { return formatCurrency(val); },
-    formatNumber(val)      { return formatNumber(val); },
-  };
-}
+// Plan 2026-06-05-002 F002 — de-drifted: exercise the REAL shell via createJarvis()
+// instead of a hand-maintained copy of the Jarvis literal (which had drifted on the
+// loadState file-set). createJarvis() returns the same object the running dashboard
+// uses, so every router-mechanics + loadState test now runs the real logic.
+const createRouter = createJarvis;
 
 // ── Shared setup ──────────────────────────────────────────────────────────────
 
@@ -377,7 +226,11 @@ describe('loadState', () => {
     expect(router.state.tasks).toEqual([]);
     expect(router.state.activity).toEqual([]);
     expect(router.state.costs).toBeNull();
-    expect(router.state.security).toEqual([]);
+    // Plan 2026-06-05-002 F002 — the REAL loader (createJarvis) treats security as
+    // nullableMissing: a missing file resets it to null so Health renders "no data
+    // yet". The old copied router loaded security as a plain file (default []) — the
+    // exact stale-loader drift this de-drift removes.
+    expect(router.state.security).toBeNull();
     // capabilities-status.json absent — capabilities stays null so the
     // Capability Center page can render its empty-state.
     expect(router.state.capabilities).toBeNull();
@@ -455,6 +308,14 @@ describe('loadState', () => {
     expect(urls).toContain('state/capabilities-status.json');
     expect(urls).toContain('state/fleet-what-now.json');
     expect(urls).not.toContain('state/capabilities.json');
+    // Plan 2026-06-05-002 F002 — drift sentinel: the REAL loader must fetch the
+    // files the stale copy was missing (architecture-view-state / config-inventory /
+    // skill-recommendations) + the state-snapshot path. If core.js's loader file-set
+    // shrinks, this fails instead of the test quietly certifying a smaller load.
+    expect(urls).toContain('state/architecture-view-state.json');
+    expect(urls).toContain('state/config-inventory.json');
+    expect(urls).toContain('state/skill-recommendations.json');
+    expect(urls).toContain('state/state-snapshot.json');
   });
 
   // ── F002: projection-to-view adapter ──────────────────────────────────────
