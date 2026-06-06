@@ -12,13 +12,14 @@ describe('core.js: real page-module surface (2026-06-05-002 F001)', () => {
   });
 
   it('matches the registered V0 nav pages exactly (drift guard)', () => {
+    // Plan 2026-06-05-003 F002 — task-priority order (Health moved ahead of Architecture).
     expect(pageModules).toEqual([
       'pages/what-now/what-now.js',
       'pages/repair/repair.js',
       'pages/mission-control/mission-control.js',
+      'pages/health/health.js',
       'pages/architecture/architecture.js',
       'pages/capabilities/capabilities.js',
-      'pages/health/health.js',
       'pages/settings/settings.js',
     ]);
   });

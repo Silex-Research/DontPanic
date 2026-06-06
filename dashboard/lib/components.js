@@ -63,3 +63,22 @@ export function renderBannerHTML(message, { kind = 'info' } = {}) {
 export function renderSkeletonHTML(rows = 3) {
   return Array.from({ length: Math.max(1, rows) }, () => `<div class="skeleton"></div>`).join('');
 }
+
+/**
+ * The mandatory page skeleton (docs/dashboard-design-system.md §3): title + scope +
+ * actions → summary → content → provenance footer. Pages compose this instead of
+ * hand-rolling their root markup. `scopeBadge`, `actions`, `summary`, `content`,
+ * `footer` are pre-rendered HTML strings (already escaped by their own helpers).
+ */
+export function renderPageHTML({ title, scopeBadge = '', actions = '', summary = '', content = '', footer = '' } = {}) {
+  return (
+    `<div class="page">` +
+    `<div class="page-header"><span class="page-title">${esc(title)}</span>${scopeBadge}` +
+    (actions ? `<div class="page-actions">${actions}</div>` : '') +
+    `</div>` +
+    (summary ? `<div class="page-summary">${summary}</div>` : '') +
+    `<div class="page-content">${content}</div>` +
+    (footer ? `<div class="page-footer">${footer}</div>` : '') +
+    `</div>`
+  );
+}

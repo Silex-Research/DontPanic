@@ -7,6 +7,7 @@ export function setupDOM() {
   // project-selector container) so tests exercise real header/selector/page chrome
   // instead of a stale fake that drifted on brand + structure.
   document.body.innerHTML = `
+    <a href="#main" class="skip-link">Skip to content</a>
     <header>
       <div class="header-left"><h1>DontPanic</h1></div>
       <div class="header-right">
@@ -16,7 +17,7 @@ export function setupDOM() {
     </header>
     <div id="project-selector-container" class="project-selector-bar"></div>
     <nav class="view-nav" id="view-nav"></nav>
-    <div id="page-container"></div>
+    <main id="main"><div id="page-container"></div></main>
     <footer>
       <span>DontPanic v1.0</span>
       <span id="last-sync">Last sync: --</span>

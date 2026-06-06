@@ -35,7 +35,11 @@
         "Journey assertion: boot the shell with producer state; assert the main landmark + skip link exist, nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS"
       ],
       "acceptance": "A shared renderPage() skeleton + a hardened shell (main landmark, skip-to-content link, a focus-ring token + global focus-visible rule, task-priority nav order) are in place. Verified by a real-state\u2192real-shell journey assertion that boots the shell with producer-generated state and checks: the main landmark + skip link exist, the nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS. True visual focus-ring rendering is NOT asserted in jsdom \u2014 it is deferred to a later Playwright pass.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F003",

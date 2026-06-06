@@ -596,13 +596,13 @@ export const pageModules = [
   // never executes. Sits next to What Now on the read path.
   'pages/repair/repair.js',
   'pages/mission-control/mission-control.js',
-  // Plan 2026-05-24-002 F002 — Architecture tab shell, value-language
-  // copy, and empty states. Slotted between Work and Tools & Setup so
-  // operators reach it on the read path (after what-now / mission-control)
-  // before the setup path (capabilities / health / settings).
+  // Plan 2026-06-05-003 F002 — task-priority nav order: triage (Needs Attention) →
+  // fix (Repair) → work (Mission Control) → status (Health) → reference (Architecture)
+  // → setup (Tools & Setup) → preferences. Health moved ahead of Architecture so the
+  // operator reaches install health before the reference map.
+  'pages/health/health.js',
   'pages/architecture/architecture.js',
   'pages/capabilities/capabilities.js',
-  'pages/health/health.js',
   'pages/settings/settings.js',
 ];
 
