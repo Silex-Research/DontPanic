@@ -3,7 +3,7 @@ id: 2026-06-06-002-feat-governed-gui-action-channel-v1
 title: Governed GUI action channel v1 — make the operator console an executor, safely
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-06"
 goal_type: new_feature
 description: >

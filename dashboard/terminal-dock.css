@@ -1,0 +1,35 @@
+/* Embedded terminal dock (plan 2026-06-06-002) — always-visible bottom bar that
+   expands into a real shell. Collapsed by default so it never blocks content. */
+.term-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  background: #0b0e14;
+  border-top: 1px solid var(--border, #2a2f3a);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+.term-dock-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 30px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: #c8d0dc;
+  font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  user-select: none;
+}
+.term-dock-title { font-weight: 600; }
+.term-dock-status { color: #7d8694; margin-left: auto; }
+.term-dock-warn { color: #ffb454; font-weight: 600; }
+.term-dock-warn.is-armed { color: #ff6b6b; }
+.term-dock-scope { color: #8aa0c0; }
+.term-dock-host { height: 320px; padding: 6px 8px 10px; }
+.term-dock--collapsed .term-dock-host { display: none; }
+.term-dock-off { color: #9aa3b2; padding: 14px; font: 13px ui-monospace, Menlo, monospace; }
+/* keep the page scrollable above an open dock */
+body { padding-bottom: 30px; }

@@ -6,6 +6,9 @@
   <title>DontPanic — Local Operating Console</title>
   <link rel="stylesheet" href="core.css">
   <link rel="stylesheet" href="components.css">
+  <!-- Embedded terminal dock (plan 2026-06-06-002): vendored xterm + dock chrome. -->
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <link rel="stylesheet" href="terminal-dock.css">
   <!-- Plan 2026-06-05-003 F005 — page CSS is loaded ONLY for pages registered in
        pageModules (core.js). The orphan pages (command-center / financial /
        cloud-costs / security) were retired: their stylesheets redefined generic
@@ -55,5 +58,9 @@
   </footer>
 
   <script type="module" src="core.js"></script>
+  <!-- Embedded terminal dock (plan 2026-06-06-002): vendored xterm UMD + dock. -->
+  <script src="vendor/xterm.js"></script>
+  <script src="vendor/xterm-addon-fit.js"></script>
+  <script src="terminal-dock.js"></script>
 </body>
 </html>

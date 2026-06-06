@@ -48,7 +48,7 @@
       "id": "F004",
       "category": "functional",
       "phase": 3,
-      "description": "Integrity under failure: idempotency keys so a double-click or retry never double-applies; audit-log integrity (append-only, tamper-evident) so every browser-originated action is provably recorded; failure recovery so a partial action leaves a clean, resumable state; and a stale-tab guard — each action carries the model fingerprint it was issued against, and the backend refuses if the world has moved on.",
+      "description": "Integrity under failure: idempotency keys so a double-click or retry never double-applies; audit-log integrity (append-only, tamper-evident) so every browser-originated action is provably recorded; failure recovery so a partial action leaves a clean, resumable state; and a stale-tab guard \u2014 each action carries the model fingerprint it was issued against, and the backend refuses if the world has moved on.",
       "steps": [
         "Idempotency keys on every action; replays are no-ops",
         "Append-only, tamper-evident audit log of browser-originated actions",
@@ -58,6 +58,58 @@
       ],
       "acceptance": "Browser-originated actions are idempotent (no double-apply), provably logged (tamper-evident), recoverable after interruption, and refused when issued against a stale model fingerprint. Verified by tests covering double-submit, tamper detection, interrupted-action recovery, and stale-tab refusal.",
       "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 5,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/pty_bridge.py",
+        "scripts/dontpanic_orchestrate/tests/test_pty_bridge_t.py"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Embedded terminal \u2014 PTY\u2194WebSocket bridge (pty_bridge): stdlib RFC-6455 handshake + frame codec + login-shell PTY pump + resize. No new deps.",
+      "acceptance": "Handshake matches the RFC-6455 vector; frames round-trip including masked/extended/partial; a shell runs a command and is reaped on socket close; resize control frame applies."
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 5,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/dashboard.py",
+        "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Embedded terminal \u2014 serve integration: threaded server + guarded /pty + /terminal/session behind --enable-terminal; loopback + Origin + per-serve token.",
+      "acceptance": "Off-by-default \u2192 /pty 404 + session enabled:false; wrong/no token \u2192 403; foreign Origin \u2192 403; loopback-only enforced; good token+origin \u2192 a live shell over the real serve handler."
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 5,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py",
+        "docs/plans/2026-06-06-002-feat-governed-gui-action-channel-v1/threat-model-embedded-terminal.md"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Embedded terminal \u2014 governance: audit log line when armed, NO auto-enable from config/build, threat-model doc.",
+      "acceptance": "terminal_audit_line names local shell + cwd + unrestricted; serve_start defaults enable_terminal=False; build() exposes no enable_terminal param; threat model documents the residual local-token risk."
+    },
+    {
+      "id": "F008",
+      "category": "functional",
+      "phase": 5,
+      "passes": true,
+      "verified_by": [
+        "dashboard/terminal-dock.js",
+        "dashboard/tests/unit/terminal-dock.test.js"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Embedded terminal \u2014 frontend dock: always-visible xterm dock; visible warning + scope when armed; honest off-hint when not.",
+      "acceptance": "Dock renders regardless of state; armed \u2192 '\u26a0 Terminal enabled \u00b7 local shell \u00b7 <repo> \u00b7 unrestricted commands' + 'Shell: <repo> \u00b7 session active'; disabled \u2192 off-hint with --enable-terminal, no warning."
     }
   ]
 }

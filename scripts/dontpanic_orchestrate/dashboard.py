@@ -1722,8 +1722,90 @@ class _SilentRequestHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt: str, *args: Any) -> None:  # noqa: A003
         return
 
+    # ── Embedded terminal (plan 2026-06-06-002) ──
+    # Two extra GET routes, both no-ops unless the serve was started with
+    # enable_terminal=True. Defended by loopback (the bind) + Origin + session
+    # token; there is no command allowlist — a terminal is a full shell.
+    def _terminal_enabled(self) -> bool:
+        return bool(getattr(self.server, "dp_enable_terminal", False))
 
-class _ReusableTCPServer(socketserver.TCPServer):
+    def _allowed_origins(self) -> set[str]:
+        try:
+            host, port = self.server.server_address[:2]  # type: ignore[attr-defined]
+        except Exception:  # noqa: BLE001
+            return set()
+        return {
+            f"http://127.0.0.1:{port}",
+            f"http://localhost:{port}",
+            f"http://[::1]:{port}",
+        }
+
+    def _origin_ok(self) -> bool:
+        origin = self.headers.get("Origin")
+        # Same-origin GETs may omit Origin; a present Origin must be in the set.
+        return origin is None or origin in self._allowed_origins()
+
+    def do_GET(self) -> None:  # noqa: N802
+        path = self.path.split("?", 1)[0]
+        if path == "/terminal/session":
+            return self._serve_terminal_session()
+        if path == "/pty":
+            return self._serve_pty()
+        return super().do_GET()
+
+    def _serve_terminal_session(self) -> None:
+        import json as _json
+
+        import os as _os
+
+        enabled = self._terminal_enabled()
+        token = getattr(self.server, "dp_session_token", "") if enabled else ""
+        cwd = str(getattr(self.server, "dp_terminal_cwd", "") or "") if enabled else ""
+        body = _json.dumps(
+            {
+                "enabled": enabled,
+                "token": token,
+                "cwd": cwd,
+                "cwd_label": _os.path.basename(cwd.rstrip("/")) if cwd else "",
+                "unrestricted": enabled,  # the UI surfaces this: no command allowlist
+            }
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_pty(self) -> None:
+        from urllib.parse import parse_qs, urlparse
+
+        if not self._terminal_enabled():
+            self.send_error(404)
+            return
+        if not self._origin_ok():
+            self.send_error(403, "bad origin")
+            return
+        token = (parse_qs(urlparse(self.path).query).get("token") or [""])[0]
+        expected = getattr(self.server, "dp_session_token", "")
+        if not expected or token != expected:
+            self.send_error(403, "bad token")
+            return
+        key = self.headers.get("Sec-WebSocket-Key")
+        if (self.headers.get("Upgrade", "").lower() != "websocket") or not key:
+            self.send_error(400, "expected websocket upgrade")
+            return
+        from dontpanic_orchestrate import pty_bridge
+
+        self.close_connection = True
+        try:
+            self.connection.sendall(pty_bridge.handshake_response(key))
+            pty_bridge.pump_pty(self.connection, cwd=str(getattr(self.server, "dp_terminal_cwd", "") or "") or None)
+        except Exception:  # noqa: BLE001, S110 — terminal session ended / socket closed
+            pass
+
+
+class _ReusableTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """TCPServer that sets ``SO_REUSEADDR`` (like :class:`http.server.HTTPServer`).
 
     Without this, a fresh ``--replace`` serve on the SAME port a just-superseded
@@ -1731,9 +1813,19 @@ class _ReusableTCPServer(socketserver.TCPServer):
     ``TIME_WAIT`` even though the old process has already exited (codex F010 i1).
     Reuse-address still REFUSES to bind a port with a live competing LISTEN
     socket, so the ordinary same-port conflict (AC6) still raises ``OSError``.
+
+    Threaded (plan 2026-06-06-002): the embedded terminal holds a long-lived
+    ``/pty`` WebSocket open; a single-threaded server would block all other
+    dashboard requests for its lifetime. daemon_threads lets shutdown not hang on
+    an open terminal.
     """
 
     allow_reuse_address = True
+    daemon_threads = True
+    # Terminal gating, set on the instance by serve_start (off by default so a
+    # plain serve / static file server never spawns a shell).
+    dp_enable_terminal = False
+    dp_session_token = ""
 
 
 def _make_server(
@@ -1812,6 +1904,17 @@ class ServeHandle:
             self.thread.join(timeout=5)
 
 
+def terminal_audit_line(cwd: str) -> str:
+    """The audit/log line emitted when the embedded terminal is armed (plan
+    2026-06-06-002). Extracted so the contract is unit-testable without a live
+    serve. Names the boundary explicitly: a real, unrestricted local shell."""
+    return (
+        f"TERMINAL ENABLED — local shell at {cwd}, unrestricted commands, "
+        "guarded by loopback + Origin + per-serve token. Disable by restarting "
+        "without --enable-terminal."
+    )
+
+
 def serve_start(
     *,
     host: str = DEFAULT_HOST,
@@ -1826,6 +1929,7 @@ def serve_start(
     warn: Callable[[str], None] | None = None,
     project: str | None = None,
     replace: bool = False,
+    enable_terminal: bool = False,
 ) -> ServeHandle:
     """Bind a localhost-only HTTP server and (optionally) start the watch
     loop. Returns immediately — tests/operator code can poll
@@ -1919,6 +2023,17 @@ def serve_start(
     server = _make_server(
         host=host, port=port, directory=dashboard_dir, bind_attempts=bind_attempts
     )
+    # Embedded terminal gating (plan 2026-06-06-002): OFF unless explicitly asked.
+    # When on, mint a per-serve session token the page must echo on the /pty
+    # handshake; the shell's cwd is the served dashboard's repo root.
+    server.dp_enable_terminal = bool(enable_terminal)  # type: ignore[attr-defined]
+    server.dp_session_token = secrets.token_urlsafe(32) if enable_terminal else ""  # type: ignore[attr-defined]
+    server.dp_terminal_cwd = str(repo_root) if repo_root else str(dashboard_dir.parent)  # type: ignore[attr-defined]
+    if enable_terminal:
+        # Audit line (plan 2026-06-06-002): a real shell is now reachable from the
+        # browser. Make that loud — never silent. Only ever set via the explicit
+        # --enable-terminal flag / enable_terminal= param; never from config.
+        warn(terminal_audit_line(server.dp_terminal_cwd))  # type: ignore[attr-defined]
     bound_host, bound_port = server.server_address[:2]
 
     serve_thread = threading.Thread(
@@ -2260,6 +2375,17 @@ def build_parser() -> argparse.ArgumentParser:
             "previous serve is still holding the singleton for this home."
         ),
     )
+    serve_parser.add_argument(
+        "--enable-terminal",
+        dest="enable_terminal",
+        action="store_true",
+        help=(
+            "Embed a real terminal in the console (plan 2026-06-06-002). OFF by "
+            "default: this turns the local dashboard into a command executor. "
+            "Guarded by loopback-only bind + Origin check + a per-serve session "
+            "token; there is NO command allowlist (it is a full shell)."
+        ),
+    )
 
     return parser
 
@@ -2472,6 +2598,7 @@ def _serve_main(args: argparse.Namespace) -> int:
             warn=_warn,
             project=requested,
             replace=getattr(args, "replace", False),
+            enable_terminal=getattr(args, "enable_terminal", False),
         )
     except DashboardAlreadyRunningError as exc:
         # F010 AC1 — refuse the second serve with an actionable message: the
