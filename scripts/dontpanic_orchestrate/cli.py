@@ -1241,6 +1241,13 @@ def _plan_review_main(argv: list[str]) -> int:
     else:
         print(plan_review_report.render_text(scope_report), end="")
 
+    # Plan 2026-06-05-004 F005 — advisory conventions-disposition check (warn-only,
+    # never blocks). Opt-in: fires only for plans that DECLARE a surface
+    # (loaded.surfaces), so a plan that merely mentions a surface in prose is not
+    # flagged. Text mode only for v0 (does not change the json schema / exit code).
+    if args.format != "json":
+        _print_disposition_advisory(plan_dir, loaded)
+
     exit_code = 1 if scope_report.has_block() else 0
 
     # Plan 2026-06-01-001 F006 — scope-delta lint invoked here on a plan-artifact
@@ -1254,6 +1261,28 @@ def _plan_review_main(argv: list[str]) -> int:
         exit_code = exit_code or delta_code
 
     return exit_code
+
+
+def _print_disposition_advisory(plan_dir: Path, loaded) -> None:
+    """Plan 2026-06-05-004 F005 — print advisory conventions-disposition warnings.
+
+    Opt-in + warn-only: silent unless the plan declares one or more surfaces. Never
+    changes the verdict / exit code.
+    """
+    declared = list(getattr(loaded, "surfaces", None) or [])
+    if not declared:
+        return
+    from dontpanic_orchestrate.conventions_ledger import load_ledger  # noqa: PLC0415
+    from dontpanic_orchestrate.plan_review.disposition_check import (  # noqa: PLC0415
+        check_plan_dispositions,
+    )
+
+    findings = check_plan_dispositions(declared=declared, ledger=load_ledger(plan_dir))
+    if not findings:
+        return
+    print("\nconventions disposition (advisory — warn only):")
+    for f in findings:
+        print(f"  [warn] surface_disposition: {f.message}")
 
 
 def _load_prior_features(plan_dir: Path, since: str) -> list[dict]:

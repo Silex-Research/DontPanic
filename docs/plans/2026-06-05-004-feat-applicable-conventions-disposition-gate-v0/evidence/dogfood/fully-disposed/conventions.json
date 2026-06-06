@@ -1,0 +1,34 @@
+{
+  "entries": [
+    {
+      "item_id": "design-system-consistency",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    },
+    {
+      "item_id": "real-shell-journey-proof",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    },
+    {
+      "item_id": "action-affordance-honesty",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    },
+    {
+      "item_id": "visible-state-coverage",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    },
+    {
+      "item_id": "accessibility-contrast-focus",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    },
+    {
+      "item_id": "component-token-consistency",
+      "disposition": "applied",
+      "evidence": "dashboard/tests/integration/dashboard-journey.test.js"
+    }
+  ]
+}

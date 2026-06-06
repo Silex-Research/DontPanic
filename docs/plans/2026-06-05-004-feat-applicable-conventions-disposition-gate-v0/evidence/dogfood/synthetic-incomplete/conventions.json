@@ -1,0 +1,6 @@
+{
+  "entries": [
+    {"item_id": "real-shell-journey-proof", "disposition": "applied", "evidence": "dashboard/tests/integration/dashboard-journey.test.js"},
+    {"item_id": "design-system-consistency", "disposition": "deferred", "reason": "foundation slice; components land in F001"}
+  ]
+}

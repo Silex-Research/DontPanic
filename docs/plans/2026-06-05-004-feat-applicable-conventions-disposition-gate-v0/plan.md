@@ -3,7 +3,7 @@ id: 2026-06-05-004-feat-applicable-conventions-disposition-gate-v0
 title: Applicable skills/conventions disposition gate v0 — awareness → accountability
 type: feat
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-05"
 goal_type: new_feature
 description: >

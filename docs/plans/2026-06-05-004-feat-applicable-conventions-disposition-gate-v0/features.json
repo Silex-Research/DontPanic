@@ -97,7 +97,11 @@
         "Tests: a frontend-surface plan with no design-system disposition warns; a fully-disposed plan is clean; a non-surface / stub plan is unaffected"
       ],
       "acceptance": "plan-review emits an advisory (warn, never block in v0) when a plan touches a canonical surface whose pack has undisposed / invalid / applied-without-evidence items, honoring the conventions ledger and leaving demand-gated stub surfaces silent. Verified by tests: a frontend-surface plan missing a design-system disposition warns, a fully-disposed plan is clean, and a non-surface plan is unaffected.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F006",
@@ -114,7 +118,11 @@
         "Capture the two dogfood runs (synthetic + historical) as the objective-contract evidence"
       ],
       "acceptance": "The disposition gate runs end to end and demonstrably warns on BOTH a synthetic incomplete frontend-surface plan AND a real historical plan fixture (the design-system-missing dashboard plan), naming the missing items, then goes clean once disposed; the skill-applicability matcher's output feeds the ledger's expected items. Verified by the two dogfood runs (synthetic + historical) captured as evidence and unit tests over the wired path.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     }
   ]
 }
