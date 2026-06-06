@@ -46,6 +46,49 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-05 — QA sufficiency contract + advisory surface lint (plan 2026-06-05-002)
+
+### Added
+- `docs/qa-sufficiency-contract.md` — a QA sufficiency standard: a feature's test
+  must ENTER THROUGH THE REAL SURFACE the user / agent / external system uses, and
+  the proof must match the claim's surface. Enumerates 8 surface classes (read-only
+  UI, interactive UI, mobile iOS/Android, CLI, agent/MCP tool, mutation, external
+  integration, service/batch) with each one's required entering-surface proof, the
+  governs-not-executes boundary (DontPanic verifies the NAMED proof; the project's
+  own toolchain runs it — no iOS simulator / Android emulator / foreign browser in
+  DontPanic's loop), and the explicit iOS/Android UI-journey rule.
+- `plan-review` emits an advisory `surface_proof_missing` warning when a feature
+  makes a surface-facing claim but names no entering-surface test/evidence. Advisory
+  only — it never blocks in v0, and is quiet on features with no surface-facing claim
+  or that already name a proof.
+
+### Changed
+- The dashboard test harness is the worked instance of the contract: nav/loader
+  tests now import the real shell symbols (the exported `pageModules` +
+  `createJarvis()`) instead of copied routers / re-declared page lists, and a
+  real-state → real-shell journey test boots the dashboard from producer-generated
+  state. Test-suite hardening only — no runtime behavior change to the dashboard.
+
+Surfaces affected: plan-review (CLI), internal standards docs
+
+## 2026-06-05 — Capability setup cards show resolving guidance + Global tools (plan 2026-06-05-001)
+
+### Fixed
+- Capability "Setup incomplete" cards in the dashboard and `what-now` now emit the
+  resolving command `dontpanic capabilities setup <id> --print-steps` (labelled
+  "Show setup steps") instead of the read-only `capabilities status <id>` diagnostic,
+  which only reported state and never advanced setup. Card detail now lists the
+  concrete setup steps (`setup_steps[].what`) instead of `missing:` jargon.
+- Install-level capabilities ("Global tools") now appear in the All-Projects / fleet
+  view. They were previously dropped from `fleet-what-now.json` (the fleet build only
+  aggregated per-project caches, while install-level capabilities live in the
+  DontPanic repo). They are now tagged `global_tool_setup` and rendered as a dedicated
+  "Global tools" section — distinct from per-project "Tracked projects" — and deduped
+  so a capability is never doubled into a project group. Health labels install
+  readiness "Global tools".
+
+Surfaces affected: dashboard, operator-console / what-now
+
 ## 2026-06-04 — Agent command surface + skill guidance (plan 2026-06-03-001)
 
 ### Added
