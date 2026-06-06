@@ -499,6 +499,8 @@ def test_cli_serve_once_clears_singleton(tmp_path):
             str(dash_dir),
             "--plans-root",
             str(plans_root),
+            "--port",
+            "0",  # ephemeral — isolate from whatever holds the stable default port
             "--once",
         ]
     )

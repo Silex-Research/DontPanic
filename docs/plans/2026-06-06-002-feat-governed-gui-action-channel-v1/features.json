@@ -110,6 +110,19 @@
       "verified_at": "2026-06-06T00:00:00Z",
       "description": "Embedded terminal \u2014 frontend dock: always-visible xterm dock; visible warning + scope when armed; honest off-hint when not.",
       "acceptance": "Dock renders regardless of state; armed \u2192 '\u26a0 Terminal enabled \u00b7 local shell \u00b7 <repo> \u00b7 unrestricted commands' + 'Shell: <repo> \u00b7 session active'; disabled \u2192 off-hint with --enable-terminal, no warning."
+    },
+    {
+      "id": "F009",
+      "category": "functional",
+      "phase": 6,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/dashboard.py (DEFAULT_CLI_PORT + port_conflict_message + _port_holder + EADDRINUSE branch)",
+        "scripts/dontpanic_orchestrate/tests/test_serve_port_policy.py"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Serve reliability: `dashboard serve` defaults to a STABLE port (8787) so the URL is predictable; on conflict it fails loud (names the holder + remediation) instead of silently drifting to a random ephemeral port.",
+      "acceptance": "CLI --port defaults to 8787; --port 0 still gives ephemeral; a taken port \u2192 REFUSED (rc 2) naming the holder pid/command + `--port N` remediation; non-conflict OSError keeps the bind-failed path (rc 1)."
     }
   ]
 }

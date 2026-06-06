@@ -44,6 +44,7 @@ import secrets
 import signal
 import socket
 import socketserver
+import errno
 import subprocess  # noqa: S404 — invoked with fixed args + shell=False; see _default_opener
 import sys
 import threading
@@ -73,7 +74,12 @@ import dataclasses as _dataclasses
 import datetime as _dt
 
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 0  # 0 = pick a free ephemeral port; tests rely on this
+DEFAULT_PORT = 0  # 0 = pick a free ephemeral port; tests + serve_start rely on this
+# The CLI defaults to a STABLE port so `dontpanic dashboard serve` is always at the
+# same URL (you can't predict an ephemeral port, and a stale server on a random port
+# reads as "the dashboard is broken"). On conflict the CLI fails loud (who holds it +
+# how to free it) rather than silently drifting to another port.
+DEFAULT_CLI_PORT = 8787
 DEFAULT_WATCH_INTERVAL_SECONDS = 2.0
 DEFAULT_DASHBOARD_DIR_NAME = "dashboard"
 DEFAULT_STATE_SUBDIR_NAME = "state"
@@ -1904,6 +1910,53 @@ class ServeHandle:
             self.thread.join(timeout=5)
 
 
+def _port_holder(port: int) -> str | None:
+    """Best-effort: which process is holding ``port`` (``pid N: <command>``).
+
+    Returns None if it can't be determined (no lsof, permission, race). Used only
+    to enrich the conflict message — never load-bearing.
+    """
+    try:
+        out = subprocess.run(
+            ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+        pids = [p for p in out.stdout.split() if p.strip()]
+        if not pids:
+            return None
+        pid = pids[0]
+        ps = subprocess.run(
+            ["ps", "-o", "command=", "-p", pid],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+        cmd = ps.stdout.strip().splitlines()[0] if ps.stdout.strip() else ""
+        return f"pid {pid}: {cmd[:80]}" if cmd else f"pid {pid}"
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def port_conflict_message(port: int, holder: str | None) -> str:
+    """The fail-loud message when the chosen serve port is already taken.
+
+    Names the squatter (so a stale server can't masquerade as the dashboard) and
+    gives the exact remediation. The decision to fail rather than drift to another
+    port is deliberate: a predictable URL is the whole point (plan 2026-06-06-002).
+    """
+    who = f" by another process ({holder})" if holder else " by another process"
+    free = f"  Free it (e.g. `kill {holder.split(':')[0].replace('pid ', '')}`)" if holder else "  Free that process"
+    return (
+        f"port {port} is already in use{who}.\n"
+        f"  If that is not a DontPanic dashboard it may be serving a stale page.\n"
+        f"{free}, or serve elsewhere with:  --port {port + 1}"
+    )
+
+
 def terminal_audit_line(cwd: str) -> str:
     """The audit/log line emitted when the embedded terminal is armed (plan
     2026-06-06-002). Extracted so the contract is unit-testable without a live
@@ -2309,7 +2362,16 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     serve_parser.add_argument("--host", default=DEFAULT_HOST)
-    serve_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_CLI_PORT,
+        help=(
+            f"port to serve on (default {DEFAULT_CLI_PORT}, a stable URL). "
+            "If it is already in use, serve fails loud with what holds it. "
+            "Pass 0 for an ephemeral port."
+        ),
+    )
     serve_parser.add_argument(
         "--dashboard-dir",
         default=None,
@@ -2618,6 +2680,14 @@ def _serve_main(args: argparse.Namespace) -> int:
         print(f"dashboard serve: REFUSED: {exc}", file=sys.stderr)
         return 2
     except OSError as exc:
+        # A chosen (non-ephemeral) port that's already taken is the common, fixable
+        # case — fail loud naming the holder + remediation, not a raw traceback.
+        if exc.errno == errno.EADDRINUSE and args.port:
+            print(
+                f"dashboard serve: REFUSED: {port_conflict_message(args.port, _port_holder(args.port))}",
+                file=sys.stderr,
+            )
+            return 2
         print(f"dashboard serve: bind failed: {exc}", file=sys.stderr)
         return 1
 
