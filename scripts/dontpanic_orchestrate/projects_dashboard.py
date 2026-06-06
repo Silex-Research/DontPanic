@@ -989,6 +989,22 @@ def _load_project_what_now_items(
     return tuple(items)
 
 
+def _fleet_item_to_dict(item: operator_console.ActionItem) -> dict[str, Any]:
+    """Project a fleet ActionItem to its dict, tagging install-level capability
+    items with the ``global_tool_setup`` group (Plan 2026-06-05-001 F005).
+
+    The single-repo render boundary (``action_renderers.action_view``) adds this
+    tag; the fleet payload builds via ``to_dict()`` and so must mirror it here.
+    """
+    d = item.to_dict()
+    d["group"] = (
+        "global_tool_setup"
+        if item.source == operator_console.SOURCE_CAPABILITY
+        else None
+    )
+    return d
+
+
 def build_fleet_what_now(
     project_reports: Iterable[ProjectBuildReport],
     *,
@@ -1094,6 +1110,14 @@ def build_fleet_what_now(
             }
         )
 
+    # Plan 2026-06-05-001 F005 — install-level capability items ("Global tools")
+    # are global to the install, not tied to any tracked project, so the
+    # per-project caches never carry them (capability manifests live in the
+    # DontPanic repo). Source them once here so the All-Projects / fleet surface
+    # can render the dedicated "Global tools" block; the dedupe below collapses
+    # any collision with a stray per-project copy by dedupe_key.
+    all_items.extend(dashboard.gather_install_capability_items())
+
     # Coalesce by (project_name || "__global__", dedupe_key). Two project
     # sweeps may emit the same dedupe_key (e.g. ``architecture:stale``) and we
     # must keep both — collapsing on the bare key would drop project-scoped
@@ -1115,7 +1139,11 @@ def build_fleet_what_now(
         "captured_at": now_iso,
         "projects": project_summaries,
         "capability_categories": capability_categories,
-        "items": [it.to_dict() for it in sorted_items],
+        # F005 — derive the ``group`` tag (mirrors action_renderers.action_view's
+        # F003 projection, which the fleet payload bypasses by using to_dict()).
+        # The dashboard renders capability-source items in the "Global tools"
+        # block; the JS render boundary also re-derives from source==capability.
+        "items": [_fleet_item_to_dict(it) for it in sorted_items],
     }
     operator_console._assert_no_secret_shapes(payload)  # noqa: SLF001
 

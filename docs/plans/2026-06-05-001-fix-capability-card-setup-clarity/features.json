@@ -74,6 +74,45 @@
         "operator-style-tdd-build"
       ],
       "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 3,
+      "description": "Fleet surface shows Global tools (correctness). build_fleet_what_now only aggregates the TRACKED projects' caches; install-level capability items live in the DontPanic repo (not a tracked project), so they never enter the fleet envelope (0 capability items in fleet-what-now.json) and the All-Projects/fleet view cannot render 'Global tools'. (1) Include the install-level capability items in fleet-what-now.json via a reusable dashboard.gather_install_capability_items() seam (run_status -> _scope_envelope_to_v0_local -> provide_capability_actions). (2) Preserve the group=global_tool_setup tag through the fleet render boundary (the payload uses to_dict() which bypasses action_view, so derive group inline mirroring F003). (3) DEDUP GUARD: render global-tool items ONLY in the dedicated 'Global tools' block (renderGlobalToolsHTML) and FILTER them out of project grouping (groupByProject must not also place them in the __global__ section). Re-derive global-tool identity in JS (group===global_tool_setup OR source===capability) so it is robust even if a producer omits the tag.",
+      "steps": [
+        "dashboard.gather_install_capability_items(repo_root=None) -> tuple[ActionItem] (best-effort, empty on failure)",
+        "build_fleet_what_now: append install capability items to all_items; derive group=global_tool_setup on capability-source items in the to_dict payload",
+        "what-now-logic: isGlobalToolItem(item) = group===GLOBAL_TOOL_GROUP || source==='capability'; renderGlobalToolsHTML filters by it",
+        "what-now-logic: groupByProject excludes isGlobalToolItem items (dedup guard) so they never render in the __global__ project section",
+        "Tests: fleet build includes >=1 capability item carrying group; groupByProject drops global-tool items while keeping reconcile globals; renderGlobalToolsHTML renders them once"
+      ],
+      "acceptance": "fleet-what-now.json includes the install-level capability items carrying group=global_tool_setup, and the All-Projects/fleet view renders them once under a dedicated 'Global tools' block with NO duplicate in the project/__global__ grouping. Verified by a Python test (fleet build carries capability items + group) and JS tests (groupByProject excludes global-tool items; renderGlobalToolsHTML renders them; reconcile globals are untouched).",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 3,
+      "depends_on": [
+        "F005"
+      ],
+      "description": "Health-tab affordance (secondary). The Health 'Setup incomplete' install-readiness card is where a human naturally interprets install state, so label it explicitly as Global tools. renderInstallHealthCardHTML gets a 'Global tools' label + clarifying copy (install-level, not tied to a project), distinct from the page's 'N projects tracked' header.",
+      "steps": [
+        "health-logic.renderInstallHealthCardHTML: add a 'Global tools' label/heading + 'install-level, not tied to a project' clarifying copy",
+        "Keep the existing GLOBAL scope badge + source line",
+        "Tests: renderInstallHealthCardHTML output contains 'Global tools' + the clarifying copy"
+      ],
+      "acceptance": "The Health install-readiness card explicitly labels install state as 'Global tools' with install-level clarifying copy, distinct from the tracked-projects header. Verified by a health-logic render test.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     }
   ]
 }

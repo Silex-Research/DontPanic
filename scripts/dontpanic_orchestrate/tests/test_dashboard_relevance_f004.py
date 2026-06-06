@@ -717,8 +717,14 @@ class TestSyntheticEightProjectFixture:
 
 
 class TestQuietAndStaleState:
-    def test_quiet_fleet_envelope_when_no_projects(self) -> None:
-        # Empty registry — no project reports, no items.
+    def test_quiet_fleet_envelope_when_no_projects(self, monkeypatch) -> None:
+        # Empty registry — no project reports, no items. Plan 2026-06-05-001 F005
+        # always sources install-level "Global tools" into the fleet envelope;
+        # that path is exercised by test_fleet_global_tools_f005, so stub it here
+        # to assert the genuinely-quiet (no projects, no globals) case.
+        monkeypatch.setattr(
+            pd.dashboard, "gather_install_capability_items", lambda *a, **k: ()
+        )
         out_path = pd.build_fleet_what_now([])
         payload = json.loads(out_path.read_text())
         assert payload["projects"] == []

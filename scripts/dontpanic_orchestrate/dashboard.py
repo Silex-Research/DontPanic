@@ -1436,6 +1436,36 @@ def _scope_envelope_to_v0_local(
     )
 
 
+def gather_install_capability_items(
+    repo_root: Path | None = None,
+) -> tuple[operator_console.ActionItem, ...]:
+    """Install-level capability ActionItems — the "Global tools" set.
+
+    Plan 2026-06-05-001 F005 — capabilities are global to the install, not tied
+    to any tracked project, so the fleet what-now builder must source them here
+    rather than aggregating them from per-project caches (which never carry
+    them — capability manifests live in the DontPanic repo, never a tracked
+    project). Mirrors the single-repo build's capability seam
+    (``run_status`` -> ``_scope_envelope_to_v0_local`` ->
+    ``provide_capability_actions``). Best-effort: any failure to load
+    capabilities or compute status yields an empty tuple so a stray error never
+    takes down the fleet build.
+    """
+    try:
+        capability_index = (
+            capabilities.load_capabilities(repo_root)
+            if repo_root is not None
+            else capabilities.load_capabilities()
+        )
+        envelope = capabilities_status.run_status(
+            capability_index=capability_index, repo_root=repo_root
+        )
+        scoped = _scope_envelope_to_v0_local(envelope, capability_index)
+        return tuple(operator_console.provide_capability_actions(scoped))
+    except Exception:  # noqa: BLE001 — capability data is optional for the fleet build
+        return ()
+
+
 def _classify_gate_kind(gate_name: str) -> str:
     if gate_name == "pre_impl":
         return "pre_impl"

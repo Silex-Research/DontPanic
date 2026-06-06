@@ -502,6 +502,11 @@ function renderEvidenceHTML(evidenceUri) {
  */
 export function groupByProject(items, projects) {
   if (!Array.isArray(items)) items = [];
+  // F005 dedup guard — install-level "Global tools" render in their own
+  // dedicated block (renderGlobalToolsHTML), so they must NOT also appear in
+  // the project / __global__ grouping. Non-capability globals (e.g. reconcile)
+  // stay in __global__.
+  items = items.filter((it) => !isGlobalToolItem(it));
   const projectIndex = new Map();
   if (Array.isArray(projects)) {
     for (const p of projects) {
@@ -900,9 +905,17 @@ export function renderProjectWhatNowHTML(envelope, fleetSummary, selectedProject
 // Returns '' when there are no global tools (quiet by absence).
 export const GLOBAL_TOOL_GROUP = 'global_tool_setup';
 
+// F005 — identify install-level "Global tools" robustly: honor the F003 producer
+// tag, but re-derive from source==='capability' so the fleet surface still groups
+// them even if a producer/envelope omits the tag (the fleet builder writes via
+// to_dict(), which bypasses the action_view tag).
+export function isGlobalToolItem(item) {
+  return !!item && (item.group === GLOBAL_TOOL_GROUP || item.source === 'capability');
+}
+
 export function renderGlobalToolsHTML(items) {
   const list = Array.isArray(items) ? items : [];
-  const tools = list.filter((it) => it && it.group === GLOBAL_TOOL_GROUP);
+  const tools = list.filter(isGlobalToolItem);
   if (tools.length === 0) return '';
   const rows = tools
     .map((it) => {

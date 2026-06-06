@@ -191,7 +191,14 @@ export function renderInstallHealthCardHTML(rawCapabilities) {
     headline = 'Install minimal';
     impact = `${notInstalled} tool${notInstalled === 1 ? '' : 's'} not installed yet; nothing currently connected.`;
   }
+  // F006 (plan 2026-06-05-001) — name install readiness "Global tools" so a human
+  // reading "Setup incomplete" understands these are install-level tools (set up
+  // once for this install), distinct from the tracked-projects count in the header.
   const body = `
+    <div class="hlth-global-tools">
+      <span class="hlth-global-tools-label">Global tools</span>
+      <span class="hlth-global-tools-note">Install-level — set up once for this install, not tied to any project.</span>
+    </div>
     <ul class="hlth-card-rows">
       <li><span class="hlth-row-label">Connected</span> <span class="hlth-row-value">${ready}</span></li>
       <li><span class="hlth-row-label">Setup required</span> <span class="hlth-row-value">${needsSetup}</span></li>

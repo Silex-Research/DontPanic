@@ -464,10 +464,16 @@ describe('what-now F004: fleet/project grouping and filtering', () => {
     ],
   };
 
-  it('groups fleet items by project with global blockers pinned first', () => {
+  it('excludes install-level global tools from project grouping (2026-06-05-001 F005)', () => {
+    // Capability (global_tool_setup) items render in the dedicated "Global tools"
+    // block, NOT in the fleet __global__ section — so groupByProject drops them.
+    // This fixture's only globals are capability items, so __global__ vanishes;
+    // non-capability globals (e.g. reconcile) would still form a __global__ group.
     const groups = groupByProject(fleetEnvelope.items, fleetSummary.projects);
-    expect(groups.map((g) => g.name)).toEqual(['__global__', 'spindine', 'glam']);
+    expect(groups.map((g) => g.name)).toEqual(['spindine', 'glam']);
     expect(groups.find((g) => g.name === 'spindine').display_name).toBe('SpinDine');
+    const allIds = groups.flatMap((g) => g.items.map((i) => i.id));
+    expect(allIds.some((id) => id.startsWith('capability:'))).toBe(false);
   });
 
   it('filters project view by typed global relevance rules', () => {

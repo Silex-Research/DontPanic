@@ -31,21 +31,23 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       : ALL_PROJECTS_VALUE;
     const fleetWhatNow = state ? state.fleetWhatNow : null;
     const fleetSummary = state ? state.fleetSummary : null;
-    // Plan 2026-06-05-001 F004 — install-level "Global tools" (the F003-labelled
-    // capability items) are not project work, so they render once at the top of
-    // every view, distinct from the project-scoped cards / tracked-projects list.
-    const env = fleetWhatNow || (state ? state.whatNow : null);
-    const items = env && Array.isArray(env.items) ? env.items : [];
-    const globalTools = renderGlobalToolsHTML(items);
-    // F004 routing: prefer the fleet what-now envelope when present so
-    // the All-Projects + project-filtered views actually use the new
-    // renderers. Fall back to the single-repo `whatNow` payload when
-    // no fleet build has run (legacy single-repo operator).
+    // Plan 2026-06-05-001 F005 — install-level "Global tools" (the F003-labelled
+    // capability items) are not project work. They render once, in a dedicated
+    // block at the top of the ALL-PROJECTS / fleet view (where groupByProject
+    // excludes them from the __global__ section so they aren't double-rendered).
+    // In the project-focused view the relevance engine already surfaces the
+    // project's relevant globals in-body; in the single-repo view they appear in
+    // the band sections — so neither prepends the block (avoids a double-render).
+    // F004 routing: prefer the fleet what-now envelope when present so the
+    // All-Projects + project-filtered views use the fleet renderers; fall back
+    // to the single-repo `whatNow` payload when no fleet build has run.
     if (fleetWhatNow != null) {
       if (selected === ALL_PROJECTS_VALUE) {
-        _el.innerHTML = globalTools + renderFleetWhatNowHTML(fleetWhatNow, fleetSummary);
+        const items = Array.isArray(fleetWhatNow.items) ? fleetWhatNow.items : [];
+        _el.innerHTML = renderGlobalToolsHTML(items)
+          + renderFleetWhatNowHTML(fleetWhatNow, fleetSummary);
       } else {
-        _el.innerHTML = globalTools + renderProjectWhatNowHTML(
+        _el.innerHTML = renderProjectWhatNowHTML(
           fleetWhatNow,
           fleetSummary,
           selected,
@@ -53,7 +55,7 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       }
       return;
     }
-    _el.innerHTML = globalTools + renderWhatNowHTML(state ? state.whatNow : null, {
+    _el.innerHTML = renderWhatNowHTML(state ? state.whatNow : null, {
       selectedProject: selected,
     });
   }
