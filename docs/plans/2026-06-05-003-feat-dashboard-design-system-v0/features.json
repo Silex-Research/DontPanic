@@ -6,60 +6,71 @@
       "id": "F001",
       "category": "functional",
       "phase": 1,
-      "description": "Token foundation + shared component layer (the missing primitives). Add to core.css the semantic color aliases (status-ok/attention/blocked/info/muted), a spacing scale (--space-1..8) and a type scale (--text-xs..2xl + leading + mono/sans families) — none of which exist today. Build the shared components per docs/dashboard-design-system.md §4: Button (.btn primary/secondary/ghost), CopyCommand (.copy-cmd: a command block + copy button with a visible 'Copied' success state AND a visible failure hint), Card (.card with status accents), StatTile + StatStrip, SectionHeader, Banner, Skeleton. Reuse the existing .status-badge/.panel/.empty-state. Provide matching render helpers in lib/ (e.g. lib/components.js) so pages compose primitives instead of hand-rolling markup.",
+      "description": "Token foundation + shared component layer (the missing primitives). Add to core.css the semantic color aliases (status-ok/attention/blocked/info/muted), a spacing scale (--space-1..8) and a type scale (--text-xs..2xl + leading + mono/sans families) \u2014 none of which exist today. Build the shared components per docs/dashboard-design-system.md \u00a74: Button (.btn primary/secondary/ghost), CopyCommand (.copy-cmd: a command block + copy button with a visible 'Copied' success state AND a visible failure hint), Card (.card with status accents), StatTile + StatStrip, SectionHeader, Banner, Skeleton. Reuse the existing .status-badge/.panel/.empty-state. Provide matching render helpers in lib/ (e.g. lib/components.js) so pages compose primitives instead of hand-rolling markup.",
       "steps": [
         "Add semantic color aliases + spacing scale + type scale tokens to core.css :root",
         "Build the component CSS (Button, CopyCommand w/ copied+failed states, Card, StatTile, StatStrip, SectionHeader, Banner, Skeleton) in core.css or a components.css loaded by index.html",
         "Add lib/components.js render helpers that emit those primitives (escaped), incl. a copy-command helper that wires the existing copy handler + feedback",
         "Unit-test the render helpers (markup shape, escaping, copied/failed affordance present)"
       ],
-      "acceptance": "The shared base stylesheet and token layer expose semantic color aliases + a spacing scale + a type scale, plus a shared component layer (button, copy-command, card, stat-tile/strip, section-header, banner, skeleton) with matching render helpers. The copy-command primitive emits a labelled copy control with a visible success state and a visible failure hint. Verified by component unit tests asserting each primitive's markup + the copy success/failure affordances (no page behavior changes here); the primitives then enter the real shell through the F003 Repair real-state→real-shell journey test.",
-      "passes": false
+      "acceptance": "The shared base stylesheet and token layer expose semantic color aliases + a spacing scale + a type scale, plus a shared component layer (button, copy-command, card, stat-tile/strip, section-header, banner, skeleton) with matching render helpers. The copy-command primitive emits a labelled copy control with a visible success state and a visible failure hint. Verified by component unit tests asserting each primitive's markup + the copy success/failure affordances (no page behavior changes here); the primitives then enter the real shell through the F003 Repair real-state\u2192real-shell journey test.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F002",
       "category": "functional",
       "phase": 1,
-      "depends_on": ["F001"],
-      "description": "Page skeleton + shell hardening. Add a renderPage() helper that lays out every tab as title → summary stat-strip → primary actions → content → provenance footer (docs/dashboard-design-system.md §3), so no page hand-rolls its root markup. Harden the shell: wrap pages in a <main> landmark, add a skip-to-content link, add a global :focus-visible ring token + rule, and reorder the nav to task priority (Needs Attention · Repair · Work · Health · Architecture · Tools & Setup · Preferences).",
+      "depends_on": [
+        "F001"
+      ],
+      "description": "Page skeleton + shell hardening. Add a renderPage() helper that lays out every tab as title \u2192 summary stat-strip \u2192 primary actions \u2192 content \u2192 provenance footer (docs/dashboard-design-system.md \u00a73), so no page hand-rolls its root markup. Harden the shell: wrap pages in a <main> landmark, add a skip-to-content link, add a global :focus-visible ring token + rule, and reorder the nav to task priority (Needs Attention \u00b7 Repair \u00b7 Work \u00b7 Health \u00b7 Architecture \u00b7 Tools & Setup \u00b7 Preferences).",
       "steps": [
         "Add renderPage()/page-skeleton CSS (.page/.page-header/.page-summary/.page-content/.page-footer)",
         "index.html + core.js: wrap page container in <main>, add a skip-to-content link, add a global :focus-visible rule using a --focus-ring token",
         "Reorder pageModules so the nav leads with Needs Attention then Repair",
         "Journey assertion: boot the shell with producer state; assert the main landmark + skip link exist, nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS"
       ],
-      "acceptance": "A shared renderPage() skeleton + a hardened shell (main landmark, skip-to-content link, a focus-ring token + global focus-visible rule, task-priority nav order) are in place. Verified by a real-state→real-shell journey assertion that boots the shell with producer-generated state and checks: the main landmark + skip link exist, the nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS. True visual focus-ring rendering is NOT asserted in jsdom — it is deferred to a later Playwright pass.",
+      "acceptance": "A shared renderPage() skeleton + a hardened shell (main landmark, skip-to-content link, a focus-ring token + global focus-visible rule, task-priority nav order) are in place. Verified by a real-state\u2192real-shell journey assertion that boots the shell with producer-generated state and checks: the main landmark + skip link exist, the nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS. True visual focus-ring rendering is NOT asserted in jsdom \u2014 it is deferred to a later Playwright pass.",
       "passes": false
     },
     {
       "id": "F003",
       "category": "functional",
       "phase": 2,
-      "depends_on": ["F001", "F002"],
-      "description": "Migrate Repair as the worked example (the worst-scoring tab; today it has NO stylesheet, shows 173 items as a count with none listed, and its 'Repair automatically' button copies a command while the label implies execution). Rebuild Repair on the F001/F002 primitives: a StatStrip for the counts (lead with the actionable number), the missing per-item LIST grouped by safety class (auto-safe / human-required / blocked-external / info), CopyCommand actions whose visible labels start with 'Copy' and show copied/failed feedback, and proper empty/zero/error states. This stays a RENDER-LAYER change: the four states are driven by FIXTURE INPUTS, not by changing the loader. NAMED DEPENDENCY: a true 'corrupt-cache' state distinct from 'never-ran' requires the state loader to PRESERVE parse/load errors rather than collapse them into the missing-cache empty state; that loader/error-envelope change is called out as a dependency (handled as a bounded sub-step, or the live corrupt path is deferred until the loader preserves it — the Repair render still proves the state from fixture inputs).",
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "description": "Migrate Repair as the worked example (the worst-scoring tab; today it has NO stylesheet, shows 173 items as a count with none listed, and its 'Repair automatically' button copies a command while the label implies execution). Rebuild Repair on the F001/F002 primitives: a StatStrip for the counts (lead with the actionable number), the missing per-item LIST grouped by safety class (auto-safe / human-required / blocked-external / info), CopyCommand actions whose visible labels start with 'Copy' and show copied/failed feedback, and proper empty/zero/error states. This stays a RENDER-LAYER change: the four states are driven by FIXTURE INPUTS, not by changing the loader. NAMED DEPENDENCY: a true 'corrupt-cache' state distinct from 'never-ran' requires the state loader to PRESERVE parse/load errors rather than collapse them into the missing-cache empty state; that loader/error-envelope change is called out as a dependency (handled as a bounded sub-step, or the live corrupt path is deferred until the loader preserves it \u2014 the Repair render still proves the state from fixture inputs).",
       "steps": [
         "Build Repair's page on renderPage() + components: StatStrip, banded item list (each item a Card with its command as a CopyCommand), section headers per safety class",
-        "Relabel actions to honest 'Copy …' verbs; add copied + failed feedback; surface the fleet-vs-project scope + consequence next to the action",
+        "Relabel actions to honest 'Copy \u2026' verbs; add copied + failed feedback; surface the fleet-vs-project scope + consequence next to the action",
         "Render the four states (populated / empty / zero / corrupt) from FIXTURE INPUTS so the tab stays a render-layer change",
         "Name the loader error-envelope dependency (preserve parse/load errors) in decisions; implement as a bounded sub-step or defer the live corrupt path",
         "Repair journey test on producer state + fixture-driven render tests: assert items render (not just a count), labels say 'Copy', copied/failed feedback exists, and corrupt-vs-never-ran is distinguished from fixture inputs"
       ],
-      "acceptance": "The Repair tab is rebuilt on the shared component layer: it lists the per-item repair set grouped by safety class (not just aggregate counts), every action is a copy-command with an honest 'Copy …' label + visible copied/failed feedback, and it distinguishes populated/empty/zero/corrupt states. Verified by a real-state→real-shell Repair journey test (producer state) PLUS fixture-driven render tests proving the corrupt-vs-never-ran distinction from fixture inputs; the loader error-envelope dependency is named in decisions and either implemented as a bounded sub-step or explicitly deferred.",
+      "acceptance": "The Repair tab is rebuilt on the shared component layer: it lists the per-item repair set grouped by safety class (not just aggregate counts), every action is a copy-command with an honest 'Copy \u2026' label + visible copied/failed feedback, and it distinguishes populated/empty/zero/corrupt states. Verified by a real-state\u2192real-shell Repair journey test (producer state) PLUS fixture-driven render tests proving the corrupt-vs-never-ran distinction from fixture inputs; the loader error-envelope dependency is named in decisions and either implemented as a bounded sub-step or explicitly deferred.",
       "passes": false
     },
     {
       "id": "F004",
       "category": "functional",
       "phase": 2,
-      "depends_on": ["F001"],
-      "description": "Conformance checks that would have caught the audit's worst bug class, SCOPED so they do not contradict the six-tab deferral. Two checks: (a) emitted-class→CSS-rule resolution (catches the Repair / sr-* / cap-card-* / wn-gt-* / hlth-global-tools* unstyled-render failures); (b) token-only values (no raw hex/rgba/px font-size/px spacing). ENFORCEMENT IS TIERED. Blocking subset (fails the suite): the shared primitives (base + component CSS), the migrated Repair page, and the orphan-CSS guard. Advisory backlog: every other (unmigrated) tab is recorded in an explicit OFFENDER LEDGER; a test asserts the detector reports EXACTLY that current backlog WITHOUT failing the suite, so the debt is visible and shrinks as each tab migrates into the blocking subset. EXTRACTION MODEL: the detector is verified by synthetic pass/fail fixtures, and for migrated pages it reads the classes actually emitted from the REAL-SHELL DOM after journey boot (capturing dynamic / modifier / state classes), not by scraping static JS string literals.",
+      "depends_on": [
+        "F001"
+      ],
+      "description": "Conformance checks that would have caught the audit's worst bug class, SCOPED so they do not contradict the six-tab deferral. Two checks: (a) emitted-class\u2192CSS-rule resolution (catches the Repair / sr-* / cap-card-* / wn-gt-* / hlth-global-tools* unstyled-render failures); (b) token-only values (no raw hex/rgba/px font-size/px spacing). ENFORCEMENT IS TIERED. Blocking subset (fails the suite): the shared primitives (base + component CSS), the migrated Repair page, and the orphan-CSS guard. Advisory backlog: every other (unmigrated) tab is recorded in an explicit OFFENDER LEDGER; a test asserts the detector reports EXACTLY that current backlog WITHOUT failing the suite, so the debt is visible and shrinks as each tab migrates into the blocking subset. EXTRACTION MODEL: the detector is verified by synthetic pass/fail fixtures, and for migrated pages it reads the classes actually emitted from the REAL-SHELL DOM after journey boot (capturing dynamic / modifier / state classes), not by scraping static JS string literals.",
       "steps": [
-        "Implement the emitted-class→CSS-rule resolver: synthetic-fixture detector + real-shell-DOM extraction for migrated pages",
+        "Implement the emitted-class\u2192CSS-rule resolver: synthetic-fixture detector + real-shell-DOM extraction for migrated pages",
         "Implement the token-only check; apply it (blocking) to base + component CSS + migrated Repair only",
         "Add the explicit offender ledger for unmigrated tabs; a test asserts the detector reports exactly that backlog without failing the suite",
         "Tests: a synthetic offender fails the blocking check; the migrated subset passes; the offender-ledger test matches the recorded backlog (and shrinks when a tab migrates)"
       ],
-      "acceptance": "Two conformance checks exist — emitted-class→CSS-rule resolution and token-only values — enforced as BLOCKING for the shared primitives + the migrated Repair page + the orphan-CSS guard, and as an ADVISORY offender-ledger report for the unmigrated tabs (a test asserts the detector reports exactly the current backlog without failing the suite). The detector reads migrated-page classes from the real-shell DOM after journey boot and is itself verified by synthetic pass/fail fixtures. Verified by: the checks failing on a synthetic offender, passing on the migrated subset, and the offender-ledger test matching the recorded backlog.",
+      "acceptance": "Two conformance checks exist \u2014 emitted-class\u2192CSS-rule resolution and token-only values \u2014 enforced as BLOCKING for the shared primitives + the migrated Repair page + the orphan-CSS guard, and as an ADVISORY offender-ledger report for the unmigrated tabs (a test asserts the detector reports exactly the current backlog without failing the suite). The detector reads migrated-page classes from the real-shell DOM after journey boot and is itself verified by synthetic pass/fail fixtures. Verified by: the checks failing on a synthetic offender, passing on the migrated subset, and the offender-ledger test matching the recorded backlog.",
       "passes": false
     },
     {

@@ -1,0 +1,124 @@
+/* ── DontPanic Dashboard — shared component layer ──
+   Plan 2026-06-05-003 F001. The ONLY approved building blocks below .panel /
+   .status-badge / .empty-state. Token-only (no raw hex / px font-size / px spacing).
+   See docs/dashboard-design-system.md §4. */
+
+/* ── Button ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn:hover { background: var(--surface-3); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.btn--primary { background: var(--status-info); border-color: var(--status-info); color: #fff; }
+.btn--primary:hover { background: var(--accent); }
+.btn--ghost { background: transparent; border-color: transparent; }
+.btn--ghost:hover { background: var(--surface-2); }
+
+/* ── CopyCommand (the canonical read-only action) ───────────────────────── */
+.copy-cmd {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.copy-cmd-code {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-x: auto;
+  white-space: pre;
+}
+.copy-cmd-btn { white-space: nowrap; }
+.copy-cmd-feedback {
+  align-self: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.copy-cmd-btn[data-copied="1"] + .copy-cmd-feedback { color: var(--status-ok); }
+.copy-cmd-btn[data-copied="denied"] + .copy-cmd-feedback,
+.copy-cmd-btn[data-copied="unsupported"] + .copy-cmd-feedback { color: var(--status-attention); }
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card {
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-muted);
+}
+.card--ok { border-left-color: var(--status-ok); }
+.card--attention { border-left-color: var(--status-attention); }
+.card--blocked { border-left-color: var(--status-blocked); }
+.card--info { border-left-color: var(--status-info); }
+.card-title { font-family: var(--font-sans); font-size: var(--text-md); color: var(--text-primary); }
+.card-impact { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--text-secondary); margin-top: var(--space-1); }
+
+/* ── StatTile + StatStrip ───────────────────────────────────────────────── */
+.stat-strip { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
+.stat {
+  min-width: 96px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.stat-value { font-family: var(--font-mono); font-size: var(--text-2xl); line-height: var(--leading-tight); color: var(--text-primary); }
+.stat-label { font-family: var(--font-sans); font-size: var(--text-xs); color: var(--text-muted); }
+.stat--ok .stat-value { color: var(--status-ok); }
+.stat--attention .stat-value { color: var(--status-attention); }
+.stat--blocked .stat-value { color: var(--status-blocked); }
+
+/* ── SectionHeader ──────────────────────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.section-header-title { font-family: var(--font-mono); font-size: var(--text-lg); color: var(--text-primary); }
+.section-header-count { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--text-muted); }
+
+/* ── Banner / Alert ─────────────────────────────────────────────────────── */
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+.banner--info { background: var(--green-dim); border-color: var(--status-info); color: var(--text-primary); }
+.banner--warn { background: var(--yellow-dim); border-color: var(--status-attention); color: var(--text-primary); }
+.banner--error { background: var(--red-dim); border-color: var(--status-blocked); color: var(--text-primary); }
+
+/* ── Skeleton (loading) ─────────────────────────────────────────────────── */
+.skeleton {
+  height: var(--space-5);
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

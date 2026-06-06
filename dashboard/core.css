@@ -22,6 +22,40 @@
   --purple: #a855f7;
   --radius: 8px;
   --font: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+
+  /* Plan 2026-06-05-003 F001 — semantic color aliases (reference meaning, not hue) */
+  --surface-1: var(--bg-primary);
+  --surface-2: var(--bg-card);
+  --surface-3: var(--bg-card-hover);
+  --status-ok: var(--green);
+  --status-attention: var(--yellow);
+  --status-blocked: var(--red);
+  --status-info: var(--accent);
+  --status-muted: var(--text-muted);
+
+  /* Spacing scale (NEW) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* Type scale (NEW) */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --font-mono: var(--font);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Focus ring (NEW) */
+  --focus-ring: 0 0 0 2px var(--accent);
 }
 
 * {
