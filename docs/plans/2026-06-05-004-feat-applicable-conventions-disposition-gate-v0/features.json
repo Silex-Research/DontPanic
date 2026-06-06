@@ -1,0 +1,79 @@
+{
+  "task_id": "2026-06-05-004-feat-applicable-conventions-disposition-gate-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Surface derivation. Build a pure surface-derivation function that returns the set of surfaces a plan touches, drawn from the closed surface set defined by the F002 registry. It unions the plan's declared surface class (the qa-sufficiency vocabulary from 2026-06-05-002) with surfaces inferred from the plan's changed/declared file paths. Reuse and extend the existing surface tagging in the plan-review lint rather than inventing a parallel tagger.",
+      "steps": [
+        "Reference the closed surface-id set aligned to docs/qa-sufficiency-contract.md surface classes (the registry owns the list in F002)",
+        "Implement the derivation: union of the declared surface class + path-pattern inference, kept pure (no IO beyond the passed plan/paths)",
+        "Reuse the plan-review lint surface keywords where possible",
+        "Tests: declared-only, path-only, both, and none (empty) cases produce the expected surface set"
+      ],
+      "acceptance": "A pure surface-derivation function returns the surfaces a plan touches, unioned from its declared surface class and its changed/declared paths, reusing the existing plan-review surface tagging. Verified by unit tests over declared-only, path-only, combined, and empty inputs.",
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Sufficiency-pack registry. A declarative map from surface -> required convention/skill items, where each item carries an id, a one-line 'what to prove', and a reference doc. Seed ONLY the dashboard/frontend pack as the concrete worked example, with items derived from the shipped standards: design-system-consistency (docs/dashboard-design-system.md), real-shell-journey-proof (docs/qa-sufficiency-contract.md), action-affordance-honesty, visible-state-coverage, accessibility-contrast-focus, component-token-consistency. The other seven surfaces are present as NAMED stubs (empty item lists) so the registry shape is complete but content stays demand-gated.",
+      "steps": [
+        "Define the registry data shape (surface -> [ {id, prove, reference} ])",
+        "Populate the dashboard-frontend pack from docs/dashboard-design-system.md + docs/qa-sufficiency-contract.md",
+        "Add the other seven surfaces as named stubs with empty item lists + a 'demand-gated' marker",
+        "Tests: the frontend pack lists the seeded items with references; stub surfaces resolve to an empty (not missing) pack"
+      ],
+      "acceptance": "A declarative sufficiency-pack registry maps each surface to its required convention/skill items (id + what-to-prove + reference); the dashboard/frontend pack is fully seeded from the shipped standards and the other seven surfaces exist as named, demand-gated stubs. Verified by tests asserting the frontend pack's items + references and that stub surfaces return an empty pack rather than an error.",
+      "passes": false
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "depends_on": ["F002"],
+      "description": "Disposition vocabulary + ledger. Define the four dispositions (applied / not-applicable / deferred / waived) and a plan-level ledger field where each applicable pack item records its disposition; the three non-applied dispositions require a non-empty reason; an applied disposition should reference evidence (a test/doc path). Provide a validator that checks the ledger against a derived pack and returns, per item, one of: disposed-ok, missing-disposition, or invalid (e.g. waived with no reason).",
+      "steps": [
+        "Define the disposition vocabulary + the per-item ledger entry shape (item id, disposition, reason, evidence)",
+        "Implement a validator: pack + ledger -> per-item status (ok / missing / invalid-reason)",
+        "Require a reason for the three non-applied dispositions; treat applied-without-evidence as ok-but-advisory",
+        "Tests: fully-disposed pack is ok; a missing item is flagged missing; a reasonless waiver is flagged invalid"
+      ],
+      "acceptance": "A closed disposition vocabulary (applied / not-applicable / deferred / waived) + a plan ledger field exist, with a validator that flags each applicable pack item as disposed-ok, missing, or invalid (a reason is required for the three non-applied dispositions). Verified by unit tests over fully-disposed, missing-item, and reasonless-waiver ledgers.",
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "depends_on": ["F001", "F003"],
+      "description": "Advisory plan-review disposition check (v0 = warn, never block). For a plan, derive its surfaces (F001), resolve each surface's pack (F002), validate the ledger (F003), and emit an advisory finding when an applicable item is undisposed or a disposition is invalid. Wire it alongside the existing plan-review checks / sufficiency_gate.py pattern, but DO NOT block — record explicitly that BLOCK escalation for user-facing/mutation surfaces is deferred (demand-gated, needs false-positive data), mirroring 2026-06-05-002 F006's advisory-first stance.",
+      "steps": [
+        "Implement the check: for each derived surface with a non-empty pack, warn on missing/invalid dispositions",
+        "Surface findings through the existing plan-review report path; keep severity = warn only",
+        "Record the BLOCK-escalation deferral as a decision; ensure stub-surface packs (empty) never warn",
+        "Tests: a dashboard-surface plan with no design-system disposition warns; a fully-disposed plan is clean; a non-surface/stub plan is unaffected"
+      ],
+      "acceptance": "plan-review emits an advisory (warn, never block in v0) when a plan touches a surface whose pack has undisposed or invalid items, honoring the disposition ledger and leaving demand-gated stub surfaces silent. Verified by tests: a dashboard-surface plan missing a design-system disposition warns, a fully-disposed plan is clean, and a non-surface plan is unaffected.",
+      "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 2,
+      "depends_on": ["F004"],
+      "description": "Wire + dogfood — prove it would have caught the Repair gap. Connect derivation -> pack -> ledger -> advisory check end to end, and dogfood against a synthetic dashboard-surface plan that omits the design-system / real-shell-journey dispositions: the check must warn, naming the missing items. Then add the dispositions and confirm it goes clean. Also bridge skill_applicability.py from advisory-only to feed the derived pack (awareness -> accountability), so the existing matcher informs the ledger instead of being a dead-end recommendation.",
+      "steps": [
+        "End-to-end wire the four steps; add a synthetic dashboard-surface plan fixture with an incomplete ledger",
+        "Dogfood: run the check on the incomplete fixture (warns, names the missing design-system + journey items) and on a completed ledger (clean)",
+        "Bridge skill_applicability.py output into the disposition derivation so matched skills appear as ledger-expected items",
+        "Capture the dogfood evidence (the two runs) as the objective-contract evidence for this plan"
+      ],
+      "acceptance": "The disposition gate runs end to end and demonstrably warns on a synthetic dashboard-surface plan that omits the design-system + real-shell-journey dispositions (naming the missing items), then goes clean once they are disposed; skill_applicability.py's matches feed the ledger's expected items. Verified by the two dogfood runs captured as evidence and unit tests over the wired path.",
+      "passes": false
+    }
+  ]
+}
