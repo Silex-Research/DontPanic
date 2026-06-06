@@ -1,0 +1,103 @@
+{
+  "task_id": "2026-06-06-001-feat-operator-triage-surface-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Triage model: a single pure, total classifier that assigns every operator item exactly one operator_bucket, derived (never producer-asserted) from resolution_class + automatable + audience + reconciled gate-state + safety_class (consumed from the repair projection, not moved onto the ActionItem envelope). Buckets: needs_auth, needs_decision, agent_runnable, auto_safe, quiet, uncertain. uncertain is the fail-closed default for missing/stale inputs and is surfaced, never silently hidden. The model also emits a data_quality envelope (counts per bucket, count uncertain, staleness/source provenance) so downstream renderers can warn instead of asserting a clean number.",
+      "steps": [
+        "Define the operator_bucket closed enum + a pure classify(item, gate_state, plan_status) returning exactly one bucket; uncertain fail-closed",
+        "Keep the four axes distinct (resolution_class / automatable / safety_class / operator_bucket); document auto_safe as the reversible-derived-state subset of automatable",
+        "Emit a data_quality envelope: per-bucket counts, uncertain count, and per-item provenance/staleness reasons",
+        "Test on the real 313-item fleet fixture: every item gets exactly one bucket; uncertain items carry a data-quality reason; classifier is pure and deterministic"
+      ],
+      "acceptance": "A pure, total operator-bucket classifier and a data_quality envelope exist as the single source of truth. Verified by unit tests over a real fleet fixture proving totality (every item exactly one bucket), the uncertain fail-closed default with a recorded reason (journeys A4/H6: never lie, always inspectable), determinism, and that the four axes stay distinct (auto_safe is a strict subset of automatable). No producer is required to assert operator_bucket.",
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Deduplicate operator items by stable dedupe_key before bucketing, so the same gate/finding stops appearing 6-8 times. Collapse preserves the richest representative (most evidence, freshest) and records the collapsed count.",
+      "steps": [
+        "Group items by dedupe_key; collapse to one representative + a duplicate_count",
+        "Choose the representative deterministically (freshest updated_at, then most evidence)",
+        "Test on real data: the duplicated approval items collapse to one-per-unique-plan-gate"
+      ],
+      "acceptance": "Items sharing a dedupe_key collapse to a single representative carrying a duplicate_count, deterministically. Verified by a test on the real fleet fixture showing the approval items (currently 6-8x per gate) collapse to one per unique plan/gate (journey H1: the human sees unique work, not repeats).",
+      "passes": false
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "description": "Reconcile gate items against plan status so closed/abandoned plans stop surfacing as live approvals. A gate whose plan status is completed or abandoned, or whose features all pass, reconciles to cleared and drops out of needs_decision; genuinely-live gates remain. Reconciliation reasons feed the data_quality envelope (a reconciled-stale gate is recorded, not silently dropped).",
+      "steps": [
+        "Define the stale-gate predicate: plan status in {completed, abandoned} OR all features pass",
+        "Reconcile each gate item: stale -> cleared (out of needs_decision), recorded with a reason",
+        "Test on real data: known-closed plans' gates no longer surface as needs_decision; an active plan's live gate still does"
+      ],
+      "acceptance": "Gate items are reconciled against plan status; stale gates (closed/abandoned plan, or all features pass) leave needs_decision with a recorded reconciliation reason, while live gates remain. Verified by a test asserting known-closed plans drop out of needs_decision and an active plan's live gate persists (journeys H1/H3: only real, live decisions reach the human).",
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "dontpanic operator brief (--json|--text): the agent-facing primary surface. Renders the F001-F003 triage model: the per-bucket lists, each item carrying its exact command, dedupe_key, operator_bucket, depends_on, and an evidence reference; a top-level allow-list (agent_runnable + auto_safe, with commands) vs escalate-list (needs_auth + needs_decision); and a data_quality block (counts, uncertain, staleness). The brief carries an explicit honesty contract (like the agent-manifest safety_rules): narrate uncertain, never fabricate a clean bucket, never run human-gated items. Named operator brief to avoid colliding with the existing agent brief setup surface.",
+      "steps": [
+        "Add the operator-brief CLI reading the same triage model the dashboard uses (one source)",
+        "Emit --json: buckets + per-item command/deps/evidence + allow-list/escalate-list + data_quality",
+        "Emit --text: a tight human/agent-readable digest of the same",
+        "Embed the honesty contract; surface uncertain + staleness as first-class",
+        "Journey tests A1/A2/A3/A4 on real state: an agent can derive a run-plan + escalation list; the escalate-list equals needs_auth+needs_decision; uncertainty is reported, not hidden"
+      ],
+      "acceptance": "dontpanic operator brief renders the triage model as --json and --text with an allow-list vs escalate-list and a data_quality block, plus an embedded honesty contract. Verified by journey tests on real producer state: an agent boots and derives a run-plan and a precise escalation list (A1), the safe-to-run set excludes everything human-gated (A2), the output is sufficient to report back what an agent ran (A3), and incomplete classification is surfaced as uncertain rather than fabricated (A4). Same source as the dashboard (no second projection).",
+      "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 3,
+      "description": "Safe-tier application: dontpanic triage apply --safe applies ONLY auto_safe (reversible derived-state) items. Dry-run is the default (prints what would run, why each is classified safe, expected file changes); --confirm runs them; every run writes a logged, reversible evidence record (what ran, why safe, what changed, what confirmed it). Hard refusals: never credentials (needs_auth), never approvals (needs_decision), never project mutations. Off by default; a config flag (dashboard.auto_apply_safe_derived_state) may later enable it for pure cache/state projection only.",
+      "steps": [
+        "Implement triage apply --safe over the auto_safe bucket only; dry-run default",
+        "On --confirm: run, then write an evidence record (ran/why-safe/changed/confirmed); reversible",
+        "Refuse needs_auth / needs_decision / project-mutating items with a clear reason",
+        "Tests: dry-run mutates nothing; --confirm applies only auto_safe + logs evidence; refusals hold"
+      ],
+      "acceptance": "triage apply --safe applies only the auto_safe bucket, dry-run by default, with a logged reversible evidence record on --confirm, and hard refuses credentials/approvals/project mutations. Verified by tests proving dry-run is side-effect-free, --confirm applies only auto_safe items and writes evidence, and a needs_auth/needs_decision/mutation item is refused. Disabled by default (no surprise mutation).",
+      "passes": false
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 4,
+      "description": "Human triage default view (GUI): the same triage model rendered as a calm default screen. One honest status line (H5), the needs-you list (needs_auth + needs_decision only, each one sentence + one action, H1), and a blocked-explainer (one card per block: the block, the one move, the consequence, H4). Everything agent_runnable/auto_safe/quiet collapses behind a single 'handled' affordance. One accent colour for needs-you; muted everything else; no raw JSON; no repeated banners. NAMED DEPENDENCY: build writes fleet state to ~/.dontpanic/dashboard/ while serve reads <repo>/dashboard/state/ — this feature resolves or explicitly defers the serve-path so the GUI renders real fleet data.",
+      "steps": [
+        "Render the default view from the triage model: status line + needs-you list + blocked-explainer; collapse handled",
+        "Apply the calm rules: one accent, two type sizes, no raw JSON, no repeated banners",
+        "Resolve or defer the fleet-state serve-path so real fleet data renders (name it in decisions)",
+        "Journey tests H1/H4/H5 on real fleet state: the default view shows <=5 actionable human items and zero raw JSON; a block shows its one move; health is one line"
+      ],
+      "acceptance": "The default GUI view renders the triage model as a calm triage queue: one health line, the needs-you list only, and a blocked-explainer, with handled work collapsed. Verified by a real-state -> real-shell journey test asserting <=5 actionable human items in the default view, zero raw JSON, and a single status line (journeys H1/H4/H5) — operator-outcome, not DOM presence. The fleet-state serve-path dependency is resolved or explicitly deferred in decisions.",
+      "passes": false
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 4,
+      "description": "Inspection and evidence surfaces (GUI): the audit layer that makes the agent's compression trustworthy. The decision drawer (click a gate -> its audit findings, diff summary, plan acceptance, signoff, enough to approve/request-changes/reject in place, H3); the what-was-handled log (reverse-chron, plain language: what the agent/auto ran, why safe, what changed, evidence ref, H2); and the why-hidden inspector (expand 'handled' into the full inventory, each item tagged with its bucket AND the reason it is there — deduped / stale-reconciled / info / agent-runnable, H6).",
+      "steps": [
+        "Decision drawer: render a gate's evidence (findings, diff, acceptance, signoff) for an in-place decision",
+        "What-was-handled log: reverse-chron record of agent/auto actions with evidence refs (fed by F004/F005 + event-actions)",
+        "Why-hidden inspector: the full inventory with per-item bucket + reason, so the compression is auditable",
+        "Journey tests H2/H3/H6 on real state: a human can decide one gate from its evidence; can see what was handled + verify; can see why each hidden item was hidden"
+      ],
+      "acceptance": "The GUI provides a decision drawer, a what-was-handled log, and a why-hidden inspector over the same triage model. Verified by journey tests on real state: a human decides a gate from its surfaced evidence without reading source (H3), can audit what the agent/auto ran and confirm it (H2), and can see why each of the hidden items was suppressed with its bucket + reason (H6: the compression is auditable, never a black box).",
+      "passes": false
+    }
+  ]
+}

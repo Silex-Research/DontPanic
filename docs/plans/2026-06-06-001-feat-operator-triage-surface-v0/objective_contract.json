@@ -1,0 +1,82 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator-locked product pivot (this plan's D001-D011 and the design conversation). The agent operator brief is the primary surface; the dashboard is a structured state projection + inspectable evidence surface. One derived triage model is the source of truth; both renderers project it. Acceptance is operator-OUTCOME via named journeys on real producer state, not DOM-render correctness.",
+  "completion_test": "On real fleet state, one derived triage model (deduped, gate-reconciled, with a data_quality envelope) drives both renderers: `dontpanic operator brief --json` exposes the buckets with an allow-list vs an escalate-list (= needs_auth + needs_decision) and surfaces uncertainty instead of fabricating, an agent can boot from it and derive a run-plan + escalation list, the safe tier applies only auto_safe items opt-in/dry-run/logged/reversible, and the default GUI shows <=5 actionable human items with zero raw JSON while making the hidden/handled items inspectable — each proven by a named-journey test, not DOM presence.",
+  "user_journeys": [
+    {
+      "name": "human-needs-you-triage",
+      "description": "H1: a human sits down and asks 'does anything need me right now?' The default surface shows only the needs_auth + needs_decision items (each one sentence + one action) and nothing else; everything agent-runnable/auto-safe/quiet is collapsed.",
+      "surfaces": ["frontend-ui", "command", "core"],
+      "states": ["raw_unreconciled_inventory", "triaged_needs_you_only", "all_handled_empty"],
+      "acceptance_signals": [
+        "The default view/brief shows <=5 actionable human items on real fleet state",
+        "Deduped + gate-reconciled so the same gate is not shown repeatedly",
+        "Zero raw JSON and one honest status line"
+      ]
+    },
+    {
+      "name": "human-decide-a-gate",
+      "description": "H3: a gate is waiting; the human opens it and decides from its evidence (audit findings, diff summary, plan acceptance, signoff) in place, without reading source.",
+      "surfaces": ["frontend-ui"],
+      "states": ["gate_live_unreviewed", "gate_evidence_shown", "gate_decided"],
+      "acceptance_signals": [
+        "A live gate's evidence is rendered enough to approve / request-changes / reject in place",
+        "Only LIVE gates appear (closed/abandoned plans reconciled out)"
+      ]
+    },
+    {
+      "name": "human-audit-what-was-handled",
+      "description": "H2/H6: the human verifies the agent's compression — what the agent/auto ran and changed (with evidence), and WHY each hidden item was suppressed (bucket + reason: deduped / stale-reconciled / info / agent-runnable).",
+      "surfaces": ["frontend-ui"],
+      "states": ["handled_collapsed", "handled_log_expanded", "why_hidden_inspected"],
+      "acceptance_signals": [
+        "A reverse-chron log shows agent/auto actions with evidence refs",
+        "The full inventory is inspectable with each item's bucket + reason",
+        "No item is silently hidden; uncertain items are surfaced"
+      ]
+    },
+    {
+      "name": "human-unblock-and-glance",
+      "description": "H4/H5: when something is stuck the human sees the block, the one move, and the consequence; on a glance the install health is one honest line.",
+      "surfaces": ["frontend-ui"],
+      "states": ["blocked_unexplained", "block_with_one_move", "health_one_line"],
+      "acceptance_signals": [
+        "A blocked item shows its single unblock move and consequence",
+        "Health renders as one trustworthy line, not six stat tiles"
+      ]
+    },
+    {
+      "name": "agent-boot-and-escalate",
+      "description": "A1/A2: the operator agent boots, reads operator brief --json, and derives a run-plan (agent_runnable + auto_safe, with commands, ordered by deps) plus a precise escalation list (needs_auth + needs_decision). It runs the safe set only and never touches human-gated items.",
+      "surfaces": ["command", "core"],
+      "states": ["agent_uninformed", "agent_has_run_plan_and_escalation", "agent_ran_safe_set"],
+      "acceptance_signals": [
+        "operator brief --json exposes per-item command/deps/evidence + allow-list vs escalate-list",
+        "The escalate-list equals needs_auth + needs_decision exactly",
+        "The agent runs nothing human-gated"
+      ]
+    },
+    {
+      "name": "agent-honesty-under-uncertainty",
+      "description": "A3/A4: the agent reports back truthfully what it ran (feeding the human log), and when classification is incomplete it narrates the uncertain items + data-quality warnings rather than fabricating a clean bucket.",
+      "surfaces": ["command", "core"],
+      "states": ["classification_complete", "classification_incomplete_uncertain", "agent_reported_back"],
+      "acceptance_signals": [
+        "The brief carries a data_quality block (counts, uncertain, staleness) and an embedded honesty contract",
+        "Incomplete classification surfaces as uncertain, never fabricated",
+        "What the agent ran is recorded with evidence for the human to audit"
+      ]
+    },
+    {
+      "name": "operator-applies-safe-tier",
+      "description": "Safe-tier application: the operator (human or agent) applies only auto_safe (reversible derived-state) items, dry-run first, logged and reversible, never credentials/approvals/project mutations. Off by default.",
+      "surfaces": ["command", "core"],
+      "states": ["safe_tier_dry_run", "safe_tier_applied_logged", "unsafe_item_refused"],
+      "acceptance_signals": [
+        "Dry-run is the default and mutates nothing",
+        "--confirm applies only auto_safe items and writes a reversible evidence record",
+        "needs_auth / needs_decision / project-mutating items are refused"
+      ]
+    }
+  ]
+}
