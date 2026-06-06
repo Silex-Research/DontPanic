@@ -133,12 +133,15 @@ export function deriveInspectView(model, selectedId) {
   };
 }
 
-/** The decision drawer: what / why-now / evidence / the one move. Read-only —
- * F008 adds the copy/open affordances; F007 only surfaces the context (H3). */
-export function renderInspectHTML(detail) {
+/** The decision drawer: what / why-now / evidence / the one move. In Operator
+ * mode it carries the copy/handoff affordances (F008) + the mark-as-run control
+ * (F009); in Observer mode it's pure-read. */
+export function renderInspectHTML(detail, opts = {}) {
   if (!detail) {
     return `<div class="console-inspect console-inspect--empty">Select an item to see why it needs you and the evidence for the next move.</div>`;
   }
+  const mode = opts.mode || OPERATOR;
+  const markedRun = opts.markedRun || [];
   const rows = [];
   rows.push(`<div class="inspect-title">${esc(detail.title)}</div>`);
   rows.push(`<div class="inspect-meta"><span class="scope-chip">${esc(detail.scope)}</span> ${esc(detail.bucket)}` +
@@ -147,7 +150,17 @@ export function renderInspectHTML(detail) {
   if (detail.whyNow) rows.push(`<div class="inspect-why"><span class="inspect-label">Why now</span> ${esc(detail.whyNow)}</div>`);
   if (detail.evidence) rows.push(`<div class="inspect-evidence"><span class="inspect-label">Evidence</span> <code>${esc(detail.evidence)}</code></div>`);
   if (detail.move) rows.push(`<div class="inspect-move"><span class="inspect-label">The move</span> <code>${esc(detail.move)}</code></div>`);
-  return `<div class="console-inspect">${rows.join('')}${renderAffordancesHTML(deriveAffordances(detail))}</div>`;
+
+  let tail = '';
+  if (mode === OPERATOR) {
+    tail += renderAffordancesHTML(deriveAffordances(detail));
+    tail += markedRun.includes(detail.id)
+      ? `<div class="mark-run mark-run--done">✓ Marked as run — clears on the next refresh if it resolved.</div>`
+      : `<button type="button" class="btn mark-run-btn" data-mark-run="${esc(detail.id || '')}">Mark as run</button>`;
+  } else {
+    tail += `<div class="observer-note">Observer mode — switch to Operator to copy the command.</div>`;
+  }
+  return `<div class="console-inspect">${rows.join('')}${tail}</div>`;
 }
 
 // ── F008 — per-bucket handoff affordances ──
@@ -232,4 +245,49 @@ export function renderActivityStripHTML(model, events) {
     lines.push(`<div class="activity-row">${when}${what}</div>`);
   }
   return `<div class="console-activity">${lines.join('')}</div>`;
+}
+
+// ── F009 — lifecycle & refresh (Observer↔Operator, mark-run, state_revision) ──
+// The console + a CLI/terminal/agent operate the same install concurrently. F009
+// keeps the GUI honest about that: a mode toggle (Observer is pure-read), a local
+// mark-as-run overlay (the GUI doesn't execute — the human runs the copied
+// command elsewhere and marks it), and a refresh that uses the model's
+// state_revision fingerprint to detect when the producer state moved underneath.
+
+export const OBSERVER = 'observer';
+export const OPERATOR = 'operator';
+
+/** True when the model's fingerprint differs from the last one shown — i.e. the
+ * producer state changed under us (another process rebuilt it). False on first
+ * load (no prior revision to compare). */
+export function revisionChanged(model, lastRevision) {
+  if (!lastRevision) return false;
+  return !!(model && model.state_revision) && model.state_revision !== lastRevision;
+}
+
+/** Reconcile the local mark-as-run overlay against a freshly-loaded model: ids
+ * still present in the model are stillPresent (action not yet reflected); ids
+ * gone are resolved (the producer cleared them — drop the mark). */
+export function reconcileMarkedRun(markedRunIds, model) {
+  const present = new Set((model && Array.isArray(model.items) ? model.items : []).map((i) => i.id));
+  const stillPresent = [];
+  const resolved = [];
+  for (const id of markedRunIds || []) (present.has(id) ? stillPresent : resolved).push(id);
+  return { stillPresent, resolved };
+}
+
+export function renderModeToggleHTML(mode) {
+  const active = mode === OBSERVER ? OBSERVER : OPERATOR;
+  const btn = (m, label) =>
+    `<button type="button" class="mode-toggle-btn${active === m ? ' is-active' : ''}" ` +
+    `data-mode="${m}" aria-pressed="${active === m}">${esc(label)}</button>`;
+  return `<div class="mode-toggle" role="group" aria-label="Console mode">${btn(OBSERVER, 'Observe')}${btn(OPERATOR, 'Operate')}</div>`;
+}
+
+export function renderRefreshHTML(view) {
+  const changed = view && view.revisionChanged;
+  const note = changed
+    ? `<span class="refresh-note refresh-note--changed">State changed — refresh to resync</span>`
+    : '';
+  return `<div class="console-refresh">${note}<button type="button" class="btn refresh-btn">Refresh</button></div>`;
 }

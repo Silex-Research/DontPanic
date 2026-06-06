@@ -91,6 +91,43 @@ describe('F006 operator console: real F001 model through the real shell', () => 
     expect(el.innerHTML).toContain('Copying never runs anything');
   });
 
+  it('F009: Observer mode is pure-read (no copy buttons); Operate restores them', async () => {
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+    el.querySelector('.console-item-select').click(); // select → drawer shows copy buttons (Operator default)
+    expect(el.querySelector('#console-inspect-pane .copy-cmd-btn')).toBeTruthy();
+
+    el.querySelector('.mode-toggle-btn[data-mode="observer"]').click();
+    expect(el.querySelector('#console-inspect-pane .copy-cmd-btn')).toBeFalsy();
+    expect(el.querySelector('#console-inspect-pane').innerHTML).toContain('Observer mode');
+
+    el.querySelector('.mode-toggle-btn[data-mode="operator"]').click();
+    expect(el.querySelector('#console-inspect-pane .copy-cmd-btn')).toBeTruthy();
+  });
+
+  it('F009: mark-as-run annotates the item locally (the GUI never executes)', async () => {
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+    el.querySelector('.console-item-select').click();
+    el.querySelector('.mark-run-btn').click();
+    expect(el.querySelector('#console-inspect-pane').innerHTML).toContain('Marked as run');
+  });
+
+  it('F009: Refresh re-pulls the model from the producer', async () => {
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+    const orig = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (...a) => { calls += 1; return orig(...a); };
+    el.querySelector('.refresh-btn').click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(calls).toBeGreaterThan(0);
+    globalThis.fetch = orig;
+  });
+
   it('ANTI-SYNTHETIC: if the model classifies nothing as human, the needs-you queue is empty', async () => {
     // Regress the producer: make every item agent_runnable (no human buckets).
     const regressed = {

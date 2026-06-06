@@ -164,7 +164,12 @@
         "Journey test on real state: hand off (F008) -> mark-run -> refresh re-reads the model; stale view prompts refresh"
       ],
       "acceptance": "The console provides the Observer/Operator mode switch, mark-run-externally (as a command handoff), attach-evidence-by-reference, refresh-triage (re-reads F001), and your-own-view stale detection, feeding the F007 activity strip. Verified by a journey test on real state proving the full single-agent loop (hand off -> mark-run -> refresh re-reads the model), that a stale view prompts a refresh before continuing, and that the console originates no mutation. Multi-actor scope/conflict display is F010.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/operator-console-lifecycle-f009.test.js (revisionChanged, reconcileMarkedRun, mode gating, refresh)",
+        "dashboard/tests/integration/operator-console-journey.test.js (real-shell: Observer pure-read, mark-run, Refresh re-pulls)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F010",
