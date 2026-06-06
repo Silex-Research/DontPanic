@@ -46,6 +46,18 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-06 — README rewrite for clarity and reader-first voice
+
+### Changed
+- Full editing pass on `README.md`. It now opens with a plain-language framing
+  (code review, CI, and an approval queue, for the case where the author is an
+  AI) so a non-engineer lands softly, then keeps the mechanics specific for
+  practitioners. The before/after became one real terminal transcript, formulaic
+  phrasing and symbol-as-connector usage were cut, and the section rhythm was
+  varied. No command, flag, path, or capability changed.
+
+Surfaces affected: README
+
 ## 2026-06-05 — Applicable-conventions disposition gate (plan 2026-06-05-004)
 
 ### Added
