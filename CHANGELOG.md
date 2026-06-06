@@ -46,6 +46,50 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-05 — Applicable-conventions disposition gate (plan 2026-06-05-004)
+
+### Added
+- `dontpanic plan-review` emits an advisory **conventions-disposition** block when a
+  plan declares one or more surfaces whose sufficiency pack has undisposed / invalid /
+  applied-without-evidence items. The plan records dispositions in a per-plan
+  `conventions.json` ledger (one of `applied` / `not-applicable` / `deferred` /
+  `waived`, with a reason required for the last three). Advisory only — warn-only in
+  v0, never blocks the verdict or exit code, and stays silent for plans that declare
+  no surface or whose ledger is complete.
+- A canonical surface vocabulary + alias map turns lint tags, QA surface classes, and
+  skill `applies_to` values into one of a fixed set of canonical surfaces; the matched
+  applicable skills feed the ledger's expected items (awareness → accountability).
+
+Surfaces affected: plan-review (CLI)
+
+## 2026-06-05 — Dashboard design system v0: shared component layer + Repair rebuilt (plan 2026-06-05-003)
+
+### Added
+- A shared dashboard component layer (`dashboard/components.css` + render helpers):
+  token scales (spacing, type, semantic status colors, focus ring) and the approved
+  primitives — Button, CopyCommand, Card, StatTile/StatStrip, SectionHeader, Banner,
+  Skeleton — so pages compose primitives instead of hand-rolling markup.
+- Shell accessibility: a `<main>` landmark, a skip-to-content link, and a global
+  `:focus-visible` ring.
+
+### Changed
+- The **Repair** tab is rebuilt as the worked example: it now LISTS the per-item
+  repair set grouped by safety class (auto-safe / human-required / blocked-external /
+  info) instead of showing only aggregate counts, every action is a copy-command with
+  an honest "Copy …" label and copied/failed feedback, and it distinguishes
+  populated / empty / zero / corrupt states. Still read-only — it copies commands and
+  never executes.
+- Nav order is task-priority: Needs Attention · Repair · Work · Health · Architecture ·
+  Tools & Setup · Preferences (Health moved ahead of Architecture).
+
+### Removed
+- The four orphan dashboard pages (command-center, financial, cloud-costs, security)
+  and their stylesheets, which were not in the live nav yet still loaded and silently
+  restyled the live pages via last-wins cascade. A guard now keeps `index.html` loading
+  page CSS only for registered pages.
+
+Surfaces affected: dashboard
+
 ## 2026-06-05 — QA sufficiency contract + advisory surface lint (plan 2026-06-05-002)
 
 ### Added
