@@ -45,18 +45,45 @@ SEPARATE from the dashboard UI remediation (plan 2026-06-05-003): this is orches
 governance, that is product UI. Different surfaces, different risk profiles, different
 reviewers.
 
+## Canonical surface mapping (load-bearing — added after review)
+The four vocabularies in play do NOT naturally match: plan-review lint tags
+(`dashboard`, `cli`, `schema`, `persistence`, `orchestration`, `core`), the
+qa-sufficiency surface classes (read-only UI, interactive UI, mobile, command,
+agent/MCP, mutation, external-integration, service/batch), the skill `applies_to`
+values (`web`, `ux`, `backend`, `infra`, `security`), and agent-conventions topics.
+Without a canonical bridge, awareness routes to the wrong (or no) standard — e.g.
+`agent-browser` declares `[web, ux]` but a dashboard plan derives `dashboard`. F001
+defines ONE closed canonical vocabulary + an alias map. The seed table:
+
+| canonical id | aliases folded in |
+|---|---|
+| `frontend-ui` | dashboard · read-only UI · interactive UI · web · ux |
+| `command` | cli · command |
+| `backend-api` | backend · api · service/batch · persistence · schema |
+| `mobile-app` | mobile · ios · android |
+| `agent-tool` | agent/MCP tool |
+| `infra-deploy` | infra · deploy |
+| `security-review` | security |
+| `mutation` | mutation |
+
+Unknown inputs resolve to an explicit `unrouteable` marker (never silently dropped).
+
 ## Scope boundary
-- IN: derive `surfaces[]` from a plan's declared surface_class + changed/declared paths;
-  a declarative sufficiency-pack registry (surface → required convention/skill items);
-  the disposition vocabulary + plan ledger field; an ADVISORY plan-review check that warns
-  on undisposed applicable items; and the **dashboard/frontend pack seeded as the one
-  concrete worked example**, dogfooded against a synthetic dashboard-surface plan.
-- OUT (demand-gated content, not code): fully authoring the other surface packs
-  (backend/API, mobile iOS/Android, CLI, agent/MCP, external integration, infra/deploy).
-  They are NAMED in the registry with a stub; their item content is filled when a plan in
-  that surface needs it — do not build the whole 8-pack framework up front.
+- IN: **the canonical surface vocabulary + alias map (F001)**; derive a plan's canonical
+  surfaces from its declared surface class + changed/declared paths (F002); a declarative
+  sufficiency-pack registry keyed by canonical surface (F003) **plus an unrouteable-skills
+  inventory** (skills with missing/malformed `applies_to` are listed, not silently skipped);
+  the disposition vocabulary + a **dedicated per-plan ledger at `docs/plans/<id>/conventions.json`**
+  (F004); an ADVISORY plan-review check (F005); and the **frontend pack seeded as the one
+  concrete worked example**, dogfooded against BOTH a synthetic plan AND one real historical
+  plan (the dashboard plan that missed the design-system disposition) (F006).
+- OUT — STATED PLAINLY: this plan does NOT yet govern backend/API, mobile (iOS/Android),
+  CLI, agent/MCP, external-integration, or infra/deploy sufficiency. It builds the registry
+  shape + canonical mapping and seeds ONLY the frontend pack; the other packs are NAMED,
+  demand-gated stubs whose item content is authored when a plan in that surface needs it.
 - OUT (deferred): BLOCK enforcement (escalating the warn to a hard block for user-facing /
-  mutation-capable surfaces); auto-inference of disposition; cross-repo convention sync.
+  mutation / security surfaces — incl. applied-without-evidence); auto-inference of
+  disposition; cross-repo convention sync.
 
 ## Why this generalizes (per the proposal)
 Frontend/mobile are most exposed (surface quality lives in layout/affordance/state/a11y

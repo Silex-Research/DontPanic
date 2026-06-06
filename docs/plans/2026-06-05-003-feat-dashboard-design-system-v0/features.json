@@ -26,9 +26,9 @@
         "Add renderPage()/page-skeleton CSS (.page/.page-header/.page-summary/.page-content/.page-footer)",
         "index.html + core.js: wrap page container in <main>, add a skip-to-content link, add a global :focus-visible rule using a --focus-ring token",
         "Reorder pageModules so the nav leads with Needs Attention then Repair",
-        "Journey assertion: boot createJarvis() with producer state; assert <main> + skip link exist, nav order matches the new priority order, and a focus-visible style is applied to the active tab"
+        "Journey assertion: boot the shell with producer state; assert the main landmark + skip link exist, nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS"
       ],
-      "acceptance": "A shared renderPage() skeleton + a hardened shell (main landmark, skip-to-content link, global :focus-visible, task-priority nav order) are in place. Verified by a real-shell journey assertion (extending dashboard-journey.test.js) that boots createJarvis() with producer-generated state and checks the landmark, skip link, focus-visible affordance, and the new nav order.",
+      "acceptance": "A shared renderPage() skeleton + a hardened shell (main landmark, skip-to-content link, a focus-ring token + global focus-visible rule, task-priority nav order) are in place. Verified by a real-state→real-shell journey assertion that boots the shell with producer-generated state and checks: the main landmark + skip link exist, the nav order matches the new priority order, interactive controls are keyboard-focusable, and the focus-ring rule/token is present in CSS. True visual focus-ring rendering is NOT asserted in jsdom — it is deferred to a later Playwright pass.",
       "passes": false
     },
     {
@@ -36,14 +36,15 @@
       "category": "functional",
       "phase": 2,
       "depends_on": ["F001", "F002"],
-      "description": "Migrate Repair as the worked example (the worst-scoring tab; today it has NO stylesheet, shows 173 items as a count with none listed, and its 'Repair automatically' button copies a command while the label implies execution). Rebuild Repair on the F001/F002 primitives: a StatStrip for the counts (lead with the actionable number), the missing per-item LIST grouped by safety class (auto-safe / human-required / blocked-external / info), CopyCommand actions whose visible labels start with 'Copy' and show copied/failed feedback, and proper empty/zero/error states.",
+      "description": "Migrate Repair as the worked example (the worst-scoring tab; today it has NO stylesheet, shows 173 items as a count with none listed, and its 'Repair automatically' button copies a command while the label implies execution). Rebuild Repair on the F001/F002 primitives: a StatStrip for the counts (lead with the actionable number), the missing per-item LIST grouped by safety class (auto-safe / human-required / blocked-external / info), CopyCommand actions whose visible labels start with 'Copy' and show copied/failed feedback, and proper empty/zero/error states. This stays a RENDER-LAYER change: the four states are driven by FIXTURE INPUTS, not by changing the loader. NAMED DEPENDENCY: a true 'corrupt-cache' state distinct from 'never-ran' requires the state loader to PRESERVE parse/load errors rather than collapse them into the missing-cache empty state; that loader/error-envelope change is called out as a dependency (handled as a bounded sub-step, or the live corrupt path is deferred until the loader preserves it — the Repair render still proves the state from fixture inputs).",
       "steps": [
         "Build Repair's page on renderPage() + components: StatStrip, banded item list (each item a Card with its command as a CopyCommand), section headers per safety class",
         "Relabel actions to honest 'Copy …' verbs; add copied + failed feedback; surface the fleet-vs-project scope + consequence next to the action",
-        "Add empty ('nothing to repair'), zero, and error(corrupt-cache) states distinct from never-ran",
-        "Repair journey test (extending dashboard-journey.test.js) on producer state: asserts the items render (not just a count), action labels say 'Copy', copied/failed feedback exists, and the honest-label + state coverage hold"
+        "Render the four states (populated / empty / zero / corrupt) from FIXTURE INPUTS so the tab stays a render-layer change",
+        "Name the loader error-envelope dependency (preserve parse/load errors) in decisions; implement as a bounded sub-step or defer the live corrupt path",
+        "Repair journey test on producer state + fixture-driven render tests: assert items render (not just a count), labels say 'Copy', copied/failed feedback exists, and corrupt-vs-never-ran is distinguished from fixture inputs"
       ],
-      "acceptance": "The Repair tab is rebuilt on the shared component layer: it lists the per-item repair set grouped by safety class (not just aggregate counts), every action is a copy-command with an honest 'Copy …' label + visible copied/failed feedback, and it distinguishes empty/zero/error states. Verified by a real-state→real-shell Repair journey test asserting the item list renders from producer state, the labels are copy-honest, and the state coverage holds.",
+      "acceptance": "The Repair tab is rebuilt on the shared component layer: it lists the per-item repair set grouped by safety class (not just aggregate counts), every action is a copy-command with an honest 'Copy …' label + visible copied/failed feedback, and it distinguishes populated/empty/zero/corrupt states. Verified by a real-state→real-shell Repair journey test (producer state) PLUS fixture-driven render tests proving the corrupt-vs-never-ran distinction from fixture inputs; the loader error-envelope dependency is named in decisions and either implemented as a bounded sub-step or explicitly deferred.",
       "passes": false
     },
     {
@@ -51,14 +52,14 @@
       "category": "functional",
       "phase": 2,
       "depends_on": ["F001"],
-      "description": "Conformance checks that would have caught the audit's worst bug class. (a) 'No unstyled emitted class': a test that every CSS class a page render emits resolves to a rule in core.css or that page's stylesheet — catching the Repair / sr-* / cap-card-* / wn-gt-* / hlth-global-tools* unstyled-render failures. (b) 'Token-only values': a check that page CSS contains no raw hex / rgba / px font-size / px spacing (all via tokens). Both advisory-to-blocking as adoption lands; seed them to FAIL on today's known offenders so the backlog is visible.",
+      "description": "Conformance checks that would have caught the audit's worst bug class, SCOPED so they do not contradict the six-tab deferral. Two checks: (a) emitted-class→CSS-rule resolution (catches the Repair / sr-* / cap-card-* / wn-gt-* / hlth-global-tools* unstyled-render failures); (b) token-only values (no raw hex/rgba/px font-size/px spacing). ENFORCEMENT IS TIERED. Blocking subset (fails the suite): the shared primitives (base + component CSS), the migrated Repair page, and the orphan-CSS guard. Advisory backlog: every other (unmigrated) tab is recorded in an explicit OFFENDER LEDGER; a test asserts the detector reports EXACTLY that current backlog WITHOUT failing the suite, so the debt is visible and shrinks as each tab migrates into the blocking subset. EXTRACTION MODEL: the detector is verified by synthetic pass/fail fixtures, and for migrated pages it reads the classes actually emitted from the REAL-SHELL DOM after journey boot (capturing dynamic / modifier / state classes), not by scraping static JS string literals.",
       "steps": [
-        "Implement the emitted-class→CSS-rule resolver check over the page render helpers + stylesheets",
-        "Implement the token-only-values check over page CSS (no raw hex/rgba/px font-size/px spacing)",
-        "Wire both into the dashboard test suite; record the current known offenders as the explicit backlog",
-        "Tests: a synthetic page with an unstyled emitted class fails the check; a page using only tokens + defined classes passes"
+        "Implement the emitted-class→CSS-rule resolver: synthetic-fixture detector + real-shell-DOM extraction for migrated pages",
+        "Implement the token-only check; apply it (blocking) to base + component CSS + migrated Repair only",
+        "Add the explicit offender ledger for unmigrated tabs; a test asserts the detector reports exactly that backlog without failing the suite",
+        "Tests: a synthetic offender fails the blocking check; the migrated subset passes; the offender-ledger test matches the recorded backlog (and shrinks when a tab migrates)"
       ],
-      "acceptance": "Two static conformance checks exist and run in the dashboard suite (not a rendered-surface claim): every class a page's render helpers output must resolve to a CSS rule, and page CSS must use tokens (no raw hex/rgba/px font-size/px spacing). Verified by tests that the checks FAIL on a synthetic unstyled-emitted-class / raw-hex fixture and PASS on a token-only, fully-styled fixture.",
+      "acceptance": "Two conformance checks exist — emitted-class→CSS-rule resolution and token-only values — enforced as BLOCKING for the shared primitives + the migrated Repair page + the orphan-CSS guard, and as an ADVISORY offender-ledger report for the unmigrated tabs (a test asserts the detector reports exactly the current backlog without failing the suite). The detector reads migrated-page classes from the real-shell DOM after journey boot and is itself verified by synthetic pass/fail fixtures. Verified by: the checks failing on a synthetic offender, passing on the migrated subset, and the offender-ledger test matching the recorded backlog.",
       "passes": false
     },
     {
