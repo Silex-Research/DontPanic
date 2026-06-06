@@ -69,7 +69,11 @@
         "Journey tests A1/A2/A3/A4 on real state: an agent derives a run-plan + escalation list; the escalate-list equals needs_auth+needs_decision; uncertainty is reported, not hidden"
       ],
       "acceptance": "operator brief --json and --text render the F001 model (incl. scope + run_state) with an allow-list vs escalate-list, the data_quality block, and an embedded honesty contract. Verified by journey tests on real state: an agent boots and derives a run-plan + precise escalation list (A1), the safe-to-run set excludes everything human-gated (A2), the output suffices to report back what an agent ran (A3), and incomplete classification surfaces as uncertain, never fabricated (A4). Command-line surface only.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_operator_brief_f004.py (10 tests, real fixture + CLI smoke)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F005",

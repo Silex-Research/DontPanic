@@ -200,6 +200,7 @@ def build_triage(
     liveness later); ``safety_class_for`` is the repair-projection lookup.
     """
     gate_live_for = gate_live_for or (lambda _it: True)
+    input_count = len(items)
     if dedupe:
         items = dedupe_items(items)
     out_items: list[dict] = []
@@ -226,6 +227,7 @@ def build_triage(
         )
     counts = Counter(i["operator_bucket"] for i in out_items)
     data_quality = {
+        "input_count": input_count,
         "total": len(out_items),
         "counts": dict(counts),
         "uncertain": counts.get(OperatorBucket.UNCERTAIN.value, 0),

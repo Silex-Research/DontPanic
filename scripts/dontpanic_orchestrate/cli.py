@@ -4980,6 +4980,10 @@ def main(argv: list[str] | None = None) -> int:
         return _manifest_main(raw[1:])
     if raw and raw[0] == "agent":
         return _agent_main(raw[1:])
+    if raw and raw[0] == "operator":
+        from dontpanic_orchestrate.operator_brief import cli_main as _operator_brief_cli
+
+        return _operator_brief_cli(raw[1:])
     if raw and raw[0] == "orchestrate":
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":

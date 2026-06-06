@@ -1,0 +1,26 @@
+{
+ "feature": "F004 operator brief",
+ "captured_at": "2026-06-06",
+ "summary": {
+  "input_count": 313,
+  "total": 182,
+  "needs_you": 14,
+  "agent_can_run": 100,
+  "uncertain": 0,
+  "quiet": 68
+ },
+ "escalate_sample": [
+  "dontpanic capabilities setup agent-claude-cli --print-steps",
+  "dontpanic capabilities setup discord-notify --print-steps",
+  "dontpanic approve 2026-04-25-003-infra-volley-synthetic upfront",
+  "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 upfront"
+ ],
+ "allow_count": 100,
+ "honesty_contract": [
+  "Narrate uncertain items; never fabricate a clean bucket.",
+  "Never run needs_auth or needs_decision items \u2014 those are the human's.",
+  "Run only allow_list items (agent_runnable / auto_safe).",
+  "Report what you ran with its evidence reference and dedupe_key.",
+  "If the model is stale (state_revision drift), re-read before acting."
+ ]
+}
