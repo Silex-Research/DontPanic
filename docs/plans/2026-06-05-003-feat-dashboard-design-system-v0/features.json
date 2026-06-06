@@ -58,7 +58,11 @@
         "Repair journey test on producer state + fixture-driven render tests: assert items render (not just a count), labels say 'Copy', copied/failed feedback exists, and corrupt-vs-never-ran is distinguished from fixture inputs"
       ],
       "acceptance": "The Repair tab is rebuilt on the shared component layer: it lists the per-item repair set grouped by safety class (not just aggregate counts), every action is a copy-command with an honest 'Copy \u2026' label + visible copied/failed feedback, and it distinguishes populated/empty/zero/corrupt states. Verified by a real-state\u2192real-shell Repair journey test (producer state) PLUS fixture-driven render tests proving the corrupt-vs-never-ran distinction from fixture inputs; the loader error-envelope dependency is named in decisions and either implemented as a bounded sub-step or explicitly deferred.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F004",

@@ -275,3 +275,128 @@ export function renderRepairControlsHTML(bundle, scope) {
       </div>
     </section>`;
 }
+
+// ── Plan 2026-06-05-003 F003 — Repair rebuilt on the shared component layer ──
+// The old renderRepairControlsHTML (above) showed counts + two copy buttons but
+// never LISTED the items. These additions render the per-item set grouped by safety
+// class, lead with the actionable number, and cover the four states. RENDER-LAYER
+// only: state is derived from fixture inputs, never from changing the loader.
+
+import {
+  renderPageHTML,
+  renderStatStripHTML,
+  renderSectionHeaderHTML,
+  renderCardHTML,
+  renderCopyCommandHTML,
+  renderBannerHTML,
+} from './components.js';
+
+export const REPAIR_VIEW_POPULATED = 'populated';
+export const REPAIR_VIEW_ZERO = 'zero';
+export const REPAIR_VIEW_NEVER_RAN = 'never_ran';
+export const REPAIR_VIEW_CORRUPT = 'corrupt';
+
+// safety class → component status accent + human band label.
+const _CLASS_META = {
+  [AUTO_SAFE]:        { status: 'ok',        label: 'Auto-safe (derived state)' },
+  [HUMAN_REQUIRED]:   { status: 'attention', label: 'Human required' },
+  [BLOCKED_EXTERNAL]: { status: 'blocked',   label: 'Blocked — external dependency' },
+  [INFO]:             { status: 'info',      label: 'Informational' },
+};
+const _BAND_ORDER = [AUTO_SAFE, HUMAN_REQUIRED, BLOCKED_EXTERNAL, INFO];
+
+/** Pure: classify the repair surface into one of the four view states from fixture
+ *  inputs. `errored` (a preserved parse/load error envelope) wins; then never-ran
+ *  (no cache at all) vs zero (cache ran, nothing to repair) vs populated. */
+export function deriveRepairView({ items = [], envPresent = false, errored = false, scope } = {}) {
+  if (errored) return { kind: REPAIR_VIEW_CORRUPT, scope, bundle: null, summary: null };
+  if (!envPresent) return { kind: REPAIR_VIEW_NEVER_RAN, scope, bundle: null, summary: null };
+  const bundle = buildBundleFromItems(items, scope);
+  const summary = buildRepairSummary(bundle);
+  const kind = bundle.actions.length === 0 ? REPAIR_VIEW_ZERO : REPAIR_VIEW_POPULATED;
+  return { kind, scope, bundle, summary };
+}
+
+function _bandHTML(bundle) {
+  const byClass = {};
+  for (const a of bundle.actions) (byClass[a.safety_class] ||= []).push(a);
+  let html = '';
+  for (const cls of _BAND_ORDER) {
+    const group = byClass[cls];
+    if (!group || group.length === 0) continue;
+    const meta = _CLASS_META[cls];
+    html += renderSectionHeaderHTML(meta.label, { count: group.length });
+    for (const a of group) {
+      const cmd = a.command
+        ? renderCopyCommandHTML(a.command, { label: 'Copy command' })
+        : '';
+      html += renderCardHTML({
+        title: a.id || a.kind || 'repair',
+        impact: a.plain_consequence || '',
+        status: meta.status,
+        body: cmd,
+      });
+    }
+  }
+  return html;
+}
+
+/** Render the rebuilt Repair page from a derived view. Honest "Copy …" labels,
+ *  per-item list, and the four state surfaces. */
+export function renderRepairPageHTML(view) {
+  const scope = view && view.scope ? view.scope : 'fleet';
+  const footer = `Read-only — copies commands, never executes. Scope: ${esc(scope)}.`;
+
+  if (view.kind === REPAIR_VIEW_CORRUPT) {
+    return renderPageHTML({
+      title: 'Repair',
+      summary: renderBannerHTML(
+        'Repair cache could not be read (parse/load error). Re-run the scan to rebuild it.',
+        { kind: 'error' },
+      ),
+      content: renderCopyCommandHTML(repairPlanCommand(scope), { label: 'Copy re-scan command' }),
+      footer,
+    });
+  }
+  if (view.kind === REPAIR_VIEW_NEVER_RAN) {
+    return renderPageHTML({
+      title: 'Repair',
+      summary: renderBannerHTML('No repair scan yet for this scope. Run a build to populate it.', { kind: 'info' }),
+      content: renderCopyCommandHTML(repairPlanCommand(scope), { label: 'Copy scan command' }),
+      footer,
+    });
+  }
+  if (view.kind === REPAIR_VIEW_ZERO) {
+    return renderPageHTML({
+      title: 'Repair',
+      summary: renderBannerHTML('Nothing to repair — this scope is clean.', { kind: 'info' }),
+      content: '',
+      footer,
+    });
+  }
+
+  // populated
+  const s = view.summary;
+  const bundle = view.bundle;
+  const preview = buildRepairAutoPreview(bundle);
+  const strip = renderStatStripHTML([
+    { value: s.derived_state, label: 'Auto-safe now', status: s.derived_state > 0 ? 'ok' : '' },
+    { value: s.human_required, label: 'Human required', status: s.human_required > 0 ? 'attention' : '' },
+    { value: s.blocked_external, label: 'Blocked external', status: s.blocked_external > 0 ? 'blocked' : '' },
+    { value: s.info, label: 'Info', status: '' },
+  ]);
+  const actions =
+    renderCopyCommandHTML(repairApplyCommand(scope), {
+      label: 'Copy safe-repair command',
+      ariaLabel: `Copy the safe derived-state repair command for ${scope}`,
+    }) +
+    `<p class="page-footer">Runs ${preview.willRun.length} safe derived-state repair(s); leaves ${preview.willLeave.length} for a human / external / info. The confirmed tier is never run without your explicit --confirm.</p>` +
+    renderCopyCommandHTML(buildAgentRepairPlanText(bundle), { label: 'Copy agent repair plan' });
+
+  return renderPageHTML({
+    title: 'Repair',
+    summary: strip,
+    content: actions + _bandHTML(bundle),
+    footer,
+  });
+}

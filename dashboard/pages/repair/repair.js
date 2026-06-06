@@ -11,8 +11,8 @@
 // `lib/repair-logic.js`; this IIFE only wires DOM lifecycle + the copy handler.
 
 import {
-  buildBundleFromItems,
-  renderRepairControlsHTML,
+  deriveRepairView,
+  renderRepairPageHTML,
 } from '../../lib/repair-logic.js';
 import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
@@ -39,9 +39,17 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
         : ALL_PROJECTS_VALUE;
     const scope =
       selected === ALL_PROJECTS_VALUE ? 'fleet' : `project:${selected}`;
-    const items = itemsFor(state, selected);
-    const bundle = buildBundleFromItems(items, scope);
-    _el.innerHTML = renderRepairControlsHTML(bundle, scope);
+    // The repair surface is derived from the same fixture inputs the loader hands us:
+    //  env present? + a preserved load/parse error? (Plan 2026-06-05-003 F003.)
+    const env = (state && state.fleetWhatNow) || (state && state.whatNow) || null;
+    const errored = !!(env && env.error);
+    const view = deriveRepairView({
+      items: itemsFor(state, selected),
+      envPresent: !!env,
+      errored,
+      scope,
+    });
+    _el.innerHTML = renderRepairPageHTML(view);
   }
 
   function attachCopyHandler() {
@@ -50,27 +58,41 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     _clickHandler = (ev) => {
       const target = ev.target;
       if (!target || target.classList == null) return;
-      if (!target.classList.contains('repair-copy-btn')) return;
+      // F003 — the component CopyCommand button (.copy-cmd-btn). Legacy
+      // .repair-copy-btn kept for safety during the migration.
+      if (
+        !target.classList.contains('copy-cmd-btn') &&
+        !target.classList.contains('repair-copy-btn')
+      ) {
+        return;
+      }
       const text = target.dataset.copy || '';
       // Read-only contract: copying a command never mutates dashboard state.
+      // Feedback lands in the aria-live sibling (the F001 .copy-cmd-feedback span)
+      // when present, otherwise on the button itself (legacy control).
+      const feedback = target.parentElement
+        ? target.parentElement.querySelector('.copy-cmd-feedback')
+        : null;
+      const setFeedback = (copiedState, msg) => {
+        target.dataset.copied = copiedState;
+        if (feedback) feedback.textContent = msg;
+      };
       const nav = typeof navigator !== 'undefined' ? navigator : null;
       if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
         nav.clipboard
           .writeText(text)
           .then(() => {
-            const original = target.textContent;
-            target.dataset.copied = '1';
-            target.textContent = 'copied';
+            setFeedback('1', 'Copied ✓');
             setTimeout(() => {
               target.dataset.copied = '';
-              target.textContent = original;
+              if (feedback) feedback.textContent = '';
             }, 1500);
           })
           .catch(() => {
-            target.dataset.copied = 'denied';
+            setFeedback('denied', 'Copy blocked — select and copy manually');
           });
       } else {
-        target.dataset.copied = 'unsupported';
+        setFeedback('unsupported', 'Clipboard unavailable — copy manually');
       }
     };
     _el.addEventListener('click', _clickHandler);
