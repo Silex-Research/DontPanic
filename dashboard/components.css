@@ -23,7 +23,7 @@
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.btn--primary { background: var(--status-info); border-color: var(--status-info); color: #fff; }
+.btn--primary { background: var(--status-info); border-color: var(--status-info); color: var(--text-on-accent); }
 .btn--primary:hover { background: var(--accent); }
 .btn--ghost { background: transparent; border-color: transparent; }
 .btn--ghost:hover { background: var(--surface-2); }

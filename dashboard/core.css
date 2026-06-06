@@ -56,6 +56,7 @@
 
   /* Focus ring (NEW) */
   --focus-ring: 0 0 0 2px var(--accent);
+  --text-on-accent: #ffffff;
 }
 
 * {

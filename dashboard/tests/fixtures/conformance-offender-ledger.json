@@ -1,0 +1,12 @@
+{
+  "_comment": "Plan 2026-06-05-003 F004 — ADVISORY backlog. Live tabs still on their own page CSS (raw values, not yet migrated to the token + component layer). Each entry shrinks to zero when that tab migrates into the blocking subset (like Repair did). The conformance test asserts the detector reports EXACTLY this set WITHOUT failing the suite.",
+  "unmigrated_live_tabs": [
+    "architecture",
+    "capabilities",
+    "health",
+    "mission-control",
+    "settings",
+    "what-now"
+  ],
+  "migrated_blocking": ["repair"]
+}

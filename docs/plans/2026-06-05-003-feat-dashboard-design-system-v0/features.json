@@ -79,7 +79,11 @@
         "Tests: a synthetic offender fails the blocking check; the migrated subset passes; the offender-ledger test matches the recorded backlog (and shrinks when a tab migrates)"
       ],
       "acceptance": "Two conformance checks exist \u2014 emitted-class\u2192CSS-rule resolution and token-only values \u2014 enforced as BLOCKING for the shared primitives + the migrated Repair page + the orphan-CSS guard, and as an ADVISORY offender-ledger report for the unmigrated tabs (a test asserts the detector reports exactly the current backlog without failing the suite). The detector reads migrated-page classes from the real-shell DOM after journey boot and is itself verified by synthetic pass/fail fixtures. Verified by: the checks failing on a synthetic offender, passing on the migrated subset, and the offender-ledger test matching the recorded backlog.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     },
     {
       "id": "F005",
