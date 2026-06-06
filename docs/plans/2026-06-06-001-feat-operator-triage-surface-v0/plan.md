@@ -114,9 +114,9 @@ One model, three coordinated panes + status bar + activity strip + two modes.
   project selector, Mode toggle, Refresh, Copy Operator Brief, Terminal handoff.
 - **Activity strip (F007).** One evidence source rendered as an ambient log; carries the
   `313 -> N unique -> M need you` pipeline line (render-truth made visible).
-- **Two modes.** Observer = read-only (copy/inspect, no mutation buttons). Operator =
-  approve/request/reject + safe-tier dry-run/apply, every mutation confirm-gated + evidence
-  recorded. Operator mode is visually unmistakable.
+- **Two modes.** Observer = read-only (copy/inspect, controls hidden). Operator = shows
+  approve/request/reject INTENT + safe-tier commands as COPY/OPEN handoff; nothing executes
+  from the browser (D018). Operator mode is visually unmistakable.
 - **Narrow viewport** collapses to status -> bucket-tabs -> selected item -> evidence
   accordion -> activity; Needs You stays first.
 
@@ -125,23 +125,25 @@ One model, three coordinated panes + status bar + activity strip + two modes.
    F002 dedupe by `dedupe_key`; F003 gate reconciliation against plan status.
 2. **Agent-facing operator brief.** F004 `dontpanic operator brief --json|--text` (CLI
    render of the model; model parity asserted separately).
-3. **Safe-tier engine.** F005 CLI `triage apply --safe` over `auto_safe` only — dry-run /
-   logged / reversible / refuses creds-approvals-mutations; exposed as a seam.
+3. **Safe-tier engine (command-line).** F005 `triage apply --safe` over `auto_safe` only —
+   dry-run / logged / reversible / refuses creds-approvals-mutations; a command the
+   human/agent runs in a terminal.
 4. **Operator-console workbench.** F006 left+top (triage queue, status, modes shell);
    F007 right+activity (context/evidence tabs, what-was-handled log, why-hidden);
-   F008 center actions + the mode switch (per-bucket affordances + agent/terminal handoff,
-   driving the F005 seam for safe-tier).
+   F008 center COPY/OPEN/HANDOFF/REFRESH actions + the mode switch (per-bucket intent +
+   exact-command handoff; the console executes nothing; safe-tier is shown as a command to copy).
 
 ## Constraints / decisions
 - `operator_bucket` is DERIVED by one classifier; producers stay dumb (D003).
 - `safety_class` stays in the repair projection; the classifier consumes it (D004).
 - `uncertain` = render-truth for triage; never silently hidden (D005).
 - The GUI is a dual-mode operator console, not an optional glance (D012).
-- Affordances are tiered, confirm-gated, evidence-writing per bucket; the action channel is
-  bounded to named buckets, never a free shell (D013).
+- v0 console affordances are COPY/OPEN/HANDOFF/REFRESH only — the console originates NO
+  mutation; it expresses intent and hands off the exact command (D018/D020).
 - No `<=N` cap; show ALL unique live human items; the 313->N collapse is a separate fixture
   assertion (D014).
-- F005 is the engine; F008 is the GUI affordance over the same seam (D015).
+- F005 is a command-line safe-tier engine the human/agent runs in a terminal; F008 only
+  HANDS OFF (copies) the command — no browser apply (D015/D018).
 - Safe-tier apply stays opt-in, dry-run-first, off by default (D006).
 - Naming: `dontpanic operator brief` (D008). Narration must not outrun the data contract (D002).
 
@@ -152,10 +154,16 @@ One model, three coordinated panes + status bar + activity strip + two modes.
 - Stale gates from closed/abandoned plans surfaced as live. Fixed by F003.
 
 ## Non-goals (v0)
-- No embedded shell/PTY. The bounded action channel + copy/terminal handoff is the affordance.
+- **Browser-originated governed mutation** (a console button that actually runs
+  `dontpanic approve` or `triage apply --confirm` through a local backend) + its threat
+  model (local-server auth, CSRF, origin restriction, command allowlist, confirmation
+  semantics, evidence atomicity, failure recovery, replay/idempotency, audit-log integrity,
+  stale-tab handling) → SEPARATE plan **2026-06-06-002 Governed GUI Action Channel v1** (D018).
+- No embedded shell/PTY and no browser-originated execution. v0 affordances are
+  copy/open/terminal handoff only.
 - Live dispatch to a RUNNING agent (claude/codex/grok) is deferred to the OpenClaw/Hermes
   runtime; v0 `send to agent` = copy-run-plan / open-in-terminal (D017).
-- No BLOCK enforcement; v0 surfaces, applies-on-request, and hands off only.
+- No BLOCK enforcement; v0 surfaces and hands off only (it applies nothing from the console).
 - Fleet-state serve-path unification (build writes `~/.dontpanic/dashboard/`, serve reads
   `<repo>/dashboard/state/`) is a NAMED dependency of F006, resolved there or deferred (D011).
 

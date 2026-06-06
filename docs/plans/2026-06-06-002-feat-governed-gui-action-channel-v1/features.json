@@ -1,0 +1,63 @@
+{
+  "task_id": "2026-06-06-002-feat-governed-gui-action-channel-v1",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Local action backend with the trust-boundary controls: a localhost-bound action endpoint protected by a per-session auth token, strict origin restriction, and CSRF protection, exposing ONLY a command allowlist bound to operator_bucket actions (approve/request/reject for a named gate; triage apply --safe for auto_safe). No arbitrary command path. This is the gate that keeps the executor from becoming a general shell.",
+      "steps": [
+        "Bind the action endpoint to localhost; issue a per-session auth token the served console must present",
+        "Enforce origin restriction + CSRF protection on every action request",
+        "Define the allowlist: only named-gate decisions and auto_safe apply; reject anything else",
+        "Tests: unauthorized/cross-origin/forged requests are refused; only allowlisted actions reach an executor"
+      ],
+      "acceptance": "The local action backend accepts only authenticated, same-origin, CSRF-protected requests for allowlisted operator_bucket actions; everything else is refused. Verified by tests proving unauthorized, cross-origin, and forged requests are rejected, and that no path reaches arbitrary command execution.",
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "description": "Browser-originated gate decision: the operator console can approve / request-changes / reject a LIVE gate directly, with an explicit confirmation step, routed through F001's allowlist, writing an evidence record atomically (the decision and its evidence commit together or not at all).",
+      "steps": [
+        "Wire approve/request/reject buttons to the F001 backend for a named live gate",
+        "Require an explicit confirmation step before the mutation",
+        "Write the decision + evidence atomically",
+        "Tests: a confirmed approval clears the gate and records evidence atomically; a refused/cancelled one mutates nothing"
+      ],
+      "acceptance": "A human can approve/request-changes/reject a live gate from the console with explicit confirmation, the action commits atomically with its evidence, and a cancelled action mutates nothing. Verified by tests on real gate state.",
+      "passes": false
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "description": "Browser-originated safe-tier apply: the console can run the dry-run then confirm the auto_safe apply directly, driving the 2026-06-06-001 F005 engine through F001's allowlist, with the same dry-run-first / confirm / atomic-evidence rules. Still auto_safe only; still refuses creds/approvals/project mutations.",
+      "steps": [
+        "Wire a dry-run-then-confirm safe-tier affordance to the F001 backend, driving the F005 engine",
+        "Preserve auto_safe-only scope and the hard refusals",
+        "Write evidence atomically on confirm",
+        "Tests: dry-run mutates nothing; confirm applies only auto_safe + records evidence; non-safe items refused"
+      ],
+      "acceptance": "The console can dry-run and then confirm-apply the auto_safe tier, driving the F005 engine via F001, with atomic evidence and auto_safe-only scope preserved. Verified by tests proving dry-run is side-effect-free, confirm applies only auto_safe + writes evidence, and non-safe items are refused.",
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 3,
+      "description": "Integrity under failure: idempotency keys so a double-click or retry never double-applies; audit-log integrity (append-only, tamper-evident) so every browser-originated action is provably recorded; failure recovery so a partial action leaves a clean, resumable state; and a stale-tab guard — each action carries the model fingerprint it was issued against, and the backend refuses if the world has moved on.",
+      "steps": [
+        "Idempotency keys on every action; replays are no-ops",
+        "Append-only, tamper-evident audit log of browser-originated actions",
+        "Failure recovery: a partial/interrupted action leaves a clean resumable state",
+        "Stale-tab guard: refuse actions whose issued-against model fingerprint no longer matches",
+        "Tests: double-submit is idempotent; tampering is detectable; an interrupted action recovers; a stale-fingerprint action is refused"
+      ],
+      "acceptance": "Browser-originated actions are idempotent (no double-apply), provably logged (tamper-evident), recoverable after interruption, and refused when issued against a stale model fingerprint. Verified by tests covering double-submit, tamper detection, interrupted-action recovery, and stale-tab refusal.",
+      "passes": false
+    }
+  ]
+}
