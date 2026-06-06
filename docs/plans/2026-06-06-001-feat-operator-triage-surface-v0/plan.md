@@ -3,7 +3,7 @@ id: 2026-06-06-001-feat-operator-triage-surface-v0
 title: Operator triage surface v0 — one model, two renderers (agent brief + operator-console workbench)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-06"
 goal_type: new_feature
 description: >
