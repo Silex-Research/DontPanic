@@ -13,7 +13,10 @@ describe('core.js: real page-module surface (2026-06-05-002 F001)', () => {
 
   it('matches the registered V0 nav pages exactly (drift guard)', () => {
     // Plan 2026-06-05-003 F002 — task-priority order (Health moved ahead of Architecture).
+    // Plan 2026-06-06-001 F006 — the operator-console workbench leads the nav as the
+    // primary surface (the F001 triage model rendered as a calm queue).
     expect(pageModules).toEqual([
+      'pages/operator-console/operator-console.js',
       'pages/what-now/what-now.js',
       'pages/repair/repair.js',
       'pages/mission-control/mission-control.js',

@@ -47,7 +47,10 @@ describe('F002 shell hardening (real shell boot)', () => {
   });
 
   it('nav order leads with the triage→fix→work→status priority', () => {
-    expect(pageModules.slice(0, 4)).toEqual([
+    // Plan 2026-06-06-001 F006 — the operator-console workbench is the primary
+    // triage surface and now leads, ahead of the legacy What Now page.
+    expect(pageModules.slice(0, 5)).toEqual([
+      'pages/operator-console/operator-console.js',
       'pages/what-now/what-now.js',
       'pages/repair/repair.js',
       'pages/mission-control/mission-control.js',
