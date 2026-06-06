@@ -585,7 +585,11 @@ function JARVIS_LITERAL() { return {
 // future plan): command-center, cloud-costs, financial, security.
 // Health ships a minimal honest missing-data scaffold here; F003 will
 // compose it from existing readiness/security/build-warning substrate.
-const pageModules = [
+// Plan 2026-06-05-002 F001 — exported so tests reference the single source of
+// truth for the registered nav/loader surface (no copied routers / re-declared
+// page lists). No behavior change to the running shell: the IIFE below still
+// consumes this same const.
+export const pageModules = [
   'pages/what-now/what-now.js',
   // Plan 2026-06-04-006 F006 — safe-repair surfaces ("Repair automatically" +
   // "Copy agent repair plan"), scope-aware via 005. Read-only: copies commands,

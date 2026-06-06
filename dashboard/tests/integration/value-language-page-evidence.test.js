@@ -380,40 +380,38 @@ describe('F004: real Preferences page render emits a provenance footer', () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('F004: real dashboard shell renders V0 nav only', () => {
-  it('createJarvis() with the V0 page modules registers Needs Attention/Work/Tools & Setup/Health/Preferences', async () => {
+  it('registers a nav label for EVERY real page module (2026-06-05-002 F002 drift guard)', async () => {
     setupDOM();
     // Stub fetch so loadState's missing-file paths resolve quickly.
     globalThis.fetch = async () => ({ ok: false, status: 404, json: async () => null });
 
-    const { createJarvis } = await import('../../core.js');
+    // Plan 2026-06-05-002 F001/F002 — drive imports + expectations from the REAL
+    // exported pageModules list, not a hand-maintained subset. If core.js adds or
+    // removes a registered page, this test changes with it instead of certifying a
+    // smaller UI than the operator sees (the old list omitted Repair + Architecture
+    // + Mission Control).
+    const { createJarvis, pageModules } = await import('../../core.js');
     const J = createJarvis();
-    // Register every V0 page module's label by stubbing Jarvis and
-    // importing each. We do this in declaration order to mirror core.js.
     const labels = [];
     globalThis.Jarvis = {
       registerPage(cfg) { labels.push(cfg.label); J.registerPage(cfg); },
       getPageEl(id) { return document.getElementById(`page-${id}`); },
     };
 
-    // Reset module cache for the page modules so each IIFE re-registers
-    // into this run's Jarvis stub. Vitest's vi.resetModules() would do
-    // this globally; here we import via a fresh URL query suffix.
+    // Import every real page module (cache-busted) in declaration order so each
+    // IIFE re-registers into this run's Jarvis stub.
     const suffix = `?test=${Date.now()}`;
-    await import('../../pages/what-now/what-now.js' + suffix);
-    await import('../../pages/mission-control/mission-control.js' + suffix);
-    await import('../../pages/capabilities/capabilities.js' + suffix);
-    await import('../../pages/health/health.js' + suffix);
-    await import('../../pages/settings/settings.js' + suffix);
+    for (const mod of pageModules) {
+      await import(`../../${mod}${suffix}`);
+    }
 
-    // V0 surface table (plan 2026-05-24-001 F002): exactly these five.
-    expect(labels).toEqual([
-      'Needs Attention',
-      'Work',
-      'Tools & Setup',
-      'Health',
-      'Preferences',
-    ]);
-    // Financial / Cloud Costs / Security must not register as core tabs.
+    // Exactly one nav label per registered page — no drift in either direction.
+    expect(labels.length).toBe(pageModules.length);
+    // The pages older nav tests omitted MUST now be certified.
+    expect(labels).toEqual(
+      expect.arrayContaining(['Needs Attention', 'Repair', 'Architecture', 'Health']),
+    );
+    // Removed-from-V0 surfaces must not register as core tabs.
     expect(labels).not.toContain('Financial');
     expect(labels).not.toContain('Cloud Costs');
     expect(labels).not.toContain('Security');
