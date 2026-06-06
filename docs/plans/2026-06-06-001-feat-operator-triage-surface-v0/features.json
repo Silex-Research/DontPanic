@@ -144,7 +144,12 @@
         "Journey test H7-affordance on real state: each bucket shows the correct copy/open affordance for the item's command; nothing mutates"
       ],
       "acceptance": "The center pane renders the item's exact command(s) per bucket as copy + open-in-terminal buttons (needs_auth setup; needs_decision behind an intent confirm; agent_runnable command + copy-the-full-sequence; auto_safe dry-run + confirm), hardcoding no command semantics. Verified by a journey test on real state proving each bucket renders its correct affordance from the item and the console originates no mutation. Presentation only \u2014 no mark-run, no refresh, no lifecycle (F009).",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/operator-console-affordances-f008.test.js (7 tests: bucket labels, handoff block, read-only no-execute)",
+        "dashboard/tests/integration/operator-console-journey.test.js (real-shell: copy writes clipboard, nothing executes)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F009",

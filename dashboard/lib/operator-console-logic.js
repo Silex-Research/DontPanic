@@ -7,7 +7,7 @@
 // status, and collapses the non-human buckets to counts. No raw JSON; no cap.
 
 import { esc } from './html-escape.js';
-import { renderSectionHeaderHTML, renderCardHTML } from './components.js';
+import { renderSectionHeaderHTML, renderCardHTML, renderCopyCommandHTML } from './components.js';
 
 // Buckets the human must see. uncertain rides WITH needs-you (the honesty bucket,
 // never buried — D017).
@@ -147,7 +147,51 @@ export function renderInspectHTML(detail) {
   if (detail.whyNow) rows.push(`<div class="inspect-why"><span class="inspect-label">Why now</span> ${esc(detail.whyNow)}</div>`);
   if (detail.evidence) rows.push(`<div class="inspect-evidence"><span class="inspect-label">Evidence</span> <code>${esc(detail.evidence)}</code></div>`);
   if (detail.move) rows.push(`<div class="inspect-move"><span class="inspect-label">The move</span> <code>${esc(detail.move)}</code></div>`);
-  return `<div class="console-inspect">${rows.join('')}</div>`;
+  return `<div class="console-inspect">${rows.join('')}${renderAffordancesHTML(deriveAffordances(detail))}</div>`;
+}
+
+// ── F008 — per-bucket handoff affordances ──
+// COPY/OPEN/HANDOFF only — never execute (D018). The GUI hands the operator (or
+// their agent) the exact command; running it stays in the human's terminal / the
+// agent's loop. Built on the read-only renderCopyCommandHTML contract the Repair
+// page already drives (.copy-cmd-btn → clipboard, no state mutation).
+
+// Bucket-aware label for the primary copy action. The COMMAND is the model's
+// exact_command verbatim — F008 labels, it does not re-derive the command.
+const _PRIMARY_LABEL = {
+  needs_auth: 'Copy setup command',
+  needs_decision: 'Copy approve command',
+  agent_runnable: 'Copy command for an agent',
+  auto_safe: 'Copy safe-apply command',
+  uncertain: 'Copy command',
+};
+
+/** The handoff affordance set for an inspect detail. Pure; no DOM. */
+export function deriveAffordances(detail) {
+  if (!detail) return { primary: null, evidence: null, handoff: null };
+  const primary = detail.move
+    ? { label: _PRIMARY_LABEL[detail.bucket] || 'Copy command', command: detail.move }
+    : null;
+  const evidence = detail.evidence
+    ? { label: 'Copy evidence path', command: detail.evidence }
+    : null;
+  // A paste-into-agent block: full context so a Claude/Codex/Cursor session can act.
+  const handoffLines = [detail.title || detail.id];
+  if (detail.whyNow) handoffLines.push(`Why: ${detail.whyNow}`);
+  if (detail.evidence) handoffLines.push(`Evidence: ${detail.evidence}`);
+  if (detail.move) handoffLines.push(`Run: ${detail.move}`);
+  const handoff = { label: 'Copy handoff for an agent', text: handoffLines.join('\n') };
+  return { primary, evidence, handoff };
+}
+
+export function renderAffordancesHTML(aff) {
+  if (!aff || (!aff.primary && !aff.handoff)) return '';
+  const parts = [];
+  if (aff.primary) parts.push(renderCopyCommandHTML(aff.primary.command, { label: aff.primary.label }));
+  if (aff.evidence) parts.push(renderCopyCommandHTML(aff.evidence.command, { label: aff.evidence.label }));
+  if (aff.handoff) parts.push(renderCopyCommandHTML(aff.handoff.text, { label: aff.handoff.label, ariaLabel: 'Copy the full handoff context for an agent' }));
+  parts.push(`<div class="affordances-note">Copying never runs anything — DontPanic hands you (or your agent) the command.</div>`);
+  return `<div class="console-affordances">${parts.join('')}</div>`;
 }
 
 /** Group every NON-human item by bucket with the reason it's hidden (H6). The

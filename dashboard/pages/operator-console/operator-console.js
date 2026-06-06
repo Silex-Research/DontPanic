@@ -60,12 +60,33 @@ import {
     attachSelectHandler();
   }
 
-  // Clicking a needs-you row populates the inspect pane — no navigation, no
-  // mutation; F007 is inspect-only (F008 adds the copy/open affordances).
+  // Copying a command writes it to the clipboard — it NEVER runs anything (D018).
+  // Same read-only contract as the Repair page: .copy-cmd-btn → clipboard, with
+  // feedback in the aria-live .copy-cmd-feedback sibling.
+  function handleCopy(btn) {
+    const text = btn.dataset.copy || '';
+    const feedback = btn.parentElement ? btn.parentElement.querySelector('.copy-cmd-feedback') : null;
+    const set = (state, msg) => { btn.dataset.copied = state; if (feedback) feedback.textContent = msg; };
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
+      nav.clipboard.writeText(text)
+        .then(() => set('1', 'Copied ✓'))
+        .catch(() => set('denied', 'Copy blocked — select and copy manually'));
+    } else {
+      set('unsupported', 'Clipboard unavailable — copy manually');
+    }
+  }
+
+  // One delegated handler: copy buttons (F008) take priority, else a queue row
+  // populates the inspect pane (F007). No navigation, no mutation.
   function attachSelectHandler() {
     if (!_el || _clickBound) return;
     _el.addEventListener('click', (ev) => {
-      const row = ev.target && ev.target.closest ? ev.target.closest('.console-item-select') : null;
+      const t = ev.target;
+      if (!t || !t.closest) return;
+      const copyBtn = t.closest('.copy-cmd-btn');
+      if (copyBtn) { handleCopy(copyBtn); return; }
+      const row = t.closest('.console-item-select');
       if (!row) return;
       _selectedId = row.dataset.itemId || null;
       _el.querySelectorAll('.console-item-select.is-selected').forEach((n) => n.classList.remove('is-selected'));

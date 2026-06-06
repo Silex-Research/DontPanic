@@ -66,6 +66,31 @@ describe('F006 operator console: real F001 model through the real shell', () => 
     expect(row.classList.contains('is-selected')).toBe(true);
   });
 
+  it('F008: the drawer offers copy affordances and copying writes to the clipboard (never executes)', async () => {
+    const writes = [];
+    const clip = { writeText: (t) => { writes.push(t); return Promise.resolve(); } };
+    // jsdom has no clipboard by default — install a spy.
+    Object.defineProperty(globalThis.navigator, 'clipboard', { value: clip, configurable: true });
+
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+    el.querySelector('.console-item-select').click(); // select a human item → drawer fills
+
+    const copyBtn = el.querySelector('#console-inspect-pane .copy-cmd-btn');
+    expect(copyBtn).toBeTruthy();
+    const cmd = copyBtn.dataset.copy;
+    expect(cmd).toBeTruthy();
+
+    copyBtn.click();
+    await Promise.resolve(); await Promise.resolve();
+    // the command was copied — and nothing was executed (no runner exists on this surface)
+    expect(writes).toContain(cmd);
+    expect(copyBtn.dataset.copied).toBe('1');
+    // the no-run promise is on the surface
+    expect(el.innerHTML).toContain('Copying never runs anything');
+  });
+
   it('ANTI-SYNTHETIC: if the model classifies nothing as human, the needs-you queue is empty', async () => {
     // Regress the producer: make every item agent_runnable (no human buckets).
     const regressed = {
