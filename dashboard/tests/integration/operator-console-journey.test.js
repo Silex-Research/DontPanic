@@ -43,6 +43,29 @@ describe('F006 operator console: real F001 model through the real shell', () => 
     expect(html).not.toContain('[{');
   });
 
+  it('F007: clicking a queue row fills the decision drawer with that item (decide in place)', async () => {
+    const J = await boot(model);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+
+    // the workbench has a right pane that starts empty (prompts a selection)...
+    expect(el.querySelector('#console-inspect-pane').innerHTML.toLowerCase()).toContain('select an item');
+    // ...and the why-hidden inspector is present (the compression is auditable, H6).
+    expect(el.innerHTML).toContain('Why the rest is hidden');
+    // the activity strip carries the pipeline line as ambient chrome (H2).
+    expect(el.querySelector('.console-activity').textContent).toContain('313');
+
+    // click the first needs-you row → the drawer fills with its move + bucket.
+    const row = el.querySelector('.console-item-select');
+    expect(row).toBeTruthy();
+    row.click();
+    const drawer = el.querySelector('#console-inspect-pane').innerHTML;
+    expect(drawer.toLowerCase()).not.toContain('select an item');
+    expect(drawer).toContain('Why now');     // the decision context
+    expect(drawer).toContain('The move');    // the next action
+    expect(row.classList.contains('is-selected')).toBe(true);
+  });
+
   it('ANTI-SYNTHETIC: if the model classifies nothing as human, the needs-you queue is empty', async () => {
     // Regress the producer: make every item agent_runnable (no human buckets).
     const regressed = {

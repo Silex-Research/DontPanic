@@ -126,7 +126,12 @@
         "Journey tests H2/H3/H6 on real state: decide one gate from its evidence; see what was handled + verify; see why each hidden item was hidden"
       ],
       "acceptance": "The console provides a right-pane decision drawer, a bottom activity strip (= the one what-was-handled evidence source, carrying the pipeline line), and a why-hidden inspector over the F001 model. Verified by journey tests on real state: a human decides a gate from its surfaced evidence without reading source (H3), audits what the agent/auto ran and confirms it (H2), and sees why each hidden item was suppressed with its bucket + reason (H6). Reads evidence only; no execution.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/operator-console-inspect-f007.test.js (10 tests: inspect/why-hidden/activity over real model)",
+        "dashboard/tests/integration/operator-console-journey.test.js (real-shell click\u2192drawer fills with evidence)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "F008",

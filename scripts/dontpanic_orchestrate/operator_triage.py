@@ -224,6 +224,11 @@ def build_triage(
                 "dedupe_key": it.get("dedupe_key"),
                 "duplicate_count": it.get("duplicate_count", 1),
                 "exact_command": it.get("exact_command"),
+                # Display + evidence fields so a renderer (the F007 inspect pane)
+                # can let a human decide from evidence without reading source.
+                "title": it.get("title"),
+                "why_now": it.get("plain_consequence") or it.get("human_required_reason"),
+                "evidence_uri": it.get("evidence_uri"),
             }
         )
     counts = Counter(i["operator_bucket"] for i in out_items)

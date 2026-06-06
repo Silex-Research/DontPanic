@@ -11,7 +11,10 @@
    "actor_label": null,
    "dedupe_key": "capability:agent-claude-cli",
    "duplicate_count": 1,
-   "exact_command": "dontpanic capabilities setup agent-claude-cli --print-steps"
+   "exact_command": "dontpanic capabilities setup agent-claude-cli --print-steps",
+   "title": "Capability agent-claude-cli needs setup",
+   "why_now": "Prints the setup steps for agent-claude-cli so you can complete it.",
+   "evidence_uri": null
   },
   {
    "id": "capability:discord-notify",
@@ -22,7 +25,10 @@
    "actor_label": null,
    "dedupe_key": "capability:discord-notify",
    "duplicate_count": 1,
-   "exact_command": "dontpanic capabilities setup discord-notify --print-steps"
+   "exact_command": "dontpanic capabilities setup discord-notify --print-steps",
+   "title": "Capability discord-notify needs setup",
+   "why_now": "Prints the setup steps for discord-notify so you can complete it.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:budget-raise-ceiling",
@@ -33,7 +39,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:budget-raise-ceiling",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Raise claude budget ceiling",
+   "why_now": "Alternative: raise claude's budget ceiling so dispatch admits now \u2014 edit the cap in ~/.jarvis/quota_caps.json (no one-shot CLI setter exists). Spends more budget; confirm before raising. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:budget-wait-redispatch",
@@ -44,7 +53,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:budget-wait-redispatch",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Wait for claude budget window to roll over (recommended)",
+   "why_now": "claude budget ceiling reached (80849520/100 weighted_tokens_local_proxy). Safer default: wait for the window to roll over, then redispatch. max_iterations exhausted: 2/2 fix iterations used; the next fix iteration is OVER cap. However, max_iterations is exhausted, so a redispatch would exceed the cap \u2014 finalize/close the feature or raise the cap before redispatching. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-close",
@@ -55,7 +67,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-close",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Close the feature as operator-resolved",
+   "why_now": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-01-001-feat-android-sprint1-parity-fixes F001 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-resume",
@@ -66,7 +81,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:no-progress-resume",
    "duplicate_count": 1,
-   "exact_command": "dontpanic resume 2026-05-01-001-feat-android-sprint1-parity-fixes --gate breaker:no_progress"
+   "exact_command": "dontpanic resume 2026-05-01-001-feat-android-sprint1-parity-fixes --gate breaker:no_progress",
+   "title": "Resume past breaker:no_progress after a fix",
+   "why_now": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:setup-reconcile-homes",
@@ -77,7 +95,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:setup-reconcile-homes",
@@ -88,7 +109,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-11-001-feat-filter-product-readiness:setup-reconcile-homes",
@@ -99,7 +123,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-11-001-feat-filter-product-readiness:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:budget-raise-ceiling",
@@ -110,7 +137,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:budget-raise-ceiling",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Raise claude budget ceiling",
+   "why_now": "Alternative: raise claude's budget ceiling so dispatch admits now \u2014 edit the cap in ~/.jarvis/quota_caps.json (no one-shot CLI setter exists). Spends more budget; confirm before raising. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:no-progress-close",
@@ -121,7 +151,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:no-progress-close",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Close the feature as operator-resolved",
+   "why_now": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-17-001-feat-admin-rating-health-dashboard F001 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:no-progress-resume",
@@ -132,7 +165,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:no-progress-resume",
    "duplicate_count": 1,
-   "exact_command": "dontpanic resume 2026-05-17-001-feat-admin-rating-health-dashboard --gate breaker:no_progress"
+   "exact_command": "dontpanic resume 2026-05-17-001-feat-admin-rating-health-dashboard --gate breaker:no_progress",
+   "title": "Resume past breaker:no_progress after a fix",
+   "why_now": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:setup-reconcile-homes",
@@ -143,7 +179,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:no-progress-close",
@@ -154,7 +193,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:no-progress-close",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Close the feature as operator-resolved",
+   "why_now": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-19-001-feat-foodie-score-v3-calibration F005 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:no-progress-resume",
@@ -165,7 +207,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:no-progress-resume",
    "duplicate_count": 1,
-   "exact_command": "dontpanic resume 2026-05-19-001-feat-foodie-score-v3-calibration --gate breaker:no_progress"
+   "exact_command": "dontpanic resume 2026-05-19-001-feat-foodie-score-v3-calibration --gate breaker:no_progress",
+   "title": "Resume past breaker:no_progress after a fix",
+   "why_now": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:setup-reconcile-homes",
@@ -176,7 +221,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:budget-raise-ceiling",
@@ -187,7 +235,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:budget-raise-ceiling",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Raise claude budget ceiling",
+   "why_now": "Alternative: raise claude's budget ceiling so dispatch admits now \u2014 edit the cap in ~/.jarvis/quota_caps.json (no one-shot CLI setter exists). Spends more budget; confirm before raising. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:budget-wait-redispatch",
@@ -198,7 +249,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:budget-wait-redispatch",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Wait for claude budget window to roll over (recommended)",
+   "why_now": "claude budget ceiling reached (80849520/100 weighted_tokens_local_proxy). Safer default: wait for the window to roll over, then redispatch. max_iterations exhausted: 5/4 fix iterations used; the next fix iteration is OVER cap. However, max_iterations is exhausted, so a redispatch would exceed the cap \u2014 finalize/close the feature or raise the cap before redispatching. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:no-progress-close",
@@ -209,7 +263,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:no-progress-close",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Close the feature as operator-resolved",
+   "why_now": "Alternative: if the remaining work is acceptable or out of scope, close it out with `dontpanic close --operator-resolved 2026-05-19-002-fix-foodie-perception-pre-v3 F001 --reason <class>`, choosing the <class> yourself. Confirm the classification. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:no-progress-resume",
@@ -220,7 +277,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:no-progress-resume",
    "duplicate_count": 1,
-   "exact_command": "dontpanic resume 2026-05-19-002-fix-foodie-perception-pre-v3 --gate breaker:no_progress"
+   "exact_command": "dontpanic resume 2026-05-19-002-fix-foodie-perception-pre-v3 --gate breaker:no_progress",
+   "title": "Resume past breaker:no_progress after a fix",
+   "why_now": "breaker:no_progress tripped: repeated rounds produced no new progress signal.. If you have a fix that breaks the stall, resume past this specific gate. Risk: re-tripping if nothing changed.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:setup-reconcile-homes",
@@ -231,7 +291,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:admission-raise-threshold",
@@ -242,7 +305,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:admission-raise-threshold",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Raise the admission threshold",
+   "why_now": "Alternative: raise the defer threshold above 70% so dispatch admits now by exporting JARVIS_QUOTA_DEFER_THRESHOLD (the percentage is yours to choose) before redispatching. This relaxes the guard for everyone \u2014 confirm before changing. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:budget-raise-ceiling",
@@ -253,7 +319,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:budget-raise-ceiling",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Raise claude budget ceiling",
+   "why_now": "Alternative: raise claude's budget ceiling so dispatch admits now \u2014 edit the cap in ~/.jarvis/quota_caps.json (no one-shot CLI setter exists). Spends more budget; confirm before raising. Human action required.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:setup-reconcile-homes",
@@ -264,7 +333,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:setup-reconcile-homes",
    "duplicate_count": 1,
-   "exact_command": "dontpanic reconcile homes --dry-run"
+   "exact_command": "dontpanic reconcile homes --dry-run",
+   "title": "Reconcile split config homes",
+   "why_now": "Both ~/.dontpanic and ~/.jarvis hold state. The dry-run below names the `homes` subcommand and writes nothing \u2014 review the migration plan, then re-run with `--confirm` to migrate. Ambiguous (divergent same-name) merges are always refused. Human action required before the confirmed migration.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F003",
@@ -275,7 +347,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F004",
@@ -286,7 +361,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `environmental_blocker` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
@@ -297,7 +375,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 breaker `environmental_blocker` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F001",
@@ -308,7 +389,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling"
+   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 breaker `budget_ceiling` tripped",
+   "why_now": "Circuit breaker `budget_ceiling` tripped. Operator clearance required before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F004",
@@ -319,7 +403,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling"
+   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 breaker `budget_ceiling` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F006",
@@ -330,7 +417,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-29-001-migration-make-quantre-operational:F006",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling"
+   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational breaker:budget_ceiling",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 breaker `budget_ceiling` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
@@ -341,7 +431,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:budget_ceiling"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:budget_ceiling",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `budget_ceiling` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
@@ -352,7 +445,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
@@ -363,7 +459,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
@@ -374,7 +473,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
@@ -385,7 +487,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
@@ -396,7 +501,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
@@ -407,7 +515,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
@@ -418,7 +529,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
@@ -429,7 +543,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
@@ -440,7 +557,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `environmental_blocker` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
@@ -451,7 +571,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:iteration_cap"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:iteration_cap",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `iteration_cap` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
@@ -462,7 +585,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
@@ -473,7 +599,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:no_progress",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F001",
@@ -484,7 +613,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F002",
@@ -495,7 +627,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F003",
@@ -506,7 +641,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-06-01-001-feat-plan-review-scope-validation:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress"
+   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation breaker:no_progress",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 breaker `no_progress` tripped",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-06-02-001-feat-control-plane-action-spine:F002",
@@ -517,7 +655,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-06-02-001-feat-control-plane-action-spine:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:environmental_blocker",
+   "title": "Blocked work on 2026-06-02-001-feat-control-plane-action-spine \u2014 breaker `environmental_blocker` tripped",
+   "why_now": "Circuit breaker `environmental_blocker` tripped. Operator clearance required before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:breaker_tripped:2026-06-02-001-feat-control-plane-action-spine:F003",
@@ -528,7 +669,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:breaker_tripped:2026-06-02-001-feat-control-plane-action-spine:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:iteration_cap"
+   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:iteration_cap",
+   "title": "Blocked work on 2026-06-02-001-feat-control-plane-action-spine \u2014 breaker `iteration_cap` tripped",
+   "why_now": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:config_required:2026-05-29-001-migration-make-quantre-operational:F004",
@@ -539,7 +683,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:config_required:2026-05-29-001-migration-make-quantre-operational:F004",
    "duplicate_count": 2,
-   "exact_command": "python -m dontpanic_orchestrate quota-caps init"
+   "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+   "title": "Setup drift on 2026-05-29-001-migration-make-quantre-operational \u2014 quota config required",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:config_required:2026-05-29-001-migration-make-quantre-operational:F006",
@@ -550,7 +697,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:config_required:2026-05-29-001-migration-make-quantre-operational:F006",
    "duplicate_count": 2,
-   "exact_command": "python -m dontpanic_orchestrate quota-caps init"
+   "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+   "title": "Setup drift on 2026-05-29-001-migration-make-quantre-operational \u2014 quota config required",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:config_required:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
@@ -561,7 +711,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:config_required:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
    "duplicate_count": 2,
-   "exact_command": "python -m dontpanic_orchestrate quota-caps init"
+   "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+   "title": "Setup drift on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 quota config required",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:environmental_blocker_short_circuit:2026-06-02-001-feat-control-plane-action-spine:F002",
@@ -572,7 +725,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:environmental_blocker_short_circuit:2026-06-02-001-feat-control-plane-action-spine:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine breaker:environmental_blocker",
+   "title": "Blocked work on 2026-06-02-001-feat-control-plane-action-spine \u2014 environmental blocker",
+   "why_now": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-04-25-003-infra-volley-synthetic:F001",
@@ -583,7 +739,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-04-25-003-infra-volley-synthetic:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-04-25-003-infra-volley-synthetic upfront"
+   "exact_command": "dontpanic approve 2026-04-25-003-infra-volley-synthetic upfront",
+   "title": "Approval needed on 2026-04-25-003-infra-volley-synthetic",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F003",
@@ -594,7 +753,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 upfront"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 upfront",
+   "title": "Approval needed on 2026-05-24-004-feat-event-messaging-v1",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-29-001-migration-make-quantre-operational:F001",
@@ -605,7 +767,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-29-001-migration-make-quantre-operational:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational upfront"
+   "exact_command": "dontpanic approve 2026-05-29-001-migration-make-quantre-operational upfront",
+   "title": "Approval needed on 2026-05-29-001-migration-make-quantre-operational",
+   "why_now": "Supervisor paused at gate `upfront` (stage `upfront`). Operator must approve before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
@@ -616,7 +781,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 pre_merge"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 pre_merge",
+   "title": "Approval needed on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
@@ -627,7 +795,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront",
+   "title": "Approval needed on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
@@ -638,7 +809,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront",
+   "title": "Approval needed on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
@@ -649,7 +823,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 upfront",
+   "title": "Approval needed on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-06-01-001-feat-plan-review-scope-validation:F002",
@@ -660,7 +837,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-06-01-001-feat-plan-review-scope-validation:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation upfront"
+   "exact_command": "dontpanic approve 2026-06-01-001-feat-plan-review-scope-validation upfront",
+   "title": "Approval needed on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-06-02-001-feat-control-plane-action-spine:F001",
@@ -671,7 +851,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-06-02-001-feat-control-plane-action-spine:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine pre_merge"
+   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine pre_merge",
+   "title": "Approval needed on 2026-06-02-001-feat-control-plane-action-spine",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-06-02-001-feat-control-plane-action-spine:F003",
@@ -682,7 +865,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-06-02-001-feat-control-plane-action-spine:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine upfront"
+   "exact_command": "dontpanic approve 2026-06-02-001-feat-control-plane-action-spine upfront",
+   "title": "Approval needed on 2026-06-02-001-feat-control-plane-action-spine",
+   "why_now": "Supervisor paused at gate `upfront` (stage `upfront`). Operator must approve before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:2026-06-03-001-feat-agent-command-surface-hardening:F001",
@@ -693,7 +879,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:2026-06-03-001-feat-agent-command-surface-hardening:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-06-03-001-feat-agent-command-surface-hardening pre_merge"
+   "exact_command": "dontpanic approve 2026-06-03-001-feat-agent-command-surface-hardening pre_merge",
+   "title": "Approval needed on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Supervisor paused at gate `pre_merge` (stage `pre_merge`). Operator must approve before dispatch continues.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:gate_hit:p1:F001",
@@ -704,7 +893,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:gate_hit:p1:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve p1 pre_impl"
+   "exact_command": "dontpanic approve p1 pre_impl",
+   "title": "Approval needed on p1",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-24-004-feat-event-messaging-v1:F003",
@@ -715,7 +907,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-24-004-feat-event-messaging-v1:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all"
+   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
@@ -726,7 +921,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
@@ -737,7 +935,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
@@ -748,7 +949,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
@@ -759,7 +963,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
@@ -770,7 +977,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
@@ -781,7 +991,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
@@ -792,7 +1005,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
@@ -803,7 +1019,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
@@ -814,7 +1033,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
@@ -825,7 +1047,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F001",
@@ -836,7 +1061,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F002",
@@ -847,7 +1075,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F003",
@@ -858,7 +1089,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:no_progress_classification:2026-06-01-001-feat-plan-review-scope-validation:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 no-progress taxonomy",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F004",
@@ -869,7 +1103,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F005",
@@ -880,7 +1117,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F005",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 verdict reconciled",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:verdict_blocked_reconciled:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
@@ -891,7 +1131,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:verdict_blocked_reconciled:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
    "duplicate_count": 2,
-   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:environmental_blocker"
+   "exact_command": "dontpanic approve 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 breaker:environmental_blocker",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 verdict reconciled",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-04-25-003-infra-volley-synthetic:F001",
@@ -902,7 +1145,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-04-25-003-infra-volley-synthetic:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-04-25-003-infra-volley-synthetic --all"
+   "exact_command": "dontpanic resume 2026-04-25-003-infra-volley-synthetic --all",
+   "title": "Blocked work on 2026-04-25-003-infra-volley-synthetic \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F003",
@@ -913,7 +1159,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all"
+   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F004",
@@ -924,7 +1173,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all"
+   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped environmental blocker",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
@@ -935,7 +1187,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all"
+   "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
+   "title": "Blocked work on 2026-05-24-004-feat-event-messaging-v1 \u2014 stopped environmental blocker",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F001",
@@ -946,7 +1201,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all"
+   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 stopped budget",
+   "why_now": "Volley terminated after 1 round(s) with status `stopped_budget`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F004",
@@ -957,7 +1215,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all"
+   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 stopped budget",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F006",
@@ -968,7 +1229,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-29-001-migration-make-quantre-operational:F006",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all"
+   "exact_command": "dontpanic resume 2026-05-29-001-migration-make-quantre-operational --all",
+   "title": "Blocked work on 2026-05-29-001-migration-make-quantre-operational \u2014 stopped budget",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
@@ -979,7 +1243,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped budget",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
@@ -990,7 +1257,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
@@ -1001,7 +1271,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
@@ -1012,7 +1285,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
@@ -1023,7 +1299,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
@@ -1034,7 +1313,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
@@ -1045,7 +1327,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
@@ -1056,7 +1341,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
@@ -1067,7 +1355,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
@@ -1078,7 +1369,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F015",
@@ -1089,7 +1383,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F015",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
@@ -1100,7 +1397,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all"
+   "exact_command": "dontpanic resume 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 --all",
+   "title": "Blocked work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0 \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F001",
@@ -1111,7 +1411,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F001",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F002",
@@ -1122,7 +1425,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F003",
@@ -1133,7 +1439,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 stopped no progress",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F007",
@@ -1144,7 +1453,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-01-001-feat-plan-review-scope-validation:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all"
+   "exact_command": "dontpanic resume 2026-06-01-001-feat-plan-review-scope-validation --all",
+   "title": "Blocked work on 2026-06-01-001-feat-plan-review-scope-validation \u2014 blocked",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-02-001-feat-control-plane-action-spine:F002",
@@ -1155,7 +1467,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-02-001-feat-control-plane-action-spine:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-02-001-feat-control-plane-action-spine --all"
+   "exact_command": "dontpanic resume 2026-06-02-001-feat-control-plane-action-spine --all",
+   "title": "Blocked work on 2026-06-02-001-feat-control-plane-action-spine \u2014 stopped environmental blocker",
+   "why_now": "Volley terminated after 3 round(s) with status `stopped_environmental_blocker`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-02-001-feat-control-plane-action-spine:F003",
@@ -1166,7 +1481,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-02-001-feat-control-plane-action-spine:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-02-001-feat-control-plane-action-spine --all"
+   "exact_command": "dontpanic resume 2026-06-02-001-feat-control-plane-action-spine --all",
+   "title": "Blocked work on 2026-06-02-001-feat-control-plane-action-spine \u2014 stopped cap",
+   "why_now": "Volley terminated after 3 round(s) with status `stopped_cap`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F002",
@@ -1177,7 +1495,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F002",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 2 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F003",
@@ -1188,7 +1509,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F003",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F004",
@@ -1199,7 +1523,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F004",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F005",
@@ -1210,7 +1537,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F005",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 3 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F006",
@@ -1221,7 +1551,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F006",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 2 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F007",
@@ -1232,7 +1565,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-06-03-001-feat-agent-command-surface-hardening:F007",
    "duplicate_count": 2,
-   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all"
+   "exact_command": "dontpanic resume 2026-06-03-001-feat-agent-command-surface-hardening --all",
+   "title": "Blocked work on 2026-06-03-001-feat-agent-command-surface-hardening \u2014 blocked",
+   "why_now": "Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step.",
+   "evidence_uri": null
   },
   {
    "id": "capability:linear",
@@ -1243,7 +1579,10 @@
    "actor_label": null,
    "dedupe_key": "capability:linear",
    "duplicate_count": 1,
-   "exact_command": "dontpanic capabilities setup linear --print-steps"
+   "exact_command": "dontpanic capabilities setup linear --print-steps",
+   "title": "Capability linear is not installed",
+   "why_now": "Prints the setup steps for linear so you can complete it.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F002:iteration-continue",
@@ -1254,7 +1593,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F002:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "2 fix iteration(s) remain under max_iterations=2 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F003:iteration-continue",
@@ -1265,7 +1607,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F003:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "2 fix iteration(s) remain under max_iterations=2 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F004:iteration-continue",
@@ -1276,7 +1621,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F004:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "2 fix iteration(s) remain under max_iterations=2 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F005:iteration-continue",
@@ -1287,7 +1635,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:F005:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-01-001-feat-android-sprint1-parity-fixes --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "2 fix iteration(s) remain under max_iterations=2 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:setup-refresh-onboarding",
@@ -1298,7 +1649,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-01-001-feat-android-sprint1-parity-fixes:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:F008:iteration-continue",
@@ -1309,7 +1663,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:F008:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-08-001-feat-vibe-mode-ranking-and-parity --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-08-001-feat-vibe-mode-ranking-and-parity --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "4 fix iteration(s) remain under max_iterations=4 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:F009:iteration-continue",
@@ -1320,7 +1677,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:F009:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-08-001-feat-vibe-mode-ranking-and-parity --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-08-001-feat-vibe-mode-ranking-and-parity --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "4 fix iteration(s) remain under max_iterations=4 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:setup-refresh-onboarding",
@@ -1331,7 +1691,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-08-001-feat-vibe-mode-ranking-and-parity:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-11-001-feat-filter-product-readiness:F014:iteration-continue",
@@ -1342,7 +1705,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-11-001-feat-filter-product-readiness:F014:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-11-001-feat-filter-product-readiness --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-11-001-feat-filter-product-readiness --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "4 fix iteration(s) remain under max_iterations=4 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-11-001-feat-filter-product-readiness:setup-refresh-onboarding",
@@ -1353,7 +1719,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-11-001-feat-filter-product-readiness:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:budget-wait-redispatch",
@@ -1364,7 +1733,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:budget-wait-redispatch",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-17-001-feat-admin-rating-health-dashboard --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-17-001-feat-admin-rating-health-dashboard --confirm",
+   "title": "Wait for claude budget window to roll over (recommended)",
+   "why_now": "claude budget ceiling reached (80849520/100 weighted_tokens_local_proxy). Safer default: wait for the window to roll over, then redispatch. 1 fix iteration(s) remain under max_iterations=5 (4 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:setup-refresh-onboarding",
@@ -1375,7 +1747,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-17-001-feat-admin-rating-health-dashboard:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:F005:iteration-continue",
@@ -1386,7 +1761,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:F005:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-19-001-feat-foodie-score-v3-calibration --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-19-001-feat-foodie-score-v3-calibration --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "5 fix iteration(s) remain under max_iterations=5 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:F006:iteration-continue",
@@ -1397,7 +1775,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:F006:iteration-continue",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-19-001-feat-foodie-score-v3-calibration --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-19-001-feat-foodie-score-v3-calibration --confirm",
+   "title": "Run the next fix iteration (within cap)",
+   "why_now": "5 fix iteration(s) remain under max_iterations=5 (0 used); the next fix iteration is within cap.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:setup-refresh-onboarding",
@@ -1408,7 +1789,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-001-feat-foodie-score-v3-calibration:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:setup-refresh-onboarding",
@@ -1419,7 +1803,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-19-002-fix-foodie-perception-pre-v3:setup-refresh-onboarding",
    "duplicate_count": 1,
-   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes"
+   "exact_command": "dontpanic projects add spindineswift /Users/bayesian/Documents/GitHub/SpinDineSwift --onboard --force --yes",
+   "title": "Refresh the stale onboarding block",
+   "why_now": "The repo's managed onboarding block is missing or stale (absent AGENTS.md/block, generator version/hash drift, or tamper). Re-run onboarding to (re)write the marked block. Because the project is ALREADY registered, the registry refuses a bare re-add \u2014 the command carries `--force --yes` to overwrite the existing entry.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:admission-wait-redispatch",
@@ -1430,7 +1817,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:admission-wait-redispatch",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-29-001-migration-make-quantre-operational --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-29-001-migration-make-quantre-operational --confirm",
+   "title": "Wait below admission threshold, then redispatch (recommended)",
+   "why_now": "claude at 319% exceeds the admission threshold of 70%. Recommended: wait for usage to drop below threshold, then redispatch.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:budget-wait-redispatch",
@@ -1441,7 +1831,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:budget-wait-redispatch",
    "duplicate_count": 1,
-   "exact_command": "dontpanic orchestrate 2026-05-29-001-migration-make-quantre-operational --confirm"
+   "exact_command": "dontpanic orchestrate 2026-05-29-001-migration-make-quantre-operational --confirm",
+   "title": "Wait for claude budget window to roll over (recommended)",
+   "why_now": "claude budget ceiling reached (80849520/100 weighted_tokens_local_proxy). Safer default: wait for the window to roll over, then redispatch.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-05-29-001-migration-make-quantre-operational:setup-refresh-brief",
@@ -1452,7 +1845,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-05-29-001-migration-make-quantre-operational:setup-refresh-brief",
    "duplicate_count": 1,
-   "exact_command": "dontpanic agent brief"
+   "exact_command": "dontpanic agent brief",
+   "title": "Refresh the agent operating brief",
+   "why_now": "The cached agent brief predates the current command/executor set. Regenerate it so operators read current facts.",
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-06-01-001-feat-plan-review-scope-validation:F004:plan-drift-refresh",
@@ -1463,7 +1859,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-06-01-001-feat-plan-review-scope-validation:F004:plan-drift-refresh",
    "duplicate_count": 2,
-   "exact_command": "dontpanic orchestrate 2026-06-01-001-feat-plan-review-scope-validation --confirm"
+   "exact_command": "dontpanic orchestrate 2026-06-01-001-feat-plan-review-scope-validation --confirm",
+   "title": "Plan changed mid-run \u2014 refresh context and redispatch",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-06-02-001-feat-control-plane-action-spine:F001:plan-drift-refresh",
@@ -1474,7 +1873,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-06-02-001-feat-control-plane-action-spine:F001:plan-drift-refresh",
    "duplicate_count": 2,
-   "exact_command": "dontpanic orchestrate 2026-06-02-001-feat-control-plane-action-spine --confirm"
+   "exact_command": "dontpanic orchestrate 2026-06-02-001-feat-control-plane-action-spine --confirm",
+   "title": "Plan changed mid-run \u2014 refresh context and redispatch",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "operations:2026-06-03-001-feat-agent-command-surface-hardening:F001:plan-drift-refresh",
@@ -1485,7 +1887,10 @@
    "actor_label": null,
    "dedupe_key": "operations:2026-06-03-001-feat-agent-command-surface-hardening:F001:plan-drift-refresh",
    "duplicate_count": 2,
-   "exact_command": "dontpanic orchestrate 2026-06-03-001-feat-agent-command-surface-hardening --confirm"
+   "exact_command": "dontpanic orchestrate 2026-06-03-001-feat-agent-command-surface-hardening --confirm",
+   "title": "Plan changed mid-run \u2014 refresh context and redispatch",
+   "why_now": "Detected context-refresh drift in audit/gate-state.json (gate-state cleared/completed set changed mid-run (cleared_gates [] \u2192 ['pre_merge']) \u2014 a gate may have been cleared outside DontPanic; refresh before next call). DontPanic paused BEFORE the next paid agent call so the volley does not continue on stale context. Re-read the changed plan artifacts, then redispatch to pick up the refreshed context.",
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:quantre-migration:0",
@@ -1496,7 +1901,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:quantre-migration:0",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (quantre-migration)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:quantre-migration:1",
@@ -1507,7 +1915,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:quantre-migration:1",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (quantre-migration)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:quantre-migration:2",
@@ -1518,7 +1929,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:quantre-migration:2",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (quantre-migration)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:spindineswift:0",
@@ -1529,7 +1943,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:spindineswift:0",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (spindineswift)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:spindineswift:1",
@@ -1540,7 +1957,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:spindineswift:1",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (spindineswift)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:spindineswift:2",
@@ -1551,7 +1971,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:spindineswift:2",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (spindineswift)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "architecture:build-warning:spindineswift:3",
@@ -1562,7 +1985,10 @@
    "actor_label": null,
    "dedupe_key": "architecture:build-warning:spindineswift:3",
    "duplicate_count": 1,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Build warning (spindineswift)",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "operations:dashboard-affordance",
@@ -1573,7 +1999,10 @@
    "actor_label": null,
    "dedupe_key": "operations:dashboard-affordance",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Dashboard is running",
+   "why_now": "Open the running dashboard to act on these items.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:49172:2026-05-29-001-migration-make-quantre-operational",
@@ -1584,7 +2013,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:49172:2026-05-29-001-migration-make-quantre-operational",
    "duplicate_count": 2,
-   "exact_command": "dontpanic ps"
+   "exact_command": "dontpanic ps",
+   "title": "Supervisor active on 2026-05-29-001-migration-make-quantre-operational",
+   "why_now": "Lists the running supervisor processes.",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-04-25-003-infra-volley-synthetic:F001",
@@ -1595,7 +2027,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-04-25-003-infra-volley-synthetic:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-04-25-003-infra-volley-synthetic",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F003",
@@ -1606,7 +2041,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F003",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F004",
@@ -1617,7 +2055,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F004",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
@@ -1628,7 +2069,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F001",
@@ -1639,7 +2083,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-29-001-migration-make-quantre-operational",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 1).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F004",
@@ -1650,7 +2097,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F004",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-29-001-migration-make-quantre-operational",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F006",
@@ -1661,7 +2111,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-29-001-migration-make-quantre-operational:F006",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-29-001-migration-make-quantre-operational",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
@@ -1672,7 +2125,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
@@ -1683,7 +2139,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F002",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
@@ -1694,7 +2153,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F003",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
@@ -1705,7 +2167,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F004",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
@@ -1716,7 +2181,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F007",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
@@ -1727,7 +2195,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
@@ -1738,7 +2209,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F009",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
@@ -1749,7 +2223,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F010",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
@@ -1760,7 +2237,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F011",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
@@ -1771,7 +2251,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F012",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
@@ -1782,7 +2265,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
@@ -1793,7 +2279,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F014",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F015",
@@ -1804,7 +2293,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F015",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
@@ -1815,7 +2307,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F016",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F001",
@@ -1826,7 +2321,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F002",
@@ -1837,7 +2335,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F002",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F003",
@@ -1848,7 +2349,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F003",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F004",
@@ -1859,7 +2363,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F004",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F007",
@@ -1870,7 +2377,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-01-001-feat-plan-review-scope-validation:F007",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-01-001-feat-plan-review-scope-validation",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F001",
@@ -1881,7 +2391,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-02-001-feat-control-plane-action-spine",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F002",
@@ -1892,7 +2405,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F002",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-02-001-feat-control-plane-action-spine",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F003",
@@ -1903,7 +2419,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-02-001-feat-control-plane-action-spine:F003",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-02-001-feat-control-plane-action-spine",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F001",
@@ -1914,7 +2433,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F001",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F002",
@@ -1925,7 +2447,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F002",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F003",
@@ -1936,7 +2461,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F003",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F004",
@@ -1947,7 +2475,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F004",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F005",
@@ -1958,7 +2489,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F005",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F006",
@@ -1969,7 +2503,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F006",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F007",
@@ -1980,7 +2517,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_start:2026-06-03-001-feat-agent-command-surface-hardening:F007",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "Active AI work on 2026-06-03-001-feat-agent-command-surface-hardening",
+   "why_now": "Volley begins with implementer `claude` and auditor `codex` (cap 2).",
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
@@ -1991,7 +2531,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F008",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "AI work finished on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   },
   {
    "id": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
@@ -2002,7 +2545,10 @@
    "actor_label": null,
    "dedupe_key": "supervisor:volley_terminal:2026-05-30-001-feat-universal-agent-repo-onboarding-v0:F013",
    "duplicate_count": 2,
-   "exact_command": null
+   "exact_command": null,
+   "title": "AI work finished on 2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+   "why_now": null,
+   "evidence_uri": null
   }
  ],
  "data_quality": {
@@ -2016,5 +2562,5 @@
   },
   "uncertain": 0
  },
- "state_revision": "7687d6e51c79"
+ "state_revision": "f79e7a88a8fa"
 }
