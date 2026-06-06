@@ -1,0 +1,36 @@
+{
+ "feature": "F001-F003 phase-1 triage model",
+ "captured_at": "2026-06-06",
+ "fixture": "evidence/fleet-fixture-real.json",
+ "item_count": 313,
+ "raw_counts": {
+  "needs_auth": 2,
+  "agent_runnable": 178,
+  "needs_decision": 24,
+  "quiet": 109
+ },
+ "deduped_counts": {
+  "needs_auth": 2,
+  "agent_runnable": 100,
+  "needs_decision": 12,
+  "quiet": 68
+ },
+ "human_facing": {
+  "raw": 26,
+  "deduped": 14
+ },
+ "state_revision_raw": "d3f6b18ee189",
+ "state_revision_deduped": "a0c44f7364ba",
+ "sample_serialized_item": {
+  "id": "capability:agent-claude-cli",
+  "operator_bucket": "needs_auth",
+  "scope": "global",
+  "project_name": null,
+  "run_state": "idle",
+  "actor_label": null,
+  "dedupe_key": "capability:agent-claude-cli",
+  "duplicate_count": 1,
+  "exact_command": "dontpanic capabilities setup agent-claude-cli --print-steps"
+ },
+ "note": "313 -> 26 raw human -> 14 deduped human. uncertain=0 on real data (all classify confidently); the uncertain fail-closed path is exercised by a synthetic malformed item in test_operator_triage_f001.py."
+}
