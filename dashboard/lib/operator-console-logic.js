@@ -30,6 +30,7 @@ export function deriveConsoleView(model) {
       scope: _SCOPE_LABEL(i),
       command: i.exact_command || '',
       runState: i.run_state || 'idle',
+      actor: i.actor_label || null,
     }));
 
   const raw = dq.input_count != null ? dq.input_count : (dq.total != null ? dq.total : items.length);
@@ -59,14 +60,21 @@ function _statusBarHTML(view) {
   );
 }
 
+/** The run-state chip with actor (F010 parallel-ops). Empty when idle. The
+ * conflicted state (>1 supervisor on the same plan) gets its own styling so two
+ * agents racing the same plan is visible at a glance. */
+export function renderRunChipHTML(runState, actor) {
+  if (!runState || runState === 'idle') return '';
+  const who = actor ? ` · ${esc(actor)}` : '';
+  return `<span class="run-state run-state--${esc(runState)}">${esc(runState)}${who}</span>`;
+}
+
 function _needsYouItemHTML(item) {
   const chip = `<span class="scope-chip">${esc(item.scope)}</span>`;
-  const running = item.runState && item.runState !== 'idle'
-    ? `<span class="run-state run-state--${esc(item.runState)}">${esc(item.runState)}</span>`
-    : '';
+  const conflicted = item.runState === 'conflicted' ? ' is-conflicted' : '';
   // data-item-id makes the row selectable (F007 inspect pane reads it).
-  const body = `<div class="console-item-line console-item-select" data-item-id="${esc(item.id || '')}">` +
-    `${chip} ${esc(item.bucket)} ${running}` +
+  const body = `<div class="console-item-line console-item-select${conflicted}" data-item-id="${esc(item.id || '')}">` +
+    `${chip} ${esc(item.bucket)} ${renderRunChipHTML(item.runState, item.actor)}` +
     (item.command ? `<div class="console-item-move">${esc(item.command)}</div>` : '') +
     `</div>`;
   return renderCardHTML({ title: '', status: 'attention', body });
@@ -129,6 +137,7 @@ export function deriveInspectView(model, selectedId) {
     move: item.exact_command || '',
     evidence: item.evidence_uri || null,
     runState: item.run_state || 'idle',
+    actor: item.actor_label || null,
     duplicateCount: item.duplicate_count || 1,
   };
 }
@@ -144,8 +153,9 @@ export function renderInspectHTML(detail, opts = {}) {
   const markedRun = opts.markedRun || [];
   const rows = [];
   rows.push(`<div class="inspect-title">${esc(detail.title)}</div>`);
+  const runChip = renderRunChipHTML(detail.runState, detail.actor);
   rows.push(`<div class="inspect-meta"><span class="scope-chip">${esc(detail.scope)}</span> ${esc(detail.bucket)}` +
-    (detail.runState !== 'idle' ? ` · <span class="run-state run-state--${esc(detail.runState)}">${esc(detail.runState)}</span>` : '') +
+    (runChip ? ` · ${runChip}` : '') +
     (detail.duplicateCount > 1 ? ` · ${esc(String(detail.duplicateCount))}× collapsed` : '') + `</div>`);
   if (detail.whyNow) rows.push(`<div class="inspect-why"><span class="inspect-label">Why now</span> ${esc(detail.whyNow)}</div>`);
   if (detail.evidence) rows.push(`<div class="inspect-evidence"><span class="inspect-label">Evidence</span> <code>${esc(detail.evidence)}</code></div>`);
@@ -290,4 +300,38 @@ export function renderRefreshHTML(view) {
     ? `<span class="refresh-note refresh-note--changed">State changed — refresh to resync</span>`
     : '';
   return `<div class="console-refresh">${note}<button type="button" class="btn refresh-btn">Refresh</button></div>`;
+}
+
+// ── F010 — parallel-ops awareness ──
+// The console, a CLI, and one or more agents operate the same install at once.
+// The model already derives run_state (idle/running/conflicted, by joining each
+// item's plan to the live active-supervisors registry) + actor_label. F010 makes
+// concurrency visible: who's working what, and where two actors race one plan
+// (conflicted). Derived read-only; no claim/lease is written (D023).
+
+/** Project the model into the running / conflicted sets with their actors. */
+export function deriveParallelOps(model) {
+  const items = (model && Array.isArray(model.items) ? model.items : []);
+  const pick = (i) => ({ id: i.id, actor: i.actor_label || null, scope: _SCOPE_LABEL(i), bucket: i.operator_bucket });
+  const running = items.filter((i) => i.run_state === 'running').map(pick);
+  const conflicted = items.filter((i) => i.run_state === 'conflicted').map(pick);
+  return { running, conflicted, counts: { running: running.length, conflicted: conflicted.length } };
+}
+
+/** Ambient banner: "N running · M conflicted" with actors. Empty when the install
+ * is quiet (nothing running) — concurrency cues only appear when they're real. */
+export function renderParallelOpsBannerHTML(ops) {
+  if (!ops || (ops.counts.running === 0 && ops.counts.conflicted === 0)) return '';
+  const cls = ops.counts.conflicted > 0 ? 'parallel-ops parallel-ops--conflicted' : 'parallel-ops';
+  const parts = [
+    `<span class="parallel-ops-summary">${esc(String(ops.counts.running))} running` +
+    (ops.counts.conflicted > 0 ? ` · ${esc(String(ops.counts.conflicted))} conflicted` : '') + `</span>`,
+  ];
+  if (ops.counts.conflicted > 0) {
+    const who = ops.conflicted.map((c) => esc(c.actor || c.id)).join(', ');
+    parts.push(`<span class="parallel-ops-warn">⚠ two actors on one plan: ${who}</span>`);
+  }
+  const actors = ops.running.filter((r) => r.actor).map((r) => esc(r.actor));
+  if (actors.length) parts.push(`<span class="parallel-ops-actors">${actors.join(' · ')}</span>`);
+  return `<div class="${cls}" role="status">${parts.join('')}</div>`;
 }

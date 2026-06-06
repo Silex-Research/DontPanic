@@ -22,6 +22,8 @@ import {
   renderRefreshHTML,
   revisionChanged,
   reconcileMarkedRun,
+  deriveParallelOps,
+  renderParallelOpsBannerHTML,
   OBSERVER,
   OPERATOR,
 } from '../../lib/operator-console-logic.js';
@@ -66,6 +68,7 @@ import {
       '</div>';
     _el.innerHTML =
       controls +
+      renderParallelOpsBannerHTML(deriveParallelOps(model)) +
       '<div class="console-workbench">' +
         '<div class="console-left">' + renderConsoleDefaultHTML(deriveConsoleView(model)) + '</div>' +
         '<div class="console-right">' +

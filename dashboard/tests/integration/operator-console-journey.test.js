@@ -128,6 +128,30 @@ describe('F006 operator console: real F001 model through the real shell', () => 
     globalThis.fetch = orig;
   });
 
+  it('F010: parallel-ops — running/conflicted surface as a banner + on the rows', async () => {
+    // Mark two human items as live (the model derives this from active_supervisors;
+    // here we set it directly to drive the renderer).
+    const human = model.items.filter((i) => i.operator_bucket === 'needs_decision' || i.operator_bucket === 'needs_auth');
+    const live = {
+      ...model,
+      items: model.items.map((i) =>
+        i.id === human[0].id ? { ...i, run_state: 'running', actor_label: 'claude · s1' }
+          : i.id === human[1].id ? { ...i, run_state: 'conflicted', actor_label: 'codex · s2' }
+            : i),
+    };
+    const J = await boot(live);
+    J.switchTo('operator-console');
+    const el = J.getPageEl('operator-console');
+    // ambient banner shows the concurrency
+    const banner = el.querySelector('.parallel-ops');
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toContain('running');
+    expect(banner.textContent).toContain('conflicted');
+    // and the conflicted row is visually distinct, with its actor on the chip
+    expect(el.querySelector('.console-item-select.is-conflicted')).toBeTruthy();
+    expect(el.innerHTML).toContain('claude · s1');
+  });
+
   it('ANTI-SYNTHETIC: if the model classifies nothing as human, the needs-you queue is empty', async () => {
     // Regress the producer: make every item agent_runnable (no human buckets).
     const regressed = {

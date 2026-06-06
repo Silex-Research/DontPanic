@@ -184,7 +184,12 @@
         "Journey tests P1-P6 on fixture/real state: same-project concurrent (P1), cross-project scope separation (P2/P4), conflict + stale before approval (P3/P6), GUI<->terminal correlation by dedupe_key/run_id (P5)"
       ],
       "acceptance": "The console renders scope chips ([GLOBAL]/[PROJECT:x]), per-item running/conflicted state + actor label (from F001), an activity strip grouped/filterable by project and actor, and stale/conflict surfacing before a handoff or approval-intent. Verified by journey tests P1-P6 on real/fixture state: a GUI-open-while-Cursor-acts shows running then refreshes (P1); cross-project work stays scope-separated with no confusion (P2/P4); two agents on one plan surface a conflict + a stale view surfaces drift before approval (P3/P6); and GUI<->terminal work correlates by dedupe_key/run_id (P5). Surfacing only (refusal-before-mutation is 002); local-machine multi-process scope; no claim/lease written.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/operator-console-parallel-f010.test.js (run chip, deriveParallelOps, banner, conflicted row)",
+        "dashboard/tests/integration/operator-console-journey.test.js (real-shell: running/conflicted banner + row styling)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z"
     }
   ]
 }
