@@ -3,7 +3,7 @@ id: 2026-06-05-003-feat-dashboard-design-system-v0
 title: Dashboard design system v0 — shared component layer + Repair worked example
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-05"
 goal_type: new_feature
 description: >

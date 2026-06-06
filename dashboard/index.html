@@ -6,12 +6,14 @@
   <title>DontPanic — Local Operating Console</title>
   <link rel="stylesheet" href="core.css">
   <link rel="stylesheet" href="components.css">
+  <!-- Plan 2026-06-05-003 F005 — page CSS is loaded ONLY for pages registered in
+       pageModules (core.js). The orphan pages (command-center / financial /
+       cloud-costs / security) were retired: their stylesheets redefined generic
+       selectors (.empty-state, .status-badge, .grid-2col, …) and silently
+       restyled the live pages via last-wins cascade. Repair carries no own CSS —
+       it migrated onto components.css. -->
   <link rel="stylesheet" href="pages/what-now/what-now.css">
-  <link rel="stylesheet" href="pages/command-center/command-center.css">
   <link rel="stylesheet" href="pages/mission-control/mission-control.css">
-  <link rel="stylesheet" href="pages/financial/financial.css">
-  <link rel="stylesheet" href="pages/cloud-costs/cloud-costs.css">
-  <link rel="stylesheet" href="pages/security/security.css">
   <link rel="stylesheet" href="pages/capabilities/capabilities.css">
   <link rel="stylesheet" href="pages/architecture/architecture.css">
   <link rel="stylesheet" href="pages/health/health.css">

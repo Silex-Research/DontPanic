@@ -96,7 +96,11 @@
         "Re-run the full dashboard suite to confirm removing the orphan CSS did not rely on its bleed"
       ],
       "acceptance": "The 4 orphan pages' stylesheets are no longer loaded by index.html, and a test guards that index.html loads CSS only for pages in pageModules. Verified by that guard test passing and the full dashboard vitest suite remaining green after the orphan CSS is removed.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
     }
   ]
 }
