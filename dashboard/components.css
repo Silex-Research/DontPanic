@@ -151,3 +151,55 @@ a:focus-visible,
 button:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius); }
+
+/* ── Cockpit mount (plan 2026-06-06-005 F002) ─────────────────────────────
+   Minimal legibility for the DEFAULT Cockpit surface over the redesign
+   components. Colour comes from the --dp-* token layer (tokens.css, loaded
+   first). Full visual fidelity — per-bucket rails, density, motion, light-mode
+   polish — is deferred to plan 008. */
+.dp-cockpit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 860px) { .dp-cockpit-layout { grid-template-columns: 1fr; } }
+
+.dp-cockpit { display: flex; flex-direction: column; gap: 0.75rem; }
+.dp-hero { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.25rem 0 0.5rem; }
+.dp-hero-count { font: 700 2rem/1 var(--dp-font-sans); color: var(--dp-text-1); }
+.dp-hero-label { color: var(--dp-text-2); font-family: var(--dp-font-sans); }
+
+.dp-group { border: 1px solid var(--dp-border); border-radius: 10px; background: var(--dp-surface-1); overflow: hidden; }
+.dp-group-head {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  padding: 0.6rem 0.85rem; background: transparent; border: 0; cursor: default;
+  font-family: var(--dp-font-sans); color: var(--dp-text-1);
+}
+.dp-group-label { font-weight: 600; }
+.dp-group-count { color: var(--dp-text-2); font-variant-numeric: tabular-nums; }
+.dp-group-feed { display: flex; flex-direction: column; }
+.dp-group--collapsed .dp-group-head { color: var(--dp-text-3); }
+
+.dp-action-item {
+  padding: 0.7rem 0.85rem; background: var(--dp-surface-1); color: var(--dp-text-1);
+  font-family: var(--dp-font-sans); cursor: pointer; border-top: 1px solid var(--dp-border);
+}
+.dp-group-feed .dp-action-item:first-child { border-top: 0; }
+.dp-action-item:hover { background: var(--dp-surface-2); }
+
+.dp-cockpit-inspect .dp-inspect, .dp-inspect {
+  position: sticky; top: 1rem; border: 1px solid var(--dp-border); border-radius: 10px;
+  background: var(--dp-surface-1); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;
+}
+.dp-inspect-title { font: 600 1.05rem/1.3 var(--dp-font-sans); color: var(--dp-text-1); margin: 0; }
+.dp-inspect-label { font: 600 0.7rem/1 var(--dp-font-sans); letter-spacing: 0.06em; color: var(--dp-text-3); margin: 0 0 0.25rem; }
+.dp-inspect-value, .dp-inspect-actor, .dp-inspect-basis, .dp-inspect-asserted { color: var(--dp-text-2); font-family: var(--dp-font-sans); }
+.dp-inspect-resolutions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dp-affordance {
+  padding: 0.35rem 0.7rem; border: 1px solid var(--dp-border); border-radius: 6px;
+  background: var(--dp-surface-2); color: var(--dp-text-1); font-family: var(--dp-font-sans); cursor: pointer;
+}
+
+.dp-cockpit-empty, .dp-inspect-hint { padding: 1rem; color: var(--dp-text-2); font-family: var(--dp-font-sans); }
+.dp-cockpit-empty code { font-family: var(--dp-font-mono); color: var(--dp-text-1); }

@@ -597,6 +597,12 @@ function JARVIS_LITERAL() { return {
 // page lists). No behavior change to the running shell: the IIFE below still
 // consumes this same const.
 export const pageModules = [
+  // Plan 2026-06-06-005 F002 — the redesigned Cockpit is the DEFAULT landing
+  // surface (pageModules[0]): renderQueue + inspect-why over the live fleet
+  // operator-triage/v0 model (F001). Read-only mount; the old Operator console
+  // and every other tab stay registered + navigable below until the Cockpit
+  // proves parity (the IA regroup + Repair dissolution are plan 006).
+  'pages/cockpit/cockpit-page.js',
   // Plan 2026-06-06-001 F006 — the operator-console default view (triage queue +
   // status bar) renders the F001 model and leads the nav as the primary surface.
   'pages/operator-console/operator-console.js',

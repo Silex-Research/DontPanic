@@ -50,11 +50,12 @@ describe('F002 shell hardening (real shell boot)', () => {
     // Plan 2026-06-06-001 F006 — the operator-console workbench is the primary
     // triage surface and now leads, ahead of the legacy What Now page.
     expect(pageModules.slice(0, 5)).toEqual([
+      // Plan 2026-06-06-005 F002 — Cockpit leads as the default landing surface.
+      'pages/cockpit/cockpit-page.js',
       'pages/operator-console/operator-console.js',
       'pages/what-now/what-now.js',
       'pages/repair/repair.js',
       'pages/mission-control/mission-control.js',
-      'pages/health/health.js',
     ]);
   });
 

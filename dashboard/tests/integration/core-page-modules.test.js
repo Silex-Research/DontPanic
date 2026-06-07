@@ -16,6 +16,9 @@ describe('core.js: real page-module surface (2026-06-05-002 F001)', () => {
     // Plan 2026-06-06-001 F006 — the operator-console workbench leads the nav as the
     // primary surface (the F001 triage model rendered as a calm queue).
     expect(pageModules).toEqual([
+      // Plan 2026-06-06-005 F002 — the redesigned Cockpit is the DEFAULT landing surface;
+      // operator-console + every other tab stay registered below it.
+      'pages/cockpit/cockpit-page.js',
       'pages/operator-console/operator-console.js',
       'pages/what-now/what-now.js',
       'pages/repair/repair.js',

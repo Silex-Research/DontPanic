@@ -20,9 +20,13 @@
       "id": "F002",
       "category": "functional",
       "phase": 2,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "tests/unit/cockpit-page.test.js (6 mount tests)",
+        "drift-guards: core-page-modules + shell-hardening-f002 (cockpit leads)",
+        "full dashboard vitest: 1139 passed"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Cockpit default mount: an Operator/Cockpit page registers via Jarvis.registerPage and renders renderQueue + renderInspectPanel from the live operator-triage.json; it is the default landing surface; the existing 8 tabs remain registered and reachable.",
       "acceptance": "Opening the served dashboard lands on the Cockpit rendering real action items via the redesign components; old tabs still present + navigable; no router rewrite (uses registerPage)."
     },
