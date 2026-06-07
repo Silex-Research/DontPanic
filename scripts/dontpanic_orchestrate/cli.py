@@ -1689,6 +1689,18 @@ def _projects_add(argv: list[str]) -> int:
             "without changing any file."
         ),
     )
+    parser.add_argument(
+        "--no-hooks",
+        action="store_true",
+        dest="no_hooks",
+        help=(
+            "Plan 2026-06-06-003 F003: skip installing the pre-commit "
+            "architecture hook. By default `projects add` installs a chained "
+            "pre-commit hook that regenerates + stages docs/architecture/"
+            "architecture.json on commit, keeping the committed map fresh. Any "
+            "prior pre-commit hook is preserved (chained, not clobbered)."
+        ),
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
 
@@ -1740,10 +1752,34 @@ def _projects_add(argv: list[str]) -> int:
             # fact in the human/JSON output. Don't fail the add.
             scaffold_skipped = True
 
+    # Plan 2026-06-06-003 F003 — install the chained pre-commit architecture hook
+    # so commits keep the committed map fresh (auto_regen=True). Best-effort +
+    # opt-out (--no-hooks): a non-git path or an install conflict is surfaced in
+    # the output, never fatal to the registration.
+    from dontpanic_orchestrate import architecture_hook
+
+    hooks_result: dict[str, object] | None = None
+    if not args.no_hooks:
+        repo_path = Path(entry.path)
+        if (repo_path / ".git").exists():
+            try:
+                res = architecture_hook.install(repo_path, auto_regen=True)
+                hooks_result = {
+                    "installed": True,
+                    "hook_path": res.get("hook_path"),
+                    "backed_up": bool(res.get("backed_up", False)),
+                }
+            except Exception as exc:  # noqa: BLE001 — a hook problem never fails the add
+                hooks_result = {"installed": False, "reason": str(exc)}
+        else:
+            hooks_result = {"installed": False, "reason": "not a git repository"}
+
     payload: dict[str, object] = {
         "action": "added",
         "project": projects_registry.to_public_dict(entry),
     }
+    if hooks_result is not None:
+        payload["hooks"] = hooks_result
     if args.init_config:
         if scaffold_skipped:
             payload["scaffold"] = "skipped (config already exists)"
@@ -1762,6 +1798,14 @@ def _projects_add(argv: list[str]) -> int:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(f"[projects add] registered {entry.name!r} → {entry.path}")
+        if hooks_result is not None:
+            if hooks_result.get("installed"):
+                chained = " (prior pre-commit hook preserved)" if hooks_result.get("backed_up") else ""
+                print(f"[projects add] installed pre-commit architecture hook{chained}")
+            else:
+                print(
+                    f"[projects add] pre-commit hook NOT installed: {hooks_result.get('reason')}"
+                )
         if args.init_config:
             if scaffold_skipped:
                 print(

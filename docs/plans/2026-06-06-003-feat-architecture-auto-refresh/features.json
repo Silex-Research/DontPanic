@@ -20,9 +20,12 @@
       "id": "F002",
       "category": "functional",
       "phase": 2,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/dashboard.py (_source_fingerprint watches each project's architecture.json)",
+        "scripts/dontpanic_orchestrate/tests/test_serve_watch_architecture_f002.py"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Watch architecture.json: add each project's snapshot to the serve's watched sources so a hook-commit or manual regen retriggers the serve rebuild live (today the watcher only fires on plan files).",
       "acceptance": "Editing a tracked project's docs/architecture/architecture.json while serve --watch is running retriggers a rebuild and the Architecture tab reflects the change without a restart."
     },
@@ -30,9 +33,12 @@
       "id": "F003",
       "category": "functional",
       "phase": 3,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/cli.py (_projects_add installs architecture_hook + --no-hooks)",
+        "scripts/dontpanic_orchestrate/tests/test_projects_add_hook_f003.py"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Auto-install the pre-commit architecture hook on `projects add` (with a --no-hooks opt-out) so every tracked repo auto-regens + stages the committed map on commit \u2014 keeping the committed copy fresh between dashboard builds.",
       "acceptance": "`dontpanic projects add <name> <path>` installs the chained pre-commit hook (preserving any prior hook); --no-hooks skips it; a commit touching an architecture-relevant file regenerates + stages docs/architecture/architecture.json."
     }

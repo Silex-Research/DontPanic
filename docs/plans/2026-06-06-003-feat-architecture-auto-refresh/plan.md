@@ -3,7 +3,7 @@ id: 2026-06-06-003-feat-architecture-auto-refresh
 title: Architecture auto-refresh — kill the "run regen" human card
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-06"
 goal_type: new_feature
 description: >

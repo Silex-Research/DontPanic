@@ -1727,6 +1727,23 @@ def _source_fingerprint(
             entries.append(("registry/projects.json", 0, -1))
     else:
         entries.append(("registry/projects.json", 0, 0))
+    # F002 (plan 2026-06-06-003) — watch each tracked project's architecture
+    # snapshot. When a commit-hook regen (F003) or a manual regen updates a
+    # project's map, the serve rebuilds so the Architecture tab refreshes live —
+    # the watcher previously only fired on plan-file edits, leaving non-plan
+    # sources (the map, installed tools) stale until a manual rebuild.
+    try:
+        for entry in pr.load_registry().projects:
+            key = f"architecture/{entry.name}"
+            try:
+                arch = Path(entry.path).expanduser() / architecture.DEFAULT_OUTPUT_REL
+                stat = arch.stat()
+                entries.append((key, stat.st_mtime_ns, stat.st_size))
+            except OSError:
+                # Absent map → ("…", 0, 0) so its later appearance registers as a diff.
+                entries.append((key, 0, 0))
+    except Exception:  # noqa: BLE001 — the watcher must never crash on a registry issue
+        pass
     return tuple(sorted(entries))
 
 
