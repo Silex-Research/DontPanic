@@ -1,0 +1,10 @@
+%% L3 — scripts/dontpanic_orchestrate
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_surface_derivation_py["surface_derivation.py"]:::fresh
+  scripts_dontpanic_orchestrate_surface_taxonomy_py["surface_taxonomy.py"]:::fresh
+  scripts_dontpanic_orchestrate_target_context_prelude_py["target_context_prelude.py"]:::fresh
+  scripts_dontpanic_orchestrate_transcript_py["transcript.py"]:::fresh
+  scripts_dontpanic_orchestrate_triage_apply_py["triage_apply.py"]:::fresh
+  scripts_dontpanic_orchestrate_surface_derivation_py --> scripts_dontpanic_orchestrate_surface_taxonomy_py

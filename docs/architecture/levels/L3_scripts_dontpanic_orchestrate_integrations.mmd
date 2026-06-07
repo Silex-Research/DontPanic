@@ -1,0 +1,20 @@
+%% L3 — scripts/dontpanic_orchestrate/integrations
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_integrations___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_adapter_registry_py["adapter_registry.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py["linear_pm_tool.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_linear_pp_adapter_py["linear_pp_adapter.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_pm_tool_mapping_py["pm_tool_mapping.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_pm_tool_models_py["pm_tool_models.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_pm_tool_sync_py["pm_tool_sync.py"]:::fresh
+  scripts_dontpanic_orchestrate_integrations_adapter_registry_py --> scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py
+  scripts_dontpanic_orchestrate_integrations_adapter_registry_py --> scripts_dontpanic_orchestrate_integrations_linear_pp_adapter_py
+  scripts_dontpanic_orchestrate_integrations_adapter_registry_py --> scripts_dontpanic_orchestrate_integrations_pm_tool_mapping_py
+  scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py --> scripts_dontpanic_orchestrate_integrations___init___py
+  scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py --> scripts_dontpanic_orchestrate_integrations_linear_pp_adapter_py
+  scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py --> scripts_dontpanic_orchestrate_integrations_pm_tool_mapping_py
+  scripts_dontpanic_orchestrate_integrations_linear_pm_tool_py --> scripts_dontpanic_orchestrate_integrations_pm_tool_models_py
+  scripts_dontpanic_orchestrate_integrations_pm_tool_mapping_py --> scripts_dontpanic_orchestrate_integrations_pm_tool_models_py
+  scripts_dontpanic_orchestrate_integrations_pm_tool_sync_py --> scripts_dontpanic_orchestrate_integrations_pm_tool_models_py

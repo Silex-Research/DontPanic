@@ -1,0 +1,18 @@
+/* Armed-terminal dock (plan 2026-06-06-004 F005, spec §5.5). Token-only. --hazard is the one
+   saturated red, reserved for exactly this: a live unrestricted shell. */
+.dp-dock { font-family: var(--dp-font-sans); border-top: 1px solid var(--dp-border); background: var(--dp-surface-1); }
+.dp-dock-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--dp-meta-gap); padding: var(--dp-row-py) var(--dp-card-pad); }
+.dp-dock-status { font-size: var(--dp-type-meta-size); color: var(--dp-text-2); }
+.dp-dock-arm { font-family: inherit; font-size: var(--dp-type-meta-size); font-weight: 600; padding: 4px 12px;
+  border-radius: 6px; background: var(--dp-surface-2); color: var(--dp-text-1); border: 1px solid var(--dp-border); cursor: pointer; }
+
+/* ARMED — the hazard frame stays visible the entire time the shell is armed; not dismissible. */
+.dp-dock--armed { border-top: none; }
+.dp-hazard-frame { border: 3px solid var(--hazard); background: var(--dp-surface-1); padding: var(--dp-card-pad); display: flex; flex-direction: column; gap: 6px; }
+.dp-hazard-title { font-size: var(--dp-type-title-size); font-weight: 700; color: var(--hazard); letter-spacing: 0.04em; }
+.dp-hazard-scope { font-size: var(--dp-type-meta-size); color: var(--dp-text-1); }
+.dp-hazard-warn { font-size: var(--dp-type-meta-size); color: var(--dp-text-2); }
+.dp-hazard-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--dp-meta-gap); margin-top: 4px; }
+.dp-hazard-session { font-size: var(--dp-type-meta-size); color: var(--hazard); }
+.dp-dock-disarm { font-family: inherit; font-size: var(--dp-type-meta-size); font-weight: 700; padding: 4px 14px;
+  border-radius: 6px; background: var(--hazard); color: var(--hazard-on); border: none; cursor: pointer; }

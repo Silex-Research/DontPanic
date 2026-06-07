@@ -1,0 +1,14 @@
+/* Freshness grammar styling (plan 2026-06-06-004 F007, spec §2.2/§6). Token-only. */
+.dp-freshness--fresh    { background: var(--freshness-fresh); }
+.dp-freshness--aging    { background: var(--freshness-aging); }
+.dp-freshness--stale    { background: var(--freshness-stale); }
+.dp-freshness--unproven { background: transparent; border: 1.5px solid var(--freshness-unproven); }
+/* Stale + unproven recede until refreshed — chroma down ~40%, slightly dimmed. */
+.dp-desaturate { filter: saturate(0.6); opacity: 0.7; }
+
+.dp-stale-banner {
+  font-family: var(--dp-font-sans); font-size: var(--dp-type-meta-size);
+  color: var(--freshness-stale); background: var(--dp-surface-2);
+  border: 1px solid var(--freshness-stale); border-radius: var(--dp-radius);
+  padding: var(--dp-row-py) var(--dp-card-pad);
+}

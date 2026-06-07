@@ -1,0 +1,13 @@
+%% L3 — scripts/dontpanic_orchestrate/showcase
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_showcase___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate_showcase_config_py["config.py"]:::fresh
+  scripts_dontpanic_orchestrate_showcase_generator_py["generator.py"]:::fresh
+  scripts_dontpanic_orchestrate_showcase_redactor_py["redactor.py"]:::fresh
+  scripts_dontpanic_orchestrate_showcase___init___py --> scripts_dontpanic_orchestrate_showcase_config_py
+  scripts_dontpanic_orchestrate_showcase___init___py --> scripts_dontpanic_orchestrate_showcase_generator_py
+  scripts_dontpanic_orchestrate_showcase___init___py --> scripts_dontpanic_orchestrate_showcase_redactor_py
+  scripts_dontpanic_orchestrate_showcase_generator_py --> scripts_dontpanic_orchestrate_showcase___init___py
+  scripts_dontpanic_orchestrate_showcase_generator_py --> scripts_dontpanic_orchestrate_showcase_redactor_py

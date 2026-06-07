@@ -1,0 +1,113 @@
+/*
+ * ActionItem atom styling (plan 2026-06-06-004 F003, spec §2.4). Token-only — every colour
+ * comes from tokens.css via --bucket-* / --freshness-* / --scope-* / --dp-*. Card vs row is
+ * the same DOM; only spacing/wrapping change (driven by --dp-* density tokens + the modifier).
+ */
+
+.dp-item {
+  position: relative;
+  display: flex;
+  gap: var(--dp-meta-gap);
+  background: var(--dp-surface-1);
+  border: 1px solid var(--dp-border);
+  border-radius: var(--dp-radius);
+  padding: var(--dp-card-pad);
+  padding-left: calc(var(--dp-card-pad) + var(--dp-accent-w));
+  color: var(--dp-text-1);
+  font-family: var(--dp-font-sans);
+}
+
+.dp-item--row {
+  padding-top: var(--dp-row-py);
+  padding-bottom: var(--dp-row-py);
+  align-items: center;
+}
+
+/* Scope accent — a 3px left bar coloured by scope (§2.4). Never a repeated text badge. */
+.dp-scope-accent {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--dp-accent-w);
+  border-top-left-radius: var(--dp-radius);
+  border-bottom-left-radius: var(--dp-radius);
+  background: var(--scope-global);
+}
+.dp-item[data-scope="project"] .dp-scope-accent { background: var(--scope-project); }
+.dp-item[data-scope="global"]  .dp-scope-accent { background: var(--scope-global); }
+
+.dp-item-body { display: flex; flex-direction: column; gap: var(--dp-stack-gap); flex: 1; min-width: 0; }
+.dp-item--row .dp-item-body { flex-direction: row; align-items: center; gap: var(--dp-meta-gap); flex-wrap: wrap; }
+.dp-item-head { display: flex; align-items: center; gap: var(--dp-meta-gap); min-width: 0; }
+
+.dp-item-title {
+  margin: 0;
+  font-size: var(--dp-type-title-size);
+  font-weight: var(--dp-type-title-weight);
+  line-height: var(--dp-leading-tight);
+}
+.dp-item--row .dp-item-title { font-size: var(--dp-type-meta-size); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bucket tints the title (and, via the primary affordance, the main action). */
+.dp-bucket-needs-auth      .dp-item-title { color: var(--bucket-needs-auth); }
+.dp-bucket-needs-decision  .dp-item-title { color: var(--bucket-needs-decision); }
+.dp-bucket-agent-runnable  .dp-item-title { color: var(--bucket-agent-runnable); }
+.dp-bucket-auto-safe       .dp-item-title { color: var(--bucket-auto-safe); }
+.dp-bucket-uncertain       .dp-item-title { color: var(--bucket-uncertain); }
+.dp-bucket-quiet           .dp-item-title { color: var(--bucket-quiet); }
+
+.dp-item-why {
+  margin: 0;
+  font-size: var(--dp-type-body-size);
+  font-weight: var(--dp-type-body-weight);
+  line-height: var(--dp-leading-body);
+  color: var(--dp-text-2);
+  max-width: var(--dp-measure);
+}
+.dp-item--row .dp-item-why { display: none; } /* dense rows drop the prose; it's in inspect */
+
+.dp-item-meta {
+  display: flex; align-items: center; gap: var(--dp-meta-gap);
+  font-size: var(--dp-type-meta-size); font-weight: var(--dp-type-meta-weight);
+  color: var(--dp-text-3);
+}
+.dp-actor { color: var(--dp-text-2); }
+.dp-dupes { color: var(--dp-text-3); }
+
+/* Freshness dot — filled = proven (item_probe); hollow ring = unproven/asserted (§2.2). */
+.dp-freshness { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dp-freshness--proven   { background: var(--freshness-fresh); }
+.dp-freshness--unproven { background: transparent; border: 1.5px solid var(--freshness-unproven); }
+
+.dp-scope-chip {
+  font-size: var(--dp-type-prov-size); font-weight: var(--dp-type-prov-weight);
+  padding: 1px 6px; border-radius: 6px;
+  color: var(--scope-global); border: 1px solid var(--scope-global);
+}
+.dp-scope-chip--project { color: var(--scope-project); border-color: var(--scope-project); }
+.dp-scope-chip--global  { color: var(--scope-global);  border-color: var(--scope-global); }
+
+/* Resolution affordances — first-class buttons, NOT copy-command blocks (§3.3). */
+.dp-resolutions { display: flex; gap: var(--dp-meta-gap); flex-wrap: wrap; }
+.dp-affordance {
+  font-family: var(--dp-font-sans); font-size: var(--dp-type-meta-size); font-weight: 600;
+  padding: 4px 12px; border-radius: 6px;
+  background: var(--dp-surface-2); color: var(--dp-text-1);
+  border: 1px solid var(--dp-border); cursor: pointer;
+}
+.dp-affordance:focus-visible { outline: none; box-shadow: var(--dp-focus-ring); }
+/* The first affordance is the primary; it carries the bucket colour. */
+.dp-bucket-needs-decision .dp-affordance:first-child { border-color: var(--bucket-needs-decision); color: var(--bucket-needs-decision); }
+.dp-bucket-agent-runnable .dp-affordance:first-child { border-color: var(--bucket-agent-runnable); color: var(--bucket-agent-runnable); }
+.dp-bucket-auto-safe      .dp-affordance:first-child { border-color: var(--bucket-auto-safe);      color: var(--bucket-auto-safe); }
+
+/* "You're clear" payoff (§2.5) — centred, generous whitespace, one quiet reassurance. */
+.dp-clear { text-align: center; padding: 64px 16px; color: var(--dp-text-2); font-family: var(--dp-font-sans); }
+.dp-clear-mark { font-size: var(--dp-type-section-size); color: var(--freshness-fresh); }
+.dp-clear-head { font-size: var(--dp-type-hero-size); font-weight: var(--dp-type-hero-weight); color: var(--dp-text-1); line-height: var(--dp-leading-tight); }
+.dp-clear-sub { font-size: var(--dp-type-body-size); margin-top: 8px; }
+.dp-clear-proof { font-size: var(--dp-type-meta-size); color: var(--dp-text-3); margin-top: 4px; }
+.dp-clear-fresh { font-size: var(--dp-type-prov-size); color: var(--dp-text-3); margin-top: 16px; display: inline-flex; align-items: center; gap: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-item, .dp-affordance { transition: none; }
+}

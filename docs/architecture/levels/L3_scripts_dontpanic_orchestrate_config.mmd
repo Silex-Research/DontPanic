@@ -1,0 +1,16 @@
+%% L3 — scripts/dontpanic_orchestrate/config
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_config___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_cli_helpers_py["cli_helpers.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_doctor_registry_py["doctor_registry.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_resolvers_py["resolvers.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_roles_py["roles.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_runtime_evidence_py["runtime_evidence.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_setup_py["setup.py"]:::fresh
+  scripts_dontpanic_orchestrate_config___init___py --> scripts_dontpanic_orchestrate_config_roles_py
+  scripts_dontpanic_orchestrate_config___init___py --> scripts_dontpanic_orchestrate_config_runtime_evidence_py
+  scripts_dontpanic_orchestrate_config_cli_helpers_py --> scripts_dontpanic_orchestrate_config_roles_py
+  scripts_dontpanic_orchestrate_config_cli_helpers_py --> scripts_dontpanic_orchestrate_config_runtime_evidence_py
+  scripts_dontpanic_orchestrate_config_setup_py --> scripts_dontpanic_orchestrate_config_cli_helpers_py

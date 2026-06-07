@@ -1,0 +1,32 @@
+%% L3 — scripts/dontpanic_orchestrate
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_reconcile_py["reconcile.py"]:::fresh
+  scripts_dontpanic_orchestrate_release_impact_py["release_impact.py"]:::fresh
+  scripts_dontpanic_orchestrate_render_gate_py["render_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_repair_apply_py["repair_apply.py"]:::fresh
+  scripts_dontpanic_orchestrate_repair_bundle_py["repair_bundle.py"]:::fresh
+  scripts_dontpanic_orchestrate_repair_planner_py["repair_planner.py"]:::fresh
+  scripts_dontpanic_orchestrate_repair_safety_py["repair_safety.py"]:::fresh
+  scripts_dontpanic_orchestrate_repair_verify_py["repair_verify.py"]:::fresh
+  scripts_dontpanic_orchestrate_repo_onboarding_py["repo_onboarding.py"]:::fresh
+  scripts_dontpanic_orchestrate_role_assignment_py["role_assignment.py"]:::fresh
+  scripts_dontpanic_orchestrate_scope_lattice_py["scope_lattice.py"]:::fresh
+  scripts_dontpanic_orchestrate_signed_off_finalizer_py["signed_off_finalizer.py"]:::fresh
+  scripts_dontpanic_orchestrate_signoff_writer_py["signoff_writer.py"]:::fresh
+  scripts_dontpanic_orchestrate_skill_allowlist_py["skill_allowlist.py"]:::fresh
+  scripts_dontpanic_orchestrate_skill_applicability_py["skill_applicability.py"]:::fresh
+  scripts_dontpanic_orchestrate_skill_invocation_py["skill_invocation.py"]:::fresh
+  scripts_dontpanic_orchestrate_skill_recommendation_py["skill_recommendation.py"]:::fresh
+  scripts_dontpanic_orchestrate_smoke_test_storage_py["smoke_test_storage.py"]:::fresh
+  scripts_dontpanic_orchestrate_state_cli_py["state_cli.py"]:::fresh
+  scripts_dontpanic_orchestrate_state_projection_py["state_projection.py"]:::fresh
+  scripts_dontpanic_orchestrate_subprocess_runner_py["subprocess_runner.py"]:::fresh
+  scripts_dontpanic_orchestrate_sufficiency_auditor_py["sufficiency_auditor.py"]:::fresh
+  scripts_dontpanic_orchestrate_sufficiency_gate_py["sufficiency_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_sufficiency_packs_py["sufficiency_packs.py"]:::fresh
+  scripts_dontpanic_orchestrate_supervisor_py["supervisor.py"]:::fresh
+  scripts_dontpanic_orchestrate_skill_allowlist_py --> scripts_dontpanic_orchestrate_skill_invocation_py
+  scripts_dontpanic_orchestrate_skill_recommendation_py --> scripts_dontpanic_orchestrate_skill_invocation_py
+  scripts_dontpanic_orchestrate_sufficiency_gate_py --> scripts_dontpanic_orchestrate_sufficiency_auditor_py

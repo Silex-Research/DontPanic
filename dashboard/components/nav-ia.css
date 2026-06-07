@@ -1,0 +1,10 @@
+/* Three-domain nav (plan 2026-06-06-004 F006, spec §1). Token-only. */
+.dp-nav { font-family: var(--dp-font-sans); border-bottom: 1px solid var(--dp-border); background: var(--dp-surface-1); }
+.dp-nav-domains { display: flex; gap: var(--dp-group-gap); padding: var(--dp-row-py) var(--dp-card-pad) 0; }
+.dp-nav-domain { font-family: inherit; font-size: var(--dp-type-meta-size); font-weight: 600; background: none; border: none;
+  color: var(--dp-text-2); padding: 8px 0; cursor: pointer; border-bottom: 2px solid transparent; }
+.dp-nav-domain--active { color: var(--dp-text-1); border-bottom-color: var(--bucket-agent-runnable); }
+.dp-nav-subnav { display: flex; gap: var(--dp-meta-gap); padding: 6px var(--dp-card-pad); }
+.dp-nav-sub { font-family: inherit; font-size: var(--dp-type-prov-size); font-weight: 500; background: none; border: none;
+  color: var(--dp-text-3); padding: 2px 6px; cursor: pointer; border-radius: 6px; }
+.dp-nav-sub--active { color: var(--dp-text-1); background: var(--dp-surface-2); }

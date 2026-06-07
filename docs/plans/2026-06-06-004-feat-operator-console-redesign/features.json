@@ -35,9 +35,13 @@
       "id": "F003",
       "category": "functional",
       "phase": 3,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest action-item.test.js",
+        "codex batch audit F002-F005 (needs_changes\u2192fixed)",
+        "full dashboard vitest 1133"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "The atom re-rendered (spec \u00a73): comfort card + dense row (same fields, spacing only) + 'you're clear' empty state; resolution affordances replace copy-command-as-primary. [deps: F001,F002]",
       "acceptance": "Card + row render identical fields; resolution buttons map 1:1 to resolution[]; empty queue shows the calm payoff; vitest unit tests."
     },
@@ -45,9 +49,13 @@
       "id": "F004",
       "category": "functional",
       "phase": 4,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest cockpit-gate.test.js",
+        "codex batch audit F002-F005 (needs_changes\u2192fixed)",
+        "full dashboard vitest 1133"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Cockpit merge (spec \u00a71.2, J1/J3): fold NEEDS ATTENTION into Cockpit sub-views; dock the terminal; inspect-why right panel (5 fixed sections). [deps: F002,F003]",
       "acceptance": "Cockpit shows queue + needs-* sub-views from one model; inspect panel renders what/why_now/evidence/provenance/resolution in order; vitest tests."
     },
@@ -55,9 +63,12 @@
       "id": "F005",
       "category": "functional",
       "phase": 5,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest cockpit-gate.test.js (gate + armed terminal)",
+        "codex batch audit F002-F005 (needs_changes\u2192fixed)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Gate + dock (J2, J4, \u00a75.5): approve/request_changes/reject resume flow; side-by-side armed terminal with persistent red hazard frame; terminal OFF by default. [deps: F003,F004]",
       "acceptance": "Approve removes item + names the run; armed state shows non-dismissible red hazard + scope; disarm one click; vitest tests for the gate logic + armed-state rendering."
     },
@@ -65,9 +76,12 @@
       "id": "F006",
       "category": "functional",
       "phase": 6,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest nav-freshness.test.js",
+        "codex batch audit F006-F008 (needs_changes\u2192fixed)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Domain regroup (spec \u00a71): 8 tabs -> Cockpit / Work / System; dissolve Repair into the queue as a resolution; Architecture under Work. [deps: F004]",
       "acceptance": "Nav is three domains with sub-nav; Repair items appear in the cockpit queue; Architecture lives under Work; drift-guard tests updated."
     },
@@ -75,9 +89,12 @@
       "id": "F007",
       "category": "functional",
       "phase": 7,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest nav-freshness.test.js",
+        "codex batch audit F006-F008 (needs_changes\u2192fixed)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Freshness everywhere (spec \u00a72.2, \u00a76): filled/hollow dot grammar (proven vs asserted) + desaturation of stale/unproven across surfaces. [deps: F001]",
       "acceptance": "Items render filled dot only when proven_live; hollow \u25cb unverified otherwise; stale desaturated + banner; never full-confidence on unproven; vitest tests."
     },
@@ -85,9 +102,13 @@
       "id": "F008",
       "category": "functional",
       "phase": 8,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "pytest test_architecture_levels_f008.py (10)",
+        "codex batch audit F006-F008 (needs_changes\u2192fixed)",
+        "live: 149-module map \u2192 17 slices, all \u226425 nodes"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Navigable architecture (spec \u00a79): per-level Mermaid (docs/architecture/levels/*.mmd) generated from architecture.json; C4 breadcrumb zoom; per-node drift coloring from source_fingerprint; regenerated on the commit hook. [deps: F007]",
       "acceptance": "Each level <=~25 nodes; .mmd files deterministic + diff-able; node drift colored from file-hash vs snapshot; replaces the 208KB flat graph; tests for slice generation + drift coloring."
     }

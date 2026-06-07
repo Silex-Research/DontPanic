@@ -1,0 +1,35 @@
+%% L3 — scripts/dontpanic_orchestrate
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_cli_py["cli.py"]:::drift
+  scripts_dontpanic_orchestrate_closeout_py["closeout.py"]:::fresh
+  scripts_dontpanic_orchestrate_command_guard_py["command_guard.py"]:::fresh
+  scripts_dontpanic_orchestrate_command_guidance_py["command_guidance.py"]:::fresh
+  scripts_dontpanic_orchestrate_command_validation_py["command_validation.py"]:::fresh
+  scripts_dontpanic_orchestrate_completion_auditor_py["completion_auditor.py"]:::fresh
+  scripts_dontpanic_orchestrate_completion_dispatch_py["completion_dispatch.py"]:::fresh
+  scripts_dontpanic_orchestrate_completion_gate_py["completion_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_inventory_py["config_inventory.py"]:::fresh
+  scripts_dontpanic_orchestrate_config_readiness_py["config_readiness.py"]:::fresh
+  scripts_dontpanic_orchestrate_conventions_gate_py["conventions_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_conventions_ledger_py["conventions_ledger.py"]:::fresh
+  scripts_dontpanic_orchestrate_dashboard_py["dashboard.py"]:::drift
+  scripts_dontpanic_orchestrate_dashboard_relevance_py["dashboard_relevance.py"]:::fresh
+  scripts_dontpanic_orchestrate_ec5_classifier_py["ec5_classifier.py"]:::fresh
+  scripts_dontpanic_orchestrate_environments_loader_py["environments_loader.py"]:::fresh
+  scripts_dontpanic_orchestrate_event_copy_py["event_copy.py"]:::fresh
+  scripts_dontpanic_orchestrate_execution_environment_py["execution_environment.py"]:::fresh
+  scripts_dontpanic_orchestrate_external_refs_sync_py["external_refs_sync.py"]:::fresh
+  scripts_dontpanic_orchestrate_firebase_client_py["firebase_client.py"]:::fresh
+  scripts_dontpanic_orchestrate_gate_pause_py["gate_pause.py"]:::fresh
+  scripts_dontpanic_orchestrate_git_state_py["git_state.py"]:::fresh
+  scripts_dontpanic_orchestrate_global_config_py["global_config.py"]:::fresh
+  scripts_dontpanic_orchestrate_home_reconcile_py["home_reconcile.py"]:::fresh
+  scripts_dontpanic_orchestrate_inbox_py["inbox.py"]:::fresh
+  scripts_dontpanic_orchestrate_cli_py --> scripts_dontpanic_orchestrate_conventions_ledger_py
+  scripts_dontpanic_orchestrate_cli_py --> scripts_dontpanic_orchestrate_dashboard_py
+  scripts_dontpanic_orchestrate_completion_dispatch_py --> scripts_dontpanic_orchestrate_completion_auditor_py
+  scripts_dontpanic_orchestrate_completion_gate_py --> scripts_dontpanic_orchestrate_completion_auditor_py
+  scripts_dontpanic_orchestrate_completion_gate_py --> scripts_dontpanic_orchestrate_completion_dispatch_py
+  scripts_dontpanic_orchestrate_conventions_gate_py --> scripts_dontpanic_orchestrate_conventions_ledger_py

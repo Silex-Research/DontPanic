@@ -1,0 +1,15 @@
+%% L3 — scripts/dontpanic_orchestrate/executors
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_executors___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate_executors_base_py["base.py"]:::fresh
+  scripts_dontpanic_orchestrate_executors_claude_cli_py["claude_cli.py"]:::fresh
+  scripts_dontpanic_orchestrate_executors_codex_cli_py["codex_cli.py"]:::fresh
+  scripts_dontpanic_orchestrate_executors_grok_api_py["grok_api.py"]:::fresh
+  scripts_dontpanic_orchestrate_executors___init___py --> scripts_dontpanic_orchestrate_executors_base_py
+  scripts_dontpanic_orchestrate_executors___init___py --> scripts_dontpanic_orchestrate_executors_claude_cli_py
+  scripts_dontpanic_orchestrate_executors___init___py --> scripts_dontpanic_orchestrate_executors_codex_cli_py
+  scripts_dontpanic_orchestrate_executors_claude_cli_py --> scripts_dontpanic_orchestrate_executors_base_py
+  scripts_dontpanic_orchestrate_executors_codex_cli_py --> scripts_dontpanic_orchestrate_executors_base_py
+  scripts_dontpanic_orchestrate_executors_grok_api_py --> scripts_dontpanic_orchestrate_executors_base_py

@@ -1,0 +1,50 @@
+%% L3 — scripts/dontpanic_orchestrate
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate___main___py["__main__.py"]:::fresh
+  scripts_dontpanic_orchestrate_action_renderers_py["action_renderers.py"]:::fresh
+  scripts_dontpanic_orchestrate_action_resolvability_py["action_resolvability.py"]:::fresh
+  scripts_dontpanic_orchestrate_active_supervisors_py["active_supervisors.py"]:::fresh
+  scripts_dontpanic_orchestrate_agent_brief_py["agent_brief.py"]:::fresh
+  scripts_dontpanic_orchestrate_agent_guide_py["agent_guide.py"]:::fresh
+  scripts_dontpanic_orchestrate_agent_manifest_py["agent_manifest.py"]:::fresh
+  scripts_dontpanic_orchestrate_agent_surface_py["agent_surface.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_py["architecture.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_hook_py["architecture_hook.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_html_py["architecture_html.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_regen_py["architecture_regen.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_regen_hook_py["architecture_regen_hook.py"]:::fresh
+  scripts_dontpanic_orchestrate_architecture_view_state_py["architecture_view_state.py"]:::fresh
+  scripts_dontpanic_orchestrate_audit_writer_py["audit_writer.py"]:::fresh
+  scripts_dontpanic_orchestrate_auditor_taxonomy_py["auditor_taxonomy.py"]:::fresh
+  scripts_dontpanic_orchestrate_calibration_loader_py["calibration_loader.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_py["capabilities.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_lock_sidecar_py["capabilities_lock_sidecar.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_setup_py["capabilities_setup.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_setup_evidence_py["capabilities_setup_evidence.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_setup_runner_py["capabilities_setup_runner.py"]:::fresh
+  scripts_dontpanic_orchestrate_capabilities_status_py["capabilities_status.py"]:::fresh
+  scripts_dontpanic_orchestrate_circuit_breakers_py["circuit_breakers.py"]:::fresh
+  scripts_dontpanic_orchestrate_action_renderers_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_agent_brief_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_agent_guide_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_agent_manifest_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_agent_surface_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_architecture_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_architecture_regen_hook_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_architecture_view_state_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_audit_writer_py --> scripts_dontpanic_orchestrate___init___py
+  scripts_dontpanic_orchestrate_capabilities_lock_sidecar_py --> scripts_dontpanic_orchestrate_capabilities_py
+  scripts_dontpanic_orchestrate_capabilities_lock_sidecar_py --> scripts_dontpanic_orchestrate_capabilities_status_py
+  scripts_dontpanic_orchestrate_capabilities_setup_py --> scripts_dontpanic_orchestrate_capabilities_py
+  scripts_dontpanic_orchestrate_capabilities_setup_py --> scripts_dontpanic_orchestrate_capabilities_setup_evidence_py
+  scripts_dontpanic_orchestrate_capabilities_setup_py --> scripts_dontpanic_orchestrate_capabilities_setup_runner_py
+  scripts_dontpanic_orchestrate_capabilities_setup_py --> scripts_dontpanic_orchestrate_capabilities_status_py
+  scripts_dontpanic_orchestrate_capabilities_setup_evidence_py --> scripts_dontpanic_orchestrate_capabilities_py
+  scripts_dontpanic_orchestrate_capabilities_setup_evidence_py --> scripts_dontpanic_orchestrate_capabilities_setup_runner_py
+  scripts_dontpanic_orchestrate_capabilities_setup_runner_py --> scripts_dontpanic_orchestrate_capabilities_py
+  scripts_dontpanic_orchestrate_capabilities_setup_runner_py --> scripts_dontpanic_orchestrate_capabilities_status_py
+  scripts_dontpanic_orchestrate_capabilities_status_py --> scripts_dontpanic_orchestrate_capabilities_py
+  scripts_dontpanic_orchestrate_circuit_breakers_py --> scripts_dontpanic_orchestrate___init___py

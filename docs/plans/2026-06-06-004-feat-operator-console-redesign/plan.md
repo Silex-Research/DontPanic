@@ -3,7 +3,7 @@ id: 2026-06-06-004-feat-operator-console-redesign
 title: Operator console redesign — control tower over a log viewer
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-06"
 goal_type: new_feature
 description: >

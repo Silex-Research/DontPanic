@@ -1,0 +1,33 @@
+%% L2 — clusters
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate["⬣ scripts/dontpanic_orchestrate · 105 mods · ○ drift"]:::drift
+  scripts_dontpanic_orchestrate_adapters["⬣ scripts/dontpanic_orchestrate/adapters · 2 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_config["⬣ scripts/dontpanic_orchestrate/config · 7 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_executors["⬣ scripts/dontpanic_orchestrate/executors · 5 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_init["⬣ scripts/dontpanic_orchestrate/init · 2 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_integrations["⬣ scripts/dontpanic_orchestrate/integrations · 7 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review["⬣ scripts/dontpanic_orchestrate/plan_review · 10 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_runtime_evidence["⬣ scripts/dontpanic_orchestrate/runtime_evidence · 6 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_showcase["⬣ scripts/dontpanic_orchestrate/showcase · 4 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate_smoke["⬣ scripts/dontpanic_orchestrate/smoke · 1 mods · ●"]:::fresh
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_config
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_executors
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_init
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_integrations
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_plan_review
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_showcase
+  scripts_dontpanic_orchestrate --> scripts_dontpanic_orchestrate_smoke
+  scripts_dontpanic_orchestrate_adapters --> scripts_dontpanic_orchestrate_integrations
+  scripts_dontpanic_orchestrate_config --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_executors --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_init --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_integrations --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_plan_review --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_plan_review --> scripts_dontpanic_orchestrate_executors
+  scripts_dontpanic_orchestrate_runtime_evidence --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_runtime_evidence --> scripts_dontpanic_orchestrate_config
+  scripts_dontpanic_orchestrate_showcase --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_smoke --> scripts_dontpanic_orchestrate
+  scripts_dontpanic_orchestrate_smoke --> scripts_dontpanic_orchestrate_executors

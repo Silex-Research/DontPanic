@@ -1,0 +1,31 @@
+%% L3 — scripts/dontpanic_orchestrate/plan_review
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_plan_review___init___py["__init__.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_cross_feature_py["cross_feature.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_design_review_py["design_review.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_disposition_check_py["disposition_check.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_lint_py["lint.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_pre_lock_gate_py["pre_lock_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_report_py["report.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_scope_delta_py["scope_delta.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_sizing_gate_py["sizing_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review_split_py["split.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_cross_feature_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_design_review_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_lint_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_report_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_scope_delta_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_sizing_gate_py
+  scripts_dontpanic_orchestrate_plan_review___init___py --> scripts_dontpanic_orchestrate_plan_review_split_py
+  scripts_dontpanic_orchestrate_plan_review_design_review_py --> scripts_dontpanic_orchestrate_plan_review_report_py
+  scripts_dontpanic_orchestrate_plan_review_pre_lock_gate_py --> scripts_dontpanic_orchestrate_plan_review_lint_py
+  scripts_dontpanic_orchestrate_plan_review_pre_lock_gate_py --> scripts_dontpanic_orchestrate_plan_review_report_py
+  scripts_dontpanic_orchestrate_plan_review_report_py --> scripts_dontpanic_orchestrate_plan_review_lint_py
+  scripts_dontpanic_orchestrate_plan_review_report_py --> scripts_dontpanic_orchestrate_plan_review_split_py
+  scripts_dontpanic_orchestrate_plan_review_scope_delta_py --> scripts_dontpanic_orchestrate_plan_review_lint_py
+  scripts_dontpanic_orchestrate_plan_review_scope_delta_py --> scripts_dontpanic_orchestrate_plan_review_sizing_gate_py
+  scripts_dontpanic_orchestrate_plan_review_sizing_gate_py --> scripts_dontpanic_orchestrate_plan_review_lint_py
+  scripts_dontpanic_orchestrate_plan_review_sizing_gate_py --> scripts_dontpanic_orchestrate_plan_review_split_py
+  scripts_dontpanic_orchestrate_plan_review_split_py --> scripts_dontpanic_orchestrate_plan_review_lint_py

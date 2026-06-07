@@ -1,0 +1,34 @@
+%% L3 — scripts/dontpanic_orchestrate
+graph LR
+  classDef fresh stroke:#16A34A,stroke-width:2px;
+classDef drift stroke:#DC2626,stroke-width:2px,stroke-dasharray:4 3;
+  scripts_dontpanic_orchestrate_install_snapshot_py["install_snapshot.py"]:::fresh
+  scripts_dontpanic_orchestrate_interactive_state_py["interactive_state.py"]:::fresh
+  scripts_dontpanic_orchestrate_mcp_server_py["mcp_server.py"]:::fresh
+  scripts_dontpanic_orchestrate_nested_orchestration_py["nested_orchestration.py"]:::fresh
+  scripts_dontpanic_orchestrate_notify_py["notify.py"]:::fresh
+  scripts_dontpanic_orchestrate_notify_discord_py["notify_discord.py"]:::fresh
+  scripts_dontpanic_orchestrate_notify_event_py["notify_event.py"]:::fresh
+  scripts_dontpanic_orchestrate_operations_guidance_py["operations_guidance.py"]:::fresh
+  scripts_dontpanic_orchestrate_operator_brief_py["operator_brief.py"]:::drift
+  scripts_dontpanic_orchestrate_operator_console_py["operator_console.py"]:::fresh
+  scripts_dontpanic_orchestrate_operator_triage_py["operator_triage.py"]:::drift
+  scripts_dontpanic_orchestrate_patch_completeness_py["patch_completeness.py"]:::fresh
+  scripts_dontpanic_orchestrate_patch_completeness_gate_py["patch_completeness_gate.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_drift_py["plan_drift.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_loader_py["plan_loader.py"]:::fresh
+  scripts_dontpanic_orchestrate_plan_target_py["plan_target.py"]:::fresh
+  scripts_dontpanic_orchestrate_planning_readiness_py["planning_readiness.py"]:::fresh
+  scripts_dontpanic_orchestrate_prereq_registry_py["prereq_registry.py"]:::fresh
+  scripts_dontpanic_orchestrate_project_config_py["project_config.py"]:::fresh
+  scripts_dontpanic_orchestrate_projects_dashboard_py["projects_dashboard.py"]:::fresh
+  scripts_dontpanic_orchestrate_projects_registry_py["projects_registry.py"]:::fresh
+  scripts_dontpanic_orchestrate_prompts_py["prompts.py"]:::fresh
+  scripts_dontpanic_orchestrate_pty_bridge_py["pty_bridge.py"]:::fresh
+  scripts_dontpanic_orchestrate_quota_admission_py["quota_admission.py"]:::fresh
+  scripts_dontpanic_orchestrate_quota_caps_loader_py["quota_caps_loader.py"]:::fresh
+  scripts_dontpanic_orchestrate_notify_py --> scripts_dontpanic_orchestrate_notify_event_py
+  scripts_dontpanic_orchestrate_notify_discord_py --> scripts_dontpanic_orchestrate_notify_event_py
+  scripts_dontpanic_orchestrate_patch_completeness_gate_py --> scripts_dontpanic_orchestrate_patch_completeness_py
+  scripts_dontpanic_orchestrate_plan_loader_py --> scripts_dontpanic_orchestrate_nested_orchestration_py
+  scripts_dontpanic_orchestrate_plan_loader_py --> scripts_dontpanic_orchestrate_plan_target_py
