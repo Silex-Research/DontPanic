@@ -34,9 +34,13 @@
       "id": "F003",
       "category": "functional",
       "phase": 3,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "tests/integration/cockpit-journey-f003.test.js (3: lands-on-cockpit + anti-synthetic missing/stale)",
+        "scripts/.../test_cockpit_fixture_contract_f003.py (3: fixture<->producer guard)",
+        "full dashboard vitest green"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Real-state journey test: boot the real shell against a real built operator-triage.json (producer fixture or live build), assert the default Cockpit renders \u2014 queue count correct, NO raw JSON, freshness basis honest (hollow unless item_probe), resolution intents present; anti-synthetic negative: stale/missing/corrupt triage state shows an honest error/fallback, never a fabricated-confident render.",
       "acceptance": "A journey test enters the REAL surface (boots the shell + Cockpit page), asserts the four positives + the anti-synthetic negative; guarded against synthetic-fixture pre-baking per the operator-outcome QA contract."
     },
