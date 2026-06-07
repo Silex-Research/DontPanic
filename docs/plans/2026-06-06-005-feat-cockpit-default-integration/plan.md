@@ -3,7 +3,7 @@ id: 2026-06-06-005-feat-cockpit-default-integration
 title: Cockpit default integration — make the redesigned Cockpit the dashboard, on real state
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-06"
 goal_type: new_feature
 description: >
