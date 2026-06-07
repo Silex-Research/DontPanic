@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- data-theme (dark|light) + data-density (comfort|dense) drive the redesign token layer
+     (plan 2026-06-06-004 F002, spec §2/§8). dark + comfort are the operator defaults. -->
+<html lang="en" data-theme="dark" data-density="comfort">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DontPanic — Local Operating Console</title>
+  <!-- Redesign semantic token layer FIRST, so it is the base every surface can adopt; core.css
+       still wins for legacy names, keeping existing pages pixel-identical until F006 migrates them. -->
+  <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="core.css">
   <link rel="stylesheet" href="components.css">
   <!-- Embedded terminal dock (plan 2026-06-06-002): vendored xterm + dock chrome. -->

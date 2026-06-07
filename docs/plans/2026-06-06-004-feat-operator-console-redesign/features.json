@@ -21,9 +21,13 @@
       "id": "F002",
       "category": "functional",
       "phase": 2,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "vitest tokens.test.js (38 assertions)",
+        "full dashboard vitest (1097 passed)",
+        "non-breaking: tokens namespaced, core.css unchanged"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
       "description": "Visual system + tokens (spec \u00a72): semantic token set (--bucket-* / --freshness-* / --scope-* / --run-*), Inter + JetBrains roles, light+dark via data-theme, comfort/dense via data-density on :root, no raw hex in components.",
       "acceptance": "One token file; both themes + both densities render from one DOM; components reference semantic tokens only (no raw hex); existing pages keep rendering."
     },

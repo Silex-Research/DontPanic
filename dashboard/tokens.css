@@ -1,0 +1,136 @@
+/*
+ * Operator console redesign — semantic token layer (plan 2026-06-06-004 F002, spec §2/§8).
+ *
+ * One semantic token set, themed via data-theme (light|dark) + data-density (comfort|dense)
+ * on :root. Components reference these tokens — never raw hex (§2.2). The redesign palette
+ * lives ONLY in this file; a unit test (tokens.test.js) enforces that.
+ *
+ * NON-BREAKING: every token here is new or namespaced (--dp-*, --bucket-*, --freshness-*,
+ * --scope-*, --run-*). It does NOT redefine core.css's existing names (--surface-1, --border,
+ * --font-sans, …), so the current pages render pixel-identically until F006 migrates them.
+ * Loaded BEFORE core.css so core.css continues to win for any legacy name.
+ *
+ * Default theme = dark (the operator's default per §2.3); default density = comfort.
+ */
+
+:root {
+  /* ── Action buckets — the operator's primary axis (maps to operator_bucket, §2.2). ──
+     Dark defaults here; light overrides below. Auth (red) outranks Decision (amber):
+     a missing credential hard-blocks; both are "stop" but red is the harder stop. */
+  --bucket-needs-auth: #F87171;
+  --bucket-needs-decision: #FBBF24;
+  --bucket-agent-runnable: #60A5FA;
+  --bucket-auto-safe: #4ADE80;
+  --bucket-uncertain: #A78BFA;
+  --bucket-quiet: #94A3B8;
+
+  /* ── Freshness grammar (§2.2) — render-truth made visible. The renderer keys the FILLED
+     dot on item-level proof (freshness_basis == "item_probe"); "unproven" is the hollow
+     ring (asserted, never proven). These are the colours the dot/desaturation use. */
+  --freshness-fresh: #4ADE80;      /* proven live, current */
+  --freshness-aging: #FBBF24;      /* proven, getting old */
+  --freshness-stale: #F87171;      /* proven once, now untrustworthy */
+  --freshness-unproven: #64748B;   /* asserted, never proven live → hollow ring */
+
+  /* ── Scope (§2.2) — readable without reading text. Teal (project) deliberately avoids
+     colliding with agent-runnable blue. "fleet" is the aggregate view. */
+  --scope-fleet: #818CF8;    /* indigo */
+  --scope-project: #2DD4BF;  /* teal */
+  --scope-global: #94A3B8;   /* slate — install-level */
+
+  /* ── Run-state (§2.2, maps to run_state). idle has no colour indicator (uses text-3). ── */
+  --run-idle: var(--dp-text-3);
+  --run-running: #60A5FA;     /* slow-pulse blue */
+  --run-waiting: #FBBF24;     /* steady amber — running + a human gate */
+  --run-conflicted: #F87171;  /* >1 live supervisor on a plan */
+  --run-complete: #4ADE80;    /* green check, then fades to quiet */
+
+  /* ── Danger (§5.5) — reserved for exactly one meaning: the armed terminal. Saturated red,
+     kept free precisely because the bucket/freshness palette is muted. */
+  --hazard: #EF4444;
+  --hazard-on: #FFFFFF;
+
+  /* ── Neutrals & surfaces (§2.3), namespaced --dp-* so they don't touch core.css. ── */
+  --dp-bg: #0B0F17;
+  --dp-surface-1: #121826;
+  --dp-surface-2: #1A2233;
+  --dp-border: #283142;
+  --dp-text-1: #E8EDF4;
+  --dp-text-2: #9FB0C3;
+  --dp-text-3: #64748B;
+
+  /* ── Typography — two families, strict roles (§2.1). Mono is a SIGNIFIER (a literal
+     machine string: command, path, id), never the default reading face. */
+  --dp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --dp-font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Type scale (1.25 ratio, even px): size / weight per role. */
+  --dp-type-hero-size: 48px;       --dp-type-hero-weight: 700;   /* "14 need you" */
+  --dp-type-section-size: 32px;    --dp-type-section-weight: 600; /* domain/page headers */
+  --dp-type-count-size: 24px;      --dp-type-count-weight: 600;   /* bucket group counts */
+  --dp-type-title-size: 18px;      --dp-type-title-weight: 600;   /* item title */
+  --dp-type-body-size: 16px;       --dp-type-body-weight: 400;    /* why-now, prose */
+  --dp-type-meta-size: 14px;       --dp-type-meta-weight: 500;    /* labels, scope, time */
+  --dp-type-mono-size: 13px;       --dp-type-mono-weight: 400;    /* commands, paths, ids */
+  --dp-type-prov-size: 12px;       --dp-type-prov-weight: 500;    /* provenance line */
+  --dp-leading-body: 1.5;
+  --dp-leading-tight: 1.25;
+  --dp-measure: 72ch;              /* max reading measure for evidence prose */
+
+  /* ── Density — comfort default (§2.4, §8). Dense overrides below. Same fields, same DOM;
+     only spacing/wrapping change. F003's card vs row consume these. ── */
+  --dp-card-pad: 16px;
+  --dp-row-py: 12px;
+  --dp-stack-gap: 12px;
+  --dp-group-gap: 24px;
+  --dp-meta-gap: 12px;
+  --dp-accent-w: 3px;     /* scope left-accent bar */
+  --dp-radius: 10px;
+  --dp-focus-ring: 0 0 0 2px var(--bucket-agent-runnable);
+}
+
+/* ── Light theme (§2.3) — a first-class peer for daytime/handoff/screenshots. ──
+   Bucket/scope hues drop to the 600-family; dark-mode hues are lightened for AA on dark. */
+:root[data-theme="light"] {
+  --bucket-needs-auth: #DC2626;
+  --bucket-needs-decision: #D97706;
+  --bucket-agent-runnable: #2563EB;
+  --bucket-auto-safe: #16A34A;
+  --bucket-uncertain: #7C3AED;
+  --bucket-quiet: #64748B;
+
+  --freshness-fresh: #16A34A;
+  --freshness-aging: #D97706;
+  --freshness-stale: #DC2626;
+  --freshness-unproven: #94A3B8;
+
+  --scope-fleet: #4F46E5;
+  --scope-project: #0D9488;
+  --scope-global: #475569;
+
+  --run-running: #2563EB;
+  --run-waiting: #D97706;
+  --run-conflicted: #DC2626;
+  --run-complete: #16A34A;
+
+  --hazard: #DC2626;
+
+  --dp-bg: #FBFCFD;
+  --dp-surface-1: #FFFFFF;
+  --dp-surface-2: #F1F5F9;
+  --dp-border: #E2E8F0;
+  --dp-text-1: #0F172A;
+  --dp-text-2: #475569;
+  --dp-text-3: #94A3B8;
+}
+
+/* ── Dense density (§8) — air-traffic density for power operators. Comfort = cards, the
+   default above; dense = table rows. Same fields, only spacing/wrapping tighten. ── */
+:root[data-density="dense"] {
+  --dp-card-pad: 8px;
+  --dp-row-py: 6px;
+  --dp-stack-gap: 4px;
+  --dp-group-gap: 12px;
+  --dp-meta-gap: 8px;
+  --dp-radius: 6px;
+}
