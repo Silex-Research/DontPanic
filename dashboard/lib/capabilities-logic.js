@@ -14,7 +14,10 @@ import { renderProvenanceFooterHTML } from './provenance.js';
 
 // F004: per-page provenance pointers.
 const CAP_SOURCE = 'dashboard/state/capabilities-status.json';
-const CAP_REFRESH = 'dontpanic capabilities status --format=json > dashboard/state/capabilities-status.json';
+// The dashboard build already produces capabilities-status.json (write_capabilities_cache
+// is on by default), so point the operator at the same one command every tab uses —
+// not a raw probe-redirect they have to hand-run.
+const CAP_REFRESH = 'dontpanic dashboard build';
 
 /** Closed set of per-capability status values (mirrors V0b). */
 export const CAPABILITY_STATUSES = Object.freeze([
@@ -255,10 +258,10 @@ export function renderEmptyStateHTML() {
       <div class="cap-empty-scope">${renderScopeBadgeHTML('global')}</div>
       <div class="cap-empty-title">No capability snapshot yet</div>
       <div class="cap-empty-body">
-        Run the local CLI to produce <code>dashboard/state/capabilities-status.json</code>,
+        Build the dashboard state to produce <code>capabilities-status.json</code>,
         then reload this page. Firebase is not required for this view.
       </div>
-      <pre class="cap-empty-cmd">dontpanic capabilities status --format=json &gt; dashboard/state/capabilities-status.json</pre>
+      <pre class="cap-empty-cmd">${CAP_REFRESH}</pre>
       <div class="cap-empty-hint">
         Tools &amp; Setup reads from a static JSON file on disk. No sign-in,
         no realtime sync, no Cloud Functions.

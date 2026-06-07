@@ -54,7 +54,7 @@ describe('capability center: missing state file', () => {
     const el = makePageEl();
     renderInto(el, null);
     const text = el.textContent;
-    expect(text).toContain('dontpanic capabilities status');
+    expect(text).toContain('dontpanic dashboard build');
     expect(text).toContain('capabilities-status.json');
     // Must NOT tell the operator they need Firebase / a hosted backend.
     expect(text.toLowerCase()).not.toContain('firestore');
@@ -293,7 +293,7 @@ describe('capability center: real page module registration', () => {
 
     const pageEl = jarvisShim.getPageEl('capabilities');
     expect(pageEl.querySelector('.cap-empty-state')).not.toBeNull();
-    expect(pageEl.textContent).toContain('dontpanic capabilities status');
+    expect(pageEl.textContent).toContain('dontpanic dashboard build');
   });
 
   // Acceptance #2 end-to-end: a real fetch against state/capabilities-status.json
