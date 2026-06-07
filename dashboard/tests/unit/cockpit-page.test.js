@@ -90,3 +90,44 @@ describe('F002 — landing surface, old tabs preserved', () => {
     expect(pageModules.length).toBeGreaterThanOrEqual(9);
   });
 });
+
+describe('F004 — honest state matrix on the Cockpit', () => {
+  it('loading: no resolved model yet → a skeleton, never a blank', async () => {
+    const { container, page } = await mountCockpit();
+    page.init({}); // no operatorTriage key → the load has not resolved
+    expect(container.querySelector('.dp-cockpit-skeleton')).toBeTruthy();
+    expect(container.querySelector('.dp-cockpit')).toBeNull();
+  });
+
+  it('stale: an old model renders UNDER a stale banner — demoted, not hidden', async () => {
+    const { container, page } = await mountCockpit();
+    const old = { ...MODEL, generated_at: new Date(Date.now() - 30 * 3600 * 1000).toISOString() };
+    page.init({ operatorTriage: old });
+    expect(container.querySelector('.dp-stale-banner')).toBeTruthy();
+    expect(container.querySelector('.dp-cockpit')).toBeTruthy();      // the queue is still shown
+    expect(container.querySelector('.dp-hero-count').textContent).toBe('1');
+  });
+
+  it('error: a failed refresh shows last-good under an error banner + retry, never fake-fresh', async () => {
+    const { container, page } = await mountCockpit();
+    page.init({ operatorTriage: MODEL });                              // good first load → last-good captured
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error('network')));
+    await page.refresh();
+    expect(container.querySelector('.dp-error-banner')).toBeTruthy();
+    expect(container.querySelector('.dp-cockpit-retry')).toBeTruthy();
+    expect(container.querySelector('.dp-cockpit')).toBeTruthy();       // last-good queue retained
+  });
+
+  it('error→recover: clicking retry re-fetches and returns to the live queue', async () => {
+    const { container, page } = await mountCockpit();
+    page.init({ operatorTriage: MODEL });
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error('network')));
+    await page.refresh();
+    expect(container.querySelector('.dp-error-banner')).toBeTruthy();
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(MODEL) }));
+    container.querySelector('.dp-cockpit-retry').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));                        // flush the fetch chain
+    expect(container.querySelector('.dp-error-banner')).toBeNull();
+    expect(container.querySelector('.dp-cockpit')).toBeTruthy();
+  });
+});

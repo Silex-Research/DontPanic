@@ -1171,7 +1171,8 @@ def build_fleet_what_now(
     from dontpanic_orchestrate import operator_triage as _operator_triage
 
     _operator_triage.write_triage_state(
-        payload["items"], target.parent / FLEET_TRIAGE_FILENAME, dedupe=False
+        payload["items"], target.parent / FLEET_TRIAGE_FILENAME, dedupe=False,
+        generated_at=now_iso,  # F004 — staleness reference for the Cockpit
     )
     return target
 

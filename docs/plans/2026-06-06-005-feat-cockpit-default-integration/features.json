@@ -44,9 +44,14 @@
       "id": "F004",
       "category": "functional",
       "phase": 4,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "tests/unit/cockpit-state.test.js (6)",
+        "tests/unit/cockpit-page.test.js F004 block (4)",
+        "live: fleet operator-triage.json carries generated_at",
+        "full dashboard vitest 1149 + py 253"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Cockpit state matrix: the Cockpit surface honestly renders loading (skeleton), missing (no triage state yet), stale (staleBanner from freshness.js), and corrupt/error states. Cockpit only \u2014 legacy pages unchanged.",
       "acceptance": "Each of loading/missing/stale/error renders a distinct honest state on the Cockpit; stale shows the age; error surfaces last-good + a retry, never a blank or a fake-fresh render."
     }

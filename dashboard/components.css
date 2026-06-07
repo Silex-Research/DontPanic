@@ -203,3 +203,20 @@ select:focus-visible,
 
 .dp-cockpit-empty, .dp-inspect-hint { padding: 1rem; color: var(--dp-text-2); font-family: var(--dp-font-sans); }
 .dp-cockpit-empty code { font-family: var(--dp-font-mono); color: var(--dp-text-1); }
+
+/* ── Cockpit state matrix (plan 2026-06-06-005 F004) — honest loading/stale/error surfaces. */
+.dp-cockpit-skeleton { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem 0; }
+.dp-skeleton-line { height: 1rem; border-radius: 6px; background: var(--dp-surface-2); opacity: 0.6; }
+.dp-skeleton-hero { height: 2rem; width: 40%; }
+.dp-stale-banner, .dp-error-banner {
+  display: flex; align-items: center; gap: 0.75rem; justify-content: space-between;
+  padding: 0.6rem 0.85rem; border-radius: 8px; margin-bottom: 0.75rem;
+  font-family: var(--dp-font-sans); color: var(--dp-text-1); border: 1px solid var(--dp-border);
+}
+.dp-stale-banner { background: var(--dp-surface-2); color: var(--dp-text-2); }
+.dp-error-banner { background: var(--dp-surface-2); }
+.dp-cockpit-retry {
+  padding: 0.3rem 0.7rem; border: 1px solid var(--dp-border); border-radius: 6px;
+  background: var(--dp-surface-1); color: var(--dp-text-1); font-family: var(--dp-font-sans); cursor: pointer;
+}
+.dp-cockpit-error { padding: 1rem 0; }

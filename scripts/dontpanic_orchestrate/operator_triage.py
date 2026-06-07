@@ -326,6 +326,7 @@ def write_triage_state(
     *,
     dedupe: bool = True,
     live_supervisors: Sequence[Mapping[str, object]] = (),
+    generated_at: str | None = None,
 ) -> Path:
     """Serialize the triage model to ``out_path`` so a renderer (the operator
     console) can read the SAME model the CLI brief reads. Returns the path."""
@@ -335,6 +336,11 @@ def write_triage_state(
         live_supervisors=list(live_supervisors),
         dedupe=dedupe,
     )
+    # Plan 2026-06-06-005 F004 — stamp when this state was generated so a renderer
+    # (the Cockpit) can show an honest stale banner. Added AFTER build_triage so it
+    # does NOT enter the content fingerprint (state_revision reflects content, not time).
+    if generated_at is not None:
+        model["generated_at"] = generated_at
     path = Path(out_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(model, ensure_ascii=False), encoding="utf-8")
