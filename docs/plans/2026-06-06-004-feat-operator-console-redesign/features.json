@@ -9,7 +9,8 @@
       "passes": true,
       "verified_by": [
         "codex-cli@0.137.0 (needs_changes -> 3 findings resolved)",
-        "pytest (4060 passed, 7 skipped)",
+        "human review (proven_live overclaim -> freshness_basis typed basis)",
+        "pytest (4060+ passed)",
         "operator-verified agent parity"
       ],
       "verified_at": "2026-06-06T00:00:00Z",

@@ -32,9 +32,10 @@ _ITEM_FIELDS = (
     "id", "operator_bucket", "scope", "project_name", "run_state",
     "actor_label", "exact_command", "dedupe_key", "duplicate_count",
     # F001 parity (plan 2026-06-06-004): the agent brief must carry the same
-    # render-truth + resolution fields the dashboard reads — an agent needs to
-    # know its options (resolution) and whether the fact is proven_live.
-    "resolution", "asserted_at", "proven_live", "provenance_source",
+    # render-truth + resolution fields the dashboard reads — an agent needs its
+    # options (resolution) and the honest freshness_basis (plan-level vs item-level
+    # vs none), not a boolean that overstates item freshness.
+    "resolution", "asserted_at", "freshness_basis", "provenance_source",
 )
 
 

@@ -1,9 +1,10 @@
 """operator-triage/v0 schema gaps — F001 (plan 2026-06-06-004 redesign).
 
 Adds, additively, the four parity/render-truth fields the console redesign needs:
-resolution[], asserted_at, proven_live, provenance_source. These tests pin the
-derivation rules + the honest defaults (proven_live false unless a live supervisor
-confirms the plan) + backward compatibility (no field renamed/removed).
+resolution[], asserted_at, freshness_basis, provenance_source. These tests pin the
+derivation rules + the honest freshness basis (plan-level liveness is NOT item-level
+freshness; the filled dot is reserved for item_probe, which no v0 producer emits) +
+backward compatibility (no field renamed/removed).
 """
 
 from __future__ import annotations
@@ -55,27 +56,39 @@ def test_build_emits_resolution_matching_bucket():
         }
 
 
-# ── proven_live: render-truth — true ONLY when a live supervisor confirms the plan ──
+# ── freshness_basis: render-truth — plan-level liveness is NOT item-level freshness ──
 
-def test_proven_live_false_by_default():
+def test_freshness_basis_null_when_no_basis():
     model = _build([{"id": "x", "band": "info"}])
-    assert model["items"][0]["proven_live"] is False  # asserted, not proven → renders hollow
+    # no live supervisor → no basis → null → the renderer must show hollow / unverified
+    assert model["items"][0]["freshness_basis"] is None
 
 
-def test_proven_live_true_only_with_a_matching_live_supervisor():
+def test_freshness_basis_plan_match_only_with_a_live_supervisor():
     plan = "2026-06-06-001-feat-thing"
     item = {"id": f"gate:{plan}", "title": "Gate approval"}
-    # no supervisors → idle → not proven
-    assert _build([item])["items"][0]["proven_live"] is False
-    # one live supervisor on the plan → running → proven live
-    live_model = _build([item], live=[{"plan_id": plan}])
-    rep = live_model["items"][0]
+    # no supervisors → idle → no basis
+    assert _build([item])["items"][0]["freshness_basis"] is None
+    # one live supervisor on the plan → running → PLAN-level basis (not item-level)
+    rep = _build([item], live=[{"plan_id": plan}])["items"][0]
     assert rep["run_state"] == "running"
-    assert rep["proven_live"] is True
-    # two supervisors → conflicted → still a live confirmation → proven
+    assert rep["freshness_basis"] == "live_supervisor_plan_match"
+    # two supervisors → conflicted → still only a plan-level basis
     conflicted = _build([item], live=[{"plan_id": plan}, {"plan_id": plan}])["items"][0]
     assert conflicted["run_state"] == "conflicted"
-    assert conflicted["proven_live"] is True
+    assert conflicted["freshness_basis"] == "live_supervisor_plan_match"
+
+
+def test_no_v0_item_claims_item_level_freshness():
+    # RENDER-TRUTH: the filled freshness dot is reserved for "item_probe", and NO v0
+    # producer can emit it — so plan liveness can never be mislabeled as item freshness.
+    plan = "2026-06-06-001-feat-thing"
+    model = _build(
+        [{"id": f"gate:{plan}", "title": "Gate approval"}, {"id": "y", "band": "info"}],
+        live=[{"plan_id": plan}],
+    )
+    assert all(i["freshness_basis"] != "item_probe" for i in model["items"])
+    assert {i["freshness_basis"] for i in model["items"]} <= {"live_supervisor_plan_match", None}
 
 
 # ── asserted_at + provenance_source ──
@@ -115,5 +128,6 @@ def test_additive_no_existing_field_removed_and_new_fields_present():
         "title", "why_now", "evidence_uri",
     }
     assert existing <= set(it)  # backward-compatible
-    assert {"resolution", "asserted_at", "proven_live", "provenance_source"} <= set(it)
+    assert {"resolution", "asserted_at", "freshness_basis", "provenance_source"} <= set(it)
+    assert "proven_live" not in it  # the overclaiming boolean was removed before any renderer
     assert model["schema"] == "operator-triage/v0"  # additive extend, not a new version

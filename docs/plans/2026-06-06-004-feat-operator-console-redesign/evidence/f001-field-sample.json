@@ -11,7 +11,7 @@
         "reject"
       ],
       "asserted_at": "2026-06-06T12:00:00Z",
-      "proven_live": true,
+      "freshness_basis": "live_supervisor_plan_match",
       "provenance_source": "claude-auditor"
     },
     {
@@ -22,7 +22,7 @@
         "inspect"
       ],
       "asserted_at": null,
-      "proven_live": false,
+      "freshness_basis": null,
       "provenance_source": null
     },
     {
@@ -33,7 +33,7 @@
         "apply_fix"
       ],
       "asserted_at": null,
-      "proven_live": false,
+      "freshness_basis": null,
       "provenance_source": null
     }
   ]

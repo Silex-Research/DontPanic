@@ -220,10 +220,29 @@ def provenance_source_for(item: Mapping[str, object]) -> str | None:
     return None
 
 
-# run_state values that mean a live supervisor positively confirmed the item's plan
-# THIS build. Render-truth: proven_live is true ONLY for these; everything else is
-# honestly "asserted (from cache)" and must render hollow / unverified, never confident.
-_PROVEN_RUN_STATES = frozenset({"running", "conflicted"})
+# A live supervisor on the item's plan proves the PLAN is live this build — it does
+# NOT prove this specific item/finding/gate is itself current. So instead of a boolean
+# that conflates the two (an earlier `proven_live` did, and would have let a renderer
+# overstate trust), we record the BASIS for any freshness claim and let the renderer
+# decide what each basis may assert:
+#   "live_supervisor_plan_match" — plan-level liveness (v0's only positive basis)
+#   "item_probe"                  — item-level freshness, positively proven (RESERVED:
+#                                   no v0 producer can emit this yet)
+#   None                          — no basis; the item is asserted-from-cache
+# RENDER-TRUTH CONTRACT: the filled freshness dot is reserved for "item_probe" ONLY.
+# Plan-level liveness drives the weaker, distinct run_state "running" signal — never
+# the trust dot. In v0, therefore, the freshness dot is hollow everywhere.
+_LIVE_PLAN_RUN_STATES = frozenset({"running", "conflicted"})
+
+
+def freshness_basis_for(run_state: str) -> str | None:
+    """The basis on which item freshness may be claimed — never overstated. v0 can only
+    prove *plan-level* liveness (a live supervisor joined to the item's plan); true
+    item-level freshness (``item_probe``) is reserved for producers that can assert it.
+    Returns None when there is no basis (the item is honestly asserted-from-cache)."""
+    if run_state in _LIVE_PLAN_RUN_STATES:
+        return "live_supervisor_plan_match"
+    return None
 
 
 def build_triage(
@@ -268,11 +287,14 @@ def build_triage(
                 "exact_command": it.get("exact_command"),
                 # F001 schema gaps (plan 2026-06-06-004) — agent-parity + render-truth,
                 # all additive. resolution makes the human's buttons == the agent's
-                # options; asserted_at/proven_live carry per-item freshness so a stale
-                # item demotes individually; provenance_source is a machine-joinable id.
+                # options (intents, not executable commands — see contract note);
+                # asserted_at is the per-item assertion age; freshness_basis is the
+                # HONEST basis for any freshness claim (plan-level vs item-level vs none)
+                # so a renderer can never mislabel plan liveness as item freshness;
+                # provenance_source is a machine-joinable producer id.
                 "resolution": resolution_for(bucket.value, it.get("exact_command")),
                 "asserted_at": (str(it.get("updated_at")) if it.get("updated_at") else None),
-                "proven_live": run_state in _PROVEN_RUN_STATES,
+                "freshness_basis": freshness_basis_for(run_state),
                 "provenance_source": provenance_source_for(it),
                 # Display + evidence fields so a renderer (the F007 inspect pane)
                 # can let a human decide from evidence without reading source.
