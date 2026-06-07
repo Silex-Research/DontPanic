@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-06-06-005-feat-cockpit-default-integration",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Build/state contract: rebuild emits a fresh operator-triage.json with resolution + asserted_at + freshness_basis + provenance_source; serve-path serves the freshly-built state (pinned, deterministic); architecture levels (if emitted from build) are cache-only, never written into tracked repos.",
+      "acceptance": "A clean `dontpanic dashboard build` produces operator-triage.json whose items carry all four F001 fields; a test asserts their presence on the GENERATED file (not a fixture); serve returns that fresh state; no tracked repo working tree is modified by any levels emission."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Cockpit default mount: an Operator/Cockpit page registers via Jarvis.registerPage and renders renderQueue + renderInspectPanel from the live operator-triage.json; it is the default landing surface; the existing 8 tabs remain registered and reachable.",
+      "acceptance": "Opening the served dashboard lands on the Cockpit rendering real action items via the redesign components; old tabs still present + navigable; no router rewrite (uses registerPage)."
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Real-state journey test: boot the real shell against a real built operator-triage.json (producer fixture or live build), assert the default Cockpit renders \u2014 queue count correct, NO raw JSON, freshness basis honest (hollow unless item_probe), resolution intents present; anti-synthetic negative: stale/missing/corrupt triage state shows an honest error/fallback, never a fabricated-confident render.",
+      "acceptance": "A journey test enters the REAL surface (boots the shell + Cockpit page), asserts the four positives + the anti-synthetic negative; guarded against synthetic-fixture pre-baking per the operator-outcome QA contract."
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Cockpit state matrix: the Cockpit surface honestly renders loading (skeleton), missing (no triage state yet), stale (staleBanner from freshness.js), and corrupt/error states. Cockpit only \u2014 legacy pages unchanged.",
+      "acceptance": "Each of loading/missing/stale/error renders a distinct honest state on the Cockpit; stale shows the age; error surfaces last-good + a retry, never a blank or a fake-fresh render."
+    }
+  ]
+}
