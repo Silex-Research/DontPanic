@@ -31,6 +31,10 @@ HONESTY_CONTRACT = (
 _ITEM_FIELDS = (
     "id", "operator_bucket", "scope", "project_name", "run_state",
     "actor_label", "exact_command", "dedupe_key", "duplicate_count",
+    # F001 parity (plan 2026-06-06-004): the agent brief must carry the same
+    # render-truth + resolution fields the dashboard reads — an agent needs to
+    # know its options (resolution) and whether the fact is proven_live.
+    "resolution", "asserted_at", "proven_live", "provenance_source",
 )
 
 

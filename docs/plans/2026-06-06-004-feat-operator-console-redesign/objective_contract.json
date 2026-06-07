@@ -1,0 +1,61 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "docs/design/operator-console-redesign.md \u2014 implement phased per \u00a710, sequenced by dependency, with agent parity (\u00a77) and render-truth as non-negotiables. Decisions locked via human gate: additive-extend operator-triage/v0; audit F001 alone then batch; Architecture under Work; pause after F001.",
+  "completion_test": "The console renders the triaged 'what needs me' as a decision-first control tower: every visual element maps to a real operator-triage field (no UI-only state); trust is visible (proven_live filled vs hollow, stale demoted); resolution affordances replace copy-command-as-primary; one semantic token set themes light/dark + comfort/dense from one DOM; the terminal is OFF by default and shouts when armed; the architecture surface is a navigable per-level Mermaid map, not a 208KB flat graph. Each feature ships behind the existing page structure with vitest tests + evidence + (per cadence) a cross-model audit.",
+  "user_journeys": [
+    {
+      "name": "morning-triage",
+      "description": "Operator opens Cockpit (fleet) and sees the few items that need them, ranked by bucket, with the next action attached; the rest collapses to counts; empty = 'you're clear'.",
+      "surfaces": [
+        "frontend-ui",
+        "core"
+      ],
+      "states": [
+        "queue_loaded",
+        "queue_clear"
+      ]
+    },
+    {
+      "name": "inspect-and-gate",
+      "description": "Operator inspects why an item needs them (what/why_now/evidence/provenance/resolution) and approves/requests-changes/rejects a paused gate with one confirmation; the volley resumes.",
+      "surfaces": [
+        "frontend-ui",
+        "core"
+      ],
+      "states": [
+        "gate_live",
+        "decision_confirmed"
+      ]
+    },
+    {
+      "name": "trust-at-a-glance",
+      "description": "Operator distinguishes proven-live from merely-asserted facts on sight (filled vs hollow dot, desaturated stale), per render-truth.",
+      "surfaces": [
+        "frontend-ui",
+        "core"
+      ],
+      "states": [
+        "proven_live",
+        "unproven_or_stale"
+      ]
+    },
+    {
+      "name": "navigate-architecture",
+      "description": "Operator descends a C4-style per-level Mermaid map (context->lanes->clusters->subgraph->module) and sees which nodes drifted since generation.",
+      "surfaces": [
+        "frontend-ui",
+        "core"
+      ],
+      "states": [
+        "map_level_rendered",
+        "drift_visible"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Notifications (native OS vs in-app) \u2014 out of scope, flagged in \u00a710",
+    "A backend/DB for the dashboard \u2014 it stays a static-file projection",
+    "Rewriting the orchestration/governance core \u2014 this is the renderer layer",
+    "Removing/renaming existing operator-triage fields (additive only)"
+  ]
+}

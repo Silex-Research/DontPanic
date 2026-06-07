@@ -185,6 +185,47 @@ def _fingerprint(model: Mapping[str, object]) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
 
 
+# ── F001 schema gaps (plan 2026-06-06-004) — additive operator-triage/v0 parity fields.
+# These make implicit truths explicit so the human's UI and the agent's brief read the
+# SAME list. They are additive: no existing field is renamed or removed.
+
+# The enumerated operator options per bucket. agent_runnable is special-cased (needs a
+# command). Derived, not asserted — claims no new truth, only names the implicit options.
+_RESOLUTION_BY_BUCKET: dict[str, list[str]] = {
+    OperatorBucket.NEEDS_DECISION.value: ["approve", "request_changes", "reject"],
+    OperatorBucket.NEEDS_AUTH.value: ["guided_setup"],
+    OperatorBucket.AUTO_SAFE.value: ["apply_fix"],
+    OperatorBucket.UNCERTAIN.value: ["inspect"],
+    OperatorBucket.QUIET.value: [],
+}
+
+
+def resolution_for(bucket: str, exact_command: object) -> list[str]:
+    """The enumerated operator options for an item, derived from its bucket (and, for
+    agent_runnable, whether a command exists). The human's buttons == the agent's
+    options. agent_runnable with no command yields ``[]`` (nothing to run yet)."""
+    if bucket == OperatorBucket.AGENT_RUNNABLE.value:
+        return ["run"] if exact_command else []
+    return list(_RESOLUTION_BY_BUCKET.get(bucket, []))
+
+
+def provenance_source_for(item: Mapping[str, object]) -> str | None:
+    """A stable, machine-joinable producer id (``actor_label`` is the human display
+    name). Reads an explicit source-ish field; returns None when unknown — never a
+    fabricated id, so provenance stays honest."""
+    for key in ("provenance_source", "source", "producer", "produced_by"):
+        val = item.get(key)
+        if val:
+            return str(val)
+    return None
+
+
+# run_state values that mean a live supervisor positively confirmed the item's plan
+# THIS build. Render-truth: proven_live is true ONLY for these; everything else is
+# honestly "asserted (from cache)" and must render hollow / unverified, never confident.
+_PROVEN_RUN_STATES = frozenset({"running", "conflicted"})
+
+
 def build_triage(
     items: Sequence[Mapping[str, object]],
     *,
@@ -207,6 +248,7 @@ def build_triage(
     out_items: list[dict] = []
     for it in items:
         scope, project = derive_scope(it)
+        run_state = derive_run_state(it, live_supervisors=live_supervisors)
         bucket = classify(
             it,
             gate_live=gate_live_for(it),
@@ -219,11 +261,19 @@ def build_triage(
                 "operator_bucket": bucket.value,
                 "scope": scope,
                 "project_name": project,
-                "run_state": derive_run_state(it, live_supervisors=live_supervisors),
+                "run_state": run_state,
                 "actor_label": _actor_label(it, live_supervisors),
                 "dedupe_key": it.get("dedupe_key"),
                 "duplicate_count": it.get("duplicate_count", 1),
                 "exact_command": it.get("exact_command"),
+                # F001 schema gaps (plan 2026-06-06-004) — agent-parity + render-truth,
+                # all additive. resolution makes the human's buttons == the agent's
+                # options; asserted_at/proven_live carry per-item freshness so a stale
+                # item demotes individually; provenance_source is a machine-joinable id.
+                "resolution": resolution_for(bucket.value, it.get("exact_command")),
+                "asserted_at": (str(it.get("updated_at")) if it.get("updated_at") else None),
+                "proven_live": run_state in _PROVEN_RUN_STATES,
+                "provenance_source": provenance_source_for(it),
                 # Display + evidence fields so a renderer (the F007 inspect pane)
                 # can let a human decide from evidence without reading source.
                 "title": it.get("title"),

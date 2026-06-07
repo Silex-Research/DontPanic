@@ -1,0 +1,40 @@
+{
+  "schema": "operator-triage/v0",
+  "items": [
+    {
+      "id": "gate:2026-06-06-001-feat-thing",
+      "operator_bucket": "needs_decision",
+      "run_state": "running",
+      "resolution": [
+        "approve",
+        "request_changes",
+        "reject"
+      ],
+      "asserted_at": "2026-06-06T12:00:00Z",
+      "proven_live": true,
+      "provenance_source": "claude-auditor"
+    },
+    {
+      "id": "cap:agent-claude-cli",
+      "operator_bucket": "uncertain",
+      "run_state": "idle",
+      "resolution": [
+        "inspect"
+      ],
+      "asserted_at": null,
+      "proven_live": false,
+      "provenance_source": null
+    },
+    {
+      "id": "fix:stale-cache",
+      "operator_bucket": "auto_safe",
+      "run_state": "idle",
+      "resolution": [
+        "apply_fix"
+      ],
+      "asserted_at": null,
+      "proven_live": false,
+      "provenance_source": null
+    }
+  ]
+}

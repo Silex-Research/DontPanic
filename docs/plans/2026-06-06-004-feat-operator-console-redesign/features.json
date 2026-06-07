@@ -1,0 +1,90 @@
+{
+  "task_id": "2026-06-06-004-feat-operator-console-redesign",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": true,
+      "verified_by": [
+        "codex-cli@0.137.0 (needs_changes -> 3 findings resolved)",
+        "pytest (4060 passed, 7 skipped)",
+        "operator-verified agent parity"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Schema gaps (operator-triage/v0, additive): resolution[] (derived from bucket+exact_command), asserted_at (from updated_at), proven_live (default false; true only when proven live this build), provenance_source (stable producer id). Agent parity: CLI/agent-brief/dashboard inherit additively.",
+      "acceptance": "Producer emits the 4 fields on every item; resolution is enumerated + bucket-correct; proven_live defaults false (never fakes confidence); existing CLI + dashboard fixtures unbroken; contract note written; Python tests cover derivation + honest defaults."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Visual system + tokens (spec \u00a72): semantic token set (--bucket-* / --freshness-* / --scope-* / --run-*), Inter + JetBrains roles, light+dark via data-theme, comfort/dense via data-density on :root, no raw hex in components.",
+      "acceptance": "One token file; both themes + both densities render from one DOM; components reference semantic tokens only (no raw hex); existing pages keep rendering."
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "The atom re-rendered (spec \u00a73): comfort card + dense row (same fields, spacing only) + 'you're clear' empty state; resolution affordances replace copy-command-as-primary. [deps: F001,F002]",
+      "acceptance": "Card + row render identical fields; resolution buttons map 1:1 to resolution[]; empty queue shows the calm payoff; vitest unit tests."
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Cockpit merge (spec \u00a71.2, J1/J3): fold NEEDS ATTENTION into Cockpit sub-views; dock the terminal; inspect-why right panel (5 fixed sections). [deps: F002,F003]",
+      "acceptance": "Cockpit shows queue + needs-* sub-views from one model; inspect panel renders what/why_now/evidence/provenance/resolution in order; vitest tests."
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 5,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Gate + dock (J2, J4, \u00a75.5): approve/request_changes/reject resume flow; side-by-side armed terminal with persistent red hazard frame; terminal OFF by default. [deps: F003,F004]",
+      "acceptance": "Approve removes item + names the run; armed state shows non-dismissible red hazard + scope; disarm one click; vitest tests for the gate logic + armed-state rendering."
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 6,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Domain regroup (spec \u00a71): 8 tabs -> Cockpit / Work / System; dissolve Repair into the queue as a resolution; Architecture under Work. [deps: F004]",
+      "acceptance": "Nav is three domains with sub-nav; Repair items appear in the cockpit queue; Architecture lives under Work; drift-guard tests updated."
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 7,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Freshness everywhere (spec \u00a72.2, \u00a76): filled/hollow dot grammar (proven vs asserted) + desaturation of stale/unproven across surfaces. [deps: F001]",
+      "acceptance": "Items render filled dot only when proven_live; hollow \u25cb unverified otherwise; stale desaturated + banner; never full-confidence on unproven; vitest tests."
+    },
+    {
+      "id": "F008",
+      "category": "functional",
+      "phase": 8,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Navigable architecture (spec \u00a79): per-level Mermaid (docs/architecture/levels/*.mmd) generated from architecture.json; C4 breadcrumb zoom; per-node drift coloring from source_fingerprint; regenerated on the commit hook. [deps: F007]",
+      "acceptance": "Each level <=~25 nodes; .mmd files deterministic + diff-able; node drift colored from file-hash vs snapshot; replaces the 208KB flat graph; tests for slice generation + drift coloring."
+    }
+  ]
+}
