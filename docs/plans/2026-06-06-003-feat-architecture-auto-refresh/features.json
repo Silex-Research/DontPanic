@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-06-06-003-feat-architecture-auto-refresh",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/dashboard.py (regen-on-build cache-only)",
+        "scripts/dontpanic_orchestrate/tests/test_architecture_autoregen.py",
+        "scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py (updated self-heal contract)"
+      ],
+      "verified_at": "2026-06-06T00:00:00Z",
+      "description": "Regen-on-build, cache-only: the dashboard build self-heals a missing/stale architecture map into the dashboard cache (never the tracked repo's working tree), so the Architecture tab reflects current truth without a human 'run regen' card.",
+      "acceptance": "Missing map \u2192 regenerated into out_dir cache + tracked repo untouched + view-state has a map; fresh map (fingerprint match) \u2192 no regen; unreadable repo \u2192 build does not raise. Full architecture/build/view-state suite green (147)."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Watch architecture.json: add each project's snapshot to the serve's watched sources so a hook-commit or manual regen retriggers the serve rebuild live (today the watcher only fires on plan files).",
+      "acceptance": "Editing a tracked project's docs/architecture/architecture.json while serve --watch is running retriggers a rebuild and the Architecture tab reflects the change without a restart."
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Auto-install the pre-commit architecture hook on `projects add` (with a --no-hooks opt-out) so every tracked repo auto-regens + stages the committed map on commit \u2014 keeping the committed copy fresh between dashboard builds.",
+      "acceptance": "`dontpanic projects add <name> <path>` installs the chained pre-commit hook (preserving any prior hook); --no-hooks skips it; a commit touching an architecture-relevant file regenerates + stages docs/architecture/architecture.json."
+    }
+  ]
+}

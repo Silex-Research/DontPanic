@@ -783,9 +783,10 @@ def build(
     architecture_status_path: Path | None = None
     arch_status: dict[str, Any] | None = None
     architecture_view_state_path: Path | None = None
+    regenerated_arch_cache: Path | None = None
     if check_architecture:
+        root = repo_root if repo_root is not None else Path.cwd()
         try:
-            root = repo_root if repo_root is not None else Path.cwd()
             arch_status = architecture.status(root)
             architecture_status_path = out_dir / "architecture-status.json"
             architecture_status_path.write_text(
@@ -797,16 +798,38 @@ def build(
             warnings.append(msg)
             warn(msg)
 
+        # Plan 2026-06-06-003 F001 — self-heal a missing/stale map into the
+        # dashboard CACHE only (never the tracked repo's working tree), so the
+        # Architecture tab reflects current truth without a human "run regen"
+        # card. The committed copy stays the pre-commit hook's job. Best-effort:
+        # a regen failure leaves the empty-state render intact.
+        if (
+            arch_status is not None
+            and arch_status.get("state") in {"absent", "stale"}
+            and root.is_dir()
+        ):
+            try:
+                regenerated_arch_cache = architecture.regen(
+                    root,
+                    output_path=out_dir / "architecture.json",
+                    with_html=False,
+                )
+            except Exception as exc:  # noqa: BLE001
+                msg = f"architecture auto-regen skipped: {exc}"
+                warnings.append(msg)
+                warn(msg)
+
         # Plan 2026-05-24-002 F001 — derive the architecture view-state
-        # cache from the existing snapshot. Best-effort; missing/stale
+        # cache from the snapshot (the freshly-regenerated cache copy when we
+        # have one, else the committed snapshot). Best-effort; missing/stale
         # architecture is represented inside the view-state itself, not
         # surfaced as a build error.
         try:
-            root = repo_root if repo_root is not None else Path.cwd()
             view_inputs = architecture_view_state.load_inputs(
                 root,
                 project_name=project_name,
                 project_display_name=project_display_name,
+                architecture_path=regenerated_arch_cache,
             )
             view_state = architecture_view_state.build_view_state(
                 view_inputs, repo_root=root

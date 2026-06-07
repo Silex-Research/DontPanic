@@ -713,8 +713,11 @@ class TestDashboardBuildIntegration:
         view_cache = out_dir / avs.VIEW_STATE_FILENAME
         assert view_cache.is_file()
         payload = json.loads(view_cache.read_text(encoding="utf-8"))
-        assert payload["freshness"]["state"] == "absent"
-        assert payload["nodes"] == []
+        # Plan 2026-06-06-003 F001 — the build now self-heals a missing map into
+        # the cache, so the tab reads a current ("fresh") map instead of an
+        # "absent" state whose only remedy was a human "run regen" command.
+        assert payload["freshness"]["state"] == "fresh"
+        assert isinstance(payload["nodes"], list)  # a real (possibly tiny) map, not absent
         # Build itself should not have surfaced a fatal warning.
         assert report.architecture_view_state_path == view_cache
 

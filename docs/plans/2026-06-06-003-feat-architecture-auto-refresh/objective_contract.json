@@ -1,0 +1,35 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator complaint: the Architecture tab assigned a deterministic, no-creds regen command to a human. DontPanic should refresh the architecture map itself, regularly and after commits, for every project it tracks. Chosen approach (operator): cache-only-for-display regen-on-build (no tracked-repo mutation) + pre-commit hook for the committed copy.",
+  "completion_test": "A tracked project with a missing or stale architecture map renders a current map in the Architecture tab with NO human 'run regen' card: the dashboard build self-heals it into the cache (F001), the serve refreshes when the snapshot changes (F002), and committing in a tracked repo keeps the committed map fresh via an auto-installed hook (F003). The dashboard build never writes into a tracked repo's working tree.",
+  "non_goals": [
+    "Writing architecture.json into tracked repos during a DontPanic dashboard build (rejected: surprises git status).",
+    "Registering DontPanic itself as a tracked project (separate operator decision).",
+    "Changing the crawler / map schema."
+  ],
+  "user_journeys": [
+    {
+      "name": "missing-map-self-heals",
+      "description": "Operator opens the Architecture tab for a tracked project whose map was never generated; the dashboard build has already regenerated it into the cache, so the tab renders a current map with no 'run regen' card.",
+      "surfaces": [
+        "core",
+        "frontend-ui"
+      ],
+      "states": [
+        "map_absent",
+        "map_rendered"
+      ]
+    },
+    {
+      "name": "commit-keeps-map-fresh",
+      "description": "Operator commits architecture-relevant changes in a tracked repo; the auto-installed pre-commit hook regenerates + stages docs/architecture/architecture.json so the committed map never drifts (F003).",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "source_changed",
+        "map_committed_fresh"
+      ]
+    }
+  ]
+}
