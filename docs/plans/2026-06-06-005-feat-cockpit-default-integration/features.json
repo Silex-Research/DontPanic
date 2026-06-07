@@ -6,9 +6,13 @@
       "id": "F001",
       "category": "functional",
       "phase": 1,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "test_fleet_triage_contract_f001.py",
+        "live:dontpanic dashboard build (308-item fleet operator-triage.json)",
+        "regression:263 passed"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Build/state contract: rebuild emits a fresh operator-triage.json with resolution + asserted_at + freshness_basis + provenance_source; serve-path serves the freshly-built state (pinned, deterministic); architecture levels (if emitted from build) are cache-only, never written into tracked repos.",
       "acceptance": "A clean `dontpanic dashboard build` produces operator-triage.json whose items carry all four F001 fields; a test asserts their presence on the GENERATED file (not a fixture); serve returns that fresh state; no tracked repo working tree is modified by any levels emission."
     },

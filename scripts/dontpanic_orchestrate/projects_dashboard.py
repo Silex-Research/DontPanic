@@ -87,6 +87,12 @@ BUILD_WARNINGS_FILENAME = "build-warnings.json"
 malformed or skipped artifacts without making the operator scrape
 stderr."""
 
+FLEET_TRIAGE_FILENAME = "operator-triage.json"
+"""Fleet-level operator-triage/v0 model (Plan 2026-06-06-005 F001). Written beside
+fleet-what-now.json so the DEFAULT All-Projects Cockpit reads the same triage model
+the CLI brief + per-project surfaces read — carrying resolution + freshness_basis +
+provenance_source. Mirrored into the served state/ by mirror_selection_into_state_dir."""
+
 FLEET_WHAT_NOW_FILENAME = "fleet-what-now.json"
 """Fleet-level what-now ActionItem aggregate. Plan 2026-05-23-005 F004:
 combines per-project ActionItems (tagged with ``project_name``) with
@@ -1153,6 +1159,20 @@ def build_fleet_what_now(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+
+    # Plan 2026-06-06-005 F001 — emit the fleet-level operator-triage MODEL beside
+    # fleet-what-now.json so the DEFAULT (All-Projects) Cockpit reads the SAME
+    # operator-triage/v0 model (resolution + freshness_basis + provenance_source)
+    # the CLI brief + per-project surfaces read. REQUIRED, not best-effort: a
+    # missing fleet triage model would silently leave the default Cockpit empty,
+    # so a failure here PROPAGATES (explicit build/state contract). dedupe=False —
+    # payload["items"] is already deduped by (scope, dedupe_key); build_triage's
+    # bare-key dedupe would over-collapse cross-project same-key items.
+    from dontpanic_orchestrate import operator_triage as _operator_triage
+
+    _operator_triage.write_triage_state(
+        payload["items"], target.parent / FLEET_TRIAGE_FILENAME, dedupe=False
+    )
     return target
 
 
@@ -1192,6 +1212,17 @@ def mirror_selection_into_state_dir(
     if fleet_what_now.is_file():
         (state_out_dir / FLEET_WHAT_NOW_FILENAME).write_text(
             fleet_what_now.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    # Plan 2026-06-06-005 F001 — mirror the fleet operator-triage model into the
+    # served tree so the static dashboard can fetch ``state/operator-triage.json``
+    # (the DEFAULT Cockpit's model) without leaking absolute $HOME paths. Pins the
+    # serve path to the freshly-built fleet triage state.
+    fleet_triage = fleet_what_now.parent / FLEET_TRIAGE_FILENAME
+    if fleet_triage.is_file():
+        (state_out_dir / FLEET_TRIAGE_FILENAME).write_text(
+            fleet_triage.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
 
