@@ -6,9 +6,11 @@
       "id": "F001",
       "category": "functional",
       "phase": 1,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_plan_review_introduces_f001.py"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Accept an optional per-feature list naming the symbols a feature defines (the introduces list). This requires widening the strict Features Pydantic model (which today forbids extra keys) to permit the optional field. It is a list of identifier strings; absent or empty means today's behavior exactly. Parsed onto the per-feature scope report. Malformed values are rejected.",
       "acceptance": "A feature may carry an optional introduces list of identifier strings; a plan that omits it lints identically to today (regression test); a malformed value (not a list, or a non-string / non-identifier entry) is rejected with a clear error; the parsed list is carried on the per-feature report."
     },
@@ -16,9 +18,11 @@
       "id": "F002",
       "category": "functional",
       "phase": 2,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_plan_review_introduces_f001.py"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Make the coupling lint order-aware. A symbol resolves when it is in the existing codebase vocabulary OR is named in the introduces list of the same feature or any earlier feature in plan order. A symbol introduced only by a later feature stays unresolved (dependency ordering preserved). Pure logic.",
       "acceptance": "A feature that introduces a symbol does not raise missing_prereq on that symbol; a later feature referencing a symbol an earlier feature introduces resolves; a feature referencing a symbol introduced only by a LATER feature still raises missing_prereq; a never-introduced or misspelled token still raises missing_prereq; the resolver augmentation is pure and deterministic, unit-tested across the feature-order matrix."
     },
@@ -26,9 +30,11 @@
       "id": "F003",
       "category": "functional",
       "phase": 3,
-      "passes": false,
-      "verified_by": [],
-      "verified_at": null,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_plan_review_introduces_f001.py"
+      ],
+      "verified_at": "2026-06-07T00:00:00Z",
       "description": "Surface introduced symbols in the plan-review report rather than dropping them silently, with enough provenance for a reviewer to spot abuse. Per feature, the report shows two visible lines: introduced-here (the symbols this feature defines) and resolved-via-introduces (each symbol this feature resolved through an EARLIER feature's introduces, shown with that earlier feature's id). A symbol resolved via introduces is never reported as a missing prerequisite.",
       "acceptance": "The plan-review report (text and JSON) shows, per feature, an introduced-here list naming the symbols that feature defines AND a resolved-via-introduces list naming each cross-feature-resolved symbol together with the id of the earlier feature that introduced it (so a reviewer can see one feature leaning on another's vocabulary); a symbol resolved via introduces never appears as missing_prereq; a plan with no introduces produces a byte-identical report to today (regression)."
     }

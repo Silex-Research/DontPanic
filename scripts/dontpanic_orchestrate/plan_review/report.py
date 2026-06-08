@@ -16,13 +16,16 @@ building the resolver set; this module stays read-only with respect to the plan
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dontpanic_orchestrate.plan_review.lint import (
     Resolvers,
     ScopeReport,
+    _as_text,
+    extract_named_tokens,
     lint_feature,
 )
 from dontpanic_orchestrate.plan_review.split import SplitProposal, propose_split
@@ -36,10 +39,19 @@ class FeatureScopeReport:
 
     ``split`` is ``None`` for a single-surface, in-budget feature (F002 only
     proposes a partition for an ``over_surface`` / ``over_ac`` feature).
+
+    ``introduced_here`` lists the symbols THIS feature declares via its
+    ``introduces`` list. ``resolved_via_introduces`` lists ``(symbol,
+    source_feature_id)`` pairs — symbols this feature references that resolved
+    only because an EARLIER feature introduced them (not the codebase). Both
+    are rendered so a reviewer can spot a feature that quietly waves a symbol
+    through by introducing it (plan 2026-06-07-002).
     """
 
     scope: ScopeReport
     split: SplitProposal | None = None
+    introduced_here: tuple[str, ...] = ()
+    resolved_via_introduces: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -98,11 +110,59 @@ def build_plan_scope_report(
     in-budget single-surface ones, so the proposal is present exactly for the
     over-scoped (flagged) features.
     """
+    base = resolvers or Resolvers()
+    # Symbols introduced by features SEEN SO FAR (earlier in plan order),
+    # mapped to the id of the feature that introduced each. Order-aware: a
+    # feature may resolve its own + any earlier introduction, never a later one.
+    introduced_by: dict[str, str] = {}
+
     feature_reports: list[FeatureScopeReport] = []
     for feature in features:
-        scope = lint_feature(feature, resolvers)
+        feature_id = str(feature.get("id", ""))
+        own = tuple(
+            str(s) for s in (feature.get("introduces") or []) if isinstance(s, str) and s
+        )
+        # This feature resolves against the codebase vocabulary PLUS every
+        # symbol introduced earlier PLUS its own introductions.
+        allowed = set(introduced_by) | set(own)
+        feat_resolvers = (
+            dataclasses.replace(base, symbols=base.symbols | frozenset(allowed))
+            if allowed
+            else base
+        )
+
+        scope = lint_feature(feature, feat_resolvers)
         split = propose_split(feature, scope)
-        feature_reports.append(FeatureScopeReport(scope=scope, split=split))
+
+        # Provenance: which referenced symbols resolved ONLY through an earlier
+        # feature's introduction (not the codebase, not this feature's own).
+        referenced = {
+            tok
+            for tok, kind in extract_named_tokens(_as_text(feature.get("acceptance")))
+            if kind == "symbol"
+        }
+        resolved_via = tuple(
+            sorted(
+                (tok, introduced_by[tok])
+                for tok in referenced
+                if tok in introduced_by and not base.resolves_symbol(tok)
+            )
+        )
+
+        feature_reports.append(
+            FeatureScopeReport(
+                scope=scope,
+                split=split,
+                introduced_here=own,
+                resolved_via_introduces=resolved_via,
+            )
+        )
+
+        # Register this feature's introductions for LATER features (first
+        # introducer wins, so provenance is stable).
+        for sym in own:
+            introduced_by.setdefault(sym, feature_id)
+
     return PlanScopeReport(plan_id=plan_id, features=tuple(feature_reports))
 
 
@@ -124,9 +184,17 @@ def render_text(report: PlanScopeReport) -> str:
     lines.append(f"  verdict: {verdict}")
     lines.append("")
 
+    # Introductions (plan 2026-06-07-002): make declared/borrowed vocabulary
+    # visible so a reviewer can spot a feature waving a symbol through. Shown
+    # regardless of flags.
+    intro_lines = _render_introductions(report)
+    if intro_lines:
+        lines.extend(intro_lines)
+        lines.append("")
+
     if not report.flagged():
         lines.append("No scope flags — every feature is single-surface and in-budget.")
-        return "\n".join(lines) + "\n"
+        return "\n".join(lines).rstrip("\n") + "\n"
 
     for fr in report.features:
         scope = fr.scope
@@ -145,6 +213,30 @@ def render_text(report: PlanScopeReport) -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
+def _render_introductions(report: PlanScopeReport) -> list[str]:
+    """One labelled line per feature that introduces or borrows a symbol.
+
+    ``introduced-here`` names the symbols a feature declares; if a feature also
+    resolved a symbol through an earlier feature's introduction, that is shown
+    as ``resolved-via-introduces: <symbol> from <feature-id>`` so abuse (a
+    feature quietly waving a symbol through) is visible to a reviewer.
+    """
+    out: list[str] = []
+    for fr in report.features:
+        if not fr.introduced_here and not fr.resolved_via_introduces:
+            continue
+        fid = fr.scope.feature_id or "(unnamed)"
+        if fr.introduced_here:
+            out.append(f"  {fid} introduced-here: {', '.join(fr.introduced_here)}")
+        for symbol, source in fr.resolved_via_introduces:
+            out.append(
+                f"  {fid} resolved-via-introduces: {symbol} from {source}"
+            )
+    if out:
+        out.insert(0, "introductions:")
+    return out
+
+
 # ───────────────────────────── serialization ───────────────────────────────
 
 
@@ -159,6 +251,8 @@ def _feature_to_dict(fr: FeatureScopeReport) -> dict:
             {"kind": flag.kind, "severity": flag.severity, "evidence": flag.evidence}
             for flag in scope.flags
         ],
+        "introduced_here": list(fr.introduced_here),
+        "resolved_via_introduces": [list(pair) for pair in fr.resolved_via_introduces],
         "split_proposal": _split_to_dict(fr.split),
     }
 
