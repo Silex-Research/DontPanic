@@ -1,0 +1,38 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Deferred from plan 2026-06-06-001 (D018): the governed action channel that lets the operator console originate mutations. Threat-model-first; demand-gated (build only once the read-only copy/handoff loop proves too slow). Acceptance is operator-OUTCOME via named journeys on real state, with adversarial cases (unauthorized/cross-origin/forged/double-submit/stale) as first-class.",
+  "completion_test": "The operator console can approve/request/reject a live gate and dry-run-then-confirm the auto_safe tier directly from the browser, routed through a localhost action backend that accepts only authenticated, same-origin, CSRF-protected, allowlisted operator_bucket actions; every mutation is confirm-gated, atomic with its evidence, idempotent, tamper-evidently logged, recoverable after interruption, and refused when issued against a stale model fingerprint. Unauthorized, cross-origin, forged, double-submit, and stale-tab attempts are all refused. Proven by named-journey + adversarial tests, not DOM presence.",
+  "user_journeys": [
+    {
+      "name": "operator-approves-from-browser",
+      "description": "The human approves/request-changes/rejects a live gate directly in the console with explicit confirmation; the decision commits atomically with its evidence.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["gate_live", "decision_confirmed", "decision_committed_with_evidence"],
+      "acceptance_signals": [
+        "A confirmed decision clears the gate and records evidence atomically",
+        "A cancelled decision mutates nothing"
+      ]
+    },
+    {
+      "name": "operator-applies-safe-tier-from-browser",
+      "description": "The human dry-runs then confirms the auto_safe apply from the console, driving the F005 engine via the governed channel, auto_safe-only.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["safe_tier_dry_run", "safe_tier_confirmed", "safe_tier_applied_with_evidence"],
+      "acceptance_signals": [
+        "Dry-run mutates nothing; confirm applies only auto_safe and records evidence",
+        "Credentials/approvals/project mutations are refused"
+      ]
+    },
+    {
+      "name": "channel-refuses-untrusted-and-stale",
+      "description": "Adversarial: unauthorized, cross-origin, forged, double-submitted, or stale-fingerprint actions are all refused; the channel never becomes a general shell.",
+      "surfaces": ["frontend-ui", "core"],
+      "states": ["request_untrusted", "request_stale_or_replayed", "request_refused"],
+      "acceptance_signals": [
+        "Unauthorized / cross-origin / forged requests are refused",
+        "Double-submit is idempotent; stale-fingerprint actions are refused",
+        "Only allowlisted operator_bucket actions are ever executed; the audit log is tamper-evident"
+      ]
+    }
+  ]
+}

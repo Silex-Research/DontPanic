@@ -3,7 +3,7 @@ id: 2026-06-08-001-feat-architecture-intent-extractor-plan-b
 title: Architecture reconciler Plan B — ADR/doc intent extractor + as-built vs intended diff
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: new_feature
 description: >
