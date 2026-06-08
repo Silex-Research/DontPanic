@@ -57,6 +57,7 @@ from pathlib import Path
 from typing import Any
 
 from dontpanic_orchestrate import architecture as _architecture
+from dontpanic_orchestrate import architecture_levels as _architecture_levels
 from dontpanic_orchestrate import operator_console as _operator_console
 
 SCHEMA_VERSION = "1.0"
@@ -599,6 +600,8 @@ def build_view_state(
             "lanes": [dict(lane) for lane in LANES],
             "nodes": [],
             "edges": [],
+            "clusters": [],
+            "levels": [],
             "flows": [],
             "steps": [],
             "filters": _empty_filters(),
@@ -698,6 +701,13 @@ def build_view_state(
 
     insights = _build_insights(nodes, edges, inputs.architecture)
 
+    # Directory-derived cluster tree + per-depth level index. This is the
+    # graph model the interactive component map drills through (breadcrumb
+    # zoom). The `.mmd` slices written by
+    # architecture_levels.export_mermaid_levels are an optional diffable
+    # export, never this render source.
+    clusters, levels = _architecture_levels.build_clusters_and_levels(nodes)
+
     view_state = {
         "schema_version": SCHEMA_VERSION,
         "project": project_block,
@@ -707,6 +717,8 @@ def build_view_state(
         "lanes": [dict(lane) for lane in LANES],
         "nodes": nodes,
         "edges": edges,
+        "clusters": clusters,
+        "levels": levels,
         "flows": flows,
         "steps": steps,
         "filters": filters,

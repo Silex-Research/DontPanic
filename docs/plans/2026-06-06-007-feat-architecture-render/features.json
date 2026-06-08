@@ -1,0 +1,32 @@
+{
+  "task_id": "2026-06-06-007-feat-architecture-render",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": true,
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_levels_f007.py",
+        "scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py"
+      ],
+      "verified_at": "2026-06-07",
+      "description": "Emit the normalized architecture graph model (nodes+edges+levels+clusters+freshness) into the view-state the interactive SVG map consumes; keep architecture_levels write_levels as an OPTIONAL diffable .mmd export (cache-only, foreign-repo guarded), NOT the render source.",
+      "acceptance": "The architecture build emits levels[] + clusters[] (by directory) alongside nodes/edges/freshness in the view-state; a test asserts the graph model carries them deterministically; the .mmd export still regenerates but is not the page's data source."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": true,
+      "verified_by": [
+        "dashboard/tests/unit/architecture-levels-logic.test.js",
+        "dashboard/tests/integration/architecture-component-map-dom.test.js"
+      ],
+      "verified_at": "2026-06-07",
+      "description": "On the EXISTING interactive Architecture SVG: clicking a component highlights upstream/downstream dependencies + dims unrelated + opens the detail panel; a breadcrumb shows the level path and drills into the next cluster level and back. No mermaid runtime.",
+      "acceptance": "Clicking a node highlights its upstream+downstream neighbors and dims the rest (pure dependency-walk logic unit-tested); the breadcrumb shows the level path and a cluster click drills in / root click restores; covered by page wiring tests."
+    }
+  ]
+}
