@@ -112,7 +112,12 @@ def _as_built_symbol_index(nodes: list[dict[str, Any]]) -> set[str]:
 
 
 def _resolves(symbol: str, index: set[str]) -> bool:
-    return symbol in index or symbol.split(".", 1)[0] in index or symbol.rsplit(".", 1)[-1] in index
+    # Exact membership only (audit 2026-06-08 B1#5). The first/last-segment
+    # fallbacks were too permissive — `foo.missing` aligned merely because
+    # `foo.py` existed, emitting an `aligned` verdict the evidence can't back.
+    # The index already carries basenames, basename-without-ext, public symbols,
+    # and last title segments, so legitimate references still match by exact token.
+    return symbol in index
 
 
 def reconcile_intent(

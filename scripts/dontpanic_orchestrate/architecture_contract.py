@@ -110,8 +110,12 @@ _UNEXTRACTED_KINDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("xcode", (".xcodeproj", ".pbxproj")),
     ("kotlin", (".kt", ".kts")),
     ("gradle", ("build.gradle", "build.gradle.kts", "settings.gradle")),
-    # javascript is no longer here — Plan C slice 1 ships a JS import extractor
-    # (js_import_crawler), so JS is an EXTRACTED kind, not a missing one.
+    # Plan C's js_import_crawler extracts dashboard .js/.mjs/.cjs ONLY. TypeScript
+    # and JSX have NO extractor, so their presence must still drop the ceiling
+    # (audit 2026-06-08 B1#2: blanket-removing javascript let .ts/.tsx/.jsx pass
+    # while the map read "high").
+    ("typescript", (".ts", ".tsx")),
+    ("jsx", (".jsx",)),
     ("go", (".go",)),
     ("rust", (".rs",)),
 )
@@ -131,14 +135,19 @@ def _derive_confidence(evidence_basis: str, *, resolved: bool, has_source: bool)
     if evidence_basis == "inferred":
         return "low"
     if evidence_basis == "observed" and resolved:
-        return "high"
+        # "high" is only honest with a citation — never assert high w/o provenance
+        # (audit 2026-06-08 B1#1: resolved import edges had no source_path).
+        return "high" if has_source else "medium"
     if evidence_basis == "declared" and has_source:
         return "medium"
     return "low"
 
 
 def _stamp(item: dict[str, Any], defaults: tuple[str, str, str], *, resolved: bool) -> None:
-    src_default, basis_default, method = defaults
+    src_default, basis_default, method_default = defaults
+    # Emitters may attribute the real extractor (e.g. JS edges are NOT the
+    # python_import_crawler) via an `extractor` hint (audit 2026-06-08 B1#1).
+    method = item.get("extractor") or method_default
     source_kind = item.get("source_kind") or src_default
     # An unresolved endpoint is `unresolved` basis unless the emission site said
     # otherwise — never let a type default (e.g. import→observed) mask a drop.
@@ -217,12 +226,12 @@ _EXT_TO_KIND: dict[str, str] = {
     ".kt": "kotlin",
     ".kts": "kotlin",
     ".gradle": "gradle",
-    ".js": "javascript",
+    ".js": "javascript",   # extracted by js_import_crawler (dashboard scope)
     ".mjs": "javascript",
     ".cjs": "javascript",
-    ".ts": "javascript",
-    ".tsx": "javascript",
-    ".jsx": "javascript",
+    ".ts": "typescript",   # NO extractor → drops the ceiling (audit B1#2)
+    ".tsx": "typescript",
+    ".jsx": "jsx",
     ".go": "go",
     ".rs": "rust",
 }
