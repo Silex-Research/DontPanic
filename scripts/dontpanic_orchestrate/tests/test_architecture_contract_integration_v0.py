@@ -64,18 +64,21 @@ def test_real_build_has_resolved_high_confidence_imports():
     assert any(e["confidence"] == "high" for e in resolved_imports)
 
 
-def test_real_build_carries_coverage_block_with_missing_extractor_for_js():
+def test_real_build_carries_coverage_block_with_js_now_extracted():
     vs = _build()
     cov = vs["coverage"]
     assert cov["contract_version"] == "v0"
     statuses = {e["status"] for e in cov["extractors"]}
     assert statuses <= set(C.COVERAGE_STATUSES)
     assert any(e["status"] == "covered" for e in cov["extractors"])
-    # DontPanic ships a JS dashboard but has no JS import extractor → the map
-    # must be honestly INCOMPLETE, never a confident Python-only picture.
+    # Plan C slice 1 shipped the JS import extractor, so DontPanic's dashboard JS
+    # is now extracted: javascript is no longer a missing kind and the once-low
+    # ceiling lifts. (The honesty lever from Plan A, demonstrated in reverse.)
     missing_kinds = {m["evidence_kind"] for m in cov["missing_extractors"]}
-    assert "javascript" in missing_kinds
-    assert cov["confidence_ceiling"] == "low"
+    assert "javascript" not in missing_kinds
+    assert any(e["extractor"] == "js_import_crawler" and e["status"] == "covered"
+               for e in cov["extractors"])
+    assert cov["confidence_ceiling"] != "low"
 
 
 def test_real_build_carries_layer_shell():

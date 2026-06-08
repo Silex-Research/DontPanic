@@ -1,0 +1,15 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator directive: start Plan C — per-evidence-type code extractors to lift the architecture coverage ceiling off low, one evidence-type per slice. First slice = a JavaScript/TS import extractor for the dashboard, because DontPanic's own as-built map currently reports javascript as missing_extractor (the dashboard ships ~39 ES modules with no extractor), pinning the ceiling low. Scope: relative-import ES module graph only; unresolved imports stay visible at low confidence; coverage stops counting javascript as unextracted. No other languages, no TS type analysis, no UI, no reconciler/Python-crawler change.",
+  "completion_test": "build_view_state emits the dashboard's JS modules as as-built nodes + relative-import edges (contract-stamped; unresolved imports surface as low-confidence endpoints), and the coverage block no longer lists javascript as missing_extractor — it reports the JS extractor's status instead — so a Python+JS repo with all extractors covered is no longer forced to a low confidence ceiling. Extractor is pure + deterministic and entered through the real build_view_state surface.",
+  "user_journeys": [
+    {"name": "js-modules-as-built", "description": "Dashboard ES modules + their relative imports appear as as-built nodes/edges.", "surfaces": ["core"], "states": ["resolved_import", "unresolved_import"]},
+    {"name": "ceiling-lifts", "description": "javascript leaves missing_extractors; the ceiling can rise above low.", "surfaces": ["core"], "states": ["js_covered"]}
+  ],
+  "non_goals": [
+    "Other languages (Swift/Gradle/Go/Rust remain reserved slices)",
+    "TS type analysis or bundler/tsconfig alias resolution (relative paths only)",
+    "UI work or any change to the Python as-built crawler / the intent reconciler",
+    "Resolving every bare/vendor import (those stay visible as low-confidence unresolved)"
+  ]
+}

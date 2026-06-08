@@ -59,6 +59,7 @@ from typing import Any
 from dontpanic_orchestrate import architecture as _architecture
 from dontpanic_orchestrate import architecture_contract as _contract
 from dontpanic_orchestrate import architecture_intent as _intent
+from dontpanic_orchestrate import architecture_js as _architecture_js
 from dontpanic_orchestrate import architecture_levels as _architecture_levels
 from dontpanic_orchestrate import operator_console as _operator_console
 
@@ -671,6 +672,11 @@ def build_view_state(
     nodes.extend(external_nodes)
     nodes.extend(page_nodes)
     edges.extend(cap_edges)
+
+    # Plan C slice 1 — JavaScript/TS import graph (lifts the javascript ceiling).
+    js_nodes, js_edges = _architecture_js.extract_js_modules(repo_root)
+    nodes.extend(js_nodes)
+    edges.extend(js_edges)
 
     # Refresh filter categories to reflect every emitted node type so
     # the UI's facet list stays in sync with what was rendered.

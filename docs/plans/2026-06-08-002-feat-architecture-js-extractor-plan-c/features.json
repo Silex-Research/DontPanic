@@ -1,0 +1,36 @@
+{
+  "task_id": "2026-06-08-002-feat-architecture-js-extractor-plan-c",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Extract the dashboard's JavaScript/TypeScript ES module graph (relative imports) into as-built nodes + import edges, contract-stamped via the Plan A evidence contract. Unresolved (bare/vendor) imports surface as low-confidence unresolved endpoints, mirroring the Python crawler. Bounded to relative-path resolution; no bundler aliases, no type analysis.",
+      "acceptance": "an extractor scans the dashboard ES modules and returns as-built module nodes (one per js file, source_path under the dashboard) plus import edges between modules whose relative imports resolve; an import that does not resolve to a local module is emitted as a low-confidence unresolved endpoint, not dropped; build_view_state includes these nodes/edges and they carry source_kind code with evidence_basis observed for resolved modules.",
+      "passes": true,
+      "introduces": [
+        "js_module"
+      ],
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_js_extractor_plan_c.py"
+      ],
+      "verified_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Lift the coverage ceiling: javascript is no longer reported as an unextracted kind (DontPanic now has a JS extractor), and the coverage block reports the new JS extractor's status (covered when js modules exist). A repo whose only previously-unextracted language was javascript can now rise above the low confidence ceiling.",
+      "acceptance": "the coverage block no longer lists javascript under missing_extractors when the repo's JS is extracted, the JS extractor appears in the coverage extractors list with a status from the defined coverage statuses, and for a Python+JS repo with every extractor covered the confidence_ceiling is no longer forced low by javascript.",
+      "passes": true,
+      "introduces": [
+        "js_import_crawler",
+        "missing_extractors",
+        "confidence_ceiling"
+      ],
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_js_extractor_plan_c.py"
+      ],
+      "verified_at": "2026-06-08T00:00:00Z"
+    }
+  ]
+}
