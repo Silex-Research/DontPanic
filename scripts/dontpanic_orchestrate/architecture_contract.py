@@ -75,6 +75,7 @@ _NODE_EVIDENCE: dict[str, tuple[str, str, str]] = {
     "command": ("code", "declared", "command_catalog"),
     "capability": ("manifest", "declared", "capability_manifest_scan"),
     "page": ("code", "observed", "dashboard_page_scan"),
+    "js_module": ("code", "observed", "js_import_crawler"),
     "metadata": ("manifest", "observed", "architecture_fingerprint"),
     "external": ("external", "declared", "capability_manifest_scan"),
     "step": ("doc", "declared", "authored_flow"),
@@ -97,6 +98,7 @@ EXTRACTORS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("plan_index", "doc", ("plan",)),
     ("capability_manifest_scan", "manifest", ("capability",)),
     ("dashboard_page_scan", "code", ("page",)),
+    ("js_import_crawler", "code", ("js_module",)),  # Plan C slice 1
     ("architecture_fingerprint", "manifest", ("metadata",)),
 )
 
@@ -108,7 +110,8 @@ _UNEXTRACTED_KINDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("xcode", (".xcodeproj", ".pbxproj")),
     ("kotlin", (".kt", ".kts")),
     ("gradle", ("build.gradle", "build.gradle.kts", "settings.gradle")),
-    ("javascript", (".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx")),
+    # javascript is no longer here — Plan C slice 1 ships a JS import extractor
+    # (js_import_crawler), so JS is an EXTRACTED kind, not a missing one.
     ("go", (".go",)),
     ("rust", (".rs",)),
 )
