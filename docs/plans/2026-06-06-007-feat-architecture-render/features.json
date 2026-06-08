@@ -1,0 +1,26 @@
+{
+  "task_id": "2026-06-06-007-feat-architecture-render",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Wire architecture_levels.write_levels into the build so the diff-able per-level .mmd slices regenerate from the current architecture snapshot into the DontPanic repo's docs/architecture/levels/; guard so foreign/fleet builds never write levels into another project's tracked tree (cache-only).",
+      "acceptance": "A build regenerates docs/architecture/levels/*.mmd from architecture.json (deterministic, diff-able); a test asserts the slices are emitted from a snapshot + that the foreign-repo guard prevents writing into a non-DontPanic tree."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Add a breadcrumb L2->L3 cluster-zoom to the EXISTING interactive Architecture SVG: a breadcrumb (All / <cluster>) filters the rendered nodes+edges to one cluster (by directory, mirroring cluster_key) and back; no mermaid runtime added.",
+      "acceptance": "Clicking a cluster zooms the SVG to that cluster's nodes (+ the breadcrumb updates); clicking the breadcrumb root restores the full map; pure cluster-derivation logic is unit-tested + the page wiring is covered."
+    }
+  ]
+}

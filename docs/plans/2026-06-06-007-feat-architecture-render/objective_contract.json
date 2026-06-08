@@ -1,0 +1,33 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "docs/design/operator-console-redesign.md \u00a79 + the built architecture_levels.py (diff-able levels) + the existing interactive Architecture SVG page. Operator decision: NO mermaid runtime \u2014 leverage the existing SVG + regenerate diff-able levels for docs.",
+  "completion_test": "A build regenerates the diff-able per-level architecture .mmd slices (cache-only, no foreign-tree writes), and the live Architecture page lets the operator drill from the whole map into a single cluster and back via a breadcrumb \u2014 on the existing interactive SVG, no mermaid dependency added.",
+  "user_journeys": [
+    {
+      "name": "levels-regenerate-on-build",
+      "description": "Build -> diff-able docs/architecture/levels/*.mmd regenerate from architecture.json.",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "levels_emitted"
+      ]
+    },
+    {
+      "name": "architecture-cluster-zoom",
+      "description": "Open Architecture -> click a cluster -> SVG zooms to that cluster -> breadcrumb back to full map.",
+      "surfaces": [
+        "frontend-ui"
+      ],
+      "states": [
+        "zoomed_in",
+        "zoomed_out"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Vendoring a mermaid runtime / client-side .mmd render",
+    "Terminal chrome + legacy theming + full multi-surface state matrix (008)",
+    "Replacing the existing swimlane SVG render"
+  ]
+}
