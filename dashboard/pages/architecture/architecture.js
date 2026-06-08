@@ -25,6 +25,10 @@ import {
   getFlowParticipants,
   layoutArchitectureGraph,
   isMissingSelectedProject,
+  computeDependencyHighlight,
+  renderClusterBarHTML,
+  getClusterMembers,
+  rootClusterId,
 } from '../../lib/architecture-logic.js';
 import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
 
@@ -34,6 +38,8 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
   let _layout = null;
   let _state = {
     flowId: null,
+    focusNodeId: null, // F002 click-a-component dependency highlight
+    clusterId: null,   // F002 breadcrumb drill-down scope
     search: '',
     filters: { type: null, lane: null, edge: null }, // null = all enabled
     zoom: 1,
@@ -77,6 +83,8 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     // previous selection/flow IDs are not guaranteed to exist anymore.
     _state = {
       flowId: null,
+      focusNodeId: null,
+      clusterId: _envelope ? rootClusterId(_envelope) : null,
       search: '',
       filters: { type: null, lane: null, edge: null },
       zoom: 1,
@@ -183,8 +191,83 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
   }
 
   function setFlow(flowId) {
+    // Flow selection and node-focus are exclusive highlight sources.
+    _state.focusNodeId = null;
     _state.flowId = flowId;
     applySelection();
+  }
+
+  // ── F002 click-a-component dependency highlight ───────────────────
+
+  function applyNodeFocus() {
+    if (!_el) return;
+    const canvas = _el.querySelector('[data-canvas]');
+    if (!canvas) return;
+    // Reset highlight classes + any flow step markers, then layer focus.
+    canvas.querySelectorAll('.arch-node, .arch-edge').forEach((g) => {
+      g.classList.remove('is-selected', 'is-dimmed');
+    });
+    canvas.querySelectorAll('[data-step-markers] *').forEach((n) => n.remove());
+    if (!_state.focusNodeId) return;
+    const { related, edgeIds } = computeDependencyHighlight(
+      _envelope, _state.focusNodeId,
+    );
+    if (related.size === 0) return;
+    canvas.querySelectorAll('.arch-node').forEach((g) => {
+      if (related.has(g.dataset.nodeId)) g.classList.add('is-selected');
+      else g.classList.add('is-dimmed');
+    });
+    canvas.querySelectorAll('.arch-edge').forEach((p) => {
+      if (edgeIds.has(p.dataset.edgeId)) p.classList.add('is-selected');
+      else p.classList.add('is-dimmed');
+    });
+  }
+
+  function setFocus(nodeId) {
+    // Clear any active flow selection — one highlight source at a time.
+    if (_state.flowId) {
+      _state.flowId = null;
+      const flowRail = _el && _el.querySelector('[data-flow-rail]');
+      if (flowRail) {
+        flowRail.querySelectorAll('[data-arch-flow]').forEach((btn) => {
+          btn.setAttribute('aria-pressed', 'false');
+          btn.classList.remove('is-selected');
+        });
+      }
+      const clearBtn = _el && _el.querySelector('[data-arch-flow-clear]');
+      const inspector = _el && _el.querySelector('[data-step-inspector]');
+      if (clearBtn) clearBtn.hidden = true;
+      if (inspector) inspector.hidden = true;
+    }
+    _state.focusNodeId = nodeId;
+    applyNodeFocus();
+  }
+
+  function clearFocus() {
+    _state.focusNodeId = null;
+    applyNodeFocus();
+  }
+
+  // ── F002 breadcrumb / cluster drill-down ──────────────────────────
+
+  function renderClusterBar() {
+    if (!_el || !_envelope) return;
+    const bar = _el.querySelector('[data-cluster-bar]');
+    if (!bar) return;
+    const html = renderClusterBarHTML(_envelope, _state.clusterId);
+    if (html) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html.trim();
+      const next = tmp.firstElementChild;
+      if (next) bar.replaceWith(next);
+    }
+  }
+
+  function setCluster(clusterId) {
+    if (!_envelope) return;
+    _state.clusterId = clusterId || rootClusterId(_envelope);
+    renderClusterBar();
+    applyFilters();
   }
 
   // ── Filter / search ───────────────────────────────────────────────
@@ -197,6 +280,12 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     const typeFilter = _state.filters.type; // Set or null
     const laneFilter = _state.filters.lane;
     const edgeFilter = _state.filters.edge;
+    // F002 cluster drill-down: when focused on a non-root cluster, only
+    // its subtree members stay on the canvas. Root (or no cluster) = all.
+    const root = rootClusterId(_envelope);
+    const clusterMembers = (_state.clusterId && _state.clusterId !== root)
+      ? getClusterMembers(_envelope, _state.clusterId)
+      : null;
     const visibleNodeIds = new Set();
     canvas.querySelectorAll('.arch-node').forEach((g) => {
       const id = g.dataset.nodeId || '';
@@ -207,11 +296,12 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       const source = (node && typeof node.source_path === 'string') ? node.source_path.toLowerCase() : '';
       const matchesType = typeFilter == null || typeFilter.has(type);
       const matchesLane = laneFilter == null || laneFilter.has(lane);
+      const matchesCluster = clusterMembers == null || clusterMembers.has(id);
       const matchesSearch = search.length === 0
         || id.toLowerCase().includes(search)
         || title.includes(search)
         || source.includes(search);
-      const visible = matchesType && matchesLane && matchesSearch;
+      const visible = matchesType && matchesLane && matchesCluster && matchesSearch;
       g.classList.toggle('is-filtered-out', !visible);
       if (visible) visibleNodeIds.add(id);
     });
@@ -350,6 +440,8 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     _state.zoom = 1;
     _state.pan = { x: 0, y: 0 };
     _state.flowId = null;
+    _state.focusNodeId = null;
+    _state.clusterId = _envelope ? rootClusterId(_envelope) : null;
     _state.search = '';
     _state.filters = { type: null, lane: null, edge: null };
     _state.detailNodeId = null;
@@ -362,6 +454,7 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       const detail = _el.querySelector('[data-detail-panel]');
       if (detail) detail.hidden = true;
     }
+    renderClusterBar();
     applyZoom();
     applyFilters();
     applySelection();
@@ -495,9 +588,23 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       return;
     }
 
-    // Detail panel close.
+    // Detail panel close — also clears the dependency highlight.
     if (t.closest('[data-arch-detail-close]')) {
       hideDetail();
+      clearFocus();
+      return;
+    }
+
+    // Cluster drill-down: a breadcrumb crumb navigates up, a child chip
+    // drills in. Both re-scope the canvas to that cluster's subtree.
+    const crumb = t.closest('[data-arch-crumb]');
+    if (crumb) {
+      setCluster(crumb.dataset.archCrumb);
+      return;
+    }
+    const clusterChip = t.closest('[data-arch-cluster]');
+    if (clusterChip) {
+      setCluster(clusterChip.dataset.archCluster);
       return;
     }
 
@@ -520,11 +627,14 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
       return;
     }
 
-    // Node click → detail panel.
+    // Node click → detail panel + dependency highlight (F002).
     const nodeG = t.closest('.arch-node');
     if (nodeG) {
       const nodeId = nodeG.dataset.nodeId;
-      if (nodeId) showDetail(nodeId);
+      if (nodeId) {
+        showDetail(nodeId);
+        setFocus(nodeId);
+      }
       return;
     }
   }
@@ -566,7 +676,10 @@ import { ALL_PROJECTS_VALUE } from '../../lib/project-selector-logic.js';
     if (nodeG) {
       ev.preventDefault();
       const nodeId = nodeG.dataset.nodeId;
-      if (nodeId) showDetail(nodeId);
+      if (nodeId) {
+        showDetail(nodeId);
+        setFocus(nodeId);
+      }
     }
   }
 

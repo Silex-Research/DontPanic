@@ -156,5 +156,69 @@
   "schema_version": "1.0",
   "source_path": "docs/architecture/architecture.json",
   "steps": [],
-  "validation_warnings": []
+  "validation_warnings": [],
+  "clusters": [
+    {
+      "id": "cluster:",
+      "key": "",
+      "title": "System",
+      "level": 0,
+      "parent_id": null,
+      "node_ids": [
+        "command:dontpanic-architecture-regen"
+      ],
+      "child_cluster_ids": [
+        "cluster:scripts"
+      ]
+    },
+    {
+      "id": "cluster:scripts",
+      "key": "scripts",
+      "title": "scripts",
+      "level": 1,
+      "parent_id": "cluster:",
+      "node_ids": [],
+      "child_cluster_ids": [
+        "cluster:scripts/dontpanic_orchestrate"
+      ]
+    },
+    {
+      "id": "cluster:scripts/dontpanic_orchestrate",
+      "key": "scripts/dontpanic_orchestrate",
+      "title": "dontpanic_orchestrate",
+      "level": 2,
+      "parent_id": "cluster:scripts",
+      "node_ids": [
+        "module:scripts/dontpanic_orchestrate/cli.py",
+        "module:scripts/dontpanic_orchestrate/supervisor.py"
+      ],
+      "child_cluster_ids": []
+    }
+  ],
+  "levels": [
+    {
+      "id": "level:0",
+      "level": 0,
+      "title": "L0",
+      "cluster_ids": [
+        "cluster:"
+      ]
+    },
+    {
+      "id": "level:1",
+      "level": 1,
+      "title": "L1",
+      "cluster_ids": [
+        "cluster:scripts"
+      ]
+    },
+    {
+      "id": "level:2",
+      "level": 2,
+      "title": "L2",
+      "cluster_ids": [
+        "cluster:scripts/dontpanic_orchestrate"
+      ]
+    }
+  ]
 }

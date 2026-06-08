@@ -3,7 +3,7 @@ id: 2026-06-06-007-feat-architecture-render
 title: Architecture render — regenerate diff-able levels in the build + breadcrumb zoom on the live SVG
 type: feat
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-06"
 goal_type: new_feature
 description: >

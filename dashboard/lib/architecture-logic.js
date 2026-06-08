@@ -187,6 +187,8 @@ export function normalizeEnvelope(raw) {
     lanes:               Array.isArray(raw.lanes) ? raw.lanes : [],
     nodes:               Array.isArray(raw.nodes) ? raw.nodes : [],
     edges:               Array.isArray(raw.edges) ? raw.edges : [],
+    clusters:            Array.isArray(raw.clusters) ? raw.clusters : [],
+    levels:              Array.isArray(raw.levels) ? raw.levels : [],
     flows:               Array.isArray(raw.flows) ? raw.flows : [],
     steps:               Array.isArray(raw.steps) ? raw.steps : [],
     filters:             raw.filters && typeof raw.filters === 'object' ? raw.filters : {},
@@ -445,6 +447,196 @@ export function getFlowParticipants(envelope, flowId) {
   });
   stepRefs.sort((a, b) => a.order - b.order);
   return { nodeIds, edgeIds, stepRefs, flow };
+}
+
+// ─── F002 dependency walk + cluster navigation (pure) ───────────────
+
+/**
+ * Walk the edge graph from `nodeId` to collect its transitive upstream
+ * (things it depends on, reached by following edges *into* the node) and
+ * downstream (things that depend on it, reached by following edges *out
+ * of* the node) neighbours. Cycle-guarded. Returns
+ * `{ focus, upstream:Set, downstream:Set, related:Set, edgeIds:Set }`
+ * where `related` is the focus plus both directions and `edgeIds` are the
+ * edges whose endpoints both fall inside `related` (the connected
+ * neighbourhood to highlight). Everything else is dimmed by the caller.
+ */
+export function computeDependencyHighlight(envelope, nodeId) {
+  const empty = {
+    focus: '',
+    upstream: new Set(),
+    downstream: new Set(),
+    related: new Set(),
+    edgeIds: new Set(),
+  };
+  if (envelope == null || typeof nodeId !== 'string' || nodeId.length === 0) {
+    return empty;
+  }
+  const nodeIds = new Set(
+    (envelope.nodes || [])
+      .filter((n) => n && typeof n.id === 'string')
+      .map((n) => n.id),
+  );
+  if (!nodeIds.has(nodeId)) return empty;
+
+  const edges = (envelope.edges || []).filter(
+    (e) => e && typeof e.from === 'string' && typeof e.to === 'string',
+  );
+  const outAdj = new Map();
+  const inAdj = new Map();
+  for (const e of edges) {
+    if (!outAdj.has(e.from)) outAdj.set(e.from, []);
+    outAdj.get(e.from).push(e.to);
+    if (!inAdj.has(e.to)) inAdj.set(e.to, []);
+    inAdj.get(e.to).push(e.from);
+  }
+  const walk = (adj) => {
+    const seen = new Set();
+    const stack = [nodeId];
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      for (const nxt of adj.get(cur) || []) {
+        if (nxt === nodeId || seen.has(nxt)) continue;
+        seen.add(nxt);
+        stack.push(nxt);
+      }
+    }
+    return seen;
+  };
+  const downstream = walk(outAdj);
+  const upstream = walk(inAdj);
+  const related = new Set([nodeId, ...upstream, ...downstream]);
+  const edgeIds = new Set();
+  for (const e of edges) {
+    if (related.has(e.from) && related.has(e.to)) edgeIds.add(e.id);
+  }
+  return { focus: nodeId, upstream, downstream, related, edgeIds };
+}
+
+export function getClusterById(envelope, clusterId) {
+  if (envelope == null) return null;
+  return (envelope.clusters || []).find((c) => c && c.id === clusterId) || null;
+}
+
+/** Resolve the level-0 ("System") cluster id, falling back to "cluster:". */
+export function rootClusterId(envelope) {
+  const root = (envelope && envelope.clusters || []).find(
+    (c) => c && c.level === 0,
+  );
+  return root ? root.id : 'cluster:';
+}
+
+/**
+ * Ordered ancestry from the System root down to `clusterId` (inclusive),
+ * each entry `{ id, title, level }`. Cycle-guarded so a malformed
+ * parent_id chain cannot loop forever.
+ */
+export function buildBreadcrumbPath(envelope, clusterId) {
+  const byId = new Map(
+    (envelope && envelope.clusters || [])
+      .filter((c) => c && typeof c.id === 'string')
+      .map((c) => [c.id, c]),
+  );
+  const out = [];
+  const guard = new Set();
+  let cur = byId.get(clusterId) || null;
+  while (cur && !guard.has(cur.id)) {
+    guard.add(cur.id);
+    out.push({ id: cur.id, title: cur.title || cur.id, level: cur.level });
+    cur = cur.parent_id ? byId.get(cur.parent_id) || null : null;
+  }
+  out.reverse();
+  return out;
+}
+
+/** Immediate child clusters of `clusterId`, in declared order. */
+export function getClusterChildren(envelope, clusterId) {
+  const cluster = getClusterById(envelope, clusterId);
+  if (!cluster) return [];
+  const byId = new Map(
+    (envelope.clusters || [])
+      .filter((c) => c && typeof c.id === 'string')
+      .map((c) => [c.id, c]),
+  );
+  return (cluster.child_cluster_ids || [])
+    .map((id) => byId.get(id))
+    .filter(Boolean);
+}
+
+/**
+ * Every node id within `clusterId` and all of its descendant clusters —
+ * the drill scope used to dim everything outside the focused subtree.
+ */
+export function getClusterMembers(envelope, clusterId) {
+  const byId = new Map(
+    (envelope && envelope.clusters || [])
+      .filter((c) => c && typeof c.id === 'string')
+      .map((c) => [c.id, c]),
+  );
+  const start = byId.get(clusterId);
+  const out = new Set();
+  if (!start) return out;
+  const stack = [start];
+  const guard = new Set();
+  while (stack.length > 0) {
+    const cluster = stack.pop();
+    if (guard.has(cluster.id)) continue;
+    guard.add(cluster.id);
+    for (const nid of cluster.node_ids || []) out.add(nid);
+    for (const cid of cluster.child_cluster_ids || []) {
+      const child = byId.get(cid);
+      if (child) stack.push(child);
+    }
+  }
+  return out;
+}
+
+/**
+ * Render the cluster breadcrumb + drill chips for the currently focused
+ * cluster. Crumbs (`data-arch-crumb`) walk back up the directory path;
+ * chips (`data-arch-cluster`) drill into child clusters. Pure given a
+ * normalized envelope + the focused cluster id.
+ */
+export function renderClusterBarHTML(envelope, clusterId) {
+  if (envelope == null || !Array.isArray(envelope.clusters)
+      || envelope.clusters.length === 0) {
+    return '';
+  }
+  const current = getClusterById(envelope, clusterId)
+    || getClusterById(envelope, rootClusterId(envelope));
+  if (!current) return '';
+
+  const crumbs = buildBreadcrumbPath(envelope, current.id);
+  const crumbHTML = crumbs.map((c, idx) => {
+    const isLast = idx === crumbs.length - 1;
+    const sep = idx > 0 ? '<span class="arch-crumb-sep" aria-hidden="true">▸</span>' : '';
+    return `${sep}<button type="button" class="arch-crumb${isLast ? ' is-current' : ''}"
+        data-arch-crumb="${esc(c.id)}"
+        ${isLast ? 'aria-current="location"' : ''}>${esc(c.title)}</button>`;
+  }).join('');
+
+  const children = getClusterChildren(envelope, current.id);
+  const memberCount = getClusterMembers(envelope, current.id).size;
+  const chipHTML = children.length === 0
+    ? '<span class="arch-cluster-chip-empty">No deeper levels — this is a leaf area.</span>'
+    : children.map((child) => {
+      const count = getClusterMembers(envelope, child.id).size;
+      return `<button type="button" class="arch-cluster-chip"
+          data-arch-cluster="${esc(child.id)}">
+          <span class="arch-cluster-chip-title">${esc(child.title)}</span>
+          <span class="arch-cluster-chip-count">${esc(String(count))}</span>
+        </button>`;
+    }).join('');
+
+  return `
+    <div class="arch-cluster-bar" data-cluster-bar data-cluster-id="${esc(current.id)}">
+      <nav class="arch-breadcrumb" aria-label="Architecture level path">
+        ${crumbHTML}
+        <span class="arch-breadcrumb-count">${esc(String(memberCount))} node${memberCount === 1 ? '' : 's'}</span>
+      </nav>
+      <div class="arch-cluster-chips" data-cluster-chips>${chipHTML}</div>
+    </div>
+  `;
 }
 
 // ─── Top-level renderer ──────────────────────────────────────────────
@@ -1474,11 +1666,13 @@ function renderExplorerHTML(envelope, layout) {
       <div class="arch-explorer-header">
         <h3 class="arch-map-title">System Map</h3>
         <p class="arch-map-hint">
-          Select a flow to highlight its path. Non-selected nodes stay
-          visible but dimmed. Use search and filters to narrow the
-          canvas, or click any node for source detail.
+          Click a component to highlight what it depends on and what
+          depends on it; everything else dims. Drill into a level with the
+          breadcrumb, select a flow to trace a path, or search and filter
+          to narrow the canvas.
         </p>
       </div>
+      ${renderClusterBarHTML(envelope, rootClusterId(envelope))}
       <div class="arch-explorer-toolbar" role="toolbar" aria-label="Architecture explorer controls">
         <label class="arch-search">
           <span class="arch-search-label">Search</span>

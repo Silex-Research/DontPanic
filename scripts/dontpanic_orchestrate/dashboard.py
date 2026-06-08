@@ -837,6 +837,14 @@ def build(
             architecture_view_state_path = architecture_view_state.write_cache(
                 view_state, out_dir=out_dir
             )
+            # Plan 2026-06-06-007 F001 — optional diffable .mmd level
+            # slices for docs/git review. Cache-only (under out_dir), never
+            # the page's render source. Best-effort: a slice-write failure
+            # must not fail the build or block the view-state cache.
+            try:
+                architecture_levels.write_levels(view_state, out_dir=out_dir)
+            except Exception as exc:  # noqa: BLE001
+                warn(f"architecture level slices skipped: {exc}")
         except Exception as exc:  # noqa: BLE001
             msg = f"architecture view-state skipped: {exc}"
             warnings.append(msg)
