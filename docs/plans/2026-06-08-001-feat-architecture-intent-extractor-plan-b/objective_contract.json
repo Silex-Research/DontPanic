@@ -1,0 +1,15 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator directive: after Plan A (architecture evidence contract) and 008 (operator-console usability), the next reconciler slice is Plan B — an ADR/doc intent extractor that populates the intent.claims Plan A's layer shell reserved empty, plus a bounded as-built vs intended reconciler that populates the diff list keyed by Plan A's diff taxonomy. ADR parsing only; no new code/language extractors (Plan C); no UI; no Plan A contract change; graceful when a repo has no ADRs.",
+  "completion_test": "build_view_state populates layers.intent with declared intent claims parsed from decision docs (id/title/status/source_path/referenced symbols; source_kind adr; evidence_basis declared) and degrades to empty + coverage adr=not_found when none exist; and populates layers.diff with conservative, evidence-backed entries keyed by the Plan A taxonomy (aligned / documented_unimplemented / stale_adr in v0). The extractor + reconciler are pure, deterministic, and entered through the real build_view_state surface.",
+  "user_journeys": [
+    {"name": "adr-intent-surfaces", "description": "A repo with an ADR yields a declared intent claim in the view-state intent layer.", "surfaces": ["core"], "states": ["adr_present", "adr_absent"]},
+    {"name": "as-built-vs-intended", "description": "Each claim is reconciled against the as-built graph into an honest diff entry.", "surfaces": ["core"], "states": ["aligned", "documented_unimplemented", "stale_adr"]}
+  ],
+  "non_goals": [
+    "New code/build/language extractors (Plan C owns those)",
+    "ADR authoring or status mutation (read-only)",
+    "UI rendering of the intent/diff layers (later slice)",
+    "Any change to the Plan A contract enums or the as-built builder"
+  ]
+}
