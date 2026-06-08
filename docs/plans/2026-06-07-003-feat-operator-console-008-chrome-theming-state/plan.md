@@ -3,7 +3,7 @@ id: 2026-06-07-003-feat-operator-console-008-chrome-theming-state
 title: Operator console 008 — armed-terminal chrome + legacy theming + full state matrix
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-07"
 goal_type: new_feature
 description: >

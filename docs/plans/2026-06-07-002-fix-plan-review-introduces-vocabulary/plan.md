@@ -3,7 +3,7 @@ id: 2026-06-07-002-fix-plan-review-introduces-vocabulary
 title: plan-review introduces-vocabulary — let a feature declare the symbols it defines so contract/greenfield plans don't self-deadlock
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-07"
 goal_type: new_feature
 description: >

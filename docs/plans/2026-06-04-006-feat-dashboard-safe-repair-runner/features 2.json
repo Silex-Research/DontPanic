@@ -1,0 +1,109 @@
+{
+  "task_id": "2026-06-04-006-feat-dashboard-safe-repair-runner",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Producer-asserted safety taxonomy + policy, distinct from resolution_class. Add safety_class ∈ {auto_safe, human_required, blocked_external, info} to each repair action, asserted by the emitter (never inferred by the runner). An auto_safe action additionally carries apply_tier ∈ {derived_state, confirmed_local}. A safety policy validates auto_safe: ALL of local, reversible-or-read-only, bounded, no credentials, no paid dispatch, no deploy, no destructive file changes, and no source-of-truth write (derived_state = regenerate derived/cached projection only; confirmed_local = an explicit allowlist of local safe mutations). Fail closed: an unclassified or policy-failing action defaults to human_required and can never auto-run. resolution_class (001) says HOW a card resolves; safety_class says WHETHER it may auto-run — they are orthogonal.",
+      "steps": [
+        "Add safety_class + apply_tier to the repair action model (separate from operator_console.ActionItem.resolution_class)",
+        "Implement a safety policy validator: auto_safe requires the full predicate set; derived_state forbids any source-of-truth write; confirmed_local is an explicit allowlist",
+        "Default unclassified/policy-failing actions to human_required (fail closed)",
+        "Tests: derived_state action passes policy; an action that writes a reconcile baseline / needs creds / deploys is rejected from auto_safe; an unclassified action -> human_required and is non-auto-runnable"
+      ],
+      "acceptance": "Every repair action carries a producer-asserted safety_class (+ apply_tier for auto_safe). A safety policy validates auto_safe against the full predicate set; derived_state forbids source-of-truth writes; confirmed_local is an explicit allowlist. An unclassified or policy-failing action defaults to human_required and is never auto-runnable. safety_class is orthogonal to resolution_class. Verified by policy tests over derived_state pass, forbidden-kind rejection, and fail-closed default.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 1
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Dependency-ordered fixpoint repair planner over the 005 render-gate output. Build an ordered plan from the visible unresolved (render) and stale (demote) cards: order by dependency (a prerequisite precedes its dependent), apply the eligible safe batch, recompute dashboard state, re-plan, and repeat until only human_required/blocked_external/info remain or no progress is made. A state-changing step recomputes the next needed step rather than trusting a static list. Terminates deterministically and logs deferred actions with reason (safety tier, dependency, or no-progress).",
+      "steps": [
+        "Consume the 005 render-gate outcomes: render -> candidate repair, demote -> candidate source-refresh, suppress -> skip",
+        "Topologically order candidate actions by declared dependency",
+        "Fixpoint loop: apply eligible batch -> recompute state -> re-plan; stop when only human/blocked/info remain or no progress (with a hard iteration cap)",
+        "Log deferred actions with reason; tests: a step that changes the next needed step triggers a re-plan; the loop terminates at a fixpoint; cyclic/dependency-stuck input is detected and deferred, not looped"
+      ],
+      "acceptance": "The planner builds a dependency-ordered plan from the 005 render-gate output and runs a fixpoint loop (apply eligible -> recompute -> re-plan) that terminates when only human_required/blocked_external/info remain or no progress is made (bounded by a hard iteration cap). A state-changing step re-plans rather than continuing a static list. Deferred actions are logged with reason. Verified by fixpoint, re-plan-on-change, and no-progress/cycle-detection tests.",
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 1,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Emit-only agent-handoff bundle (the default). `dontpanic repair plan --scope <s> --format=json` produces the dependency-ordered, safety-classified plan as machine-readable JSON: each action carries command, safety_class, apply_tier, clears_when, plain_consequence, and scope. It performs ZERO mutation — any agentic operator (Codex/Claude/Grok) runs it. This is the default `repair` behavior; execution requires an explicit apply subcommand (F004).",
+      "steps": [
+        "Add `dontpanic repair plan` CLI emitting the F002 plan; --format=json (default human-readable summary otherwise)",
+        "Each emitted action: command, safety_class, apply_tier, clears_when, plain_consequence, scope (scope via 005)",
+        "Assert no mutation occurs on `repair plan` (read-only)",
+        "Tests: snapshot of the JSON bundle shape; ordering preserved; no files written / no state mutated by the emit path"
+      ],
+      "acceptance": "`dontpanic repair plan --scope <s> --format=json` emits the dependency-ordered, safety-classified plan (command + safety_class + apply_tier + clears_when + plain_consequence + scope) and mutates nothing. Verified by a bundle snapshot test, an ordering test, and a no-mutation assertion.",
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 2,
+      "depends_on": ["F001", "F002"]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Tiered opt-in local apply. `dontpanic repair apply --safe-derived-state` executes ONLY apply_tier=derived_state actions (rebuild dashboard state, recompute what-now, refresh capability status, refresh reconcile CHECK (not baseline write), regenerate architecture map if bounded, clear replaceable generated dashboard caches, re-export state, suppress resolved cards). `dontpanic repair apply --safe --confirm` additionally executes an explicit allowlist of apply_tier=confirmed_local mutations behind the stronger flag. NO tier runs deploys, credential setup, paid dispatch, role changes, plan-state mutation, project-registry changes, destructive cleanup, or reconcile-baseline writes (those stay human_required unless explicitly approved). Every executing tier requires per-command safety_class + clears_when + round-trip verification (F005).",
+      "steps": [
+        "Add `repair apply` with --safe-derived-state (runs apply_tier=derived_state only) and --safe --confirm (adds the confirmed_local allowlist)",
+        "Enforce the forbidden-kind exclusion at execution: refuse deploy/creds/paid/role/plan-state/registry/destructive/baseline regardless of flag",
+        "Each executed action passes through F005 round-trip verification; abort/skip + log on verification failure",
+        "Tests: --safe-derived-state runs only derived_state and refuses every forbidden kind; --safe --confirm runs only allowlisted confirmed_local; an unclassified action is never executed by either tier"
+      ],
+      "acceptance": "`repair apply --safe-derived-state` executes only apply_tier=derived_state actions; `repair apply --safe --confirm` additionally executes only an explicit allowlist of confirmed_local mutations. Neither tier runs deploy/creds/paid/role/plan-state/registry/destructive/baseline actions. Every executed action is round-trip verified (F005). An unclassified action is never executed. Verified by per-tier execution tests + a forbidden-kind refusal test.",
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 2,
+      "depends_on": ["F001", "F002", "F005"]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Round-trip verification. After each applied action, recompute state and verify the targeted card cleared, chained (became a chained follow-up), or became human_required; a card that does not change after its action is flagged defective/incomplete. Reuses 001's clears_when predicate evaluation as the verification primitive, run at apply time.",
+      "steps": [
+        "After applying an action, recompute the relevant live_state and re-evaluate the targeted card's clears_when",
+        "Classify the outcome: cleared (predicate now resolved) / chained (new chained action surfaced) / human_required (escalated) / unchanged (defective)",
+        "Surface 'unchanged after its action' as a defect signal (the card or its action is incomplete)",
+        "Tests: a derived-state refresh clears a stale card; a chained action surfaces the next step; an action that doesn't move its predicate is flagged defective"
+      ],
+      "acceptance": "After each applied action the runner recomputes and classifies the targeted card as cleared / chained / human_required / unchanged, using 001's clears_when at apply time; an unchanged card is flagged defective. Verified by clear, chain, and defective-unchanged tests.",
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 1,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "description": "Dashboard surfaces. Add 'Repair automatically' (invokes the apply runner at --safe-derived-state) and 'Copy agent repair plan' (emits the F003 bundle) to the dashboard, both scope-aware via 005. 'Repair automatically' shows what it will run (the derived_state batch) and what it will leave (human_required/blocked_external/info), and never runs a stronger tier without the explicit --confirm equivalent.",
+      "steps": [
+        "Add a 'Repair automatically' control that runs the --safe-derived-state batch for the selected 005 scope and shows the resulting cleared/remaining summary",
+        "Add a 'Copy agent repair plan' control that emits the F003 JSON bundle for the selected scope",
+        "Surface the post-run summary (cleared / chained / human-required-remaining) truthfully via 005's render gate",
+        "Tests: the control runs only derived_state; the copy action produces the same bundle as the CLI; the post-run summary reflects the re-evaluated render set"
+      ],
+      "acceptance": "The dashboard exposes 'Repair automatically' (runs only the --safe-derived-state batch for the selected scope) and 'Copy agent repair plan' (emits the F003 bundle), both scope-aware via 005, with a truthful post-run cleared/remaining summary. No stronger tier runs without an explicit confirm. Verified by a derived-state-only control test, bundle-parity test, and post-run summary test.",
+      "passes": true,
+      "verified_by": ["operator-style-tdd-build"],
+      "verified_at": "2026-06-05T00:00:00Z",
+      "phase": 3,
+      "depends_on": ["F003", "F004"]
+    }
+  ]
+}

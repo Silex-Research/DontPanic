@@ -3,7 +3,7 @@ id: 2026-06-08-002-feat-architecture-js-extractor-plan-c
 title: Architecture reconciler Plan C (slice 1) — JavaScript/TS import extractor
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: new_feature
 description: >

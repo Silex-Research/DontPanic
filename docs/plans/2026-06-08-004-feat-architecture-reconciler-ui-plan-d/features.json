@@ -1,0 +1,36 @@
+{
+  "task_id": "2026-06-08-004-feat-architecture-reconciler-ui-plan-d",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Render the extractor-coverage + confidence block at the top of the Architecture page: confidence ceiling, per-extractor status, and present-but-unextracted kinds, so an incomplete map states its incompleteness loudly.",
+      "acceptance": "the Architecture page renders a coverage banner showing the confidence ceiling, each extractor's status, and any missing-extractor kinds from the view-state coverage block; a low or medium ceiling is rendered as an explicit incompleteness statement, never hidden; the banner is driven only by real coverage data (no hard-coded high).",
+      "passes": false,
+      "introduces": [
+        "coverage_banner"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Render the intent layer (declared ADR claims) alongside the as-built graph and surface each diff entry by its taxonomy as a drift badge; intent is labelled declared and an empty intent layer reads as no-ADRs, never as confident as-built.",
+      "acceptance": "the page renders intent claims distinctly labelled as declared/intended (not as-built fact), shows each diff entry's taxonomy as a drift badge (aligned / documented_unimplemented / stale_adr), and renders an honest empty state when there are no claims; nothing presents intent as observed evidence.",
+      "passes": false,
+      "introduces": [
+        "intent_layer_view",
+        "drift_badge",
+        "documented_unimplemented",
+        "stale_adr"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Real-shell journey: boot the actual dashboard shell on a producer-built view-state and assert the Architecture surface renders the coverage banner + intent claims + diff honestly through the real render path.",
+      "acceptance": "a journey test boots the real shell (createJarvis init) on a producer-generated architecture view-state and asserts the rendered Architecture surface shows the coverage banner, at least one declared intent claim, and the diff, with no raw JSON leaked and no over-confident/fake-fresh rendering.",
+      "passes": false
+    }
+  ]
+}

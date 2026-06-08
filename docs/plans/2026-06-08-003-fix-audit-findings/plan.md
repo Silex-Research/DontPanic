@@ -3,7 +3,7 @@ id: 2026-06-08-003-fix-audit-findings
 title: Fix the 10 Codex-audit findings on the session's merged work
 type: fix
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: incident
 description: >

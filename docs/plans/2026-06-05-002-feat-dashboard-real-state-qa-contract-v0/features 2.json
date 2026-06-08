@@ -1,0 +1,124 @@
+{
+  "task_id": "2026-06-05-002-feat-dashboard-real-state-qa-contract-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "description": "Make the dashboard shell testable (keystone). core.js registers its page list as a PRIVATE `pageModules` const, so tests cannot reference the real nav/loader surface and instead copy or re-declare it (drift). Export `pageModules` (and a small accessor for registered page ids/labels + the loader entry) from core.js with NO behavior change to the running shell, so F002/F003 reference the single source of truth.",
+      "steps": [
+        "Export `pageModules` from core.js (and a tiny helper exposing registered page ids/labels) guarded so the browser IIFE path is unchanged",
+        "Confirm createJarvis() + the loader remain importable + side-effect-free under VITEST",
+        "Test: importing core.js yields the real pageModules array including repair + architecture + mission-control (pages the operator actually sees)"
+      ],
+      "acceptance": "core.js exports the real pageModules list (and shell accessors) with no change to the running dashboard; a test importing it sees the full registered set including repair/architecture/mission-control. Verified by an import test asserting the exported list matches the registered pages.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "depends_on": [
+        "F001"
+      ],
+      "description": "De-drift the dashboard harness. (a) Rewrite tests/integration/core-router.test.js to import createJarvis()/the real loader instead of the copied router + private loadState subset. (b) Fix tests/helpers/setup.js to be the real shell DOM \u2014 brand 'DontPanic' (not 'JARVIS') and include the project-selector container present in index.html. (c) Tie the nav test (value-language-page-evidence) to the exported pageModules so it cannot certify a smaller UI than core.js registers.",
+      "steps": [
+        "core-router.test.js: drive createJarvis()/real loadState; assert the REAL file set the loader reads",
+        "setup.js: replace JARVIS branding with DontPanic; add the project-selector container + header chrome to match index.html",
+        "nav test: import exported pageModules (F001); assert rendered nav labels == real registered pages (fails if a page is added/removed)",
+        "Test: the de-drifted tests fail under a simulated loader/page drift"
+      ],
+      "acceptance": "core-router.test.js exercises the real createJarvis() loader; setup.js DOM matches the real shell (DontPanic brand + selector container); the nav test references exported pageModules and would fail on a registered-page change. Verified by the updated tests passing against the real shell and failing under simulated drift.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 2,
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "description": "Real-state\u2192real-shell journey test (closes the producer\u2194render bug class; the dashboard's entering-surface proof). A Vitest test loads PRODUCER-GENERATED dashboard state (a committed fixture produced by `dontpanic dashboard build --project all`), boots createJarvis() with the real pageModules, and asserts the operator journey. A Python contract test guards that the committed fixture stays faithful to the live producer for the asserted invariant(s). By construction the journey test FAILS if the producer stops emitting the global-tools group \u2014 the anti-synthetic property the suite lacked.",
+      "steps": [
+        "Generate + commit a real producer state fixture (fleet/All-Projects) under dashboard/tests/fixtures/real-state/ via `dontpanic dashboard build --project all`",
+        "Vitest journey test: load the fixture into createJarvis(); default All-Projects scope; render Needs Attention + Health",
+        "Assert: Needs Attention shows the global tools ONCE (not duplicated); Health labels install state 'Global tools'; every visible copy button has a non-empty payload; nav labels == exported pageModules",
+        "Python contract test: assert the live producer still emits the fixture's key invariant (capability items carry group=global_tool_setup) so the fixture cannot silently go stale",
+        "Negative check: the journey test fails if the fixture's capability items lose the group / the global-tools section is dropped"
+      ],
+      "acceptance": "A real-state\u2192real-shell Vitest journey test, driven by producer-generated state, asserts the All-Projects \u2192 Needs Attention 'Global tools (once)' + Health 'Global tools' operator path; a Python contract test guards fixture faithfulness. The journey test demonstrably fails when the producer stops emitting the global-tools group. Verified by both tests passing green and failing under the simulated producer regression.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 2,
+      "description": "Dashboard QA sufficiency contract (the read-only-UI surface instance of the general model in F005). A short written standard for the dashboard: dashboard-facing features require a real-state\u2192real-shell test (not render-helper-only), and nav/loader tests must import real shell symbols (no copied routers / re-declared page lists). This is the concrete, exercised instance that proves F005's model is real.",
+      "steps": [
+        "Write the dashboard sufficiency note (dashboard test docs): the real-state requirement + the no-copied-harness rule, framed as the read-only-UI instance of F005",
+        "Cross-reference F003 as the exemplar entering-surface test",
+        "Test/check: the note exists and the dashboard surface_class maps to the F005 taxonomy"
+      ],
+      "acceptance": "A written dashboard QA sufficiency note exists, framed as the read-only-UI instance of the F005 model, requiring a real-state\u2192real-shell test and forbidding copied harnesses, and citing F003 as the exemplar. Verified by the note's presence + a doc/link check.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 3,
+      "description": "Surface-agnostic QA sufficiency MODEL (convention doc). Author the general contract: a feature's QA proof must ENTER THROUGH THE REAL SURFACE the user/agent/external system uses, and the proof must match the CLAIM's surface. Define surface classes \u2014 read-only UI, interactive UI, mobile app (iOS/Android), command (CLI), agent/MCP tool, mutation, external-integration, service-batch (backend/API/jobs/pipelines/infra) \u2014 each with its required 'entering-surface' proof. Encode the GOVERNS-NOT-EXECUTES boundary: DontPanic requires the plan to NAME the entering-surface test/evidence and verifies the reference; the project's own toolchain executes it (DontPanic does not run simulators/emulators/foreign browser suites). Include the explicit iOS/Android rule: a user-facing mobile change (visual/navigational/permission/workflow) must name >=1 simulator/emulator UI journey, not only ViewModel/unit tests.",
+      "steps": [
+        "Write the sufficiency model doc (a convention under agent-conventions or the dashboard/standards area): the core principle + the surface-class table + per-class entering-surface proof",
+        "State the governs-not-executes boundary explicitly (DontPanic verifies the NAMED proof; the project toolchain runs it)",
+        "State the proof-matches-the-claim rule (no UI journey required when there is no user-facing claim)",
+        "Mark the dashboard read-only-UI row as the worked, shipped instance (F001-F004)",
+        "Check: the doc enumerates the surface classes + per-class required proof + the mobile rule"
+      ],
+      "acceptance": "A written surface-agnostic sufficiency model exists, enumerating the surface classes + per-class entering-surface proof + the 'enter through the real surface' principle + the governs-not-executes boundary + the iOS/Android UI-journey rule, with the dashboard read-only-UI row marked as the shipped instance. Verified by a doc/structure check over the enumerated classes and rules.",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 3,
+      "depends_on": [
+        "F005"
+      ],
+      "description": "Declarative ADVISORY plan-review surface-class gate (v0). A feature may declare a `surface_class`; when a feature makes a surface-facing claim (e.g. shows/displays/renders/operator sees/copy button, navigational, permission, mutation, integration) and names NO entering-surface test/evidence for its class, plan-review WARNS (never blocks in v0). Declarative + heuristic by design \u2014 NOT auto surface-class inference and NOT a synthetic-provenance static analyzer. The dashboard read-only-UI is the seeded, exercised instance; other classes are recognized by the model (F005) but enforcement stays advisory until per-surface adoption data exists.",
+      "steps": [
+        "plan-review: add an advisory heuristic that, for a feature with a surface-facing claim, warns when no entering-surface test/evidence is referenced (honoring an optional declared surface_class)",
+        "Recognize the F005 surface classes; keep WARN severity (advisory) only",
+        "Record that BLOCK promotion + auto surface inference + synthetic-provenance analysis are deferred (need false-positive data first)",
+        "Tests: warns on a surface-claiming feature with no entering-surface reference; quiet when one is referenced or when there is no surface claim; non-surface features unaffected"
+      ],
+      "acceptance": "plan-review emits an advisory (warn) when a feature makes a surface-facing claim but names no entering-surface test/evidence, honoring an optional surface-class declaration when the plan provides one, with no false positives on non-surface features and no blocking. Verified by heuristic tests over a surface-claiming-without-proof fixture (warns), a proof-referenced fixture (quiet), and a non-surface fixture (quiet).",
+      "passes": true,
+      "verified_by": [
+        "operator-style-tdd-build"
+      ],
+      "verified_at": "2026-06-05T00:00:00Z"
+    }
+  ]
+}
