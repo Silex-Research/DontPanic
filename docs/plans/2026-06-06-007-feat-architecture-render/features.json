@@ -9,8 +9,8 @@
       "passes": false,
       "verified_by": [],
       "verified_at": null,
-      "description": "Wire architecture_levels.write_levels into the build so the diff-able per-level .mmd slices regenerate from the current architecture snapshot into the DontPanic repo's docs/architecture/levels/; guard so foreign/fleet builds never write levels into another project's tracked tree (cache-only).",
-      "acceptance": "A build regenerates docs/architecture/levels/*.mmd from architecture.json (deterministic, diff-able); a test asserts the slices are emitted from a snapshot + that the foreign-repo guard prevents writing into a non-DontPanic tree."
+      "description": "Emit the normalized architecture graph model (nodes+edges+levels+clusters+freshness) into the view-state the interactive SVG map consumes; keep architecture_levels write_levels as an OPTIONAL diffable .mmd export (cache-only, foreign-repo guarded), NOT the render source.",
+      "acceptance": "The architecture build emits levels[] + clusters[] (by directory) alongside nodes/edges/freshness in the view-state; a test asserts the graph model carries them deterministically; the .mmd export still regenerates but is not the page's data source."
     },
     {
       "id": "F002",
@@ -19,8 +19,8 @@
       "passes": false,
       "verified_by": [],
       "verified_at": null,
-      "description": "Add a breadcrumb L2->L3 cluster-zoom to the EXISTING interactive Architecture SVG: a breadcrumb (All / <cluster>) filters the rendered nodes+edges to one cluster (by directory, mirroring cluster_key) and back; no mermaid runtime added.",
-      "acceptance": "Clicking a cluster zooms the SVG to that cluster's nodes (+ the breadcrumb updates); clicking the breadcrumb root restores the full map; pure cluster-derivation logic is unit-tested + the page wiring is covered."
+      "description": "On the EXISTING interactive Architecture SVG: clicking a component highlights upstream/downstream dependencies + dims unrelated + opens the detail panel; a breadcrumb shows the level path and drills into the next cluster level and back. No mermaid runtime.",
+      "acceptance": "Clicking a node highlights its upstream+downstream neighbors and dims the rest (pure dependency-walk logic unit-tested); the breadcrumb shows the level path and a cluster click drills in / root click restores; covered by page wiring tests."
     }
   ]
 }
