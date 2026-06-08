@@ -177,31 +177,101 @@ def test_empty_architecture_still_emits_empty_clusters_levels(tmp_path):
 # ── .mmd export (optional, cache-only, never the render source) ─────────
 
 
-def test_write_levels_emits_diffable_mmd_into_cache(tmp_path):
+def test_export_mermaid_levels_emits_diffable_mmd_into_cache(tmp_path):
     vs = _view_state(tmp_path)
     out_dir = tmp_path / "state"
-    written = levels.write_levels(vs, out_dir=out_dir)
+    written = levels.export_mermaid_levels(vs, out_dir=out_dir)
     assert written, "expected at least one .mmd slice"
     for p in written:
         assert p.suffix == ".mmd"
         # Cache-only: never escapes out_dir.
         assert out_dir in p.parents
         text = p.read_text(encoding="utf-8")
-        assert text.startswith("flowchart")
+        assert "flowchart LR" in text
 
 
-def test_write_levels_is_byte_stable(tmp_path):
+def test_export_mermaid_levels_is_byte_stable(tmp_path):
     vs = _view_state(tmp_path)
     first = {
         p.name: p.read_text(encoding="utf-8")
-        for p in levels.write_levels(vs, out_dir=tmp_path / "a")
+        for p in levels.export_mermaid_levels(vs, out_dir=tmp_path / "a")
     }
     second = {
         p.name: p.read_text(encoding="utf-8")
-        for p in levels.write_levels(vs, out_dir=tmp_path / "b")
+        for p in levels.export_mermaid_levels(vs, out_dir=tmp_path / "b")
     }
     assert first == second
 
 
-def test_write_levels_noop_when_no_clusters(tmp_path):
-    assert levels.write_levels({"clusters": [], "levels": []}, out_dir=tmp_path) == []
+def test_export_mermaid_levels_noop_when_no_clusters(tmp_path):
+    assert (
+        levels.export_mermaid_levels({"clusters": [], "levels": []}, out_dir=tmp_path)
+        == []
+    )
+
+
+def test_write_levels_alias_delegates_to_export(tmp_path):
+    # Back-compat alias kept for existing callers — same output.
+    vs = _view_state(tmp_path)
+    alias = {
+        p.name: p.read_text(encoding="utf-8")
+        for p in levels.write_levels(vs, out_dir=tmp_path / "alias")
+    }
+    canonical = {
+        p.name: p.read_text(encoding="utf-8")
+        for p in levels.export_mermaid_levels(vs, out_dir=tmp_path / "canon")
+    }
+    assert alias == canonical
+
+
+# ── folded F008 render-truth mechanics (drift coloring + pagination) ────
+
+
+def test_drift_overlay_marks_changed_nodes_dashed_red(tmp_path):
+    vs = _view_state(tmp_path)
+    # Mark cli.py as drifted (changed since the snapshot).
+    drift = {"scripts/dontpanic_orchestrate/cli.py"}
+    mmd = levels.render_level_mermaid(vs, 2, drift=drift)
+    assert "classDef drift" in mmd
+    # The drifted node is :::drift, a sibling is :::fresh.
+    cli_line = next(l for l in mmd.splitlines() if "cli_py" in l and ":::" in l)
+    sup_line = next(l for l in mmd.splitlines() if "supervisor_py" in l and ":::" in l)
+    assert cli_line.endswith(":::drift")
+    assert sup_line.endswith(":::fresh")
+
+
+def test_compute_drift_reads_current_hashes(tmp_path):
+    import hashlib
+
+    f = tmp_path / "a.py"
+    f.write_text("new content", encoding="utf-8")
+    snapshot = {
+        "source_fingerprint": {
+            "algo": "sha256",
+            "file_hashes": {
+                "a.py": "stale-hash-does-not-match",
+                "missing.py": hashlib.sha256(b"x").hexdigest(),
+            },
+        }
+    }
+    drifted = levels.compute_drift(snapshot, tmp_path)
+    assert "a.py" in drifted  # hash differs
+    assert "missing.py" in drifted  # absent file counts as drift
+
+
+def test_dense_cluster_paginates_into_bounded_pages():
+    # A cluster with >_MAX_NODES direct nodes splits into ≤25-node pages.
+    n = levels._DENSE_THRESHOLD + 5
+    node_ids = [f"module:pkg/m{i:02d}.py" for i in range(n)]
+    nodes = [
+        {"id": nid, "type": "module", "title": nid, "source_path": nid.split(":", 1)[1]}
+        for nid in node_ids
+    ]
+    clusters, lvls = levels.build_clusters_and_levels(nodes)
+    view_state = {"clusters": clusters, "levels": lvls, "nodes": nodes, "edges": []}
+    pkg_level = next(c["level"] for c in clusters if c["key"] == "pkg")
+    mmd = levels.render_level_mermaid(view_state, pkg_level)
+    pages = [l for l in mmd.splitlines() if l.strip().startswith("subgraph")]
+    assert len(pages) >= 2  # paginated, not one mega-graph
+    # ELK requested for the busy level.
+    assert mmd.startswith("%%{init")
