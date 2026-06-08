@@ -10,6 +10,9 @@
        still wins for legacy names, keeping existing pages pixel-identical until F006 migrates them. -->
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="core.css">
+  <!-- 008 F002: bridge legacy core.css colour vars onto the --dp-* tokens AFTER
+       core.css, so a theme/density swap survives onto every legacy page. -->
+  <link rel="stylesheet" href="legacy-theme-bridge.css">
   <link rel="stylesheet" href="components.css">
   <!-- Embedded terminal dock (plan 2026-06-06-002): vendored xterm + dock chrome. -->
   <link rel="stylesheet" href="vendor/xterm.css">

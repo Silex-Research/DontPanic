@@ -1,0 +1,24 @@
+/* Legacy theme bridge (plan 2026-06-07-003 / operator-console 008 F002).
+ *
+ * The legacy pages (architecture, capabilities, health, settings, what-now, …)
+ * consume the original core.css colour variables (--bg-*, --text-*, --border).
+ * Those were hard-coded Slate hexes, so a theme/density swap never reached them.
+ *
+ * This bridge redefines exactly those legacy variables in terms of the --dp-*
+ * design tokens. It is loaded AFTER core.css so it wins, and because the --dp-*
+ * tokens themselves swap under [data-theme]/[data-density] (tokens.css), every
+ * legacy page now re-colours with the theme — no per-page redesign, no raw hex.
+ *
+ * Scope: background / text / border only (the colour surface the legacy pages
+ * read). Accent and page-specific hues are out of 008's bounded scope.
+ */
+:root {
+  --bg-primary: var(--dp-bg);
+  --bg-secondary: var(--dp-surface-1);
+  --bg-card: var(--dp-surface-1);
+  --bg-card-hover: var(--dp-surface-2);
+  --border: var(--dp-border);
+  --text-primary: var(--dp-text-1);
+  --text-secondary: var(--dp-text-2);
+  --text-muted: var(--dp-text-3);
+}
