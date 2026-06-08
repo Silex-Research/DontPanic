@@ -1,0 +1,16 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator directive (2026-06-07): finish the operator-console usability layer deferred to 008 — armed-terminal chrome, legacy-page theming onto the existing tokens, and the full five-state surface matrix — so the shipped dashboard feels coherent before expanding architecture intelligence (Plan B/C). Bounded: armed terminal chrome only (no PTY/backend semantics), theme survives legacy pages onto existing --dp-* tokens, state matrix across key surfaces (loading/missing/stale/error/ready), journey tests through the real dashboard shell, no architecture-model changes, no new action execution channel.",
+  "completion_test": "The armed terminal renders a token-only hazard frame (role=alert, scope label, disarm-only, OFF by default) with no backend change; toggling theme/density visibly re-colours legacy pages via a token bridge; a reusable surface-state classifier + renderer drives loading/missing/stale/error/ready across the key surfaces with stale never shown as fresh; and a real-shell journey (createJarvis().init()) walks each key surface through all five states. No architecture nodes/edges/contract change and no new execution channel.",
+  "user_journeys": [
+    {"name": "theme-survives-legacy", "description": "Operator toggles theme/density; legacy pages re-colour through the token bridge.", "surfaces": ["browser"], "states": ["theme_swapped", "density_swapped"]},
+    {"name": "surface-state-matrix", "description": "Each key surface renders the right chrome for loading/missing/stale/error/ready.", "surfaces": ["browser"], "states": ["loading", "missing", "stale", "error", "ready"]},
+    {"name": "armed-terminal-chrome", "description": "The terminal shows a persistent hazard frame only when armed, disarm-only.", "surfaces": ["browser"], "states": ["disarmed", "armed"]}
+  ],
+  "non_goals": [
+    "New PTY backend semantics or any new action-execution channel",
+    "Architecture-model changes (nodes/edges/contract)",
+    "Per-page visual redesign (theming is a token bridge, not a re-layout)",
+    "New dashboard pages or nav/IA changes (006 owns the IA)"
+  ]
+}
