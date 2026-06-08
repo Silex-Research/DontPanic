@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-06-07-001-feat-architecture-evidence-contract-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 1,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Emit an evidence contract on every node and edge build_view_state produces: source_kind (closed enum, v0 populates only crawler-provable kinds), confidence (high|medium|low), evidence_basis (observed|inferred), and a provenance block (source_path + extractor id + resolution method). Derived deterministically from signals already present; no new extractors.",
+      "acceptance": "Every emitted node and edge carries source_kind + confidence + evidence_basis + provenance; resolved intra-repo imports are observed/high while curated-catalog/manifest-derived nodes are declared/medium; a test asserts the fields are present and deterministic across two builds; existing consumers (007 map, .mmd export) keep working."
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 2,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Stop silently dropping unresolved references. Unresolved imports/refs (external/stdlib/unresolved-authored) are emitted as edges with evidence_basis=inferred, confidence=low, and an explicit unresolved marker, so missing evidence is visible rather than invisibly absent.",
+      "acceptance": "A fixture with an unresolved import yields a low-confidence inferred edge (not a dropped edge); the edge is flagged unresolved; a test asserts unresolved refs appear in the model and are never marked observed/high."
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 3,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Add a top-level extractor-coverage block: which extractors ran, which evidence kinds are covered vs missing/not-applicable for this repo, and an overall coverage + confidence summary. Honest for absent kinds so a repo with no Swift/build/ADR extractor reports limited coverage instead of a confident map.",
+      "acceptance": "The view-state carries a coverage block enumerating extractors run + evidence kinds covered/missing + an overall summary; for the DontPanic repo it reports python/schema/manifest covered and swift/build_config/adr as missing-or-not-applicable; a test asserts absent extractors surface as low/limited, never as covered."
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 4,
+      "passes": false,
+      "verified_by": [],
+      "verified_at": null,
+      "description": "Split the model into as_built and intent layers and define the as-built<->intent diff taxonomy (schema-only). The intent layer's claim shape is defined but EMPTY in v0 (no ADR ingestion); the diff taxonomy enum is defined with an empty/placeholder diff list. No reconciliation logic beyond the empty shape.",
+      "acceptance": "The view-state exposes as_built (today's nodes/edges) + an intent layer (claim shape defined, empty) + a diff list keyed by a defined taxonomy enum (aligned|drifted|unverified|implemented_undocumented|documented_unimplemented|conflicting_dependency|stale_adr|unknown_confidence), empty in v0; a test asserts the shape exists and is honestly empty (no fabricated diffs/claims)."
+    }
+  ]
+}

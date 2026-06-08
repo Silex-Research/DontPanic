@@ -1,0 +1,34 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator contract (2026-06-07): the architecture surface is an evidence-backed reconciler, not a single-source oracle — every node/edge must carry what-it-is + where-inferred-from + freshness + confidence + observed-vs-inferred, with an extractor-coverage block and as_built/intent layers + drift taxonomy. Captured in memory project_architecture_evidence_reconciler. Generalizes the render-truth scope contract (suppress-unless-proven, mark-stale, never-present-inferred-as-fact) from per-node liveness to the architecture model. Builds on the view-state produced by scripts/dontpanic_orchestrate/architecture_view_state.build_view_state (the model the 2026-06-06-007 interactive map consumes).",
+  "completion_test": "build_view_state emits, for EVERY node and edge, source_kind + confidence + evidence_basis + provenance; unresolved references appear as low-confidence inferred edges (never dropped); a top-level coverage block enumerates evidence kinds covered vs missing (absent extractors render limited/low, not confident); the model is split into as_built + intent layers with a defined diff taxonomy (intent + diff EMPTY in v0). NO new extractor (Swift/Gradle/Xcode/JS/routing/API/infra), NO ADR/doc ingestion, NO UI overhaul — all deferred to later plans.",
+  "user_journeys": [
+    {
+      "name": "evidence-contract-emitted",
+      "description": "Build -> every node/edge in the architecture view-state carries source_kind/confidence/evidence_basis/provenance; unresolved refs are present as low-confidence inferred.",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "contract_present",
+        "unresolved_visible"
+      ]
+    },
+    {
+      "name": "coverage-honesty",
+      "description": "Build -> the view-state reports an extractor-coverage block; evidence kinds with no extractor surface as missing/limited, never as covered.",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "coverage_reported"
+      ]
+    }
+  ],
+  "non_goals": [
+    "ADR/doc extractor or any population of the intent layer (Plan B)",
+    "Swift/Gradle/Xcode/JS/routing/API-client/DB/infra extractors (Plan C+)",
+    "Two-layer UI render, drift surfacing, user annotation/correction (Plan D)",
+    "Promoting the contract to an agent-conventions JSON Schema (deferred until shape settles)"
+  ]
+}
