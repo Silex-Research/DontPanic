@@ -1,0 +1,38 @@
+{
+  "task_id": "2026-06-08-001-feat-architecture-intent-extractor-plan-b",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Extract intent claims from ADR/decision documents into the architecture view-state intent layer Plan A reserved empty. Each claim is declared (source_kind adr, evidence_basis declared) with id, title, status, source path, decision text, and referenced symbols. Absence of ADRs degrades gracefully (empty claims, populated false) and the coverage block reports the doc/adr extractor honestly.",
+      "acceptance": "given a repo with at least one decision document, build_view_state populates the intent layer with one declared intent_claim per document (id, title, status, source path, referenced symbols), evidence_basis declared and source_kind adr; given a repo with none, the intent layer stays empty with populated false and no crash; the coverage block marks the doc/adr extractor covered when claims exist and not_found when none.",
+      "passes": true,
+      "introduces": [
+        "intent_claim",
+        "not_found"
+      ],
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_intent_plan_b.py"
+      ],
+      "verified_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Reconcile each intent claim against the as-built graph and populate the diff list Plan A reserved empty, keyed by the defined diff taxonomy. Conservative: emit only evidence-backed entries \u2014 aligned when a claim reference resolves to an as-built node, documented_unimplemented when it resolves to nothing, stale_adr for a superseded decision. The remaining taxonomy values stay reserved.",
+      "acceptance": "build_view_state emits a diff list of intent_diff entries each tagged with one taxonomy value from the Plan A enum; a claim whose referenced symbol exists as_built yields aligned; a claim whose reference resolves to nothing yields documented_unimplemented; a superseded decision yields stale_adr; the reconciler is pure and deterministic and emits no entry it cannot back from evidence.",
+      "passes": true,
+      "introduces": [
+        "intent_diff",
+        "as_built",
+        "documented_unimplemented",
+        "stale_adr"
+      ],
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_intent_plan_b.py"
+      ],
+      "verified_at": "2026-06-08T00:00:00Z"
+    }
+  ]
+}

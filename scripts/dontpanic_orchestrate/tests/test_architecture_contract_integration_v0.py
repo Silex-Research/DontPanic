@@ -83,8 +83,10 @@ def test_real_build_carries_layer_shell():
     layers = vs["layers"]
     assert layers["as_built"]["node_count"] == len(vs["nodes"])
     assert layers["as_built"]["edge_count"] == len(vs["edges"])
-    assert layers["intent"]["claims"] == []
-    assert layers["diff"] == []
+    # Plan A reserved intent/diff empty; Plan B (2026-06-08-001) populates them
+    # from ADR/doc intent. The shell shape persists; the lists are now lists.
+    assert isinstance(layers["intent"]["claims"], list)
+    assert isinstance(layers["diff"], list)
     assert tuple(layers["diff_taxonomy"]) == C.DIFF_TAXONOMY
 
 

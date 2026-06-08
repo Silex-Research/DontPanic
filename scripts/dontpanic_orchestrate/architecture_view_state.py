@@ -58,6 +58,7 @@ from typing import Any
 
 from dontpanic_orchestrate import architecture as _architecture
 from dontpanic_orchestrate import architecture_contract as _contract
+from dontpanic_orchestrate import architecture_intent as _intent
 from dontpanic_orchestrate import architecture_levels as _architecture_levels
 from dontpanic_orchestrate import operator_console as _operator_console
 
@@ -592,6 +593,10 @@ def build_view_state(
     validation_warnings: list[dict[str, Any]] = []
 
     if inputs.architecture is None:
+        absent_coverage = _contract.compute_coverage(repo_root, [])
+        absent_layers = _contract.build_layer_shell([], [])
+        # Plan B: ADRs are independent of architecture.json — still surface intent.
+        _apply_intent_layers(repo_root, [], absent_coverage, absent_layers)
         view_state = {
             "schema_version": SCHEMA_VERSION,
             "project": project_block,
@@ -607,8 +612,8 @@ def build_view_state(
             "steps": [],
             "filters": _empty_filters(),
             "insights": [],
-            "coverage": _contract.compute_coverage(repo_root, []),
-            "layers": _contract.build_layer_shell([], []),
+            "coverage": absent_coverage,
+            "layers": absent_layers,
             "validation_warnings": validation_warnings,
         }
         if inputs.load_error:
@@ -721,6 +726,11 @@ def build_view_state(
 
     clusters, levels = _architecture_levels.build_clusters_and_levels(nodes)
 
+    coverage = _contract.compute_coverage(repo_root, nodes)
+    layers = _contract.build_layer_shell(nodes, edges)
+    # Plan B — populate the intent + diff layers from ADR/doc intent.
+    _apply_intent_layers(repo_root, nodes, coverage, layers)
+
     view_state = {
         "schema_version": SCHEMA_VERSION,
         "project": project_block,
@@ -737,9 +747,9 @@ def build_view_state(
         "filters": filters,
         "insights": insights,
         # F003 — extractor-coverage block (honesty ceiling).
-        "coverage": _contract.compute_coverage(repo_root, nodes),
-        # F004 — as_built / intent / diff layer shell (no reconciler yet).
-        "layers": _contract.build_layer_shell(nodes, edges),
+        "coverage": coverage,
+        # Plan A F004 layer split, now populated by Plan B (intent + diff).
+        "layers": layers,
         "validation_warnings": validation_warnings,
     }
     _operator_console._assert_no_secret_shapes(view_state)  # noqa: SLF001
@@ -853,6 +863,30 @@ def _empty_filters() -> dict[str, Any]:
             {"id": lane["id"], "title": lane["title"]} for lane in LANES
         ],
     }
+
+
+def _apply_intent_layers(
+    repo_root: Path,
+    nodes: list[dict[str, Any]],
+    coverage: dict[str, Any],
+    layers: dict[str, Any],
+) -> None:
+    """Plan B: fill the intent + diff layers Plan A reserved empty, and append the
+    ADR extractor's honest coverage status. Mutates ``coverage`` + ``layers``."""
+    claims = _intent.extract_adr_claims(repo_root)
+    layers["intent"]["claims"] = claims
+    layers["intent"]["populated"] = bool(claims)
+    layers["diff"] = _intent.reconcile_intent(claims, nodes)
+    extractors = coverage.get("extractors")
+    if isinstance(extractors, list):
+        extractors.append(
+            {
+                "extractor": "adr_intent_extractor",
+                "evidence_kind": "adr",
+                "status": "covered" if claims else "not_found",
+                "node_count": len(claims),
+            }
+        )
 
 
 def _dedupe_by_id(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
