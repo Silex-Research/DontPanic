@@ -1,0 +1,25 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator directive (2026-06-07): plan-review's lock-time coupling lint flags any AC token it cannot resolve as missing_prereq (block-severity), and the resolver only knows the existing codebase vocabulary — so a greenfield/schema/contract plan that intentionally defines new symbols self-deadlocks at lock. Add a principled per-feature escape hatch (an introduces list) the lint honors with dependency ordering. Discovered while drafting plan 2026-06-07-001 (architecture evidence contract), whose enum names cannot lock. Lives in scripts/dontpanic_orchestrate/plan_review/ (lint.py + report.py + pre_lock_gate.py).",
+  "completion_test": "A feature may declare an optional per-feature introduces list of identifier strings; the plan-review coupling lint treats an introduced symbol as resolved for the introducing feature and any later feature in plan order, but NOT for earlier features; a never-introduced or misspelled token still raises missing_prereq (block); the plan-review report names introduced symbols as introduced-here; plans without introduces are byte-identical to today. No change outside plan_review; no cross-plan resolution; symbols are author-declared, never auto-derived.",
+  "user_journeys": [
+    {
+      "name": "contract-plan-locks",
+      "description": "A contract/greenfield plan declares the symbols each feature defines via introduces; plan-review no longer self-blocks those symbols, and the plan can reach lock.",
+      "surfaces": ["cli"],
+      "states": ["introduced_resolved", "still_blocks_typos"]
+    },
+    {
+      "name": "dependency-order-preserved",
+      "description": "A symbol introduced by a later feature does not resolve for an earlier feature; ordering reasoning is intact.",
+      "surfaces": ["core"],
+      "states": ["later_intro_blocks_earlier"]
+    }
+  ],
+  "non_goals": [
+    "Cross-plan symbol resolution (introduces is scoped within one plan)",
+    "Auto-deriving introduced symbols from features.json or code (authors declare them)",
+    "Any change to the architecture evidence contract plan 2026-06-07-001",
+    "Relaxing the missing_prereq block-severity for non-introduced symbols"
+  ]
+}

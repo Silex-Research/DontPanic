@@ -74,6 +74,15 @@ class Feature(BaseModel):
     verified_at: AwareDatetime | None = None
     evidence_refs: list[EvidenceRef] | None = None
     depends_on: list[constr(pattern=r'^F\d{3}$')] | None = None
+    introduces: list[str] | None = Field(
+        None,
+        description=(
+            'Symbols (code identifiers) this feature DEFINES. plan-review honors '
+            'these as locally-defined for this feature and any later feature in '
+            'plan order, so a greenfield/contract plan that introduces new '
+            'vocabulary does not self-deadlock the missing_prereq lint.'
+        ),
+    )
     phase: conint(ge=0, le=9) | None = None
     tier_override: TierOverride | None = Field(
         None, description='Force different audit tier for this feature only'
