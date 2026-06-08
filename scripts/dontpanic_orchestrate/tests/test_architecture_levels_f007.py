@@ -10,8 +10,8 @@ nodes/edges/freshness:
   * ``levels``   — the distinct depths, each listing the cluster ids at
     that depth (L0 = System).
 
-The ``.mmd`` slices written by ``architecture_levels.write_levels`` are
-an OPTIONAL, cache-only diffable export for docs/git review — NEVER the
+The ``.mmd`` slices written by ``architecture_levels.export_mermaid_levels``
+are an OPTIONAL, cache-only diffable export for docs/git review — NEVER the
 page's render source.
 
 Run targeted:

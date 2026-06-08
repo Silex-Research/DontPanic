@@ -703,8 +703,9 @@ def build_view_state(
 
     # Directory-derived cluster tree + per-depth level index. This is the
     # graph model the interactive component map drills through (breadcrumb
-    # zoom). The `.mmd` slices written by architecture_levels.write_levels
-    # are an optional diffable export, never this render source.
+    # zoom). The `.mmd` slices written by
+    # architecture_levels.export_mermaid_levels are an optional diffable
+    # export, never this render source.
     clusters, levels = _architecture_levels.build_clusters_and_levels(nodes)
 
     view_state = {
