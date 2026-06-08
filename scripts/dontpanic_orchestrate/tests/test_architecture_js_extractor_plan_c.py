@@ -144,6 +144,17 @@ def test_export_from_and_dynamic_import_are_not_dropped(tmp_path):
     assert any("dynamic" in t or "${" in t for t in titles)  # interpolated dynamic surfaced
 
 
+def test_dynamic_import_inside_template_interpolation_is_surfaced(tmp_path):
+    # re-audit edge: import() nested in a template-literal ${...} (the mask blanks
+    # template bodies) must still be surfaced, never silently dropped.
+    d = tmp_path / "dashboard"
+    d.mkdir(parents=True)
+    (d / "a.js").write_text("const html = `<x>${import('./real.js')}</x>`;\n")
+    nodes, _ = JS.extract_js_modules(tmp_path)
+    assert any(n["type"] == "external" and n.get("unresolved")
+               and "dynamic-import" in n["id"] for n in nodes)
+
+
 def test_walk_prunes_node_modules(tmp_path):
     d = tmp_path / "dashboard"
     (d / "node_modules" / "pkg").mkdir(parents=True)

@@ -38,6 +38,10 @@ _DYNAMIC_IMPORT_RE = re.compile(r"""\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)""")
 # A dynamic import whose argument is NOT a plain string literal (e.g. a template
 # with interpolation) — surfaced as visible unresolved evidence, never dropped.
 _DYNAMIC_NONLITERAL_RE = re.compile(r"""\bimport\s*\(\s*(?!['"])""")
+# A dynamic import() living INSIDE a template-literal ${...} interpolation: the
+# mask blanks template bodies, so detect it on RAW source and surface it as an
+# unresolved sentinel rather than drop it (audit 2026-06-08 re-audit B1#3/B1#4).
+_TEMPLATE_IMPORT_RE = re.compile(r"`[^`]*\bimport\s*\([^`]*`", re.DOTALL)
 _EXPORT_RE = re.compile(
     r"^\s*export\s+(?:async\s+)?(?:function|const|class|let|var)\s+([A-Za-z_$][\w$]*)",
     re.MULTILINE,
@@ -117,8 +121,10 @@ def _iter_js_files(repo_root: Path) -> list[Path]:
     out: list[Path] = []
     seen = 0
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in _SKIP_PARTS]
-        for name in filenames:
+        # Sort in place so traversal order — and thus any cap truncation — is
+        # deterministic (audit 2026-06-08 re-audit LOW), not filesystem-dependent.
+        dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_PARTS)
+        for name in sorted(filenames):
             seen += 1
             if seen > _SCAN_ENTRY_CAP:
                 return sorted(out)
@@ -209,7 +215,9 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
                 if val:
                     raw_specs.add(val)
         # Dynamic import() whose argument is NOT a plain literal — never dropped.
-        if _DYNAMIC_NONLITERAL_RE.search(masked):
+        # Also catch import() nested inside a template-literal ${...} (which the
+        # mask blanks) by scanning the RAW source.
+        if _DYNAMIC_NONLITERAL_RE.search(masked) or _TEMPLATE_IMPORT_RE.search(text):
             _add_external(
                 f"dynamic-import:{rel}", "unknown",
                 detail="dynamic import() with a computed (non-literal) specifier",
