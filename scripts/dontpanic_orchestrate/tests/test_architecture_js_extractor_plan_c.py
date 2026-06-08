@@ -94,7 +94,73 @@ def test_javascript_no_longer_missing_and_ceiling_lifts():
     assert extractors["js_import_crawler"]["status"] in C.COVERAGE_STATUSES
     assert extractors["js_import_crawler"]["status"] == "covered"
     # javascript is no longer counted as a missing extractor for DontPanic itself
-    missing = cov.get("missing_extractors") or []
-    assert "javascript" not in missing
-    # with JS extracted, DontPanic's own map is no longer forced to the low ceiling
-    assert cov["confidence_ceiling"] != "low"
+    # audit 2026-06-08 B1#7: `missing_extractors` is a list of dicts, so
+    # `"javascript" not in missing` was a tautology that ALWAYS passed. Assert
+    # against the real evidence_kind set.
+    missing_kinds = {m["evidence_kind"] for m in (cov.get("missing_extractors") or [])}
+    # javascript IS extracted now (js_import_crawler) → never a missing kind.
+    assert "javascript" not in missing_kinds
+    # HONESTY (audit B1#2): DontPanic itself ships unextracted .tsx/.jsx
+    # (docs/design mockups, remotion skill), so the ceiling is correctly capped —
+    # the Plan C slice-1 "ceiling lifts to high" claim was itself an over-claim.
+    assert "typescript" in missing_kinds or "jsx" in missing_kinds
+    assert cov["confidence_ceiling"] in {"low", "medium"}
+
+
+# ── audit 2026-06-08 remediation: honest JS parsing ─────────────────────
+
+
+def test_imports_inside_comments_and_strings_are_ignored(tmp_path):
+    d = tmp_path / "dashboard"
+    d.mkdir(parents=True)
+    (d / "a.js").write_text(
+        "// import x from './commented.js'\n"
+        "/* import y from './block.js' */\n"
+        "const s = \"import z from './string.js'\";\n"
+        "import { real } from './real.js';\n"
+    )
+    nodes, edges = JS.extract_js_modules(tmp_path)
+    titles = {n["title"] for n in nodes if n.get("unresolved")}
+    assert "./commented.js" not in titles  # comment text is not an import (B1#3)
+    assert "./block.js" not in titles
+    assert "./string.js" not in titles
+    # the one REAL relative import is still seen (as unresolved — target absent)
+    assert any(n.get("title") == "./real.js" for n in nodes)
+
+
+def test_export_from_and_dynamic_import_are_not_dropped(tmp_path):
+    d = tmp_path / "dashboard"
+    d.mkdir(parents=True)
+    (d / "a.js").write_text(
+        "export { thing } from 'reexported-vendor';\n"
+        "export * from './star.js';\n"
+        "const m = await import('dynlib');\n"
+        "const t = await import(`./tpl/${name}.js`);\n"
+    )
+    nodes, _ = JS.extract_js_modules(tmp_path)
+    titles = {n["title"] for n in nodes if n["type"] == "external"}
+    assert "reexported-vendor" in titles      # export ... from (B1#4)
+    assert "dynlib" in titles                 # dynamic import literal (B1#4)
+    assert any("dynamic" in t or "${" in t for t in titles)  # interpolated dynamic surfaced
+
+
+def test_walk_prunes_node_modules(tmp_path):
+    d = tmp_path / "dashboard"
+    (d / "node_modules" / "pkg").mkdir(parents=True)
+    (d / "node_modules" / "pkg" / "junk.js").write_text("import './deep.js';\n")
+    (d / "real.js").write_text("export const x = 1;\n")
+    nodes, _ = JS.extract_js_modules(tmp_path)
+    paths = {n["source_path"] for n in nodes if n["type"] == "js_module"}
+    assert "dashboard/real.js" in paths
+    assert not any("node_modules" in p for p in paths)  # pruned, never walked (B1#6)
+
+
+def test_present_typescript_drops_ceiling(tmp_path):
+    # A repo with UNEXTRACTED TypeScript must not read "high" (B1#2).
+    from dontpanic_orchestrate import architecture_contract as C
+    (tmp_path / "app.tsx").write_text("export const X = 1;\n")
+    nodes = [{"id": "m", "type": "module"}, {"id": "j", "type": "js_module"}]
+    cov = C.compute_coverage(tmp_path, nodes)
+    kinds = {m["evidence_kind"] for m in cov["missing_extractors"]}
+    assert "typescript" in kinds
+    assert cov["confidence_ceiling"] == "low"

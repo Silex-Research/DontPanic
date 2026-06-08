@@ -71,14 +71,18 @@ def test_real_build_carries_coverage_block_with_js_now_extracted():
     statuses = {e["status"] for e in cov["extractors"]}
     assert statuses <= set(C.COVERAGE_STATUSES)
     assert any(e["status"] == "covered" for e in cov["extractors"])
-    # Plan C slice 1 shipped the JS import extractor, so DontPanic's dashboard JS
-    # is now extracted: javascript is no longer a missing kind and the once-low
-    # ceiling lifts. (The honesty lever from Plan A, demonstrated in reverse.)
+    # Plan C slice 1 ships the JS import extractor → javascript is no longer a
+    # missing kind and js_import_crawler is covered.
     missing_kinds = {m["evidence_kind"] for m in cov["missing_extractors"]}
     assert "javascript" not in missing_kinds
     assert any(e["extractor"] == "js_import_crawler" and e["status"] == "covered"
                for e in cov["extractors"])
-    assert cov["confidence_ceiling"] != "low"
+    # HONESTY (audit 2026-06-08 B1#2): DontPanic itself ships UNEXTRACTED .tsx/.jsx
+    # (docs/design React mockups, remotion skill assets), so the ceiling must stay
+    # honestly capped — NOT "high". Removing javascript wholesale had wrongly
+    # presented the map as fully covered.
+    assert "typescript" in missing_kinds or "jsx" in missing_kinds
+    assert cov["confidence_ceiling"] in {"low", "medium"}
 
 
 def test_real_build_carries_layer_shell():

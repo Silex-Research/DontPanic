@@ -43,7 +43,11 @@ export function classifySurfaceState({
   if (errored) return 'error';
   if (!present) return 'missing';
   const age = ageMs(generatedAt, now);
-  if (age != null && age >= staleAfterMs) return 'stale';
+  // Render-truth (audit 2026-06-08 B2#2): present content with NO trustworthy
+  // timestamp (null / unparseable generatedAt) must be demoted to `stale`, never
+  // shown as fresh `ready`. Only a parseable, in-window timestamp earns `ready`.
+  if (age == null) return 'stale';
+  if (age >= staleAfterMs) return 'stale';
   return 'ready';
 }
 

@@ -60,14 +60,33 @@ def test_unresolved_node_is_low_regardless_of_type():
 
 def test_resolved_import_edge_is_high_unresolved_edge_is_low():
     edges = [
-        {"id": "e1", "type": "import", "from": "a", "to": "b"},
+        # CITED resolved edge → high (audit 2026-06-08 B1#1: high requires provenance).
+        {"id": "e1", "type": "import", "from": "a", "to": "b", "source_path": "a.py"},
         {"id": "e2", "type": "import", "from": "a", "to": "ext", "unresolved": True},
     ]
     C.apply_evidence_contract([], edges)
     assert edges[0]["confidence"] == "high" and edges[0]["provenance"]["resolved"]
+    assert edges[0]["provenance"]["source_path"] == "a.py"
     assert edges[1]["confidence"] == "low"
     assert edges[1]["evidence_basis"] == "unresolved"
-    assert edges[1]["provenance"]["resolved"] is False
+
+
+def test_resolved_edge_without_source_is_medium_not_high():
+    # The honesty fix: an observed+resolved edge with NO citation must NOT claim
+    # high confidence (audit 2026-06-08 B1#1).
+    edges = [{"id": "e1", "type": "import", "from": "a", "to": "b"}]
+    C.apply_evidence_contract([], edges)
+    assert edges[0]["confidence"] == "medium"
+    assert edges[0]["provenance"]["source_path"] is None
+
+
+def test_edge_extractor_override_attributes_the_real_method():
+    # JS edges must NOT be attributed to python_import_crawler (audit B1#1).
+    edges = [{"id": "e1", "type": "import", "from": "a", "to": "b",
+              "source_path": "dashboard/a.js", "extractor": "js_import_crawler"}]
+    C.apply_evidence_contract([], edges)
+    assert edges[0]["provenance"]["method"] == "js_import_crawler"
+    assert edges[0]["confidence"] == "high"  # cited + resolved
 
 
 def test_every_node_and_edge_carries_all_four_fields():

@@ -80,4 +80,13 @@ describe('renderSurfaceChrome (008 F003) — one renderer, every surface', () =>
   it('rejects an unknown state (no silent mis-render)', () => {
     expect(() => renderSurfaceChrome('bogus', {})).toThrow();
   });
+
+  // audit 2026-06-08 B2#2: present content with NO trustworthy timestamp must be
+  // demoted to `stale`, never shown as fresh `ready` (the fake-fresh failure).
+  it('present + null/unparseable generatedAt classifies as stale, not ready', () => {
+    expect(classifySurfaceState({ present: true, generatedAt: null })).toBe('stale');
+    expect(classifySurfaceState({ present: true, generatedAt: 'not-a-date' })).toBe('stale');
+    const now = Date.parse('2026-06-08T12:00:00Z');
+    expect(classifySurfaceState({ present: true, generatedAt: now, now })).toBe('ready');
+  });
 });

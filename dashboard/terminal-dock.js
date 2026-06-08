@@ -96,10 +96,20 @@
     if (session && session.enabled) {
       warnEl.textContent = '⚠ Terminal enabled · local shell · ' + scopeName() + ' · unrestricted commands';
       warnEl.classList.add('is-armed');
+      // Armed = an unrestricted local shell. Assistive tech must ANNOUNCE it the
+      // moment it arms (audit 2026-06-08 B2#1: the safety contract from plan 008
+      // lived only in an unused component; the REAL dock had no alert semantics).
+      warnEl.setAttribute('role', 'alert');
+      warnEl.setAttribute('aria-live', 'assertive');
+      warnEl.setAttribute('aria-atomic', 'true');
       scopeEl.textContent = 'Shell: ' + scopeName() + ' · ready';
       setStatus('click to open');
     } else {
       warnEl.textContent = '';
+      warnEl.classList.remove('is-armed');
+      warnEl.removeAttribute('role');
+      warnEl.removeAttribute('aria-live');
+      warnEl.removeAttribute('aria-atomic');
       scopeEl.textContent = '';
       setStatus('off — relaunch with --enable-terminal');
     }
