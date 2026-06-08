@@ -9,8 +9,15 @@
       "passes": false,
       "verified_by": [],
       "verified_at": null,
-      "description": "Emit an evidence contract on every node and edge build_view_state produces: source_kind (WHERE — closed enum code|build|manifest|config|infra|test|doc|adr|runtime|external|unknown; v0 populates only crawler-provable kinds), evidence_basis (HOW — observed|declared|inferred|unresolved), confidence (high|medium|low per the precedence rule), and a provenance block (source_path + extractor id + resolution method). source_kind and evidence_basis are orthogonal; inferred is a basis, never a source_kind. Curated catalogs/manifests are declared, not forced into observed/inferred. No new extractors.",
-      "acceptance": "Every emitted node and edge carries source_kind + evidence_basis + confidence + provenance. The confidence precedence rule holds: resolved-source/build endpoint => observed/high; manifest/catalog/doc citing a source_path => declared/medium; unresolved/name-matched/heuristic/no-coverage => inferred-or-unresolved/low. source_kind never takes the value 'inferred'. A test asserts the fields, the enum membership, the precedence mapping, and determinism across two builds; existing consumers (007 map, .mmd export) keep working."
+      "description": "Emit an evidence contract on every node and edge build_view_state produces: source_kind (WHERE \u2014 closed enum code|build|manifest|config|infra|test|doc|adr|runtime|external|unknown; v0 populates only crawler-provable kinds), evidence_basis (HOW \u2014 observed|declared|inferred|unresolved), confidence (high|medium|low per the precedence rule), and a provenance block (source_path + extractor id + resolution method). source_kind and evidence_basis are orthogonal; inferred is a basis, never a source_kind. Curated catalogs/manifests are declared, not forced into observed/inferred. No new extractors.",
+      "acceptance": "Every emitted node and edge carries source_kind + evidence_basis + confidence + provenance. The confidence precedence rule holds: resolved-source/build endpoint => observed/high; manifest/catalog/doc citing a source_path => declared/medium; unresolved/name-matched/heuristic/no-coverage => inferred-or-unresolved/low. source_kind never takes the value 'inferred'. A test asserts the fields, the enum membership, the precedence mapping, and determinism across two builds; existing consumers (007 map, .mmd export) keep working.",
+      "introduces": [
+        "source_kind",
+        "evidence_basis",
+        "confidence",
+        "provenance",
+        "unknown_confidence"
+      ]
     },
     {
       "id": "F002",
@@ -20,7 +27,10 @@
       "verified_by": [],
       "verified_at": null,
       "description": "Stop silently dropping unresolved references. Unresolved imports/refs (external/stdlib/third-party/unresolved-authored) are emitted as edges with evidence_basis=unresolved, confidence=low, source_kind=external|unknown, and an explicit unresolved marker, so missing evidence is visible rather than invisibly absent.",
-      "acceptance": "A fixture with an unresolved import yields a low-confidence unresolved edge (not a dropped edge) with source_kind external|unknown; the edge is flagged unresolved; a test asserts unresolved refs appear in the model and are never marked observed/high or given a resolved source_kind."
+      "acceptance": "A fixture with an unresolved import yields a low-confidence unresolved edge (not a dropped edge) with source_kind external|unknown; the edge is flagged unresolved; a test asserts unresolved refs appear in the model and are never marked observed/high or given a resolved source_kind.",
+      "introduces": [
+        "unresolved_edge"
+      ]
     },
     {
       "id": "F003",
@@ -30,7 +40,13 @@
       "verified_by": [],
       "verified_at": null,
       "description": "Add a top-level extractor-coverage block: which extractors ran, a per-evidence-kind status from the closed set covered|not_found|missing_extractor|not_applicable|error, and an overall coverage + confidence summary that missing_extractor/error pull down. missing_extractor (repo HAS the kind, DontPanic lacks an extractor) is distinct from not_applicable (kind cannot apply) and not_found (extractor ran, no artifact).",
-      "acceptance": "The view-state carries a coverage block enumerating extractors run + a per-kind status from {covered,not_found,missing_extractor,not_applicable,error} + an overall summary. For the DontPanic (Python) repo: python/schema/manifest=covered, adr=not_found-or-covered, gradle/swift=not_applicable. A test asserts missing_extractor and error pull the overall summary DOWN and never render as covered, and that not_applicable does not penalize coverage."
+      "acceptance": "The view-state carries a coverage block enumerating extractors run + a per-kind status from {covered,not_found,missing_extractor,not_applicable,error} + an overall summary. For the DontPanic (Python) repo: python/schema/manifest=covered, adr=not_found-or-covered, gradle/swift=not_applicable. A test asserts missing_extractor and error pull the overall summary DOWN and never render as covered, and that not_applicable does not penalize coverage.",
+      "introduces": [
+        "coverage",
+        "not_found",
+        "missing_extractor",
+        "not_applicable"
+      ]
     },
     {
       "id": "F004",
@@ -40,7 +56,18 @@
       "verified_by": [],
       "verified_at": null,
       "description": "Split the model into as_built and intent layers and define the as-built<->intent diff taxonomy (schema-only). The intent layer's claim shape is defined but EMPTY in v0 (no ADR ingestion); the diff taxonomy enum is defined with an empty/placeholder diff list. Backward-compatible: top-level nodes/edges remain as compatibility aliases of as_built.nodes/edges so the 007 map + .mmd export are unaffected.",
-      "acceptance": "The view-state exposes as_built (today's nodes/edges) + an intent layer (claim shape defined, empty) + a diff list keyed by the defined taxonomy enum (aligned|drifted|unverified|implemented_undocumented|documented_unimplemented|conflicting_dependency|stale_adr|unknown_confidence), empty in v0. A test asserts (a) the layer shape exists and is honestly empty (no fabricated claims/diffs), and (b) top-level nodes/edges equal as_built.nodes/edges (compatibility aliases preserved)."
+      "acceptance": "The view-state exposes as_built (today's nodes/edges) + an intent layer (claim shape defined, empty) + a diff list keyed by the defined taxonomy enum (aligned|drifted|unverified|implemented_undocumented|documented_unimplemented|conflicting_dependency|stale_adr|unknown_confidence), empty in v0. A test asserts (a) the layer shape exists and is honestly empty (no fabricated claims/diffs), and (b) top-level nodes/edges equal as_built.nodes/edges (compatibility aliases preserved).",
+      "introduces": [
+        "as_built",
+        "intent_layer",
+        "diff_taxonomy",
+        "aligned",
+        "drift",
+        "implemented_undocumented",
+        "documented_unimplemented",
+        "conflicting_dependency",
+        "stale_adr"
+      ]
     }
   ]
 }

@@ -3,7 +3,7 @@ id: 2026-06-07-001-feat-architecture-evidence-contract-v0
 title: Architecture evidence contract v0 — source_kind + evidence_basis + confidence + provenance + extractor-coverage + as_built/intent layers + diff taxonomy (contract-only)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-07"
 goal_type: new_feature
 description: >
