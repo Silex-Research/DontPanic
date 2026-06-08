@@ -29,8 +29,8 @@
       "passes": false,
       "verified_by": [],
       "verified_at": null,
-      "description": "Surface introduced symbols in the plan-review report rather than dropping them silently. Each feature's introduced symbols are listed and labelled introduced-here; a symbol resolved via the introduces list is shown as introduced, never as a missing prerequisite.",
-      "acceptance": "The plan-review report (text and JSON) names each feature's introduced symbols, labelled introduced-here; a symbol resolved via introduces is shown as introduced and never as missing_prereq; a plan with no introduces produces a byte-identical report to today (regression)."
+      "description": "Surface introduced symbols in the plan-review report rather than dropping them silently, with enough provenance for a reviewer to spot abuse. Per feature, the report shows two visible lines: introduced-here (the symbols this feature defines) and resolved-via-introduces (each symbol this feature resolved through an EARLIER feature's introduces, shown with that earlier feature's id). A symbol resolved via introduces is never reported as a missing prerequisite.",
+      "acceptance": "The plan-review report (text and JSON) shows, per feature, an introduced-here list naming the symbols that feature defines AND a resolved-via-introduces list naming each cross-feature-resolved symbol together with the id of the earlier feature that introduced it (so a reviewer can see one feature leaning on another's vocabulary); a symbol resolved via introduces never appears as missing_prereq; a plan with no introduces produces a byte-identical report to today (regression)."
     }
   ]
 }
