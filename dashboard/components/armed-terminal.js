@@ -42,6 +42,10 @@ export function renderTerminalDock(state = {}) {
   // ARMED — the hazard frame. Persistent; does not collapse while armed.
   const frame = el('div', 'dp-hazard-frame');
   frame.setAttribute('role', 'alert');
+  // Arming is a hazardous state change — announce it assertively and atomically
+  // (008): a screen reader must hear the full warning the instant the shell arms.
+  frame.setAttribute('aria-live', 'assertive');
+  frame.setAttribute('aria-atomic', 'true');
   frame.appendChild(el('div', 'dp-hazard-title', '⚠  UNRESTRICTED LOCAL SHELL'));
   frame.appendChild(el('div', 'dp-hazard-scope', `Scope · ${scope}`));
   frame.appendChild(el('div', 'dp-hazard-warn', 'Commands execute on YOUR machine. No sandbox.'));

@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-06-07-003-feat-operator-console-008-chrome-theming-state",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Polish the armed-terminal hazard chrome on the existing component: token-only colours (no raw hex), persistent hazard frame while armed, role=alert + aria-live, a scope label, and a disarm-only affordance. OFF by default; no PTY/backend or command-channel change.",
+      "acceptance": "armed-terminal renders disarmed by default with no hazard frame; when armed it shows a persistent hazard frame, role=alert, an explicit scope label, and only a disarm control; all colours come from tokens (no raw hex in the component); no new backend/exec call is introduced.",
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Bridge the legacy core stylesheet colour variables to the design tokens under data-theme/data-density so a theme or density swap survives onto legacy pages, without redesigning any page. Bridge layer carries no raw hex.",
+      "acceptance": "a token bridge maps the legacy core stylesheet colour variables (background, text, border) onto the design-token layer; toggling data-theme or data-density changes the resolved legacy values; legacy pages re-colour without per-page edits; the bridge layer contains no raw hex.",
+      "passes": false,
+      "introduces": [
+        "theme_bridge"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Generalize the cockpit 5-state classifier into one reusable surface-state module (loading/missing/stale/error/ready) plus a shared render contract applied across the key surfaces, aligned to freshness.js thresholds. One classifier, many renderers; render-truth preserved (stale demoted, error shows last-good + retry).",
+      "acceptance": "a pure surface_state classifier returns one of loading/missing/stale/error/ready for each key surface from its inputs; a shared renderer turns each state into the right chrome (skeleton/empty/stale-banner/error-retry/ready); stale is never rendered as fresh; the matrix is unit-tested across all five states for every key surface.",
+      "passes": false,
+      "introduces": [
+        "surface_state",
+        "surface_matrix"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Journey tests that boot the real dashboard shell (createJarvis().init()) and drive each key surface through all five surface states using producer-shaped fixtures, asserting the shell renders the correct state chrome end-to-end.",
+      "acceptance": "a journey test boots createJarvis().init() and, per key surface, feeds producer-shaped fixtures for each of loading/missing/stale/error/ready and asserts the rendered shell shows the matching state chrome; the theme/density swap and armed-terminal chrome are exercised through the real shell, not a synthetic mount.",
+      "passes": false
+    }
+  ]
+}
