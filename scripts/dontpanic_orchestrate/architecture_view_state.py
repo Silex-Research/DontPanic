@@ -57,6 +57,7 @@ from pathlib import Path
 from typing import Any
 
 from dontpanic_orchestrate import architecture as _architecture
+from dontpanic_orchestrate import architecture_contract as _contract
 from dontpanic_orchestrate import architecture_levels as _architecture_levels
 from dontpanic_orchestrate import operator_console as _operator_console
 
@@ -606,6 +607,8 @@ def build_view_state(
             "steps": [],
             "filters": _empty_filters(),
             "insights": [],
+            "coverage": _contract.compute_coverage(repo_root, []),
+            "layers": _contract.build_layer_shell([], []),
             "validation_warnings": validation_warnings,
         }
         if inputs.load_error:
@@ -706,6 +709,16 @@ def build_view_state(
     # zoom). The `.mmd` slices written by
     # architecture_levels.export_mermaid_levels are an optional diffable
     # export, never this render source.
+    # Defensive: an unresolved-import external and a curated-service external
+    # could in principle share an id; keep the first occurrence so the contract
+    # stamps each node exactly once.
+    nodes = _dedupe_by_id(nodes)
+    edges = _dedupe_by_id(edges)
+
+    # F001 — stamp the evidence contract (source_kind / evidence_basis /
+    # confidence / provenance) onto every node + edge.
+    _contract.apply_evidence_contract(nodes, edges)
+
     clusters, levels = _architecture_levels.build_clusters_and_levels(nodes)
 
     view_state = {
@@ -723,6 +736,10 @@ def build_view_state(
         "steps": steps,
         "filters": filters,
         "insights": insights,
+        # F003 — extractor-coverage block (honesty ceiling).
+        "coverage": _contract.compute_coverage(repo_root, nodes),
+        # F004 — as_built / intent / diff layer shell (no reconciler yet).
+        "layers": _contract.build_layer_shell(nodes, edges),
         "validation_warnings": validation_warnings,
     }
     _operator_console._assert_no_secret_shapes(view_state)  # noqa: SLF001
@@ -838,6 +855,20 @@ def _empty_filters() -> dict[str, Any]:
     }
 
 
+def _dedupe_by_id(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep the first occurrence of each ``id`` (stable order)."""
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for item in items:
+        iid = item.get("id")
+        if iid in seen:
+            continue
+        if isinstance(iid, str):
+            seen.add(iid)
+        out.append(item)
+    return out
+
+
 def _build_nodes_and_edges(
     architecture: dict[str, Any],
 ) -> tuple[
@@ -883,9 +914,13 @@ def _build_nodes_and_edges(
         if isinstance(name, str):
             module_name_to_id[name] = mid
 
-    # Import edges. Keep only intra-architecture imports (target module is
-    # in the graph). External imports (stdlib, third-party) are surfaced
-    # via ``external:`` nodes only when there's a curated mapping below.
+    # Import edges. Intra-architecture imports resolve to an in-graph module.
+    # Unresolved imports (stdlib / third-party / a first-party ref that did not
+    # resolve) are NO LONGER dropped (plan 2026-06-07-001 F002): each is emitted
+    # as a low-confidence unresolved edge to a deduped external endpoint so the
+    # "missing evidence" is visible rather than silently swallowed.
+    first_party_tops = {name.split(".", 1)[0] for name in module_name_to_id}
+    unresolved_externals: dict[str, dict[str, Any]] = {}
     for mod in modules:
         if not isinstance(mod, dict):
             continue
@@ -894,10 +929,43 @@ def _build_nodes_and_edges(
             continue
         from_id = module_node_id(path)
         for imp in mod.get("imports") or []:
-            if not isinstance(imp, str):
+            if not isinstance(imp, str) or not imp:
                 continue
             to_id = module_name_to_id.get(imp)
-            if to_id is None or to_id == from_id:
+            if to_id == from_id:
+                continue
+            if to_id is None:
+                kind = _contract.classify_unresolved_endpoint(imp, first_party_tops)
+                ext_id = external_node_id(imp)
+                ext_node = unresolved_externals.get(ext_id)
+                if ext_node is None:
+                    ext_node = {
+                        "id": ext_id,
+                        "type": "external",
+                        "lane_id": "lane:external-services",
+                        "title": imp,
+                        "summary": (
+                            "unresolved import — first-party reference that did "
+                            "not resolve (missing evidence)"
+                            if kind == "unknown"
+                            else "unresolved import — stdlib/third-party"
+                        ),
+                        "source_kind": kind,
+                        "evidence_basis": "unresolved",
+                        "unresolved": True,
+                        "referenced_by": [],
+                    }
+                    unresolved_externals[ext_id] = ext_node
+                ext_node["referenced_by"].append(from_id)
+                edges.append(
+                    {
+                        "id": import_edge_id(from_id, ext_id),
+                        "type": "import",
+                        "from": from_id,
+                        "to": ext_id,
+                        "unresolved": True,
+                    }
+                )
                 continue
             edges.append(
                 {
@@ -907,6 +975,12 @@ def _build_nodes_and_edges(
                     "to": to_id,
                 }
             )
+
+    # Emit the deduped unresolved external endpoints (deterministic order).
+    for ext_id in sorted(unresolved_externals):
+        node = unresolved_externals[ext_id]
+        node["referenced_by"] = sorted(set(node["referenced_by"]))
+        nodes.append(node)
 
     # Schemas → data-evidence nodes.
     schema_ids: list[str] = []
