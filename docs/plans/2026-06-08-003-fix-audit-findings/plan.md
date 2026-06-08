@@ -5,7 +5,7 @@ type: fix
 tier: cross-cutting
 status: active
 date: "2026-06-08"
-goal_type: bug_fix
+goal_type: incident
 description: >
   Remediate all 10 findings from the retroactive cross-model Codex audit of this
   session's six merged plans (PRs #23-#28). Two batched audits both returned
