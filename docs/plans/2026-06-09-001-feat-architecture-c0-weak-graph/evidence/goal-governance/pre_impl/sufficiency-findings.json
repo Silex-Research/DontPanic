@@ -1,0 +1,52 @@
+{
+  "auditor": "codex",
+  "implementer": null,
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "coverage_gap",
+      "description": "The proposed baseline does not explicitly guarantee a non-empty tier-0 graph for an empty repository, even though the journey includes empty_repo and the completion test requires an arbitrary repo to yield a non-empty inventory graph.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F005"
+      ],
+      "recommendation": "Require a deterministic root/project inventory node or equivalent tier-0 sentinel for empty repos, and add an empty_repo fixture assertion through build_view_state."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "wiring_gap",
+      "description": "Project registration is named in the objective, but the proposed tests only assert the real build_view_state surface and do not prove the project-add path invokes detection, registry resolution, baseline graph construction, and coverage computation together.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Add an acceptance condition or integration test for the project-add flow that verifies the profile, baseline graph, and coverage block are created or recomputed before implementation locks."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-coverage",
+      "gap_class": "parity_gap",
+      "description": "The plan says Python and JS parser-backed coverage is preserved, but it does not define the expected covered semantics per evidence type, so a regression could still report parser-backed imports as merely heuristic or capped too low.",
+      "feature_refs": [
+        "F002",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Specify fixture expectations that Python and JS/TS parser-backed import evidence remains tier-2, covered where existing extractors apply, and not downgraded by the weak baseline fallback."
+    },
+    {
+      "severity": "low",
+      "journey_id": "honest-coverage",
+      "gap_class": "missing_feature",
+      "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed features mostly describe statuses and confidence values rather than a concrete user-facing note field or message contract.",
+      "feature_refs": [],
+      "recommendation": "Add a coverage note or warnings field with deterministic wording for missing parser extractors and unextracted-language heuristic imports."
+    }
+  ]
+}
