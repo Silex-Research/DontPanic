@@ -128,6 +128,54 @@ def _rewrite_summary_verdict(summary: str, status: str) -> str:
     return summary
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "live_auditor: this test deliberately invokes a real (paid) cross-vendor "
+        "auditor; exempts it from the offline-fixture guard. Use sparingly.",
+    )
+
+
+class _PaidAuditorInTest(BaseException):
+    """Raised when a test reaches a real (paid) auditor dispatch without opting
+    in via @pytest.mark.live_auditor. Subclasses BaseException so production
+    ``except Exception`` swallow-paths cannot mask it — the test fails loudly
+    instead of silently spending a Codex/Claude call."""
+
+
+@pytest.fixture(autouse=True)
+def _block_paid_auditor_dispatch(request, monkeypatch):
+    """Offline-fixture protection (2026-06-09): governance regression tests must
+    NEVER invoke a paid auditor. After the lock gate learned to regenerate stale
+    sufficiency findings, a fixture that seeded fingerprint-less findings tripped
+    the live ``generate_sufficiency_findings`` path and fired real Codex calls.
+
+    This patches the production paid-dispatch builders to raise loudly so any
+    test that reaches them fails fast. Offline tests inject ``dispatch=`` or seed
+    fresh (fingerprinted) fixtures; a deliberately live test opts in with
+    ``@pytest.mark.live_auditor``."""
+    if request.node.get_closest_marker("live_auditor"):
+        return
+
+    def _blocked(*_args, **_kwargs):
+        raise _PaidAuditorInTest(
+            "a test reached a real (paid) auditor dispatch — inject a fake "
+            "`dispatch=`, seed fresh fingerprinted findings, or mark the test "
+            "@pytest.mark.live_auditor. Governance regression tests stay offline."
+        )
+
+    import dontpanic_orchestrate.sufficiency_auditor as _sa
+
+    monkeypatch.setattr(_sa, "_production_sufficiency_dispatch", _blocked, raising=False)
+    try:
+        import dontpanic_orchestrate.completion_dispatch as _cd
+
+        if hasattr(_cd, "_production_dispatch"):
+            monkeypatch.setattr(_cd, "_production_dispatch", _blocked, raising=False)
+    except ImportError:
+        pass
+
+
 @pytest.fixture(autouse=True)
 def _isolate_jarvis_state(tmp_path, monkeypatch):
     monkeypatch.setenv(

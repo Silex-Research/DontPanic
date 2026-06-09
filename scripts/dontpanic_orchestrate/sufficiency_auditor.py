@@ -26,10 +26,12 @@ do with them.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -84,6 +86,82 @@ PRE_IMPL_FINDINGS_ARTIFACT: str = "sufficiency-findings.json"
 """Filename under ``evidence/goal-governance/pre_impl/`` per F0's path
 convention (mirrors :data:`nested_orchestration.GOAL_GOVERNANCE_EVIDENCE_PREFIX`).
 """
+
+FINDINGS_SCHEMA_VERSION: str = "v1"
+"""Artifact schema version. ``v1`` adds ``input_fingerprint`` + ``generated_at``
+so the lock can prove whether persisted findings still reflect the plan. A
+``v0`` (fingerprint-absent) artifact is treated as stale and regenerated."""
+
+SUFFICIENCY_INPUT_FILES: tuple[str, ...] = (
+    "plan.md",
+    "features.json",
+    "decisions.jsonl",
+)
+"""Fixed-name plan-contract files whose content determines whether a prior
+sufficiency audit is still valid. The objective contract is NOT here because the
+gate/auditor resolve it via ``plan.md`` ``links.objective_contract`` (which may
+point off the default path); :func:`compute_input_fingerprint` hashes the
+*resolved* contract instead. Editing any input (tightening an acceptance, adding
+a decision, repointing or editing the contract) must force regeneration —
+otherwise a stale findings file from a prior *refused* lock can permanently block
+a plan that has since addressed those very findings (governance defect,
+2026-06-09)."""
+
+_DEFAULT_CONTRACT_REL = "objective_contract.json"
+
+
+def _resolve_contract_rel(plan_dir: Path) -> str:
+    """Relative ref to the objective contract from ``plan.md`` links, defaulting
+    to ``objective_contract.json``. Pure and tolerant: unreadable/missing
+    frontmatter or links falls back to the default (plan.md itself is hashed, so
+    a malformed links line still changes the fingerprint)."""
+    try:
+        plan_data = _read_frontmatter(plan_dir / "plan.md")
+        links = plan_data.get("links")
+        if isinstance(links, dict):
+            ref = links.get("objective_contract")
+            if isinstance(ref, str) and ref.strip():
+                return ref
+    except Exception:  # noqa: BLE001 — fingerprint must never raise on bad input
+        pass
+    return _DEFAULT_CONTRACT_REL
+
+
+def compute_input_fingerprint(plan_dir: Path) -> str:
+    """Stable SHA-256 over the plan-contract inputs that affect sufficiency.
+
+    Deterministic and edit-sensitive: each input is hashed in a fixed order,
+    framed by a logical name and byte length, so adding/removing a file, editing
+    it, or moving content between files all change the digest. The objective
+    contract is resolved via ``links.objective_contract`` (audit 2026-06-09:
+    hardcoding ``objective_contract.json`` left the stale-reuse bug open for plans
+    that relocate the contract) — the resolved link ref is folded into the digest
+    so repointing the link is itself a change. A missing input contributes a
+    distinct sentinel (so absent ≠ empty). Pure modulo file reads — never mutates,
+    never networks, never raises on malformed input."""
+    plan_dir = Path(plan_dir)
+    contract_rel = _resolve_contract_rel(plan_dir)
+    # (logical name framed into the digest, path to read)
+    entries: list[tuple[str, Path]] = [
+        (name, plan_dir / name) for name in SUFFICIENCY_INPUT_FILES
+    ]
+    entries.append((f"objective_contract@{contract_rel}", plan_dir / contract_rel))
+
+    digest = hashlib.sha256()
+    for name, path in entries:
+        digest.update(name.encode("utf-8"))
+        try:
+            data = path.read_bytes()
+        except OSError:
+            digest.update(b"\x00<absent>\x00")
+            continue
+        digest.update(f"\x00{len(data)}\x00".encode("utf-8"))
+        digest.update(data)
+    return f"sha256:{digest.hexdigest()}"
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 _SAME_VENDOR_OVERRIDE_ENV: str = "DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR"
 """Operator override channel. When set to ``'1'`` / ``'true'`` / ``'yes'``
@@ -534,6 +612,12 @@ def run_sufficiency_audit(
     features = _load_features(plan_dir)
     auditor = _resolve_goal_auditor_agent(plan_dir, implementer_agent=implementer_agent)
     prompt = _build_sufficiency_prompt(contract, features)
+    # Capture the fingerprint over the bytes that BUILT this prompt, BEFORE the
+    # (slow, paid) dispatch — if a plan input is edited mid-audit, the stored
+    # fingerprint must describe the audited inputs, not the post-edit ones, or a
+    # later lock would treat these findings as fresh for an already-changed plan
+    # (audit 2026-06-09 TOCTOU).
+    input_fingerprint = compute_input_fingerprint(plan_dir)
 
     if dispatch is None:
         raise SufficiencyAuditError(
@@ -549,8 +633,15 @@ def run_sufficiency_audit(
     out_path.write_text(
         json.dumps(
             {
+                "schema_version": FINDINGS_SCHEMA_VERSION,
                 "auditor": auditor,
                 "implementer": implementer_agent,
+                # Provenance so the lock can prove these findings still reflect
+                # the plan — without it, a stale artifact blocks edited plans.
+                # Captured pre-dispatch (above) to avoid a TOCTOU where a mid-audit
+                # edit makes the stamp describe inputs the findings never saw.
+                "input_fingerprint": input_fingerprint,
+                "generated_at": _utc_now_iso(),
                 "findings": [f.model_dump() for f in findings],
             },
             indent=2,
