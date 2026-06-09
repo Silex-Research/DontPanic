@@ -2,32 +2,51 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:5930820a3771e057527c69720274b1f5f5ed23d2a052d22704dce7499e3eeb6e",
-  "generated_at": "2026-06-09T18:30:23Z",
+  "input_fingerprint": "sha256:3db6d25728818a58e6aa5d102e71f3a14f893b4429270a81e1cfd759ed1b71c4",
+  "generated_at": "2026-06-09T19:30:49Z",
   "findings": [
+    {
+      "severity": "high",
+      "journey_id": "honest-coverage",
+      "gap_class": "integration_gap",
+      "description": "The fixture requirement is not fully locked to the real build_view_state surface. F004 requires one integration path, while F005 can still be satisfied by lower-level baseline tests, leaving Python, JS/TS, Swift/Kotlin, empty, and truncated fixtures unproven through the operator-facing path.",
+      "feature_refs": [
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Make F005 explicitly drive project registration plus build_view_state for every fixture case, not just the baseline builder."
+    },
+    {
+      "severity": "high",
+      "journey_id": "honest-coverage",
+      "gap_class": "coverage_gap",
+      "description": "The detector promises build systems, test frameworks, app frameworks, infra, and config surfaces, but the coverage block only names filesystem, package_manifest, imports, runtime, and adr. Those detected evidence classes could be invisible or ambiguously folded into filesystem.",
+      "feature_refs": [
+        "F001",
+        "F004"
+      ],
+      "recommendation": "Either add explicit coverage statuses for build_system, test_framework, app_framework, infra, and config, or define and test their deterministic mapping into existing evidence types."
+    },
     {
       "severity": "medium",
       "journey_id": "weak-graph-any-repo",
-      "gap_class": "coverage_gap",
-      "description": "The completion test explicitly requires the detector, registry, and baseline to be pure, deterministic, and bounded, but the proposed acceptance only pins those properties for the detector and baseline. The registry path is not required to be pure or deterministic, and the detector is not explicitly required to have bounded traversal behavior on large repositories.",
+      "gap_class": "wiring_gap",
+      "description": "The plan ensures baseline graph data is emitted, but it does not explicitly protect the existing render-truth path from filtering out low-confidence unresolved edges, filesystem/config nodes, or scan_truncated markers before the user sees them.",
       "feature_refs": [
-        "F001",
-        "F002",
-        "F003"
+        "F003",
+        "F004"
       ],
-      "recommendation": "Add acceptance language and tests that detector and registry resolution are pure, deterministic, network-free, mutation-free, and bounded under large or pathological repo layouts."
+      "recommendation": "Add an acceptance check against the final build_view_state/render payload that low-confidence edges, tier-0 nodes, and truncation markers survive unchanged."
     },
     {
       "severity": "medium",
       "journey_id": "honest-coverage",
       "gap_class": "coverage_gap",
-      "description": "The plan requires bounded scanning and honest coverage ceilings, but it does not specify what the graph or coverage block reports when a repo exceeds scan limits. Without an explicit truncation or limit-hit signal, a bounded baseline could omit nodes or heuristic edges while still appearing complete enough to mislead the operator.",
+      "description": "Overall rollup and honest confidence ceilings remain underspecified. Runtime is a tier-3 non-goal, ADR may be absent, and scans may truncate, but the exact deterministic rules for limited versus partial versus covered are not locked.",
       "feature_refs": [
-        "F003",
-        "F004",
-        "F005"
+        "F004"
       ],
-      "recommendation": "Define a deterministic scan-limit/truncation marker that feeds the coverage block and caps confidence when inventory or heuristic import extraction stops before the full repo is examined."
+      "recommendation": "Define rollup rules before implementation, including how absent runtime, absent ADR, heuristic-only imports, parser-backed imports, and scan_truncated affect the overall status."
     }
   ]
 }
