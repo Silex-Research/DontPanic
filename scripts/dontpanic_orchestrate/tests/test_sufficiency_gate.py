@@ -41,6 +41,7 @@ HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
 from dontpanic_orchestrate import cli, supervisor  # noqa: E402
+from dontpanic_orchestrate import sufficiency_auditor as _sa  # noqa: E402
 from dontpanic_orchestrate.sufficiency_gate import (  # noqa: E402
     BLOCKING_SEVERITIES,
     SufficiencyGateError,
@@ -129,8 +130,20 @@ def _write_plan(
     if findings is not None:
         evidence_dir = plan_dir / "evidence" / "goal-governance" / "pre_impl"
         evidence_dir.mkdir(parents=True, exist_ok=True)
+        # Stamp the current input fingerprint so the seeded findings represent a
+        # fresh audit for THIS plan — the CLI lock path reuses them (the offline
+        # reuse branch) instead of regenerating via a paid auditor (2026-06-09).
         (evidence_dir / "sufficiency-findings.json").write_text(
-            json.dumps({"auditor": "codex", "implementer": "claude", "findings": findings})
+            json.dumps(
+                {
+                    "schema_version": _sa.FINDINGS_SCHEMA_VERSION,
+                    "auditor": "codex",
+                    "implementer": "claude",
+                    "input_fingerprint": _sa.compute_input_fingerprint(plan_dir),
+                    "generated_at": "2026-05-05T00:00:00Z",
+                    "findings": findings,
+                }
+            )
         )
 
     return plan_dir

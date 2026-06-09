@@ -128,6 +128,73 @@ def _rewrite_summary_verdict(summary: str, status: str) -> str:
     return summary
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "live_auditor: this test deliberately invokes a real (paid) cross-vendor "
+        "auditor; exempts it from the offline-fixture guard. Use sparingly.",
+    )
+
+
+class _PaidAuditorInTest(BaseException):
+    """Raised when a test reaches a real (paid) auditor dispatch without opting
+    in via @pytest.mark.live_auditor. Subclasses BaseException so production
+    ``except Exception`` swallow-paths cannot mask it — the test fails loudly
+    instead of silently spending a Codex/Claude call."""
+
+
+# Production (paid) auditor-dispatch entrypoint the guard MUST neutralize, as a
+# (module import path, attribute) pair. Patched with raising=True so a RENAME
+# fails the guard LOUDLY (every test errors in setup) instead of silently
+# re-opening paid dispatch — the fail-open mode CodeRabbit flagged on PR #32.
+#
+# Scope is the SUFFICIENCY production-dispatch BUILDER only: offline sufficiency
+# tests never call it (they inject `dispatch=` or reuse fingerprinted fixtures),
+# so neutralizing it can only catch an accidental real-auditor call — exactly the
+# regression this PR's regen path could introduce. The completion path is NOT
+# listed on purpose: its offline tests legitimately route through
+# ``completion_dispatch._dispatch_via_executor`` with a MOCKED ``get_executor``,
+# so patching that function would block real offline tests (false positives); its
+# paid boundary is the executor's network call, which those tests already avoid
+# via the mock + the ``dispatch=`` seam. Add a symbol here only if it is a paid
+# builder that NO offline test legitimately invokes.
+_PAID_DISPATCH_ENTRYPOINTS: tuple[tuple[str, str], ...] = (
+    ("dontpanic_orchestrate.sufficiency_auditor", "_production_sufficiency_dispatch"),
+)
+
+
+@pytest.fixture(autouse=True)
+def _block_paid_auditor_dispatch(request, monkeypatch):
+    """Offline-fixture protection (2026-06-09): governance regression tests must
+    NEVER invoke a paid auditor. After the lock gate learned to regenerate stale
+    sufficiency findings, a fixture that seeded fingerprint-less findings tripped
+    the live ``generate_sufficiency_findings`` path and fired real Codex calls.
+
+    Patches every production paid-dispatch entrypoint to raise loudly so any test
+    that reaches one fails fast. FAIL-CLOSED: each symbol is patched with
+    ``raising=True``, so if a paid path is renamed the guard errors in setup
+    (alerting the maintainer to update :data:`_PAID_DISPATCH_ENTRYPOINTS`) rather
+    than silently no-op'ing. Offline tests inject ``dispatch=`` or seed fresh
+    (fingerprinted) fixtures; a deliberately live test opts in with
+    ``@pytest.mark.live_auditor``."""
+    if request.node.get_closest_marker("live_auditor"):
+        return
+
+    import importlib
+
+    def _blocked(*_args, **_kwargs):
+        raise _PaidAuditorInTest(
+            "a test reached a real (paid) auditor dispatch — inject a fake "
+            "`dispatch=`, seed fresh fingerprinted findings, or mark the test "
+            "@pytest.mark.live_auditor. Governance regression tests stay offline."
+        )
+
+    for module_path, attr in _PAID_DISPATCH_ENTRYPOINTS:
+        module = importlib.import_module(module_path)
+        # raising=True (default): a missing/renamed symbol fails HERE, loudly.
+        monkeypatch.setattr(module, attr, _blocked)
+
+
 @pytest.fixture(autouse=True)
 def _isolate_jarvis_state(tmp_path, monkeypatch):
     monkeypatch.setenv(

@@ -3149,21 +3149,30 @@ def _run_pre_lock_design_volley(
 
 
 def _ensure_sufficiency_findings(plan_dir) -> None:
-    """Plan 2026-06-08-006 — generate the pre-impl sufficiency findings if the plan
-    is in the gated goal_type set and the artifact is missing. Previously the lock
-    gate REQUIRED ``sufficiency-findings.json`` but no command produced it (F003 had
-    no production caller), so lock dead-ended. This invokes the production
-    cross-vendor sufficiency runner; if no auditor is configured it prints an
-    actionable message and lets the gate's own refusal carry the final word —
-    never a silent dead-end."""
+    """Plan 2026-06-08-006 — generate the pre-impl sufficiency findings when the
+    plan is in the gated goal_type set, then 2026-06-09 — regenerate them when
+    the plan changed.
+
+    The lock gate REQUIRES ``sufficiency-findings.json``. The original generator
+    skipped generation whenever ANY findings file existed; a stale artifact (e.g.
+    committed from a prior *refused* lock) therefore survived plan edits forever,
+    so a plan tightened to address those exact findings could never clear the
+    gate ("lock regenerates fresh audit evidence" was a false mental model —
+    governance correctness defect). The artifact now carries an
+    ``input_fingerprint`` over the plan-contract files (plan.md / features.json /
+    objective_contract.json / decisions.jsonl) plus ``generated_at``; we reuse it
+    only when the fingerprint still matches the current inputs, and regenerate
+    when it is missing (a pre-fingerprint artifact, can't prove fresh) or drifted.
+
+    If no auditor is configured the generator prints an actionable message and
+    lets the gate's own refusal carry the final word — never a silent dead-end."""
     from dontpanic_orchestrate import sufficiency_gate as _sg
     from dontpanic_orchestrate.sufficiency_auditor import (
         SufficiencyAuditError,
+        compute_input_fingerprint,
         generate_sufficiency_findings,
     )
 
-    if _sg._findings_path(plan_dir).is_file():
-        return
     # Decide gating from the SAME YAML frontmatter the gate itself reads (audit
     # 2026-06-08): a raw-text regex would miss quoted/tagged forms like
     # goal_type: "new_feature" and skip generation for a plan the gate DOES gate,
@@ -3174,10 +3183,43 @@ def _ensure_sufficiency_findings(plan_dir) -> None:
         return
     if not _sg._should_gate_sufficiency(plan_data):
         return  # non-gated goal_type — the gate is a no-op, no paid call needed
-    print(
-        "[plan lock] pre-impl sufficiency findings missing — generating via the "
-        "cross-vendor auditor (Goal Governance V1 F003)..."
-    )
+
+    findings_path = _sg._findings_path(plan_dir)
+    if findings_path.is_file():
+        # Reuse ONLY when the persisted fingerprint still matches the plan's
+        # current contract inputs; otherwise the findings are stale and must be
+        # regenerated rather than block an edited plan.
+        try:
+            existing = json.loads(findings_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            existing = None
+        stored_fp = existing.get("input_fingerprint") if isinstance(existing, dict) else None
+        current_fp = compute_input_fingerprint(plan_dir)
+        if stored_fp is not None and stored_fp == current_fp:
+            stamp = existing.get("generated_at", "<unknown>")
+            count = len(existing.get("findings", [])) if isinstance(existing, dict) else 0
+            print(
+                f"[plan lock] reusing sufficiency findings — plan inputs unchanged "
+                f"since {stamp} ({count} finding(s)); no re-audit needed."
+            )
+            return
+        if stored_fp is None:
+            print(
+                "[plan lock] existing sufficiency findings predate input-"
+                "fingerprinting — cannot prove they reflect the current plan; "
+                "regenerating via the cross-vendor auditor..."
+            )
+        else:
+            print(
+                "[plan lock] plan inputs changed since the last sufficiency audit "
+                "— regenerating findings (stale evidence is never reused)..."
+            )
+    else:
+        print(
+            "[plan lock] pre-impl sufficiency findings missing — generating via the "
+            "cross-vendor auditor (Goal Governance V1 F003)..."
+        )
+
     try:
         findings = generate_sufficiency_findings(plan_dir)
         print(f"[plan lock] sufficiency audit: generated {len(findings)} finding(s)")
