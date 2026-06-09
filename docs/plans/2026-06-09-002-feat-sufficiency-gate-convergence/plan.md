@@ -43,11 +43,12 @@ build the convergence rule first, then return to C0 under it.
 
 ## Features
 
-- **F001** — sufficiency round tracking: every lock run appends a durable round
-  record (finding count, stable content-derived finding ids, prior ids
-  cleared vs persisted, new-finding severities, and a closed finding-class
-  enum: plan_contract / implementation_detail / editorial / scope_guard /
-  matrix_pin) to an append-only rounds ledger in plan evidence.
+- **F001** — sufficiency round tracking: every auditor run appends a durable
+  round record (finding count, stable finding ids + fingerprints per F006,
+  prior ids cleared vs persisted, new-finding severities, and a closed
+  finding-class enum: plan_contract / implementation_detail / editorial /
+  scope_guard / matrix_pin, conservative fallback to plan_contract) to an
+  append-only rounds ledger in plan evidence.
 - **F002** — convergence policy: a pure, deterministic function over the rounds
   ledger + recorded dispositions, exhaustive over severity × class. Full
   clearance + all new findings medium/low and classed in the eligible set
@@ -66,9 +67,15 @@ build the convergence rule first, then return to C0 under it.
   verdicts, and that round 6's three medium eligible-class findings are
   disposition-eligible while its high finding keeps the block. Zero paid calls.
 - **F005** — lock-path wiring: refusals name the policy branch that fired; the
-  no-auditor resolution path (dispositions cover the latest round + unchanged
-  input fingerprint) proceeds with zero paid calls; a changed fingerprint
-  falls back to the plain gate with a fresh audit.
+  no-auditor resolution path (no-audit-kind dispositions cover the latest
+  round + unchanged input fingerprint) proceeds with zero paid calls; a
+  changed fingerprint falls back to the plain gate with a fresh audit;
+  accepted_into_plan always routes through the plain gate.
+- **F006** — two-level finding identity: semantic id from locator fields with
+  deterministic same-cell ordinals + content fingerprint over severity, class,
+  description, and recommendation; escalation is material change; fail-closed
+  cell invalidation (any cell-set change re-surfaces its dispositions as
+  blocking). Pure functions.
 
 ## Non-goals
 
