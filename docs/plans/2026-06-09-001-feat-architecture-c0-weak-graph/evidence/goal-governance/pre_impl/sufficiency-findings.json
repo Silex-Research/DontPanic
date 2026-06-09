@@ -1,52 +1,33 @@
 {
+  "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
+  "input_fingerprint": "sha256:5930820a3771e057527c69720274b1f5f5ed23d2a052d22704dce7499e3eeb6e",
+  "generated_at": "2026-06-09T18:30:23Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "weak-graph-any-repo",
       "gap_class": "coverage_gap",
-      "description": "The proposed baseline does not explicitly guarantee a non-empty tier-0 graph for an empty repository, even though the journey includes empty_repo and the completion test requires an arbitrary repo to yield a non-empty inventory graph.",
-      "feature_refs": [
-        "F001",
-        "F003",
-        "F005"
-      ],
-      "recommendation": "Require a deterministic root/project inventory node or equivalent tier-0 sentinel for empty repos, and add an empty_repo fixture assertion through build_view_state."
-    },
-    {
-      "severity": "medium",
-      "journey_id": "weak-graph-any-repo",
-      "gap_class": "wiring_gap",
-      "description": "Project registration is named in the objective, but the proposed tests only assert the real build_view_state surface and do not prove the project-add path invokes detection, registry resolution, baseline graph construction, and coverage computation together.",
+      "description": "The completion test explicitly requires the detector, registry, and baseline to be pure, deterministic, and bounded, but the proposed acceptance only pins those properties for the detector and baseline. The registry path is not required to be pure or deterministic, and the detector is not explicitly required to have bounded traversal behavior on large repositories.",
       "feature_refs": [
         "F001",
         "F002",
-        "F003",
-        "F004",
-        "F005"
+        "F003"
       ],
-      "recommendation": "Add an acceptance condition or integration test for the project-add flow that verifies the profile, baseline graph, and coverage block are created or recomputed before implementation locks."
+      "recommendation": "Add acceptance language and tests that detector and registry resolution are pure, deterministic, network-free, mutation-free, and bounded under large or pathological repo layouts."
     },
     {
       "severity": "medium",
       "journey_id": "honest-coverage",
-      "gap_class": "parity_gap",
-      "description": "The plan says Python and JS parser-backed coverage is preserved, but it does not define the expected covered semantics per evidence type, so a regression could still report parser-backed imports as merely heuristic or capped too low.",
+      "gap_class": "coverage_gap",
+      "description": "The plan requires bounded scanning and honest coverage ceilings, but it does not specify what the graph or coverage block reports when a repo exceeds scan limits. Without an explicit truncation or limit-hit signal, a bounded baseline could omit nodes or heuristic edges while still appearing complete enough to mislead the operator.",
       "feature_refs": [
-        "F002",
+        "F003",
         "F004",
         "F005"
       ],
-      "recommendation": "Specify fixture expectations that Python and JS/TS parser-backed import evidence remains tier-2, covered where existing extractors apply, and not downgraded by the weak baseline fallback."
-    },
-    {
-      "severity": "low",
-      "journey_id": "honest-coverage",
-      "gap_class": "missing_feature",
-      "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed features mostly describe statuses and confidence values rather than a concrete user-facing note field or message contract.",
-      "feature_refs": [],
-      "recommendation": "Add a coverage note or warnings field with deterministic wording for missing parser extractors and unextracted-language heuristic imports."
+      "recommendation": "Define a deterministic scan-limit/truncation marker that feeds the coverage block and caps confidence when inventory or heuristic import extraction stops before the full repo is examined."
     }
   ]
 }
