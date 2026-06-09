@@ -52,9 +52,12 @@ Python+JS to a registry-driven, language-agnostic substrate.
   (tier 0 filesystem, tier 1 heuristic, tier 2 parser, tier 3 build/runtime).
 - **F003** — Tier-0 inventory + Tier-1 heuristic graph: a baseline as-built graph for
   ANY repo — nodes for directories, package/build/config manifests, test dirs,
-  docs/ADRs (Tier 0, low/medium confidence) — plus Tier-1 regex/import-pattern edges
-  for common languages emitted as low-confidence unresolved unless a relative target
-  resolves. Contract-stamped; never drops; deterministic + bounded.
+  docs/ADRs, and detected infra surfaces (Tier 0, low/medium confidence) — plus
+  Tier-1 regex/import-pattern edges for common languages emitted as low-confidence
+  unresolved unless a relative target resolves. Tier precedence pinned: parser-backed
+  (tier-2) edges supersede same-source heuristic edges — no duplicate low-confidence
+  counterparts for parser-served languages. Contract-stamped; never drops;
+  deterministic + bounded.
 - **F004** — tiered coverage block: emit an architecture coverage object with an
   overall rollup (limited / partial / covered; deterministic pinned rules),
   per-language status (covered / missing_extractor / not_found) and

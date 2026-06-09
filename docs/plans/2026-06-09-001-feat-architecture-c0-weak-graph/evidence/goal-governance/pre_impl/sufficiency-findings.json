@@ -2,51 +2,51 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:3db6d25728818a58e6aa5d102e71f3a14f893b4429270a81e1cfd759ed1b71c4",
-  "generated_at": "2026-06-09T19:30:49Z",
+  "input_fingerprint": "sha256:9c3eddf90cf15d4b9ded8bd0364abc72d521ff45a5df705d75b14cb5f3222736",
+  "generated_at": "2026-06-09T20:13:22Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "honest-coverage",
-      "gap_class": "integration_gap",
-      "description": "The fixture requirement is not fully locked to the real build_view_state surface. F004 requires one integration path, while F005 can still be satisfied by lower-level baseline tests, leaving Python, JS/TS, Swift/Kotlin, empty, and truncated fixtures unproven through the operator-facing path.",
-      "feature_refs": [
-        "F004",
-        "F005"
-      ],
-      "recommendation": "Make F005 explicitly drive project registration plus build_view_state for every fixture case, not just the baseline builder."
-    },
-    {
-      "severity": "high",
-      "journey_id": "honest-coverage",
       "gap_class": "coverage_gap",
-      "description": "The detector promises build systems, test frameworks, app frameworks, infra, and config surfaces, but the coverage block only names filesystem, package_manifest, imports, runtime, and adr. Those detected evidence classes could be invisible or ambiguously folded into filesystem.",
+      "description": "The proposed ProjectProfile keeps docs and ADRs bundled as a single docs_adr detection class while F004 requires each detected class to map into exactly one unified source_kind, yet also says docs_adr maps to doc/adr. That is not a total one-to-one mapping and can make ADR coverage invisible or ambiguously folded into generic docs.",
       "feature_refs": [
         "F001",
         "F004"
       ],
-      "recommendation": "Either add explicit coverage statuses for build_system, test_framework, app_framework, infra, and config, or define and test their deterministic mapping into existing evidence types."
+      "recommendation": "Split docs and adr into separate detection classes, or make each docs_adr detection item carry an explicit source_kind so the exported mapping remains total and deterministic."
     },
     {
       "severity": "medium",
       "journey_id": "weak-graph-any-repo",
       "gap_class": "wiring_gap",
-      "description": "The plan ensures baseline graph data is emitted, but it does not explicitly protect the existing render-truth path from filtering out low-confidence unresolved edges, filesystem/config nodes, or scan_truncated markers before the user sees them.",
+      "description": "F001 detects infra/config surfaces and F004 reports infra/config coverage, but F003 only guarantees graph nodes for directories, package/build/config manifests, test dirs, docs, and ADRs. Infra can therefore be detected and covered without being represented in the filesystem/config graph the operator sees.",
       "feature_refs": [
+        "F001",
         "F003",
         "F004"
       ],
-      "recommendation": "Add an acceptance check against the final build_view_state/render payload that low-confidence edges, tier-0 nodes, and truncation markers survive unchanged."
+      "recommendation": "Extend the tier-0 inventory graph acceptance to require detected infra surfaces, such as Docker, Terraform, Kubernetes, and CI files, to appear as source_kind=infra nodes in the final build_view_state payload."
     },
     {
       "severity": "medium",
       "journey_id": "honest-coverage",
-      "gap_class": "coverage_gap",
-      "description": "Overall rollup and honest confidence ceilings remain underspecified. Runtime is a tier-3 non-goal, ADR may be absent, and scans may truncate, but the exact deterministic rules for limited versus partial versus covered are not locked.",
+      "gap_class": "integration_gap",
+      "description": "F003 requires heuristic import edges for common languages, while F004/F005 require Python and JS parser-backed imports to remain covered/high. The merge precedence is not specified, so parser-backed repos could still render duplicate low-confidence heuristic edges and look less certain than the preserved parser result.",
       "feature_refs": [
-        "F004"
+        "F003",
+        "F004",
+        "F005"
       ],
-      "recommendation": "Define rollup rules before implementation, including how absent runtime, absent ADR, heuristic-only imports, parser-backed imports, and scan_truncated affect the overall status."
+      "recommendation": "Pin the graph merge rule: parser-backed tier-2 edges supersede same-source heuristic edges for that language, and heuristic import extraction only fills gaps where parser coverage is unavailable or unresolved."
+    },
+    {
+      "severity": "advisory",
+      "journey_id": "honest-coverage",
+      "gap_class": "missing_feature",
+      "description": "The objective explicitly excludes a UI overhaul, but the proposed features do not include a negative acceptance guard that the new coverage block is surfaced through the existing display path only. That leaves room for scope creep into Plan D while implementing C0.",
+      "feature_refs": [],
+      "recommendation": "Add a non-goal guard or snapshot assertion that C0 only adds the coverage data/render payload expected by the existing coverage display and does not introduce broader UI restructuring."
     }
   ]
 }
