@@ -230,3 +230,78 @@ def test_e2e_dry_run_draft_to_gate_no_crash(tmp_path):
         json.dumps(json.loads(sg._findings_path(plan_dir).read_text())["findings"])
     )
     assert len(reparsed) == 1
+
+
+# ── post-impl audit remediation (2026-06-08) ─────────────────────────────
+
+
+def test_coerce_rejects_leading_prose():
+    # audit finding #2: a non-answer like "I could not do it\n[]" must NOT be
+    # silently accepted as an empty findings list (it would let a gated plan lock).
+    import pytest as _pytest
+
+    with _pytest.raises(json.JSONDecodeError):
+        cs.coerce_first_json_value("I could not complete the audit.\n[]")
+    # but a genuine value followed by trailing prose is still tolerated
+    assert cs.coerce_first_json_value("[]\nthat is all") == []
+
+
+def test_sufficiency_rejects_leading_prose_nonanswer():
+    # end-to-end: a Codex non-answer reaches the sufficiency parser and is refused,
+    # rather than parsed as zero findings.
+    import pytest as _pytest
+
+    stream = _codex_stream("Sorry, I was unable to evaluate this plan. []")
+    with _pytest.raises(sa.SufficiencyAuditError):
+        sa._parse_sufficiency_response(stream)
+
+
+def test_design_volley_real_production_path_handles_enum_features(tmp_path):
+    # audit finding #1: exercise the ACTUAL _run_pre_lock_design_volley path (not
+    # just model_dump in isolation). The real plan's features carry a Category enum;
+    # the volley must serialize them without the "not JSON serializable" crash.
+    from dontpanic_orchestrate import cli
+
+    captured = {}
+
+    def fake_run_volley(plan_id, features, **kwargs):
+        captured["features"] = features
+        json.dumps(features)  # must not raise — this is what crashed before the fix
+
+        class _F:
+            kind = "info"
+            severity = "low"
+            feature_id = "F001"
+            evidence = "ok"
+
+        class _Env:
+            verdict = "ok"
+            findings = [_F()]
+
+        return _Env()
+
+    class _Exec:  # stand-in auditor so the volley does not bail on "no executor"
+        pass
+
+    plan_dir = REPO_ROOT / "docs/plans/2026-06-08-004-feat-architecture-reconciler-ui-plan-d"
+    # operator_requested=True forces the volley to run regardless of lint state.
+    cli._run_pre_lock_design_volley(
+        plan_dir, operator_requested=True, executor=_Exec(), run_volley=fake_run_volley
+    )
+    assert "features" in captured, "the real volley path must have been exercised"
+    json.dumps(captured["features"])  # production feature dicts are JSON-safe
+
+
+def test_ensure_sufficiency_gates_quoted_goal_type(tmp_path):
+    # audit finding #3: a quoted YAML goal_type must be recognized as gated (the old
+    # regex missed `goal_type: "new_feature"`, recreating the dead-end).
+    from dontpanic_orchestrate import sufficiency_gate as sg
+
+    d = tmp_path / "plan-quoted"
+    d.mkdir()
+    (d / "plan.md").write_text(
+        '---\nid: x\ntitle: t\ngoal_type: "new_feature"\n---\n\n# t\n'
+    )
+    plan_data = sg._read_frontmatter(d / "plan.md")
+    assert plan_data.get("goal_type") == "new_feature"
+    assert sg._should_gate_sufficiency(plan_data) is True  # quoted form IS gated

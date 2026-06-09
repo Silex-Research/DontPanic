@@ -102,16 +102,16 @@ def coerce_first_json_value(text: str) -> Any:
     rest). Raises ``json.JSONDecodeError`` only if no JSON value can be found at
     all — callers translate that into their domain error.
     """
-    cleaned = strip_code_fence(text)
+    cleaned = strip_code_fence(text).lstrip()
     try:
         return json.loads(cleaned)
-    except json.JSONDecodeError as first_exc:
-        decoder = json.JSONDecoder()
-        for i, ch in enumerate(cleaned):
-            if ch in "[{":
-                try:
-                    value, _end = decoder.raw_decode(cleaned, i)
-                    return value
-                except json.JSONDecodeError:
-                    continue
-        raise first_exc
+    except json.JSONDecodeError:
+        # Tolerate ONLY trailing content after a complete leading JSON value
+        # (the "Extra data" shape). raw_decode reads the value at the START of
+        # the string and ignores what follows. We deliberately do NOT scan
+        # forward for the first '['/'{' (audit 2026-06-08): a response like
+        # "I could not complete the audit.\n[]" must NOT be silently accepted as
+        # an empty findings list — leading prose means the model did not produce
+        # findings, and accepting it could let a gated plan lock on a non-answer.
+        value, _end = json.JSONDecoder().raw_decode(cleaned)
+        return value
