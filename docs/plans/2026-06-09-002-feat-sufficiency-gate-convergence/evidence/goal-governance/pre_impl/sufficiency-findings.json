@@ -2,76 +2,77 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:5f1225c40f47924e9b21368f9ad3a751480a042d727d6f54770da3b02ab44862",
-  "generated_at": "2026-06-09T21:32:47Z",
+  "input_fingerprint": "sha256:86228c81674c66dc123f23cc8d1ca927a50497d6f3db6943ccfde1b08cc68c51",
+  "generated_at": "2026-06-09T21:42:20Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "finding-disposition",
       "gap_class": "wiring_gap",
-      "description": "The accepted_into_plan disposition semantics conflict with the completion test's no-paid resolution path: F003 keeps accepted findings blocking until the input fingerprint changes, while F005 sends changed fingerprints back through the plain fresh-audit path.",
+      "description": "Materially changed findings can be classified as PERSISTED by F001 because clearance accounting is by finding_id, while F002 only defines convergence behavior for new findings. That leaves invalidated dispositions without a clearly blocking policy path when the same semantic id recurs with a different fingerprint.",
       "feature_refs": [
+        "F001",
+        "F002",
         "F003",
-        "F005"
+        "F006"
       ],
-      "recommendation": "Resolve whether accepted_into_plan is a no-auditor operator disposition or an edit-required state that is excluded from the promised no-paid lock resolution, then pin that behavior in the completion test."
+      "recommendation": "Add explicit changed_prior_ids or materially_changed finding accounting to the ledger and make the policy treat invalidated changed findings as blocking until re-disposition or fresh clearance."
     },
     {
       "severity": "high",
       "journey_id": "finding-disposition",
-      "gap_class": "coverage_gap",
-      "description": "Disposition invalidation only binds description and recommendation content, so a same-id finding can change from medium to high or from implementation_detail to plan_contract without invalidating an old disposition.",
+      "gap_class": "parity_gap",
+      "description": "F006 derives same-cell ordinals by sorting content fingerprints, but insertion, removal, or content edits inside a multi-finding cell can renumber otherwise related findings. That undermines the stable finding_id contract used by clearance accounting, disposition binding, and ledger reconstruction.",
       "feature_refs": [
         "F001",
-        "F002",
+        "F006"
+      ],
+      "recommendation": "Define stable cross-round matching semantics for multi-finding cells, or explicitly make cell-level invalidation replace per-finding stability for those cells and reflect that in F001 clearance accounting."
+    },
+    {
+      "severity": "high",
+      "journey_id": "convergent-lock",
+      "gap_class": "integration_gap",
+      "description": "F001 says the rounds ledger is appended only when the auditor actually runs, while F003 requires legacy override usage to be logged in the rounds ledger. A lock pass using the override may not run the auditor, so the write target and append rules conflict.",
+      "feature_refs": [
+        "F001",
         "F003"
       ],
-      "recommendation": "Include severity and finding class in the bound disposition fingerprint, or add an explicit validity check for those fields, with tests for same-text severity and class changes."
+      "recommendation": "Resolve whether non-auditor events are allowed in the rounds ledger, or move override usage to a separate append-only lock events artifact referenced by the ledger."
     },
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "convergent-lock",
-      "gap_class": "parity_gap",
-      "description": "The proposed eligible class set includes editorial and scope_guard, but the objective contract's convergence rule names only medium or low matrix_pin and implementation_detail findings as disposition-required.",
+      "gap_class": "coverage_gap",
+      "description": "F002 includes advisory findings in the operator_disposition_required branch, but also states advisory findings never hard-block on their own. The plan does not define whether advisory-only rounds proceed, require disposition, or are ignored when mixed with medium or low findings.",
       "feature_refs": [
         "F002",
-        "F004",
+        "F003",
         "F005"
       ],
-      "recommendation": "Have the operator decide whether editorial and scope_guard are intentionally disposition-eligible; update the objective contract and completion tests if yes, or narrow F002/F004 if no."
+      "recommendation": "Add explicit policy rows for advisory-only and advisory-mixed rounds, including whether advisory findings require dispositions during no-auditor resolution."
     },
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "finding-disposition",
       "gap_class": "coverage_gap",
-      "description": "The semantic finding id uses a same-cell ordinal, which can drift when two findings share locator fields and the auditor reorders or inserts a finding, breaking clearance accounting and disposition durability.",
+      "description": "The disposition CLI records against finding ids, but the lock refusal contract only promises to name the policy branch. It does not require surfacing the exact finding ids, fingerprints, classes, and allowed disposition kinds the operator must act on.",
       "feature_refs": [
-        "F001",
         "F003",
-        "F004"
+        "F005"
       ],
-      "recommendation": "Define stable collision handling independent of auditor order, or add explicit matrix locator fields to the finding schema and test reorder plus insertion cases."
+      "recommendation": "Require lock refusals to emit a machine-readable disposition_required list with finding_id, fingerprint, class, severity, allowed disposition kinds, and required reason or follow-up fields."
     },
     {
       "severity": "medium",
       "journey_id": "convergent-lock",
       "gap_class": "coverage_gap",
-      "description": "The F002 exhaustive policy matrix omits advisory even though the existing sufficiency severity vocabulary accepts advisory alongside low, medium, high, and critical.",
+      "description": "The convergence policy says it can proceed, but the acceptance criteria do not explicitly cover the case where the latest round fully clears prior findings and produces zero current findings. That is the cleanest successful convergence case and should be pinned.",
       "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Add advisory to the severity x class matrix and pin whether advisory plan_contract findings block, require waiver, or proceed."
-    },
-    {
-      "severity": "medium",
-      "journey_id": "finding-disposition",
-      "gap_class": "integration_gap",
-      "description": "The plan does not define how the existing --ignore-sufficiency-findings override and override.json interact with the new per-finding disposition artifact and policy-driven lock path.",
-      "feature_refs": [
-        "F003",
+        "F002",
         "F005"
       ],
-      "recommendation": "Specify whether the legacy override is deprecated, mapped to waived_with_reason for current findings, or allowed as a separate explicit bypass, and test the interaction."
+      "recommendation": "Add a zero-finding latest-round branch that proceeds without disposition or paid calls, and test it through both the pure policy and plan lock path."
     }
   ]
 }

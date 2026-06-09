@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "Two paid sufficiency rounds found 12 real findings, all addressed in acceptance text and decisions D004-D007. Further relock would continue the convergence pattern this plan is designed to govern. Proceeding via D002/D007 recorded override; implementation must prove conservative fallback, strict invalidation, zero-auditor disposition lock path, and legacy override precedence through tests.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-09T21:42:20Z",
+  "plan_id": "2026-06-09-002-feat-sufficiency-gate-convergence",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:8a76d4423d75685dcdb003aa0e19703a53067d68fd13150478b1cd1bb346fb4c",
+  "objective_contract_hash": "sha256:99bd1d5999b55da057a4abb64053ddf3fbdd6b218d4ef02221afec67c47b0716",
+  "sufficiency_findings_hash": "sha256:ad96fda35a255e9e931f59e84945e06633e4a90e109a8ed4e4a26a7c1618fc51"
+}
