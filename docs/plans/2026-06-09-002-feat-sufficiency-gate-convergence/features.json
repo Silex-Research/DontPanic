@@ -22,8 +22,8 @@
     {
       "id": "F002",
       "category": "functional",
-      "description": "Convergence policy: a pure, deterministic function over the rounds ledger that decides whether the just-completed round hard-blocks, requires operator disposition, or proceeds — full clearance with only medium/low pin-class findings demands disposition instead of another paid hard block.",
-      "acceptance": "a pure, deterministic policy function consumes the rounds ledger plus recorded dispositions and returns the gate behavior for the latest round: (a) when the round FULLY CLEARED all prior findings AND every new finding is severity medium or low AND every new finding is classed in the DISPOSITION-ELIGIBLE set {matrix_pin, implementation_detail, editorial, scope_guard}, the gate returns operator_disposition_required — the lock refuses but explicitly demands per-finding disposition (F003) rather than implying another tighten-and-paid-relock round; (b) any new high-or-critical-severity finding keeps the plain hard block; (c) any new plan_contract finding keeps the hard block, and plan_contract is neutralizable ONLY by waived_with_reason or by genuinely clearing through a plan edit — no other disposition kind bypasses it; (d) a first round with no ledger history defers to the plain gate unchanged. The verdict mapping is EXHAUSTIVE over severity x class: every combination of severity (critical/high/medium/low) and class (all five enum values, plus the unclassified->plan_contract fallback) has a defined verdict, and a test enumerates the full matrix. NO-AUDITOR RESOLUTION PATH: when the latest round's verdict was operator_disposition_required and recorded dispositions now cover every blocking finding of that round AND the plan input_fingerprint is unchanged, dontpanic plan lock proceeds by re-evaluating the EXISTING ledger and dispositions with ZERO auditor invocations — no new paid call, no new auditor round appended; a test asserts the auditor is never invoked on this path. The policy is wired into the dontpanic plan lock path and the refusal output NAMES which policy branch fired and why. The function performs no I/O beyond its arguments (no network, no filesystem, no paid calls). Tests pin all branches and assert the policy function is pure (same inputs -> same verdict).",
+      "description": "Convergence policy: a pure, deterministic function over the rounds ledger plus recorded dispositions that decides whether the latest round hard-blocks, requires operator disposition, or proceeds — exhaustive over severity x class; full clearance with only medium/low disposition-eligible-class findings demands disposition instead of another paid hard block.",
+      "acceptance": "a pure, deterministic policy function consumes the rounds ledger plus recorded dispositions and returns the verdict for the latest round: (a) when the round FULLY CLEARED all prior findings AND every new finding is severity medium or low AND every new finding is classed in the DISPOSITION-ELIGIBLE set {matrix_pin, implementation_detail, editorial, scope_guard}, the verdict is operator_disposition_required — demanding per-finding disposition (F003) rather than another tighten-and-paid-relock round; (b) any new high-or-critical-severity finding keeps the plain hard block; (c) any new plan_contract finding keeps the hard block, and plan_contract is neutralizable ONLY by an explicit waiver disposition recorded with a reason (F003) or by genuinely clearing through a plan edit — no other disposition kind bypasses it; (d) a first round with no ledger history defers to the plain gate unchanged. The verdict mapping is EXHAUSTIVE over severity x class: every combination of severity (critical/high/medium/low) and class (all five enum values, plus the unclassified->plan_contract fallback) has a defined verdict, and a test enumerates the full matrix. The function performs no I/O beyond its arguments (no network, no filesystem, no paid calls) and is pure (same inputs -> same verdict); tests pin all four branches.",
       "passes": false,
       "introduces": [
         "convergence_policy",
@@ -53,6 +53,16 @@
       "passes": false,
       "introduces": [
         "convergence_fixtures"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Lock-path wiring: the F002 convergence policy drives dontpanic plan lock — refusals name the policy branch that fired, and a disposition-resolution pass covering the latest round's blocking findings with an unchanged input_fingerprint proceeds with zero auditor invocations.",
+      "acceptance": "dontpanic plan lock evaluates the F002 policy verdict for the latest round, and its refusal output NAMES which policy branch fired and why. The no_auditor_resolution path is wired: when the latest round's verdict was operator_disposition_required and recorded dispositions (F003) now cover every blocking finding of that round AND the plan input_fingerprint is unchanged, the lock proceeds by re-evaluating the EXISTING ledger and dispositions with ZERO auditor invocations — no new paid call and no new auditor round appended; if the input_fingerprint HAS changed since that round, the plain gate (fresh audit) applies instead of the resolution path. Tests drive the lock path end-to-end: refusal branch naming, the zero-auditor disposition-resolution pass (asserting the auditor is never invoked), and the changed-fingerprint fallback to the plain gate.",
+      "passes": false,
+      "introduces": [
+        "no_auditor_resolution"
       ]
     }
   ]

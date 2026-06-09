@@ -49,19 +49,26 @@ build the convergence rule first, then return to C0 under it.
   enum: plan_contract / implementation_detail / editorial / scope_guard /
   matrix_pin) to an append-only rounds ledger in plan evidence.
 - **F002** — convergence policy: a pure, deterministic function over the rounds
-  ledger. Full clearance + all new findings medium/low and classed
-  matrix_pin/implementation_detail → operator_disposition_required (no further
-  paid hard block). Any new high severity → keep blocking. Any new
-  plan_contract finding → keep blocking unless explicitly waived.
+  ledger + recorded dispositions, exhaustive over severity × class. Full
+  clearance + all new findings medium/low and classed in the eligible set
+  {matrix_pin, implementation_detail, editorial, scope_guard} →
+  operator_disposition_required (no further paid hard block). Any new
+  high/critical → keep blocking. plan_contract → keep blocking; neutralizable
+  only by an explicit waiver-with-reason disposition or a clearing plan edit.
 - **F003** — disposition artifact: per-finding operator dispositions
   (accepted_into_plan / deferred_to_impl / waived_with_reason /
   split_to_followup_plan) recorded durably via a CLI surface, honored by the
   lock path, mirrored into decisions.jsonl, and invalidated if the finding
   recurs materially changed.
-- **F004** — dogfood: replay the six committed C0 rounds as offline fixtures;
+- **F004** — dogfood: replay the six committed C0 rounds as offline fixtures
+  (explicit retrospective class annotations + a fallback companion test);
   assert ledger reconstruction, full-clearance detection, per-round policy
-  verdicts, and that round 6's three medium pin-class findings are
+  verdicts, and that round 6's three medium eligible-class findings are
   disposition-eligible while its high finding keeps the block. Zero paid calls.
+- **F005** — lock-path wiring: refusals name the policy branch that fired; the
+  no-auditor resolution path (dispositions cover the latest round + unchanged
+  input fingerprint) proceeds with zero paid calls; a changed fingerprint
+  falls back to the plain gate with a fresh audit.
 
 ## Non-goals
 
