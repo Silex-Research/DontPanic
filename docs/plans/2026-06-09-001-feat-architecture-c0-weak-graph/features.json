@@ -11,7 +11,12 @@
       "introduces": [
         "project_detector",
         "ProjectProfile",
-        "scan_truncated"
+        "scan_truncated",
+        "package_managers",
+        "build_systems",
+        "test_frameworks",
+        "app_frameworks",
+        "docs_adr"
       ]
     },
     {
