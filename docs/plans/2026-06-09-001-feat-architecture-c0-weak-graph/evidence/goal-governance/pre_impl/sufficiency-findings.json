@@ -2,56 +2,60 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:1d9f609698592e76cc472e44d1685b6a495d570ca7835053a57d362b7698f91a",
-  "generated_at": "2026-06-09T20:18:00Z",
+  "input_fingerprint": "sha256:b1d2887854e3fc56516dfda6655d1e173d1f89c498926d3060687c3f89051886",
+  "generated_at": "2026-06-09T20:30:09Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "honest-coverage",
-      "gap_class": "coverage_gap",
-      "description": "Per-evidence-type aggregation is not pinned when multiple detected languages map into the single code evidence key. A Python+Swift repo could produce covered for Python and missing_extractor or heuristic-low for Swift, but the proposed plan does not explicitly define whether code becomes partial, missing_extractor, or another status in the final coverage block.",
-      "feature_refs": [
-        "F004",
-        "F005"
-      ],
-      "recommendation": "Define a deterministic per-evidence-type status lattice, especially for code across mixed parser-backed and heuristic-only languages, and assert Python+Swift yields an honest partial/low-confidence code entry."
-    },
-    {
-      "severity": "medium",
       "journey_id": "weak-graph-any-repo",
       "gap_class": "coverage_gap",
-      "description": "The unified source_kind taxonomy introduces filesystem as a coverage key, but the detection-class mapping has no source class that maps to filesystem and no explicit rule saying the repo-root tier-0 inventory satisfies filesystem coverage. Empty or minimal repos could therefore show a root node while filesystem coverage is ambiguous or not_found.",
+      "description": "F003 leaves the tier-1 heuristic language set as vague 'common languages', while F004 explicitly allows the low-confidence note to appear even when no heuristic import edges are produced. That means Swift/Kotlin or other intended common languages could end up with only filesystem nodes and still appear to satisfy the plan, missing the requested weak dependency baseline.",
       "feature_refs": [
         "F003",
         "F004",
         "F005"
       ],
-      "recommendation": "Pin filesystem coverage as always evaluated from tier-0 inventory construction, with the repo-root node satisfying it at tier 0 even when no detector classes are found."
+      "recommendation": "Pin the C0 heuristic extractor matrix, including whether Swift and Kotlin are covered, and add fixture imports that prove low-confidence unresolved or resolved heuristic edges reach build_view_state."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-coverage",
+      "gap_class": "coverage_gap",
+      "description": "F004 pins detailed coverage rules for overall, code, filesystem, and runtime, but does not fully pin satisfaction rules for manifest, build, test, config, infra, doc, and adr evidence types. The mapping is total, but the status, tier, confidence ceiling, and truncation behavior for those non-code evidence entries remain under-specified.",
+      "feature_refs": [
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Define deterministic status rules for every evidence_type: detected tier-0 evidence should report a specific covered or partial status, confidence, and tier, absent evidence should report not_found, and truncation effects should be explicit."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "parity_gap",
+      "description": "The objective requires the baseline to be pure, deterministic, and bounded, but F003 only explicitly pins determinism and bounded scanning. Unlike F001 and F002, it does not state or test that baseline construction performs no network access, no mutation, and no cache/state writes.",
+      "feature_refs": [
+        "F003",
+        "F005"
+      ],
+      "recommendation": "Add F003 acceptance language and tests proving identical inputs produce identical baseline output without filesystem mutation, network access, or hidden state dependencies."
     },
     {
       "severity": "medium",
       "journey_id": "honest-coverage",
       "gap_class": "integration_gap",
-      "description": "Detector truncation and graph-builder truncation are specified separately, but there is no single propagation rule that any limit hit from either phase must demote coverage and appear in the final build_view_state payload. Divergent caps could leave a partial profile or graph looking complete.",
+      "description": "F005's empty_repo acceptance conflates mutually exclusive cases by saying the empty repo should assert Python/JS imports remain covered/high while Swift/Kotlin imports are heuristic-low. An empty repo should have no detected languages, so this ambiguity can either create impossible tests or hide missing fixture assertions.",
       "feature_refs": [
-        "F001",
-        "F003",
-        "F004",
         "F005"
       ],
-      "recommendation": "Define one final limit-hit model that merges detector and graph truncation signals, demotes otherwise-covered results to partial, and is asserted through the final render payload."
+      "recommendation": "Split the fixture assertions: empty_repo should only pin root inventory and limited coverage, while separate Python, JS/TS, Swift/Kotlin, and mixed fixtures should pin language-specific import confidence."
     },
     {
       "severity": "medium",
-      "journey_id": "weak-graph-any-repo",
-      "gap_class": "coverage_gap",
-      "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed acceptance mostly asserts low confidence on dependency edges. That can pass without an operator-facing note, and languages with no heuristic imports may still lack a clear explanation of why dependency extraction is weak.",
-      "feature_refs": [
-        "F003",
-        "F004",
-        "F005"
-      ],
-      "recommendation": "Add a concrete coverage payload field for dependency confidence notes per language, and test Swift/Kotlin plus an unextracted language with no imports to ensure the note survives build_view_state."
+      "journey_id": "honest-coverage",
+      "gap_class": "missing_feature",
+      "description": "The proposed scope guard only prevents UI expansion, but the objective also forbids new parser-backed extractors in C0. Without a plan-level guard, implementation could satisfy coverage by silently adding tier-2 support for unsupported languages, crossing into C+.",
+      "feature_refs": [],
+      "recommendation": "Add a non-goal enforcement check that C0 registers only pre-existing parser extractors and that newly detected unsupported languages remain tier-0/tier-1 with missing_extractor status."
     }
   ]
 }
