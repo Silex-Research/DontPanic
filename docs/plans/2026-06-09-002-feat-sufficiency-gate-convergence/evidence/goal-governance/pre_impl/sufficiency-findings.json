@@ -2,73 +2,76 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:5127f2692cfc4203d9ef5318b0c13a09a682436a566f343412b615d6839dd877",
-  "generated_at": "2026-06-09T21:19:26Z",
+  "input_fingerprint": "sha256:5f1225c40f47924e9b21368f9ad3a751480a042d727d6f54770da3b02ab44862",
+  "generated_at": "2026-06-09T21:32:47Z",
   "findings": [
     {
-      "severity": "critical",
-      "journey_id": "convergent-lock",
+      "severity": "high",
+      "journey_id": "finding-disposition",
       "gap_class": "wiring_gap",
-      "description": "The features do not explicitly define a no-auditor lock path after operator dispositions are recorded. F001 says every pre-impl lock run appends a new sufficiency round, while F002 evaluates the just-completed round, which implies another auditor invocation instead of reusing the latest ledger entry as required by the completion test.",
+      "description": "The accepted_into_plan disposition semantics conflict with the completion test's no-paid resolution path: F003 keeps accepted findings blocking until the input fingerprint changes, while F005 sends changed fingerprints back through the plain fresh-audit path.",
       "feature_refs": [
-        "F001",
-        "F002",
-        "F003"
+        "F003",
+        "F005"
       ],
-      "recommendation": "Add a pre-auditor lock branch that evaluates the latest committed round plus recorded dispositions and permits the lock when all current blocking findings are disposed, without appending a new round or invoking the auditor."
+      "recommendation": "Resolve whether accepted_into_plan is a no-auditor operator disposition or an edit-required state that is excluded from the promised no-paid lock resolution, then pin that behavior in the completion test."
     },
     {
       "severity": "high",
       "journey_id": "finding-disposition",
-      "gap_class": "integration_gap",
-      "description": "F001 and F003 define incompatible identity semantics for changed findings. F001 requires content-derived finding ids where materially changed content gets a new id, but F003 says a disposition is invalidated when the same finding id recurs with a materially changed content fingerprint, which cannot happen under a strictly content-derived id.",
+      "gap_class": "coverage_gap",
+      "description": "Disposition invalidation only binds description and recommendation content, so a same-id finding can change from medium to high or from implementation_detail to plan_contract without invalidating an old disposition.",
       "feature_refs": [
         "F001",
-        "F003"
-      ],
-      "recommendation": "Separate a stable logical finding key from a content/version fingerprint, then invalidate dispositions when the logical key recurs with a different material content fingerprint."
-    },
-    {
-      "severity": "high",
-      "journey_id": "convergent-lock",
-      "gap_class": "integration_gap",
-      "description": "The plan_contract waiver rule is weakened by the generic disposition handling. F002 says new conceptual plan_contract findings block unless explicitly waived, but F003 says deferred_to_impl and split_to_followup_plan suppress blocks generally, which would allow non-waiver dispositions to bypass plan_contract findings.",
-      "feature_refs": [
         "F002",
         "F003"
       ],
-      "recommendation": "Constrain plan_contract suppression to waived_with_reason unless the contract is intentionally expanded to allow a named alternate disposition for that class."
+      "recommendation": "Include severity and finding class in the bound disposition fingerprint, or add an explicit validity check for those fields, with tests for same-text severity and class changes."
     },
     {
       "severity": "high",
       "journey_id": "convergent-lock",
       "gap_class": "parity_gap",
-      "description": "The C0 replay fixture depends on historical findings being classed as matrix_pin or implementation_detail, but F001 conservatively falls back missing classes to plan_contract. If the committed C0 evidence predates the new class field, F004 cannot both replay real evidence and recognize round-6 medium pin findings as disposition-eligible.",
+      "description": "The proposed eligible class set includes editorial and scope_guard, but the objective contract's convergence rule names only medium or low matrix_pin and implementation_detail findings as disposition-required.",
+      "feature_refs": [
+        "F002",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Have the operator decide whether editorial and scope_guard are intentionally disposition-eligible; update the objective contract and completion tests if yes, or narrow F002/F004 if no."
+    },
+    {
+      "severity": "high",
+      "journey_id": "finding-disposition",
+      "gap_class": "coverage_gap",
+      "description": "The semantic finding id uses a same-cell ordinal, which can drift when two findings share locator fields and the auditor reorders or inserts a finding, breaking clearance accounting and disposition durability.",
       "feature_refs": [
         "F001",
+        "F003",
         "F004"
       ],
-      "recommendation": "Specify an offline fixture classification artifact or migration rule for historical C0 findings, and make tests prove the fallback is not accidentally applied to the fixture labels."
+      "recommendation": "Define stable collision handling independent of auditor order, or add explicit matrix locator fields to the finding schema and test reorder plus insertion cases."
     },
     {
       "severity": "medium",
       "journey_id": "convergent-lock",
       "gap_class": "coverage_gap",
-      "description": "The convergence policy is not exhaustive over the closed finding class enum. It covers high severity, plan_contract, and the eligible matrix_pin or implementation_detail classes, but does not state the verdict for medium or low editorial and scope_guard findings.",
+      "description": "The F002 exhaustive policy matrix omits advisory even though the existing sufficiency severity vocabulary accepts advisory alongside low, medium, high, and critical.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Define the default verdict for every non-eligible class, preferably an explicit hard_block branch with the class and severity named in the refusal output."
+      "recommendation": "Add advisory to the severity x class matrix and pin whether advisory plan_contract findings block, require waiver, or proceed."
     },
     {
       "severity": "medium",
       "journey_id": "finding-disposition",
-      "gap_class": "coverage_gap",
-      "description": "accepted_into_plan is underspecified for lock authorization. F003 says it expects the plan artifact to change, but does not require or test a plan/input fingerprint change before treating the disposition as non-blocking, so a lock could pass without evidence that the finding was actually accepted into the plan.",
+      "gap_class": "integration_gap",
+      "description": "The plan does not define how the existing --ignore-sufficiency-findings override and override.json interact with the new per-finding disposition artifact and policy-driven lock path.",
       "feature_refs": [
-        "F003"
+        "F003",
+        "F005"
       ],
-      "recommendation": "Require accepted_into_plan dispositions to reference a changed plan/input fingerprint or clarify that accepted_into_plan is only a pending state until the artifact changes."
+      "recommendation": "Specify whether the legacy override is deprecated, mapped to waived_with_reason for current findings, or allowed as a separate explicit bypass, and test the interaction."
     }
   ]
 }
