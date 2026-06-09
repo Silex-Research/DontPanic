@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-06-09-001-feat-architecture-c0-weak-graph",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Project detector: from a repo root produce a deterministic ProjectProfile of languages, package managers, build systems, test frameworks, app frameworks, docs/ADR presence, and infra/config surfaces. Pure, no network, graceful on an empty or unknown repo.",
+      "acceptance": "a pure detector scans a repo root and returns a ProjectProfile listing detected languages, package managers, build systems, test frameworks, app frameworks, docs/ADR presence, and infra/config surfaces; it is deterministic (same repo -> same profile), performs no network or mutation, and degrades to an empty-but-valid profile on an unknown or empty repo.",
+      "passes": false,
+      "introduces": [
+        "project_detector",
+        "ProjectProfile"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Extractor registry mapping evidence-kind/language to an extractor and its availability, tier-aware (tier 0 filesystem / tier 1 heuristic / tier 2 parser / tier 3 build-runtime), so the system can list available vs missing extractors for a given ProjectProfile.",
+      "acceptance": "a registry resolves, for a given ProjectProfile, which extractors are available and which are missing per evidence-kind/language, each tagged with its tier (0 filesystem, 1 heuristic, 2 parser, 3 build/runtime); a detected language with no parser-backed extractor is reported as having a missing higher-tier extractor while still being served by the tier-0/tier-1 ones.",
+      "passes": false,
+      "introduces": [
+        "extractor_registry",
+        "extractor_tier"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Tier-0 inventory graph (dirs, package/build/config manifests, test dirs, docs/ADRs; low/medium confidence) for ANY repo, plus Tier-1 heuristic import-pattern edges for common languages emitted low-confidence/unresolved unless a relative target resolves; contract-stamped, deterministic, bounded, never dropped.",
+      "acceptance": "build produces a baseline graph for any repo: tier-0 nodes for directories, package/build/config manifests, test dirs and docs/ADRs (contract-stamped, low or medium confidence), and tier-1 heuristic dependency edges for common languages that are low-confidence unresolved endpoints unless a relative target resolves; the scan is deterministic and bounded and never silently drops an edge.",
+      "passes": false,
+      "introduces": [
+        "inventory_graph",
+        "heuristic_import_edge"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Tiered coverage block: overall rollup (limited/partial/covered) + per-language status (covered/missing_extractor/not_found) + per-evidence-type status (filesystem/package_manifest/imports/runtime/adr), with honest confidence ceilings, computed on project registration and inside build_view_state.",
+      "acceptance": "build_view_state emits a coverage block with an overall rollup, a per-language map (covered / missing_extractor / not_found) and a per-evidence-type map (filesystem / package_manifest / imports / runtime / adr); a repo with an unextracted language still shows its filesystem/package graph AND a clear low-confidence dependency note, and runtime/adr absent reads not_found rather than covered.",
+      "passes": false,
+      "introduces": [
+        "architecture_coverage",
+        "evidence_kind_status",
+        "missing_extractor",
+        "not_found",
+        "package_manifest"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Fixture-repo tests across Python, JS/TS, and Swift/Kotlin asserting the weak baseline renders for each, imports are heuristic-low for unextracted languages while filesystem/package coverage is present, and the coverage block flags the missing Swift/Kotlin extractor without suppressing the tier-0 graph.",
+      "acceptance": "tests build the baseline over Python, JS/TS, and Swift/Kotlin fixture repos and assert each yields a non-empty tier-0 graph; for Swift/Kotlin the coverage block reports a missing parser extractor and dependency confidence low while still presenting filesystem/package nodes; for Python/JS the existing parser-backed coverage is preserved (no regression).",
+      "passes": false
+    }
+  ]
+}
