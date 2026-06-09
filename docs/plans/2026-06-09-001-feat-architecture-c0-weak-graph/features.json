@@ -46,7 +46,8 @@
         "evidence_kind_status",
         "missing_extractor",
         "not_found",
-        "package_manifest"
+        "package_manifest",
+        "evidence_type"
       ]
     },
     {
@@ -54,7 +55,10 @@
       "category": "functional",
       "description": "Fixture-repo tests across Python, JS/TS, and Swift/Kotlin asserting the weak baseline renders for each, imports are heuristic-low for unextracted languages while filesystem/package coverage is present, and the coverage block flags the missing Swift/Kotlin extractor without suppressing the tier-0 graph.",
       "acceptance": "tests build the baseline over Python, JS/TS, and Swift/Kotlin fixture repos and assert each yields a non-empty tier-0 graph; for Swift/Kotlin the coverage block reports a missing parser extractor and dependency confidence low while still presenting filesystem/package nodes; for Python/JS the existing parser-backed coverage is preserved (no regression). Includes an empty_repo case asserting a non-empty tier-0 graph (repo-root node) with overall coverage 'limited', and asserts Python/JS imports remain covered/high (not downgraded) while Swift/Kotlin imports are heuristic-low.",
-      "passes": false
+      "passes": false,
+      "introduces": [
+        "empty_repo"
+      ]
     }
   ]
 }
