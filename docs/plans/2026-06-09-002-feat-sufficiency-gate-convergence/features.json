@@ -1,0 +1,59 @@
+{
+  "task_id": "2026-06-09-002-feat-sufficiency-gate-convergence",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Sufficiency round tracking: every pre-impl lock run appends a durable round record to an append-only rounds ledger in plan evidence, with stable content-derived finding ids, prior-id clearance accounting, new-finding severities, and a closed per-finding class enum.",
+      "acceptance": "each pre-impl sufficiency lock run appends a round record to an append-only rounds ledger stored beside sufficiency-findings.json in the plan's evidence directory; the record carries the round number, the input_fingerprint, the total finding count, a STABLE id per finding (content-derived so an unchanged finding keeps its id across regenerations and a materially changed finding gets a new one), which prior-round finding ids CLEARED vs PERSISTED, each new finding's severity, and each finding's class from a CLOSED enum (plan_contract / implementation_detail / editorial / scope_guard / matrix_pin). The auditor emits the class per finding via the findings schema; a missing or invalid class falls back CONSERVATIVELY to plan_contract, never silently to a disposition-eligible class. The ledger is append-only and fully reconstructable from committed evidence. Tests assert id stability across an unchanged-finding regeneration, id change on material content change, clearance accounting against a prior round, and the conservative class fallback.",
+      "passes": false,
+      "introduces": [
+        "rounds_ledger",
+        "finding_id",
+        "finding_class",
+        "plan_contract",
+        "implementation_detail",
+        "editorial",
+        "scope_guard",
+        "matrix_pin"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Convergence policy: a pure, deterministic function over the rounds ledger that decides whether the just-completed round hard-blocks, requires operator disposition, or proceeds — full clearance with only medium/low pin-class findings demands disposition instead of another paid hard block.",
+      "acceptance": "a pure, deterministic policy function consumes the rounds ledger and returns the gate behavior for the just-completed round: (a) when the round FULLY CLEARED all prior findings AND every new finding is severity medium or low AND every new finding is classed matrix_pin or implementation_detail, the gate returns operator_disposition_required — the lock refuses but explicitly demands per-finding disposition (F003) rather than implying another tighten-and-paid-relock round; (b) any new high-severity finding keeps the plain hard block; (c) any new plan_contract finding keeps the hard block unless that finding is explicitly waived via disposition; (d) a first round with no ledger history defers to the plain gate unchanged. The policy is wired into the dontpanic plan lock path and the refusal output NAMES which policy branch fired and why. The function performs no I/O beyond its ledger argument (no network, no filesystem, no paid calls). Tests pin all four branches and assert the policy function is pure (same ledger -> same verdict).",
+      "passes": false,
+      "introduces": [
+        "convergence_policy",
+        "operator_disposition_required",
+        "full_clearance"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Disposition artifact: durable per-finding operator dispositions (accepted_into_plan / deferred_to_impl / waived_with_reason / split_to_followup_plan) recorded via a CLI surface, honored by the lock path, mirrored to decisions.jsonl, and invalidated when a disposed finding recurs materially changed.",
+      "acceptance": "per-finding operator dispositions are recorded durably in plan evidence, each one of accepted_into_plan / deferred_to_impl / waived_with_reason / split_to_followup_plan; waived_with_reason REQUIRES a non-empty reason and split_to_followup_plan REQUIRES a follow-up plan reference. A CLI surface records dispositions against finding ids (no hand-editing of evidence files); each recorded disposition is mirrored into the plan's decisions.jsonl for the audit trail. The lock path treats a disposed finding as non-blocking: accepted_into_plan expects the plan artifact to change (the finding clears naturally next regeneration), while deferred_to_impl / waived_with_reason / split_to_followup_plan suppress the block without a plan edit. A disposition is INVALIDATED when the same finding id recurs with a materially changed content fingerprint — the finding re-surfaces as blocking. Tests cover each disposition kind end-to-end through the lock path, the invalidation-on-change case, the missing-reason and missing-followup-ref refusals, and that an undisposed blocking finding still refuses the lock.",
+      "passes": false,
+      "introduces": [
+        "finding_disposition",
+        "accepted_into_plan",
+        "deferred_to_impl",
+        "waived_with_reason",
+        "split_to_followup_plan"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Dogfood against the six committed C0 rounds: replay plan 2026-06-09-001's real finding sequences as offline fixtures, asserting ledger reconstruction, full-clearance detection, per-round policy verdicts, and round-6 disposition eligibility — with zero paid auditor calls.",
+      "acceptance": "the six committed C0 sufficiency rounds (plan 2026-06-09-001, finding counts 3 -> 2 -> 4 -> 3 -> 4 -> 5, recoverable from the plan's git evidence history) are replayed as OFFLINE fixtures: tests reconstruct a rounds ledger from the real finding sequences, assert FULL CLEARANCE is detected at every round boundary (each round cleared 100% of the prior round's findings), and assert the policy verdict per round — every C0 round that introduced a high-severity or plan_contract-class finding verdicts as a hard block, and round 6's three medium pin-class findings (F003 purity parity, F005 empty-repo wording, missing no-new-parser-extractors scope guard) are recognized as disposition-eligible while round 6's high tier-1 language-set finding keeps the overall block. The fixture suite makes ZERO live auditor invocations and asserts that guarantee explicitly (no paid calls under any test path).",
+      "passes": false,
+      "introduces": [
+        "convergence_fixtures"
+      ]
+    }
+  ]
+}
