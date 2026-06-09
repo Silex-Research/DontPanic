@@ -56,11 +56,15 @@ Python+JS to a registry-driven, language-agnostic substrate.
   for common languages emitted as low-confidence unresolved unless a relative target
   resolves. Contract-stamped; never drops; deterministic + bounded.
 - **F004** — tiered coverage block: emit an architecture coverage object with an
-  overall rollup (limited / partial / covered), per-language status (covered /
-  missing_extractor / not_found) and per-evidence-type status (filesystem /
-  package_manifest / imports / runtime / adr), with confidence ceilings that stay
-  honest — an unextracted language shows its file/config graph AND a clear
-  low-confidence note. Computed on project registration and inside build_view_state.
+  overall rollup (limited / partial / covered; deterministic pinned rules),
+  per-language status (covered / missing_extractor / not_found) and
+  per-evidence-type status keyed by ONE taxonomy unified with the architecture
+  contract's source_kind enum (filesystem / code / manifest / build / test /
+  config / infra / doc / adr / runtime) — every ProjectProfile detection class
+  maps deterministically (and tested-totally) into it — with confidence ceilings
+  that stay honest: an unextracted language shows its file/config graph AND a
+  clear low-confidence note. Computed on project registration and inside
+  build_view_state.
 - **F005** — fixture-repo tests across Python, JS/TS, and Swift/Kotlin: assert the
   weak baseline renders for each, that imports are heuristic-low for the unextracted
   languages while filesystem/package coverage is present, and that the coverage block
