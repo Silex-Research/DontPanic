@@ -2,51 +2,56 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:9c3eddf90cf15d4b9ded8bd0364abc72d521ff45a5df705d75b14cb5f3222736",
-  "generated_at": "2026-06-09T20:13:22Z",
+  "input_fingerprint": "sha256:1d9f609698592e76cc472e44d1685b6a495d570ca7835053a57d362b7698f91a",
+  "generated_at": "2026-06-09T20:18:00Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "honest-coverage",
       "gap_class": "coverage_gap",
-      "description": "The proposed ProjectProfile keeps docs and ADRs bundled as a single docs_adr detection class while F004 requires each detected class to map into exactly one unified source_kind, yet also says docs_adr maps to doc/adr. That is not a total one-to-one mapping and can make ADR coverage invisible or ambiguously folded into generic docs.",
+      "description": "Per-evidence-type aggregation is not pinned when multiple detected languages map into the single code evidence key. A Python+Swift repo could produce covered for Python and missing_extractor or heuristic-low for Swift, but the proposed plan does not explicitly define whether code becomes partial, missing_extractor, or another status in the final coverage block.",
       "feature_refs": [
-        "F001",
-        "F004"
+        "F004",
+        "F005"
       ],
-      "recommendation": "Split docs and adr into separate detection classes, or make each docs_adr detection item carry an explicit source_kind so the exported mapping remains total and deterministic."
+      "recommendation": "Define a deterministic per-evidence-type status lattice, especially for code across mixed parser-backed and heuristic-only languages, and assert Python+Swift yields an honest partial/low-confidence code entry."
     },
     {
       "severity": "medium",
       "journey_id": "weak-graph-any-repo",
-      "gap_class": "wiring_gap",
-      "description": "F001 detects infra/config surfaces and F004 reports infra/config coverage, but F003 only guarantees graph nodes for directories, package/build/config manifests, test dirs, docs, and ADRs. Infra can therefore be detected and covered without being represented in the filesystem/config graph the operator sees.",
-      "feature_refs": [
-        "F001",
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Extend the tier-0 inventory graph acceptance to require detected infra surfaces, such as Docker, Terraform, Kubernetes, and CI files, to appear as source_kind=infra nodes in the final build_view_state payload."
-    },
-    {
-      "severity": "medium",
-      "journey_id": "honest-coverage",
-      "gap_class": "integration_gap",
-      "description": "F003 requires heuristic import edges for common languages, while F004/F005 require Python and JS parser-backed imports to remain covered/high. The merge precedence is not specified, so parser-backed repos could still render duplicate low-confidence heuristic edges and look less certain than the preserved parser result.",
+      "gap_class": "coverage_gap",
+      "description": "The unified source_kind taxonomy introduces filesystem as a coverage key, but the detection-class mapping has no source class that maps to filesystem and no explicit rule saying the repo-root tier-0 inventory satisfies filesystem coverage. Empty or minimal repos could therefore show a root node while filesystem coverage is ambiguous or not_found.",
       "feature_refs": [
         "F003",
         "F004",
         "F005"
       ],
-      "recommendation": "Pin the graph merge rule: parser-backed tier-2 edges supersede same-source heuristic edges for that language, and heuristic import extraction only fills gaps where parser coverage is unavailable or unresolved."
+      "recommendation": "Pin filesystem coverage as always evaluated from tier-0 inventory construction, with the repo-root node satisfying it at tier 0 even when no detector classes are found."
     },
     {
-      "severity": "advisory",
+      "severity": "medium",
       "journey_id": "honest-coverage",
-      "gap_class": "missing_feature",
-      "description": "The objective explicitly excludes a UI overhaul, but the proposed features do not include a negative acceptance guard that the new coverage block is surfaced through the existing display path only. That leaves room for scope creep into Plan D while implementing C0.",
-      "feature_refs": [],
-      "recommendation": "Add a non-goal guard or snapshot assertion that C0 only adds the coverage data/render payload expected by the existing coverage display and does not introduce broader UI restructuring."
+      "gap_class": "integration_gap",
+      "description": "Detector truncation and graph-builder truncation are specified separately, but there is no single propagation rule that any limit hit from either phase must demote coverage and appear in the final build_view_state payload. Divergent caps could leave a partial profile or graph looking complete.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Define one final limit-hit model that merges detector and graph truncation signals, demotes otherwise-covered results to partial, and is asserted through the final render payload."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "coverage_gap",
+      "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed acceptance mostly asserts low confidence on dependency edges. That can pass without an operator-facing note, and languages with no heuristic imports may still lack a clear explanation of why dependency extraction is weak.",
+      "feature_refs": [
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Add a concrete coverage payload field for dependency confidence notes per language, and test Swift/Kotlin plus an unextracted language with no imports to ensure the note survives build_view_state."
     }
   ]
 }
