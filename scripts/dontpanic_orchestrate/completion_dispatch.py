@@ -60,6 +60,10 @@ from dontpanic_orchestrate.completion_auditor import (
 )
 from dontpanic_orchestrate.executors import get_executor
 from dontpanic_orchestrate.executors.base import DispatchTask
+from dontpanic_orchestrate.codex_stream import (
+    _RECOGNIZED_CODEX_STREAM_TYPES,
+    extract_codex_streaming_payload as _extract_codex_streaming_payload,
+)
 from dontpanic_orchestrate.sufficiency_auditor import (
     SufficiencyAuditError,
     _is_truthy_env,
@@ -94,22 +98,8 @@ _AUDITOR_NAME_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
 ascii + dash/underscore so we can never write a path-traversal filename."""
 
 
-_RECOGNIZED_CODEX_STREAM_TYPES: frozenset[str] = frozenset(
-    {
-        "thread.started",
-        "turn.started",
-        "turn.completed",
-        "item.started",
-        "item.completed",
-    }
-)
-"""D008(a) shape gate. The codex CLI emits its turn as line-delimited
-JSON; each event has a top-level ``type`` field. This frozenset is the
-positive recognition signal — :func:`_extract_codex_streaming_payload`
-returns ``None`` unless at least one parsed line carries a ``type`` in
-this set. Arbitrary JSONL whose objects happen to be parseable per-line
-but carry no recognized event ``type`` is NOT treated as a codex stream
-(it falls through to the existing raw-JSON path)."""
+# _RECOGNIZED_CODEX_STREAM_TYPES now lives in codex_stream (imported above) so
+# the pre-impl sufficiency path can reuse the SAME shape gate (plan 2026-06-08-006).
 
 _DISPATCH_FEATURE_ID: str = "F002"
 """F2/F002 is the plan-level dispatcher; the dispatched executor task
@@ -353,83 +343,9 @@ def _strip_code_fence(text: str) -> str:
     return stripped
 
 
-def _extract_codex_streaming_payload(response: str) -> str | None:
-    """Conservative codex JSONL streaming-output extractor (Plan F2C-D008).
-
-    Walk ``response`` line-by-line. Track two pieces of state:
-
-    - ``saw_recognized_shape``: flips True the first time a line parses
-      as a JSON object whose ``type`` field is in
-      :data:`_RECOGNIZED_CODEX_STREAM_TYPES`. This is the D008(a)
-      positive recognition gate — without it we would silently
-      misidentify arbitrary line-delimited JSON (or even single-line
-      raw JSON arrays) as codex streams.
-    - ``agent_message_texts``: every ``item.completed`` event whose
-      ``item.type == 'agent_message'`` contributes its non-empty
-      ``item.text`` to this list, in stream order. D008(b) — partial
-      ``item.started`` events without matching completion are ignored;
-      non-``agent_message`` ``item.type`` values (``tool_use``,
-      ``function_call``, ``reasoning``, ``command_execution``, ...)
-      are ignored.
-
-    Lines that fail :func:`json.loads` are skipped (per-line tolerance —
-    a single malformed line MUST NOT abort the scan; partial-write lines
-    have been observed in real codex streams). Lines that parse but are
-    not dicts, or are dicts whose ``type`` is unknown, are skipped.
-
-    Return rules (deterministic):
-
-    1. ``saw_recognized_shape == False`` → ``None``. Input is not a
-       codex stream; caller falls through to existing raw-JSON path.
-    2. Recognized shape seen but ``agent_message_texts`` is empty →
-       ``None``. The stream had codex events but no completion text;
-       caller falls through.
-    3. Otherwise → ``agent_message_texts[-1]``. D008(c) deterministic
-       last-wins ambiguity resolution.
-
-    The return value, when non-None, is always a string that the
-    downstream :func:`_strip_code_fence` + JSON parser can consume.
-    Helper returning ``None`` NEVER short-circuits the pipeline — the
-    raw path runs on the original ``response`` and surfaces an explicit
-    ``dispatch_response_malformed`` envelope status if both fail.
-    NO silent empty result. (D008(d).)"""
-    if not response:
-        return None
-
-    saw_recognized_shape = False
-    agent_message_texts: list[str] = []
-
-    for line in response.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            event = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(event, dict):
-            continue
-        event_type = event.get("type")
-        if event_type not in _RECOGNIZED_CODEX_STREAM_TYPES:
-            continue
-        saw_recognized_shape = True
-        if event_type != "item.completed":
-            continue
-        item = event.get("item")
-        if not isinstance(item, dict):
-            continue
-        if item.get("type") != "agent_message":
-            continue
-        text = item.get("text", "")
-        if not isinstance(text, str) or not text.strip():
-            continue
-        agent_message_texts.append(text)
-
-    if not saw_recognized_shape:
-        return None
-    if not agent_message_texts:
-        return None
-    return agent_message_texts[-1]
+# _extract_codex_streaming_payload now lives in codex_stream and is imported at
+# the top of this module (back-compat alias). The pre-impl sufficiency path
+# reuses the SAME implementation — single source of truth (plan 2026-06-08-006).
 
 
 def _parse_audit_response(

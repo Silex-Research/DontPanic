@@ -3148,6 +3148,49 @@ def _run_pre_lock_design_volley(
         print(f"[plan lock] WARN: design-review volley skipped ({exc!r})")
 
 
+def _ensure_sufficiency_findings(plan_dir) -> None:
+    """Plan 2026-06-08-006 — generate the pre-impl sufficiency findings if the plan
+    is in the gated goal_type set and the artifact is missing. Previously the lock
+    gate REQUIRED ``sufficiency-findings.json`` but no command produced it (F003 had
+    no production caller), so lock dead-ended. This invokes the production
+    cross-vendor sufficiency runner; if no auditor is configured it prints an
+    actionable message and lets the gate's own refusal carry the final word —
+    never a silent dead-end."""
+    import re
+
+    from dontpanic_orchestrate import sufficiency_gate as _sg
+    from dontpanic_orchestrate.sufficiency_auditor import (
+        SufficiencyAuditError,
+        generate_sufficiency_findings,
+    )
+
+    if _sg._findings_path(plan_dir).is_file():
+        return
+    try:
+        text = (plan_dir / "plan.md").read_text(encoding="utf-8")
+    except OSError:
+        return
+    m = re.search(r"^goal_type:\s*([A-Za-z_]+)", text, re.MULTILINE)
+    plan_data = {"goal_type": m.group(1)} if m else {}
+    if not _sg._should_gate_sufficiency(plan_data):
+        return  # non-gated goal_type — the gate is a no-op, no paid call needed
+    print(
+        "[plan lock] pre-impl sufficiency findings missing — generating via the "
+        "cross-vendor auditor (Goal Governance V1 F003)..."
+    )
+    try:
+        findings = generate_sufficiency_findings(plan_dir)
+        print(f"[plan lock] sufficiency audit: generated {len(findings)} finding(s)")
+    except SufficiencyAuditError as exc:
+        print(f"[plan lock] sufficiency audit could not run: {exc}")
+        print(
+            "[plan lock]   configure roles.goal_auditor + a reachable executor, "
+            "then re-run `dontpanic plan lock`."
+        )
+    except Exception as exc:  # noqa: BLE001 — advisory; the gate below still guards
+        print(f"[plan lock] WARN: sufficiency generation failed ({exc!r})")
+
+
 def _plan_lock_main(argv: list[str]) -> int:
     """``dontpanic plan lock`` — canonical lock-time entry point for Goal
     Governance V1 F004. Wraps :func:`sufficiency_gate.lock_plan`."""
@@ -3249,6 +3292,11 @@ def _plan_lock_main(argv: list[str]) -> int:
     # Plan 2026-06-01-001 F005 — opt-in design-review volley (advisory, never
     # blocks the lock). Runs on lint uncertainty OR --design-review.
     _run_pre_lock_design_volley(plan_dir, operator_requested=args.design_review)
+
+    # Plan 2026-06-08-006 — generate the pre-impl sufficiency findings before the
+    # gate checks for them, so a gated plan locks in one command instead of
+    # dead-ending on a required-but-ungenerated artifact.
+    _ensure_sufficiency_findings(plan_dir)
 
     try:
         plan_md = sufficiency_gate.lock_plan(

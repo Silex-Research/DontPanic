@@ -438,9 +438,20 @@ def _parse_sufficiency_response(response: str) -> list[SufficiencyFinding]:
         (severity below the audit envelope enum, unknown gap_class,
         too-short description, etc.).
     """
-    cleaned = _strip_code_fence(response)
+    # Reuse the known-good post-impl Codex parser (plan 2026-06-08-006). The Codex
+    # CLI streams line-delimited JSON events; pull the agent_message payload when the
+    # response is a stream, else use it as-is. Then coerce tolerantly so a valid JSON
+    # value followed by trailing prose (the "Extra data" shape that discarded a paid
+    # Codex response during the 2026-06-08 dogfood) still parses.
+    from dontpanic_orchestrate.codex_stream import (
+        coerce_first_json_value,
+        extract_codex_streaming_payload,
+    )
+
+    stream_payload = extract_codex_streaming_payload(response)
+    source = stream_payload if stream_payload is not None else response
     try:
-        payload = json.loads(cleaned)
+        payload = coerce_first_json_value(source)
     except json.JSONDecodeError as exc:
         raise SufficiencyAuditError(
             f"sufficiency auditor response is not valid JSON: {exc.msg}"
@@ -551,6 +562,59 @@ def run_sufficiency_audit(
     return findings
 
 
+def _production_sufficiency_dispatch(plan_dir: Path):
+    """Build the production dispatch callable that invokes the resolved auditor
+    through the registered executor (plan 2026-06-08-006 — F003 had no production
+    caller; this is the missing wiring the lock gate needed).
+
+    Returns ``dispatch(auditor_agent, prompt) -> raw_response``. Mirrors
+    ``completion_dispatch._production_dispatch`` for the post-impl boundary.
+    """
+    from dontpanic_orchestrate.executors import get_executor
+    from dontpanic_orchestrate.executors.base import DispatchTask
+
+    def dispatch(auditor_agent: str, prompt: str) -> str:
+        executor = get_executor(auditor_agent)
+        if not executor.is_available():
+            raise SufficiencyAuditError(
+                f"resolved sufficiency auditor {auditor_agent!r} is not available — "
+                f"{executor.availability_hint()}"
+            )
+        task = DispatchTask(
+            plan_id=plan_dir.name,
+            plan_dir=plan_dir,
+            feature_id="F003",
+            feature_description="pre-impl sufficiency audit (cross-vendor)",
+            feature_acceptance="auditor returns a JSON array of sufficiency findings",
+            feature_steps=[],
+            agent_role="auditor",
+            iteration=0,
+            extra_context={"prompt_override": prompt},
+            permission_policy="auditor",
+        )
+        return executor.dispatch(task).raw_response or ""
+
+    return dispatch
+
+
+def generate_sufficiency_findings(
+    plan_dir: Path,
+    *,
+    implementer_agent: str | None = None,
+) -> list[SufficiencyFinding]:
+    """Production entry point: run the pre-impl sufficiency audit against the real
+    cross-vendor auditor and persist ``sufficiency-findings.json`` (plan
+    2026-06-08-006 — F003's ``run_sufficiency_audit`` previously had no production
+    caller, so the lock gate could never obtain the artifact it required).
+    """
+    plan_dir = Path(plan_dir).resolve()
+    return run_sufficiency_audit(
+        plan_dir,
+        implementer_agent=implementer_agent,
+        dispatch=_production_sufficiency_dispatch(plan_dir),
+    )
+
+
 __all__ = [
     "DispatchFn",
     "GapClass",
@@ -558,5 +622,6 @@ __all__ = [
     "SUFFICIENCY_GAP_CLASSES",
     "SufficiencyAuditError",
     "SufficiencyFinding",
+    "generate_sufficiency_findings",
     "run_sufficiency_audit",
 ]
