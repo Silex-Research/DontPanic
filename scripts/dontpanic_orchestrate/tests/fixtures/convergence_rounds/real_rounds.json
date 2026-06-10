@@ -1,0 +1,551 @@
+{
+  "_provenance": "Real sufficiency rounds extracted from git history. retrospective_class values are OPERATOR-REVIEWED RETROSPECTIVE annotations (plan 2026-06-09-002 F004) — never produced by the auditor or the conservative fallback.",
+  "c0_rounds": [
+    {
+      "commit": "e9ecd06",
+      "input_fingerprint": "sha256:legacy-e9ecd06",
+      "generated_at": "unknown",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "coverage_gap",
+          "description": "The proposed baseline does not explicitly guarantee a non-empty tier-0 graph for an empty repository, even though the journey includes empty_repo and the completion test requires an arbitrary repo to yield a non-empty inventory graph.",
+          "feature_refs": [
+            "F001",
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Require a deterministic root/project inventory node or equivalent tier-0 sentinel for empty repos, and add an empty_repo fixture assertion through build_view_state.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "wiring_gap",
+          "description": "Project registration is named in the objective, but the proposed tests only assert the real build_view_state surface and do not prove the project-add path invokes detection, registry resolution, baseline graph construction, and coverage computation together.",
+          "feature_refs": [
+            "F001",
+            "F002",
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Add an acceptance condition or integration test for the project-add flow that verifies the profile, baseline graph, and coverage block are created or recomputed before implementation locks.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "parity_gap",
+          "description": "The plan says Python and JS parser-backed coverage is preserved, but it does not define the expected covered semantics per evidence type, so a regression could still report parser-backed imports as merely heuristic or capped too low.",
+          "feature_refs": [
+            "F002",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Specify fixture expectations that Python and JS/TS parser-backed import evidence remains tier-2, covered where existing extractors apply, and not downgraded by the weak baseline fallback.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "low",
+          "journey_id": "honest-coverage",
+          "gap_class": "missing_feature",
+          "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed features mostly describe statuses and confidence values rather than a concrete user-facing note field or message contract.",
+          "feature_refs": [],
+          "recommendation": "Add a coverage note or warnings field with deterministic wording for missing parser extractors and unextracted-language heuristic imports.",
+          "retrospective_class": "matrix_pin"
+        }
+      ]
+    },
+    {
+      "commit": "a7e3793",
+      "input_fingerprint": "sha256:5930820a3771e057527c69720274b1f5f5ed23d2a052d22704dce7499e3eeb6e",
+      "generated_at": "2026-06-09T18:30:23Z",
+      "findings": [
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "coverage_gap",
+          "description": "The completion test explicitly requires the detector, registry, and baseline to be pure, deterministic, and bounded, but the proposed acceptance only pins those properties for the detector and baseline. The registry path is not required to be pure or deterministic, and the detector is not explicitly required to have bounded traversal behavior on large repositories.",
+          "feature_refs": [
+            "F001",
+            "F002",
+            "F003"
+          ],
+          "recommendation": "Add acceptance language and tests that detector and registry resolution are pure, deterministic, network-free, mutation-free, and bounded under large or pathological repo layouts.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "The plan requires bounded scanning and honest coverage ceilings, but it does not specify what the graph or coverage block reports when a repo exceeds scan limits. Without an explicit truncation or limit-hit signal, a bounded baseline could omit nodes or heuristic edges while still appearing complete enough to mislead the operator.",
+          "feature_refs": [
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Define a deterministic scan-limit/truncation marker that feeds the coverage block and caps confidence when inventory or heuristic import extraction stops before the full repo is examined.",
+          "retrospective_class": "matrix_pin"
+        }
+      ]
+    },
+    {
+      "commit": "68b400a",
+      "input_fingerprint": "sha256:3db6d25728818a58e6aa5d102e71f3a14f893b4429270a81e1cfd759ed1b71c4",
+      "generated_at": "2026-06-09T19:30:49Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "honest-coverage",
+          "gap_class": "integration_gap",
+          "description": "The fixture requirement is not fully locked to the real build_view_state surface. F004 requires one integration path, while F005 can still be satisfied by lower-level baseline tests, leaving Python, JS/TS, Swift/Kotlin, empty, and truncated fixtures unproven through the operator-facing path.",
+          "feature_refs": [
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Make F005 explicitly drive project registration plus build_view_state for every fixture case, not just the baseline builder.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "high",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "The detector promises build systems, test frameworks, app frameworks, infra, and config surfaces, but the coverage block only names filesystem, package_manifest, imports, runtime, and adr. Those detected evidence classes could be invisible or ambiguously folded into filesystem.",
+          "feature_refs": [
+            "F001",
+            "F004"
+          ],
+          "recommendation": "Either add explicit coverage statuses for build_system, test_framework, app_framework, infra, and config, or define and test their deterministic mapping into existing evidence types.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "wiring_gap",
+          "description": "The plan ensures baseline graph data is emitted, but it does not explicitly protect the existing render-truth path from filtering out low-confidence unresolved edges, filesystem/config nodes, or scan_truncated markers before the user sees them.",
+          "feature_refs": [
+            "F003",
+            "F004"
+          ],
+          "recommendation": "Add an acceptance check against the final build_view_state/render payload that low-confidence edges, tier-0 nodes, and truncation markers survive unchanged.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "Overall rollup and honest confidence ceilings remain underspecified. Runtime is a tier-3 non-goal, ADR may be absent, and scans may truncate, but the exact deterministic rules for limited versus partial versus covered are not locked.",
+          "feature_refs": [
+            "F004"
+          ],
+          "recommendation": "Define rollup rules before implementation, including how absent runtime, absent ADR, heuristic-only imports, parser-backed imports, and scan_truncated affect the overall status.",
+          "retrospective_class": "matrix_pin"
+        }
+      ]
+    },
+    {
+      "commit": "1e1e5cf",
+      "input_fingerprint": "sha256:9c3eddf90cf15d4b9ded8bd0364abc72d521ff45a5df705d75b14cb5f3222736",
+      "generated_at": "2026-06-09T20:13:22Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "The proposed ProjectProfile keeps docs and ADRs bundled as a single docs_adr detection class while F004 requires each detected class to map into exactly one unified source_kind, yet also says docs_adr maps to doc/adr. That is not a total one-to-one mapping and can make ADR coverage invisible or ambiguously folded into generic docs.",
+          "feature_refs": [
+            "F001",
+            "F004"
+          ],
+          "recommendation": "Split docs and adr into separate detection classes, or make each docs_adr detection item carry an explicit source_kind so the exported mapping remains total and deterministic.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "wiring_gap",
+          "description": "F001 detects infra/config surfaces and F004 reports infra/config coverage, but F003 only guarantees graph nodes for directories, package/build/config manifests, test dirs, docs, and ADRs. Infra can therefore be detected and covered without being represented in the filesystem/config graph the operator sees.",
+          "feature_refs": [
+            "F001",
+            "F003",
+            "F004"
+          ],
+          "recommendation": "Extend the tier-0 inventory graph acceptance to require detected infra surfaces, such as Docker, Terraform, Kubernetes, and CI files, to appear as source_kind=infra nodes in the final build_view_state payload.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "integration_gap",
+          "description": "F003 requires heuristic import edges for common languages, while F004/F005 require Python and JS parser-backed imports to remain covered/high. The merge precedence is not specified, so parser-backed repos could still render duplicate low-confidence heuristic edges and look less certain than the preserved parser result.",
+          "feature_refs": [
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Pin the graph merge rule: parser-backed tier-2 edges supersede same-source heuristic edges for that language, and heuristic import extraction only fills gaps where parser coverage is unavailable or unresolved.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "advisory",
+          "journey_id": "honest-coverage",
+          "gap_class": "missing_feature",
+          "description": "The objective explicitly excludes a UI overhaul, but the proposed features do not include a negative acceptance guard that the new coverage block is surfaced through the existing display path only. That leaves room for scope creep into Plan D while implementing C0.",
+          "feature_refs": [],
+          "recommendation": "Add a non-goal guard or snapshot assertion that C0 only adds the coverage data/render payload expected by the existing coverage display and does not introduce broader UI restructuring.",
+          "retrospective_class": "scope_guard"
+        }
+      ]
+    },
+    {
+      "commit": "1df88e5",
+      "input_fingerprint": "sha256:1d9f609698592e76cc472e44d1685b6a495d570ca7835053a57d362b7698f91a",
+      "generated_at": "2026-06-09T20:18:00Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "Per-evidence-type aggregation is not pinned when multiple detected languages map into the single code evidence key. A Python+Swift repo could produce covered for Python and missing_extractor or heuristic-low for Swift, but the proposed plan does not explicitly define whether code becomes partial, missing_extractor, or another status in the final coverage block.",
+          "feature_refs": [
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Define a deterministic per-evidence-type status lattice, especially for code across mixed parser-backed and heuristic-only languages, and assert Python+Swift yields an honest partial/low-confidence code entry.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "coverage_gap",
+          "description": "The unified source_kind taxonomy introduces filesystem as a coverage key, but the detection-class mapping has no source class that maps to filesystem and no explicit rule saying the repo-root tier-0 inventory satisfies filesystem coverage. Empty or minimal repos could therefore show a root node while filesystem coverage is ambiguous or not_found.",
+          "feature_refs": [
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Pin filesystem coverage as always evaluated from tier-0 inventory construction, with the repo-root node satisfying it at tier 0 even when no detector classes are found.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "integration_gap",
+          "description": "Detector truncation and graph-builder truncation are specified separately, but there is no single propagation rule that any limit hit from either phase must demote coverage and appear in the final build_view_state payload. Divergent caps could leave a partial profile or graph looking complete.",
+          "feature_refs": [
+            "F001",
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Define one final limit-hit model that merges detector and graph truncation signals, demotes otherwise-covered results to partial, and is asserted through the final render payload.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "coverage_gap",
+          "description": "The objective requires an explicit low-confidence note for unextracted languages, but the proposed acceptance mostly asserts low confidence on dependency edges. That can pass without an operator-facing note, and languages with no heuristic imports may still lack a clear explanation of why dependency extraction is weak.",
+          "feature_refs": [
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Add a concrete coverage payload field for dependency confidence notes per language, and test Swift/Kotlin plus an unextracted language with no imports to ensure the note survives build_view_state.",
+          "retrospective_class": "matrix_pin"
+        }
+      ]
+    },
+    {
+      "commit": "fa0a879",
+      "input_fingerprint": "sha256:b1d2887854e3fc56516dfda6655d1e173d1f89c498926d3060687c3f89051886",
+      "generated_at": "2026-06-09T20:30:09Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "coverage_gap",
+          "description": "F003 leaves the tier-1 heuristic language set as vague 'common languages', while F004 explicitly allows the low-confidence note to appear even when no heuristic import edges are produced. That means Swift/Kotlin or other intended common languages could end up with only filesystem nodes and still appear to satisfy the plan, missing the requested weak dependency baseline.",
+          "feature_refs": [
+            "F003",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Pin the C0 heuristic extractor matrix, including whether Swift and Kotlin are covered, and add fixture imports that prove low-confidence unresolved or resolved heuristic edges reach build_view_state.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "coverage_gap",
+          "description": "F004 pins detailed coverage rules for overall, code, filesystem, and runtime, but does not fully pin satisfaction rules for manifest, build, test, config, infra, doc, and adr evidence types. The mapping is total, but the status, tier, confidence ceiling, and truncation behavior for those non-code evidence entries remain under-specified.",
+          "feature_refs": [
+            "F003",
+            "F004"
+          ],
+          "recommendation": "Define deterministic status rules for every evidence_type: detected tier-0 evidence should report a specific covered or partial status, confidence, and tier, absent evidence should report not_found, and truncation effects should be explicit.",
+          "retrospective_class": "plan_contract"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "weak-graph-any-repo",
+          "gap_class": "parity_gap",
+          "description": "The objective requires the baseline to be pure, deterministic, and bounded, but F003 only explicitly pins determinism and bounded scanning. Unlike F001 and F002, it does not state or test that baseline construction performs no network access, no mutation, and no cache/state writes.",
+          "feature_refs": [
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Add F003 acceptance language and tests proving identical inputs produce identical baseline output without filesystem mutation, network access, or hidden state dependencies.",
+          "retrospective_class": "matrix_pin"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "integration_gap",
+          "description": "F005's empty_repo acceptance conflates mutually exclusive cases by saying the empty repo should assert Python/JS imports remain covered/high while Swift/Kotlin imports are heuristic-low. An empty repo should have no detected languages, so this ambiguity can either create impossible tests or hide missing fixture assertions.",
+          "feature_refs": [
+            "F005"
+          ],
+          "recommendation": "Split the fixture assertions: empty_repo should only pin root inventory and limited coverage, while separate Python, JS/TS, Swift/Kotlin, and mixed fixtures should pin language-specific import confidence.",
+          "retrospective_class": "editorial"
+        },
+        {
+          "severity": "medium",
+          "journey_id": "honest-coverage",
+          "gap_class": "missing_feature",
+          "description": "The proposed scope guard only prevents UI expansion, but the objective also forbids new parser-backed extractors in C0. Without a plan-level guard, implementation could satisfy coverage by silently adding tier-2 support for unsupported languages, crossing into C+.",
+          "feature_refs": [],
+          "recommendation": "Add a non-goal enforcement check that C0 registers only pre-existing parser extractors and that newly detected unsupported languages remain tier-0/tier-1 with missing_extractor status.",
+          "retrospective_class": "scope_guard"
+        }
+      ]
+    }
+  ],
+  "meta_rounds": [
+    {
+      "commit": "7a8e956",
+      "input_fingerprint": "sha256:5127f2692cfc4203d9ef5318b0c13a09a682436a566f343412b615d6839dd877",
+      "generated_at": "2026-06-09T21:19:26Z",
+      "findings": [
+        {
+          "severity": "critical",
+          "journey_id": "convergent-lock",
+          "gap_class": "wiring_gap",
+          "description": "The features do not explicitly define a no-auditor lock path after operator dispositions are recorded. F001 says every pre-impl lock run appends a new sufficiency round, while F002 evaluates the just-completed round, which implies another auditor invocation instead of reusing the latest ledger entry as required by the completion test.",
+          "feature_refs": [
+            "F001",
+            "F002",
+            "F003"
+          ],
+          "recommendation": "Add a pre-auditor lock branch that evaluates the latest committed round plus recorded dispositions and permits the lock when all current blocking findings are disposed, without appending a new round or invoking the auditor."
+        },
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "integration_gap",
+          "description": "F001 and F003 define incompatible identity semantics for changed findings. F001 requires content-derived finding ids where materially changed content gets a new id, but F003 says a disposition is invalidated when the same finding id recurs with a materially changed content fingerprint, which cannot happen under a strictly content-derived id.",
+          "feature_refs": [
+            "F001",
+            "F003"
+          ],
+          "recommendation": "Separate a stable logical finding key from a content/version fingerprint, then invalidate dispositions when the logical key recurs with a different material content fingerprint."
+        },
+        {
+          "severity": "high",
+          "journey_id": "convergent-lock",
+          "gap_class": "integration_gap",
+          "description": "The plan_contract waiver rule is weakened by the generic disposition handling. F002 says new conceptual plan_contract findings block unless explicitly waived, but F003 says deferred_to_impl and split_to_followup_plan suppress blocks generally, which would allow non-waiver dispositions to bypass plan_contract findings.",
+          "feature_refs": [
+            "F002",
+            "F003"
+          ],
+          "recommendation": "Constrain plan_contract suppression to waived_with_reason unless the contract is intentionally expanded to allow a named alternate disposition for that class."
+        },
+        {
+          "severity": "high",
+          "journey_id": "convergent-lock",
+          "gap_class": "parity_gap",
+          "description": "The C0 replay fixture depends on historical findings being classed as matrix_pin or implementation_detail, but F001 conservatively falls back missing classes to plan_contract. If the committed C0 evidence predates the new class field, F004 cannot both replay real evidence and recognize round-6 medium pin findings as disposition-eligible.",
+          "feature_refs": [
+            "F001",
+            "F004"
+          ],
+          "recommendation": "Specify an offline fixture classification artifact or migration rule for historical C0 findings, and make tests prove the fallback is not accidentally applied to the fixture labels."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "convergent-lock",
+          "gap_class": "coverage_gap",
+          "description": "The convergence policy is not exhaustive over the closed finding class enum. It covers high severity, plan_contract, and the eligible matrix_pin or implementation_detail classes, but does not state the verdict for medium or low editorial and scope_guard findings.",
+          "feature_refs": [
+            "F002"
+          ],
+          "recommendation": "Define the default verdict for every non-eligible class, preferably an explicit hard_block branch with the class and severity named in the refusal output."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "finding-disposition",
+          "gap_class": "coverage_gap",
+          "description": "accepted_into_plan is underspecified for lock authorization. F003 says it expects the plan artifact to change, but does not require or test a plan/input fingerprint change before treating the disposition as non-blocking, so a lock could pass without evidence that the finding was actually accepted into the plan.",
+          "feature_refs": [
+            "F003"
+          ],
+          "recommendation": "Require accepted_into_plan dispositions to reference a changed plan/input fingerprint or clarify that accepted_into_plan is only a pending state until the artifact changes."
+        }
+      ]
+    },
+    {
+      "commit": "3839adb",
+      "input_fingerprint": "sha256:5f1225c40f47924e9b21368f9ad3a751480a042d727d6f54770da3b02ab44862",
+      "generated_at": "2026-06-09T21:32:47Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "wiring_gap",
+          "description": "The accepted_into_plan disposition semantics conflict with the completion test's no-paid resolution path: F003 keeps accepted findings blocking until the input fingerprint changes, while F005 sends changed fingerprints back through the plain fresh-audit path.",
+          "feature_refs": [
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Resolve whether accepted_into_plan is a no-auditor operator disposition or an edit-required state that is excluded from the promised no-paid lock resolution, then pin that behavior in the completion test."
+        },
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "coverage_gap",
+          "description": "Disposition invalidation only binds description and recommendation content, so a same-id finding can change from medium to high or from implementation_detail to plan_contract without invalidating an old disposition.",
+          "feature_refs": [
+            "F001",
+            "F002",
+            "F003"
+          ],
+          "recommendation": "Include severity and finding class in the bound disposition fingerprint, or add an explicit validity check for those fields, with tests for same-text severity and class changes."
+        },
+        {
+          "severity": "high",
+          "journey_id": "convergent-lock",
+          "gap_class": "parity_gap",
+          "description": "The proposed eligible class set includes editorial and scope_guard, but the objective contract's convergence rule names only medium or low matrix_pin and implementation_detail findings as disposition-required.",
+          "feature_refs": [
+            "F002",
+            "F004",
+            "F005"
+          ],
+          "recommendation": "Have the operator decide whether editorial and scope_guard are intentionally disposition-eligible; update the objective contract and completion tests if yes, or narrow F002/F004 if no."
+        },
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "coverage_gap",
+          "description": "The semantic finding id uses a same-cell ordinal, which can drift when two findings share locator fields and the auditor reorders or inserts a finding, breaking clearance accounting and disposition durability.",
+          "feature_refs": [
+            "F001",
+            "F003",
+            "F004"
+          ],
+          "recommendation": "Define stable collision handling independent of auditor order, or add explicit matrix locator fields to the finding schema and test reorder plus insertion cases."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "convergent-lock",
+          "gap_class": "coverage_gap",
+          "description": "The F002 exhaustive policy matrix omits advisory even though the existing sufficiency severity vocabulary accepts advisory alongside low, medium, high, and critical.",
+          "feature_refs": [
+            "F002"
+          ],
+          "recommendation": "Add advisory to the severity x class matrix and pin whether advisory plan_contract findings block, require waiver, or proceed."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "finding-disposition",
+          "gap_class": "integration_gap",
+          "description": "The plan does not define how the existing --ignore-sufficiency-findings override and override.json interact with the new per-finding disposition artifact and policy-driven lock path.",
+          "feature_refs": [
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Specify whether the legacy override is deprecated, mapped to waived_with_reason for current findings, or allowed as a separate explicit bypass, and test the interaction."
+        }
+      ]
+    },
+    {
+      "commit": "785fb23",
+      "input_fingerprint": "sha256:86228c81674c66dc123f23cc8d1ca927a50497d6f3db6943ccfde1b08cc68c51",
+      "generated_at": "2026-06-09T21:42:20Z",
+      "findings": [
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "wiring_gap",
+          "description": "Materially changed findings can be classified as PERSISTED by F001 because clearance accounting is by finding_id, while F002 only defines convergence behavior for new findings. That leaves invalidated dispositions without a clearly blocking policy path when the same semantic id recurs with a different fingerprint.",
+          "feature_refs": [
+            "F001",
+            "F002",
+            "F003",
+            "F006"
+          ],
+          "recommendation": "Add explicit changed_prior_ids or materially_changed finding accounting to the ledger and make the policy treat invalidated changed findings as blocking until re-disposition or fresh clearance."
+        },
+        {
+          "severity": "high",
+          "journey_id": "finding-disposition",
+          "gap_class": "parity_gap",
+          "description": "F006 derives same-cell ordinals by sorting content fingerprints, but insertion, removal, or content edits inside a multi-finding cell can renumber otherwise related findings. That undermines the stable finding_id contract used by clearance accounting, disposition binding, and ledger reconstruction.",
+          "feature_refs": [
+            "F001",
+            "F006"
+          ],
+          "recommendation": "Define stable cross-round matching semantics for multi-finding cells, or explicitly make cell-level invalidation replace per-finding stability for those cells and reflect that in F001 clearance accounting."
+        },
+        {
+          "severity": "high",
+          "journey_id": "convergent-lock",
+          "gap_class": "integration_gap",
+          "description": "F001 says the rounds ledger is appended only when the auditor actually runs, while F003 requires legacy override usage to be logged in the rounds ledger. A lock pass using the override may not run the auditor, so the write target and append rules conflict.",
+          "feature_refs": [
+            "F001",
+            "F003"
+          ],
+          "recommendation": "Resolve whether non-auditor events are allowed in the rounds ledger, or move override usage to a separate append-only lock events artifact referenced by the ledger."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "convergent-lock",
+          "gap_class": "coverage_gap",
+          "description": "F002 includes advisory findings in the operator_disposition_required branch, but also states advisory findings never hard-block on their own. The plan does not define whether advisory-only rounds proceed, require disposition, or are ignored when mixed with medium or low findings.",
+          "feature_refs": [
+            "F002",
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Add explicit policy rows for advisory-only and advisory-mixed rounds, including whether advisory findings require dispositions during no-auditor resolution."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "finding-disposition",
+          "gap_class": "coverage_gap",
+          "description": "The disposition CLI records against finding ids, but the lock refusal contract only promises to name the policy branch. It does not require surfacing the exact finding ids, fingerprints, classes, and allowed disposition kinds the operator must act on.",
+          "feature_refs": [
+            "F003",
+            "F005"
+          ],
+          "recommendation": "Require lock refusals to emit a machine-readable disposition_required list with finding_id, fingerprint, class, severity, allowed disposition kinds, and required reason or follow-up fields."
+        },
+        {
+          "severity": "medium",
+          "journey_id": "convergent-lock",
+          "gap_class": "coverage_gap",
+          "description": "The convergence policy says it can proceed, but the acceptance criteria do not explicitly cover the case where the latest round fully clears prior findings and produces zero current findings. That is the cleanest successful convergence case and should be pinned.",
+          "feature_refs": [
+            "F002",
+            "F005"
+          ],
+          "recommendation": "Add a zero-finding latest-round branch that proceeds without disposition or paid calls, and test it through both the pure policy and plan lock path."
+        }
+      ]
+    }
+  ]
+}

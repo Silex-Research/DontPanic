@@ -217,6 +217,15 @@ class SufficiencyFinding(BaseModel):
         default=None,
         description="Optional operator-facing remediation hint.",
     )
+    finding_class: str | None = Field(
+        default=None,
+        description=(
+            "Convergence class (plan 2026-06-09-002): plan_contract / "
+            "implementation_detail / editorial / scope_guard / matrix_pin. "
+            "Optional — a missing or invalid value falls back CONSERVATIVELY to "
+            "plan_contract at ledger time, never to a disposition-eligible class."
+        ),
+    )
 
     @field_validator("severity")
     @classmethod
@@ -480,6 +489,12 @@ def _build_sufficiency_prompt(
         "- `description` (string, ≥ 40 characters of substantive prose)\n"
         "- `feature_refs` (list of feature IDs that relate; empty for missing-feature gaps)\n"
         "- `recommendation` (optional string; null when not applicable)\n"
+        "- `finding_class` (optional string, one of: plan_contract, "
+        "implementation_detail, editorial, scope_guard, matrix_pin — "
+        "plan_contract for conceptual contract gaps, implementation_detail for "
+        "gaps an implementation test would naturally cover, editorial for "
+        "wording defects in the plan text, scope_guard for missing non-goal "
+        "guards, matrix_pin for unpinned deterministic-rule cells)\n"
     )
     sections.append(
         "Return an empty JSON array `[]` if you find no gaps. Do NOT wrap the "
@@ -649,6 +664,29 @@ def run_sufficiency_audit(
         )
         + "\n"
     )
+
+    # Convergence rounds ledger (plan 2026-06-09-002 F001): an audit round is
+    # appended HERE and only here — the one place the auditor actually runs.
+    # A disposition-resolution lock pass never reaches this function.
+    # All-or-nothing with the findings artifact: if the ledger append fails,
+    # the just-written findings file is removed so the next lock regenerates
+    # BOTH — otherwise the fingerprint-match reuse path would keep serving
+    # findings that have no corresponding audit round, and the convergence
+    # policy would never see this round (CodeRabbit PR#35).
+    from dontpanic_orchestrate.sufficiency_convergence import append_audit_round
+
+    try:
+        append_audit_round(
+            plan_dir,
+            [f.model_dump() for f in findings],
+            input_fingerprint=input_fingerprint,
+        )
+    except Exception as exc:
+        out_path.unlink(missing_ok=True)
+        raise SufficiencyAuditError(
+            f"rounds-ledger append failed after findings write; findings artifact "
+            f"rolled back so the next lock regenerates both: {exc}"
+        ) from exc
 
     return findings
 
