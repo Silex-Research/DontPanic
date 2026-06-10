@@ -6,15 +6,17 @@
       "id": "F001",
       "category": "functional",
       "description": "Policy amendment: streak-gated eligibility for HIGH matrix_pin findings in the pure convergence policy; critical, plan_contract, and conservative-fallback classifications remain absolute blocks; medium/low handling unchanged.",
-      "acceptance": "a pure clearance_streak helper counts consecutive full-clearance audit rounds ending at the latest round, where a round is full-clearance IFF it had a prior round AND persisted none of its findings \u2014 the FIRST round of any ledger is never full-clearance (nothing preceded it to clear), so a ledger whose rounds each cleared their predecessor has a streak of one less than its total round count (pinned worked example: C0 rounds 1-3 -> streak at round 3 is exactly 2, at round 2 exactly 1, at round 1 exactly 0); override events never count toward or reset within the helper's input contract (audit rounds only); convergence_verdict gains the v1.1 rule: a HIGH-severity finding whose auditor-emitted class is matrix_pin is suppressible by a valid waived_matrix_pin_high disposition IFF clearance_streak >= N (N configurable parameter, default 2); eligibility NEVER applies to critical severity, to plan_contract class, to conservative-fallback (unclassified) findings, or below the streak threshold; medium/low/advisory handling, accepted_into_plan semantics, and legacy whole-plan override precedence are byte-for-byte unchanged (regression tests); verdict_for gains the streak-conditional cell and the exhaustive severity x class matrix test is updated to stay total; the policy remains pure (no I/O beyond arguments).",
+      "acceptance": "a pure clearance_streak helper counts consecutive full-clearance audit rounds ending at the latest round, where a round is full-clearance IFF it had a prior round AND persisted none of its findings \u2014 the FIRST round of any ledger is never full-clearance (nothing preceded it to clear), so a ledger whose rounds each cleared their predecessor has a streak of one less than its total round count (pinned worked example: C0 rounds 1-3 -> streak at round 3 is exactly 2, at round 2 exactly 1, at round 1 exactly 0); override events never count toward or reset within the helper's input contract (audit rounds only); convergence_verdict gains the v1.1 rule: a HIGH-severity finding whose auditor-emitted class is matrix_pin is suppressible by a valid waived_matrix_pin_high disposition IFF clearance_streak >= N (N configurable parameter, default 2); eligibility NEVER applies to critical severity, to plan_contract class, to conservative-fallback (unclassified) findings, or below the streak threshold \u2014 plan_contract stays governed by the UNCHANGED v1 rule (block unless explicitly waived_with_reason or cleared by a plan edit; the streak rule never applies to it, at any severity); medium/low/advisory handling, accepted_into_plan semantics, and legacy whole-plan override precedence are byte-for-byte unchanged (regression tests); the streak threshold N has exactly ONE source of truth \u2014 a single module-level default constant consumed by convergence_verdict, record_disposition validation, and the lock refusal messaging alike, with any override parameter threaded from that one seam (a test asserts the three consumers cannot disagree); verdict_for gains the streak-conditional cell and the exhaustive severity x class matrix test is updated to stay total; the policy remains pure (no I/O beyond arguments).",
       "passes": false,
       "introduces": [
+        "accepted_into_plan",
         "clearance_streak",
-        "waived_matrix_pin_high",
-        "streak_threshold",
         "matrix_pin",
         "plan_contract",
-        "accepted_into_plan"
+        "single_threshold_source",
+        "streak_threshold",
+        "waived_matrix_pin_high",
+        "waived_with_reason"
       ]
     },
     {
