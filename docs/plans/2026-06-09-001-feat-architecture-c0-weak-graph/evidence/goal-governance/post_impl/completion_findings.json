@@ -1,6 +1,6 @@
 {
   "audit_kind": "v1_evidence_coverage_heuristic",
-  "generated_at": "2026-06-10T15:33:09.435158+00:00",
+  "generated_at": "2026-06-10T16:02:31.067772+00:00",
   "plan_id": "2026-06-09-001-feat-architecture-c0-weak-graph",
   "contract_path": "./objective_contract.json",
   "evidence_manifest_uris": [],
