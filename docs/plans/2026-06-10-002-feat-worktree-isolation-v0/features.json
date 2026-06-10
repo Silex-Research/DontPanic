@@ -24,8 +24,8 @@
     {
       "id": "F002",
       "category": "functional",
-      "description": "Gate-time binding capture: plan lock / audit / close record the worktree binding snapshot into the plan's audit evidence when a binding exists.",
-      "acceptance": "when a binding exists for the plan, `plan lock`, `plan audit`, and `plan close` write a binding snapshot (worktree_path, base_ref, branch, owner_actor, captured_at) into the plan's audit evidence alongside the gate artifacts they already produce; when no binding exists the commands behave exactly as today and write no snapshot (additive, proven by a no-binding regression test); a fixture test runs a gate command inside a bound temp worktree and asserts the snapshot lands with the recorded values.",
+      "description": "Gate-time binding capture: plan lock / audit / close AND the orchestrate dispatch (build) path record the worktree binding snapshot into the plan's audit evidence when a binding exists.",
+      "acceptance": "when a binding exists for the plan, `plan lock`, `plan audit`, `plan close`, and the orchestrate dispatch entry point (the build path) write a binding snapshot (worktree_path, base_ref, branch, owner_actor, captured_at) into the plan's audit evidence alongside the gate artifacts they already produce; when no binding exists the commands behave exactly as today and write no snapshot (additive, proven by a no-binding regression test); fixture tests run a gate command and a dispatch entry inside a bound temp worktree and assert the snapshot lands with the recorded values.",
       "passes": false,
       "introduces": [
         "binding_snapshot",
@@ -38,8 +38,8 @@
     {
       "id": "F003",
       "category": "functional",
-      "description": "Wrong-worktree refusal: plan-mutating commands refuse from a working tree other than the plan's bound worktree unless explicitly overridden, and the override is recorded.",
-      "acceptance": "`plan lock`, `plan close`, and `plan disposition` resolve the invoking working tree (git rev-parse --show-toplevel) and, when the plan has a binding whose worktree_path differs, refuse BEFORE any gate side effect with a message naming both the invoking tree and the bound worktree_path plus the exact create/override commands; an explicit override flag with a required reason proceeds and records the override (plan_id, invoking path, bound path, reason, actor, timestamp) into the plan's audit evidence; plans with no binding are never refused (backward-compatibility regression test); tests cover refusal, override-with-reason recording, and the unbound passthrough.",
+      "description": "Wrong-worktree refusal: every plan-mutating entry point (lock, audit, close, disposition, orchestrate dispatch) refuses from a working tree other than the plan's bound worktree unless explicitly overridden, and the override is recorded.",
+      "acceptance": "`plan lock`, `plan audit`, `plan close`, `plan disposition`, and the orchestrate dispatch entry point resolve the invoking working tree (git rev-parse --show-toplevel) and, when the plan has a binding whose worktree_path differs, refuse BEFORE any gate side effect or evidence write with a message naming both the invoking tree and the bound worktree_path plus the exact create/override commands; an explicit override flag with a required reason proceeds and records the override (plan_id, invoking path, bound path, reason, actor, timestamp) into the plan's audit evidence; plans with no binding are never refused (backward-compatibility regression test); DontPanic has NO merge command \u2014 merging is the operator's external gh ritual, so the guarded set above IS the complete plan-mutating surface (asserted in the plan, see D005); tests cover refusal per guarded entry point, override-with-reason recording, and the unbound passthrough.",
       "passes": false,
       "introduces": [
         "wrong_worktree_refusal",
@@ -86,11 +86,14 @@
       "id": "F006",
       "category": "functional",
       "description": "`dontpanic plan worktree create <plan-id>`: create the per-plan git worktree from an explicit recorded base and bind it in the registry.",
-      "acceptance": "`dontpanic plan worktree create <plan-id>` resolves the plan dir, creates a git worktree (git_worktree_add) at a deterministic path OUTSIDE the main working tree on a branch derived from the plan id, from a base_ref that is explicit in the command output and recorded verbatim in the binding; on success the registry holds the full binding and the command prints worktree_path, branch, base_ref, and owner_actor; an already-bound plan refuses naming the existing binding; an occupied target path refuses without touching it; a failed git invocation leaves NO registry entry behind (no half-bind); tests cover create, double-bind refusal, occupied-path refusal, and git-failure rollback on a temp git repo with no network.",
+      "acceptance": "`dontpanic plan worktree create <plan-id>` resolves the plan dir and creates a git worktree (git_worktree_add) at a deterministic path OUTSIDE the main working tree on a branch derived from the plan id; the base is NEVER the invoking checkout's HEAD implicitly: by default it is the repo's default branch (origin's default-branch ref when an origin exists, else the local main/master) resolved via rev-parse to a commit SHA, and an explicit base_flag (a base-ref CLI option) may select a different base; in every case the resolved base SHA and the ref it came from are printed in the command output and recorded verbatim in the binding as base_ref; an unresolvable base refuses before any worktree is created; on success the registry holds the full binding and the command prints worktree_path, branch, base_ref, and owner_actor; an already-bound plan refuses naming the existing binding; an occupied target path refuses without touching it; a failed git invocation leaves NO registry entry behind (no half-bind); tests cover default-base resolution (asserting it tracks the default branch, not the invoking HEAD on a divergent checkout), explicit base_flag recording, unresolvable-base refusal, create, double-bind refusal, occupied-path refusal, and git-failure rollback on a temp git repo with no network.",
       "passes": false,
       "introduces": [
-        "worktree_create",
-        "git_worktree_add"
+        "base_flag",
+        "default_branch_resolution",
+        "git_worktree_add",
+        "rev_parse",
+        "worktree_create"
       ],
       "depends_on": [
         "F001"
@@ -100,10 +103,11 @@
       "id": "F007",
       "category": "functional",
       "description": "Operator brief + dashboard visibility: the worktree-status model rendered in the operator brief and the dashboard state payload.",
-      "acceptance": "the operator brief includes an active-worktrees section driven by the SAME worktree-status model as the list command (branch, dirty, untracked_count, owner_actor, broken bindings included); the dashboard state payload carries the same block, passes the existing no-secret-shapes guard, and renders nothing fabricated when no bindings exist (honest empty state); tests cover the brief section and the payload block for clean, dirty, and broken-binding fixtures and assert model parity between the three renderers (list, brief, payload).",
+      "acceptance": "the operator brief includes an active-worktrees section driven by the SAME worktree-status model as the list command (branch, dirty, untracked_count, owner_actor, broken bindings included); the dashboard state payload carries the same block and passes the existing no-secret-shapes guard; the dashboard UI ACTUALLY RENDERS the block: a DOM-level integration test loads the real dashboard page module with a payload fixture and asserts the rendered surface shows branch, dirty state, untracked count, actor, and broken bindings for the fixture entries, plus an honest empty state when no bindings exist (nothing fabricated); tests cover the brief section, the payload block, and the DOM render for clean, dirty, and broken-binding fixtures, and assert model parity between the three renderers (list, brief, dashboard).",
       "passes": false,
       "introduces": [
-        "active_worktrees_section"
+        "active_worktrees_section",
+        "dom_render_test"
       ],
       "depends_on": [
         "F004"

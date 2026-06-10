@@ -58,34 +58,45 @@ where, nothing clever.
 
 ## Features
 
-- **F001** — worktree registry + create command: `dontpanic plan worktree
-  create <plan-id>` creates a git worktree for the plan from an explicit,
-  recorded base (default: the repo's default branch tip) on a plan-derived
-  branch, at a deterministic path outside the main working tree, and records
-  the binding (plan_id, repo_root, worktree_path, branch, base_ref,
-  owner_actor, created_at) in `$DONTPANIC_HOME/worktrees.json`. Refuses to
-  double-bind a plan or reuse an occupied path.
+- **F001** — worktree binding registry: install-level storage at
+  `$DONTPANIC_HOME/worktrees.json` (same home resolution as projects.json,
+  Pydantic `extra='forbid'`, degrade-to-empty + WARN). Binding = plan_id,
+  repo_root, worktree_path, branch, base_ref, owner_actor, created_at. Pure
+  add/get/remove/list; refuses double-binds and path collisions.
 - **F002** — gate-time binding capture: when a binding exists for the plan,
-  `plan lock`, `plan audit`, and `plan close` record the binding snapshot
-  (worktree_path, base_ref, branch, owner_actor) into the plan's audit
-  evidence; when no binding exists, behavior is unchanged (additive).
-- **F003** — wrong-worktree refusal: plan-mutating commands (`plan lock`,
-  `plan close`, `plan disposition`) refuse when invoked from a working tree
-  that is not the plan's bound worktree, naming both paths; an explicit
-  override flag with a reason proceeds and the override is recorded. No
-  binding → no refusal (backward compatible).
-- **F004** — worktree visibility: one worktree-status model (per binding:
-  plan_id, branch, dirty flag from `git status --porcelain`, untracked count,
-  owner_actor, path) rendered in three places — `dontpanic plan worktree
-  list`, the operator brief, and the dashboard state payload — passing the
-  no-secret guard; missing/externally-deleted worktrees render as broken
-  bindings, not silently dropped.
+  `plan lock`, `plan audit`, `plan close`, AND the orchestrate dispatch
+  (build) path record the binding snapshot (worktree_path, base_ref, branch,
+  owner_actor) into the plan's audit evidence; when no binding exists,
+  behavior is unchanged (additive).
+- **F003** — wrong-worktree refusal: every plan-mutating entry point
+  (`plan lock`, `plan audit`, `plan close`, `plan disposition`, orchestrate
+  dispatch) refuses when invoked from a working tree that is not the plan's
+  bound worktree, naming both paths, BEFORE any gate side effect or evidence
+  write; an explicit override flag with a reason proceeds and the override is
+  recorded. No binding → no refusal (backward compatible). DontPanic has no
+  merge command — merging is the operator's external gh ritual — so this
+  guarded set is the complete plan-mutating surface (D005).
+- **F004** — worktree-status model + list command: one pure model per binding
+  (plan_id, branch, dirty flag from porcelain status, untracked count,
+  owner_actor, path, broken flag for missing/externally-deleted worktrees —
+  rendered, never silently dropped), printed by `dontpanic plan worktree list`.
 - **F005** — explicit, audited, safe cleanup: `dontpanic plan worktree
   remove <plan-id>` removes the worktree and binding ONLY when the tree is
   clean (no modified, staged, or untracked files) and records an audit entry
   (who, when, path, branch); a dirty tree refuses with the file list and no
   force path exists in v0; plan close NEVER auto-removes — it may only print
   the cleanup command.
+- **F006** — `dontpanic plan worktree create <plan-id>`: creates the per-plan
+  worktree on a plan-derived branch at a deterministic path outside the main
+  tree. The base is never the invoking checkout's HEAD implicitly: default =
+  the repo's default branch resolved to a commit SHA; `--base <ref>` overrides
+  explicitly; either way the resolved SHA is printed and recorded verbatim as
+  base_ref. Unresolvable base refuses; failed git leaves no half-bind.
+- **F007** — operator brief + dashboard visibility: the SAME worktree-status
+  model rendered as an active-worktrees section in the operator brief and as
+  a block in the dashboard state payload (no-secret guard), with a DOM-level
+  test proving the dashboard UI actually renders branch / dirty / untracked /
+  actor / broken — plus an honest empty state.
 
 ## Non-goals (out of scope for v0)
 

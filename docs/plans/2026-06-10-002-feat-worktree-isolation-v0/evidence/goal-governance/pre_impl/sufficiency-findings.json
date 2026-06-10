@@ -1,0 +1,63 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:3911d37bc03ed197975c93ec07c7b008f764a5ee3ac8351690d31634949aec13",
+  "generated_at": "2026-06-10T20:11:40Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "isolated-plan-start",
+      "gap_class": "coverage_gap",
+      "description": "F006 says the base_ref is explicit and recorded, but it does not pin how the correct base is selected or validated for create <plan-id>. Recording the chosen base is not enough if the command can accidentally use the caller's current checkout or an implicit default.",
+      "feature_refs": [
+        "F006"
+      ],
+      "recommendation": "Define the base_ref source and precedence, require resolvability before worktree creation, and add a test proving creation from a non-current base uses the recorded base rather than ambient HEAD.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "coverage_gap",
+      "description": "The objective directive requires lock/build/close to record the binding, but F002 covers lock/audit/close and never mentions build. If build is a real gate or mutating command, this leaves a named contract path without binding evidence.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Add build to the binding snapshot capture contract and tests, or explicitly mark build as nonexistent or out of scope for this v0.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "coverage_gap",
+      "description": "F002 makes plan audit write binding evidence, but F003 does not protect plan audit with the wrong-worktree guard. That permits a session outside the bound worktree to mutate plan evidence while lock, close, and disposition are refused.",
+      "feature_refs": [
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Either include audit in the guarded command set or state why audit evidence mutation is intentionally allowed from any checkout and test that behavior.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "missing_feature",
+      "description": "The objective says merge/close operates from the plan worktree, but no proposed feature names a merge path or proves merge-equivalent behavior is guarded. Disposition may be intended to cover this, but the plan does not say so.",
+      "feature_refs": [],
+      "recommendation": "Add merge to the guarded command matrix, or explicitly map disposition to the merge operation and test refusal, override recording, and bound-worktree execution.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "fleet-worktree-visibility",
+      "gap_class": "wiring_gap",
+      "description": "F007 validates the dashboard state payload, but the user-facing contract says the dashboard shows active worktrees. A payload block alone does not prove the dashboard UI actually renders branch, dirty state, untracked count, actor, and broken bindings.",
+      "feature_refs": [
+        "F007"
+      ],
+      "recommendation": "Add the dashboard renderer or component wiring to F007 acceptance, with a test or fixture that exercises the visible dashboard output from the payload.",
+      "finding_class": "implementation_detail"
+    }
+  ]
+}
