@@ -3,7 +3,7 @@ id: 2026-06-09-002-feat-sufficiency-gate-convergence
 title: Sufficiency-gate convergence — round tracking, policy, operator disposition
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-09"
 goal_type: new_feature
 links:
