@@ -594,10 +594,20 @@ def build_view_state(
     validation_warnings: list[dict[str, Any]] = []
 
     if inputs.architecture is None:
-        absent_coverage = _contract.compute_coverage(repo_root, [])
-        absent_layers = _contract.build_layer_shell([], [])
+        # Plan C0 — the weak baseline works for ANY repo: even without
+        # architecture.json the operator sees the tier-0/1 graph and the
+        # tiered coverage block instead of an empty surface.
+        from dontpanic_orchestrate import architecture_baseline as _baseline
+
+        baseline = _baseline.build_baseline(repo_root)
+        baseline_nodes = list(baseline["graph"]["nodes"])
+        baseline_edges = list(baseline["graph"]["edges"])
+        _contract.apply_evidence_contract(baseline_nodes, baseline_edges)
+        absent_coverage = _contract.compute_coverage(repo_root, baseline_nodes)
+        absent_coverage["baseline"] = baseline["coverage"]
+        absent_layers = _contract.build_layer_shell(baseline_nodes, baseline_edges)
         # Plan B: ADRs are independent of architecture.json — still surface intent.
-        _apply_intent_layers(repo_root, [], absent_coverage, absent_layers)
+        _apply_intent_layers(repo_root, baseline_nodes, absent_coverage, absent_layers)
         view_state = {
             "schema_version": SCHEMA_VERSION,
             "project": project_block,
@@ -605,8 +615,8 @@ def build_view_state(
             "source_path": source_rel,
             "freshness": freshness,
             "lanes": [dict(lane) for lane in LANES],
-            "nodes": [],
-            "edges": [],
+            "nodes": baseline_nodes,
+            "edges": baseline_edges,
             "clusters": [],
             "levels": [],
             "flows": [],
@@ -677,6 +687,15 @@ def build_view_state(
     js_nodes, js_edges = _architecture_js.extract_js_modules(repo_root)
     nodes.extend(js_nodes)
     edges.extend(js_edges)
+
+    # Plan C0 — tier-0/1 weak baseline (language-agnostic). The render-truth
+    # passthrough acceptance requires these low-confidence/filesystem items
+    # to SURVIVE to the final payload.
+    from dontpanic_orchestrate import architecture_baseline as _baseline
+
+    baseline = _baseline.build_baseline(repo_root)
+    nodes.extend(baseline["graph"]["nodes"])
+    edges.extend(baseline["graph"]["edges"])
 
     # Refresh filter categories to reflect every emitted node type so
     # the UI's facet list stays in sync with what was rendered.

@@ -1,0 +1,55 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 45 items
+
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_language_marker_matrix_pinned PASSED [  2%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_tier_split_pinned PASSED [  4%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_package_manager_markers_pinned PASSED [  6%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_build_system_markers_pinned PASSED [  8%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_test_framework_markers_pinned PASSED [ 11%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_app_framework_markers_pinned PASSED [ 13%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_infra_and_config_markers_pinned PASSED [ 15%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_docs_adr_markers_pinned PASSED [ 17%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_unknown_extension_set_is_closed_and_disjoint_from_matrix PASSED [ 20%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detection_class_mapping_total_and_one_taxonomy PASSED [ 22%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detector_deterministic_and_pure PASSED [ 24%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detector_empty_repo_profile PASSED [ 26%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detector_tables_drive_detection PASSED [ 28%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detector_unrecognized_extensions_producer PASSED [ 31%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_detector_bounded_cap_stamps_truncation PASSED [ 33%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_registry_pure_deterministic_and_tier_aware PASSED [ 35%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_registry_tier3_reserved_never_available PASSED [ 37%]
+dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py::test_registry_tier0_always_available PASSED [ 40%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_heuristic_edge_for_every_tier1_language PASSED [ 42%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_tier_precedence_no_heuristic_for_parser_served PASSED [ 44%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_relative_import_resolves PASSED [ 46%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_containment_tree_connects_all_fs_nodes PASSED [ 48%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_empty_repo_yields_nonempty_graph PASSED [ 51%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_infra_nodes_emitted PASSED [ 53%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_manifest_inferred_frameworks_are_annotations_not_nodes PASSED [ 55%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_shared_truncation_signal PASSED [ 57%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_graph_deterministic_and_pure PASSED [ 60%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_per_language_map_domain PASSED [ 62%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_code_aggregation_rule PASSED [ 64%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_filesystem_satisfaction_rule PASSED [ 66%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_non_code_satisfaction_triple PASSED [ 68%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_runtime_reserved_never_demotes PASSED [ 71%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_rollup_lattice_pins PASSED [ 73%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_low_confidence_notes_rendered PASSED [ 75%]
+dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py::test_unknown_language_note PASSED [ 77%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_swift_kotlin_fixture_full_passthrough PASSED [ 80%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_empty_repo_fixture PASSED [ 82%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_python_fixture_parser_coverage_preserved PASSED [ 84%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_javascript_fixture_with_ts_split PASSED [ 86%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_truncated_fixture_marker_survives PASSED [ 88%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_unknown_language_fixture_note_in_payload PASSED [ 91%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_config_nodes_survive PASSED [ 93%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_no_new_dashboard_page PASSED [ 95%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_tier2_extractor_set_unchanged PASSED [ 97%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_no_tier3_registration PASSED [100%]
+
+============================== 45 passed in 0.27s ==============================

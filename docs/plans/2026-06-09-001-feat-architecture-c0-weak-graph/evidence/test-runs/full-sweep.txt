@@ -1,0 +1,2 @@
+py sweep: 4262 passed, 7 skipped (2026-06-10, post C0-baseline integration)
+vitest: 73 files, 1195 passed (2026-06-10, post C0-baseline integration)
