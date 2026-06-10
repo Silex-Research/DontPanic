@@ -2,57 +2,33 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:c968e37a953c63962c25b515cc78143c6cd296c13875b09b43ee63abd4ab6655",
-  "generated_at": "2026-06-10T20:57:58Z",
+  "input_fingerprint": "sha256:23fdb178ecdddc9f2072df300fe99333b5e01269f3eb97d56bbbff7122da9e52",
+  "generated_at": "2026-06-10T21:13:57Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "critical",
       "journey_id": "mature-matrix-tail",
-      "gap_class": "coverage_gap",
-      "description": "The proposed tests contain a streak-counting ambiguity: F001 says clearance_streak counts consecutive full-clearance rounds ending at the latest round, but F003 expects C0 round 3 to have streak=2 while rounds 1-2 are not eligible despite the stated 100% clearance across rounds 1-3.",
-      "feature_refs": [
-        "F001",
-        "F003"
-      ],
-      "recommendation": "Pin whether the latest round is included in the streak and align the C0 round expectations before implementation starts.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "high",
-      "journey_id": "mature-matrix-tail",
-      "gap_class": "integration_gap",
-      "description": "The plan does not explicitly require the full completion-path test where an eligible high matrix_pin refusal is followed by recording waived_matrix_pin_high and then the same lock succeeds without any paid auditor invocation.",
+      "gap_class": "parity_gap",
+      "description": "The proposed end-to-end completion path is not satisfiable against the real C0 round-3 ledger as written: that round contains an eligible high matrix_pin, but it also contains a medium plan_contract finding and other medium blockers. Recording only waived_matrix_pin_high cannot both permit the lock and preserve the rule that plan_contract findings remain blocked regardless of streak.",
       "feature_refs": [
         "F001",
         "F002",
         "F003"
       ],
-      "recommendation": "Add an end-to-end offline fixture for the real C0 eligible round: refusal names eligibility, disposition with valid confirmation is recorded, and lock then passes with the auditor-call guard unchanged.",
+      "recommendation": "Pin the positive completion fixture explicitly: either use a reduced/synthetic ledger with only the eligible high matrix_pin, require additional valid legacy dispositions for every other blocker, or change the C0 round-3 expectation to remain blocked on its plan_contract finding.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "mature-matrix-tail",
       "gap_class": "coverage_gap",
-      "description": "The fallback_blocked journey state is named in the objective, and F001 mentions conservative-fallback findings, but F003 only calls out plan_contract discrimination fixtures and does not require a concrete fallback-classed or unclassified high blocker case.",
+      "description": "The objective lists auditor prompt changes as a non-goal, but the proposed features do not require any scope guard proving the sufficiency auditor prompt, schema contract, or classifier instructions stay unchanged while adding the v1.1 policy and fixture replay.",
       "feature_refs": [
         "F001",
-        "F002",
         "F003"
       ],
-      "recommendation": "Add an explicit high conservative-fallback fixture proving it blocks lock and refuses waived_matrix_pin_high even when the clearance streak threshold is met.",
+      "recommendation": "Add an explicit regression or greppable boundary test that the implementation does not modify the auditor prompt/classification surface for this feature.",
       "finding_class": "scope_guard"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "mature-matrix-tail",
-      "gap_class": "wiring_gap",
-      "description": "F002 asks the refusal output to name the exact disposition command, but also forbids default confirmation text anywhere in the path. That leaves the CLI contract under-specified and risks either a non-runnable command or an accidental canned confirmation.",
-      "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Specify the exact CLI shape with a required operator-supplied confirmation argument or placeholder, and ensure placeholder text itself is not accepted as valid confirmation.",
-      "finding_class": "editorial"
     }
   ]
 }
