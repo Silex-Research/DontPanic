@@ -2,89 +2,67 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:dd68dad01d0f2e8711038ceb2d380715da6b0ddc73412ffe5baf824e96729992",
-  "generated_at": "2026-06-10T20:21:24Z",
+  "input_fingerprint": "sha256:b86b3adb666290de188f5e03ea75ff1eeb144f64e6ecc241016eb57a42ef225b",
+  "generated_at": "2026-06-10T20:27:59Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "isolated-plan-start",
       "gap_class": "coverage_gap",
-      "description": "The proposed schema records base_ref but does not pin a distinct resolved base commit SHA, even though the contract requires a recorded base SHA and default-branch resolution that cannot drift after creation.",
+      "description": "F002 calls the evidence a binding snapshot but omits base_sha, even though F001/F006 make the pinned base SHA the key proof that the worktree was created from the correct base.",
       "feature_refs": [
         "F001",
         "F002",
         "F006"
       ],
-      "recommendation": "Add an immutable base_sha field, keep source_ref/base_ref separately, and assert all snapshots and renderers carry the resolved SHA.",
+      "recommendation": "Include base_sha, and preferably repo_root, in every lock/audit/close/dispatch binding snapshot test and evidence record.",
       "finding_class": "plan_contract"
     },
     {
-      "severity": "high",
-      "journey_id": "isolated-plan-start",
+      "severity": "medium",
+      "journey_id": "wrong-worktree-guard",
       "gap_class": "coverage_gap",
-      "description": "Create says it resolves the plan dir and uses the repo default branch, but it does not pin the authoritative repo_root source or prove the command cannot accidentally use the invoking checkout's repository.",
+      "description": "F003 does not pin behavior when the invoking directory is not inside any git worktree. For a bound plan, that context is still not the bound worktree and must refuse before side effects.",
       "feature_refs": [
-        "F001",
-        "F006"
+        "F003"
       ],
-      "recommendation": "Define how repo_root is derived for a plan, require create to use that repo_root for base resolution and worktree add, and test invocation from an unrelated checkout.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Add an explicit bound-plan test for invocation outside a git checkout, requiring refusal unless override-with-reason is supplied.",
+      "finding_class": "implementation_detail"
     },
     {
-      "severity": "medium",
+      "severity": "high",
       "journey_id": "fleet-worktree-visibility",
-      "gap_class": "coverage_gap",
-      "description": "Broken-binding detection only mentions missing paths or not-a-git-worktree, but does not require validating that the path is a worktree of the recorded repo_root rather than an arbitrary git repository.",
+      "gap_class": "parity_gap",
+      "description": "F004/F007 do not distinguish recorded branch from current branch or mark branch drift as broken, so the bound path could pass guards while close/dispatch mutates a detached or wrong branch.",
       "feature_refs": [
-        "F001",
+        "F003",
         "F004",
         "F007"
       ],
-      "recommendation": "Mark bindings broken when the path is not listed as a worktree for the stored repo_root or its git common-dir does not match the recorded repository.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Pin branch semantics: render actual branch, compare it to the recorded branch, and either mark mismatch as broken or refuse guarded mutations.",
+      "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
-      "journey_id": "fleet-worktree-visibility",
-      "gap_class": "wiring_gap",
-      "description": "The dashboard plan proves payload shape and DOM rendering from a fixture, but does not explicitly wire the real dashboard state producer or local JSON state path to include the active-worktrees block.",
-      "feature_refs": [
-        "F007"
-      ],
-      "recommendation": "Add an integration assertion that the actual dashboard state generation path emits the same worktree-status model consumed by the UI.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "isolated-plan-start",
+      "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "The branch and deterministic worktree path are described as derived from plan_id, but the derivation, sanitization, collision behavior, and existing-branch handling are not pinned.",
+      "description": "F005 records owner_actor in the removal audit entry but not the actor performing the cleanup, which weakens the audit trail when someone other than the owner removes the worktree.",
       "feature_refs": [
-        "F006"
+        "F005"
       ],
-      "recommendation": "Specify the exact plan_id-to-branch/path algorithm and refusal behavior for collisions with existing branches or occupied deterministic paths.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Record remover_actor using the same actor resolution rule, while preserving owner_actor from the binding for context.",
+      "finding_class": "plan_contract"
     },
     {
       "severity": "low",
       "journey_id": "wrong-worktree-guard",
       "gap_class": "coverage_gap",
-      "description": "The wrong-worktree guard compares the invoking git toplevel with the bound path, but does not define canonicalization or non-git cwd behavior before side effects.",
+      "description": "The no-DontPanic-merge non-goal is only asserted in prose with a dangling D005 reference, while no acceptance item pins the absence of plan merge or worktree merge CLI surfaces.",
       "feature_refs": [
-        "F003"
+        "F003",
+        "F005"
       ],
-      "recommendation": "Canonicalize both paths and require a clean refusal when rev-parse fails outside any git worktree.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "low",
-      "journey_id": "wrong-worktree-guard",
-      "gap_class": "coverage_gap",
-      "description": "The no-DontPanic-merge-command non-goal is referenced as an assertion in a separate D005 item that is not part of the proposed feature list, leaving the scope guard unowned.",
-      "feature_refs": [
-        "F003"
-      ],
-      "recommendation": "Attach the CLI-surface assertion directly to F003 or add an explicit feature/test that proves no merge command is introduced.",
+      "recommendation": "Add a CLI-surface scope-guard test proving no DontPanic merge command exists and no worktree command performs merge-to-main behavior.",
       "finding_class": "scope_guard"
     }
   ]

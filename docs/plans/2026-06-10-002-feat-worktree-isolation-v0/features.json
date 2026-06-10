@@ -26,9 +26,10 @@
       "id": "F002",
       "category": "functional",
       "description": "Gate-time binding capture: plan lock / audit / close AND the orchestrate dispatch (build) path record the worktree binding snapshot into the plan's audit evidence when a binding exists.",
-      "acceptance": "when a binding exists for the plan, `plan lock`, `plan audit`, `plan close`, and the orchestrate dispatch entry point (the build path) write a binding snapshot (worktree_path, base_ref, branch, owner_actor, captured_at) into the plan's audit evidence alongside the gate artifacts they already produce; when no binding exists the commands behave exactly as today and write no snapshot (additive, proven by a no-binding regression test); fixture tests run a gate command and a dispatch entry inside a bound temp worktree and assert the snapshot lands with the recorded values.",
+      "acceptance": "when a binding exists for the plan, `plan lock`, `plan audit`, `plan close`, and the orchestrate dispatch entry point (the build path) write a binding snapshot (worktree_path, base_ref, base_sha, branch, owner_actor, captured_at) into the plan's audit evidence alongside the gate artifacts they already produce; when no binding exists the commands behave exactly as today and write no snapshot (additive, proven by a no-binding regression test); fixture tests run a gate command and a dispatch entry inside a bound temp worktree and assert the snapshot lands with the recorded values.",
       "passes": false,
       "introduces": [
+        "base_sha",
         "binding_snapshot",
         "captured_at"
       ],
@@ -40,11 +41,13 @@
       "id": "F003",
       "category": "functional",
       "description": "Wrong-worktree refusal: every plan-mutating entry point (lock, audit, close, disposition, orchestrate dispatch) refuses from a working tree other than the plan's bound worktree unless explicitly overridden, and the override is recorded.",
-      "acceptance": "`plan lock`, `plan audit`, `plan close`, `plan disposition`, and the orchestrate dispatch entry point resolve the invoking working tree (git rev-parse --show-toplevel) and, when the plan has a binding whose worktree_path differs, refuse BEFORE any gate side effect or evidence write with a message naming both the invoking tree and the bound worktree_path plus the exact create/override commands; an explicit override flag with a required reason proceeds and records the override (plan_id, invoking path, bound path, reason, actor, timestamp) into the plan's audit evidence; plans with no binding are never refused (backward-compatibility regression test); DontPanic has NO merge command \u2014 merging is the operator's external gh ritual, so the guarded set above IS the complete plan-mutating surface (asserted in the plan, see D005); tests cover refusal per guarded entry point, override-with-reason recording, and the unbound passthrough.",
+      "acceptance": "`plan lock`, `plan audit`, `plan close`, `plan disposition`, and the orchestrate dispatch entry point resolve the invoking working tree (git rev-parse --show-toplevel) and, for a bound plan, refuse BEFORE any gate side effect or evidence write when the invoking tree differs from the bound worktree_path OR when the invoking directory is not inside any git worktree at all (not-in-a-worktree is still not the bound worktree), OR when the bound worktree's CURRENT branch differs from the recorded branch (branch drift / detached HEAD must not let a correct path mutate a wrong branch) with a message naming both the invoking tree and the bound worktree_path plus the exact create/override commands; an explicit override flag with a required reason proceeds and records the override (plan_id, invoking path, bound path, reason, actor, timestamp) into the plan's audit evidence; plans with no binding are never refused (backward-compatibility regression test); DontPanic has NO merge command \u2014 merging is the operator's external gh ritual, so the guarded set above IS the complete plan-mutating surface (asserted in the plan, see D005); tests cover refusal per guarded entry point, override-with-reason recording, and the unbound passthrough.",
       "passes": false,
       "introduces": [
-        "wrong_worktree_refusal",
-        "worktree_override"
+        "branch_drift",
+        "detached_head",
+        "worktree_override",
+        "wrong_worktree_refusal"
       ],
       "depends_on": [
         "F001"
@@ -54,10 +57,12 @@
       "id": "F004",
       "category": "functional",
       "description": "Worktree-status model + `dontpanic plan worktree list`: one pure model over registry + git state, rendered by the list command.",
-      "acceptance": "a single pure function builds the worktree-status model from the registry plus per-worktree git state \u2014 per binding: plan_id, branch, worktree_path, owner_actor, dirty (true iff the worktree's porcelain-format status output (git_status_porcelain) is non-empty), untracked_count, and a broken flag when the recorded worktree_path no longer exists, is not a git worktree, or is not a worktree OF the recorded repo_root (verified against repo_root's own worktree list / common git dir \u2014 an arbitrary unrelated git repository at that path is broken, not healthy); broken bindings are RENDERED, never silently dropped; `dontpanic plan worktree list` prints one row per binding from this model; tests cover clean, dirty, untracked-only, and broken-binding states through the model and the list renderer on temp git repos.",
+      "acceptance": "a single pure function builds the worktree-status model from the registry plus per-worktree git state \u2014 per binding: plan_id, recorded branch, current_branch (the worktree's actual checked-out branch, with drift between them rendered as broken/drifted, never hidden), worktree_path, owner_actor, dirty (true iff the worktree's porcelain-format status output (git_status_porcelain) is non-empty), untracked_count, and a broken flag when the recorded worktree_path no longer exists, is not a git worktree, or is not a worktree OF the recorded repo_root (verified against repo_root's own worktree list / common git dir \u2014 an arbitrary unrelated git repository at that path is broken, not healthy); broken bindings are RENDERED, never silently dropped; `dontpanic plan worktree list` prints one row per binding from this model; tests cover clean, dirty, untracked-only, and broken-binding states through the model and the list renderer on temp git repos.",
       "passes": false,
       "introduces": [
+        "branch_drift",
         "broken_binding",
+        "current_branch",
         "git_status_porcelain",
         "untracked_count",
         "worktree_membership",
@@ -71,13 +76,14 @@
       "id": "F005",
       "category": "functional",
       "description": "Explicit, audited, safe cleanup: remove a plan worktree only when clean; no force path in v0; close never auto-removes.",
-      "acceptance": "`dontpanic plan worktree remove <plan-id>` refuses when the bound worktree has ANY modified, staged, or untracked files, printing the offending paths, and removes the worktree (git worktree remove without --force) plus the registry binding only when fully clean; every removal appends an audit entry (plan_id, worktree_path, branch, owner_actor, removed_at) to a worktree audit log under $DONTPANIC_HOME; no command in this plan deletes a dirty worktree or exposes a force-removal flag (asserted by a CLI-surface test); `plan close` performs NO worktree removal \u2014 at most it prints the explicit remove command (regression test on the close path); tests cover clean removal with audit entry, dirty refusal listing files, untracked-only refusal, and the close-does-not-remove guarantee.",
+      "acceptance": "`dontpanic plan worktree remove <plan-id>` refuses when the bound worktree has ANY modified, staged, or untracked files, printing the offending paths, and removes the worktree (git worktree remove without --force) plus the registry binding only when fully clean; every removal appends an audit entry (plan_id, worktree_path, branch, owner_actor, removed_by \u2014 the actor performing the cleanup, resolved the same way as owner_actor and recorded even when it differs \u2014 and removed_at) to a worktree audit log under $DONTPANIC_HOME; no command in this plan deletes a dirty worktree or exposes a force-removal flag (asserted by a CLI-surface test); `plan close` performs NO worktree removal \u2014 at most it prints the explicit remove command (regression test on the close path); tests cover clean removal with audit entry, dirty refusal listing files, untracked-only refusal, and the close-does-not-remove guarantee.",
       "passes": false,
       "introduces": [
-        "worktree_remove",
-        "worktree_audit_log",
+        "DONTPANIC_HOME",
         "removed_at",
-        "DONTPANIC_HOME"
+        "removed_by",
+        "worktree_audit_log",
+        "worktree_remove"
       ],
       "depends_on": [
         "F001",
