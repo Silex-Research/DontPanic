@@ -44,6 +44,7 @@
         "fallback_blocked",
         "matrix_pin",
         "plan_contract",
+        "waived_with_reason",
         "worktree_rounds_fixture"
       ],
       "depends_on": [
