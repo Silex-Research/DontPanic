@@ -3,7 +3,7 @@ id: 2026-06-09-001-feat-architecture-c0-weak-graph
 title: Architecture C0 — language-agnostic weak graph baseline + tiered coverage
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-09"
 goal_type: new_feature
 links:

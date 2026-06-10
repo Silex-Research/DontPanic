@@ -2,58 +2,47 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:69b850c19d94d7e552a6bd6d6892b48b5f2ef75b4f6fc3b3a341ed9c41d2ded7",
-  "generated_at": "2026-06-10T14:25:24Z",
+  "input_fingerprint": "sha256:82c38eec580889d2e0c43335f83ec5230a9e7b8d7241a26ca761226df2aa82ed",
+  "generated_at": "2026-06-10T14:47:13Z",
   "findings": [
+    {
+      "severity": "high",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "coverage_gap",
+      "description": "The plan pins the language extension matrix but does not pin equivalent C0 marker matrices for package managers, build systems, test frameworks, app frameworks, docs, ADRs, infra, and config. Those detections drive both graph nodes and coverage status, so leaving their marker rules open risks non-reproducible coverage and missed filesystem/package evidence.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Add a closed C0 marker table for each non-language detection class, including the minimum files/patterns expected for Python, JS/TS, Swift/Kotlin, docs/ADR, CI, Docker, Terraform, Kubernetes, and config fixtures.",
+      "finding_class": "matrix_pin"
+    },
     {
       "severity": "high",
       "journey_id": "honest-coverage",
       "gap_class": "coverage_gap",
-      "description": "The language marker matrix is pinned, but the detector rules for package managers, build systems, test frameworks, app frameworks, docs, ADRs, infra, config, and source-like unknown extensions are not pinned with the same rigor. Without enumerated markers and classification rules, two implementations can both satisfy the prose while producing different ProjectProfiles, graph nodes, and coverage statuses for the same repo.",
+      "description": "F003 says manifest-inferred test and app frameworks must be annotations on the owning manifest node, but F004's non-code satisfaction rule says coverage is covered only when the tier-0 graph contains a corresponding node. This is ambiguous for test_frameworks detected only from a manifest dependency, where no standalone test node may exist.",
       "feature_refs": [
-        "F001",
         "F003",
         "F004"
       ],
-      "recommendation": "Pin closed detector value tables and marker rules for every non-language evidence class, including the definition of source-like unrecognized extensions, then require total graph and coverage mapping tests over those tables.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "weak-graph-any-repo",
-      "gap_class": "wiring_gap",
-      "description": "F003 strongly specifies tier-0 inventory nodes, but it does not pin the filesystem/config relationship edges that make the inventory an actual graph. An implementation could emit a root node plus disconnected manifest, config, doc, ADR, and infra nodes and still pass many of the stated assertions while failing the operator outcome of seeing a useful filesystem/config graph.",
-      "feature_refs": [
-        "F003",
-        "F005"
-      ],
-      "recommendation": "Require deterministic tier-0 containment or ownership edges from repo root to directories and file-backed inventory nodes, plus explicit manifest-to-annotation linkage for manifest-inferred framework evidence.",
+      "recommendation": "Explicitly state that manifest annotations satisfy their mapped evidence type, especially test_frameworks -> test and app_frameworks -> manifest, and add an end-to-end fixture where a framework is detected only from a manifest annotation.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "honest-coverage",
-      "gap_class": "integration_gap",
-      "description": "The JavaScript fixture language is ambiguous because F005 calls it plain JavaScript while also requiring a TypeScript file in the same fixture. That can mask whether plain JS alone remains parser-covered/high with no low-confidence note and whether mixed JS plus TS is partial for the correct reason.",
+      "gap_class": "coverage_gap",
+      "description": "The unrecognized_extensions field is required to produce the unknown-language note, but the plan does not define what counts as a source-like unrecognized extension beyond a .zig fixture. Implementers could make inconsistent choices and silently omit the note for uncommon-language repos.",
       "feature_refs": [
+        "F001",
         "F004",
         "F005"
       ],
-      "recommendation": "Split the fixture suite into a pure plain-JS fixture and a separate JS-plus-TS mixed fixture, asserting overall covered for the pure case and code partial with a TypeScript low-confidence note for the mixed case.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "honest-coverage",
-      "gap_class": "parity_gap",
-      "description": "The plan says runtime is reserved and always not_found, but the registry is explicitly tier-aware through tier 3 and the scope guard only names no new tier-2 parser extractors. There is no equivalent guard proving C0 does not register, invoke, or satisfy build/runtime collectors despite Tier-3 collection being a stated non-goal.",
-      "feature_refs": [
-        "F002",
-        "F004",
-        "F005"
-      ],
-      "recommendation": "Add a scope-guard assertion that the registered tier-3 extractor set is empty or unavailable in C0, no build/runtime command path is invoked, and runtime coverage remains not_found without demoting rollup.",
-      "finding_class": "scope_guard"
+      "recommendation": "Pin a deterministic source-like extension allowlist or rule for C0, and test at least one recognized non-marker source extension plus one non-source extension that must not trigger the note.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
