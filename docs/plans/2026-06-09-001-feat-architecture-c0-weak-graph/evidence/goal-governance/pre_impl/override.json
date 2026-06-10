@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "C0 has completed multiple full-clearance sufficiency rounds under the convergence ledger. The remaining high-severity findings are auditor-classified matrix_pin detector-table enumerations. These will be pinned by implementation equality tests over the detector marker tables and coverage mappings. Proceeding via recorded override to avoid further paid enumeration rounds; queueing policy v1.1 to make high matrix_pin disposition-eligible after repeated full-clearance rounds with explicit operator confirmation.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-10T14:47:13Z",
+  "plan_id": "2026-06-09-001-feat-architecture-c0-weak-graph",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:b4a9119e7470ccb73be4cc593cff2db6ae490bf9b87120e6dfed840c6a90ce88",
+  "objective_contract_hash": "sha256:ca68e98b506104d5ef2e596260caacd474d6b5af53200bd57250b0deacfdc9e8",
+  "sufficiency_findings_hash": "sha256:43832cd8ce50a037efd3f5dbeac8754989a7a102adeaeac1fd273595cb0dc607"
+}

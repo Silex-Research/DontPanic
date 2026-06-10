@@ -39,6 +39,8 @@ SOURCE_KINDS = (
     "runtime",
     "external",
     "unknown",
+    # Plan C0 — tier-0 filesystem inventory (directories, containment tree).
+    "filesystem",
 )
 EVIDENCE_BASES = ("observed", "declared", "inferred", "unresolved")
 CONFIDENCE_LEVELS = ("high", "medium", "low")

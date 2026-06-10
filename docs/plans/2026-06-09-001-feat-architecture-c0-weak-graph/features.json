@@ -1,0 +1,98 @@
+{
+  "task_id": "2026-06-09-001-feat-architecture-c0-weak-graph",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Project detector: from a repo root produce a deterministic ProjectProfile of languages, package managers, build systems, test frameworks, app frameworks, docs/ADR presence, and infra/config surfaces. Pure, no network, graceful on an empty or unknown repo.",
+      "acceptance": "a pure detector scans a repo root and returns a ProjectProfile listing detected languages, package managers, build systems, test frameworks, app frameworks, docs/ADR presence, and infra/config surfaces; it is deterministic (same repo -> same profile), performs no network or mutation, and degrades to an empty-but-valid profile on an unknown or empty repo. ProjectProfile's detection classes form a CLOSED, enumerated list (languages, package_managers, build_systems, test_frameworks, app_frameworks, docs, adr, infra, config) -- docs presence and ADR presence are SEPARATE detection classes, never bundled -- that F004's evidence-type mapping is required -- and tested -- to cover totally, so no detected class can be invisible to coverage. The detector's traversal is BOUNDED on large repos via a deterministic scan cap (no unbounded walk); reaching the cap is recorded as a truncation signal on the profile, not silently dropped; this profile truncation signal is the SAME scan_truncated signal the F003 graph and F004 coverage block propagate (one shared signal, never a parallel flag). ProjectProfile also carries an unrecognized_extensions field: the sorted set of source-like file extensions encountered outside the language marker matrix (the producer for F004's unknown-language note — never inferred ad hoc at render time); a fixture with .zig files asserts the field is populated. A test asserts determinism (same repo -> identical profile) AND that a synthetic over-cap repo trips the bounded-traversal cap and stamps the truncation signal.",
+      "passes": true,
+      "introduces": [
+        "project_detector",
+        "ProjectProfile",
+        "scan_truncated",
+        "package_managers",
+        "build_systems",
+        "test_frameworks",
+        "app_frameworks",
+        "docs_adr",
+        "unrecognized_extensions"
+      ],
+      "evidence_refs": [
+        "scripts/dontpanic_orchestrate/architecture_baseline.py",
+        "scripts/dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py",
+        "evidence/test-runs/baseline-suite.txt"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Extractor registry mapping evidence-kind/language to an extractor and its availability, tier-aware (tier 0 filesystem / tier 1 heuristic / tier 2 parser / tier 3 build-runtime), so the system can list available vs missing extractors for a given ProjectProfile.",
+      "acceptance": "a registry resolves, for a given ProjectProfile, which extractors are available and which are missing per evidence-kind/language, each tagged with its tier (0 filesystem, 1 heuristic, 2 parser, 3 build/runtime); a detected language with no parser-backed extractor is reported as having a missing higher-tier extractor while still being served by the tier-0/tier-1 ones. Registry resolution is PURE and DETERMINISTIC: the same ProjectProfile yields the same availability/missing result, with no network or mutation. A test asserts determinism (same profile -> identical resolution) and that resolution touches no filesystem/network.",
+      "passes": true,
+      "introduces": [
+        "extractor_registry",
+        "extractor_tier"
+      ],
+      "evidence_refs": [
+        "scripts/dontpanic_orchestrate/architecture_baseline.py",
+        "scripts/dontpanic_orchestrate/tests/test_baseline_tables_f001_f002.py",
+        "evidence/test-runs/baseline-suite.txt"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Tier-0 inventory graph (dirs, package/build/config manifests, test dirs, docs/ADRs; low/medium confidence) for ANY repo, plus Tier-1 heuristic import-pattern edges for common languages emitted low-confidence/unresolved unless a relative target resolves; contract-stamped, deterministic, bounded, never dropped.",
+      "acceptance": "build produces a baseline graph for any repo: tier-0 nodes for directories, package/build/config manifests, test dirs, docs/ADRs, AND detected infra surfaces (e.g. Docker / Terraform / Kubernetes / CI files, emitted as source_kind=infra nodes) -- every ProjectProfile detection class that F004 can report as covered has a corresponding tier-0 graph representation when detected — for file-backed classes (manifests, test dirs, docs/ADRs, infra, config) that is a node; for MANIFEST-INFERRED classes (test_frameworks, app_frameworks, detected from manifest entries rather than standalone files) it is a structured ANNOTATION on the owning manifest node (never a fabricated standalone node), and F004 coverage reads those annotations — so a detected-and-covered class is never absent from the graph the operator sees (a fixture with CI/container files asserts infra nodes reach the final build_view_state payload) -- (contract-stamped, low or medium confidence), and tier-1 heuristic dependency edges for an EXPLICITLY ENUMERATED language set — at minimum Swift, Kotlin, TypeScript/TSX, JSX, Go, and Rust (every language in the detector's marker table without a tier-2 parser). The LANGUAGE MARKER MATRIX is pinned verbatim: python=.py; javascript=.js/.mjs/.cjs; typescript=.ts/.tsx; jsx=.jsx; swift=.swift; kotlin=.kt/.kts; go=.go; rust=.rs — this closed table IS the detector marker table for C0 (extending it is Plan C+ scope), and a test asserts the implemented table equals it exactly. The tier-2 parser set is pinned EXACTLY as today's: Python (.py via the Python import crawler) and plain JavaScript (.js/.mjs/.cjs via the dashboard JS crawler) — TypeScript/TSX and JSX are NOT parser-covered and are tier-1 heuristic languages, never required to be parser-covered anywhere in this plan; every other matrix language (swift, kotlin, typescript, jsx, go, rust) is tier-1. Tier-1 edges are emitted as low-confidence unresolved endpoints unless a relative target resolves; a detected tier-1 language whose files contain import-like statements ALWAYS yields heuristic import edges (never filesystem-only nodes posing as the weak dependency baseline), and a per-language fixture test pins at least one heuristic edge for each enumerated language; the scan is deterministic and bounded and never silently drops an edge. PURITY (parity with F001/F002): baseline construction performs no network access, no mutation of the repo, and no cache or state writes — pure apart from reading the scan root; a test asserts nothing outside the scan root is touched. TIER PRECEDENCE PINNED: parser-backed (tier-2) edges SUPERSEDE same-source heuristic (tier-1) edges for that language -- heuristic import extraction only fills gaps where parser coverage is unavailable, and a parser-served language NEVER renders duplicate low-confidence heuristic counterparts alongside its parser edges; a test asserts a Python/JS fixture yields parser-backed edges with no duplicate heuristic counterparts. When the bounded scan hits its cap, the graph emits an EXPLICIT truncation/limit-hit marker (scan_truncated, with the cap and what was reached) so a capped, partial graph is never presented as complete — the omission is surfaced, not silent. Even for an empty or trivial repo the baseline yields a NON-EMPTY tier-0 graph (at minimum a repo-root directory node) — never an empty graph. A test asserts a synthetic over-cap repo trips the cap and stamps scan_truncated on the graph. RENDER-TRUTH PASSTHROUGH: an acceptance test asserts against the FINAL operator-facing build_view_state/render payload (after any render-truth gating) that tier-1 low-confidence/unresolved edges, tier-0 filesystem/config nodes, and the scan_truncated marker SURVIVE to the rendered payload unchanged — the render gate must not filter them out before the operator sees them.",
+      "passes": true,
+      "introduces": [
+        "inventory_graph",
+        "heuristic_import_edge",
+        "scan_truncated"
+      ],
+      "evidence_refs": [
+        "scripts/dontpanic_orchestrate/architecture_baseline.py",
+        "scripts/dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py",
+        "evidence/test-runs/baseline-suite.txt"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Tiered coverage block: overall rollup (limited/partial/covered) + per-language status (covered/missing_extractor/not_found) + per-evidence-type status keyed by ONE taxonomy unified with the architecture contract's source_kind enum (filesystem/code/manifest/build/test/config/infra/doc/adr/runtime), with a total mapping from every ProjectProfile detection class, pinned deterministic rollup rules, and honest confidence ceilings, computed on project registration and inside build_view_state.",
+      "acceptance": "build_view_state emits a coverage block with an overall rollup, a per-language map (covered / missing_extractor / not_found) and a per-evidence-type map. ONE TAXONOMY: the evidence_type enum is unified with the architecture contract's existing source_kind enum — filesystem (NEW source_kind for tier-0 directory inventory), code (imports), manifest (package manifests), build (build-system files), test, config, infra, doc, adr, runtime — no parallel vocabulary; external/unknown are endpoint classifications and are excluded from coverage keys. Every ProjectProfile detection class maps deterministically into exactly one evidence_type via a single exported mapping table (languages->code, package_managers->manifest, build_systems->build, test_frameworks->test, app_frameworks->manifest, infra->infra, config->config, docs->doc, adr->adr) -- strictly ONE evidence_type per detection class, docs and adr mapped separately so ADR coverage can never fold into generic docs -- and a test asserts that mapping is TOTAL over ProjectProfile's closed detection-class list so no detected class is invisible or silently folded into filesystem. NON-CODE SATISFACTION RULES PINNED: each of manifest, build, test, config, infra, doc, and adr reports covered AT TIER 0 (declared basis, medium confidence ceiling) when the detector found its class AND the tier-0 graph contains at least one corresponding node; not_found when the class was not detected; these seven are NEVER missing_extractor in C0 (the tier-0 inventory IS their extractor) and scan_truncated demotes each of them to partial exactly as it does filesystem; a test pins the covered/not_found/partial triple for at least one of these types. PINNED ROLLUP (deterministic lattice): overall is 'limited' when NO detected language has parser-backed (tier-2) imports coverage (the empty repo included); 'covered' only when EVERY detected language is parser-backed covered AND no detected evidence class reports missing_extractor or error AND the scan was not truncated; 'partial' otherwise. runtime (tier-3, reserved) always reports not_found in C0 and never demotes the rollup; an evidence class the detector did NOT detect reports not_found WITHOUT demoting; scan_truncated demotes an otherwise-covered rollup to partial. Tests pin each rollup rule (empty repo -> limited; pure-Python -> covered; Python+Swift -> partial; truncated otherwise-covered -> partial). A repo with an unextracted language still shows its filesystem/package graph AND a clear low-confidence dependency note. covered semantics are explicit: a parser-backed (tier-2) language reports its imports evidence_type as covered at observed/high confidence and is NEVER downgraded to heuristic/low; a heuristic-only (tier-1) language reports imports partial at low confidence; each per-evidence-type entry carries the tier it was satisfied at. An integration test drives the real project-registration/build_view_state path so detection -> registry resolution -> baseline construction -> coverage computation are proven to run together (operator-outcome), not just as isolated units. When the underlying scan was truncated (scan_truncated set), the coverage block SURFACES that limit-hit signal in the FINAL operator-facing view-state payload (the render-truth gate must not filter it) so a capped scan never reads as fully covered; a test asserts a truncated scan is reflected in the rendered coverage block, not hidden. PER-LANGUAGE MAP DOMAIN PINNED: the per-language map contains EXACTLY the detected languages — an undetected language is OMITTED, never listed as not_found (in the per-language domain the not_found status is reserved and unused in C0; a test asserts no per-language not_found entry ever appears), and the empty repo yields an empty map. UNKNOWN-LANGUAGE NOTE: when source-like files exist whose extensions fall outside the detector marker table, the coverage block carries a generic operator-facing note ('Language dependency extraction was not attempted for unrecognized file types.') so an uncommon-language repo never silently degrades to bare filesystem coverage; an unknown-language fixture asserts the note reaches the final payload. MIXED-LANGUAGE AGGREGATION PINNED: the single code evidence_type entry aggregates across detected languages deterministically — covered only when EVERY detected language's imports are parser-backed (tier-2); not_found when no languages are detected; partial in every mixed case (any detected language lacking a tier-2 extractor caps the code entry at partial, never covered), with the per-language map carrying which language drags it down; a test asserts a Python+Swift fixture reports code partial while the per-language map shows Python covered and Swift missing_extractor. FILESYSTEM SATISFACTION PINNED: no detection class maps to filesystem — it is the one evidence_type satisfied STRUCTURALLY by the tier-0 inventory itself: filesystem reports covered (tier 0) whenever the bounded scan completed (including the empty repo, whose repo-root node satisfies it) and is demoted to partial when scan_truncated; it is never not_found because the tier-0 graph is never empty; the mapping-totality test covers all detection classes excluding filesystem, and a dedicated test pins the filesystem rule for the empty and truncated cases. TRUNCATION PROPAGATION (ONE RULE): the detector's traversal cap (F001) and the graph builder's scan cap (F003) set the SAME scan_truncated signal — never two parallel flags; a cap hit in EITHER phase yields scan_truncated in the coverage block, demotes filesystem to partial and the overall rollup from covered to partial, and reaches the final build_view_state payload; a test asserts each phase's cap INDEPENDENTLY produces the same rendered truncation outcome. LOW-CONFIDENCE NOTE PINNED: for EVERY detected language without a tier-2 parser extractor, the coverage block carries a RENDERED operator-facing note string ('Dependency confidence is low. No <lang> extractor installed.') as a payload field reaching build_view_state — not merely low confidence stamped on edges, and emitted even when that language produced no heuristic import edges at all; a test asserts the note text is present in the final payload for the Swift/Kotlin fixture and absent for a fully parser-backed repo. SCOPE GUARD (non-goal enforcement): the coverage block is surfaced through the EXISTING coverage display path only -- C0 adds coverage data/payload, not new UI surfaces or pages (Plan D owns rendering); a guard assertion verifies no new dashboard page/section is introduced by this plan. The guard ALSO covers the second non-goal: no NEW tier-2 parser-backed extractor is introduced for any currently-unextracted language (that is Plan C+) -- a guard test asserts the registered tier-2 extractor set is unchanged from today's (Python import crawler + dashboard JS import crawler), so coverage can never be satisfied by silently crossing into C+ scope.",
+      "passes": true,
+      "introduces": [
+        "architecture_coverage",
+        "evidence_kind_status",
+        "missing_extractor",
+        "not_found",
+        "evidence_type",
+        "filesystem",
+        "detection_class_mapping"
+      ],
+      "evidence_refs": [
+        "scripts/dontpanic_orchestrate/architecture_baseline.py",
+        "scripts/dontpanic_orchestrate/tests/test_baseline_graph_coverage_f003_f004.py",
+        "evidence/test-runs/baseline-suite.txt"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Fixture-repo tests across Python, JavaScript (with a TS heuristic-low assertion), and Swift/Kotlin asserting the weak baseline renders for each, imports are heuristic-low for unextracted languages while filesystem/package coverage is present, and the coverage block flags the missing Swift/Kotlin extractor without suppressing the tier-0 graph.",
+      "acceptance": "EVERY fixture case — Python, JavaScript (plain .js, the tier-2-covered language), Swift/Kotlin, empty_repo, and over-cap (truncated) — is driven through the REAL project-registration + build_view_state operator path, with assertions made on the final view-state payload; low-level baseline-builder unit tests may supplement but do NOT satisfy this acceptance on their own. Through that path: each fixture yields a non-empty tier-0 graph; for Swift/Kotlin the coverage block reports a missing parser extractor and dependency confidence low while still presenting filesystem/package nodes; for Python and plain JavaScript the existing parser-backed coverage is preserved (no regression), and a TypeScript file included in the JavaScript fixture asserts TS imports are heuristic-low (tier-1), NEVER parser-covered — pinning the JS-vs-TS split in the same fixture. The empty_repo case asserts ONLY what an empty repo can exhibit: a non-empty tier-0 graph (repo-root node), overall coverage 'limited', and an EMPTY per-language map (no languages detected). SEPARATELY — in their own fixture cases, never conflated with empty_repo — the Python/JS fixtures assert imports remain covered/high (not downgraded) and the Swift/Kotlin fixture asserts imports are heuristic-low. The over-cap case asserts the bounded scan trips its cap, the graph stamps scan_truncated, and the rendered coverage block surfaces the truncation (never reads as complete). Fixture assertions also pin the F004 contract rules end-to-end: the rendered low-confidence note text is present in the final payload for the Swift/Kotlin fixture (and absent for the pure parser-backed fixtures), and a mixed Python+Swift case reports the code evidence_type as partial with the per-language map showing Python covered and Swift missing_extractor.",
+      "passes": true,
+      "introduces": [
+        "empty_repo"
+      ],
+      "evidence_refs": [
+        "scripts/dontpanic_orchestrate/architecture_view_state.py",
+        "scripts/dontpanic_orchestrate/tests/test_baseline_view_state_f005.py",
+        "evidence/test-runs/full-sweep.txt"
+      ]
+    }
+  ]
+}

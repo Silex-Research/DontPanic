@@ -235,6 +235,9 @@ class TestStableIds:
                 "external",
                 "page",
                 "metadata",
+                # Plan C0 — tier-0 filesystem inventory + tier-1 heuristic targets.
+                "fs",
+                "heuristic",
             }, f"unexpected prefix {prefix}"
         assert "module" in seen_types
         assert "plan" in seen_types
@@ -569,7 +572,10 @@ class TestAuthoredFlows:
 
 
 class TestMissingAndStaleStates:
-    def test_absent_architecture_produces_empty_graph_with_warning(self, tmp_path):
+    def test_absent_architecture_produces_baseline_graph_with_warning(self, tmp_path):
+        # Plan C0: absent architecture.json no longer means an empty surface —
+        # the weak tier-0/1 baseline renders for ANY repo. The warning and
+        # freshness state are unchanged.
         repo = tmp_path / "empty"
         repo.mkdir()
         inputs = avs.load_inputs(repo)
@@ -578,8 +584,10 @@ class TestMissingAndStaleStates:
         assert view_state["freshness"]["regen_command"] == (
             "dontpanic architecture regen --with-html"
         )
-        assert view_state["nodes"] == []
-        assert view_state["edges"] == []
+        assert any(n["id"] == "fs:." for n in view_state["nodes"]), (
+            "C0 baseline: even an empty repo renders the repo-root node"
+        )
+        assert "baseline" in view_state["coverage"]
         assert view_state["flows"] == []
         codes = {w["code"] for w in view_state["validation_warnings"]}
         assert "architecture_missing" in codes

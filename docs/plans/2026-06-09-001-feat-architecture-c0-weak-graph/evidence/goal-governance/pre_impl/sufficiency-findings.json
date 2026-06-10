@@ -1,0 +1,48 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:82c38eec580889d2e0c43335f83ec5230a9e7b8d7241a26ca761226df2aa82ed",
+  "generated_at": "2026-06-10T14:47:13Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "weak-graph-any-repo",
+      "gap_class": "coverage_gap",
+      "description": "The plan pins the language extension matrix but does not pin equivalent C0 marker matrices for package managers, build systems, test frameworks, app frameworks, docs, ADRs, infra, and config. Those detections drive both graph nodes and coverage status, so leaving their marker rules open risks non-reproducible coverage and missed filesystem/package evidence.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Add a closed C0 marker table for each non-language detection class, including the minimum files/patterns expected for Python, JS/TS, Swift/Kotlin, docs/ADR, CI, Docker, Terraform, Kubernetes, and config fixtures.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "honest-coverage",
+      "gap_class": "coverage_gap",
+      "description": "F003 says manifest-inferred test and app frameworks must be annotations on the owning manifest node, but F004's non-code satisfaction rule says coverage is covered only when the tier-0 graph contains a corresponding node. This is ambiguous for test_frameworks detected only from a manifest dependency, where no standalone test node may exist.",
+      "feature_refs": [
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Explicitly state that manifest annotations satisfy their mapped evidence type, especially test_frameworks -> test and app_frameworks -> manifest, and add an end-to-end fixture where a framework is detected only from a manifest annotation.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "honest-coverage",
+      "gap_class": "coverage_gap",
+      "description": "The unrecognized_extensions field is required to produce the unknown-language note, but the plan does not define what counts as a source-like unrecognized extension beyond a .zig fixture. Implementers could make inconsistent choices and silently omit the note for uncommon-language repos.",
+      "feature_refs": [
+        "F001",
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Pin a deterministic source-like extension allowlist or rule for C0, and test at least one recognized non-marker source extension plus one non-source extension that must not trigger the note.",
+      "finding_class": "matrix_pin"
+    }
+  ]
+}
