@@ -17,8 +17,8 @@ description: >
   paid round at a time even at 100% clearance. v1.1: after N consecutive
   full-clearance rounds (default N=2), a HIGH matrix_pin becomes
   disposition-eligible — but ONLY via a new high-rigor disposition kind that
-  requires explicit operator confirmation text; critical severity and
-  plan_contract class remain absolute blocks. Dogfood against C0 ledger rounds
+  requires explicit operator confirmation text; critical severity is never
+  eligible and plan_contract stays under the unchanged v1 waiver-only rule. Dogfood against C0 ledger rounds
   1-3 (real auditor-emitted classes) plus the original nine fixture rounds.
 ---
 
@@ -45,9 +45,11 @@ whole-plan override.
   matrix_pin by the auditor becomes suppressible by a valid
   waived_matrix_pin_high disposition IFF the ledger shows >= N consecutive
   full-clearance audit rounds ending at the current round (configurable,
-  default 2). plan_contract, critical, and conservative-fallback
-  classifications remain absolute; medium/low handling and the legacy
-  override are byte-for-byte unchanged. verdict_for + exhaustive matrix
+  default 2). Critical severity and conservative-fallback classifications
+  are never eligible; plan_contract stays under the UNCHANGED v1 rule
+  (block unless explicitly waived_with_reason or cleared by a plan edit —
+  the streak rule never applies to it, at any severity); medium/low
+  handling and the legacy override are byte-for-byte unchanged. verdict_for + exhaustive matrix
   updated for the streak-conditional cell.
 - **F002** — disposition kind + wiring: record_disposition accepts
   waived_matrix_pin_high only for streak-eligible high matrix_pins, requires
