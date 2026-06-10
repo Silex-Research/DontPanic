@@ -6,19 +6,20 @@
       "id": "F001",
       "category": "functional",
       "description": "Worktree binding registry module: install-level storage of per-plan worktree bindings at $DONTPANIC_HOME/worktrees.json, mirroring the projects.json registry pattern.",
-      "acceptance": "a new worktrees registry module stores bindings at $DONTPANIC_HOME/worktrees.json honoring the same DONTPANIC_HOME / JARVIS_HOME resolution as projects.json, with Pydantic extra=forbid and degrade-to-empty-plus-warn on invalid files; a binding record carries plan_id, repo_root, worktree_path, branch, base_ref, owner_actor (DONTPANIC_ACTOR env else user@host), created_at; the module exposes pure add/get/remove/list operations that refuse a second binding for an already-bound plan and refuse a worktree_path already claimed by another binding; tests cover round-trip persistence, double-bind refusal, path-collision refusal, invalid-file degradation, and home-resolution precedence, all against a temp home with no network.",
+      "acceptance": "a new worktrees registry module stores bindings at $DONTPANIC_HOME/worktrees.json honoring the same DONTPANIC_HOME / JARVIS_HOME resolution as projects.json, with Pydantic extra=forbid and degrade-to-empty-plus-warn on invalid files; a binding record carries plan_id, repo_root, worktree_path, branch, base_ref (the ref name the base was resolved FROM), base_sha (the resolved commit SHA, pinned at create time and never recomputed), owner_actor (DONTPANIC_ACTOR env else user@host), created_at; the module exposes pure add/get/remove/list operations that refuse a second binding for an already-bound plan and refuse a worktree_path already claimed by another binding; tests cover round-trip persistence, double-bind refusal, path-collision refusal, invalid-file degradation, and home-resolution precedence, all against a temp home with no network.",
       "passes": false,
       "introduces": [
-        "worktree_registry",
-        "worktree_binding",
-        "worktree_path",
-        "base_ref",
-        "owner_actor",
+        "DONTPANIC_ACTOR",
         "DONTPANIC_HOME",
         "JARVIS_HOME",
-        "DONTPANIC_ACTOR",
+        "base_ref",
+        "base_sha",
+        "created_at",
+        "owner_actor",
         "repo_root",
-        "created_at"
+        "worktree_binding",
+        "worktree_path",
+        "worktree_registry"
       ]
     },
     {
@@ -53,13 +54,14 @@
       "id": "F004",
       "category": "functional",
       "description": "Worktree-status model + `dontpanic plan worktree list`: one pure model over registry + git state, rendered by the list command.",
-      "acceptance": "a single pure function builds the worktree-status model from the registry plus per-worktree git state \u2014 per binding: plan_id, branch, worktree_path, owner_actor, dirty (true iff the worktree's porcelain-format status output (git_status_porcelain) is non-empty), untracked_count, and a broken flag when the recorded worktree_path no longer exists or is not a git worktree; broken bindings are RENDERED, never silently dropped; `dontpanic plan worktree list` prints one row per binding from this model; tests cover clean, dirty, untracked-only, and broken-binding states through the model and the list renderer on temp git repos.",
+      "acceptance": "a single pure function builds the worktree-status model from the registry plus per-worktree git state \u2014 per binding: plan_id, branch, worktree_path, owner_actor, dirty (true iff the worktree's porcelain-format status output (git_status_porcelain) is non-empty), untracked_count, and a broken flag when the recorded worktree_path no longer exists, is not a git worktree, or is not a worktree OF the recorded repo_root (verified against repo_root's own worktree list / common git dir \u2014 an arbitrary unrelated git repository at that path is broken, not healthy); broken bindings are RENDERED, never silently dropped; `dontpanic plan worktree list` prints one row per binding from this model; tests cover clean, dirty, untracked-only, and broken-binding states through the model and the list renderer on temp git repos.",
       "passes": false,
       "introduces": [
-        "worktree_status_model",
-        "untracked_count",
         "broken_binding",
-        "git_status_porcelain"
+        "git_status_porcelain",
+        "untracked_count",
+        "worktree_membership",
+        "worktree_status_model"
       ],
       "depends_on": [
         "F001"
@@ -86,13 +88,17 @@
       "id": "F006",
       "category": "functional",
       "description": "`dontpanic plan worktree create <plan-id>`: create the per-plan git worktree from an explicit recorded base and bind it in the registry.",
-      "acceptance": "`dontpanic plan worktree create <plan-id>` resolves the plan dir and creates a git worktree (git_worktree_add) at a deterministic path OUTSIDE the main working tree on a branch derived from the plan id; the base is NEVER the invoking checkout's HEAD implicitly: by default it is the repo's default branch (origin's default-branch ref when an origin exists, else the local main/master) resolved via rev-parse to a commit SHA, and an explicit base_flag (a base-ref CLI option) may select a different base; in every case the resolved base SHA and the ref it came from are printed in the command output and recorded verbatim in the binding as base_ref; an unresolvable base refuses before any worktree is created; on success the registry holds the full binding and the command prints worktree_path, branch, base_ref, and owner_actor; an already-bound plan refuses naming the existing binding; an occupied target path refuses without touching it; a failed git invocation leaves NO registry entry behind (no half-bind); tests cover default-base resolution (asserting it tracks the default branch, not the invoking HEAD on a divergent checkout), explicit base_flag recording, unresolvable-base refusal, create, double-bind refusal, occupied-path refusal, and git-failure rollback on a temp git repo with no network.",
+      "acceptance": "`dontpanic plan worktree create <plan-id>` resolves the plan dir and derives repo_root AUTHORITATIVELY from the plan dir's containing repository (rev-parse show-toplevel of the resolved plan directory) \u2014 every git invocation the command makes runs against that repo_root, never the invoking checkout's repository (proven by a test invoking create from an unrelated git repo); it creates a git worktree (git_worktree_add) at the deterministic path $DONTPANIC_HOME/worktrees/<repo-dir-name>/<plan-id> (outside the main working tree) on the branch plan/<plan-id> (plan ids are already filesystem/ref-safe slugs; the derivation is identity plus the pinned prefixes, asserted by test); a pre-existing branch of that name refuses in v0 (no reuse, no force); the base is NEVER the invoking checkout's HEAD implicitly: by default it is repo_root's default branch (origin's default-branch ref when an origin exists, else the local main/master) and an explicit base_flag (a base-ref CLI option) may select a different base; in every case the base is resolved via rev-parse to base_sha, both base_ref and base_sha are printed in the command output and recorded verbatim in the binding, and the worktree is created AT base_sha so the recorded SHA cannot drift from what was checked out; an unresolvable base refuses before any worktree is created; on success the registry holds the full binding and the command prints worktree_path, branch, base_ref, base_sha, and owner_actor; an already-bound plan refuses naming the existing binding; an occupied target path refuses without touching it; a failed git invocation leaves NO registry entry behind (no half-bind); tests cover default-base resolution (asserting it tracks the default branch, not the invoking HEAD on a divergent checkout), explicit base_flag recording, unresolvable-base refusal, pre-existing-branch refusal, wrong-invoking-repo independence, create, double-bind refusal, occupied-path refusal, and git-failure rollback on temp git repos with no network.",
       "passes": false,
       "introduces": [
         "base_flag",
+        "base_sha",
+        "branch_derivation",
         "default_branch_resolution",
         "git_worktree_add",
+        "repo_dir_name",
         "rev_parse",
+        "show_toplevel",
         "worktree_create"
       ],
       "depends_on": [
@@ -103,11 +109,12 @@
       "id": "F007",
       "category": "functional",
       "description": "Operator brief + dashboard visibility: the worktree-status model rendered in the operator brief and the dashboard state payload.",
-      "acceptance": "the operator brief includes an active-worktrees section driven by the SAME worktree-status model as the list command (branch, dirty, untracked_count, owner_actor, broken bindings included); the dashboard state payload carries the same block and passes the existing no-secret-shapes guard; the dashboard UI ACTUALLY RENDERS the block: a DOM-level integration test loads the real dashboard page module with a payload fixture and asserts the rendered surface shows branch, dirty state, untracked count, actor, and broken bindings for the fixture entries, plus an honest empty state when no bindings exist (nothing fabricated); tests cover the brief section, the payload block, and the DOM render for clean, dirty, and broken-binding fixtures, and assert model parity between the three renderers (list, brief, dashboard).",
+      "acceptance": "the operator brief includes an active-worktrees section driven by the SAME worktree-status model as the list command (branch, dirty, untracked_count, owner_actor, broken bindings included); the REAL dashboard state producer (the dashboard build path that writes the on-disk JSON state the shell loads) is wired to include the active-worktrees block \u2014 a producer test runs the real build path against a temp registry and asserts the block lands in the written state file and passes the existing no-secret-shapes guard; the dashboard UI ACTUALLY RENDERS the block: a DOM-level integration test loads the real dashboard page module with a payload fixture and asserts the rendered surface shows branch, dirty state, untracked count, actor, and broken bindings for the fixture entries, plus an honest empty state when no bindings exist (nothing fabricated); tests cover the brief section, the payload block, and the DOM render for clean, dirty, and broken-binding fixtures, and assert model parity between the three renderers (list, brief, dashboard).",
       "passes": false,
       "introduces": [
         "active_worktrees_section",
-        "dom_render_test"
+        "dom_render_test",
+        "state_producer_wiring"
       ],
       "depends_on": [
         "F004"
