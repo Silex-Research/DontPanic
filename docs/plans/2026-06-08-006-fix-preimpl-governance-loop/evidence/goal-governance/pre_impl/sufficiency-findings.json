@@ -1,0 +1,49 @@
+{
+  "auditor": "codex",
+  "implementer": "claude",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "lock-a-gated-plan",
+      "gap_class": "coverage_gap",
+      "description": "F001 states that plan lock invokes sufficiency generation, but its acceptance test only proves the audit runner writes an artifact with injected dispatch. It does not prove the CLI lock path handles findings_missing by generating findings and then continuing to lock.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Add a no-paid CLI-level or command-boundary test where a gated plan without sufficiency-findings.json runs through lock and produces the artifact instead of returning the prior dead-end."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "parse-codex-output",
+      "gap_class": "coverage_gap",
+      "description": "The parse-codex-output journey explicitly includes the garbage state, but F003 only covers Codex streams and JSON values with trailing prose. The proposed feature set does not define expected behavior for invalid garbage input.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Specify and test garbage handling so invalid Codex output fails deterministically with an actionable parse error and does not silently discard paid output or fabricate findings."
+    },
+    {
+      "severity": "medium",
+      "journey_id": "parse-codex-output",
+      "gap_class": "parity_gap",
+      "description": "The objective requires the post-impl audit path to be unaffected and to reuse the same Codex parser, but the proposed acceptance only asserts shared-module reuse in principle. It does not require a post-impl audit regression fixture through the actual post-impl boundary.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Add a no-paid post-impl audit fixture using the same Codex JSONL shape and assert it reaches findings through the shared parser after the refactor."
+    },
+    {
+      "severity": "low",
+      "journey_id": "lock-a-gated-plan",
+      "gap_class": "coverage_gap",
+      "description": "The completion test requires the full Python suite to be green, but none of the proposed feature acceptances names that as a required verification artifact before implementation closes.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Add full Python suite execution to the implementation verification checklist so the plan cannot close on fixture-only or narrow-path tests."
+    }
+  ]
+}

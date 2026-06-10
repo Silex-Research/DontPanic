@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-06-10-001-feat-convergence-policy-v1-1",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Policy amendment: streak-gated eligibility for HIGH matrix_pin findings in the pure convergence policy; critical, plan_contract, and conservative-fallback classifications remain absolute blocks; medium/low handling unchanged.",
+      "acceptance": "a pure clearance_streak helper counts consecutive full-clearance audit rounds ending at the latest round (override events excluded); convergence_verdict gains the v1.1 rule: a HIGH-severity finding whose auditor-emitted class is matrix_pin is suppressible by a valid waived_matrix_pin_high disposition IFF clearance_streak >= N (N configurable parameter, default 2); eligibility NEVER applies to critical severity, to plan_contract class, to conservative-fallback (unclassified) findings, or below the streak threshold; medium/low/advisory handling, accepted_into_plan semantics, and legacy whole-plan override precedence are byte-for-byte unchanged (regression tests); verdict_for gains the streak-conditional cell (high + matrix_pin -> block without streak context, disposition-eligible variant with it) and the exhaustive severity x class matrix test is updated to stay total; the policy remains pure (no I/O beyond arguments).",
+      "passes": false,
+      "introduces": [
+        "clearance_streak",
+        "waived_matrix_pin_high",
+        "streak_threshold",
+        "matrix_pin",
+        "plan_contract",
+        "accepted_into_plan"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Disposition kind + wiring: record waived_matrix_pin_high with mandatory operator confirmation text, fail-closed validation, and a lock refusal message that names streak-unlocked eligibility.",
+      "acceptance": "record_disposition accepts the new waived_matrix_pin_high kind ONLY for a finding whose latest-round severity is high AND class is matrix_pin AND whose ledger streak satisfies clearance_streak >= N \u2014 every other combination refuses fail-closed naming the unmet condition; the kind REQUIRES non-empty operator confirmation text of at least 20 characters (auto-confirmation impossible: no default text exists anywhere in the code path); the disposition is recorded, mirrored into decisions.jsonl, and invalidated on material recurrence exactly like existing kinds and is a member of the no-audit resolution set; the dontpanic plan disposition CLI passes the new kind through with its reason; when a lock refusal's blocking set includes a high matrix_pin whose streak eligibility is unlocked, the refusal output names the finding id and the exact disposition command to resolve it without a new paid call; tests cover acceptance, each refusal arm (wrong severity, wrong class, short confirmation, streak too short), CLI passthrough, and the refusal-message naming.",
+      "passes": false,
+      "introduces": [
+        "confirmation_text",
+        "matrix_pin"
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Dual real-corpus dogfood: replay the C0 live rounds (1-4) and the worktree-isolation-v0 rounds (1-3) \u2014 both with auditor-emitted classes \u2014 as offline fixtures proving the eligibility AND the discrimination invariants.",
+      "acceptance": "the C0 plan's real sufficiency-rounds ledger (rounds 1-4, auditor-emitted finding_class values) and the worktree-isolation-v0 plan's real ledger (rounds 1-3) are copied verbatim into the test fixture corpus; fixtures assert: C0 round 3's high matrix_pin is streak-eligible (streak=2) while rounds 1-2 are not; C0 round 4 with its matrix_pin high dispositioned still BLOCKS on its high plan_contract (discrimination); worktree round 3 (streak=2) still BLOCKS on its high plan_contract even under v1.1 (negative case: the new policy must not unlock it); the pre-existing nine fixture rounds remain verdict-stable under v1.1 (no behavior change without the new kind); zero live auditor invocations, enforced by the existing autouse guard.",
+      "passes": false,
+      "introduces": [
+        "dual_corpus",
+        "worktree_rounds_fixture",
+        "matrix_pin",
+        "plan_contract"
+      ],
+      "depends_on": [
+        "F001",
+        "F002"
+      ]
+    }
+  ]
+}
