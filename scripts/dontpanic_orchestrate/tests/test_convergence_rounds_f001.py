@@ -122,3 +122,57 @@ def test_disposition_resolution_pass_appends_nothing(plan_dir: Path):
 
     gate_decision(plan_dir)
     assert _ledger_file(plan_dir).read_text() == before
+
+
+def test_failed_ledger_append_rolls_back_findings_artifact(tmp_path, monkeypatch):
+    """All-or-nothing findings <-> ledger (CodeRabbit PR#35): when the round
+    append fails after the findings write, the findings artifact is removed
+    so the next lock regenerates BOTH instead of reusing orphaned findings."""
+    import json as _json
+
+    import pytest as _pytest
+
+    from dontpanic_orchestrate import sufficiency_auditor as _sa
+    from dontpanic_orchestrate import sufficiency_convergence as _sc
+
+    plan = tmp_path / "plan"
+    plan.mkdir()
+    (plan / "plan.md").write_text(
+        "---\nid: x\ntitle: x\ntype: feat\ntier: local\nstatus: draft\n"
+        "date: '2026-06-09'\ndescription: fixture\ngoal_type: new_feature\n"
+        "links:\n  objective_contract: ./objective_contract.json\n---\n"
+    )
+    (plan / "features.json").write_text(
+        _json.dumps({"features": [{"id": "F001", "category": "tooling", "phase": 1,
+                                   "description": "f", "steps": ["a"], "acceptance": "ok.",
+                                   "passes": False, "depends_on": [], "evidence_refs": []}]})
+    )
+    (plan / "objective_contract.json").write_text(
+        _json.dumps({
+            "goal_type": "new_feature",
+            "source_of_truth": "fixture",
+            "user_journeys": [{"name": "j", "description": "x" * 60}],
+            "completion_test": "fixture completion test long enough to validate.",
+        })
+    )
+
+    def _boom(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise OSError("disk full")
+
+    monkeypatch.setattr(_sc, "append_audit_round", _boom)
+
+    response = _json.dumps([
+        {
+            "severity": "medium",
+            "journey_id": "j",
+            "gap_class": "coverage_gap",
+            "description": "a substantive fixture finding exceeding the forty character floor.",
+            "feature_refs": ["F001"],
+            "recommendation": None,
+        }
+    ])
+    with _pytest.raises(_sa.SufficiencyAuditError, match="rolled back"):
+        _sa.run_sufficiency_audit(plan, dispatch=lambda agent, prompt: response)
+
+    findings_path = plan / "evidence" / "goal-governance" / "pre_impl" / "sufficiency-findings.json"
+    assert not findings_path.exists(), "orphaned findings must not survive a failed ledger append"

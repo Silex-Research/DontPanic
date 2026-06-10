@@ -2992,7 +2992,13 @@ def _plan_main(argv: list[str]) -> int:
             "  resync <plan-dir>\n"
             "      Retry any failed/pending entries in evidence/external_sync.json\n"
             "      via the registered category adapters. Idempotent — already-\n"
-            "      pushed entries are skipped. Plan 2026-05-20-001 F002.",
+            "      pushed entries are skipped. Plan 2026-05-20-001 F002.\n"
+            "  disposition <plan-dir> --finding <id> --kind <kind> [--reason] [--followup]\n"
+            "      Record a per-finding sufficiency disposition against the latest\n"
+            "      audit round (convergence policy, plan 2026-06-09-002). Resolves\n"
+            "      eligible findings WITHOUT another paid audit. Kinds:\n"
+            "      accepted_into_plan / deferred_to_impl / waived_with_reason /\n"
+            "      split_to_followup_plan.",
             file=sys.stderr,
         )
         return 2

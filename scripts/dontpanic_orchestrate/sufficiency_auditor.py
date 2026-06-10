@@ -668,13 +668,25 @@ def run_sufficiency_audit(
     # Convergence rounds ledger (plan 2026-06-09-002 F001): an audit round is
     # appended HERE and only here — the one place the auditor actually runs.
     # A disposition-resolution lock pass never reaches this function.
+    # All-or-nothing with the findings artifact: if the ledger append fails,
+    # the just-written findings file is removed so the next lock regenerates
+    # BOTH — otherwise the fingerprint-match reuse path would keep serving
+    # findings that have no corresponding audit round, and the convergence
+    # policy would never see this round (CodeRabbit PR#35).
     from dontpanic_orchestrate.sufficiency_convergence import append_audit_round
 
-    append_audit_round(
-        plan_dir,
-        [f.model_dump() for f in findings],
-        input_fingerprint=input_fingerprint,
-    )
+    try:
+        append_audit_round(
+            plan_dir,
+            [f.model_dump() for f in findings],
+            input_fingerprint=input_fingerprint,
+        )
+    except Exception as exc:
+        out_path.unlink(missing_ok=True)
+        raise SufficiencyAuditError(
+            f"rounds-ledger append failed after findings write; findings artifact "
+            f"rolled back so the next lock regenerates both: {exc}"
+        ) from exc
 
     return findings
 
