@@ -3006,8 +3006,69 @@ def _plan_main(argv: list[str]) -> int:
         return _plan_close_main(rest)
     if sub == "resync":
         return _plan_resync_main(rest)
+    if sub == "disposition":
+        return _plan_disposition_main(rest)
     print(f"dontpanic plan: unknown subcommand {sub!r}", file=sys.stderr)
     return 2
+
+
+def _plan_disposition_main(argv: list[str]) -> int:
+    """``dontpanic plan disposition`` — record a per-finding operator
+    disposition against the latest sufficiency audit round (plan
+    2026-06-09-002 F003). No hand-editing of evidence files; each recorded
+    disposition is mirrored into the plan's decisions.jsonl. Performs zero
+    auditor invocations."""
+    from dontpanic_orchestrate.sufficiency_convergence import (
+        DISPOSITION_KINDS,
+        ConvergenceError,
+        gate_decision,
+        record_disposition,
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan disposition",
+        description=(
+            "Record a per-finding sufficiency disposition (convergence policy, "
+            "plan 2026-09-002). waived_with_reason requires --reason; "
+            "split_to_followup_plan requires --followup; deferred_to_impl and "
+            "split_to_followup_plan are refused for plan_contract findings; "
+            "accepted_into_plan stays blocking until the plan is actually "
+            "edited and re-audited."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    parser.add_argument("--finding", required=True, help="finding_id from the rounds ledger")
+    parser.add_argument("--kind", required=True, choices=list(DISPOSITION_KINDS))
+    parser.add_argument("--reason", default=None)
+    parser.add_argument("--followup", default=None, metavar="PLAN_REF")
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    try:
+        entry = record_disposition(
+            plan_dir,
+            finding_id=args.finding,
+            kind=args.kind,
+            reason=args.reason,
+            followup_plan=args.followup,
+            recorded_by=os.environ.get("DONTPANIC_OPERATOR")
+            or os.environ.get("USER")
+            or "operator",
+        )
+    except ConvergenceError as exc:
+        print(f"[plan disposition] REFUSED: {exc}", file=sys.stderr)
+        return 3
+    print(
+        f"[plan disposition] recorded {args.kind} for {args.finding} "
+        f"(fingerprint {entry['fingerprint']}, round {entry['round']})"
+    )
+    decision = gate_decision(plan_dir)
+    print(f"[plan disposition] convergence verdict now: {decision.verdict} ({decision.branch})")
+    if decision.undisposed_ids:
+        print(
+            "[plan disposition] still undisposed: " + ", ".join(decision.undisposed_ids)
+        )
+    return 0
 
 
 def _run_pre_lock_scope_gate(

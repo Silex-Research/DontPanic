@@ -308,16 +308,43 @@ def enforce_sufficiency_gate(plan_dir: Path) -> None:
     findings = _load_findings(plan_dir)
     blocking = _blocking_findings(findings)
     if blocking:
+        # Convergence policy (plan 2026-06-09-002 F002/F005). Consults the
+        # rounds ledger + recorded dispositions — performs ZERO auditor
+        # invocations. When every blocking finding of the latest round is
+        # covered by a valid no-audit disposition, the gate passes (the
+        # no_auditor_resolution path); otherwise the refusal names the
+        # policy branch that fired.
+        from dontpanic_orchestrate.sufficiency_convergence import (
+            VERDICT_DISPOSITION_REQUIRED,
+            VERDICT_PROCEED,
+            gate_decision,
+        )
+
+        decision = gate_decision(plan_dir)
+        if decision.verdict == VERDICT_PROCEED:
+            return  # resolved by dispositions — no paid call, no new round
+
         bullet_lines = [
             f"  - {f.journey_id} / {f.gap_class} ({f.severity}): {f.description}" for f in blocking
         ]
+        if decision.verdict == VERDICT_DISPOSITION_REQUIRED:
+            guidance = (
+                "to resolve WITHOUT another paid audit: dontpanic plan disposition "
+                "<plan-dir> --finding <id> --kind "
+                "deferred_to_impl|waived_with_reason|split_to_followup_plan"
+            )
+        else:
+            guidance = (
+                "to override: dontpanic plan lock <plan-dir> "
+                '--ignore-sufficiency-findings "<reason>"'
+            )
         raise SufficiencyGateError(
             f"plan lock refused — {len(blocking)} blocking sufficiency finding(s) "
             f"at severity ≥ medium:\n"
             + "\n".join(bullet_lines)
-            + f"\nfindings file: {_findings_path(plan_dir)}\n"
-            "to override: dontpanic plan lock <plan-dir> "
-            '--ignore-sufficiency-findings "<reason>"'
+            + f"\nconvergence policy branch: {decision.branch} — {decision.detail}\n"
+            + f"findings file: {_findings_path(plan_dir)}\n"
+            + guidance
         )
 
 
@@ -408,15 +435,22 @@ def lock_plan(
         # if any input is missing.
         hashes = _compute_input_hashes(plan_dir, plan_data)
         contract_ref = (plan_data.get("links") or {}).get("objective_contract", "")
+        approver = _resolved_approver(approved_by)
         _write_override(
             plan_dir,
             reason=override_reason,
-            approved_by=_resolved_approver(approved_by),
+            approved_by=approver,
             plan_id=plan_data.get("id", "<unknown>"),
             goal_type=plan_data.get("goal_type", "<unknown>"),
             objective_contract_path=contract_ref,
             hashes=hashes,
         )
+        # The legacy override takes precedence over the disposition path and
+        # bypasses it entirely — but its use is logged in the rounds ledger
+        # (plan 2026-06-09-002 F003 legacy-override interaction).
+        from dontpanic_orchestrate.sufficiency_convergence import append_override_event
+
+        append_override_event(plan_dir, reason=override_reason, approved_by=approver)
 
     _mutate_plan_status_to_active(plan_md)
     return plan_md
