@@ -6,6 +6,10 @@ tier: cross-cutting
 status: draft
 date: "2026-06-10"
 goal_type: new_feature
+links:
+  features: ./features.json
+  decisions: ./decisions.jsonl
+  objective_contract: ./objective_contract.json
 description: >
   Give every plan its own git worktree and make DontPanic worktree-aware: a
   create command that builds the worktree from the correct base and records the
