@@ -20,7 +20,9 @@
       ],
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_rounds_f001.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_rounds_f001.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     },
     {
@@ -36,7 +38,9 @@
       ],
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_f002.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_f002.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     },
     {
@@ -55,7 +59,9 @@
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
         "scripts/dontpanic_orchestrate/cli.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_disposition_f003.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_disposition_f003.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     },
     {
@@ -69,7 +75,9 @@
       ],
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/tests/fixtures/convergence_rounds/real_rounds.json",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_fixtures_f004.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_fixtures_f004.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     },
     {
@@ -83,7 +91,9 @@
       ],
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/sufficiency_gate.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_lock_wiring_f005.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_lock_wiring_f005.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     },
     {
@@ -98,7 +108,9 @@
       ],
       "evidence_refs": [
         "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_identity_f006.py"
+        "scripts/dontpanic_orchestrate/tests/test_convergence_identity_f006.py",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
+        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
       ]
     }
   ]
