@@ -1,0 +1,113 @@
+{
+  "task_id": "2026-06-10-002-feat-worktree-isolation-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Worktree binding registry module: install-level storage of per-plan worktree bindings at $DONTPANIC_HOME/worktrees.json, mirroring the projects.json registry pattern.",
+      "acceptance": "a new worktrees registry module stores bindings at $DONTPANIC_HOME/worktrees.json honoring the same DONTPANIC_HOME / JARVIS_HOME resolution as projects.json, with Pydantic extra=forbid and degrade-to-empty-plus-warn on invalid files; a binding record carries plan_id, repo_root, worktree_path, branch, base_ref, owner_actor (DONTPANIC_ACTOR env else user@host), created_at; the module exposes pure add/get/remove/list operations that refuse a second binding for an already-bound plan and refuse a worktree_path already claimed by another binding; tests cover round-trip persistence, double-bind refusal, path-collision refusal, invalid-file degradation, and home-resolution precedence, all against a temp home with no network.",
+      "passes": false,
+      "introduces": [
+        "worktree_registry",
+        "worktree_binding",
+        "worktree_path",
+        "base_ref",
+        "owner_actor",
+        "DONTPANIC_HOME",
+        "JARVIS_HOME",
+        "DONTPANIC_ACTOR",
+        "repo_root",
+        "created_at"
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Gate-time binding capture: plan lock / audit / close record the worktree binding snapshot into the plan's audit evidence when a binding exists.",
+      "acceptance": "when a binding exists for the plan, `plan lock`, `plan audit`, and `plan close` write a binding snapshot (worktree_path, base_ref, branch, owner_actor, captured_at) into the plan's audit evidence alongside the gate artifacts they already produce; when no binding exists the commands behave exactly as today and write no snapshot (additive, proven by a no-binding regression test); a fixture test runs a gate command inside a bound temp worktree and asserts the snapshot lands with the recorded values.",
+      "passes": false,
+      "introduces": [
+        "binding_snapshot",
+        "captured_at"
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "Wrong-worktree refusal: plan-mutating commands refuse from a working tree other than the plan's bound worktree unless explicitly overridden, and the override is recorded.",
+      "acceptance": "`plan lock`, `plan close`, and `plan disposition` resolve the invoking working tree (git rev-parse --show-toplevel) and, when the plan has a binding whose worktree_path differs, refuse BEFORE any gate side effect with a message naming both the invoking tree and the bound worktree_path plus the exact create/override commands; an explicit override flag with a required reason proceeds and records the override (plan_id, invoking path, bound path, reason, actor, timestamp) into the plan's audit evidence; plans with no binding are never refused (backward-compatibility regression test); tests cover refusal, override-with-reason recording, and the unbound passthrough.",
+      "passes": false,
+      "introduces": [
+        "wrong_worktree_refusal",
+        "worktree_override"
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Worktree-status model + `dontpanic plan worktree list`: one pure model over registry + git state, rendered by the list command.",
+      "acceptance": "a single pure function builds the worktree-status model from the registry plus per-worktree git state \u2014 per binding: plan_id, branch, worktree_path, owner_actor, dirty (true iff the worktree's porcelain-format status output (git_status_porcelain) is non-empty), untracked_count, and a broken flag when the recorded worktree_path no longer exists or is not a git worktree; broken bindings are RENDERED, never silently dropped; `dontpanic plan worktree list` prints one row per binding from this model; tests cover clean, dirty, untracked-only, and broken-binding states through the model and the list renderer on temp git repos.",
+      "passes": false,
+      "introduces": [
+        "worktree_status_model",
+        "untracked_count",
+        "broken_binding",
+        "git_status_porcelain"
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Explicit, audited, safe cleanup: remove a plan worktree only when clean; no force path in v0; close never auto-removes.",
+      "acceptance": "`dontpanic plan worktree remove <plan-id>` refuses when the bound worktree has ANY modified, staged, or untracked files, printing the offending paths, and removes the worktree (git worktree remove without --force) plus the registry binding only when fully clean; every removal appends an audit entry (plan_id, worktree_path, branch, owner_actor, removed_at) to a worktree audit log under $DONTPANIC_HOME; no command in this plan deletes a dirty worktree or exposes a force-removal flag (asserted by a CLI-surface test); `plan close` performs NO worktree removal \u2014 at most it prints the explicit remove command (regression test on the close path); tests cover clean removal with audit entry, dirty refusal listing files, untracked-only refusal, and the close-does-not-remove guarantee.",
+      "passes": false,
+      "introduces": [
+        "worktree_remove",
+        "worktree_audit_log",
+        "removed_at",
+        "DONTPANIC_HOME"
+      ],
+      "depends_on": [
+        "F001",
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "description": "`dontpanic plan worktree create <plan-id>`: create the per-plan git worktree from an explicit recorded base and bind it in the registry.",
+      "acceptance": "`dontpanic plan worktree create <plan-id>` resolves the plan dir, creates a git worktree (git_worktree_add) at a deterministic path OUTSIDE the main working tree on a branch derived from the plan id, from a base_ref that is explicit in the command output and recorded verbatim in the binding; on success the registry holds the full binding and the command prints worktree_path, branch, base_ref, and owner_actor; an already-bound plan refuses naming the existing binding; an occupied target path refuses without touching it; a failed git invocation leaves NO registry entry behind (no half-bind); tests cover create, double-bind refusal, occupied-path refusal, and git-failure rollback on a temp git repo with no network.",
+      "passes": false,
+      "introduces": [
+        "worktree_create",
+        "git_worktree_add"
+      ],
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "description": "Operator brief + dashboard visibility: the worktree-status model rendered in the operator brief and the dashboard state payload.",
+      "acceptance": "the operator brief includes an active-worktrees section driven by the SAME worktree-status model as the list command (branch, dirty, untracked_count, owner_actor, broken bindings included); the dashboard state payload carries the same block, passes the existing no-secret-shapes guard, and renders nothing fabricated when no bindings exist (honest empty state); tests cover the brief section and the payload block for clean, dirty, and broken-binding fixtures and assert model parity between the three renderers (list, brief, payload).",
+      "passes": false,
+      "introduces": [
+        "active_worktrees_section"
+      ],
+      "depends_on": [
+        "F004"
+      ]
+    }
+  ]
+}
