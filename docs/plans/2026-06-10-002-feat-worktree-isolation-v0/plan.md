@@ -3,7 +3,7 @@ id: 2026-06-10-002-feat-worktree-isolation-v0
 title: Worktree Isolation v0 — per-plan git worktrees with binding, refusal, visibility, and safe cleanup
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-10"
 goal_type: new_feature
 links:

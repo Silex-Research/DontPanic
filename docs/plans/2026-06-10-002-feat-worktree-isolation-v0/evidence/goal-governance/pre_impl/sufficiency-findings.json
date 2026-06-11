@@ -2,32 +2,7 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:5cd2abb4975af2a8930523f1b96736a47d150331af6948805f94bbe5bea6184f",
-  "generated_at": "2026-06-11T13:38:37Z",
-  "findings": [
-    {
-      "severity": "high",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "coverage_gap",
-      "description": "Registry-write-failure rollback is covered for removing the newly created worktree and branch, but the proposed acceptance text does not pin that the pre-existing worktrees registry remains intact after a failed write. A partial or truncated registry write would still satisfy 'no binding exists without its worktree' while breaking existing bindings and visibility.",
-      "feature_refs": [
-        "F001",
-        "F006"
-      ],
-      "recommendation": "Add an explicit atomic-write requirement and fixture: seed an existing registry, simulate write failure during create, assert the old registry content remains readable and unchanged while the new worktree and branch are removed.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "binding-honesty",
-      "gap_class": "parity_gap",
-      "description": "F004 includes current_branch in the status model, but F007 only requires the brief and dashboard to render 'branch' plus health reasons. For branch-drifted bindings, the user-facing surfaces may show only the recorded branch and a generic drift reason, leaving the actual current branch invisible.",
-      "feature_refs": [
-        "F004",
-        "F007"
-      ],
-      "recommendation": "Pin renderer parity so list, brief, and dashboard all expose recorded branch and current_branch when they differ, or require the health reason payload to include the observed current branch value.",
-      "finding_class": "plan_contract"
-    }
-  ]
+  "input_fingerprint": "sha256:943164d2699853e32ee307931192811a86ee8945e4bffae7e3c34b0de6946997",
+  "generated_at": "2026-06-11T14:17:40Z",
+  "findings": []
 }
