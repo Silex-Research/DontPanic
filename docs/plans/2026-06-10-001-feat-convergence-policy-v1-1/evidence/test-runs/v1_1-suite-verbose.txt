@@ -1,6 +1,6 @@
-platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
 cachedir: .pytest_cache
-rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+rootdir: <home>/Documents/GitHub/DontPanic
 configfile: pyproject.toml
 plugins: anyio-4.12.1, typeguard-4.5.1
 collecting ... collected 36 items

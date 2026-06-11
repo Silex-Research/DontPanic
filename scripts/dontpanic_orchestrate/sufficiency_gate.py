@@ -48,6 +48,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -346,7 +347,7 @@ def enforce_sufficiency_gate(plan_dir: Path) -> None:
         unlocked_lines = [
             (
                 f"streak-unlocked high matrix_pin {fid} — resolvable without a "
-                f"new paid audit:\n  dontpanic plan disposition {plan_dir} "
+                f"new paid audit:\n  dontpanic plan disposition {shlex.quote(str(plan_dir))} "
                 f"--finding {fid} --kind {WAIVED_MATRIX_PIN_HIGH} "
                 f'--reason "{CONFIRMATION_PLACEHOLDER}"'
             )

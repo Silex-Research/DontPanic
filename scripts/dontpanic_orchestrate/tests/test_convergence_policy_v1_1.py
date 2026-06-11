@@ -191,10 +191,12 @@ class TestStreakGatedSuppression:
         ledger = _rounds_prefix(_load(C0_LEDGER), 3)
         r3 = dict(ledger[-1])
         boosted = [dict(f) for f in r3["findings"]]
+        crit = None
         for f in boosted:
             if f["severity"] == "high" and f["finding_class"] == "matrix_pin":
                 f["severity"] = "critical"
                 crit = f
+        assert crit is not None, "fixture drift: no high matrix_pin in C0 round 3"
         r3["findings"] = boosted
         verdict = convergence_verdict(ledger[:-1] + [r3], self._disposition_for(crit))
         assert verdict.verdict == VERDICT_BLOCK
