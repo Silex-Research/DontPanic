@@ -2,55 +2,56 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:3cd73f298e8bea2ecd60b9085c46aec91021bbf520799539d8bea26d86018a98",
-  "generated_at": "2026-06-11T00:41:39Z",
+  "input_fingerprint": "sha256:908835a68f83fa49970f04f1b77f1d96a297e32800fbd4ce5e8d4d4d2e19977f",
+  "generated_at": "2026-06-11T00:48:03Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "wrong-worktree-guard",
-      "gap_class": "integration_gap",
-      "description": "F001's invalid-registry behavior degrades to an empty registry, while F003 treats an empty registry as unbound passthrough. That creates a fail-open path where corrupt worktrees.json disables wrong-worktree protection before plan-mutating commands.",
-      "feature_refs": [
-        "F001",
-        "F003"
-      ],
-      "recommendation": "Separate valid-empty from invalid-unreadable registry state. Mutating guarded commands should fail closed on invalid worktree registry state, while read-only list/brief/dashboard surfaces can warn and render no rows.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
       "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F005 only pins dirty, staged, and untracked refusal for remove; it does not explicitly refuse broken bindings, unrelated repositories at the recorded path, non-worktree paths, missing paths, detached HEAD, or branch drift before cleanup.",
+      "description": "The plan pins corrupt-registry fail-closed behavior for guarded plan-mutating entry points, but not for worktree create/remove even though those commands mutate the registry and remove filesystem state.",
       "feature_refs": [
-        "F004",
-        "F005"
+        "F001",
+        "F005",
+        "F006"
       ],
-      "recommendation": "Make remove consume the same worktree-status ownership and drift checks as F004, and require refusal for broken or drifted bindings before any git worktree remove or registry mutation.",
+      "recommendation": "Require strict registry loading for every registry- or filesystem-mutating worktree command, with corrupt worktrees.json tests for create and remove.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
       "journey_id": "fleet-worktree-visibility",
       "gap_class": "parity_gap",
-      "description": "F004 requires branch drift to be rendered as broken or drifted, but F007's brief, payload, and DOM tests only pin generic clean, dirty, and broken fixtures. Drift visibility could disappear in brief or dashboard while list remains correct.",
+      "description": "F001 requires read-only consumers to surface a corrupt-registry warning, but F004 and F007 do not pin a warning field or renderer tests for list, brief, and dashboard parity.",
       "feature_refs": [
+        "F001",
         "F004",
         "F007"
       ],
-      "recommendation": "Add a branch-drift fixture to list, operator brief, dashboard payload, and DOM tests, asserting both recorded branch and current branch or an explicit drift marker are visible.",
+      "recommendation": "Add the registry-corrupt warning to the shared status model and assert it renders in plan worktree list, operator brief, and the dashboard DOM.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "fleet-worktree-visibility",
+      "gap_class": "coverage_gap",
+      "description": "The untracked_count behavior is not deterministic enough for user-facing parity because the plan does not pin whether porcelain status expands untracked directories or counts collapsed directory entries.",
+      "feature_refs": [
+        "F004",
+        "F005",
+        "F007"
+      ],
+      "recommendation": "Pin the exact git status mode, preferably porcelain with untracked expansion, and test nested untracked directories across list, cleanup refusal, brief, and dashboard.",
       "finding_class": "matrix_pin"
     },
     {
-      "severity": "low",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "coverage_gap",
-      "description": "F006 says default base is origin's default branch when origin exists, else local main/master, but it does not pin fallback behavior when origin exists without a resolvable origin/HEAD or when both main and master exist locally.",
-      "feature_refs": [
-        "F006"
-      ],
-      "recommendation": "Define the exact default-branch resolution order and add tests for origin-without-default-ref, main/master ambiguity, and refusal versus fallback behavior.",
-      "finding_class": "matrix_pin"
+      "severity": "medium",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "missing_feature",
+      "description": "The non-goal that DontPanic must not add a merge command is referenced through an absent D005 assertion, leaving the merge-adjacent CLI surface guard unowned.",
+      "feature_refs": [],
+      "recommendation": "Add an explicit CLI-surface/non-goal assertion that no DontPanic merge command is introduced and that close/disposition remain the complete guarded surface.",
+      "finding_class": "scope_guard"
     }
   ]
 }
