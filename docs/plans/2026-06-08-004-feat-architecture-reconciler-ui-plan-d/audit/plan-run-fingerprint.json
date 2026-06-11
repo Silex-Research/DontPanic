@@ -1,0 +1,64 @@
+{
+  "captured_at": "2026-06-08T22:21:55Z",
+  "decision_lines": [
+    "D001\u001f5cd736e4016bc14d932c5610cccf9b9d6cef75fedf26296cbdbf052786791e36",
+    "D002\u001f9c9ec1080e1ec7f837f19600924364f926781d06fc29696b7722056fa3adc03f",
+    "D003\u001f00e3483eafb1feeeffebd0c5da038ad9a29b60451c437fa2cc3b3db30a0df068"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "the Architecture page renders a coverage banner showing the confidence ceiling, each extractor's status, and any missing-extractor kinds from the view-state coverage block; a low or medium ceiling is rendered as an explicit incompleteness statement, never hidden; the banner is driven only by real coverage data (no hard-coded high).",
+        "agents_required": null,
+        "depends_on": null,
+        "passes": false
+      },
+      "F002": {
+        "acceptance": "the page renders intent claims distinctly labelled as declared/intended (not as-built fact), shows each diff entry's taxonomy as a drift badge (aligned / documented_unimplemented / stale_adr), and renders an honest empty state when there are no claims; nothing presents intent as observed evidence.",
+        "agents_required": null,
+        "depends_on": null,
+        "passes": false
+      },
+      "F003": {
+        "acceptance": "a journey test boots the real shell (createJarvis init) on a producer-generated architecture view-state and asserts the rendered Architecture surface shows the coverage banner, at least one declared intent claim, and the diff, with no raw JSON leaked and no over-confident/fake-fresh rendering.",
+        "agents_required": null,
+        "depends_on": null,
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": null,
+    "decisions.jsonl": "05ebd7aa1af919f4e8d01588f72199a12b04d87ce4f23f4a112f47c654fba487",
+    "features.json": "29a03c9ae1bccd5641d853daba43c54d37da57715be17232bd3a126cdc7784c7",
+    "objective_contract.json": "6e242675b4c2032a20350a0617995779b7d794d81feffd8ae4ead8a2aff533a7",
+    "plan.md": "7211509e878358375052cbc33803a30022f9787c991e42d1cc0a0bb86c089388"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": null,
+    "decisions.jsonl": 1780955231.765086,
+    "features.json": 1780955231.7654245,
+    "objective_contract.json": 1780955231.7656052,
+    "plan.md": 1780957315.045922
+  },
+  "gate_semantics": {
+    "cleared_gates": [],
+    "completed_stages": []
+  },
+  "objective_hash": "6e242675b4c2032a20350a0617995779b7d794d81feffd8ae4ead8a2aff533a7",
+  "plan_semantics": {
+    "agents_required": null,
+    "allowed_paths": null,
+    "dependencies": null,
+    "forbidden_decisions": null,
+    "human_gates": null,
+    "loop_caps": null,
+    "protected_paths": null,
+    "status": "active"
+  }
+}

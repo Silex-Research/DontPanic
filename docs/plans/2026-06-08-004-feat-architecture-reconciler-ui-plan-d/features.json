@@ -5,32 +5,80 @@
     {
       "id": "F001",
       "category": "functional",
-      "description": "Render the extractor-coverage + confidence block at the top of the Architecture page: confidence ceiling, per-extractor status, and present-but-unextracted kinds, so an incomplete map states its incompleteness loudly.",
-      "acceptance": "the Architecture page renders a coverage banner showing the confidence ceiling, each extractor's status, and any missing-extractor kinds from the view-state coverage block; a low or medium ceiling is rendered as an explicit incompleteness statement, never hidden; the banner is driven only by real coverage data (no hard-coded high).",
+      "description": "Render the contract coverage + confidence block at the top of the Architecture page: confidence ceiling, per-extractor status rows, and present-but-unextracted kinds, so an incomplete map states its incompleteness loudly.",
+      "acceptance": "the Architecture page renders a coverage banner driven only by the view-state coverage block (no hard-coded ceiling): it shows coverage.confidence_ceiling, one row per coverage.extractors entry (extractor, evidence_kind, status) including the adr_intent_extractor row, and every coverage.missing_extractors kind; a low or medium ceiling renders an explicit incompleteness statement (the map is incomplete, not wrong), never hidden or softened; a unit test feeds a low-ceiling and a high-ceiling coverage block through the real renderer and asserts the difference.",
       "passes": false,
       "introduces": [
-        "coverage_banner"
+        "coverage_banner",
+        "evidence_kind",
+        "adr_intent_extractor"
       ]
     },
     {
       "id": "F002",
       "category": "functional",
       "description": "Render the intent layer (declared ADR claims) alongside the as-built graph and surface each diff entry by its taxonomy as a drift badge; intent is labelled declared and an empty intent layer reads as no-ADRs, never as confident as-built.",
-      "acceptance": "the page renders intent claims distinctly labelled as declared/intended (not as-built fact), shows each diff entry's taxonomy as a drift badge (aligned / documented_unimplemented / stale_adr), and renders an honest empty state when there are no claims; nothing presents intent as observed evidence.",
+      "acceptance": "the page renders layers.intent.claims distinctly labelled as declared/intended (not as-built fact), renders each layers.diff entry as a badge keyed by its taxonomy value with distinct rendering for the three live values (aligned / documented_unimplemented / stale_adr) and a safe fallback rendering for the remaining DIFF_TAXONOMY values (drift / implemented_undocumented / conflicting_dependency / unknown_confidence), and renders an honest empty state when layers.intent.populated is false (reads as no ADR claims found); nothing presents intent as observed evidence.",
       "passes": false,
       "introduces": [
         "intent_layer_view",
         "drift_badge",
         "documented_unimplemented",
-        "stale_adr"
+        "stale_adr",
+        "implemented_undocumented",
+        "conflicting_dependency",
+        "unknown_confidence"
       ]
     },
     {
       "id": "F003",
       "category": "functional",
-      "description": "Real-shell journey: boot the actual dashboard shell on a producer-built view-state and assert the Architecture surface renders the coverage banner + intent claims + diff honestly through the real render path.",
-      "acceptance": "a journey test boots the real shell (createJarvis init) on a producer-generated architecture view-state and asserts the rendered Architecture surface shows the coverage banner, at least one declared intent claim, and the diff, with no raw JSON leaked and no over-confident/fake-fresh rendering.",
-      "passes": false
+      "description": "C0 baseline coverage panel: render coverage.baseline \u2014 rollup verdict, per-language status, per-evidence-type tier table, scan-truncation warning, and the operator notes verbatim.",
+      "acceptance": "when coverage.baseline is present the page renders: (1) baseline.rollup verbatim as one of limited/partial/covered with limited and partial framed as incompleteness; (2) one row per baseline.per_language entry showing the language and its status (covered for parser-backed languages, missing_extractor otherwise), rendering ONLY detected languages; (3) a per-evidence-type table with one row for each of the 10 keys in architecture_baseline.EVIDENCE_TYPES showing status and tier, including the reserved runtime tier-3 row rendered as reserved/not_found rather than omitted; (4) a visible truncation warning when baseline.scan_truncated is true and none when false; (5) every baseline.notes string rendered verbatim (the per-language low-confidence extractor notes and the unknown-language note), driven only by the payload; when coverage.baseline is absent the panel renders an honest empty state and fabricates nothing.",
+      "passes": false,
+      "introduces": [
+        "baseline_coverage_panel",
+        "missing_extractor",
+        "not_found",
+        "scan_truncated"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Confidence-aware graph styling: heuristic/unresolved edges and heuristic-target/filesystem nodes are visually distinct from parser-backed evidence, with a legend; render-truth passthrough keeps them visible.",
+      "acceptance": "heuristic_import edges render visually distinct from parser-backed import edges, with unresolved (resolved=false / evidence_basis=unresolved) edges further distinguished from inferred resolved ones; heuristic_target nodes (evidence_basis=unresolved) and tier-0 filesystem nodes render so they cannot be mistaken for parser-proven components; the page legend gains entries naming these evidence levels; a render test on a producer-built view-state containing heuristic and filesystem items asserts they SURVIVE to the rendered output (not filtered) and carry the distinct styling hooks; no existing node/edge rendering is removed.",
+      "passes": false,
+      "introduces": [
+        "confidence_legend",
+        "heuristic_import",
+        "heuristic_target"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Producer parity: attach coverage[\"baseline\"] on the present-architecture branch of build_view_state, where the baseline is already computed but its coverage block is dropped.",
+      "acceptance": "build_view_state attaches the build_baseline coverage block as coverage[\"baseline\"] on BOTH branches (architecture.json present and absent); a parity test builds both branches against the same repo fixture and asserts both payloads carry a coverage.baseline block with identical keys (rollup, per_language, per_evidence_type, scan_truncated, notes, unrecognized_extensions); the change is limited to attaching the already-computed block \u2014 no detector, marker-table, registry, or coverage-rule change, and the existing absent-branch behavior is unchanged.",
+      "passes": false,
+      "introduces": [
+        "baseline_parity",
+        "per_evidence_type",
+        "scan_truncated",
+        "unrecognized_extensions",
+        "per_language"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "description": "Real-shell journeys for both producer states: architecture.json present (full reconciler surface) and absent (C0 any-repo baseline surface), with a fixture-producer contract guard.",
+      "acceptance": "a journey test boots the real shell (createJarvis().init()) on a producer-generated view-state with architecture.json present and asserts the rendered Architecture surface shows the coverage banner, the baseline coverage panel, at least one declared intent claim, and at least one diff badge, with no raw JSON leaked and no over-confident rendering (low/medium ceiling visible as incompleteness); a second journey boots the real shell on a producer-generated view-state for a repo WITHOUT architecture.json and asserts the baseline graph and baseline coverage panel render instead of an empty surface, including the architecture_missing warning; both journey fixtures are guarded by a contract test that regenerates them from the real producer (build_view_state) so a drifted fixture fails rather than pre-baking the asserted shape.",
+      "passes": false,
+      "introduces": [
+        "any_repo_journey",
+        "architecture_missing"
+      ]
     }
   ]
 }
