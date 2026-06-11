@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 16 items
+
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_healthy PASSED [  6%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_missing_path PASSED [ 12%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_not_a_worktree PASSED [ 18%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_wrong_repo_same_branch PASSED [ 25%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_branch_drift PASSED [ 31%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestBindingHealth::test_probe_error_is_unhealthy PASSED [ 37%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestStatusModel::test_clean_dirty_untracked PASSED [ 43%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestStatusModel::test_untracked_dir_counts_as_one PASSED [ 50%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestStatusModel::test_unhealthy_renders_nulls_with_reason PASSED [ 56%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestStatusModel::test_corrupt_registry_flag PASSED [ 62%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestStatusModel::test_broken_binding_rendered_not_dropped PASSED [ 68%]
+dontpanic_orchestrate/tests/test_worktrees_visibility.py::TestBriefSection::test_brief_carries_and_renders_the_model PASSED [ 75%]
+dontpanic_orchestrate/tests/test_worktrees_visibility.py::TestBriefSection::test_brief_drift_shows_both_branches_and_unknown_nulls PASSED [ 81%]
+dontpanic_orchestrate/tests/test_worktrees_visibility.py::TestBriefSection::test_brief_corrupt_registry_warns_visibly PASSED [ 87%]
+dontpanic_orchestrate/tests/test_worktrees_visibility.py::TestBriefSection::test_brief_empty_state_is_honest PASSED [ 93%]
+dontpanic_orchestrate/tests/test_worktrees_visibility.py::TestBriefSection::test_brief_without_model_omits_section PASSED [100%]
+
+============================== 16 passed in 1.86s ==============================

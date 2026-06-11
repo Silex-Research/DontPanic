@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 19 items
+
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_create_binds_and_checks_out_base_sha PASSED [  5%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_default_base_tracks_default_branch_not_invoking_head PASSED [ 10%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_explicit_base_recorded PASSED [ 15%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_unresolvable_base_refuses_before_creation PASSED [ 21%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_double_bind_refused PASSED [ 26%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_occupied_path_refused_untouched PASSED [ 31%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_preexisting_branch_refused PASSED [ 36%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_repo_root_from_plan_dir_not_invoking_cwd PASSED [ 42%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_same_basename_repos_do_not_collide PASSED [ 47%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_registry_write_failure_rolls_back PASSED [ 52%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_target_inside_repo_refused PASSED [ 57%]
+dontpanic_orchestrate/tests/test_worktrees_registry.py::TestCreate::test_corrupt_registry_refuses_create PASSED [ 63%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestCaptureHelper::test_bound_plan_snapshot_lands_with_recorded_values PASSED [ 68%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestCaptureHelper::test_unbound_plan_writes_nothing PASSED [ 73%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestCaptureHelper::test_corrupt_registry_fails_closed PASSED [ 78%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestGatePathWiring::test_lock_plan_captures_snapshot_when_bound PASSED [ 84%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestGatePathWiring::test_lock_plan_unbound_behaves_exactly_as_today PASSED [ 89%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestGatePathWiring::test_lock_plan_refuses_on_corrupt_registry_before_side_effects PASSED [ 94%]
+dontpanic_orchestrate/tests/test_worktrees_snapshots.py::TestGatePathWiring::test_dispatch_seam_calls_capture PASSED [100%]
+
+============================== 19 passed in 1.76s ==============================
