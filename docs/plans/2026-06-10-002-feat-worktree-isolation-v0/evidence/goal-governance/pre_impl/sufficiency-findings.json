@@ -2,41 +2,31 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:40949f2086b8965ba78d5d92b50ce6fd7511d486c331272da69b0ca14c1f3fdd",
-  "generated_at": "2026-06-11T13:28:14Z",
+  "input_fingerprint": "sha256:5cd2abb4975af2a8930523f1b96736a47d150331af6948805f94bbe5bea6184f",
+  "generated_at": "2026-06-11T13:38:37Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "binding-honesty",
-      "gap_class": "wiring_gap",
-      "description": "F002 does not pin corrupt-registry behavior for evidence-writing gate and dispatch paths. If those paths use the read-only degraded loader, a corrupt registry can look like no binding exists and silently omit required binding evidence.",
-      "feature_refs": [
-        "F001",
-        "F002"
-      ],
-      "recommendation": "Specify that lock, audit, close, and dispatch use strict registry loading and fail closed on corrupt registry, or explicitly record a corrupt-registry evidence item; add regression tests for both bound and corrupt-registry cases.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
       "journey_id": "isolated-plan-start",
       "gap_class": "coverage_gap",
-      "description": "F006 says the deterministic worktree path is outside the main working tree, but it does not require validation when DONTPANIC_HOME is configured inside the repository. That can undermine the isolation outcome by placing generated worktree paths under the active checkout.",
+      "description": "Registry-write-failure rollback is covered for removing the newly created worktree and branch, but the proposed acceptance text does not pin that the pre-existing worktrees registry remains intact after a failed write. A partial or truncated registry write would still satisfy 'no binding exists without its worktree' while breaking existing bindings and visibility.",
       "feature_refs": [
+        "F001",
         "F006"
       ],
-      "recommendation": "Add an explicit resolved-path containment guard and test: if the computed target is inside repo_root or any existing worktree, refuse before touching git or the registry.",
+      "recommendation": "Add an explicit atomic-write requirement and fixture: seed an existing registry, simulate write failure during create, assert the old registry content remains readable and unchanged while the new worktree and branch are removed.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "integration_gap",
-      "description": "F006 mixes best-effort rollback wording with a hard atomicity invariant that no worktree or branch outlives a failed registry write. The implementation contract is ambiguous for branch-removal or worktree-removal failure during rollback.",
+      "journey_id": "binding-honesty",
+      "gap_class": "parity_gap",
+      "description": "F004 includes current_branch in the status model, but F007 only requires the brief and dashboard to render 'branch' plus health reasons. For branch-drifted bindings, the user-facing surfaces may show only the recorded branch and a generic drift reason, leaving the actual current branch invisible.",
       "feature_refs": [
-        "F006"
+        "F004",
+        "F007"
       ],
-      "recommendation": "Resolve the rollback contract before implementation: require verified removal of both the worktree path and plan branch, and define the exact error/reporting path if cleanup cannot be completed.",
+      "recommendation": "Pin renderer parity so list, brief, and dashboard all expose recorded branch and current_branch when they differ, or require the health reason payload to include the observed current branch value.",
       "finding_class": "plan_contract"
     }
   ]
