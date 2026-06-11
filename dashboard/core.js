@@ -296,6 +296,10 @@ function JARVIS_LITERAL() { return {
       // build" empty state; a fetch failure after a successful load resets to
       // null so the missing state surfaces on next refresh.
       { key: 'operatorTriage', file: 'operator-triage.json', nullableMissing: true },
+      // Worktree Isolation v0 F007 — the worktree-status model (the SAME
+      // model `dontpanic plan worktree list` and the operator brief render).
+      // Missing → null so the console shows an honest "no state" line.
+      { key: 'activeWorktrees', file: 'active-worktrees.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),

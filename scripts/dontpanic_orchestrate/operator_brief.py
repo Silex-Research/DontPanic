@@ -43,8 +43,18 @@ def _brief_item(item: Mapping[str, object]) -> dict:
     return {k: item.get(k) for k in _ITEM_FIELDS}
 
 
-def build_brief(model: Mapping[str, object]) -> dict:
-    """Render the F001 model into the agent brief. Pure; no I/O."""
+def build_brief(
+    model: Mapping[str, object],
+    *,
+    worktrees: Mapping[str, object] | None = None,
+) -> dict:
+    """Render the F001 model into the agent brief. Pure; no I/O.
+
+    ``worktrees`` is the Worktree Isolation v0 status model
+    (worktrees.build_status_model()) — the SAME model `plan worktree list`
+    and the dashboard render; None means the section is omitted entirely
+    (older fixtures), while a model with empty bindings renders an honest
+    empty section."""
     items = list(model.get("items", []))
     escalate = [_brief_item(i) for i in items if i.get("operator_bucket") in _ESCALATE]
     allow = [_brief_item(i) for i in items if i.get("operator_bucket") in _ALLOW]
@@ -67,6 +77,7 @@ def build_brief(model: Mapping[str, object]) -> dict:
         "allow_list": allow,
         "uncertain": uncertain,
         "data_quality": dq,
+        "active_worktrees": dict(worktrees) if worktrees is not None else None,
         "honesty_contract": list(HONESTY_CONTRACT),
     }
 
@@ -97,6 +108,35 @@ def render_text(brief: Mapping[str, object]) -> str:
         lines.append(f"UNCERTAIN ({len(brief['uncertain'])} — could not classify; do not fabricate):")
         for i in brief["uncertain"]:
             lines.append(f"  • {i.get('id')}")
+    wts = brief.get("active_worktrees")
+    if wts is not None:
+        lines.append("")
+        lines.append("ACTIVE WORKTREES:")
+        if wts.get("registry_corrupt"):
+            lines.append(
+                "  ! registry CORRUPT — bindings below may be incomplete "
+                f"({wts.get('registry_path')})"
+            )
+        rows = wts.get("bindings") or []
+        if not rows:
+            if not wts.get("registry_corrupt"):
+                lines.append("  (none)")
+        for w in rows:
+            if w.get("healthy"):
+                state = f"dirty={w.get('dirty')} untracked={w.get('untracked_count')}"
+            else:
+                state = (
+                    f"UNHEALTHY: {w.get('health_reason')} "
+                    "(dirty=unknown untracked=unknown)"
+                )
+            drift = (
+                f" current_branch={w.get('current_branch')}"
+                if w.get("current_branch") not in (None, w.get("branch")) else ""
+            )
+            lines.append(
+                f"  • {w.get('plan_id')} branch={w.get('branch')}{drift} {state} "
+                f"owner={w.get('owner_actor')}"
+            )
     lines.append("")
     lines.append(f"AGENT MAY RUN: {s.get('agent_can_run', 0)} item(s) in allow_list (see --json).")
     lines.append("Honesty contract: " + " ".join(brief.get("honesty_contract", [])))
@@ -134,12 +174,25 @@ def _live_supervisors() -> list[dict]:
         return []
 
 
+def _live_worktrees() -> dict | None:
+    """The Worktree Isolation v0 status model, best-effort and read-only —
+    a corrupt registry is RENDERED by the model (registry_corrupt), never
+    swallowed; only an unexpected probe crash degrades to None."""
+    try:
+        from dontpanic_orchestrate import worktrees as _wt
+
+        return _wt.build_status_model()
+    except Exception:
+        return None
+
+
 def build_operator_brief(
     *,
     items: Sequence[Mapping[str, object]] | None = None,
     fixture: str | os.PathLike[str] | None = None,
     dedupe: bool = True,
     live_supervisors: Sequence[Mapping[str, object]] | None = None,
+    worktrees: Mapping[str, object] | None = None,
 ) -> dict:
     """Compose load -> triage -> brief. ``items``/``fixture`` for tests; default reads
     the operator-home fleet state and the live supervisor registry."""
@@ -147,10 +200,12 @@ def build_operator_brief(
         items = load_fleet_items(fixture)
     if live_supervisors is None:
         live_supervisors = _live_supervisors()
+    if worktrees is None:
+        worktrees = _live_worktrees()
     model = ot.build_triage(
         items, safety_class_for=lambda _it: None, live_supervisors=live_supervisors, dedupe=dedupe
     )
-    return build_brief(model)
+    return build_brief(model, worktrees=worktrees)
 
 
 def cli_main(argv: Sequence[str] | None = None) -> int:

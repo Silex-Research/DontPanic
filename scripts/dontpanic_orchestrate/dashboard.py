@@ -897,6 +897,23 @@ def build(
                 _operator_triage.write_triage_state(_wn_items, out_dir / "operator-triage.json")
             except Exception as _ot_exc:  # noqa: BLE001
                 warnings.append(f"operator-triage state skipped: {_ot_exc}")
+            # Worktree Isolation v0 F007 — write the worktree-status MODEL
+            # (the SAME model `plan worktree list` and the operator brief
+            # render: one model, three renderers) next to what-now.json.
+            # Best-effort: a failure here never fails the build, but a
+            # corrupt registry is RENDERED as registry_corrupt by the model
+            # itself, never silently skipped.
+            try:
+                import json as _json2
+
+                from dontpanic_orchestrate import worktrees as _worktrees
+
+                (out_dir / "active-worktrees.json").write_text(
+                    _json2.dumps(_worktrees.build_status_model(), indent=2) + "\n",
+                    encoding="utf-8",
+                )
+            except Exception as _wt_exc:  # noqa: BLE001
+                warnings.append(f"active-worktrees state skipped: {_wt_exc}")
             # write_cache merges by default (merge_event_sidecar=True); pass
             # the already-merged list and disable the inner merge to avoid
             # double-application that would be a no-op anyway.

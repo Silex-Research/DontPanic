@@ -27,6 +27,7 @@ import {
   OBSERVER,
   OPERATOR,
 } from '../../lib/operator-console-logic.js';
+import { renderWorktreesHTML } from '../../lib/worktrees-logic.js';
 
 (() => {
   let _el = null;
@@ -36,6 +37,7 @@ import {
   let _markedRun = new Set();      // local mark-as-run overlay (GUI never executes)
   let _shownRevision = null;       // the model fingerprint currently displayed
   let _clickBound = false;
+  let _worktrees = null;          // Worktree Isolation v0 F007 status model
 
   function eventsFor(state) {
     const ev = state && state.eventActions;
@@ -79,7 +81,8 @@ import {
             renderWhyHiddenHTML(deriveWhyHidden(model)) + '</details>' +
         '</div>' +
       '</div>' +
-      renderActivityStripHTML(model, _lastEvents);
+      renderActivityStripHTML(model, _lastEvents) +
+      renderWorktreesHTML(_worktrees);
     markSelectedRow();
     attachSelectHandler();
     _shownRevision = model.state_revision || null;
@@ -87,6 +90,7 @@ import {
 
   let _lastEvents = [];
   function render(state) {
+    _worktrees = state ? state.activeWorktrees : null;
     _lastEvents = eventsFor(state);
     renderFromModel(state && state.operatorTriage, { revisionChanged: false });
   }
