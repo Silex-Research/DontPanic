@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-004-feat-architecture-reconciler-ui-plan-d
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 15 items
+
+dontpanic_orchestrate/tests/test_plan_d_producer_parity_f005.py::test_present_branch_carries_coverage_baseline PASSED [  6%]
+dontpanic_orchestrate/tests/test_plan_d_producer_parity_f005.py::test_baseline_blocks_are_value_identical_across_branches PASSED [ 13%]
+dontpanic_orchestrate/tests/test_plan_d_producer_parity_f005.py::test_absent_branch_behavior_unchanged PASSED [ 20%]
+dontpanic_orchestrate/tests/test_plan_d_journey_fixtures_f006.py::test_generator_is_deterministic PASSED [ 26%]
+dontpanic_orchestrate/tests/test_plan_d_journey_fixtures_f006.py::test_committed_fixtures_match_real_producer PASSED [ 33%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_swift_kotlin_fixture_full_passthrough PASSED [ 40%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_empty_repo_fixture PASSED [ 46%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_python_fixture_parser_coverage_preserved PASSED [ 53%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_javascript_fixture_with_ts_split PASSED [ 60%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_truncated_fixture_marker_survives PASSED [ 66%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_unknown_language_fixture_note_in_payload PASSED [ 73%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_config_nodes_survive PASSED [ 80%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_no_new_dashboard_page PASSED [ 86%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_tier2_extractor_set_unchanged PASSED [ 93%]
+dontpanic_orchestrate/tests/test_baseline_view_state_f005.py::test_scope_guard_no_tier3_registration PASSED [100%]
+
+============================== 15 passed in 0.23s ==============================

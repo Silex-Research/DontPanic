@@ -1,0 +1,20 @@
+// Journey 3: NO ADRs — honest "No ADR claims found" empty state, zero
+//            fabricated claims, zero diff badges.
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+--
+import noadrs from '../fixtures/plan-d-view-state-noadrs.json' with { type: 'json' };
+
+async function boot(viewState) {
+  setupDOM();
+--
+    const el = await boot(noadrs);
+
+  Plugin: vite:dynamic-import-vars
+  File: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-004-feat-architecture-reconciler-ui-plan-d/dashboard/core.js
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:50:34
+   Duration  643ms (transform 104ms, setup 0ms, import 43ms, tests 272ms, environment 206ms)
+
