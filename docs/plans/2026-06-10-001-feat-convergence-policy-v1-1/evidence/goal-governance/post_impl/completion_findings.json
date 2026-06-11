@@ -1,0 +1,20 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-11T00:14:40.691557+00:00",
+  "plan_id": "2026-06-10-001-feat-convergence-policy-v1-1",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [],
+  "findings": [
+    {
+      "finding_id": "F2C-J001",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'mature-matrix-tail'",
+      "narrative": "The contract's user_journey 'mature-matrix-tail' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "core",
+      "journey": "mature-matrix-tail",
+      "matcher_string": null,
+      "evidence_uris": []
+    }
+  ]
+}
