@@ -2,68 +2,55 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:b86b3adb666290de188f5e03ea75ff1eeb144f64e6ecc241016eb57a42ef225b",
-  "generated_at": "2026-06-10T20:27:59Z",
+  "input_fingerprint": "sha256:3cd73f298e8bea2ecd60b9085c46aec91021bbf520799539d8bea26d86018a98",
+  "generated_at": "2026-06-11T00:41:39Z",
   "findings": [
     {
-      "severity": "medium",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "coverage_gap",
-      "description": "F002 calls the evidence a binding snapshot but omits base_sha, even though F001/F006 make the pinned base SHA the key proof that the worktree was created from the correct base.",
+      "severity": "high",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "integration_gap",
+      "description": "F001's invalid-registry behavior degrades to an empty registry, while F003 treats an empty registry as unbound passthrough. That creates a fail-open path where corrupt worktrees.json disables wrong-worktree protection before plan-mutating commands.",
       "feature_refs": [
         "F001",
-        "F002",
-        "F006"
-      ],
-      "recommendation": "Include base_sha, and preferably repo_root, in every lock/audit/close/dispatch binding snapshot test and evidence record.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "wrong-worktree-guard",
-      "gap_class": "coverage_gap",
-      "description": "F003 does not pin behavior when the invoking directory is not inside any git worktree. For a bound plan, that context is still not the bound worktree and must refuse before side effects.",
-      "feature_refs": [
         "F003"
       ],
-      "recommendation": "Add an explicit bound-plan test for invocation outside a git checkout, requiring refusal unless override-with-reason is supplied.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
-      "journey_id": "fleet-worktree-visibility",
-      "gap_class": "parity_gap",
-      "description": "F004/F007 do not distinguish recorded branch from current branch or mark branch drift as broken, so the bound path could pass guards while close/dispatch mutates a detached or wrong branch.",
-      "feature_refs": [
-        "F003",
-        "F004",
-        "F007"
-      ],
-      "recommendation": "Pin branch semantics: render actual branch, compare it to the recorded branch, and either mark mismatch as broken or refuse guarded mutations.",
+      "recommendation": "Separate valid-empty from invalid-unreadable registry state. Mutating guarded commands should fail closed on invalid worktree registry state, while read-only list/brief/dashboard surfaces can warn and render no rows.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F005 records owner_actor in the removal audit entry but not the actor performing the cleanup, which weakens the audit trail when someone other than the owner removes the worktree.",
+      "description": "F005 only pins dirty, staged, and untracked refusal for remove; it does not explicitly refuse broken bindings, unrelated repositories at the recorded path, non-worktree paths, missing paths, detached HEAD, or branch drift before cleanup.",
       "feature_refs": [
+        "F004",
         "F005"
       ],
-      "recommendation": "Record remover_actor using the same actor resolution rule, while preserving owner_actor from the binding for context.",
-      "finding_class": "plan_contract"
+      "recommendation": "Make remove consume the same worktree-status ownership and drift checks as F004, and require refusal for broken or drifted bindings before any git worktree remove or registry mutation.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "fleet-worktree-visibility",
+      "gap_class": "parity_gap",
+      "description": "F004 requires branch drift to be rendered as broken or drifted, but F007's brief, payload, and DOM tests only pin generic clean, dirty, and broken fixtures. Drift visibility could disappear in brief or dashboard while list remains correct.",
+      "feature_refs": [
+        "F004",
+        "F007"
+      ],
+      "recommendation": "Add a branch-drift fixture to list, operator brief, dashboard payload, and DOM tests, asserting both recorded branch and current branch or an explicit drift marker are visible.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "low",
-      "journey_id": "wrong-worktree-guard",
+      "journey_id": "isolated-plan-start",
       "gap_class": "coverage_gap",
-      "description": "The no-DontPanic-merge non-goal is only asserted in prose with a dangling D005 reference, while no acceptance item pins the absence of plan merge or worktree merge CLI surfaces.",
+      "description": "F006 says default base is origin's default branch when origin exists, else local main/master, but it does not pin fallback behavior when origin exists without a resolvable origin/HEAD or when both main and master exist locally.",
       "feature_refs": [
-        "F003",
-        "F005"
+        "F006"
       ],
-      "recommendation": "Add a CLI-surface scope-guard test proving no DontPanic merge command exists and no worktree command performs merge-to-main behavior.",
-      "finding_class": "scope_guard"
+      "recommendation": "Define the exact default-branch resolution order and add tests for origin-without-default-ref, main/master ambiguity, and refusal versus fallback behavior.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
