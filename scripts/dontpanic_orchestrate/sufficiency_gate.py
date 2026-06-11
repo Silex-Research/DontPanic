@@ -48,6 +48,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -315,8 +316,10 @@ def enforce_sufficiency_gate(plan_dir: Path) -> None:
         # no_auditor_resolution path); otherwise the refusal names the
         # policy branch that fired.
         from dontpanic_orchestrate.sufficiency_convergence import (
+            CONFIRMATION_PLACEHOLDER,
             VERDICT_DISPOSITION_REQUIRED,
             VERDICT_PROCEED,
+            WAIVED_MATRIX_PIN_HIGH,
             gate_decision,
         )
 
@@ -338,11 +341,24 @@ def enforce_sufficiency_gate(plan_dir: Path) -> None:
                 "to override: dontpanic plan lock <plan-dir> "
                 '--ignore-sufficiency-findings "<reason>"'
             )
+        # v1.1 — name each streak-unlocked high matrix_pin with a runnable
+        # disposition command. The reason placeholder MUST be replaced: the
+        # literal text is rejected by record_disposition's validation.
+        unlocked_lines = [
+            (
+                f"streak-unlocked high matrix_pin {fid} — resolvable without a "
+                f"new paid audit:\n  dontpanic plan disposition {shlex.quote(str(plan_dir))} "
+                f"--finding {fid} --kind {WAIVED_MATRIX_PIN_HIGH} "
+                f'--reason "{CONFIRMATION_PLACEHOLDER}"'
+            )
+            for fid in decision.streak_unlocked_ids
+        ]
         raise SufficiencyGateError(
             f"plan lock refused — {len(blocking)} blocking sufficiency finding(s) "
             f"at severity ≥ medium:\n"
             + "\n".join(bullet_lines)
             + f"\nconvergence policy branch: {decision.branch} — {decision.detail}\n"
+            + ("\n".join(unlocked_lines) + "\n" if unlocked_lines else "")
             + f"findings file: {_findings_path(plan_dir)}\n"
             + guidance
         )

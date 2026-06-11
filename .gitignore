@@ -31,6 +31,8 @@
 
 # Plan G runtime-evidence fixtures use .jsonl as a tested format shape
 !/scripts/dontpanic_orchestrate/tests/runtime_evidence/**/*.jsonl
+# Convergence v1.1 real-ledger fixture corpora (C0 + worktree-v0 rounds)
+!/scripts/dontpanic_orchestrate/tests/fixtures/convergence_rounds/*.jsonl
 
 # Python bytecode
 **/__pycache__/
