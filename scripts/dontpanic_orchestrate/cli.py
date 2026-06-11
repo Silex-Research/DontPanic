@@ -2999,7 +2999,11 @@ def _plan_main(argv: list[str]) -> int:
             "      audit round (convergence policy, plan 2026-06-09-002). Resolves\n"
             "      eligible findings WITHOUT another paid audit. Kinds:\n"
             "      accepted_into_plan / deferred_to_impl / waived_with_reason /\n"
-            "      split_to_followup_plan.",
+            "      split_to_followup_plan.\n"
+            "  worktree <create|list>\n"
+            "      Per-plan git worktree isolation (plan 2026-06-10-002): create a\n"
+            "      bound plan worktree from the repo's default branch, or render\n"
+            "      the worktree-status model (branch, dirty, health, owner).",
             file=sys.stderr,
         )
         return 2
