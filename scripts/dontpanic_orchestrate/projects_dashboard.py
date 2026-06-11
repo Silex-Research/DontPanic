@@ -1174,6 +1174,21 @@ def build_fleet_what_now(
         payload["items"], target.parent / FLEET_TRIAGE_FILENAME, dedupe=False,
         generated_at=now_iso,  # F004 — staleness reference for the Cockpit
     )
+    # Worktree Isolation v0 F007 (fleet parity) — the worktree registry is
+    # INSTALL-level, so the fleet root is its primary dashboard home: emit
+    # active-worktrees.json beside fleet-what-now.json so the DEFAULT
+    # All-Projects console renders live bindings, not the honest-but-wrong
+    # "no state" line. Best-effort like the per-project producer; the model
+    # itself renders a corrupt registry as registry_corrupt, never silently.
+    try:
+        from dontpanic_orchestrate import worktrees as _worktrees
+
+        (target.parent / "active-worktrees.json").write_text(
+            json.dumps(_worktrees.build_status_model(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except Exception:  # noqa: BLE001 — never fail the fleet build
+        pass
     return target
 
 
