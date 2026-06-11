@@ -2,56 +2,69 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:908835a68f83fa49970f04f1b77f1d96a297e32800fbd4ce5e8d4d4d2e19977f",
-  "generated_at": "2026-06-11T00:48:03Z",
+  "input_fingerprint": "sha256:1c66d6b44bd14efb6364683177d72e1b95ce996f21c19b9a831ab3d954d36c06",
+  "generated_at": "2026-06-11T01:13:40Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "safe-cleanup",
-      "gap_class": "coverage_gap",
-      "description": "The plan pins corrupt-registry fail-closed behavior for guarded plan-mutating entry points, but not for worktree create/remove even though those commands mutate the registry and remove filesystem state.",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "wiring_gap",
+      "description": "F003 guards path equality and recorded-branch drift, but it does not explicitly require the bound path to still be a valid git worktree belonging to the recorded repo_root before allowing mutation. A deleted worktree replaced by an unrelated repo at the same path and branch could satisfy the described guard while violating the plan-worktree contract.",
       "feature_refs": [
-        "F001",
-        "F005",
-        "F006"
+        "F003",
+        "F004",
+        "F005"
       ],
-      "recommendation": "Require strict registry loading for every registry- or filesystem-mutating worktree command, with corrupt worktrees.json tests for create and remove.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Reuse the same worktree health predicate required by F004/F005 in every guarded mutating entry point, and add refusal tests for missing paths, unrelated repos at the bound path, and non-worktree directories.",
+      "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "fleet-worktree-visibility",
       "gap_class": "parity_gap",
-      "description": "F001 requires read-only consumers to surface a corrupt-registry warning, but F004 and F007 do not pin a warning field or renderer tests for list, brief, and dashboard parity.",
+      "description": "F001 and F004 require corrupt registry files to degrade only for read-only consumers with a visible warning, but F007 does not pin that warning through the operator brief, dashboard payload, or dashboard DOM. That leaves room for list to warn while brief/dashboard silently render an empty state.",
       "feature_refs": [
         "F001",
         "F004",
         "F007"
       ],
-      "recommendation": "Add the registry-corrupt warning to the shared status model and assert it renders in plan worktree list, operator brief, and the dashboard DOM.",
+      "recommendation": "Add corrupt-registry parity tests for list, operator brief, dashboard state production, and dashboard DOM rendering.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
       "journey_id": "fleet-worktree-visibility",
       "gap_class": "coverage_gap",
-      "description": "The untracked_count behavior is not deterministic enough for user-facing parity because the plan does not pin whether porcelain status expands untracked directories or counts collapsed directory entries.",
+      "description": "The status model requires dirty and untracked_count fields for every binding, but broken bindings often cannot produce trustworthy porcelain status. The plan does not pin whether those values are null, unknown, false/zero with a broken reason, or omitted, which can lead to misleading dashboard and brief output.",
       "feature_refs": [
         "F004",
-        "F005",
         "F007"
       ],
-      "recommendation": "Pin the exact git status mode, preferably porcelain with untracked expansion, and test nested untracked directories across list, cleanup refusal, brief, and dashboard.",
+      "recommendation": "Define broken-binding field semantics explicitly, preferably with a broken_reason and honest unknown values for git-derived status that cannot be computed.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "wrong-worktree-guard",
-      "gap_class": "missing_feature",
-      "description": "The non-goal that DontPanic must not add a merge command is referenced through an absent D005 assertion, leaving the merge-adjacent CLI surface guard unowned.",
-      "feature_refs": [],
-      "recommendation": "Add an explicit CLI-surface/non-goal assertion that no DontPanic merge command is introduced and that close/disposition remain the complete guarded surface.",
-      "finding_class": "scope_guard"
+      "gap_class": "integration_gap",
+      "description": "F002 tests binding snapshot capture in a bound worktree and F003 tests override recording, but the combined overridden path is not pinned. For lock, audit, close, and dispatch, an override should still record both the override evidence and the binding snapshot required by the objective.",
+      "feature_refs": [
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Add integration fixtures for overridden guarded commands that assert both override evidence and binding snapshot evidence are written exactly once before normal gate artifacts proceed.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "low",
+      "journey_id": "isolated-plan-start",
+      "gap_class": "coverage_gap",
+      "description": "The objective names `--base` as the explicit base override, while F006 only refers to a base-ref CLI option or base_flag. Without pinning the flag spelling, implementation could satisfy the feature text while missing the operator-facing command contract.",
+      "feature_refs": [
+        "F006"
+      ],
+      "recommendation": "Pin the create command option as `--base <ref>` in F006 acceptance and include a CLI-surface test for that exact spelling.",
+      "finding_class": "editorial"
     }
   ]
 }

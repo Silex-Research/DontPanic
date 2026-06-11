@@ -71,15 +71,21 @@ where, nothing clever.
 - **F003** — wrong-worktree refusal: every plan-mutating entry point
   (`plan lock`, `plan audit`, `plan close`, `plan disposition`, orchestrate
   dispatch) refuses when invoked from a working tree that is not the plan's
-  bound worktree, naming both paths, BEFORE any gate side effect or evidence
-  write; an explicit override flag with a reason proceeds and the override is
-  recorded. No binding → no refusal (backward compatible). DontPanic has no
-  merge command — merging is the operator's external gh ritual — so this
-  guarded set is the complete plan-mutating surface (D005).
-- **F004** — worktree-status model + list command: one pure model per binding
-  (plan_id, branch, dirty flag from porcelain status, untracked count,
-  owner_actor, path, broken flag for missing/externally-deleted worktrees —
-  rendered, never silently dropped), printed by `dontpanic plan worktree list`.
+  bound worktree OR fails the canonical binding_health predicate (called from
+  F004 — a swapped repository at the same path and branch refuses), BEFORE any
+  gate side effect or evidence write; corrupt registry fails closed; an
+  explicit override with a reason proceeds, is recorded, and STILL captures
+  the binding snapshot. No binding in a valid registry → no refusal (backward
+  compatible). DontPanic has no merge command — merging is the operator's
+  external gh ritual — so this guarded set is the complete plan-mutating
+  surface, owned here via a CLI-surface test (D005/D009).
+- **F004** — canonical binding_health predicate + status model + list command:
+  ONE exported predicate (exists ∧ is_git_worktree ∧ belongs_to_recorded_
+  repo_root ∧ on_recorded_branch, probe errors = unhealthy, machine-readable
+  failed-conjunct reason) consumed by the guard (F003), removal (F005), and
+  the status model — never re-specified. Unhealthy bindings render with the
+  reason and explicit null dirty/untracked fields; printed by
+  `dontpanic plan worktree list`.
 - **F005** — explicit, audited, safe cleanup: `dontpanic plan worktree
   remove <plan-id>` removes the worktree and binding ONLY when the tree is
   clean (no modified, staged, or untracked files) and records an audit entry
