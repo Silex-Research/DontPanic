@@ -1,0 +1,630 @@
+{
+  "clusters": [
+    {
+      "child_cluster_ids": [
+        "cluster:App",
+        "cluster:docs"
+      ],
+      "id": "cluster:",
+      "key": "",
+      "level": 0,
+      "node_ids": [
+        "fs:.",
+        "fs:App",
+        "fs:Dockerfile",
+        "fs:docs",
+        "heuristic:swift:UIKit"
+      ],
+      "parent_id": null,
+      "title": "System"
+    },
+    {
+      "child_cluster_ids": [],
+      "id": "cluster:App",
+      "key": "App",
+      "level": 1,
+      "node_ids": [
+        "fs:App/Main.swift",
+        "module:App/main.py"
+      ],
+      "parent_id": "cluster:",
+      "title": "App"
+    },
+    {
+      "child_cluster_ids": [
+        "cluster:docs/architecture"
+      ],
+      "id": "cluster:docs",
+      "key": "docs",
+      "level": 1,
+      "node_ids": [
+        "fs:docs/architecture"
+      ],
+      "parent_id": "cluster:",
+      "title": "docs"
+    },
+    {
+      "child_cluster_ids": [],
+      "id": "cluster:docs/architecture",
+      "key": "docs/architecture",
+      "level": 2,
+      "node_ids": [
+        "metadata:architecture-fingerprint"
+      ],
+      "parent_id": "cluster:docs",
+      "title": "architecture"
+    }
+  ],
+  "coverage": {
+    "baseline": {
+      "notes": [
+        "Dependency confidence is low. No Swift extractor installed."
+      ],
+      "per_evidence_type": {
+        "adr": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "build": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "code": {
+          "confidence_ceiling": "low",
+          "status": "partial",
+          "tier": 1
+        },
+        "config": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "doc": {
+          "confidence_ceiling": "medium",
+          "status": "partial",
+          "tier": 0
+        },
+        "filesystem": {
+          "confidence_ceiling": "medium",
+          "status": "covered",
+          "tier": 0
+        },
+        "infra": {
+          "confidence_ceiling": "medium",
+          "status": "covered",
+          "tier": 0
+        },
+        "manifest": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "runtime": {
+          "reserved": true,
+          "status": "not_found",
+          "tier": 3
+        },
+        "test": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        }
+      },
+      "per_language": {
+        "python": "covered",
+        "swift": "missing_extractor"
+      },
+      "rollup": "partial",
+      "scan_truncated": false,
+      "unrecognized_extensions": []
+    },
+    "confidence_ceiling": "low",
+    "contract_version": "v0",
+    "extractors": [
+      {
+        "evidence_kind": "code",
+        "extractor": "python_import_crawler",
+        "node_count": 1,
+        "status": "covered"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "json_schema_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "doc",
+        "extractor": "plan_index",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "manifest",
+        "extractor": "capability_manifest_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "dashboard_page_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "js_import_crawler",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "manifest",
+        "extractor": "architecture_fingerprint",
+        "node_count": 1,
+        "status": "covered"
+      },
+      {
+        "evidence_kind": "adr",
+        "extractor": "adr_intent_extractor",
+        "node_count": 0,
+        "status": "not_found"
+      }
+    ],
+    "missing_extractors": [
+      {
+        "evidence_kind": "swift",
+        "status": "missing_extractor"
+      }
+    ],
+    "note": "Extractor coverage is the ceiling on the as-built model. missing_extractor means the repo contains this evidence kind but DontPanic has no extractor for it — the map is INCOMPLETE, not wrong."
+  },
+  "edges": [
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:App",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:App",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:docs",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:Dockerfile",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:Dockerfile",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:App",
+      "id": "edge:contains:fs:App->fs:App/Main.swift",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:App/Main.swift",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:docs",
+      "id": "edge:contains:fs:docs->fs:docs/architecture",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs/architecture",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "unresolved",
+      "extractor": "heuristic_import_scan",
+      "from": "fs:App/Main.swift",
+      "id": "edge:himport:fs:App/Main.swift->heuristic:swift:UIKit",
+      "provenance": {
+        "method": "heuristic_import_scan",
+        "resolved": true,
+        "source_path": null
+      },
+      "resolved": false,
+      "source_kind": "code",
+      "to": "heuristic:swift:UIKit",
+      "type": "heuristic_import"
+    }
+  ],
+  "filters": {
+    "categories": [
+      "fs_dir",
+      "fs_infra",
+      "fs_source",
+      "heuristic_target",
+      "metadata",
+      "module"
+    ],
+    "lanes": [
+      {
+        "id": "lane:actors",
+        "title": "Actors"
+      },
+      {
+        "id": "lane:client-surfaces",
+        "title": "Client surfaces"
+      },
+      {
+        "id": "lane:orchestrator-runtime",
+        "title": "Orchestrator runtime"
+      },
+      {
+        "id": "lane:capabilities-adapters",
+        "title": "Capabilities & adapters"
+      },
+      {
+        "id": "lane:data-evidence",
+        "title": "Data & evidence"
+      },
+      {
+        "id": "lane:external-services",
+        "title": "External services"
+      }
+    ],
+    "modules": [
+      "App/main.py"
+    ],
+    "plans": []
+  },
+  "flows": [],
+  "freshness": {
+    "current_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "files_count": 1,
+    "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generated_at": "2026-06-11T00:00:00Z",
+    "message": "architecture.json is stale relative to the working tree. Run the regen command to refresh it.",
+    "regen_command": "dontpanic architecture regen --with-html",
+    "state": "stale",
+    "stored_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "generated_at": "2026-06-11T00:00:00Z",
+  "insights": [
+    {
+      "id": "insight:module-count",
+      "kind": "count",
+      "title": "Modules",
+      "value": 1
+    },
+    {
+      "id": "insight:plan-count",
+      "kind": "count",
+      "title": "Plans",
+      "value": 0
+    },
+    {
+      "id": "insight:schema-count",
+      "kind": "count",
+      "title": "Schemas",
+      "value": 0
+    },
+    {
+      "id": "insight:high-fan-out",
+      "kind": "ranking",
+      "title": "Highest import fan-out",
+      "value": []
+    }
+  ],
+  "lanes": [
+    {
+      "id": "lane:actors",
+      "kind": "actor",
+      "order": 0,
+      "title": "Actors"
+    },
+    {
+      "id": "lane:client-surfaces",
+      "kind": "client",
+      "order": 1,
+      "title": "Client surfaces"
+    },
+    {
+      "id": "lane:orchestrator-runtime",
+      "kind": "runtime",
+      "order": 2,
+      "title": "Orchestrator runtime"
+    },
+    {
+      "id": "lane:capabilities-adapters",
+      "kind": "capability",
+      "order": 3,
+      "title": "Capabilities & adapters"
+    },
+    {
+      "id": "lane:data-evidence",
+      "kind": "data",
+      "order": 4,
+      "title": "Data & evidence"
+    },
+    {
+      "id": "lane:external-services",
+      "kind": "external",
+      "order": 5,
+      "title": "External services"
+    }
+  ],
+  "layers": {
+    "as_built": {
+      "edge_count": 6,
+      "is_current": true,
+      "node_count": 9
+    },
+    "contract_version": "v0",
+    "diff": [],
+    "diff_taxonomy": [
+      "aligned",
+      "drift",
+      "implemented_undocumented",
+      "documented_unimplemented",
+      "conflicting_dependency",
+      "stale_adr",
+      "unknown_confidence"
+    ],
+    "intent": {
+      "claims": [],
+      "note": "Reserved for ADR/doc intent extraction (Plan B). Empty in v0.",
+      "populated": false
+    }
+  },
+  "levels": [
+    {
+      "cluster_ids": [
+        "cluster:"
+      ],
+      "id": "level:0",
+      "level": 0,
+      "title": "L0"
+    },
+    {
+      "cluster_ids": [
+        "cluster:App",
+        "cluster:docs"
+      ],
+      "id": "level:1",
+      "level": 1,
+      "title": "L1"
+    },
+    {
+      "cluster_ids": [
+        "cluster:docs/architecture"
+      ],
+      "id": "level:2",
+      "level": 2,
+      "title": "L2"
+    }
+  ],
+  "nodes": [
+    {
+      "confidence": "high",
+      "evidence_basis": "observed",
+      "id": "module:App/main.py",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "python_import_crawler",
+        "resolved": true,
+        "source_path": "App/main.py"
+      },
+      "public_symbols": [],
+      "source_kind": "code",
+      "source_path": "App/main.py",
+      "summary": "entry",
+      "title": "app.main",
+      "type": "module"
+    },
+    {
+      "algorithm": "sha256",
+      "computed_at": "2026-06-11T00:00:00Z",
+      "confidence": "high",
+      "evidence_basis": "observed",
+      "files_count": 1,
+      "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "generated_at": "2026-06-11T00:00:00Z",
+      "id": "metadata:architecture-fingerprint",
+      "lane_id": "lane:data-evidence",
+      "provenance": {
+        "method": "architecture_fingerprint",
+        "resolved": true,
+        "source_path": "docs/architecture/architecture.json"
+      },
+      "source_kind": "manifest",
+      "source_path": "docs/architecture/architecture.json",
+      "summary": "Source fingerprint used to detect architecture drift between the cached map and working tree.",
+      "title": "Architecture fingerprint",
+      "type": "metadata"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:.",
+      "label": "repo",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "."
+      },
+      "source_kind": "filesystem",
+      "source_path": ".",
+      "title": "repo",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:App",
+      "label": "App",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "App"
+      },
+      "source_kind": "filesystem",
+      "source_path": "App",
+      "title": "App",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs",
+      "label": "docs",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs"
+      },
+      "source_kind": "filesystem",
+      "source_path": "docs",
+      "title": "docs",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:Dockerfile",
+      "label": "Dockerfile",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "Dockerfile"
+      },
+      "source_kind": "infra",
+      "source_path": "Dockerfile",
+      "title": "Dockerfile",
+      "type": "fs_infra"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:App/Main.swift",
+      "label": "Main.swift",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "App/Main.swift"
+      },
+      "source_kind": "code",
+      "source_path": "App/Main.swift",
+      "title": "Main.swift",
+      "type": "fs_source"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs/architecture",
+      "label": "architecture",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs/architecture"
+      },
+      "source_kind": "filesystem",
+      "source_path": "docs/architecture",
+      "title": "architecture",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "unresolved",
+      "extractor": "heuristic_import_scan",
+      "id": "heuristic:swift:UIKit",
+      "label": "UIKit",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "heuristic_import_scan",
+        "resolved": false,
+        "source_path": null
+      },
+      "source_kind": "unknown",
+      "title": "UIKit",
+      "type": "heuristic_target"
+    }
+  ],
+  "project": {
+    "display_name": "Plan D Fixture",
+    "label": "plan-d-fixture",
+    "name": "plan-d-fixture"
+  },
+  "schema_version": "1.0",
+  "source_path": "docs/architecture/architecture.json",
+  "steps": [],
+  "validation_warnings": [
+    {
+      "code": "flow_dropped_missing_refs",
+      "message": "derived flow flow:architecture-regen dropped: node_ref='command:dontpanic-architecture-regen', node_ref='module:scripts/dontpanic_orchestrate/architecture.py', node_ref='module:scripts/dontpanic_orchestrate/architecture_html.py', node_ref='schema:claude/shared/schemas/v1.0/architecture-snapshot.schema.json'",
+      "ref": "flow:architecture-regen"
+    },
+    {
+      "code": "flow_dropped_missing_refs",
+      "message": "derived flow flow:dashboard-build dropped: node_ref='command:dontpanic-dashboard-build', node_ref='module:scripts/dontpanic_orchestrate/dashboard.py', node_ref='module:scripts/dontpanic_orchestrate/state_projection.py', node_ref='module:scripts/dontpanic_orchestrate/operator_console.py'",
+      "ref": "flow:dashboard-build"
+    },
+    {
+      "code": "flow_dropped_missing_refs",
+      "message": "derived flow flow:capability-setup dropped: node_ref='command:dontpanic-capabilities-status', node_ref='module:scripts/dontpanic_orchestrate/capabilities.py', node_ref='module:scripts/dontpanic_orchestrate/capabilities_setup_runner.py'",
+      "ref": "flow:capability-setup"
+    },
+    {
+      "code": "flow_dropped_missing_refs",
+      "message": "derived flow flow:project-selection dropped: node_ref='command:dontpanic-projects-add', node_ref='module:scripts/dontpanic_orchestrate/projects_dashboard.py', node_ref='module:scripts/dontpanic_orchestrate/projects_registry.py'",
+      "ref": "flow:project-selection"
+    }
+  ]
+}
