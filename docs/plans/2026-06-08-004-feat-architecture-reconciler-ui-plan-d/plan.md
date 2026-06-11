@@ -3,7 +3,7 @@ id: 2026-06-08-004-feat-architecture-reconciler-ui-plan-d
 title: Architecture reconciler Plan D — surface the coverage + intent + diff + baseline layers in the UI
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: new_feature
 links:
