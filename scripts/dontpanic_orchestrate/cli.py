@@ -2999,7 +2999,11 @@ def _plan_main(argv: list[str]) -> int:
             "      audit round (convergence policy, plan 2026-06-09-002). Resolves\n"
             "      eligible findings WITHOUT another paid audit. Kinds:\n"
             "      accepted_into_plan / deferred_to_impl / waived_with_reason /\n"
-            "      split_to_followup_plan.",
+            "      split_to_followup_plan.\n"
+            "  worktree <create|list>\n"
+            "      Per-plan git worktree isolation (plan 2026-06-10-002): create a\n"
+            "      bound plan worktree from the repo's default branch, or render\n"
+            "      the worktree-status model (branch, dirty, health, owner).",
             file=sys.stderr,
         )
         return 2
@@ -3015,8 +3019,79 @@ def _plan_main(argv: list[str]) -> int:
         return _plan_resync_main(rest)
     if sub == "disposition":
         return _plan_disposition_main(rest)
+    if sub == "worktree":
+        return _plan_worktree_main(rest)
     print(f"dontpanic plan: unknown subcommand {sub!r}", file=sys.stderr)
     return 2
+
+
+def _plan_worktree_main(argv: list[str]) -> int:
+    """``dontpanic plan worktree create|list`` — Worktree Isolation v0
+    (plan 2026-06-10-002, substrate slice). No remove subcommand in v0:
+    removal ships with the guard-hardening follow-up plan."""
+    from dontpanic_orchestrate import worktrees as _wt
+
+    if not argv or argv[0] not in ("create", "list"):
+        print(
+            "usage: dontpanic plan worktree <subcommand>\n\n"
+            "subcommands:\n"
+            "  create <plan-dir> [--base <ref>]\n"
+            "      Create the plan's dedicated git worktree on branch\n"
+            "      plan/<plan-id> at a repo-key-qualified path under\n"
+            "      $DONTPANIC_HOME/worktrees/, from the repo's default branch\n"
+            "      (or --base) resolved to a recorded commit SHA, and bind it\n"
+            "      in the worktrees registry.\n"
+            "  list\n"
+            "      Render the worktree-status model: one row per binding with\n"
+            "      branch, current branch, dirty state, untracked count,\n"
+            "      owner, and health reasons.",
+            file=sys.stderr,
+        )
+        return 2
+    if argv[0] == "create":
+        parser = argparse.ArgumentParser(prog="dontpanic plan worktree create")
+        parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
+        parser.add_argument("--base", default=None, metavar="REF",
+                            help="Explicit base ref (default: the repo's default branch)")
+        args = parser.parse_args(argv[1:])
+        plan_dir = _resolve_plan_dir(args.plan)
+        try:
+            binding = _wt.create_worktree(plan_dir, base=args.base)
+        except _wt.WorktreeError as exc:
+            print(f"[plan worktree create] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        print(f"[plan worktree create] worktree_path={binding['worktree_path']}")
+        print(f"[plan worktree create] branch={binding['branch']}")
+        print(
+            f"[plan worktree create] base_ref={binding['base_ref']} "
+            f"base_sha={binding['base_sha']}"
+        )
+        print(f"[plan worktree create] owner_actor={binding['owner_actor']}")
+        return 0
+    # list
+    model = _wt.build_status_model()
+    if model["registry_corrupt"]:
+        print(
+            f"[plan worktree list] WARNING: registry at {model['registry_path']} "
+            "is CORRUPT — bindings below may be incomplete; fix or remove the file."
+        )
+    if not model["bindings"]:
+        print("[plan worktree list] no worktree bindings")
+        return 0
+    for row in model["bindings"]:
+        if row["healthy"]:
+            state = f"dirty={row['dirty']} untracked={row['untracked_count']}"
+        else:
+            state = f"UNHEALTHY: {row['health_reason']} (dirty=unknown untracked=unknown)"
+        drift = (
+            f" current_branch={row['current_branch']}"
+            if row["current_branch"] not in (None, row["branch"]) else ""
+        )
+        print(
+            f"  {row['plan_id']}  branch={row['branch']}{drift}  {state}  "
+            f"owner={row['owner_actor']}  path={row['worktree_path']}"
+        )
+    return 0
 
 
 def _plan_disposition_main(argv: list[str]) -> int:
@@ -3669,6 +3744,15 @@ def _plan_audit_main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     plan_dir = _resolve_plan_dir(args.plan)
+    from dontpanic_orchestrate.worktrees import (
+        RegistryCorruptError as _WtCorrupt,
+        capture_binding_snapshot as _wt_capture,
+    )
+    try:
+        _wt_capture(plan_dir, "plan audit")
+    except _WtCorrupt as exc:
+        print(f"[plan audit] REFUSED: {exc}", file=sys.stderr)
+        return 3
     print(f"[plan audit] plan_dir={plan_dir}")
 
     try:
@@ -3774,6 +3858,15 @@ def _plan_close_main(argv: list[str]) -> int:
         return 2
 
     plan_dir = _resolve_plan_dir(args.plan)
+    from dontpanic_orchestrate.worktrees import (
+        RegistryCorruptError as _WtCorrupt,
+        capture_binding_snapshot as _wt_capture,
+    )
+    try:
+        _wt_capture(plan_dir, "plan close")
+    except _WtCorrupt as exc:
+        print(f"[plan close] REFUSED: {exc}", file=sys.stderr)
+        return 3
     print(f"[plan close] plan_dir={plan_dir}{' (dry-run)' if args.dry_run else ''}")
 
     try:

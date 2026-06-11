@@ -1,0 +1,12 @@
+
+ RUN  v4.1.8 <home>/Documents/GitHub/DontPanic/dashboard
+
+9:53:13 AM [vite] (client) warning: invalid import "./${src}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: <home>/Documents/GitHub/DontPanic/dashboard/core.js
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  09:53:13
+   Duration  597ms (transform 98ms, setup 0ms, import 77ms, tests 119ms, environment 606ms)
+

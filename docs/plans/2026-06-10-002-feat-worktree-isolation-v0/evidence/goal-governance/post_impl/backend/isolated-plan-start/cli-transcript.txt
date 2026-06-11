@@ -1,0 +1,8 @@
+$ dontpanic plan worktree create <demo-repo>/docs/plans/2026-06-11-demo-plan
+[plan worktree create] worktree_path=<scratch>/dp-home/worktrees/demo-5e3665bf/2026-06-11-demo-plan
+[plan worktree create] branch=plan/2026-06-11-demo-plan
+[plan worktree create] base_ref=main base_sha=651651792d28ac18a584cf689888b6e086c122f8
+[plan worktree create] owner_actor=<operator>@<host>
+
+$ dontpanic plan worktree list
+  2026-06-11-demo-plan  branch=plan/2026-06-11-demo-plan  dirty=False untracked=0  owner=<operator>@<host>  path=<scratch>/dp-home/worktrees/demo-5e3665bf/2026-06-11-demo-plan

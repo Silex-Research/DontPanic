@@ -399,6 +399,16 @@ def _resolved_approver(approved_by: str | None) -> str:
     return os.environ.get("DONTPANIC_OPERATOR") or os.environ.get("USER") or "operator"
 
 
+def _capture_worktree_snapshot(plan_dir: Path, command: str) -> None:
+    """Worktree Isolation v0 F002 — record the plan's binding as gate
+    evidence before side effects. STRICT registry load: a corrupt
+    worktrees.json refuses the command (never treated as no-binding).
+    Unbound plans: no-op."""
+    from dontpanic_orchestrate.worktrees import capture_binding_snapshot
+
+    capture_binding_snapshot(plan_dir, command)
+
+
 def lock_plan(
     plan_dir: Path,
     *,
@@ -426,6 +436,8 @@ def lock_plan(
         raise SufficiencyGateError(
             f"{plan_md}: refusing to lock — current status={status!r}, expected 'draft'"
         )
+
+    _capture_worktree_snapshot(plan_dir, "plan lock")
 
     if not _should_gate_sufficiency(plan_data):
         # No goal_type / non-gated goal_type: gate is a no-op but the lock

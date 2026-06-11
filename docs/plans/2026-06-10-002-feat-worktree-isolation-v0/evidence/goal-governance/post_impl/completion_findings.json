@@ -1,0 +1,13 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-11T14:54:52.861355+00:00",
+  "plan_id": "2026-06-10-002-feat-worktree-isolation-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/backend/binding-honesty/pytest-health-model-brief.txt",
+    "evidence/goal-governance/post_impl/backend/isolated-plan-start/cli-transcript.txt",
+    "evidence/goal-governance/post_impl/backend/isolated-plan-start/pytest-create-and-snapshots.txt",
+    "evidence/goal-governance/post_impl/web/fleet-worktree-visibility/vitest-console-dom.txt"
+  ],
+  "findings": []
+}

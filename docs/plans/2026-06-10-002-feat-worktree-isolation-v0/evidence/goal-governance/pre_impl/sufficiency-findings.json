@@ -1,0 +1,8 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:943164d2699853e32ee307931192811a86ee8945e4bffae7e3c34b0de6946997",
+  "generated_at": "2026-06-11T14:17:40Z",
+  "findings": []
+}
