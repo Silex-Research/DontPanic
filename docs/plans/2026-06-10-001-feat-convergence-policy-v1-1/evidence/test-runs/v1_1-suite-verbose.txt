@@ -1,0 +1,45 @@
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 36 items
+
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_first_round_never_counts PASSED [  2%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_c0_worked_example_round2_is_1_round3_is_2 PASSED [  5%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_worktree_round3_is_2 PASSED [  8%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_override_events_excluded PASSED [ 11%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_empty_ledger PASSED [ 13%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestClearanceStreak::test_persisted_findings_break_streak PASSED [ 16%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_high_matrix_pin_suppressed_with_streak_and_dedicated_kind PASSED [ 19%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_high_matrix_pin_not_suppressed_below_streak PASSED [ 22%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_high_plan_contract_never_suppressed_by_new_kind PASSED [ 25%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_critical_never_suppressed PASSED [ 27%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_dedicated_kind_does_not_suppress_mediums PASSED [ 30%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_other_kinds_do_not_suppress_highs PASSED [ 33%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_block_detail_names_streak_unlocked_eligibility PASSED [ 36%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestStreakGatedSuppression::test_no_eligibility_named_below_streak PASSED [ 38%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestVerdictForMatrix::test_high_matrix_pin_streak_conditional_cell PASSED [ 41%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestVerdictForMatrix::test_matrix_total_both_streak_contexts PASSED [ 44%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestVerdictForMatrix::test_streak_never_changes_non_high_matrix_pin_cells PASSED [ 47%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestVerdictForMatrix::test_critical_and_plan_contract_and_fallback_block_even_with_streak PASSED [ 50%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestSingleThresholdSource::test_consumers_share_the_module_constant PASSED [ 52%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestSingleThresholdSource::test_disagreement_impossible_refusal_matches_validation PASSED [ 55%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_kind_registered_and_no_audit PASSED [ 58%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_accepts_eligible_high_matrix_pin PASSED [ 61%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_refuses_wrong_severity PASSED [ 63%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_refuses_wrong_class PASSED [ 66%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_refuses_streak_too_short PASSED [ 69%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_refuses_short_confirmation PASSED [ 72%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_refuses_literal_placeholder PASSED [ 75%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestWaivedMatrixPinHighKind::test_cli_passthrough PASSED [ 77%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestRefusalNaming::test_gate_refusal_names_finding_and_command_template PASSED [ 80%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestDualCorpusDogfood::test_c0_round4_discrimination PASSED [ 83%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestDualCorpusDogfood::test_worktree_round3_negative_case PASSED [ 86%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestDualCorpusDogfood::test_fallback_high_blocked_and_refused PASSED [ 88%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestDualCorpusDogfood::test_completion_path_new_kind_is_final_gate PASSED [ 91%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestDualCorpusDogfood::test_completion_path_reverse_order_refuses PASSED [ 94%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestAuditorContractUnchanged::test_prompt_class_instruction_block_pinned PASSED [ 97%]
+dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py::TestAuditorContractUnchanged::test_schema_field_description_pinned PASSED [100%]
+
+============================== 36 passed in 0.25s ==============================

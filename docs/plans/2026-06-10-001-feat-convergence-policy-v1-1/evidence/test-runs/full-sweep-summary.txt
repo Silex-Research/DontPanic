@@ -1,0 +1,1 @@
+full orchestrate sweep: 4298 passed, 7 skipped, 1 warning in 256.53s (run 2026-06-10, branch feat/convergence-policy-v1.1)

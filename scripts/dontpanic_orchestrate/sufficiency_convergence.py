@@ -69,14 +69,33 @@ SEVERITIES: tuple[str, ...] = ("critical", "high", "medium", "low", "advisory")
 _HARD_BLOCK_SEVERITIES: frozenset[str] = frozenset({"critical", "high"})
 _GATE_BLOCKING_SEVERITIES: frozenset[str] = frozenset({"critical", "high", "medium"})
 
+WAIVED_MATRIX_PIN_HIGH: str = "waived_matrix_pin_high"
+"""v1.1 (plan 2026-06-10-001): the ONLY kind that can suppress a HIGH
+matrix_pin finding, and only once the ledger shows a full-clearance streak.
+Requires explicit operator confirmation text — no default exists anywhere."""
+
+MATRIX_PIN_STREAK_THRESHOLD: int = 2
+"""v1.1 streak threshold N — the SINGLE source of truth consumed by
+convergence_verdict, record_disposition validation, and the lock refusal
+messaging alike (the three consumers cannot disagree)."""
+
+MIN_CONFIRMATION_LENGTH: int = 20
+
+CONFIRMATION_PLACEHOLDER: str = "<REPLACE WITH YOUR OPERATOR CONFIRMATION>"
+"""Printed verbatim in the lock refusal's suggested command. Validation
+REJECTS any reason containing this literal — copy-paste cannot mint a
+canned confirmation."""
+
 DISPOSITION_KINDS: tuple[str, ...] = (
     "accepted_into_plan",
     "deferred_to_impl",
     "waived_with_reason",
     "split_to_followup_plan",
+    WAIVED_MATRIX_PIN_HIGH,
 )
 NO_AUDIT_DISPOSITION_KINDS: frozenset[str] = frozenset(
-    {"deferred_to_impl", "waived_with_reason", "split_to_followup_plan"}
+    {"deferred_to_impl", "waived_with_reason", "split_to_followup_plan",
+     WAIVED_MATRIX_PIN_HIGH}
 )
 """accepted_into_plan deliberately excluded: it means the operator will EDIT
 the plan, which routes through the plain gate (fresh audit) by design."""
@@ -296,6 +315,24 @@ def full_clearance(record: dict[str, Any]) -> bool:
     return record.get("prior_finding_count") is not None and not record.get("persisted_ids")
 
 
+def clearance_streak(ledger: list[dict[str, Any]]) -> int:
+    """v1.1 — count consecutive full-clearance AUDIT rounds ending at the
+    latest round. Override events are excluded by construction
+    (:func:`audit_rounds`). The FIRST round of any ledger is never
+    full-clearance (nothing preceded it to clear), so a ledger whose rounds
+    each cleared their predecessor has streak == round_count - 1.
+    Pinned worked example (C0 live rounds): streak at round 3 is exactly 2,
+    at round 2 exactly 1, at round 1 exactly 0."""
+    rounds = audit_rounds(ledger)
+    streak = 0
+    for record in reversed(rounds):
+        if full_clearance(record):
+            streak += 1
+        else:
+            break
+    return streak
+
+
 # ──────────────────────────────  F003: dispositions  ──────────────────────────────
 
 
@@ -324,16 +361,22 @@ def record_disposition(
     reason: str | None = None,
     followup_plan: str | None = None,
     recorded_by: str = "operator",
+    streak_threshold: int = MATRIX_PIN_STREAK_THRESHOLD,
 ) -> dict[str, Any]:
     """Record one per-finding disposition against the LATEST audit round.
 
     Validation (all fail-closed):
     - the finding must exist in the latest round;
-    - kind must be one of the four;
+    - kind must be one of the registered kinds;
     - waived_with_reason REQUIRES a non-empty reason;
     - split_to_followup_plan REQUIRES a follow-up plan reference;
     - deferred_to_impl / split_to_followup_plan are REFUSED for
-      plan_contract findings (only a waiver or a plan edit neutralizes those).
+      plan_contract findings (only a waiver or a plan edit neutralizes those);
+    - v1.1: waived_matrix_pin_high is accepted ONLY for a finding whose
+      latest-round severity is high AND class is matrix_pin AND whose ledger
+      streak satisfies clearance_streak >= streak_threshold, with operator
+      confirmation text of at least MIN_CONFIRMATION_LENGTH characters that
+      does not contain the literal CONFIRMATION_PLACEHOLDER.
 
     The disposition binds the finding's fingerprint AND its cell's
     fingerprint set, so any material change re-surfaces it as blocking.
@@ -366,6 +409,35 @@ def record_disposition(
             f"finding {finding_id} is classed plan_contract — only waived_with_reason "
             "(or an actual plan edit that clears it) neutralizes a plan_contract finding"
         )
+    if kind == WAIVED_MATRIX_PIN_HIGH:
+        if finding.get("severity") != "high":
+            raise ConvergenceError(
+                f"finding {finding_id} is {finding.get('severity')!r} — "
+                f"{WAIVED_MATRIX_PIN_HIGH} applies ONLY to high-severity findings"
+            )
+        if finding.get("finding_class") != "matrix_pin":
+            raise ConvergenceError(
+                f"finding {finding_id} is classed {finding.get('finding_class')!r} — "
+                f"{WAIVED_MATRIX_PIN_HIGH} applies ONLY to auditor-classed matrix_pin findings"
+            )
+        streak = clearance_streak(ledger)
+        if streak < streak_threshold:
+            raise ConvergenceError(
+                f"clearance streak is {streak} but {WAIVED_MATRIX_PIN_HIGH} requires "
+                f">= {streak_threshold} consecutive full-clearance rounds — "
+                "the eligibility is not unlocked yet"
+            )
+        text = (reason or "").strip()
+        if CONFIRMATION_PLACEHOLDER in text:
+            raise ConvergenceError(
+                f"{WAIVED_MATRIX_PIN_HIGH} refuses the literal placeholder text — "
+                "replace it with your own operator confirmation"
+            )
+        if len(text) < MIN_CONFIRMATION_LENGTH:
+            raise ConvergenceError(
+                f"{WAIVED_MATRIX_PIN_HIGH} requires explicit operator confirmation "
+                f"text of at least {MIN_CONFIRMATION_LENGTH} characters"
+            )
 
     cells = {}
     for f in current.get("findings", []):
@@ -452,18 +524,46 @@ class PolicyVerdict:
     branch: str
     detail: str
     undisposed_ids: tuple[str, ...] = field(default_factory=tuple)
+    # v1.1 — high matrix_pin finding ids whose streak eligibility is
+    # unlocked but which carry no valid waived_matrix_pin_high yet.
+    streak_unlocked_ids: tuple[str, ...] = field(default_factory=tuple)
 
 
-def _suppressed(finding: dict[str, Any], disposition: dict[str, Any] | None) -> bool:
+def _streak_eligible(finding: dict[str, Any], *, streak_ok: bool) -> bool:
+    """v1.1 eligibility cell: HIGH severity + auditor-emitted matrix_pin +
+    unlocked streak. Critical, plan_contract (any severity), and
+    conservative-fallback classifications are never eligible."""
+    return (
+        streak_ok
+        and finding.get("severity") == "high"
+        and finding.get("finding_class") == "matrix_pin"
+    )
+
+
+def _suppressed(
+    finding: dict[str, Any],
+    disposition: dict[str, Any] | None,
+    *,
+    streak_ok: bool = False,
+) -> bool:
     """A blocking finding is suppressed iff a VALID disposition of a
     permitted kind covers it. plan_contract only yields to a waiver;
     accepted_into_plan never suppresses (it demands a plan edit + fresh
-    audit by design)."""
+    audit by design). v1.1: a HIGH matrix_pin yields ONLY to the dedicated
+    waived_matrix_pin_high kind and ONLY when the streak is unlocked; the
+    dedicated kind suppresses nothing else."""
     if disposition is None:
         return False
     kind = disposition.get("kind")
     if kind not in NO_AUDIT_DISPOSITION_KINDS:
         return False  # accepted_into_plan (or junk) — still blocking
+    if finding.get("severity") in _HARD_BLOCK_SEVERITIES:
+        return (
+            kind == WAIVED_MATRIX_PIN_HIGH
+            and _streak_eligible(finding, streak_ok=streak_ok)
+        )
+    if kind == WAIVED_MATRIX_PIN_HIGH:
+        return False  # the dedicated kind never covers non-high-matrix-pin cells
     if finding["finding_class"] == "plan_contract":
         return kind == "waived_with_reason"
     return True
@@ -472,6 +572,8 @@ def _suppressed(finding: dict[str, Any], disposition: dict[str, Any] | None) -> 
 def convergence_verdict(
     ledger: list[dict[str, Any]],
     dispositions: dict[str, dict[str, Any]],
+    *,
+    streak_threshold: int = MATRIX_PIN_STREAK_THRESHOLD,
 ) -> PolicyVerdict:
     """Pure, deterministic policy verdict for the latest round.
 
@@ -486,16 +588,19 @@ def convergence_verdict(
         )
 
     current = rounds[-1]
+    streak = clearance_streak(ledger)
+    streak_ok = streak >= streak_threshold
     findings = current.get("findings", [])
     blocking = [f for f in findings if f.get("severity") in _GATE_BLOCKING_SEVERITIES]
-    # High/critical findings are NEVER suppressible by per-finding disposition
-    # — branch (b) keeps the plain hard block; only the legacy whole-plan
-    # override bypasses them. Suppression applies to medium findings only.
+    # High/critical findings are not suppressible by per-finding disposition
+    # — with ONE v1.1 exception: a high matrix_pin under an unlocked
+    # full-clearance streak yields to waived_matrix_pin_high (and nothing
+    # else). Critical and plan_contract highs keep the plain hard block;
+    # only the legacy whole-plan override bypasses them.
     remaining = [
         f
         for f in blocking
-        if f.get("severity") in _HARD_BLOCK_SEVERITIES
-        or not _suppressed(f, dispositions.get(f["finding_id"]))
+        if not _suppressed(f, dispositions.get(f["finding_id"]), streak_ok=streak_ok)
     ]
 
     if not remaining:
@@ -509,11 +614,23 @@ def convergence_verdict(
     hard = [f for f in remaining if f.get("severity") in _HARD_BLOCK_SEVERITIES]
     if hard:
         ids = ", ".join(f["finding_id"] for f in hard)
+        unlocked = tuple(
+            f["finding_id"] for f in hard if _streak_eligible(f, streak_ok=streak_ok)
+        )
+        detail = f"new high/critical finding(s) keep the hard block: {ids}"
+        if unlocked:
+            detail += (
+                f"; streak-unlocked eligibility ({streak} consecutive full-"
+                f"clearance rounds >= {streak_threshold}): "
+                + ", ".join(unlocked)
+                + f" — resolvable via the {WAIVED_MATRIX_PIN_HIGH} disposition"
+            )
         return PolicyVerdict(
             VERDICT_BLOCK,
             "b_high_severity",
-            f"new high/critical finding(s) keep the hard block: {ids}",
+            detail,
             tuple(f["finding_id"] for f in remaining),
+            unlocked,
         )
 
     contracts = [f for f in remaining if f.get("finding_class") == "plan_contract"]
@@ -551,9 +668,14 @@ def convergence_verdict(
     )
 
 
-def verdict_for(severity: str, finding_class: str | None) -> str:
+def verdict_for(
+    severity: str, finding_class: str | None, *, streak_ok: bool = False
+) -> str:
     """Single-finding verdict cell — the exhaustive severity x class matrix
-    (test surface for F002). advisory/low never hard-block on their own."""
+    (test surface for F002). advisory/low never hard-block on their own.
+    v1.1 adds the ONE streak-conditional cell: high + matrix_pin becomes
+    disposition-eligible when the caller's ledger streak is unlocked; every
+    other cell is identical in both streak contexts."""
     sev = (severity or "").strip().lower()
     cls = normalize_class(finding_class)
     if sev not in SEVERITIES:
@@ -561,6 +683,8 @@ def verdict_for(severity: str, finding_class: str | None) -> str:
     if sev in ("low", "advisory"):
         return "pass"
     if sev in _HARD_BLOCK_SEVERITIES:
+        if sev == "high" and cls == "matrix_pin" and streak_ok:
+            return "disposition_eligible_with_streak"
         return "block"
     # medium:
     if cls == "plan_contract":
@@ -580,14 +704,18 @@ def gate_decision(plan_dir: Path) -> PolicyVerdict:
 
 
 __all__ = [
+    "CONFIRMATION_PLACEHOLDER",
     "CONSERVATIVE_FALLBACK_CLASS",
     "DISPOSITIONS_ARTIFACT",
     "DISPOSITION_ELIGIBLE_CLASSES",
     "DISPOSITION_KINDS",
     "FINDING_CLASSES",
+    "MATRIX_PIN_STREAK_THRESHOLD",
+    "MIN_CONFIRMATION_LENGTH",
     "NO_AUDIT_DISPOSITION_KINDS",
     "ROUNDS_LEDGER_ARTIFACT",
     "SEVERITIES",
+    "WAIVED_MATRIX_PIN_HIGH",
     "ConvergenceError",
     "PolicyVerdict",
     "append_audit_round",
@@ -597,6 +725,7 @@ __all__ = [
     "build_round_record",
     "cell_fingerprint_sets",
     "cell_key",
+    "clearance_streak",
     "convergence_verdict",
     "effective_dispositions",
     "finding_fingerprint",
