@@ -1,0 +1,55 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:126d69b5c45dcc17f1ea976e9cceec276edbbf7178dc341037905fbd3b6ba76d",
+  "generated_at": "2026-06-11T15:53:09Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "baseline-limits",
+      "gap_class": "parity_gap",
+      "description": "F005 only requires the present and absent producer branches to expose identical coverage.baseline keys, which would allow divergent rollup values, language statuses, evidence tiers, truncation flags, or notes to pass parity while violating the contract.",
+      "feature_refs": [
+        "F005"
+      ],
+      "recommendation": "Strengthen the parity test to assert deep equality of the baseline block for the same repo fixture, normalizing only deterministic ordering where necessary.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "high",
+      "journey_id": "any-repo-graph",
+      "gap_class": "integration_gap",
+      "description": "F006's architecture.json-absent journey asserts the baseline graph and baseline panel, but it does not explicitly assert the coverage/confidence banner, raw-JSON absence, or low/medium incompleteness wording for that producer state despite the objective requiring real-shell verification for both branches.",
+      "feature_refs": [
+        "F001",
+        "F006"
+      ],
+      "recommendation": "Add the same coverage banner, no raw JSON, and no over-confident rendering assertions to the architecture_missing real-shell journey.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "as-built-vs-intended",
+      "gap_class": "integration_gap",
+      "description": "The plan covers declared intent when ADR claims exist, but the real-shell journey only asserts the has_adrs path; the no_adrs state is left to feature-level acceptance and may never be exercised through createJarvis init.",
+      "feature_refs": [
+        "F002",
+        "F006"
+      ],
+      "recommendation": "Add a real-shell assertion for layers.intent.populated=false that verifies the no-ADR empty state is honest and not rendered as observed as-built evidence.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "any-repo-graph",
+      "gap_class": "wiring_gap",
+      "description": "The architecture_missing warning is asserted in F006, but no user-facing feature defines which payload field drives it or where the renderer should surface it, leaving room for fabricated copy or inconsistent warning behavior.",
+      "feature_refs": [
+        "F006"
+      ],
+      "recommendation": "Pin the source field and render location for the architecture_missing warning in the feature acceptance, and require it to be payload-driven.",
+      "finding_class": "plan_contract"
+    }
+  ]
+}
