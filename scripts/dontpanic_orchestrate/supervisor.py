@@ -1619,6 +1619,14 @@ def dispatch_volley(
             [],
         )
 
+    # Worktree Isolation v0 F002 — record the plan's worktree binding as
+    # evidence on the build path. Strict registry load: a corrupt
+    # worktrees.json refuses dispatch (never silently treated as no-binding);
+    # unbound plans are untouched.
+    from dontpanic_orchestrate.worktrees import capture_binding_snapshot as _wt_capture
+
+    _wt_capture(loaded.plan_dir, "orchestrate dispatch")
+
     # Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation. Mirrors
     # the dispatch_single_agent placement so volley dispatch refuses to
     # proceed when persisted gate-state contradicts the plan declaration.
