@@ -122,3 +122,18 @@ class TestDashboardProducer:
 
         scrubbed = scrub_secrets(json.dumps(written))
         assert scrubbed == json.dumps(written)
+
+
+class TestFleetRootProducer:
+    def test_fleet_what_now_emits_active_worktrees_beside_it(self, home, repo, tmp_path):
+        """The DEFAULT All-Projects console serves the fleet root — the
+        install-level worktree model must land there, not only in
+        per-project state dirs (gap found in live post-merge verification)."""
+        wt.create_worktree(repo / "docs" / "plans" / PLAN_ID)
+        from dontpanic_orchestrate import projects_dashboard as pd
+
+        out = tmp_path / "fleet" / "fleet-what-now.json"
+        pd.build_fleet_what_now([], output_path=out)
+        state = json.loads((out.parent / "active-worktrees.json").read_text())
+        assert state["bindings"][0]["plan_id"] == PLAN_ID
+        assert state["registry_corrupt"] is False
