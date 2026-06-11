@@ -2,69 +2,78 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:1c66d6b44bd14efb6364683177d72e1b95ce996f21c19b9a831ab3d954d36c06",
-  "generated_at": "2026-06-11T01:13:40Z",
+  "input_fingerprint": "sha256:184bc3403ec0b006a1299e3f9704c9894801cbddfc0da146c5601f92526d218b",
+  "generated_at": "2026-06-11T12:22:58Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "wrong-worktree-guard",
-      "gap_class": "wiring_gap",
-      "description": "F003 guards path equality and recorded-branch drift, but it does not explicitly require the bound path to still be a valid git worktree belonging to the recorded repo_root before allowing mutation. A deleted worktree replaced by an unrelated repo at the same path and branch could satisfy the described guard while violating the plan-worktree contract.",
+      "journey_id": "isolated-plan-start",
+      "gap_class": "integration_gap",
+      "description": "F006 specifies no registry entry after a failed git invocation, but it does not define rollback when git worktree creation succeeds and the later registry add/write fails. That can leave an unbound worktree or plan branch, violating the recorded-binding outcome.",
       "feature_refs": [
-        "F003",
-        "F004",
+        "F001",
+        "F006"
+      ],
+      "recommendation": "Pin create as a transaction and test registry-write/add failure after successful git worktree creation, including cleanup or an explicit recoverable failure state.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "high",
+      "journey_id": "safe-cleanup",
+      "gap_class": "integration_gap",
+      "description": "F005 requires audited cleanup, but it does not pin ordering or failure behavior for audit-log writes versus git worktree removal and registry deletion. A log write failure after removal would produce an unaudited cleanup.",
+      "feature_refs": [
         "F005"
       ],
-      "recommendation": "Reuse the same worktree health predicate required by F004/F005 in every guarded mutating entry point, and add refusal tests for missing paths, unrelated repos at the bound path, and non-worktree directories.",
+      "recommendation": "Define audit persistence semantics before deletion, and add failure tests proving cleanup cannot complete without a durable audit record or an explicit recoverable error.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "fleet-worktree-visibility",
       "gap_class": "parity_gap",
-      "description": "F001 and F004 require corrupt registry files to degrade only for read-only consumers with a visible warning, but F007 does not pin that warning through the operator brief, dashboard payload, or dashboard DOM. That leaves room for list to warn while brief/dashboard silently render an empty state.",
+      "description": "F001 and F004 require corrupt-registry warnings for read-only consumers, but F007 only pins clean, dirty, and broken-binding dashboard and brief cases. The brief or dashboard could still silently render an empty state on registry corruption.",
       "feature_refs": [
         "F001",
         "F004",
         "F007"
       ],
-      "recommendation": "Add corrupt-registry parity tests for list, operator brief, dashboard state production, and dashboard DOM rendering.",
+      "recommendation": "Add corrupt-registry parity fixtures for list, operator brief, dashboard payload, and DOM rendering.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
-      "journey_id": "fleet-worktree-visibility",
+      "journey_id": "isolated-plan-start",
       "gap_class": "coverage_gap",
-      "description": "The status model requires dirty and untracked_count fields for every binding, but broken bindings often cannot produce trustworthy porcelain status. The plan does not pin whether those values are null, unknown, false/zero with a broken reason, or omitted, which can lead to misleading dashboard and brief output.",
+      "description": "The completion contract names `--base`, but F006 only refers to a generic base_flag or base-ref CLI option. An implementation could choose a different flag spelling and miss the operator-facing contract.",
       "feature_refs": [
-        "F004",
-        "F007"
+        "F006"
       ],
-      "recommendation": "Define broken-binding field semantics explicitly, preferably with a broken_reason and honest unknown values for git-derived status that cannot be computed.",
+      "recommendation": "Pin the CLI surface to `dontpanic plan worktree create <plan-id> --base <ref>` and assert that exact flag in CLI-surface tests.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "wrong-worktree-guard",
-      "gap_class": "integration_gap",
-      "description": "F002 tests binding snapshot capture in a bound worktree and F003 tests override recording, but the combined overridden path is not pinned. For lock, audit, close, and dispatch, an override should still record both the override evidence and the binding snapshot required by the objective.",
+      "gap_class": "coverage_gap",
+      "description": "F003 says the invoking git toplevel must equal the recorded worktree_path, but it does not pin canonical path or git identity comparison. Symlinked paths, case variants, or path normalization differences can create false refusals or inconsistent guard behavior.",
       "feature_refs": [
-        "F002",
-        "F003"
+        "F003",
+        "F004"
       ],
-      "recommendation": "Add integration fixtures for overridden guarded commands that assert both override evidence and binding snapshot evidence are written exactly once before normal gate artifacts proceed.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Define path identity using canonical real paths plus the same git worktree/common-dir evidence used by binding_health, and add a regression test for symlinked invocation paths.",
+      "finding_class": "matrix_pin"
     },
     {
-      "severity": "low",
-      "journey_id": "isolated-plan-start",
+      "severity": "medium",
+      "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "The objective names `--base` as the explicit base override, while F006 only refers to a base-ref CLI option or base_flag. Without pinning the flag spelling, implementation could satisfy the feature text while missing the operator-facing command contract.",
+      "description": "F005 refuses modified, staged, and untracked files, but it does not explicitly decide how ignored files, nested repositories, or submodule dirt affect removal. The no-force cleanup path needs deterministic refusal and path reporting for all filesystem content that might be deleted.",
       "feature_refs": [
-        "F006"
+        "F005"
       ],
-      "recommendation": "Pin the create command option as `--base <ref>` in F006 acceptance and include a CLI-surface test for that exact spelling.",
-      "finding_class": "editorial"
+      "recommendation": "Pin the cleanup cleanliness matrix, including ignored files and submodule or nested-repo states, and test that no such content is deleted automatically.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
