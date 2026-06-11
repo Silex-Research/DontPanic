@@ -2,44 +2,44 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:1a9ea6f1c9ad842edfb6e143123fbe7ef894a18424dfdf6f0a1a241112fd4c79",
-  "generated_at": "2026-06-11T16:03:58Z",
+  "input_fingerprint": "sha256:5f1bf127e0ed44689de338e7c06b734dd4a5eecd37613294f6a4fd08fa0bb9aa",
+  "generated_at": "2026-06-11T16:38:51Z",
   "findings": [
     {
-      "severity": "high",
-      "journey_id": "any-repo-graph",
-      "gap_class": "integration_gap",
-      "description": "F004 requires heuristic, unresolved, and filesystem graph items to remain visible with distinct styling and a legend, but F006's createJarvis journeys never assert those hooks in either producer state. A shell or router regression could strip the legend or classes while the narrower render test still passes.",
+      "severity": "medium",
+      "journey_id": "coverage-honesty",
+      "gap_class": "coverage_gap",
+      "description": "F001 requires low-ceiling and high-ceiling renderer coverage, but the objective contract explicitly says low and medium ceilings must both be stated as incompleteness. A medium ceiling could regress into neutral or over-confident copy while the proposed low/high test matrix still passes.",
       "feature_refs": [
-        "F004",
+        "F001",
         "F006"
       ],
-      "recommendation": "Add real-shell assertions in the present and absent producer journeys for the evidence legend plus styling hooks and survival of heuristic_import, unresolved heuristic_target, and fs_* graph items.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "high",
-      "journey_id": "baseline-limits",
-      "gap_class": "integration_gap",
-      "description": "F003 pins the row-level C0 baseline story, but F006 only asserts that a baseline coverage panel exists. It does not require the real shell path to prove per-language status, all 10 evidence-type rows including reserved runtime, scan-truncation behavior, or notes rendered verbatim for the producer states.",
-      "feature_refs": [
-        "F003",
-        "F006"
-      ],
-      "recommendation": "Extend the real-shell journeys or add a parameterized createJarvis journey to assert the full baseline panel contents from producer-regenerated present and absent payloads, including truncated and unrecognized-language cases.",
+      "recommendation": "Pin a renderer-unit case for medium confidence_ceiling, or parameterize the low-ceiling assertion across both low and medium values.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
-      "journey_id": "as-built-vs-intended",
-      "gap_class": "coverage_gap",
-      "description": "F002 requires safe fallback rendering for the reserved DIFF_TAXONOMY values, but the producer currently emits only the three live values and the no-ADR branch emits no diff entries. F006's no-ADR journey therefore cannot actually exercise fallback badge behavior.",
+      "journey_id": "any-repo-graph",
+      "gap_class": "integration_gap",
+      "description": "F004 and F006 require confidence styling hooks, but the journey only demands at least one distinct hook in each producer state. The contract names heuristic, unresolved, and filesystem items as separate user-facing honesty signals; one surviving hook does not prove all three classes remain visible through the real shell.",
       "feature_refs": [
-        "F002",
+        "F004",
         "F006"
       ],
-      "recommendation": "Pin fallback badge behavior with an explicit renderer matrix over all DIFF_TAXONOMY values, or revise F006 so fallback coverage is tested outside producer-generated journey fixtures.",
+      "recommendation": "Require the producer-generated journey fixture or assertions to cover heuristic import edges, unresolved edges or targets, and tier-0 filesystem nodes independently, with selectors proving each class survives shell rendering.",
       "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "low",
+      "journey_id": "any-repo-graph",
+      "gap_class": "wiring_gap",
+      "description": "F003 says the architecture_missing warning must be driven by the view-state absence marker and asserted by name, but the proposed feature does not pin the actual payload path. That leaves ambiguity where the renderer could infer absence from a missing architecture block instead of using the producer contract marker.",
+      "feature_refs": [
+        "F003",
+        "F006"
+      ],
+      "recommendation": "Name the exact build_view_state absence-marker path in the plan before implementation and require the renderer test to assert that specific field is the sole warning input.",
+      "finding_class": "implementation_detail"
     }
   ]
 }

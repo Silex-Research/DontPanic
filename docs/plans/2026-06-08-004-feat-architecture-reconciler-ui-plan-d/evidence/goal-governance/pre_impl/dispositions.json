@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "dispositions": {
+    "f-fd7a77e67753": {
+      "kind": "deferred_to_impl",
+      "reason": "F001's ceiling test matrix will cover low AND medium AND high ceilings (medium asserted as incompleteness wording, never neutral copy) — provable in the implementation's renderer tests and checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-e8951c4ff2e3bee2",
+      "cell_key": "coverage-honesty|coverage_gap|F001,F006",
+      "cell_set": [
+        "fp-e8951c4ff2e3bee2"
+      ],
+      "round": 3,
+      "input_fingerprint": "sha256:034c2b4b89385abf266ee76b431438ce0c72fc87418e79802832a93be1208cf5",
+      "recorded_at": "2026-06-11T16:34:49Z",
+      "recorded_by": "bayesian"
+    },
+    "f-e4ac34645fd8": {
+      "kind": "deferred_to_impl",
+      "reason": "Both journeys will assert ALL THREE confidence-class hooks (heuristic, unresolved, filesystem) by selector, not just one surviving hook — provable in the journey tests and checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-ca74693671dacebc",
+      "cell_key": "any-repo-graph|integration_gap|F004,F006",
+      "cell_set": [
+        "fp-ca74693671dacebc"
+      ],
+      "round": 3,
+      "input_fingerprint": "sha256:034c2b4b89385abf266ee76b431438ce0c72fc87418e79802832a93be1208cf5",
+      "recorded_at": "2026-06-11T16:34:49Z",
+      "recorded_by": "bayesian"
+    },
+    "f-7031dc163096": {
+      "kind": "deferred_to_impl",
+      "reason": "The renderer will consume the producer's actual absence-marker field asserted BY NAME in the test (resolved from build_view_state's absent branch at implementation time), never inferring absence from a missing block.",
+      "followup_plan": null,
+      "fingerprint": "fp-8ebe32417185fe9d",
+      "cell_key": "baseline-limits|wiring_gap|F003,F006",
+      "cell_set": [
+        "fp-8ebe32417185fe9d"
+      ],
+      "round": 3,
+      "input_fingerprint": "sha256:034c2b4b89385abf266ee76b431438ce0c72fc87418e79802832a93be1208cf5",
+      "recorded_at": "2026-06-11T16:34:49Z",
+      "recorded_by": "bayesian"
+    }
+  }
+}
