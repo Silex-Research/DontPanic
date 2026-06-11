@@ -107,7 +107,8 @@ class TestRegistry:
             wt.load_registry_strict()
 
     def test_home_resolution_precedence(self, tmp_path, monkeypatch):
-        a = tmp_path / "a"; a.mkdir()
+        a = tmp_path / "a"
+        a.mkdir()
         monkeypatch.setenv("DONTPANIC_HOME", str(a))
         assert str(wt.registry_path()).startswith(str(a))
 
@@ -192,7 +193,8 @@ class TestCreate:
             wt.create_worktree(_plan_dir(repo))
 
     def test_repo_root_from_plan_dir_not_invoking_cwd(self, home, repo, tmp_path, monkeypatch):
-        other = tmp_path / "unrelated"; other.mkdir()
+        other = tmp_path / "unrelated"
+        other.mkdir()
         _git("init", "-q", "-b", "main", cwd=other)
         monkeypatch.chdir(other)
         wt.create_worktree(_plan_dir(repo))
@@ -255,7 +257,8 @@ class TestBindingHealth:
 
     def test_not_a_worktree(self, home, repo, tmp_path):
         wt.create_worktree(_plan_dir(repo))
-        plain = tmp_path / "plain"; plain.mkdir()
+        plain = tmp_path / "plain"
+        plain.mkdir()
         b = dict(wt.get_binding(PLAN_ID), worktree_path=str(plain))
         ok, reason = wt.binding_health(b)
         assert not ok
@@ -264,7 +267,8 @@ class TestBindingHealth:
         # an unrelated repo at the recorded path, on the recorded branch name
         wt.create_worktree(_plan_dir(repo))
         b = wt.get_binding(PLAN_ID)
-        impostor = tmp_path / "impostor"; impostor.mkdir()
+        impostor = tmp_path / "impostor"
+        impostor.mkdir()
         _git("init", "-q", "-b", b["branch"], cwd=impostor)
         _git("config", "user.email", "t@e.c", cwd=impostor)
         _git("config", "user.name", "t", cwd=impostor)
@@ -306,8 +310,10 @@ class TestStatusModel:
     def test_untracked_dir_counts_as_one(self, home, repo):
         wt.create_worktree(_plan_dir(repo))
         p = Path(wt.get_binding(PLAN_ID)["worktree_path"])
-        d = p / "newdir"; d.mkdir()
-        (d / "a").write_text("a"); (d / "b").write_text("b")
+        d = p / "newdir"
+        d.mkdir()
+        (d / "a").write_text("a")
+        (d / "b").write_text("b")
         row = wt.build_status_model()["bindings"][0]
         assert row["untracked_count"] == 1
 

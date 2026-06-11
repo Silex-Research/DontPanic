@@ -1,6 +1,6 @@
 ---
 id: 2026-06-10-002-feat-worktree-isolation-v0
-title: Worktree Isolation v0 — per-plan git worktrees with binding, refusal, visibility, and safe cleanup
+title: Worktree Isolation v0 — per-plan git worktrees with binding registry, gate snapshots, health model, creation, and visibility (substrate slice)
 type: feat
 tier: cross-cutting
 status: completed

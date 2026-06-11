@@ -41,13 +41,13 @@ predicate); this plan ships enforcement on top of it.
 
 ## Design inputs (resolve in the pre-lock design pass — carried from v0 rounds)
 
-- **Open operator decision (v0 round-8 HIGH, plan_contract,
-  f-330122e8396e):** does the contract's "dirty/untracked files are never
-  deleted automatically" include gitignored files? Options: (a) ignored files
-  do not block removal and are deleted with the worktree (regenerable by
-  declaration — requires amending the contract wording); (b) any ignored
-  files also block removal (strictest, but makes removal nearly always refuse
-  for built projects). Pick one explicitly before lock.
+- **Gitignored files in cleanup (v0 round-8 HIGH, plan_contract,
+  f-330122e8396e) — operator lean RECORDED in D002 and mirrored in F002:**
+  ignored files are still untracked human/workspace state and are PRESERVED
+  by default; cleanup reports them separately, and deleting them requires a
+  later explicit, audited cleanup command. The design pass finalizes the
+  mechanics (how git worktree remove's native handling of ignored files is
+  constrained or replaced), not the policy direction.
 - **Evidence-write durability (v0 round-8 MED, f-6d97ffb6949f):** the
   override path must not perform guarded side effects unless the override
   record AND binding snapshot are durably written first (fail closed on

@@ -201,7 +201,8 @@ def remove_binding(plan_id: str) -> None:
 
 
 def list_bindings() -> list[dict[str, Any]]:
-    return [load_registry_strict()[k] for k in sorted(load_registry_strict())]
+    bindings = load_registry_strict()
+    return [bindings[k] for k in sorted(bindings)]
 
 
 # ──────────────────────────────  git helpers  ──────────────────────────────

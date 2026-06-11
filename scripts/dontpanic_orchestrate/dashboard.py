@@ -913,7 +913,9 @@ def build(
                     encoding="utf-8",
                 )
             except Exception as _wt_exc:  # noqa: BLE001
-                warnings.append(f"active-worktrees state skipped: {_wt_exc}")
+                _wt_msg = f"active-worktrees state skipped: {_wt_exc}"
+                warnings.append(_wt_msg)
+                warn(_wt_msg)
             # write_cache merges by default (merge_event_sidecar=True); pass
             # the already-merged list and disable the inner merge to avoid
             # double-application that would be a no-op anyway.
