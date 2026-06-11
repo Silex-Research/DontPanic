@@ -2,43 +2,42 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:654cdbfb86a48ab976ca273ec77af41ed49790dbf07fc103481f4f01d5999667",
-  "generated_at": "2026-06-11T13:09:30Z",
+  "input_fingerprint": "sha256:40949f2086b8965ba78d5d92b50ce6fd7511d486c331272da69b0ca14c1f3fdd",
+  "generated_at": "2026-06-11T13:28:14Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "safe-cleanup",
-      "gap_class": "parity_gap",
-      "description": "F005 allows gitignored files to be deleted with an otherwise clean worktree, but the objective contract says cleanup only happens when clean and dirty or untracked files are never deleted automatically. Unless ignored files are explicitly excluded from the contract's meaning of untracked, this creates a user-facing cleanup semantics mismatch.",
+      "journey_id": "binding-honesty",
+      "gap_class": "wiring_gap",
+      "description": "F002 does not pin corrupt-registry behavior for evidence-writing gate and dispatch paths. If those paths use the read-only degraded loader, a corrupt registry can look like no binding exists and silently omit required binding evidence.",
       "feature_refs": [
-        "F005"
+        "F001",
+        "F002"
       ],
-      "recommendation": "Either make ignored files block removal, or amend the objective and tests to explicitly define ignored files as regenerable non-blocking state for v0 cleanup.",
+      "recommendation": "Specify that lock, audit, close, and dispatch use strict registry loading and fail closed on corrupt registry, or explicitly record a corrupt-registry evidence item; add regression tests for both bound and corrupt-registry cases.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
-      "journey_id": "wrong-worktree-guard",
+      "journey_id": "isolated-plan-start",
       "gap_class": "coverage_gap",
-      "description": "F003 requires override-with-reason recording and F002 requires binding snapshot capture, but the proposed acceptance does not pin failure behavior if those evidence writes fail before the guarded command performs its side effects. The operator outcome requires overrides to be recorded, so an override path that proceeds without durable evidence would violate the contract.",
+      "description": "F006 says the deterministic worktree path is outside the main working tree, but it does not require validation when DONTPANIC_HOME is configured inside the repository. That can undermine the isolation outcome by placing generated worktree paths under the active checkout.",
       "feature_refs": [
-        "F002",
-        "F003"
+        "F006"
       ],
-      "recommendation": "Specify audit/evidence-first ordering for override execution and add a negative test proving side effects do not run when override evidence or snapshot capture cannot be written.",
+      "recommendation": "Add an explicit resolved-path containment guard and test: if the computed target is inside repo_root or any existing worktree, refuse before touching git or the registry.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
       "journey_id": "isolated-plan-start",
       "gap_class": "integration_gap",
-      "description": "F006 derives the deterministic worktree path from only the repository directory name and plan id, while the registry is install-level and records repo_root. Two repositories or checkouts with the same directory basename and plan id will collide at the filesystem path and block otherwise valid isolated-plan-start flows.",
+      "description": "F006 mixes best-effort rollback wording with a hard atomicity invariant that no worktree or branch outlives a failed registry write. The implementation contract is ambiguous for branch-removal or worktree-removal failure during rollback.",
       "feature_refs": [
-        "F001",
         "F006"
       ],
-      "recommendation": "Include a stable repo identity component such as a sanitized repo_root hash in the deterministic path, or explicitly pin v0 to a single repo basename namespace.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Resolve the rollback contract before implementation: require verified removal of both the worktree path and plan branch, and define the exact error/reporting path if cleanup cannot be completed.",
+      "finding_class": "plan_contract"
     }
   ]
 }
