@@ -1,6 +1,6 @@
 {
   "audit_kind": "v1_evidence_coverage_heuristic",
-  "generated_at": "2026-06-11T00:14:40.691557+00:00",
+  "generated_at": "2026-06-11T00:35:39.378951+00:00",
   "plan_id": "2026-06-10-001-feat-convergence-policy-v1-1",
   "contract_path": "./objective_contract.json",
   "evidence_manifest_uris": [],

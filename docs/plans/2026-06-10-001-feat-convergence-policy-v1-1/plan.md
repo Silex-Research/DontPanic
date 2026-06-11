@@ -3,7 +3,7 @@ id: 2026-06-10-001-feat-convergence-policy-v1-1
 title: Convergence policy v1.1 — high matrix_pin disposition eligibility after repeated full clearance
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-10"
 goal_type: new_feature
 links:
