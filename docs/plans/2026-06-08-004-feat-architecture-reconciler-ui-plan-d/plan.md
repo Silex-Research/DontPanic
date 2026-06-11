@@ -6,6 +6,10 @@ tier: cross-cutting
 status: draft
 date: "2026-06-08"
 goal_type: new_feature
+links:
+  features: ./features.json
+  decisions: ./decisions.jsonl
+  objective_contract: ./objective_contract.json
 description: >
   Plans A/B/C/C0 built the reconciler's DATA (as_built + intent claims + diff +
   extractor coverage + the C0 tiered baseline coverage block) but the dashboard
