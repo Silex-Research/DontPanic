@@ -194,6 +194,10 @@ export function normalizeEnvelope(raw) {
     filters:             raw.filters && typeof raw.filters === 'object' ? raw.filters : {},
     insights:            Array.isArray(raw.insights) ? raw.insights : [],
     validation_warnings: Array.isArray(raw.validation_warnings) ? raw.validation_warnings : [],
+    // Plan D — extractor-coverage block (F001) + intent/diff layers (F002).
+    // Carried through verbatim; renderers below own the honest-empty cases.
+    coverage:            raw.coverage && typeof raw.coverage === 'object' ? raw.coverage : null,
+    layers:              raw.layers && typeof raw.layers === 'object' ? raw.layers : null,
   };
 }
 
@@ -358,6 +362,10 @@ export function layoutArchitectureGraph(envelope, opts = {}) {
         source_path: typeof node.source_path === 'string' ? node.source_path : '',
         summary: typeof node.summary === 'string' ? node.summary : '',
         fingerprint: typeof node.fingerprint === 'string' ? node.fingerprint : '',
+        // Plan D F004 — evidence contract fields survive layout so the
+        // SVG can render confidence styling hooks.
+        source_kind: typeof node.source_kind === 'string' ? node.source_kind : '',
+        evidence_basis: typeof node.evidence_basis === 'string' ? node.evidence_basis : '',
         x,
         y,
         w: cfg.nodeWidth,
@@ -397,6 +405,9 @@ export function layoutArchitectureGraph(envelope, opts = {}) {
       x2: to.x + to.w / 2,
       y2: to.y + to.h / 2,
       missing: false,
+      // Plan D F004 — evidence contract fields survive layout.
+      resolved: typeof edge.resolved === 'boolean' ? edge.resolved : null,
+      evidence_basis: typeof edge.evidence_basis === 'string' ? edge.evidence_basis : '',
     });
   }
   edgesOut.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -677,6 +688,17 @@ export function renderArchitectureHTML(raw, opts = {}) {
   }
   const state = envelope.freshness.state;
   if (state === 'absent' || state === 'missing') {
+    // Plan D F003 — the absent branch now carries a full tier-0/1 baseline
+    // graph (nodes + coverage.baseline). When that surface exists, render
+    // the populated page (coverage banner + architecture_missing warning +
+    // baseline panel) instead of hiding it behind the empty card. Truly
+    // empty payloads (no nodes, no baseline) keep the missing state.
+    const hasBaselineSurface = (Array.isArray(envelope.nodes) && envelope.nodes.length > 0)
+      || (envelope.coverage != null && envelope.coverage.baseline != null
+          && typeof envelope.coverage.baseline === 'object');
+    if (hasBaselineSurface) {
+      return renderPopulatedHTML(envelope, scope, opts);
+    }
     return renderMissingStateHTML(scope, envelope);
   }
   if (state === 'error') {
@@ -871,6 +893,309 @@ export function renderErrorStateHTML(scope, envelope) {
   `;
 }
 
+// ─── Plan D — coverage honesty surfaces ──────────────────────────────
+
+// Mirror of architecture_baseline.EVIDENCE_TYPES (scripts/dontpanic_orchestrate/
+// architecture_baseline.py). Ordering only — rows render from the payload,
+// never fabricated. `runtime` is the reserved tier-3 entry.
+export const BASELINE_EVIDENCE_TYPE_ORDER = Object.freeze([
+  'filesystem',
+  'code',
+  'manifest',
+  'build',
+  'test',
+  'config',
+  'infra',
+  'doc',
+  'adr',
+  'runtime',
+]);
+
+// The three taxonomy values architecture_intent.reconcile_intent emits
+// today. Everything else in DIFF_TAXONOMY (drift, implemented_undocumented,
+// conflicting_dependency, unknown_confidence) — and any unknown string —
+// renders with the single safe `--reserved` fallback class.
+const LIVE_DIFF_TAXONOMY = Object.freeze([
+  'aligned',
+  'documented_unimplemented',
+  'stale_adr',
+]);
+
+/**
+ * F001 — extractor-coverage banner. Driven ONLY by the view-state
+ * coverage block: confidence_ceiling, one row per extractor, and every
+ * missing_extractor kind. A low or medium ceiling renders an explicit
+ * incompleteness statement — never hidden, never softened.
+ */
+export function renderCoverageBannerHTML(coverage) {
+  if (coverage == null || typeof coverage !== 'object') return '';
+  const ceiling = typeof coverage.confidence_ceiling === 'string'
+    ? coverage.confidence_ceiling
+    : 'low';
+  const extractors = Array.isArray(coverage.extractors) ? coverage.extractors : [];
+  const missing = Array.isArray(coverage.missing_extractors) ? coverage.missing_extractors : [];
+  const showIncomplete = ceiling !== 'high';
+  const extractorRows = extractors
+    .filter((e) => e && typeof e === 'object')
+    .map((e) => `
+      <tr class="arch-coverage-row" data-testid="arch-coverage-extractor-row" data-extractor="${esc(String(e.extractor ?? ''))}">
+        <td class="arch-coverage-extractor"><code>${esc(String(e.extractor ?? ''))}</code></td>
+        <td class="arch-coverage-kind">${esc(String(e.evidence_kind ?? ''))}</td>
+        <td class="arch-coverage-status" data-status="${esc(String(e.status ?? ''))}">${esc(String(e.status ?? ''))}</td>
+      </tr>
+    `).join('');
+  // Producer emits missing_extractors as {evidence_kind, status} entries;
+  // tolerate plain strings so an older payload still renders honestly.
+  const missingRows = missing.map((m) => {
+    const kind = m && typeof m === 'object' ? String(m.evidence_kind ?? '') : String(m ?? '');
+    return `
+      <li class="arch-coverage-missing-kind" data-testid="arch-coverage-missing-kind">
+        <code>${esc(kind)}</code> — no extractor installed
+      </li>
+    `;
+  }).join('');
+  return `
+    <section class="panel arch-coverage-banner arch-coverage-banner--${esc(ceiling)}"
+             data-testid="arch-coverage-banner"
+             data-ceiling="${esc(ceiling)}">
+      <div class="arch-coverage-header">
+        <h3 class="arch-coverage-title">Extractor coverage</h3>
+        <span class="arch-coverage-ceiling" data-testid="arch-coverage-ceiling">
+          Confidence ceiling: <strong>${esc(ceiling)}</strong>
+        </span>
+      </div>
+      ${showIncomplete ? `
+        <p class="arch-coverage-incomplete" data-testid="arch-coverage-incomplete">
+          This map is incomplete, not wrong — confidence ceiling: ${esc(ceiling)}.
+          Evidence kinds without an extractor are listed below; they are
+          absent from the map, not absent from the repo.
+        </p>
+      ` : ''}
+      <table class="arch-coverage-table">
+        <thead>
+          <tr><th>Extractor</th><th>Evidence kind</th><th>Status</th></tr>
+        </thead>
+        <tbody>${extractorRows}</tbody>
+      </table>
+      ${missing.length > 0 ? `
+        <div class="arch-coverage-missing">
+          <span class="arch-coverage-missing-label">Missing extractors</span>
+          <ul class="arch-coverage-missing-list">${missingRows}</ul>
+        </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+/**
+ * F003 — visible warning driven ONLY by the producer's absence marker:
+ * a `validation_warnings` entry with code === 'architecture_missing'.
+ * Returns '' when no such warning exists. Never inferred from a missing
+ * architecture block.
+ */
+export function renderArchitectureMissingWarningHTML(envelope) {
+  if (envelope == null || typeof envelope !== 'object') return '';
+  const warnings = Array.isArray(envelope.validation_warnings)
+    ? envelope.validation_warnings
+    : [];
+  const marker = warnings.find(
+    (w) => w && typeof w === 'object' && w.code === 'architecture_missing',
+  );
+  if (!marker) return '';
+  const message = typeof marker.message === 'string' && marker.message.length > 0
+    ? marker.message
+    : 'architecture.json was not found.';
+  return `
+    <section class="panel arch-missing-warning"
+             data-testid="arch-missing-warning"
+             data-warning-code="architecture_missing">
+      <span class="arch-missing-warning-badge">architecture.json missing</span>
+      <p class="arch-missing-warning-message">${esc(message)}</p>
+      <p class="arch-missing-warning-note">
+        The map below is the tier-0/1 baseline scan, not an extracted
+        architecture snapshot.
+      </p>
+    </section>
+  `;
+}
+
+/**
+ * F003 — tiered baseline coverage panel. Renders coverage.baseline
+ * verbatim: rollup, per-language rows (detected languages only), the
+ * full per-evidence-type table including the reserved runtime tier-3
+ * row, the scan-truncation warning, and every note string verbatim.
+ * Absent baseline → honest empty state, nothing fabricated.
+ */
+export function renderBaselinePanelHTML(coverage) {
+  const baseline = coverage && typeof coverage === 'object'
+    && coverage.baseline && typeof coverage.baseline === 'object'
+    ? coverage.baseline
+    : null;
+  if (baseline == null) {
+    return `
+      <section class="panel arch-baseline-panel" data-testid="arch-baseline-panel" data-baseline="absent">
+        <h3 class="arch-baseline-title">Baseline coverage</h3>
+        <p class="arch-baseline-empty" data-testid="arch-baseline-empty">
+          No baseline coverage block in this snapshot. Nothing to show —
+          the dashboard does not invent coverage data.
+        </p>
+      </section>
+    `;
+  }
+  const rollup = typeof baseline.rollup === 'string' ? baseline.rollup : '';
+  const rollupIncomplete = rollup === 'limited' || rollup === 'partial';
+  const perLanguage = baseline.per_language && typeof baseline.per_language === 'object'
+    ? baseline.per_language
+    : {};
+  const perType = baseline.per_evidence_type && typeof baseline.per_evidence_type === 'object'
+    ? baseline.per_evidence_type
+    : {};
+  const notes = Array.isArray(baseline.notes) ? baseline.notes : [];
+
+  const langRows = Object.keys(perLanguage).sort().map((lang) => `
+    <tr class="arch-baseline-lang-row" data-testid="arch-baseline-lang-row" data-language="${esc(lang)}">
+      <td class="arch-baseline-lang">${esc(lang)}</td>
+      <td class="arch-baseline-lang-status" data-status="${esc(String(perLanguage[lang] ?? ''))}">${esc(String(perLanguage[lang] ?? ''))}</td>
+    </tr>
+  `).join('');
+
+  // Render rows from the payload in the pinned EVIDENCE_TYPES order, then
+  // any unexpected extra keys — never drop, never fabricate.
+  const typeKeys = [
+    ...BASELINE_EVIDENCE_TYPE_ORDER.filter((k) => k in perType),
+    ...Object.keys(perType).filter((k) => !BASELINE_EVIDENCE_TYPE_ORDER.includes(k)).sort(),
+  ];
+  const typeRows = typeKeys.map((key) => {
+    const entry = perType[key] && typeof perType[key] === 'object' ? perType[key] : {};
+    const status = String(entry.status ?? '');
+    const tier = entry.tier == null ? '—' : String(entry.tier);
+    const reserved = entry.reserved === true;
+    return `
+      <tr class="arch-baseline-evidence-row" data-testid="arch-baseline-evidence-row" data-evidence-type="${esc(key)}">
+        <td class="arch-baseline-evidence-type"><code>${esc(key)}</code></td>
+        <td class="arch-baseline-evidence-status" data-status="${esc(status)}">${esc(status)}${reserved ? ' <span class="arch-baseline-reserved">(reserved)</span>' : ''}</td>
+        <td class="arch-baseline-evidence-tier">tier ${esc(tier)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <section class="panel arch-baseline-panel" data-testid="arch-baseline-panel" data-rollup="${esc(rollup)}">
+      <div class="arch-baseline-header">
+        <h3 class="arch-baseline-title">Baseline coverage</h3>
+        <span class="arch-baseline-rollup" data-testid="arch-baseline-rollup">
+          Rollup: <strong>${esc(rollup)}</strong>
+        </span>
+      </div>
+      ${rollupIncomplete ? `
+        <p class="arch-baseline-incomplete" data-testid="arch-baseline-incomplete">
+          Baseline coverage is <strong>${esc(rollup)}</strong> — this view is
+          incomplete, not wrong. Lower-tier evidence is shown with its tier so
+          you can see exactly how much weight it can carry.
+        </p>
+      ` : ''}
+      ${baseline.scan_truncated === true ? `
+        <p class="arch-baseline-truncated" data-testid="arch-baseline-truncated">
+          Scan truncated: the repository walk hit the entry cap before
+          finishing. Coverage below reflects a partial scan.
+        </p>
+      ` : ''}
+      ${langRows ? `
+        <table class="arch-baseline-lang-table">
+          <thead><tr><th>Language</th><th>Status</th></tr></thead>
+          <tbody>${langRows}</tbody>
+        </table>
+      ` : `
+        <p class="arch-baseline-no-langs">No languages detected.</p>
+      `}
+      <table class="arch-baseline-evidence-table">
+        <thead><tr><th>Evidence type</th><th>Status</th><th>Tier</th></tr></thead>
+        <tbody>${typeRows}</tbody>
+      </table>
+      ${notes.length > 0 ? `
+        <ul class="arch-baseline-notes">
+          ${notes.map((n) => `<li class="arch-baseline-note" data-testid="arch-baseline-note">${esc(String(n))}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </section>
+  `;
+}
+
+/**
+ * F002 — declared-intent panel + diff badges. Claims are ALWAYS labelled
+ * declared/intended — never presented as as-built fact. Diff entries get
+ * a badge keyed by taxonomy: the three live values each get a distinct
+ * class; the four reserved values and any unknown string share the safe
+ * `--reserved` fallback (raw taxonomy text, escaped, never a crash).
+ */
+export function renderIntentPanelHTML(layers) {
+  const intent = layers && typeof layers === 'object'
+    && layers.intent && typeof layers.intent === 'object'
+    ? layers.intent
+    : null;
+  const populated = intent != null && intent.populated === true;
+  if (!populated) {
+    return `
+      <section class="panel arch-intent-panel" data-testid="arch-intent-panel" data-populated="false">
+        <h3 class="arch-intent-title">Declared intent (ADR claims)</h3>
+        <p class="arch-intent-empty" data-testid="arch-intent-empty">
+          No ADR claims found. Decision documents under
+          <code>docs/adr/</code> populate this layer.
+        </p>
+      </section>
+    `;
+  }
+  const claims = Array.isArray(intent.claims) ? intent.claims : [];
+  const diff = layers && Array.isArray(layers.diff) ? layers.diff : [];
+
+  const claimItems = claims
+    .filter((c) => c && typeof c === 'object')
+    .map((c) => `
+      <li class="arch-intent-claim" data-testid="arch-intent-claim" data-claim-id="${esc(String(c.id ?? ''))}">
+        <span class="arch-intent-claim-badge">declared</span>
+        <code class="arch-intent-claim-id">${esc(String(c.id ?? ''))}</code>
+        <span class="arch-intent-claim-title">${esc(String(c.title ?? ''))}</span>
+        ${c.status ? `<span class="arch-intent-claim-status">status: ${esc(String(c.status))}</span>` : ''}
+        ${c.source_path ? `<code class="arch-intent-claim-source">${esc(String(c.source_path))}</code>` : ''}
+      </li>
+    `).join('');
+
+  const diffBadges = diff
+    .filter((d) => d && typeof d === 'object')
+    .map((d) => {
+      const taxonomy = String(d.taxonomy ?? '');
+      const live = LIVE_DIFF_TAXONOMY.includes(taxonomy);
+      const cls = live
+        ? `arch-diff-badge arch-diff-badge--${taxonomy}`
+        : 'arch-diff-badge arch-diff-badge--reserved';
+      const label = [
+        taxonomy,
+        d.claim_id ? String(d.claim_id) : null,
+        d.symbol ? String(d.symbol) : null,
+      ].filter(Boolean).join(' · ');
+      return `
+        <li class="arch-diff-item">
+          <span class="${esc(cls)}" data-testid="arch-diff-badge" data-taxonomy="${esc(taxonomy)}">${esc(label)}</span>
+          ${d.detail ? `<span class="arch-diff-detail">${esc(String(d.detail))}</span>` : ''}
+        </li>
+      `;
+    }).join('');
+
+  return `
+    <section class="panel arch-intent-panel" data-testid="arch-intent-panel" data-populated="true">
+      <h3 class="arch-intent-title">Declared intent (ADR claims)</h3>
+      <p class="arch-intent-hint">
+        These claims are declared intent extracted from decision documents —
+        what the ADRs say the system should be, not as-built fact. The diff
+        badges below show how each declared reference reconciles against the
+        as-built graph.
+      </p>
+      <ul class="arch-intent-claims">${claimItems}</ul>
+      ${diffBadges ? `<ul class="arch-diff-list" data-testid="arch-diff-list">${diffBadges}</ul>` : ''}
+    </section>
+  `;
+}
+
 function renderPopulatedHTML(envelope, scope, opts) {
   const warnings = collectFlowWarnings(envelope);
   const layout = layoutArchitectureGraph(envelope);
@@ -879,6 +1204,10 @@ function renderPopulatedHTML(envelope, scope, opts) {
       ${renderHeaderHTML(envelope, scope)}
       ${renderProjectContextHTML(envelope, scope)}
       ${renderFreshnessBannerHTML(envelope)}
+      ${renderCoverageBannerHTML(envelope.coverage)}
+      ${renderArchitectureMissingWarningHTML(envelope)}
+      ${renderBaselinePanelHTML(envelope.coverage)}
+      ${renderIntentPanelHTML(envelope.layers)}
       ${renderSummaryCardsHTML(envelope)}
       ${renderInsightsPanelHTML(envelope)}
       ${renderValidationWarningsHTML(warnings)}
@@ -1763,7 +2092,14 @@ export function renderArchitectureMapSVG(layout) {
       const cx1 = edge.x1 + dx;
       const cx2 = edge.x2 - dx;
       const d = `M ${edge.x1} ${edge.y1} C ${cx1} ${edge.y1}, ${cx2} ${edge.y2}, ${edge.x2} ${edge.y2}`;
-      return `<path class="arch-edge" data-edge-id="${esc(edge.id)}" data-edge-type="${esc(edge.type)}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" d="${d}" stroke="${esc(meta.color)}" fill="none" />`;
+      // Plan D F004 — confidence styling hooks. Heuristic imports and
+      // unresolved evidence get class modifiers in ADDITION to arch-edge.
+      let edgeClass = 'arch-edge';
+      if (edge.type === 'heuristic_import') edgeClass += ' arch-edge--heuristic';
+      if (edge.resolved === false || edge.evidence_basis === 'unresolved') {
+        edgeClass += ' arch-edge--unresolved';
+      }
+      return `<path class="${esc(edgeClass)}" data-edge-id="${esc(edge.id)}" data-edge-type="${esc(edge.type)}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" d="${d}" stroke="${esc(meta.color)}" fill="none" />`;
     }).join('');
   const laneShapes = lanes.map((lane) => `
     <g class="arch-lane" data-lane-id="${esc(lane.id)}" data-lane-kind="${esc(lane.kind)}">
@@ -1778,8 +2114,12 @@ export function renderArchitectureMapSVG(layout) {
       ? `${node.title} — ${node.summary}`
       : node.title;
     const label = truncateLabel(node.title, 18);
+    // Plan D F004 — confidence styling hooks on nodes.
+    let nodeClass = 'arch-node';
+    if (node.evidence_basis === 'unresolved') nodeClass += ' arch-node--unresolved';
+    if (node.source_kind === 'filesystem') nodeClass += ' arch-node--filesystem';
     return `
-      <g class="arch-node" data-node-id="${esc(node.id)}" data-node-type="${esc(node.type)}" data-node-category="${esc(node.category)}" data-lane-id="${esc(node.lane_id)}" tabindex="0" role="button" aria-label="${esc(node.title)} (${esc(meta.label)})">
+      <g class="${esc(nodeClass)}" data-node-id="${esc(node.id)}" data-node-type="${esc(node.type)}" data-node-category="${esc(node.category)}" data-lane-id="${esc(node.lane_id)}" tabindex="0" role="button" aria-label="${esc(node.title)} (${esc(meta.label)})">
         <title>${esc(titleAttr)}</title>
         <rect class="arch-node-bg" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="6" fill="${esc(meta.color)}" />
         <text class="arch-node-label" x="${node.x + 10}" y="${node.y + node.h / 2 + 4}">${esc(label)}</text>
@@ -1870,7 +2210,7 @@ function renderFlowRailHTML(envelope) {
   `;
 }
 
-function renderLegendHTML(envelope) {
+export function renderLegendHTML(envelope) {
   const types = Array.from(new Set((envelope.nodes || [])
     .map((n) => (n && typeof n.type === 'string') ? n.type : null)
     .filter(Boolean))).sort();
@@ -1900,6 +2240,19 @@ function renderLegendHTML(envelope) {
           </span>
         `;
       }).join('')}
+      <span class="arch-legend-section-label">Evidence</span>
+      <span class="arch-legend-item" data-legend-evidence="heuristic">
+        <span class="arch-legend-dot arch-legend-dot--line arch-edge--heuristic"></span>
+        <span class="arch-legend-label">Heuristic import (low confidence)</span>
+      </span>
+      <span class="arch-legend-item" data-legend-evidence="unresolved">
+        <span class="arch-legend-dot arch-node--unresolved"></span>
+        <span class="arch-legend-label">Unresolved target</span>
+      </span>
+      <span class="arch-legend-item" data-legend-evidence="filesystem">
+        <span class="arch-legend-dot arch-node--filesystem"></span>
+        <span class="arch-legend-label">Filesystem-only (tier 0)</span>
+      </span>
     </div>
   `;
 }
