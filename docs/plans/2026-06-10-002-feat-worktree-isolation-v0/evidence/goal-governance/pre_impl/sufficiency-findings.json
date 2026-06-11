@@ -2,77 +2,42 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:184bc3403ec0b006a1299e3f9704c9894801cbddfc0da146c5601f92526d218b",
-  "generated_at": "2026-06-11T12:22:58Z",
+  "input_fingerprint": "sha256:654cdbfb86a48ab976ca273ec77af41ed49790dbf07fc103481f4f01d5999667",
+  "generated_at": "2026-06-11T13:09:30Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "integration_gap",
-      "description": "F006 specifies no registry entry after a failed git invocation, but it does not define rollback when git worktree creation succeeds and the later registry add/write fails. That can leave an unbound worktree or plan branch, violating the recorded-binding outcome.",
-      "feature_refs": [
-        "F001",
-        "F006"
-      ],
-      "recommendation": "Pin create as a transaction and test registry-write/add failure after successful git worktree creation, including cleanup or an explicit recoverable failure state.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
       "journey_id": "safe-cleanup",
-      "gap_class": "integration_gap",
-      "description": "F005 requires audited cleanup, but it does not pin ordering or failure behavior for audit-log writes versus git worktree removal and registry deletion. A log write failure after removal would produce an unaudited cleanup.",
+      "gap_class": "parity_gap",
+      "description": "F005 allows gitignored files to be deleted with an otherwise clean worktree, but the objective contract says cleanup only happens when clean and dirty or untracked files are never deleted automatically. Unless ignored files are explicitly excluded from the contract's meaning of untracked, this creates a user-facing cleanup semantics mismatch.",
       "feature_refs": [
         "F005"
       ],
-      "recommendation": "Define audit persistence semantics before deletion, and add failure tests proving cleanup cannot complete without a durable audit record or an explicit recoverable error.",
+      "recommendation": "Either make ignored files block removal, or amend the objective and tests to explicitly define ignored files as regenerable non-blocking state for v0 cleanup.",
       "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "fleet-worktree-visibility",
-      "gap_class": "parity_gap",
-      "description": "F001 and F004 require corrupt-registry warnings for read-only consumers, but F007 only pins clean, dirty, and broken-binding dashboard and brief cases. The brief or dashboard could still silently render an empty state on registry corruption.",
-      "feature_refs": [
-        "F001",
-        "F004",
-        "F007"
-      ],
-      "recommendation": "Add corrupt-registry parity fixtures for list, operator brief, dashboard payload, and DOM rendering.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "isolated-plan-start",
-      "gap_class": "coverage_gap",
-      "description": "The completion contract names `--base`, but F006 only refers to a generic base_flag or base-ref CLI option. An implementation could choose a different flag spelling and miss the operator-facing contract.",
-      "feature_refs": [
-        "F006"
-      ],
-      "recommendation": "Pin the CLI surface to `dontpanic plan worktree create <plan-id> --base <ref>` and assert that exact flag in CLI-surface tests.",
-      "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "wrong-worktree-guard",
       "gap_class": "coverage_gap",
-      "description": "F003 says the invoking git toplevel must equal the recorded worktree_path, but it does not pin canonical path or git identity comparison. Symlinked paths, case variants, or path normalization differences can create false refusals or inconsistent guard behavior.",
+      "description": "F003 requires override-with-reason recording and F002 requires binding snapshot capture, but the proposed acceptance does not pin failure behavior if those evidence writes fail before the guarded command performs its side effects. The operator outcome requires overrides to be recorded, so an override path that proceeds without durable evidence would violate the contract.",
       "feature_refs": [
-        "F003",
-        "F004"
+        "F002",
+        "F003"
       ],
-      "recommendation": "Define path identity using canonical real paths plus the same git worktree/common-dir evidence used by binding_health, and add a regression test for symlinked invocation paths.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Specify audit/evidence-first ordering for override execution and add a negative test proving side effects do not run when override evidence or snapshot capture cannot be written.",
+      "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
-      "journey_id": "safe-cleanup",
-      "gap_class": "coverage_gap",
-      "description": "F005 refuses modified, staged, and untracked files, but it does not explicitly decide how ignored files, nested repositories, or submodule dirt affect removal. The no-force cleanup path needs deterministic refusal and path reporting for all filesystem content that might be deleted.",
+      "journey_id": "isolated-plan-start",
+      "gap_class": "integration_gap",
+      "description": "F006 derives the deterministic worktree path from only the repository directory name and plan id, while the registry is install-level and records repo_root. Two repositories or checkouts with the same directory basename and plan id will collide at the filesystem path and block otherwise valid isolated-plan-start flows.",
       "feature_refs": [
-        "F005"
+        "F001",
+        "F006"
       ],
-      "recommendation": "Pin the cleanup cleanliness matrix, including ignored files and submodule or nested-repo states, and test that no such content is deleted automatically.",
+      "recommendation": "Include a stable repo identity component such as a sanitized repo_root hash in the deterministic path, or explicitly pin v0 to a single repo basename namespace.",
       "finding_class": "matrix_pin"
     }
   ]

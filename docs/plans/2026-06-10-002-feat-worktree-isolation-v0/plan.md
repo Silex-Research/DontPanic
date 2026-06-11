@@ -11,15 +11,14 @@ links:
   decisions: ./decisions.jsonl
   objective_contract: ./objective_contract.json
 description: >
-  Give every plan its own git worktree and make DontPanic worktree-aware: a
-  create command that builds the worktree from the correct base and records the
-  binding (worktree_path, base_ref, branch, owner_actor); lock/audit/close
-  capture that binding as evidence; plan-mutating commands refuse to run from
-  the wrong worktree unless explicitly overridden; the operator brief and
-  dashboard show active worktrees with branch, dirty status, and actor; and
-  cleanup is explicit, audited, and refuses dirty/untracked state. A platform
-  primitive that removes shared-worktree friction before Plan D, 008, Plan B,
-  and C+ overlap.
+  Give every plan its own git worktree and make DontPanic worktree-aware —
+  the SUBSTRATE slice (D012 split): a binding registry, a create command that
+  builds the worktree from a recorded base SHA with rollback atomicity,
+  gate-time binding snapshots as evidence, the canonical binding_health
+  predicate + status model, and operator brief / dashboard visibility.
+  Enforcement (wrong-worktree refusal + safe cleanup) ships immediately after
+  in 2026-06-11-001-feat-worktree-guard-hardening. A platform primitive that
+  removes shared-worktree friction before Plan D, 008, Plan B, and C+ overlap.
 ---
 
 ## Target
@@ -68,17 +67,6 @@ where, nothing clever.
   (build) path record the binding snapshot (worktree_path, base_ref, branch,
   owner_actor) into the plan's audit evidence; when no binding exists,
   behavior is unchanged (additive).
-- **F003** — wrong-worktree refusal: every plan-mutating entry point
-  (`plan lock`, `plan audit`, `plan close`, `plan disposition`, orchestrate
-  dispatch) refuses when invoked from a working tree that is not the plan's
-  bound worktree OR fails the canonical binding_health predicate (called from
-  F004 — a swapped repository at the same path and branch refuses), BEFORE any
-  gate side effect or evidence write; corrupt registry fails closed; an
-  explicit override with a reason proceeds, is recorded, and STILL captures
-  the binding snapshot. No binding in a valid registry → no refusal (backward
-  compatible). DontPanic has no merge command — merging is the operator's
-  external gh ritual — so this guarded set is the complete plan-mutating
-  surface, owned here via a CLI-surface test (D005/D009).
 - **F004** — canonical binding_health predicate + status model + list command:
   ONE exported predicate (exists ∧ is_git_worktree ∧ belongs_to_recorded_
   repo_root ∧ on_recorded_branch, probe errors = unhealthy, machine-readable
@@ -86,12 +74,6 @@ where, nothing clever.
   the status model — never re-specified. Unhealthy bindings render with the
   reason and explicit null dirty/untracked fields; printed by
   `dontpanic plan worktree list`.
-- **F005** — explicit, audited, safe cleanup: `dontpanic plan worktree
-  remove <plan-id>` removes the worktree and binding ONLY when the tree is
-  clean (no modified, staged, or untracked files) and records an audit entry
-  (who, when, path, branch); a dirty tree refuses with the file list and no
-  force path exists in v0; plan close NEVER auto-removes — it may only print
-  the cleanup command.
 - **F006** — `dontpanic plan worktree create <plan-id>`: creates the per-plan
   worktree on a plan-derived branch at a deterministic path outside the main
   tree. The base is never the invoking checkout's HEAD implicitly: default =
@@ -103,6 +85,17 @@ where, nothing clever.
   a block in the dashboard state payload (no-secret guard), with a DOM-level
   test proving the dashboard UI actually renders branch / dirty / untracked /
   actor / broken — plus an honest empty state.
+
+## Split (D012)
+
+Enforcement — the wrong-worktree refusal (formerly F003) and safe cleanup
+(formerly F005) — moved wholesale to plan
+`2026-06-11-001-feat-worktree-guard-hardening` after eight sufficiency rounds
+(100% clearance each) kept finding real adversarial holes in that threat model
+one conjunct at a time. v0 ships the substrate: registry, gate-time snapshots,
+the canonical binding_health predicate + status model, create, and
+visibility. The hardening plan consumes binding_health and ships refusal +
+removal immediately after, behind one holistic design pass.
 
 ## Non-goals (out of scope for v0)
 
