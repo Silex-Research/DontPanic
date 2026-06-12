@@ -3,7 +3,7 @@ id: 2026-06-12-001-fix-audit-evidence-writer-hygiene
 title: Audit evidence-writer hygiene — capture-time sanitization + re-audit iteration preservation
 type: fix
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-12"
 goal_type: infra
 description: >
