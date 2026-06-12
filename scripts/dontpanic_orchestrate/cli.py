@@ -3026,28 +3026,77 @@ def _plan_main(argv: list[str]) -> int:
 
 
 def _plan_worktree_main(argv: list[str]) -> int:
-    """``dontpanic plan worktree create|list`` — Worktree Isolation v0
-    (plan 2026-06-10-002, substrate slice). No remove subcommand in v0:
-    removal ships with the guard-hardening follow-up plan."""
+    """``dontpanic plan worktree create|list|remove`` — Worktree Isolation
+    v0 (plan 2026-06-10-002) + guard-hardening F002 removal (plan
+    2026-06-11-001). These are worktree-MANAGEMENT commands: deliberately
+    OUTSIDE the wrong-worktree guard (they operate on bindings by plan id
+    from any checkout) and protected by their own preconditions — strict
+    registry load, binding_health, full-policy cleanliness. There is NO
+    force flag on this surface."""
     from dontpanic_orchestrate import worktrees as _wt
 
-    if not argv or argv[0] not in ("create", "list"):
+    if not argv or argv[0] not in ("create", "list", "remove"):
         print(
             "usage: dontpanic plan worktree <subcommand>\n\n"
             "subcommands:\n"
-            "  create <plan-dir> [--base <ref>]\n"
+            "  create <plan-dir> [--base <ref>] [--copy-local-config]\n"
             "      Create the plan's dedicated git worktree on branch\n"
             "      plan/<plan-id> at a repo-key-qualified path under\n"
             "      $DONTPANIC_HOME/worktrees/, from the repo's default branch\n"
             "      (or --base) resolved to a recorded commit SHA, and bind it\n"
-            "      in the worktrees registry.\n"
+            "      in the worktrees registry. Allowlisted operator-local\n"
+            "      config (environments.json) is declared when missing or\n"
+            "      divergent; --copy-local-config opts into copying it.\n"
             "  list\n"
             "      Render the worktree-status model: one row per binding with\n"
             "      branch, current branch, dirty state, untracked count,\n"
-            "      owner, and health reasons.",
+            "      owner, and health reasons.\n"
+            "  remove <plan-id>\n"
+            "      Health-gated, audit-first removal (7-step sequence): refuses\n"
+            "      on any dirty, gitignored, submodule, or nested-repo content;\n"
+            "      appends fsynced intent + outcome records to\n"
+            "      $DONTPANIC_HOME/worktree-audit.jsonl; deletes the registry\n"
+            "      binding only after successful physical removal. No force\n"
+            "      flag exists. The plan branch always survives.",
             file=sys.stderr,
         )
         return 2
+    if argv[0] == "remove":
+        from dontpanic_orchestrate import worktree_remove as _wr
+
+        parser = argparse.ArgumentParser(prog="dontpanic plan worktree remove")
+        parser.add_argument("plan_id", help="Plan ID of the bound worktree")
+        try:
+            args = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        try:
+            result = _wr.remove_worktree(args.plan_id)
+        except _wr.RemoveRefusal as exc:
+            print(f"[plan worktree remove] REFUSED (step {exc.step}): {exc}", file=sys.stderr)
+            return 3
+        except _wt.RegistryCorruptError as exc:
+            print(f"[plan worktree remove] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        except _wr.RemoveError as exc:
+            print(f"[plan worktree remove] FAILED (step {exc.step}): {exc}", file=sys.stderr)
+            return 4
+        except _wr.RemoveDegraded as exc:
+            print(f"[plan worktree remove] DEGRADED: {exc}", file=sys.stderr)
+            return 5
+        if result["path"] == "completion":
+            print(
+                f"[plan worktree remove] removed (registry-only completion path) "
+                f"for plan {result['plan_id']} — the worktree was already gone; "
+                "the orphaned binding is now cleared and audited"
+            )
+        else:
+            print(
+                f"[plan worktree remove] removed {result['worktree_path']} "
+                f"(plan {result['plan_id']}); intent + outcome audited at "
+                f"{_wr.audit_log_path()}"
+            )
+        return 0
     if argv[0] == "create":
         parser = argparse.ArgumentParser(prog="dontpanic plan worktree create")
         parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
