@@ -1,0 +1,13 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-12T20:49:55.331649+00:00",
+  "plan_id": "2026-06-12-001-fix-audit-evidence-writer-hygiene",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/pytest/append-only-reaudit/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/append-only-reaudit/state-map.json",
+    "evidence/goal-governance/post_impl/pytest/sanitized-capture/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/sanitized-capture/state-map.json"
+  ],
+  "findings": []
+}

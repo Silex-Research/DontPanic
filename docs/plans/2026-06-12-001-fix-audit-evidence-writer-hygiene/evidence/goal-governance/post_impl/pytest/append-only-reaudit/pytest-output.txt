@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-12-001-fix-audit-evidence-writer-hygiene
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 8 items
+
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_two_audits_write_two_iterations_first_preserved PASSED [ 12%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_reader_returns_latest_iteration_verdict PASSED [ 25%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_explicit_colliding_iteration_refuses_naming_file PASSED [ 37%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_explicit_noncolliding_iteration_honoured PASSED [ 50%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_envelope_iteration_field_matches_filename PASSED [ 62%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_mixed_auditors_number_independently PASSED [ 75%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_latest_reader_in_mixed_auditor_directory PASSED [ 87%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations::test_gate_entry_points_default_to_derived_iteration PASSED [100%]
+
+============================== 8 passed in 0.18s ===============================
+

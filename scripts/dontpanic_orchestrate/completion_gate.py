@@ -389,11 +389,24 @@ def _find_audit_envelopes(plan_dir: Path) -> list[Path]:
     return [path for _, path in out]
 
 
-def _load_latest_audit_envelope(plan_dir: Path) -> CompletionAuditTranscript | None:
+def _load_latest_audit_envelope(
+    plan_dir: Path, auditor: str | None = None
+) -> CompletionAuditTranscript | None:
     """Load the highest-iteration envelope file as a typed transcript.
     Returns ``None`` when no envelope exists. Raises
-    :class:`CompletionGateError` on malformed envelope files."""
+    :class:`CompletionGateError` on malformed envelope files.
+
+    Iteration numbers are per-auditor (plan 2026-06-12-001 F002), so in a
+    mixed-auditor directory the globally-highest number can belong to a
+    stale foreign auditor. Pass ``auditor`` to select the highest iteration
+    FOR THAT AUDITOR; ``None`` keeps the global-highest behaviour for
+    callers that validate historical state across auditor switches."""
     envelopes = _find_audit_envelopes(plan_dir)
+    if auditor is not None:
+        envelopes = [
+            e for e in envelopes
+            if (m := _AUDIT_ENVELOPE_RE.match(e.name)) and m.group(1) == auditor
+        ]
     if not envelopes:
         return None
     latest = envelopes[-1]
@@ -520,7 +533,7 @@ def audit_plan(
     plan_dir: Path,
     *,
     dispatch: DispatchFn | None = None,
-    iteration: int = 1,
+    iteration: int | None = None,
     implementer_agent: str | None = None,
 ) -> AuditPlanResult:
     """Run the full F001 → F002 → F0-classify pipeline for a plan and
@@ -580,7 +593,7 @@ def close_plan(
     approved_by: str | None = None,
     dry_run: bool = False,
     dispatch: DispatchFn | None = None,
-    iteration: int = 1,
+    iteration: int | None = None,
     implementer_agent: str | None = None,
 ) -> ClosePlanResult:
     """Canonical close-command body. Read-only when ``dry_run=True``.

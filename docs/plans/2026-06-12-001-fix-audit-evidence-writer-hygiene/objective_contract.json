@@ -1,0 +1,39 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "PR #46 hollow-verdict incident trail: plan 2026-06-11-001 D014/D015 (the auditor-side empty-envelope lesson) plus the two standing follow-ups recorded since worktree-v0 \u2014 capture-time sanitization belongs in the evidence writer because committed envelopes are immutable, and the re-audit overwrite observed live on 2026-06-11-001 (grounded re-audit destroyed the hollow iteration-1 artifacts in the working tree) must become append-only.",
+  "completion_test": "Writing a completion-audit envelope through the real writer with workstation paths and the operator's username in its inputs persists ONLY placeholder forms while the envelope still parses end-to-end (status + dispositions), and running a second audit for the same auditor produces a second iteration file with the first preserved byte-identical \u2014 overwrite refused by construction. Proven by offline fixture tests through the real writer/reader seams with zero paid calls.",
+  "user_journeys": [
+    {
+      "name": "sanitized-capture",
+      "description": "An audit envelope/transcript is captured on a workstation; the persisted artifacts carry no home paths or operator identity, and downstream gate parsing is unchanged.",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "paths_placeholdered",
+        "identity_placeholdered",
+        "parses_unchanged",
+        "clean_content_passthrough"
+      ]
+    },
+    {
+      "name": "append-only-reaudit",
+      "description": "The operator re-runs a completion audit after remediation; the new verdict lands as the next iteration, the prior envelope survives untouched, and the gate consumes the latest.",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "next_iteration_written",
+        "prior_preserved",
+        "latest_consumed",
+        "collision_refused"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Retroactive editing of committed envelopes",
+    "Envelope schema changes",
+    "Secrets-scrubber changes",
+    "Pre-impl sufficiency writer adoption (follow-up wiring only \u2014 the sanitizer is merely exported for it)"
+  ]
+}

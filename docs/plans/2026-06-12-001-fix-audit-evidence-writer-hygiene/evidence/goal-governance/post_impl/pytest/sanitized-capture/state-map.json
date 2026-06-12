@@ -1,0 +1,23 @@
+{
+  "journey": "sanitized-capture",
+  "surface": "core",
+  "entered_through": "real writer seam — cd.dispatch_completion_audit with injected dispatch returning identity-laden auditor output; envelope/transcript read back from disk",
+  "states": {
+    "dirty-capture-scrubbed": [
+      "TestF001CaptureSanitization::test_home_paths_and_identity_never_reach_disk",
+      "TestF001CaptureSanitization::test_sanitizer_is_exported_pure_function"
+    ],
+    "memory-equals-disk": [
+      "TestF001CaptureSanitization::test_in_memory_transcript_equals_disk"
+    ],
+    "path-fields-placeholdered": [
+      "TestF001CaptureSanitization::test_path_fields_are_placeholdered_but_files_land_in_audit_dir"
+    ],
+    "parse-unbroken-by-sanitization": [
+      "TestF001CaptureSanitization::test_envelope_reparses_and_dispositions_parse_unchanged",
+      "TestF001CaptureSanitization::test_clean_content_passes_through_byte_identical"
+    ]
+  },
+  "result": "6 passed",
+  "paid_calls": 0
+}

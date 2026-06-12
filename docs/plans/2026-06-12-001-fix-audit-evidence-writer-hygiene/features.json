@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-06-12-001-fix-audit-evidence-writer-hygiene",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "security",
+      "description": "Capture-time sanitization in the completion-audit evidence writer: workstation-specific paths and operator identity never reach disk.",
+      "acceptance": "the envelope writer (the single function that persists audit-<auditor>-<i>.json and its transcript) sanitizes BEFORE writing: every absolute path under the operator's home directory in transcript_path, envelope_path, and raw_response is rewritten to a stable placeholder form (<home>-prefixed or repo-relative when the path is inside the repo), and the operator's username and user@host actor strings are replaced with <operator> / <operator>@<host> placeholders; sanitization happens in the WRITER so the in-memory transcript object returned to callers is the sanitized one (what the gate consumes equals what disk holds \u2014 no divergence); a written envelope re-read from disk parses with the existing envelope reader and the disposition parser unchanged; the transcript .txt sidecar receives the same sanitization; a regression test writes an envelope whose raw response and paths contain the real home directory and username (injected via the offline/dispatch seam, no paid call) and asserts the persisted bytes contain neither the home path nor the username while status/dispositions still parse; a no-op test asserts already-clean content passes through byte-identical; pure-function sanitizer is exported so the sufficiency (pre-impl) envelope writer can adopt it in a follow-up without re-implementation. all tests offline on temp dirs, zero paid calls.",
+      "passes": true,
+      "introduces": [
+        "sanitize_capture",
+        "home_placeholder",
+        "operator_placeholder"
+      ],
+      "evidence": {
+        "tests": "scripts/dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization (6 tests)",
+        "journey_evidence": "evidence/goal-governance/post_impl/pytest/sanitized-capture/",
+        "notes": "sanitize_capture exported from completion_dispatch; applied pre-parse in dispatch_completion_audit and in _write_envelope; recorded path fields are placeholdered (writer recomputes real paths from plan_dir). Existing suite updated: 3 tests in test_completion_dispatch.py now map placeholders back for disk reads. Full sweep 4444 passed / 7 skipped (final remediated tree; pre-remediation pass was 4443)."
+      }
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Append-only re-audit: a completion re-audit writes the next iteration's envelope/transcript instead of overwriting the previous one.",
+      "acceptance": "the iteration used by the completion-audit dispatch path is derived from the audit directory state: the next iteration is one greater than the highest existing audit-<auditor>-<n>.json for that auditor (1 when none exist); an explicit iteration argument passed by callers is honoured only when it does not collide with an existing envelope \u2014 on collision the writer refuses with an actionable error naming the existing file rather than overwriting (overwrite is impossible by construction, not by caller discipline); the envelope's recorded iteration field always equals the filename's <n>; the gate/close readers select the HIGHEST-iteration envelope for the auditor when consuming prior audit state; tests: two sequential audits via the injected dispatch seam produce audit-x-1.json and audit-x-2.json with the first byte-identical after the second run, the reader returns iteration 2's verdict, an explicit colliding iteration refuses with the named file, and mixed-auditor directories number independently per auditor. all tests offline on temp dirs, zero paid calls.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "introduces": [
+        "next_iteration",
+        "append_only_audit",
+        "collision_refusal"
+      ],
+      "evidence": {
+        "tests": "scripts/dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations (8 tests)",
+        "journey_evidence": "evidence/goal-governance/post_impl/pytest/append-only-reaudit/",
+        "notes": "_next_iteration derives per-auditor max+1; _write_envelope refuses collisions naming the file; dispatch_completion_audit/audit_plan/close_plan default iteration=None (derived). Reader already selected highest iteration (_load_latest_audit_envelope) - pinned by test. Audit-i2 overlay remediated (D004): _load_latest_audit_envelope grew an optional auditor filter (per-auditor highest) pinned by a mixed-auditor reader test; unscoped global behavior preserved for the completed-plan backstop."
+      }
+    }
+  ]
+}
