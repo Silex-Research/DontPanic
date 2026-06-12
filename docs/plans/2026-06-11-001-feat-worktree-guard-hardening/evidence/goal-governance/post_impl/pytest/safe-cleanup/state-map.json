@@ -1,0 +1,11 @@
+{
+  "journey": "safe-cleanup",
+  "test_file": "scripts/dontpanic_orchestrate/tests/test_worktree_remove_f002.py",
+  "evidence": "evidence/goal-governance/post_impl/pytest/safe-cleanup/pytest-output.txt",
+  "state_to_test": {
+    "clean_removed_audited": "TestHappyPath::test_remove_succeeds_with_intent_then_outcome_in_order + TestStep7Outcome::test_outcome_append_fsyncs",
+    "dirty_refused": "TestStep3Cleanliness::test_dirty_refuses_listing_paths + test_untracked_only_refuses_listing_paths + test_gitignored_content_refuses_listing_paths + test_dirty_submodule_refuses_with_submodule_and_paths + test_nested_non_submodule_git_dir_refuses",
+    "unhealthy_refused": "TestStep2Health::test_each_unhealthy_conjunct_refuses + test_detached_head_refuses + completion-path positive/negative",
+    "unwritable_audit_refused": "TestStep4Intent::test_unwritable_intent_log_refuses_with_worktree_untouched + TestStep7Outcome::test_outcome_append_failure_after_success_is_loud_degraded"
+  }
+}

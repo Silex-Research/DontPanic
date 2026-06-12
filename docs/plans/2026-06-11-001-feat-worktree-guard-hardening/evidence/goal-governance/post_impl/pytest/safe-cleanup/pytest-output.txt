@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-11-001-feat-worktree-guard-hardening
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 26 items
+
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep1Registry::test_corrupt_registry_refuses_before_anything PASSED [  3%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep1Registry::test_no_binding_refuses PASSED [  7%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep2Health::test_each_unhealthy_conjunct_refuses PASSED [ 11%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep2Health::test_detached_head_refuses PASSED [ 15%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep2Health::test_completion_path_missing_worktree_with_intent PASSED [ 19%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep2Health::test_completion_path_negative_missing_worktree_without_intent PASSED [ 23%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep3Cleanliness::test_dirty_refuses_listing_paths PASSED [ 26%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep3Cleanliness::test_untracked_only_refuses_listing_paths PASSED [ 30%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep3Cleanliness::test_gitignored_content_refuses_listing_paths PASSED [ 34%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep3Cleanliness::test_dirty_submodule_refuses_with_submodule_and_paths PASSED [ 38%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep3Cleanliness::test_nested_non_submodule_git_dir_refuses PASSED [ 42%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep4Intent::test_unwritable_intent_log_refuses_with_worktree_untouched PASSED [ 46%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep4Intent::test_intent_entry_shape_never_claims_success PASSED [ 50%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep5GitRemove::test_git_failure_leaves_binding_intact_with_outcome PASSED [ 53%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep5GitRemove::test_no_force_flag_anywhere_on_the_surface PASSED [ 57%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep6RegistryDelete::test_registry_delete_strictly_follows_physical_removal PASSED [ 61%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep6RegistryDelete::test_registry_delete_failure_names_orphan_then_rerun_completes PASSED [ 65%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep7Outcome::test_outcome_append_failure_after_success_is_loud_degraded PASSED [ 69%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestStep7Outcome::test_outcome_append_fsyncs PASSED [ 73%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestHappyPath::test_remove_succeeds_with_intent_then_outcome_in_order PASSED [ 76%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestHappyPath::test_branch_survives_removal PASSED [ 80%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestCLISurface::test_cli_remove_happy_path PASSED [ 84%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestCLISurface::test_cli_remove_refusal_exit_3 PASSED [ 88%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestCLISurface::test_cli_remove_rejects_force PASSED [ 92%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestCLISurface::test_cli_remove_runs_unguarded_from_main_checkout PASSED [ 96%]
+dontpanic_orchestrate/tests/test_worktree_remove_f002.py::TestCloseNeverRemoves::test_plan_close_performs_no_removal PASSED [100%]
+
+============================== 26 passed in 4.20s ==============================
