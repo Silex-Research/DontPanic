@@ -1,0 +1,28 @@
+{
+  "journey": "append-only-reaudit",
+  "surface": "core",
+  "entered_through": "real writer seam — two sequential cd.dispatch_completion_audit calls on the same plan dir; on-disk audit directory inspected between calls",
+  "states": {
+    "second-audit-appends": [
+      "TestF002AppendOnlyIterations::test_two_audits_write_two_iterations_first_preserved",
+      "TestF002AppendOnlyIterations::test_envelope_iteration_field_matches_filename"
+    ],
+    "reader-consumes-latest": [
+      "TestF002AppendOnlyIterations::test_reader_returns_latest_iteration_verdict"
+    ],
+    "collision-refused": [
+      "TestF002AppendOnlyIterations::test_explicit_colliding_iteration_refuses_naming_file"
+    ],
+    "explicit-free-iteration-honoured": [
+      "TestF002AppendOnlyIterations::test_explicit_noncolliding_iteration_honoured"
+    ],
+    "per-auditor-numbering": [
+      "TestF002AppendOnlyIterations::test_mixed_auditors_number_independently"
+    ],
+    "entry-points-derive-not-hardcode": [
+      "TestF002AppendOnlyIterations::test_gate_entry_points_default_to_derived_iteration"
+    ]
+  },
+  "result": "7 passed",
+  "paid_calls": 0
+}

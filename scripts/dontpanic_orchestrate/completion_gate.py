@@ -520,7 +520,7 @@ def audit_plan(
     plan_dir: Path,
     *,
     dispatch: DispatchFn | None = None,
-    iteration: int = 1,
+    iteration: int | None = None,
     implementer_agent: str | None = None,
 ) -> AuditPlanResult:
     """Run the full F001 → F002 → F0-classify pipeline for a plan and
@@ -580,7 +580,7 @@ def close_plan(
     approved_by: str | None = None,
     dry_run: bool = False,
     dispatch: DispatchFn | None = None,
-    iteration: int = 1,
+    iteration: int | None = None,
     implementer_agent: str | None = None,
 ) -> ClosePlanResult:
     """Canonical close-command body. Read-only when ``dry_run=True``.

@@ -5,7 +5,7 @@ type: fix
 tier: cross-cutting
 status: active
 date: "2026-06-12"
-goal_type: infra
+goal_type: new_feature
 description: >
   Two trust-boundary fixes in the completion-audit evidence writer, both standing
   follow-ups from the PR #46 hollow-verdict incident: (1) envelopes and transcripts

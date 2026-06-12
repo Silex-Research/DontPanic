@@ -41,9 +41,11 @@ This module is library-only; F003 will add the CLI surface.
 
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import re
+import socket
 from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -510,6 +512,49 @@ def _audit_dir(plan_dir: Path) -> Path:
     return plan_dir / POST_IMPL_DIR / _AUDIT_DIR_NAME
 
 
+def sanitize_capture(text: str) -> str:
+    """Plan 2026-06-12-001 F001 — capture-time sanitizer for audit evidence.
+
+    Pure + idempotent: the operator's home directory becomes ``<home>``,
+    ``user@host`` becomes ``<operator>@<host>``, and remaining bare
+    username tokens become ``<operator>``. Applied by the evidence writer
+    BEFORE the first byte is persisted (committed envelopes are immutable,
+    so the writer is the only correct fix point). Exported so the pre-impl
+    sufficiency writer can adopt the same sanitizer."""
+    home = str(Path.home())
+    try:
+        user = getpass.getuser()
+    except Exception:  # noqa: BLE001 — no resolvable user: nothing to scrub
+        user = ""
+    host = socket.gethostname()
+    out = text.replace(home, "<home>")
+    if user:
+        out = out.replace(f"{user}@{host}", "<operator>@<host>")
+        out = out.replace(user, "<operator>")
+    return out
+
+
+_ENVELOPE_FILE_RE = re.compile(r"^audit-(.+)-(\d+)\.json$")
+
+
+def _next_iteration(plan_dir: Path, auditor: str) -> int:
+    """Plan 2026-06-12-001 F002 — derive the next free iteration for this
+    auditor from the audit directory (1 when none exist). Per-auditor:
+    a foreign auditor's envelopes never bump this auditor's counter."""
+    audit_dir = _audit_dir(plan_dir)
+    if not audit_dir.is_dir():
+        return 1
+    highest = 0
+    for entry in audit_dir.iterdir():
+        m = _ENVELOPE_FILE_RE.match(entry.name)
+        if m and m.group(1) == auditor:
+            try:
+                highest = max(highest, int(m.group(2)))
+            except ValueError:
+                continue
+    return highest + 1
+
+
 def _envelope_path(plan_dir: Path, auditor: str, iteration: int) -> Path:
     return _audit_dir(plan_dir) / f"audit-{auditor}-{iteration}.json"
 
@@ -523,13 +568,23 @@ def _write_envelope(
     transcript: CompletionAuditTranscript,
     raw_response: str,
 ) -> None:
-    """Write transcript + envelope to disk. The transcript is the raw
-    auditor response (verbatim); the envelope is the parsed
-    :class:`CompletionAuditTranscript` JSON."""
+    """Write transcript + envelope to disk, refusing to overwrite an
+    existing envelope (append-only audit trail — F002) and sanitizing at
+    capture time (F001). The REAL output paths are recomputed from
+    plan_dir/auditor/iteration because the transcript's recorded path
+    strings are the sanitized placeholder forms."""
     out_dir = _audit_dir(plan_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    Path(transcript.transcript_path).write_text(raw_response)
-    Path(transcript.envelope_path).write_text(
+    envelope_file = _envelope_path(plan_dir, transcript.auditor_agent, transcript.iteration)
+    if envelope_file.exists():
+        raise CompletionDispatchError(
+            f"refusing to overwrite existing audit envelope {envelope_file.name} "
+            f"in {out_dir} — the audit trail is append-only; omit the explicit "
+            "iteration (or pass a free one) to write the next iteration instead"
+        )
+    transcript_file = _transcript_path(plan_dir, transcript.auditor_agent, transcript.iteration)
+    transcript_file.write_text(sanitize_capture(raw_response))
+    envelope_file.write_text(
         json.dumps(
             transcript.model_dump(mode="json", exclude_none=True),
             indent=2,
@@ -571,8 +626,8 @@ def _emit_offline_envelope(
         status="dispatch_skipped_offline",
         iteration=iteration,
         findings_dispositions=[],
-        transcript_path=str(transcript_path),
-        envelope_path=str(envelope_path),
+        transcript_path=sanitize_capture(str(transcript_path)),
+        envelope_path=sanitize_capture(str(envelope_path)),
         generated_at=_utc_now_iso(),
         raw_response=None,
     )
@@ -643,7 +698,7 @@ def dispatch_completion_audit(
     *,
     findings: list[CompletionFinding],
     implementer_agent: str | None = None,
-    iteration: int = 1,
+    iteration: int | None = None,
     dispatch: DispatchFn | None = None,
     caps_path: Path | None = None,
 ) -> CompletionAuditTranscript:
@@ -688,6 +743,12 @@ def dispatch_completion_audit(
         )
     _validate_auditor_name(auditor)
 
+    # F002 — append-only iterations: derive the next free slot when the
+    # caller did not pin one; a pinned-but-colliding iteration is refused
+    # by the writer (overwrite impossible by construction).
+    if iteration is None:
+        iteration = _next_iteration(plan_dir, auditor)
+
     if _offline:
         return _emit_offline_envelope(plan_dir, auditor, iteration, implementer_agent)
 
@@ -705,6 +766,9 @@ def dispatch_completion_audit(
         # before auditor-name validation.
         raw_response = _dispatch_via_executor(auditor, prompt, plan_dir=plan_dir)
 
+    # F001 — sanitize BEFORE parsing so the in-memory transcript the gate
+    # consumes is exactly what disk holds (no divergence).
+    raw_response = sanitize_capture(raw_response)
     status, dispositions = _parse_audit_response(raw_response, findings)
 
     transcript_path = _transcript_path(plan_dir, auditor, iteration)
@@ -715,8 +779,8 @@ def dispatch_completion_audit(
         status=status,
         iteration=iteration,
         findings_dispositions=dispositions,
-        transcript_path=str(transcript_path),
-        envelope_path=str(envelope_path),
+        transcript_path=sanitize_capture(str(transcript_path)),
+        envelope_path=sanitize_capture(str(envelope_path)),
         generated_at=_utc_now_iso(),
         raw_response=raw_response,
     )

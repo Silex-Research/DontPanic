@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-12-001-fix-audit-evidence-writer-hygiene
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 6 items
+
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_home_paths_and_identity_never_reach_disk PASSED [ 16%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_in_memory_transcript_equals_disk PASSED [ 33%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_path_fields_are_placeholdered_but_files_land_in_audit_dir PASSED [ 50%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_envelope_reparses_and_dispositions_parse_unchanged PASSED [ 66%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_clean_content_passes_through_byte_identical PASSED [ 83%]
+dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization::test_sanitizer_is_exported_pure_function PASSED [100%]
+
+============================== 6 passed in 0.18s ===============================
+

@@ -28,6 +28,7 @@ Run::
 
 from __future__ import annotations
 
+import getpass
 import json
 import sys
 from pathlib import Path
@@ -107,6 +108,15 @@ _DEFAULT_FRONTMATTER = {
     "links": {"objective_contract": "./objective_contract.json"},
     "description": "synthetic fixture plan for completion_dispatch tests",
 }
+
+
+_USER = getpass.getuser()
+_HOME = str(Path.home())
+
+
+def _real(recorded: str) -> str:
+    """Recorded path fields are identity-placeholdered; map back for disk reads."""
+    return recorded.replace("<home>", _HOME).replace("<operator>", _USER)
 
 
 def _write_plan(plan_dir: Path, *, contract: dict | None = None) -> Path:
@@ -371,9 +381,9 @@ class TestOfflineMode:
         assert called["n"] == 0, "offline mode MUST NOT invoke dispatch"
         assert transcript.status == "dispatch_skipped_offline"
         assert transcript.findings_dispositions == []
-        assert Path(transcript.transcript_path).exists()
-        assert Path(transcript.envelope_path).exists()
-        envelope = json.loads(Path(transcript.envelope_path).read_text())
+        assert Path(_real(transcript.transcript_path)).exists()
+        assert Path(_real(transcript.envelope_path)).exists()
+        envelope = json.loads(Path(_real(transcript.envelope_path)).read_text())
         assert envelope["status"] == "dispatch_skipped_offline"
 
     def test_offline_envelope_files_use_correct_filename_pattern(self, tmp_path, monkeypatch):
@@ -410,8 +420,8 @@ class TestFilenamePattern:
             dispatch=lambda a, p: "[]",
         )
 
-        env_p = Path(transcript.envelope_path)
-        tr_p = Path(transcript.transcript_path)
+        env_p = Path(_real(transcript.envelope_path))
+        tr_p = Path(_real(transcript.transcript_path))
         assert env_p.name == "audit-codex-3.json"
         assert tr_p.name == "audit-codex-3.transcript.txt"
         assert env_p.parent.name == "audit"
@@ -677,11 +687,11 @@ class TestEnvelopePersistence:
             dispatch=lambda a, p: "[]",
         )
 
-        env = json.loads(Path(transcript.envelope_path).read_text())
+        env = json.loads(Path(_real(transcript.envelope_path)).read_text())
         assert env["auditor_agent"] == "codex"
         assert env["status"] == "dispatch_response_malformed"
         # raw_response is preserved verbatim.
-        assert "[]" in Path(transcript.transcript_path).read_text()
+        assert "[]" in Path(_real(transcript.transcript_path)).read_text()
 
 
 # ──────────────────────────────  production path with stub registry  ─────────────
