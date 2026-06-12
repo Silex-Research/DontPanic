@@ -508,6 +508,9 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         "roles",
         "doctor",
         "init",
+        # Plan 2026-06-04-003: integration operator-actions surface
+        # (`integrations smoke|attest`).
+        "integrations",
         "smoke",
         "architecture",
         "showcase",

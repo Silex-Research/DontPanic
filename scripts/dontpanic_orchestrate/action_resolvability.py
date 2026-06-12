@@ -234,3 +234,27 @@ def _capability_ready(
     """
     cap_id = params["capability_id"]
     return (live_state.get("capabilities") or {}).get(cap_id) == "ready"
+
+
+@register_predicate("integration_evidence_present")
+def _integration_evidence_present(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Plan 2026-06-04-003 F001 — an integration action item resolves when the
+    append-only evidence history (F002 contract) contains a record for its
+    bound (integration_id, action_id) with the bound outcome. Evidence files
+    are the SOLE channel: there is no command-side or env-probe clearing path.
+
+    live_state expects ``integration_evidence``:
+    {integration_id -> [evidence record dicts]} as read by
+    :func:`integration_actions.read_evidence`.
+    """
+    integration_id = params["integration_id"]
+    action_id = params["action_id"]
+    outcome = params.get("outcome", "passed")
+    records = (live_state.get("integration_evidence") or {}).get(integration_id) or []
+    return any(
+        r.get("action_id") == action_id and r.get("outcome") == outcome
+        for r in records
+        if isinstance(r, Mapping)
+    )

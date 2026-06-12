@@ -480,6 +480,13 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     ),
     "init": SubcommandSpec(positional_max=None),
     "smoke": SubcommandSpec(positional_max=None),
+    # Plan 2026-06-04-003 — operator integration actions: `integrations smoke
+    # <integration>` (F002 runner) and `integrations attest <integration>
+    # --action <id> --outcome passed|failed [--note]` (F002 attestation).
+    "integrations": SubcommandSpec(
+        positional_max=2,
+        value_flags=frozenset({"--action", "--outcome", "--note"}),
+    ),
     "architecture": _ARCHITECTURE_SPEC,
     "showcase": SubcommandSpec(positional_max=None),
     "capabilities": _CAPABILITIES_SPEC,
