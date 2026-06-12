@@ -76,6 +76,22 @@ surface, minimal code.
   existing what-now/operator-console surfaces (no separate integrations panel),
   derived from catalog + evidence per the status matrix below.
 
+## Integration catalog (F001 literal rows)
+
+| integration_id | action_id | command (operator_command unless marked exact) | credential_env_vars | evidence_expected |
+|---|---|---|---|---|
+| static-dashboard | static-dashboard-smoke | `dontpanic integrations smoke static-dashboard` (exact_command) | [] | smoke record outcome=passed |
+| firebase-functions-deploy | firebase-creds | provision Firebase service credentials, then `dontpanic integrations attest firebase-functions-deploy --action firebase-creds --outcome passed` | [FIREBASE_TOKEN] | attestation record (action_id firebase-creds) |
+| firebase-functions-deploy | firebase-deploy | `firebase deploy --only functions` (operator_command), then attest with --action firebase-deploy | [FIREBASE_TOKEN] | attestation record (action_id firebase-deploy) |
+| firebase-realtime-smoke | firebase-realtime-smoke | follow dashboard/functions/RUNBOOK.md smoke, then attest with --action firebase-realtime-smoke | [FIREBASE_TOKEN] | attestation record outcome=passed |
+| discord-webhook | discord-webhook | set the Discord webhook env var, then attest with --action discord-webhook | [DONTPANIC_DISCORD_WEBHOOK_URL] | attestation record (action_id discord-webhook) |
+| linear-credentials | linear-creds | provision Linear API credentials, then attest with --action linear-creds | [LINEAR_API_KEY] | attestation record (action_id linear-creds) |
+
+Trigger: firebase-deploy and firebase-realtime-smoke carry trigger_condition
+"multi-operator dashboard need" (trigger attestation action_id firebase-trigger).
+Fixtures assert these literals; implementation MUST NOT drift from this table
+without a plan amendment.
+
 ## Integration status matrix (F004 contract)
 
 Evidence = integration-evidence files written by write_integration_evidence()

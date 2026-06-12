@@ -2,69 +2,81 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:415c018e86e5684a75505fc772c2571ea714bc8dd6cc748f884fcfe6f555a370",
-  "generated_at": "2026-06-12T23:03:04Z",
+  "input_fingerprint": "sha256:4e8124668897c1a713e7d1526a25984149045f9c6342d2a0f998e4b196f571e0",
+  "generated_at": "2026-06-12T23:11:26Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "status-derivation",
-      "gap_class": "integration_gap",
-      "description": "The plan conflicts on the source of truth for configured status: F002 says downstream consumers read only append-only evidence files, while the F004 matrix derives some configured states from env-var name presence. That can clear or advance integration status without captured evidence.",
+      "journey_id": "integration-catalog-renders",
+      "gap_class": "coverage_gap",
+      "description": "The proposal says to enumerate catalog entries, exact operator commands, credential env-var names, and evidence expectations, but it does not pin the actual catalog rows before implementation. The core outcome depends on those literals being truthful and deterministic, so leaving them to implementation risks command drift and inconsistent fixture expectations.",
       "feature_refs": [
         "F001",
-        "F002",
-        "F003",
-        "F004"
+        "F003"
       ],
-      "recommendation": "Pin env-var presence as display-only readiness context, or define an evidence-writing credential probe/attestation record as the only status-clearing input.",
+      "recommendation": "Add a lock-time catalog table for every integration action with integration_id, action_id, exact_command or operator_command, credential_env_vars, evidence_expected, trigger_condition, resolution_class, reversible, and clears_when target.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "high",
-      "journey_id": "gated-deploy-visibility",
-      "gap_class": "wiring_gap",
-      "description": "The trigger condition for Firebase deploy/realtime work is met only by operator-attested evidence, but the attest command is specified only as integration/outcome/note and does not pin an action identifier or trigger-record type.",
+      "journey_id": "static-smoke-evidence",
+      "gap_class": "coverage_gap",
+      "description": "F002 defines the attestation CLI syntax but does not pin the runnable static-dashboard smoke command that F001 must render as the ActionItem exact_command and F004 must execute in the end-to-end status-flip test. Without the literal command shape, the completion test cannot prove the rendered action is the one that writes evidence.",
       "feature_refs": [
+        "F001",
         "F002",
-        "F003"
+        "F004"
       ],
-      "recommendation": "Add a deterministic attestation grammar for action_id and trigger records, then bind gated ActionItems to those exact records in clears_when/status derivation.",
+      "recommendation": "Pin the exact smoke CLI command, for example `dontpanic integrations smoke static-dashboard`, and require command-validation coverage plus the F004 end-to-end test to execute that rendered exact_command verbatim.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "static-smoke-evidence",
+      "gap_class": "integration_gap",
+      "description": "The render-proof smoke can still be under-specified if marker checks are allowed to pass by finding exported values in copied state JSON rather than in an actual dashboard-rendered artifact. The user journey requires verifying artifacts render, not merely that export-dashboard produced readable state files.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Require markers to be asserted from a rendered dashboard page or real dashboard render function output, and explicitly exclude raw exported state JSON from satisfying the render-proof marker assertion.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "high",
       "journey_id": "status-derivation",
       "gap_class": "wiring_gap",
-      "description": "Post-clear visibility is not mechanically pinned against the shipped clears_when suppression model. A pending item that clears via clears_when will be suppressed unless the plan defines a separate quiet status item or a band-transform path.",
+      "description": "The plan says clears_when names or reads integration evidence files, but it does not pin the closed predicate registry entry, predicate parameters, or action-specific matching semantics. Since shipped clears_when is predicate-based rather than arbitrary file-based, pending action clearing and status-item persistence remain ambiguous.",
       "feature_refs": [
         "F001",
+        "F002",
         "F004"
       ],
-      "recommendation": "Specify whether cleared integrations re-emit as quiet status ActionItems, or whether integration clears_when changes band instead of suppressing the item.",
+      "recommendation": "Define the exact clears_when predicate name and params, including integration_id, action_id, required source/outcome, trigger-vs-completion distinction, and an explicit rule that informational status items do not clear.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "parity_gap",
+      "description": "F003 refers to rendering untriggered gated items in the QUIET band, but the shipped ActionItem band vocabulary is needs_action, advisory, info, and ready; quiet is an operator-triage bucket concept. This vocabulary mismatch can break provider construction or produce inconsistent what-now versus operator-console rendering.",
+      "feature_refs": [
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Pin the mapping explicitly, such as ActionItem.band=info with operator_bucket=quiet after triage, and require tests through both what-now and operator-console render paths.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
-      "journey_id": "static-smoke-evidence",
+      "journey_id": "gated-deploy-visibility",
       "gap_class": "coverage_gap",
-      "description": "The static-dashboard smoke acceptance says rendered artifacts must exist, but artifact existence alone is weaker than render-proof and may not fail parseable-but-unrenderable dashboard state.",
+      "description": "The gated deploy/realtime plan pins untriggered and actionable states, but it does not fully specify the trigger-met-but-credentials-absent state. Credential requirements are central to the user journey, and the operator must see whether the item is waiting on trigger evidence, credential provisioning, or post-credential execution.",
       "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Require the smoke to invoke the real dashboard renderer or browser/DOM path and assert non-empty rendered surfaces from the exported state.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
-      "journey_id": "integration-catalog-renders",
-      "gap_class": "parity_gap",
-      "description": "The proposed source/provider wiring pins the main build path, but the standard dashboard can also flow through fleet/project projection rehydration, where unknown sources and new display fields can be filtered or dropped.",
-      "feature_refs": [
-        "F001",
+        "F003",
         "F004"
       ],
-      "recommendation": "Add explicit fleet/selected-dashboard projection coverage for SOURCE_INTEGRATION and all new display fields through fleet-what-now and operator-triage rendering.",
-      "finding_class": "plan_contract"
+      "recommendation": "Add a deterministic gate-state matrix covering trigger absent, trigger present with credentials absent, trigger present with credentials present, evidence passed, and evidence failed, with band/bucket/label expectations for each.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
