@@ -38,7 +38,7 @@
         "Write passed/failed evidence records; wire as the F001 static-dashboard-smoke item's exact_command (a real dontpanic command)",
         "Test: smoke passes on a fixture state and flips the evidence file; fails loudly + records outcome=failed on missing/garbled state"
       ],
-      "acceptance": "Running the static-dashboard smoke invokes the real `dontpanic state export-dashboard`, verifies the exported artifacts are present and parseable, and writes an evidence record via a new write_integration_evidence() API that mirrors the shipped capabilities-setup evidence discipline: JSON file at $DONTPANIC_HOME/integrations/evidence/<integration_id>.json with schema_version, integration_id, action_id, captured_at, outcome (passed|failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed before write). This evidence file IS the contract F004's status derivation and the F001 clears_when predicates consume - same path, same schema, no other channel. The smoke fails clearly on missing/garbled state and writes outcome=failed evidence; no Firebase credentials required. Verified by tests over a fixture state dir.",
+      "acceptance": "Running the static-dashboard smoke invokes the real `dontpanic state export-dashboard`, verifies the exported artifacts are present and parseable, and writes an evidence record via a new write_integration_evidence() API that mirrors the shipped capabilities-setup evidence discipline: a JSON file per integration under the DontPanic home integrations evidence directory, carrying schema_version, the integration identifier, action identifier, captured_at, outcome (passed or failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed before write). These evidence files are the SOLE channel downstream consumers read - the F001 clears_when predicates name them, and no other side channel exists. The smoke fails clearly on missing or garbled state and records outcome=failed evidence; no Firebase credentials required. Verified by tests over a fixture state dir.",
       "passes": false,
       "depends_on": [
         "F001"
@@ -46,7 +46,8 @@
       "introduces": [
         "static_dashboard_smoke",
         "write_integration_evidence",
-        "integration_evidence"
+        "integration_evidence",
+        "integration_id"
       ]
     },
     {
