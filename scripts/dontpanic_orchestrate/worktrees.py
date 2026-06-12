@@ -250,6 +250,23 @@ def binding_health(binding: dict[str, Any]) -> tuple[bool, str | None]:
         }
         if wt_path.resolve() not in registered:
             return False, "path does not belong to the recorded repo_root"
+        # registration alone is spoofable: a deleted worktree replaced by an
+        # UNRELATED repository at the same path stays in repo_root's stale
+        # worktree list. The git-common-dir of a genuine linked worktree
+        # resolves into repo_root's own .git; an imposter's resolves to its
+        # private .git (guard-hardening plan 2026-06-11-001 F001).
+        try:
+            common = _git(
+                wt_path, "rev-parse", "--path-format=absolute", "--git-common-dir"
+            )
+        except WorktreeError:
+            return False, "worktree git-common-dir is not probeable"
+        if Path(common).resolve() != (repo_root / ".git").resolve():
+            return False, (
+                "path does not belong to the recorded repo_root "
+                "(git-common-dir mismatch — unrelated repository at the "
+                "recorded path)"
+            )
         current = _git(wt_path, "rev-parse", "--abbrev-ref", "HEAD")
         if current == "HEAD":
             return False, "worktree is on a detached HEAD, not the recorded branch"

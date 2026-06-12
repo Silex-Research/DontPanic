@@ -3094,6 +3094,48 @@ def _plan_worktree_main(argv: list[str]) -> int:
     return 0
 
 
+def _run_worktree_guard(
+    plan_dir: Path, command: str, label: str, override_reason: str | None = None
+) -> int | None:
+    """Guard-hardening F001 — the shared wrong-worktree guard precondition,
+    evaluated BEFORE any gate side effect or evidence write on every
+    plan-gate entry point (lock / audit / close / disposition; the
+    orchestrate dispatch seam wires the same function in supervisor).
+    Returns an exit code on refusal, None when the command may proceed."""
+    from dontpanic_orchestrate import worktree_guard as _wg
+    from dontpanic_orchestrate.worktrees import RegistryCorruptError as _WtCorrupt
+
+    try:
+        result = _wg.guard_plan_command(
+            plan_dir, command, override_reason=override_reason
+        )
+    except (_wg.GuardRefusal, _WtCorrupt) as exc:
+        print(f"[{label}] REFUSED: {exc}", file=sys.stderr)
+        return 3
+    if result is not None and result.get("guard") == "override":
+        print(
+            f"[{label}] worktree guard OVERRIDDEN "
+            f"({result['refusal_class']}) — override record + binding snapshot "
+            "durably written to the plan's audit evidence"
+        )
+    return None
+
+
+def _add_worktree_guard_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--override-worktree-guard",
+        default=None,
+        metavar="REASON",
+        dest="worktree_guard_override",
+        help=(
+            "Override a wrong-worktree guard refusal (judgment classes only — "
+            "a corrupt registry is never overridable). Proceeds only after the "
+            "override record and a binding snapshot are durably written to the "
+            "plan's audit evidence."
+        ),
+    )
+
+
 def _plan_disposition_main(argv: list[str]) -> int:
     """``dontpanic plan disposition`` — record a per-finding operator
     disposition against the latest sufficiency audit round (plan
@@ -3123,9 +3165,15 @@ def _plan_disposition_main(argv: list[str]) -> int:
     parser.add_argument("--kind", required=True, choices=list(DISPOSITION_KINDS))
     parser.add_argument("--reason", default=None)
     parser.add_argument("--followup", default=None, metavar="PLAN_REF")
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan disposition", "plan disposition", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     try:
         entry = record_disposition(
             plan_dir,
@@ -3435,6 +3483,7 @@ def _plan_lock_main(argv: list[str]) -> int:
             "lock; prints the verdict + findings."
         ),
     )
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     if args.override_reason is not None and not args.override_reason.strip():
@@ -3445,6 +3494,11 @@ def _plan_lock_main(argv: list[str]) -> int:
         return 2
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan lock", "plan lock", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     print(f"[plan lock] plan_dir={plan_dir}")
 
     # Plan 2026-05-20-001 F002 — pre-flight external_refs reachability.
@@ -3741,9 +3795,15 @@ def _plan_audit_main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan audit", "plan audit", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     from dontpanic_orchestrate.worktrees import (
         RegistryCorruptError as _WtCorrupt,
         capture_binding_snapshot as _wt_capture,
@@ -3838,6 +3898,7 @@ def _plan_close_main(argv: list[str]) -> int:
         action="store_true",
         help=argparse.SUPPRESS,  # parsed but always refused — see below
     )
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     if args.skip_audit:
@@ -3858,6 +3919,11 @@ def _plan_close_main(argv: list[str]) -> int:
         return 2
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan close", "plan close", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     from dontpanic_orchestrate.worktrees import (
         RegistryCorruptError as _WtCorrupt,
         capture_binding_snapshot as _wt_capture,

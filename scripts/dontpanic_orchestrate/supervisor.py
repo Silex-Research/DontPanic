@@ -1619,6 +1619,15 @@ def dispatch_volley(
             [],
         )
 
+    # Guard-hardening F001 (plan 2026-06-11-001) — the shared wrong-worktree
+    # guard precondition, BEFORE the binding snapshot and any gate side
+    # effect: strict registry load (corrupt never overridable), realpath
+    # invoking-path identity, canonical binding_health. Raises GuardRefusal /
+    # RegistryCorruptError fail-closed; unbound plans pass through.
+    from dontpanic_orchestrate.worktree_guard import guard_plan_command as _wt_guard
+
+    _wt_guard(loaded.plan_dir, "orchestrate dispatch")
+
     # Worktree Isolation v0 F002 — record the plan's worktree binding as
     # evidence on the build path. Strict registry load: a corrupt
     # worktrees.json refuses dispatch (never silently treated as no-binding);
