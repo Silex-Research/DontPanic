@@ -1,0 +1,8 @@
+{
+  "journey": "ts-as-built",
+  "test_file": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py",
+  "state_to_test": {
+    "resolved_import": "TestF001Extractor::test_ts_modules_and_relative_edges + test_tsx_and_jsx_files_are_scanned + test_import_type_form_is_parsed + test_export_from_form_is_parsed + test_build_view_state_includes_ts_modules_with_source_kind_code",
+    "unresolved_import": "TestF001Extractor::test_unresolved_import_is_low_confidence_endpoint_never_dropped"
+  }
+}

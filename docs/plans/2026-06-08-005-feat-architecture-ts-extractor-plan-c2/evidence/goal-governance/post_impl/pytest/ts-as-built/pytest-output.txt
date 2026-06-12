@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-005-feat-architecture-ts-extractor-plan-c2
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 11 items
+
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_ts_modules_and_relative_edges PASSED [  9%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_tsx_and_jsx_files_are_scanned PASSED [ 18%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_import_type_form_is_parsed PASSED [ 27%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_export_from_form_is_parsed PASSED [ 36%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_unresolved_import_is_low_confidence_endpoint_never_dropped PASSED [ 45%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF001Extractor::test_build_view_state_includes_ts_modules_with_source_kind_code PASSED [ 54%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF002Exclusions::test_non_product_trees_excluded_from_extractor PASSED [ 63%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF002Exclusions::test_non_product_trees_excluded_from_language_presence_scan PASSED [ 72%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF002Exclusions::test_product_ts_is_detected_and_covered_not_missing_extractor PASSED [ 81%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF002Exclusions::test_dontpanic_shape_only_non_product_ts_keeps_ceiling_unforced PASSED [ 90%]
+dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py::TestF002Exclusions::test_docs_markers_still_detected_despite_language_exclusion PASSED [100%]
+
+============================== 11 passed in 0.16s ==============================
