@@ -10,7 +10,6 @@ gitignored-local. All on temp git repos, no network.
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 from pathlib import Path

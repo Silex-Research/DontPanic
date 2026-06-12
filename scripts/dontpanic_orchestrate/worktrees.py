@@ -256,12 +256,18 @@ def binding_health(binding: dict[str, Any]) -> tuple[bool, str | None]:
         # resolves into repo_root's own .git; an imposter's resolves to its
         # private .git (guard-hardening plan 2026-06-11-001 F001).
         try:
-            common = _git(
-                wt_path, "rev-parse", "--path-format=absolute", "--git-common-dir"
-            )
+            bound_common = Path(
+                _git(wt_path, "rev-parse", "--path-format=absolute", "--git-common-dir")
+            ).resolve()
+            # compare against repo_root's OWN common dir, not repo_root/.git:
+            # the recorded repo_root may itself be a linked worktree or
+            # submodule whose .git is a gitfile.
+            repo_common = Path(
+                _git(repo_root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+            ).resolve()
         except WorktreeError:
-            return False, "worktree git-common-dir is not probeable"
-        if Path(common).resolve() != (repo_root / ".git").resolve():
+            return False, "git-common-dir is not probeable"
+        if bound_common != repo_common:
             return False, (
                 "path does not belong to the recorded repo_root "
                 "(git-common-dir mismatch — unrelated repository at the "

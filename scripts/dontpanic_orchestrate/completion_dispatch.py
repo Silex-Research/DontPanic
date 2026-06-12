@@ -302,10 +302,33 @@ def _serialize_findings(findings: Iterable[CompletionFinding]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
 
 
-def _serialize_manifest(manifest) -> str:
+def _plan_dir_repo_prefix(plan_dir: Path) -> str | None:
+    """Repo-root-relative prefix for the plan dir (e.g.
+    ``docs/plans/<id>``), found by walking up to the nearest ``.git``
+    entry (dir in a primary checkout, FILE in a linked worktree). None
+    when the plan dir is not inside a repository."""
+    plan_dir = Path(plan_dir).resolve()
+    for ancestor in plan_dir.parents:
+        if (ancestor / ".git").exists():
+            return str(plan_dir.relative_to(ancestor))
+    return None
+
+
+def _serialize_manifest(manifest, *, uri_prefix: str | None = None) -> str:
     """Sorted-key JSON dump of the rebuilt evidence manifest. Each
-    EvidenceRef serializes via its Pydantic model_dump."""
+    EvidenceRef serializes via its Pydantic model_dump.
+
+    ``uri_prefix`` rewrites uris for the PROMPT only: EvidenceRef.uri is
+    plan-dir-relative by contract (manifest signatures and envelopes are
+    unchanged), but the auditor subprocess runs with cwd at the repo
+    root — the audit-codex-1 transcript on plan 2026-06-11-001 showed
+    every artifact read failing on the bare plan-relative path and the
+    verdict silently degrading to manifest-shape-only review."""
     payload = [ref.model_dump(mode="json", exclude_none=True) for ref in manifest]
+    if uri_prefix:
+        for ref in payload:
+            if ref.get("uri"):
+                ref["uri"] = f"{uri_prefix}/{ref['uri']}"
     payload.sort(key=lambda r: (r.get("uri") or "", r.get("hash") or ""))
     return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
 
@@ -315,17 +338,25 @@ def _build_audit_prompt(
     features: list[dict],
     findings: Iterable[CompletionFinding],
     manifest,
+    *,
+    plan_dir: Path | None = None,
 ) -> str:
     """Render the prompt template by substituting the four context
     blocks. Uses ``str.replace`` rather than ``str.format`` so embedded
     ``{`` / ``}`` characters in the JSON payloads do not collide with
-    the template's placeholders."""
+    the template's placeholders. When ``plan_dir`` is given, evidence
+    uris are rendered repo-root-relative so the auditor (cwd = repo
+    root) can actually open them."""
     template = _read_prompt_template()
+    uri_prefix = _plan_dir_repo_prefix(plan_dir) if plan_dir is not None else None
     return (
         template.replace("{contract}", _serialize_contract(contract))
         .replace("{features}", _serialize_features(features))
         .replace("{findings}", _serialize_findings(findings))
-        .replace("{evidence_manifest}", _serialize_manifest(manifest))
+        .replace(
+            "{evidence_manifest}",
+            _serialize_manifest(manifest, uri_prefix=uri_prefix),
+        )
     )
 
 
@@ -663,7 +694,9 @@ def dispatch_completion_audit(
     contract = _load_objective_contract(plan_dir)
     features = _load_features(plan_dir)
     manifest = _build_evidence_manifest(plan_dir)
-    prompt = _build_audit_prompt(contract, features, findings, manifest)
+    prompt = _build_audit_prompt(
+        contract, features, findings, manifest, plan_dir=plan_dir
+    )
 
     if dispatch is not None:
         raw_response = dispatch(auditor, prompt)

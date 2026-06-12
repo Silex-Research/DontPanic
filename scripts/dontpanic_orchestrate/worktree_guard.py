@@ -58,15 +58,28 @@ class GuardRefusal(wt.WorktreeError):
         self.refusal_class = refusal_class
 
 
+def _fsync_dir(directory: Path) -> None:
+    fd = os.open(str(directory), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def _append_durable(path: Path, record: dict[str, Any]) -> None:
     """Append one JSONL record written, flushed, AND fsynced — the
     crash-durability contract: a process crash immediately after the guard
-    proceeds must leave the record readable."""
+    proceeds must leave the record readable. The containing directory is
+    fsynced too when this append CREATES the file, so a brand-new audit
+    file's directory entry is as durable as its bytes."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    existed = path.exists()
     with path.open("a") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         fh.flush()
         os.fsync(fh.fileno())
+    if not existed:
+        _fsync_dir(path.parent)
 
 
 def _same_directory(a: Path, b: Path) -> bool:

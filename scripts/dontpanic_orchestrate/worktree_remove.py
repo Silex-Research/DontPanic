@@ -61,13 +61,26 @@ def audit_log_path() -> Path:
     return gc.dontpanic_home() / AUDIT_LOG_FILENAME
 
 
+def _fsync_dir(directory: Path) -> None:
+    fd = os.open(str(directory), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def _append_durable(record: dict[str, Any]) -> None:
     path = audit_log_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    existed = path.exists()
     with path.open("a") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         fh.flush()
         os.fsync(fh.fileno())
+    if not existed:
+        # a brand-new audit log's directory entry must be as durable as
+        # its bytes — the intent record is what makes destruction legal.
+        _fsync_dir(path.parent)
 
 
 def _read_entries() -> list[dict[str, Any]]:
