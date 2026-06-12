@@ -1,5 +1,5 @@
 {
-  "goal_type": "bug_fix",
+  "goal_type": "infra",
   "source_of_truth": "PR #46 hollow-verdict incident trail: plan 2026-06-11-001 D014/D015 (the auditor-side empty-envelope lesson) plus the two standing follow-ups recorded since worktree-v0 \u2014 capture-time sanitization belongs in the evidence writer because committed envelopes are immutable, and the re-audit overwrite observed live on 2026-06-11-001 (grounded re-audit destroyed the hollow iteration-1 artifacts in the working tree) must become append-only.",
   "completion_test": "Writing a completion-audit envelope through the real writer with workstation paths and the operator's username in its inputs persists ONLY placeholder forms while the envelope still parses end-to-end (status + dispositions), and running a second audit for the same auditor produces a second iteration file with the first preserved byte-identical \u2014 overwrite refused by construction. Proven by offline fixture tests through the real writer/reader seams with zero paid calls.",
   "user_journeys": [
