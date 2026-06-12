@@ -2,41 +2,43 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:ebaa1ac1ad9904b2e74676aac59cbe168b4f0a301000b4c32d491bec31b8c140",
-  "generated_at": "2026-06-12T01:41:33Z",
+  "input_fingerprint": "sha256:233ab535a462eaf0b0c69db2ff32a1f03398258c047b70596570fb3fb7865a7e",
+  "generated_at": "2026-06-12T01:53:17Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "wrong-worktree-guard",
       "gap_class": "integration_gap",
-      "description": "Override behavior is not pinned per refusal class. F001 clearly fail-closes corrupt registry loads, but also says an explicit override proceeds after evidence, leaving ambiguity over whether wrong path, unhealthy binding, swapped repo, indeterminate git state, and corrupt registry are all overrideable or whether some are absolute stops.",
+      "description": "F001 declares the listed guarded commands to be the complete plan-mutating surface, but F002 and F003 introduce or modify plan worktree remove and plan worktree create, both of which mutate registry or worktree state. The plan needs an explicit decision that these commands are exempt from the wrong-worktree guard, or they need equivalent guard coverage.",
       "feature_refs": [
-        "F001"
+        "F001",
+        "F002",
+        "F003"
       ],
-      "recommendation": "Add an explicit overrideability matrix: wrong-worktree may override with durable evidence; evidence-write failure and corrupt registry should likely remain non-overrideable; swapped or unhealthy binding should be explicitly allowed or denied.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Pin create/remove as intentionally outside the wrong-worktree guard with rationale and regression tests, or add them to the guarded entry-point matrix.",
+      "finding_class": "scope_guard"
     },
     {
       "severity": "medium",
       "journey_id": "safe-cleanup",
-      "gap_class": "coverage_gap",
-      "description": "F002 does not specify or test what happens if registry binding deletion fails after the audit entry is flushed and after git worktree removal starts or succeeds. That leaves a cleanup path where the worktree can be gone but the registry still records a binding, which undermines the clean_removed_audited outcome.",
+      "gap_class": "integration_gap",
+      "description": "F002 requires audit-first deletion, but the described audit record appears to encode a successful removal before the destructive git worktree remove step has actually succeeded. The registry-only completion path then relies on an audit log entry for successful removal, which can be ambiguous after partial failures.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Pin the registry mutation ordering and failure behavior, with a fixture for registry-delete/write failure that proves no destructive filesystem removal happens unless the implementation can complete the registry update safely.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Separate removal intent from removal completion, or pin the completion predicate so a pre-delete audit entry cannot be mistaken for proof that deletion succeeded.",
+      "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "local-config-honesty",
-      "gap_class": "parity_gap",
-      "description": "The journey state names divergent_refused, but F003 says default create only detects and reports divergent allowlisted files, reserving refusal for copy-time overwrite attempts. The intended user-facing result for no-flag divergence is therefore ambiguous.",
+      "gap_class": "coverage_gap",
+      "description": "F003 asserts that no symlinks are created in the new worktree, but it does not pin behavior when an allowlisted source file or preexisting target path is itself a symlink. That leaves a deterministic-rule gap for the no-symlinks-in-v1 policy and for copy-time overwrite refusal.",
       "feature_refs": [
         "F003"
       ],
-      "recommendation": "Clarify whether default create with a divergent allowlisted file should succeed with an explicit notice or refuse; then rename the journey state or add the missing refusal acceptance test accordingly.",
-      "finding_class": "plan_contract"
+      "recommendation": "Add explicit refusal and reporting rules for symlinked allowlist source or target entries, with tests covering both cases.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
