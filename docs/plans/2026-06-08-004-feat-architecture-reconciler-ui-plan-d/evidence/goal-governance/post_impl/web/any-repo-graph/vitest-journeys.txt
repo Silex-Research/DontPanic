@@ -1,0 +1,12 @@
+
+ RUN  v4.1.8 <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-004-feat-architecture-reconciler-ui-plan-d/dashboard
+
+4:50:34 PM [vite] (client) warning: invalid import "./${src}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-004-feat-architecture-reconciler-ui-plan-d/dashboard/core.js
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:50:33
+   Duration  636ms (transform 102ms, setup 0ms, import 44ms, tests 269ms, environment 202ms)
+

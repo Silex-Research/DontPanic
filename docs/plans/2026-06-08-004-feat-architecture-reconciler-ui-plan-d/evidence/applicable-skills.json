@@ -1,0 +1,161 @@
+{
+  "matches": [
+    {
+      "external_cli": null,
+      "matched_goal_types": [
+        "new_feature"
+      ],
+      "matched_surfaces": [],
+      "provenance": "internal",
+      "rationale": "matched on surfaces=[] + goal_types=['new_feature']",
+      "skill_name": "agent-browser"
+    },
+    {
+      "external_cli": null,
+      "matched_goal_types": [
+        "new_feature"
+      ],
+      "matched_surfaces": [],
+      "provenance": "internal",
+      "rationale": "matched on surfaces=[] + goal_types=['new_feature']",
+      "skill_name": "cost-model"
+    },
+    {
+      "external_cli": null,
+      "matched_goal_types": [
+        "new_feature"
+      ],
+      "matched_surfaces": [],
+      "provenance": "internal",
+      "rationale": "matched on surfaces=[] + goal_types=['new_feature']",
+      "skill_name": "eval-harness"
+    },
+    {
+      "external_cli": null,
+      "matched_goal_types": [
+        "new_feature"
+      ],
+      "matched_surfaces": [],
+      "provenance": "internal",
+      "rationale": "matched on surfaces=[] + goal_types=['new_feature']",
+      "skill_name": "pr-reviewer"
+    },
+    {
+      "external_cli": {
+        "command": "cli-printing-press",
+        "name": "CLI Printing Press",
+        "provider": "printing-press",
+        "version_pin": "pinned-at-plan-lock"
+      },
+      "matched_goal_types": [
+        "new_feature"
+      ],
+      "matched_surfaces": [],
+      "provenance": "external",
+      "rationale": "matched on surfaces=[] + goal_types=['new_feature']",
+      "skill_name": "printing-press-adapter"
+    }
+  ],
+  "plan_goal_type": "new_feature",
+  "plan_id": "2026-06-08-004-feat-architecture-reconciler-ui-plan-d",
+  "plan_surfaces": [],
+  "schema_version": "1.0",
+  "skipped": [
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "autoresearch"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "brainstorm-gate"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "browser-use"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "changelog"
+    },
+    {
+      "reason": "SKILL.md missing or malformed YAML frontmatter",
+      "skill_name": "continuous-learning"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "cost-guard"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "git-essentials"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "github-pr"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "kronos-agent"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "migration-planner"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "plan-artifacts"
+    },
+    {
+      "reason": "SKILL.md missing or malformed YAML frontmatter",
+      "skill_name": "proactive-agent"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "product-health-agent"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "prompt-optimizer"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "remotion-video-toolkit"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "revenue-check"
+    },
+    {
+      "reason": "SKILL.md missing or malformed YAML frontmatter",
+      "skill_name": "security-review"
+    },
+    {
+      "reason": "SKILL.md missing or malformed YAML frontmatter",
+      "skill_name": "self-improving-agent"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "skill-creator"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "subagent-driven-dev"
+    },
+    {
+      "reason": "SKILL.md missing or malformed YAML frontmatter",
+      "skill_name": "test-runner"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "token-budget-tracker"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "worktree-isolation"
+    },
+    {
+      "reason": "skill has no applies_to declaration",
+      "skill_name": "yahoo-finance"
+    }
+  ]
+}

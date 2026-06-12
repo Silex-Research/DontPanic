@@ -1,0 +1,9 @@
+
+ RUN  v4.1.8 <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-08-004-feat-architecture-reconciler-ui-plan-d/dashboard
+
+
+ Test Files  1 passed (1)
+      Tests  35 passed (35)
+   Start at  16:50:32
+   Duration  534ms (transform 55ms, setup 0ms, import 72ms, tests 8ms, environment 303ms)
+

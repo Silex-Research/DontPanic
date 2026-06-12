@@ -1,0 +1,13 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-11T22:12:06.273334+00:00",
+  "plan_id": "2026-06-08-004-feat-architecture-reconciler-ui-plan-d",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/backend/baseline-limits/pytest-parity-fixtures.txt",
+    "evidence/goal-governance/post_impl/web/any-repo-graph/vitest-journeys.txt",
+    "evidence/goal-governance/post_impl/web/as-built-vs-intended/journey3-noadr-excerpt.txt",
+    "evidence/goal-governance/post_impl/web/coverage-honesty/vitest-honesty-unit.txt"
+  ],
+  "findings": []
+}

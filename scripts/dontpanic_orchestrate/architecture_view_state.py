@@ -752,6 +752,10 @@ def build_view_state(
     clusters, levels = _architecture_levels.build_clusters_and_levels(nodes)
 
     coverage = _contract.compute_coverage(repo_root, nodes)
+    # Plan D F005 — producer parity: the present branch attaches the SAME
+    # already-computed build_baseline coverage block the absent branch carries
+    # (value-identical by construction; no detector or coverage-rule change).
+    coverage["baseline"] = baseline["coverage"]
     layers = _contract.build_layer_shell(nodes, edges)
     # Plan B — populate the intent + diff layers from ADR/doc intent.
     _apply_intent_layers(repo_root, nodes, coverage, layers)

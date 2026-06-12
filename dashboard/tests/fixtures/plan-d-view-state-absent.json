@@ -1,0 +1,556 @@
+{
+  "clusters": [],
+  "coverage": {
+    "baseline": {
+      "notes": [
+        "Dependency confidence is low. No Swift extractor installed."
+      ],
+      "per_evidence_type": {
+        "adr": {
+          "confidence_ceiling": "medium",
+          "status": "partial",
+          "tier": 0
+        },
+        "build": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "code": {
+          "confidence_ceiling": "low",
+          "status": "partial",
+          "tier": 1
+        },
+        "config": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "doc": {
+          "confidence_ceiling": "medium",
+          "status": "covered",
+          "tier": 0
+        },
+        "filesystem": {
+          "confidence_ceiling": "medium",
+          "status": "covered",
+          "tier": 0
+        },
+        "infra": {
+          "confidence_ceiling": "medium",
+          "status": "covered",
+          "tier": 0
+        },
+        "manifest": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        },
+        "runtime": {
+          "reserved": true,
+          "status": "not_found",
+          "tier": 3
+        },
+        "test": {
+          "confidence_ceiling": "medium",
+          "status": "not_found",
+          "tier": 0
+        }
+      },
+      "per_language": {
+        "python": "covered",
+        "swift": "missing_extractor"
+      },
+      "rollup": "partial",
+      "scan_truncated": false,
+      "unrecognized_extensions": []
+    },
+    "confidence_ceiling": "low",
+    "contract_version": "v0",
+    "extractors": [
+      {
+        "evidence_kind": "code",
+        "extractor": "python_import_crawler",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "json_schema_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "doc",
+        "extractor": "plan_index",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "manifest",
+        "extractor": "capability_manifest_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "dashboard_page_scan",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "code",
+        "extractor": "js_import_crawler",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "manifest",
+        "extractor": "architecture_fingerprint",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
+        "evidence_kind": "adr",
+        "extractor": "adr_intent_extractor",
+        "node_count": 1,
+        "status": "covered"
+      }
+    ],
+    "missing_extractors": [
+      {
+        "evidence_kind": "swift",
+        "status": "missing_extractor"
+      }
+    ],
+    "note": "Extractor coverage is the ceiling on the as-built model. missing_extractor means the repo contains this evidence kind but DontPanic has no extractor for it — the map is INCOMPLETE, not wrong."
+  },
+  "edges": [
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:App",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:App",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:docs",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:.",
+      "id": "edge:contains:fs:.->fs:Dockerfile",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:Dockerfile",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:App",
+      "id": "edge:contains:fs:App->fs:App/Main.swift",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:App/Main.swift",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:docs",
+      "id": "edge:contains:fs:docs->fs:docs/adr",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs/adr",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:docs",
+      "id": "edge:contains:fs:docs->fs:docs/architecture",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs/architecture",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "from": "fs:docs/adr",
+      "id": "edge:contains:fs:docs/adr->fs:docs/adr/0001-use-sqlite.md",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": null
+      },
+      "source_kind": "filesystem",
+      "to": "fs:docs/adr/0001-use-sqlite.md",
+      "type": "contains"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "unresolved",
+      "extractor": "heuristic_import_scan",
+      "from": "fs:App/Main.swift",
+      "id": "edge:himport:fs:App/Main.swift->heuristic:swift:UIKit",
+      "provenance": {
+        "method": "heuristic_import_scan",
+        "resolved": true,
+        "source_path": null
+      },
+      "resolved": false,
+      "source_kind": "code",
+      "to": "heuristic:swift:UIKit",
+      "type": "heuristic_import"
+    }
+  ],
+  "filters": {
+    "categories": [],
+    "lanes": [
+      {
+        "id": "lane:actors",
+        "title": "Actors"
+      },
+      {
+        "id": "lane:client-surfaces",
+        "title": "Client surfaces"
+      },
+      {
+        "id": "lane:orchestrator-runtime",
+        "title": "Orchestrator runtime"
+      },
+      {
+        "id": "lane:capabilities-adapters",
+        "title": "Capabilities & adapters"
+      },
+      {
+        "id": "lane:data-evidence",
+        "title": "Data & evidence"
+      },
+      {
+        "id": "lane:external-services",
+        "title": "External services"
+      }
+    ],
+    "modules": [],
+    "plans": []
+  },
+  "flows": [],
+  "freshness": {
+    "files_count": null,
+    "generated_at": null,
+    "message": "architecture.json was not found. Run the regen command to generate it.",
+    "regen_command": "dontpanic architecture regen --with-html",
+    "state": "absent"
+  },
+  "generated_at": "2026-06-11T00:00:00Z",
+  "insights": [],
+  "lanes": [
+    {
+      "id": "lane:actors",
+      "kind": "actor",
+      "order": 0,
+      "title": "Actors"
+    },
+    {
+      "id": "lane:client-surfaces",
+      "kind": "client",
+      "order": 1,
+      "title": "Client surfaces"
+    },
+    {
+      "id": "lane:orchestrator-runtime",
+      "kind": "runtime",
+      "order": 2,
+      "title": "Orchestrator runtime"
+    },
+    {
+      "id": "lane:capabilities-adapters",
+      "kind": "capability",
+      "order": 3,
+      "title": "Capabilities & adapters"
+    },
+    {
+      "id": "lane:data-evidence",
+      "kind": "data",
+      "order": 4,
+      "title": "Data & evidence"
+    },
+    {
+      "id": "lane:external-services",
+      "kind": "external",
+      "order": 5,
+      "title": "External services"
+    }
+  ],
+  "layers": {
+    "as_built": {
+      "edge_count": 8,
+      "is_current": true,
+      "node_count": 9
+    },
+    "contract_version": "v0",
+    "diff": [
+      {
+        "claim_id": "ADR-0001",
+        "detail": "app.main declared by ADR-0001 has no as-built evidence.",
+        "symbol": "app.main",
+        "taxonomy": "documented_unimplemented"
+      },
+      {
+        "claim_id": "ADR-0001",
+        "detail": "ghost_module.cache declared by ADR-0001 has no as-built evidence.",
+        "symbol": "ghost_module.cache",
+        "taxonomy": "documented_unimplemented"
+      }
+    ],
+    "diff_taxonomy": [
+      "aligned",
+      "drift",
+      "implemented_undocumented",
+      "documented_unimplemented",
+      "conflicting_dependency",
+      "stale_adr",
+      "unknown_confidence"
+    ],
+    "intent": {
+      "claims": [
+        {
+          "confidence": "medium",
+          "date": "2026-06-01",
+          "decision": "We persist plan state through `app.main` and defer the\n`ghost_module.cache` layer until demand exists.",
+          "evidence_basis": "declared",
+          "id": "ADR-0001",
+          "provenance": {
+            "method": "adr_intent_extractor",
+            "resolved": true,
+            "source_path": "docs/adr/0001-use-sqlite.md"
+          },
+          "references": [
+            "app.main",
+            "ghost_module.cache"
+          ],
+          "source_kind": "adr",
+          "source_path": "docs/adr/0001-use-sqlite.md",
+          "status": "accepted",
+          "title": "Use SQLite for plan state"
+        }
+      ],
+      "note": "Reserved for ADR/doc intent extraction (Plan B). Empty in v0.",
+      "populated": true
+    }
+  },
+  "levels": [],
+  "nodes": [
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:.",
+      "label": "repo",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "."
+      },
+      "source_kind": "filesystem",
+      "source_path": ".",
+      "title": "repo",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:App",
+      "label": "App",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "App"
+      },
+      "source_kind": "filesystem",
+      "source_path": "App",
+      "title": "App",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs",
+      "label": "docs",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs"
+      },
+      "source_kind": "filesystem",
+      "source_path": "docs",
+      "title": "docs",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:Dockerfile",
+      "label": "Dockerfile",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "Dockerfile"
+      },
+      "source_kind": "infra",
+      "source_path": "Dockerfile",
+      "title": "Dockerfile",
+      "type": "fs_infra"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:App/Main.swift",
+      "label": "Main.swift",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "App/Main.swift"
+      },
+      "source_kind": "code",
+      "source_path": "App/Main.swift",
+      "title": "Main.swift",
+      "type": "fs_source"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs/adr",
+      "label": "adr",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs/adr"
+      },
+      "source_kind": "filesystem",
+      "source_path": "docs/adr",
+      "title": "adr",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs/architecture",
+      "label": "architecture",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs/architecture"
+      },
+      "source_kind": "filesystem",
+      "source_path": "docs/architecture",
+      "title": "architecture",
+      "type": "fs_dir"
+    },
+    {
+      "confidence": "medium",
+      "evidence_basis": "declared",
+      "extractor": "tier0_inventory",
+      "id": "fs:docs/adr/0001-use-sqlite.md",
+      "label": "0001-use-sqlite.md",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "tier0_inventory",
+        "resolved": true,
+        "source_path": "docs/adr/0001-use-sqlite.md"
+      },
+      "source_kind": "doc",
+      "source_path": "docs/adr/0001-use-sqlite.md",
+      "title": "0001-use-sqlite.md",
+      "type": "fs_doc"
+    },
+    {
+      "confidence": "low",
+      "evidence_basis": "unresolved",
+      "extractor": "heuristic_import_scan",
+      "id": "heuristic:swift:UIKit",
+      "label": "UIKit",
+      "lane_id": "lane:orchestrator-runtime",
+      "provenance": {
+        "method": "heuristic_import_scan",
+        "resolved": false,
+        "source_path": null
+      },
+      "source_kind": "unknown",
+      "title": "UIKit",
+      "type": "heuristic_target"
+    }
+  ],
+  "project": {
+    "display_name": "Plan D Fixture",
+    "label": "plan-d-fixture",
+    "name": "plan-d-fixture"
+  },
+  "schema_version": "1.0",
+  "source_path": "does-not-exist.json",
+  "steps": [],
+  "validation_warnings": [
+    {
+      "code": "architecture_missing",
+      "message": "architecture.json was not found. Run `dontpanic architecture regen --with-html` to generate it."
+    }
+  ]
+}
