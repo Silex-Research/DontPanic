@@ -1,0 +1,15 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-12T13:51:07.606160+00:00",
+  "plan_id": "2026-06-11-001-feat-worktree-guard-hardening",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/pytest/local-config-honesty/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/local-config-honesty/state-map.json",
+    "evidence/goal-governance/post_impl/pytest/safe-cleanup/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/safe-cleanup/state-map.json",
+    "evidence/goal-governance/post_impl/pytest/wrong-worktree-guard/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/wrong-worktree-guard/state-map.json"
+  ],
+  "findings": []
+}

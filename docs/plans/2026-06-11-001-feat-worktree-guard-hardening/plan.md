@@ -3,7 +3,7 @@ id: 2026-06-11-001-feat-worktree-guard-hardening
 title: Worktree guard hardening — wrong-worktree refusal + safe cleanup, split from isolation v0
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-11"
 goal_type: new_feature
 links:
