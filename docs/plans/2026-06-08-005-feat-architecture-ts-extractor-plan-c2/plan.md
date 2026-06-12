@@ -14,6 +14,9 @@ description: >
   (claude/skills/**/assets) are NON-PRODUCT and excluded from the architecture model
   (like node_modules), so DontPanic's own ceiling lifts off low truthfully rather than
   by ingesting mockup noise. Relative imports only (no tsconfig path/alias resolution).
+links:
+  features: ./features.json
+  objective_contract: ./objective_contract.json
 ---
 
 ## Target
