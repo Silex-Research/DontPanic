@@ -22,7 +22,10 @@
         "worktree_path",
         "worktree_registry"
       ],
-      "evidence": "scripts/dontpanic_orchestrate/worktrees.py (registry, atomic temp-rename writes, strict vs degrade loaders) + tests/test_worktrees_registry.py::TestRegistry (8 tests incl. kill-mid-write atomicity + corrupt strict/degrade split)"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F002",
@@ -39,7 +42,10 @@
       "depends_on": [
         "F001"
       ],
-      "evidence": "worktrees.capture_binding_snapshot wired into sufficiency_gate.lock_plan, cli plan audit/close, supervisor.dispatch_volley + tests/test_worktrees_snapshots.py (7 tests: recorded values, unbound no-op regression, corrupt-registry fail-closed before side effects, real lock_plan path, dispatch seam guard)"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F004",
@@ -62,7 +68,10 @@
       "depends_on": [
         "F001"
       ],
-      "evidence": "worktrees.binding_health (canonical predicate: exists/is-worktree/repo_root-membership/branch; probe error = unhealthy w/ reason) + build_status_model (explicit null dirty/untracked w/ reason, collapsed-dir untracked pin, registry_corrupt flag) + CLI plan worktree list + tests::TestBindingHealth/TestStatusModel (12 tests)"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F006",
@@ -85,7 +94,10 @@
       "depends_on": [
         "F001"
       ],
-      "evidence": "worktrees.create_worktree (repo_root from plan dir, default-branch->SHA base rule, repo-key path, outside-repo validation, registry-write-last + rollback) + CLI plan worktree create + tests::TestCreate (11 tests incl. same-basename no-collide, registry-write-failure rollback, DONTPANIC_HOME-inside-repo refusal)"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F007",
@@ -104,7 +116,10 @@
       "depends_on": [
         "F004"
       ],
-      "evidence": "dashboard.build writes active-worktrees.json (real producer); operator_brief ACTIVE WORKTREES section; dashboard/lib/worktrees-logic.js + core.js loader + operator-console render; tests: test_worktrees_visibility.py (6 \u2014 brief drift/corrupt/empty + producer-wiring + no-secret-shapes guard), worktrees-logic.test.js (10 \u2014 six states + escaping), worktrees-journey.test.js (5 \u2014 real createJarvis shell DOM). Sweeps: 4342 py + 1210 vitest green."
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     }
   ]
 }
