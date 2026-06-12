@@ -3102,6 +3102,19 @@ def _plan_worktree_main(argv: list[str]) -> int:
         parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
         parser.add_argument("--base", default=None, metavar="REF",
                             help="Explicit base ref (default: the repo's default branch)")
+        # Guard-hardening F003 (operator policy D003): allowlisted operator-
+        # local config is DECLARED when missing/divergent; this flag opts in
+        # to copying it. No symlinks at either end; overwrites are refused.
+        parser.add_argument(
+            "--copy-local-config",
+            action="store_true",
+            dest="copy_local_config",
+            help=(
+                "Copy allowlisted operator-local config (environments.json) "
+                "from the repo root into the new worktree. Never overwrites "
+                "divergent content; never follows or creates symlinks."
+            ),
+        )
         args = parser.parse_args(argv[1:])
         plan_dir = _resolve_plan_dir(args.plan)
         try:
@@ -3116,6 +3129,20 @@ def _plan_worktree_main(argv: list[str]) -> int:
             f"base_sha={binding['base_sha']}"
         )
         print(f"[plan worktree create] owner_actor={binding['owner_actor']}")
+        # F003: declare missing/divergent allowlisted local config (default)
+        # and perform the opt-in copy. Runs strictly AFTER create succeeded —
+        # a refused create (incl. corrupt registry) never reaches this point.
+        from dontpanic_orchestrate import worktree_local_config as _wlc
+
+        for notice in _wlc.local_config_report(
+            Path(binding["repo_root"]),
+            Path(binding["worktree_path"]),
+            copy=args.copy_local_config,
+        ):
+            print(
+                f"[plan worktree create] local-config {notice['kind']}: "
+                f"{notice['message']}"
+            )
         return 0
     # list
     model = _wt.build_status_model()
