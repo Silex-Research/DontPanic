@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "All round-5 findings resolved by concrete artifact edits recorded in D008 (literal catalog table, literal smoke command, built-artifact markers, registered clears_when predicate, shipped band vocabulary, creds-absent state). Rounds 1-4 cleared 100% with 19 findings resolved by artifact edits (D003-D007); round 5 was matrix-pin/vocabulary class with 2 of 3 highs streak-unlocked as waivable by the convergence policy itself. Override per the operator's standing lock protocol (dispositions/override once findings are implementation-detail pins against explicit contracts); it skips only re-verification of resolutions already made.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-12T23:16:31Z",
+  "plan_id": "2026-06-04-003-feat-integration-operator-actions",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:9998f56a3b354d98550f3e805487ce5a90f5466e1a28a0bc032c4a5bc5eb1f79",
+  "objective_contract_hash": "sha256:254620b82541523b8f04c2d7f8ff6f7c6ad59fae8ac4f393a2e13164f781cc20",
+  "sufficiency_findings_hash": "sha256:1ce7620ec6bdbda484474bcffa7b07cd1c635360b0623e5adba6a4646ba6f157"
+}

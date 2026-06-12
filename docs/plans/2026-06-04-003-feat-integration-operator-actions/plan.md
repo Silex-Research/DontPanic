@@ -3,7 +3,7 @@ id: 2026-06-04-003-feat-integration-operator-actions
 title: Integration operator-actions (deploy / credentials / smoke)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-04"
 goal_type: new_feature
 description: >
