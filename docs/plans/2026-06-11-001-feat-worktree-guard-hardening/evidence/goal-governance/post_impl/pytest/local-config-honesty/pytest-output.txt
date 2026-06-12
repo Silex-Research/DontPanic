@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-11-001-feat-worktree-guard-hardening
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 14 items
+
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestAllowlistConstant::test_allowlist_is_pinned_verbatim PASSED [  7%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestDeclareMissing::test_missing_in_worktree_is_declared_with_copy_affordance PASSED [ 14%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestDeclareMissing::test_source_missing_produces_no_notice_and_never_copies PASSED [ 21%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestDeclareDivergent::test_divergent_content_is_reported_by_default_no_flag PASSED [ 28%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestDeclareDivergent::test_identical_content_is_silent PASSED [ 35%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestOptInCopy::test_copy_flag_copies_allowlisted_file_and_reports PASSED [ 42%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestOptInCopy::test_copy_refuses_to_overwrite_divergent_content PASSED [ 50%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestOptInCopy::test_not_on_allowlist_never_copied_even_gitignored PASSED [ 57%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestNoSymlinks::test_symlinked_source_is_never_copied_reported_and_skipped PASSED [ 64%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestNoSymlinks::test_symlinked_target_is_divergent_refused_never_followed PASSED [ 71%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestNoSymlinks::test_no_code_path_creates_symlinks PASSED [ 78%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestCreateWiring::test_create_declares_missing_by_default PASSED [ 85%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestCreateWiring::test_create_copy_flag_copies_and_reports PASSED [ 92%]
+dontpanic_orchestrate/tests/test_worktree_local_config_f003.py::TestCreateWiring::test_corrupt_registry_refuses_create_before_any_copy PASSED [100%]
+
+============================== 14 passed in 1.07s ==============================

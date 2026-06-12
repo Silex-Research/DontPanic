@@ -3026,33 +3026,95 @@ def _plan_main(argv: list[str]) -> int:
 
 
 def _plan_worktree_main(argv: list[str]) -> int:
-    """``dontpanic plan worktree create|list`` — Worktree Isolation v0
-    (plan 2026-06-10-002, substrate slice). No remove subcommand in v0:
-    removal ships with the guard-hardening follow-up plan."""
+    """``dontpanic plan worktree create|list|remove`` — Worktree Isolation
+    v0 (plan 2026-06-10-002) + guard-hardening F002 removal (plan
+    2026-06-11-001). These are worktree-MANAGEMENT commands: deliberately
+    OUTSIDE the wrong-worktree guard (they operate on bindings by plan id
+    from any checkout) and protected by their own preconditions — strict
+    registry load, binding_health, full-policy cleanliness. There is NO
+    force flag on this surface."""
     from dontpanic_orchestrate import worktrees as _wt
 
-    if not argv or argv[0] not in ("create", "list"):
+    if not argv or argv[0] not in ("create", "list", "remove"):
         print(
             "usage: dontpanic plan worktree <subcommand>\n\n"
             "subcommands:\n"
-            "  create <plan-dir> [--base <ref>]\n"
+            "  create <plan-dir> [--base <ref>] [--copy-local-config]\n"
             "      Create the plan's dedicated git worktree on branch\n"
             "      plan/<plan-id> at a repo-key-qualified path under\n"
             "      $DONTPANIC_HOME/worktrees/, from the repo's default branch\n"
             "      (or --base) resolved to a recorded commit SHA, and bind it\n"
-            "      in the worktrees registry.\n"
+            "      in the worktrees registry. Allowlisted operator-local\n"
+            "      config (environments.json) is declared when missing or\n"
+            "      divergent; --copy-local-config opts into copying it.\n"
             "  list\n"
             "      Render the worktree-status model: one row per binding with\n"
             "      branch, current branch, dirty state, untracked count,\n"
-            "      owner, and health reasons.",
+            "      owner, and health reasons.\n"
+            "  remove <plan-id>\n"
+            "      Health-gated, audit-first removal (7-step sequence): refuses\n"
+            "      on any dirty, gitignored, submodule, or nested-repo content;\n"
+            "      appends fsynced intent + outcome records to\n"
+            "      $DONTPANIC_HOME/worktree-audit.jsonl; deletes the registry\n"
+            "      binding only after successful physical removal. No force\n"
+            "      flag exists. The plan branch always survives.",
             file=sys.stderr,
         )
         return 2
+    if argv[0] == "remove":
+        from dontpanic_orchestrate import worktree_remove as _wr
+
+        parser = argparse.ArgumentParser(prog="dontpanic plan worktree remove")
+        parser.add_argument("plan_id", help="Plan ID of the bound worktree")
+        try:
+            args = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        try:
+            result = _wr.remove_worktree(args.plan_id)
+        except _wr.RemoveRefusal as exc:
+            print(f"[plan worktree remove] REFUSED (step {exc.step}): {exc}", file=sys.stderr)
+            return 3
+        except _wt.RegistryCorruptError as exc:
+            print(f"[plan worktree remove] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        except _wr.RemoveError as exc:
+            print(f"[plan worktree remove] FAILED (step {exc.step}): {exc}", file=sys.stderr)
+            return 4
+        except _wr.RemoveDegraded as exc:
+            print(f"[plan worktree remove] DEGRADED: {exc}", file=sys.stderr)
+            return 5
+        if result["path"] == "completion":
+            print(
+                f"[plan worktree remove] removed (registry-only completion path) "
+                f"for plan {result['plan_id']} — the worktree was already gone; "
+                "the orphaned binding is now cleared and audited"
+            )
+        else:
+            print(
+                f"[plan worktree remove] removed {result['worktree_path']} "
+                f"(plan {result['plan_id']}); intent + outcome audited at "
+                f"{_wr.audit_log_path()}"
+            )
+        return 0
     if argv[0] == "create":
         parser = argparse.ArgumentParser(prog="dontpanic plan worktree create")
         parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
         parser.add_argument("--base", default=None, metavar="REF",
                             help="Explicit base ref (default: the repo's default branch)")
+        # Guard-hardening F003 (operator policy D003): allowlisted operator-
+        # local config is DECLARED when missing/divergent; this flag opts in
+        # to copying it. No symlinks at either end; overwrites are refused.
+        parser.add_argument(
+            "--copy-local-config",
+            action="store_true",
+            dest="copy_local_config",
+            help=(
+                "Copy allowlisted operator-local config (environments.json) "
+                "from the repo root into the new worktree. Never overwrites "
+                "divergent content; never follows or creates symlinks."
+            ),
+        )
         args = parser.parse_args(argv[1:])
         plan_dir = _resolve_plan_dir(args.plan)
         try:
@@ -3067,6 +3129,20 @@ def _plan_worktree_main(argv: list[str]) -> int:
             f"base_sha={binding['base_sha']}"
         )
         print(f"[plan worktree create] owner_actor={binding['owner_actor']}")
+        # F003: declare missing/divergent allowlisted local config (default)
+        # and perform the opt-in copy. Runs strictly AFTER create succeeded —
+        # a refused create (incl. corrupt registry) never reaches this point.
+        from dontpanic_orchestrate import worktree_local_config as _wlc
+
+        for notice in _wlc.local_config_report(
+            Path(binding["repo_root"]),
+            Path(binding["worktree_path"]),
+            copy=args.copy_local_config,
+        ):
+            print(
+                f"[plan worktree create] local-config {notice['kind']}: "
+                f"{notice['message']}"
+            )
         return 0
     # list
     model = _wt.build_status_model()
@@ -3092,6 +3168,48 @@ def _plan_worktree_main(argv: list[str]) -> int:
             f"owner={row['owner_actor']}  path={row['worktree_path']}"
         )
     return 0
+
+
+def _run_worktree_guard(
+    plan_dir: Path, command: str, label: str, override_reason: str | None = None
+) -> int | None:
+    """Guard-hardening F001 — the shared wrong-worktree guard precondition,
+    evaluated BEFORE any gate side effect or evidence write on every
+    plan-gate entry point (lock / audit / close / disposition; the
+    orchestrate dispatch seam wires the same function in supervisor).
+    Returns an exit code on refusal, None when the command may proceed."""
+    from dontpanic_orchestrate import worktree_guard as _wg
+    from dontpanic_orchestrate.worktrees import RegistryCorruptError as _WtCorrupt
+
+    try:
+        result = _wg.guard_plan_command(
+            plan_dir, command, override_reason=override_reason
+        )
+    except (_wg.GuardRefusal, _WtCorrupt) as exc:
+        print(f"[{label}] REFUSED: {exc}", file=sys.stderr)
+        return 3
+    if result is not None and result.get("guard") == "override":
+        print(
+            f"[{label}] worktree guard OVERRIDDEN "
+            f"({result['refusal_class']}) — override record + binding snapshot "
+            "durably written to the plan's audit evidence"
+        )
+    return None
+
+
+def _add_worktree_guard_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--override-worktree-guard",
+        default=None,
+        metavar="REASON",
+        dest="worktree_guard_override",
+        help=(
+            "Override a wrong-worktree guard refusal (judgment classes only — "
+            "a corrupt registry is never overridable). Proceeds only after the "
+            "override record and a binding snapshot are durably written to the "
+            "plan's audit evidence."
+        ),
+    )
 
 
 def _plan_disposition_main(argv: list[str]) -> int:
@@ -3123,9 +3241,15 @@ def _plan_disposition_main(argv: list[str]) -> int:
     parser.add_argument("--kind", required=True, choices=list(DISPOSITION_KINDS))
     parser.add_argument("--reason", default=None)
     parser.add_argument("--followup", default=None, metavar="PLAN_REF")
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan disposition", "plan disposition", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     try:
         entry = record_disposition(
             plan_dir,
@@ -3435,6 +3559,7 @@ def _plan_lock_main(argv: list[str]) -> int:
             "lock; prints the verdict + findings."
         ),
     )
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     if args.override_reason is not None and not args.override_reason.strip():
@@ -3445,6 +3570,11 @@ def _plan_lock_main(argv: list[str]) -> int:
         return 2
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan lock", "plan lock", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     print(f"[plan lock] plan_dir={plan_dir}")
 
     # Plan 2026-05-20-001 F002 — pre-flight external_refs reachability.
@@ -3741,9 +3871,15 @@ def _plan_audit_main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan audit", "plan audit", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     from dontpanic_orchestrate.worktrees import (
         RegistryCorruptError as _WtCorrupt,
         capture_binding_snapshot as _wt_capture,
@@ -3838,6 +3974,7 @@ def _plan_close_main(argv: list[str]) -> int:
         action="store_true",
         help=argparse.SUPPRESS,  # parsed but always refused — see below
     )
+    _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
     if args.skip_audit:
@@ -3858,6 +3995,11 @@ def _plan_close_main(argv: list[str]) -> int:
         return 2
 
     plan_dir = _resolve_plan_dir(args.plan)
+    guard_rc = _run_worktree_guard(
+        plan_dir, "plan close", "plan close", args.worktree_guard_override
+    )
+    if guard_rc is not None:
+        return guard_rc
     from dontpanic_orchestrate.worktrees import (
         RegistryCorruptError as _WtCorrupt,
         capture_binding_snapshot as _wt_capture,

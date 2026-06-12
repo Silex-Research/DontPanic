@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "dispositions": {
+    "f-662edc459cc1": {
+      "kind": "deferred_to_impl",
+      "reason": "The exact override-command spelling in refusal messages is an implementation detail: the implementation will print the literal flag it parses (single source: the argparse definition), and the guard tests assert the refusal names that exact command — provable in implementation, checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-4990228261b690a5",
+      "cell_key": "wrong-worktree-guard|coverage_gap|F001",
+      "cell_set": [
+        "fp-4990228261b690a5"
+      ],
+      "round": 5,
+      "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+      "recorded_at": "2026-06-12T02:18:51Z",
+      "recorded_by": "bayesian"
+    },
+    "f-bc50262f46e1": {
+      "kind": "deferred_to_impl",
+      "reason": "The outcome-append failure mode is substantively pinned in acceptance (non-zero exit stating removal-succeeded/outcome-unrecorded, completion keys on intent); the remaining ask is test enumeration, discharged by an implementation fixture simulating the failed append — checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-d4fcfa82b12444c1",
+      "cell_key": "safe-cleanup|coverage_gap|F002",
+      "cell_set": [
+        "fp-02b255ddd132c35a",
+        "fp-d4fcfa82b12444c1"
+      ],
+      "round": 5,
+      "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+      "recorded_at": "2026-06-12T02:18:51Z",
+      "recorded_by": "bayesian"
+    },
+    "f-3bb59beaafe5": {
+      "kind": "deferred_to_impl",
+      "reason": "The completion path's OUTCOME entry uses the same step-7 append+fsync mechanics and degraded-state behavior as the main sequence (one writer, one shape, marked completion=true) — wording harmonization the implementation makes exact with a shared helper; checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-5783976e48ccd795",
+      "cell_key": "safe-cleanup|coverage_gap|F002",
+      "cell_set": [
+        "fp-5783976e48ccd795"
+      ],
+      "round": 7,
+      "input_fingerprint": "sha256:a162e26ab7c97df03850a632d2466bfb1e46f16d41c119b9a1acb4d216c6cc88",
+      "recorded_at": "2026-06-12T02:43:54Z",
+      "recorded_by": "bayesian"
+    },
+    "f-64af7ceee5c4": {
+      "kind": "waived_with_reason",
+      "reason": "The non-goal's INTENT (do not alter v0's registry/create/visibility SEMANTICS) is preserved: F003 only ADDS create-time reporting and an opt-in copy affordance on top of unchanged v0 behavior — D003 records this as the operator-decided scope. The non-goal clause reads over-broadly; its intent and F003's additive scope are reconciled in this waiver rather than burning a paid round on a one-line wording edit.",
+      "followup_plan": null,
+      "fingerprint": "fp-b2949a7d9360374e",
+      "cell_key": "local-config-honesty|integration_gap|F003",
+      "cell_set": [
+        "fp-b2949a7d9360374e"
+      ],
+      "round": 7,
+      "input_fingerprint": "sha256:a162e26ab7c97df03850a632d2466bfb1e46f16d41c119b9a1acb4d216c6cc88",
+      "recorded_at": "2026-06-12T02:43:53Z",
+      "recorded_by": "bayesian"
+    },
+    "f-d2313c8b5658": {
+      "kind": "deferred_to_impl",
+      "reason": "Source-missing matrix is implementation detail under the decided policy: an allowlisted file absent from repo_root produces no notice and is never copied (nothing to declare or propagate); present-in-worktree-only is left untouched and unreported in v1 (the policy governs repo_root->worktree propagation only). The implementation pins this with fixtures; checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-e1d61b338bb38050",
+      "cell_key": "local-config-honesty|coverage_gap|F003",
+      "cell_set": [
+        "fp-e1d61b338bb38050"
+      ],
+      "round": 7,
+      "input_fingerprint": "sha256:a162e26ab7c97df03850a632d2466bfb1e46f16d41c119b9a1acb4d216c6cc88",
+      "recorded_at": "2026-06-12T02:43:53Z",
+      "recorded_by": "bayesian"
+    }
+  }
+}

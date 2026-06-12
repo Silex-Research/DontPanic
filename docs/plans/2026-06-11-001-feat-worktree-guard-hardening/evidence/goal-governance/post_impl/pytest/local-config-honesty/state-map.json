@@ -1,0 +1,12 @@
+{
+  "journey": "local-config-honesty",
+  "test_file": "scripts/dontpanic_orchestrate/tests/test_worktree_local_config_f003.py",
+  "evidence": "evidence/goal-governance/post_impl/pytest/local-config-honesty/pytest-output.txt",
+  "state_to_test": {
+    "missing_declared": "TestDeclareMissing::test_missing_in_worktree_is_declared_with_copy_affordance + TestCreateWiring::test_create_declares_missing_by_default",
+    "divergent_reported": "TestDeclareDivergent::test_divergent_content_is_reported_by_default_no_flag",
+    "copied_on_opt_in": "TestOptInCopy::test_copy_flag_copies_allowlisted_file_and_reports + TestCreateWiring::test_create_copy_flag_copies_and_reports",
+    "overwrite_refused": "TestOptInCopy::test_copy_refuses_to_overwrite_divergent_content + TestNoSymlinks (both ends)",
+    "not_on_allowlist_excluded": "TestOptInCopy::test_not_on_allowlist_never_copied_even_gitignored"
+  }
+}

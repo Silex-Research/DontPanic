@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "Operator-directed (D010 follow-through): after the F002 numbered-algorithm restructure, round 7 returned zero ordering/policy findings; the remaining high is implementation_detail — a create-path test pin whose substance ALREADY ships tested in v0 (test_worktrees_registry.py TestCreate corrupt-registry refusal precedes all filesystem work because strict load is create's first step); the residual ask (assert refusal also precedes the new local-config copy) is a trivially-added implementation test the post-impl audit will check. Three medium prose pins resolved via recorded dispositions. Seven rounds, 100% clearance every round, policy undisputed since D003.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-12T02:47:06Z",
+  "plan_id": "2026-06-11-001-feat-worktree-guard-hardening",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:4e62b32211f10ff67a003b8398d8bce8084312b78a7acd1b092e99f49bc6cfc9",
+  "objective_contract_hash": "sha256:146f3e103fb295ba19c5fc44b168182cbae64b446866c71db2b189d0e915ada1",
+  "sufficiency_findings_hash": "sha256:7ffe8fa286980e42f72c9033cd230e774087f797bbf7258a4b68dfde3b1221ff"
+}

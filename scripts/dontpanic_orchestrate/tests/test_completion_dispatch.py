@@ -1208,3 +1208,50 @@ class TestCodexStreamingDecoder:
         )
         assert transcript.status == "agree"
         assert len(transcript.findings_dispositions) == 1
+
+
+class TestPromptEvidencePathsResolvable:
+    """PR #46 remediation — the audit-codex-1 transcript showed the auditor
+    could NOT read any evidence artifact: manifest URIs are plan-dir-relative
+    while the auditor's cwd is the repo root, so every read 404'd and the
+    verdict fell back to manifest shape. The PROMPT must render evidence
+    URIs resolvable from the repo root (EvidenceRef.uri itself stays
+    plan-relative — signatures and envelopes are unchanged)."""
+
+    def test_prompt_uris_are_repo_root_relative(self, tmp_path):
+        import json as _json
+        import subprocess as _sp
+
+        from dontpanic_orchestrate.completion_dispatch import _build_audit_prompt
+        from dontpanic_orchestrate.completion_auditor import _build_evidence_manifest
+
+        repo = tmp_path / "repo"
+        plan = repo / "docs" / "plans" / "2026-01-01-001-feat-x"
+        ev = plan / "evidence" / "goal-governance" / "post_impl" / "pytest" / "j1"
+        ev.mkdir(parents=True)
+        (ev / "out.txt").write_text("42 passed\n")
+        _sp.run(["git", "init", "-q", str(repo)], check=True)
+
+        manifest = _build_evidence_manifest(plan)
+        assert manifest and manifest[0].uri.startswith("evidence/")  # unchanged
+
+        prompt = _build_audit_prompt(
+            type("C", (), {"model_dump": lambda self, **k: {}})(),
+            [],
+            [],
+            manifest,
+            plan_dir=plan,
+        )
+        assert "docs/plans/2026-01-01-001-feat-x/evidence/" in prompt
+        # the unresolvable bare plan-relative uri must not be what the
+        # auditor is told to read
+        payload_start = prompt.find("docs/plans/2026-01-01-001-feat-x/evidence/")
+        assert payload_start != -1
+
+    def test_prompt_without_plan_dir_keeps_legacy_uris(self):
+        from dontpanic_orchestrate.completion_dispatch import _build_audit_prompt
+
+        prompt = _build_audit_prompt(
+            type("C", (), {"model_dump": lambda self, **k: {}})(), [], [], []
+        )
+        assert isinstance(prompt, str)

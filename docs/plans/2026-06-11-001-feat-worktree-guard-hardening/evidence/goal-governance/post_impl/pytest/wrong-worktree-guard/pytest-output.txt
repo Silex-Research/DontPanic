@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/.dontpanic/worktrees/DontPanic-69cde678/2026-06-11-001-feat-worktree-guard-hardening
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 29 items
+
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_unbound_plan_passes_through_absent_registry PASSED [  3%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_unbound_plan_passes_through_valid_registry PASSED [  6%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_corrupt_registry_fails_closed_never_unbound PASSED [ 10%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_corrupt_registry_rejects_the_override_flag PASSED [ 13%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_right_worktree_passes PASSED [ 17%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_wrong_invoking_path_refuses_naming_both_and_commands PASSED [ 20%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_symlinked_spelling_of_bound_path_passes PASSED [ 24%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_deleted_worktree_refuses_via_health_conjunct PASSED [ 27%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_swapped_repo_at_same_path_and_branch_refuses PASSED [ 31%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_branch_drift_refuses_through_the_guard PASSED [ 34%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_detached_head_refuses_through_the_guard PASSED [ 37%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestGuardCore::test_non_git_invoking_cwd_is_indeterminate_and_refuses PASSED [ 41%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_wrong_path_override_records_both_artifacts PASSED [ 44%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_unhealthy_binding_override_records_both_artifacts PASSED [ 48%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_indeterminate_override_records_both_artifacts PASSED [ 51%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_override_requires_a_reason PASSED [ 55%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_failed_evidence_write_refuses_instead_of_proceeding PASSED [ 58%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestOverridePath::test_durable_write_fsyncs PASSED [ 62%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_lock_refuses_from_wrong_checkout PASSED [ 65%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_audit_refuses_with_zero_auditor_invocations PASSED [ 68%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_close_refuses_with_zero_auditor_invocations PASSED [ 72%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_disposition_refuses_before_recording PASSED [ 75%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_lock_proceeds_from_the_bound_worktree PASSED [ 79%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_plan_lock_override_flag_proceeds_with_evidence PASSED [ 82%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_dispatch_seam_guards_before_capture_and_reconcile PASSED [ 86%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestEntryPointWiring::test_dispatch_volley_refuses_from_wrong_checkout PASSED [ 89%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestCommandScoping::test_worktree_create_runs_unguarded_from_main_checkout PASSED [ 93%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestCommandScoping::test_worktree_namespace_never_calls_the_guard PASSED [ 96%]
+dontpanic_orchestrate/tests/test_worktree_guard_f001.py::TestCommandScoping::test_plan_namespace_has_no_merge_subcommand PASSED [100%]
+
+============================== 29 passed in 6.28s ==============================

@@ -1,0 +1,14 @@
+{
+  "journey": "wrong-worktree-guard",
+  "test_file": "scripts/dontpanic_orchestrate/tests/test_worktree_guard_f001.py",
+  "evidence": "evidence/goal-governance/post_impl/pytest/wrong-worktree-guard/pytest-output.txt",
+  "state_to_test": {
+    "refused_wrong_path": "TestGuardCore::test_wrong_invoking_path_refuses_naming_both_and_commands",
+    "refused_corrupt_registry": "TestGuardCore::test_corrupt_registry_fails_closed_never_unbound + test_corrupt_registry_rejects_the_override_flag",
+    "refused_unhealthy_binding": "TestGuardCore::test_swapped_repo_at_same_path_and_branch_refuses + test_branch_drift_refuses_through_the_guard + test_detached_head_refuses_through_the_guard + test_deleted_worktree_refuses_via_health_conjunct",
+    "overridden_with_evidence": "TestOverridePath::test_wrong_path_override_records_both_artifacts + test_unhealthy_binding_override_records_both_artifacts + test_indeterminate_override_records_both_artifacts + test_durable_write_fsyncs + test_failed_evidence_write_refuses_instead_of_proceeding",
+    "unbound_passthrough": "TestGuardCore::test_unbound_plan_passes_through_absent_registry + test_unbound_plan_passes_through_valid_registry",
+    "entry_point_wiring (contract: refusal per guarded entry point, auditor stubbed)": "TestEntryPointWiring::test_plan_lock_refuses_from_wrong_checkout + test_plan_audit_refuses_with_zero_auditor_invocations + test_plan_close_refuses_with_zero_auditor_invocations + test_plan_disposition_refuses_before_recording + test_plan_lock_proceeds_from_the_bound_worktree + test_plan_lock_override_flag_proceeds_with_evidence + test_dispatch_seam_guards_before_capture_and_reconcile + test_dispatch_volley_refuses_from_wrong_checkout",
+    "command_scoping (contract: create/remove unguarded, no merge subcommand)": "TestCommandScoping::test_worktree_create_runs_unguarded_from_main_checkout + test_worktree_namespace_never_calls_the_guard + test_plan_namespace_has_no_merge_subcommand"
+  }
+}
