@@ -8,13 +8,14 @@
       "phase": 1,
       "description": "Integration ActionItem catalog: declare the operator-owned integration steps (Firebase functions deploy, Firebase realtime smoke, static-dashboard smoke, Linear credential setup, Discord webhook setup) as ActionItems produced by a new provide_integration_actions() source in operator_console.py with its own SOURCE_INTEGRATION source kind, each carrying what/why/credentials_required/exact_command/evidence_expected/reversible plus the shipped control-plane spine fields (audience, dedupe_key, plain_consequence, clears_when, resolution_class). Data + projection, not credential handling.",
       "steps": [
-        "Enumerate the known operator integration steps + their exact commands",
-        "Model each as an ActionItem (audience=operator, requires_human where creds needed)",
-        "Mark credentials_required + reversible + evidence_expected per item",
+        "Enumerate the known operator integration steps; record external commands as operator_command (display-only), validated dontpanic commands as exact_command, None otherwise",
+        "Model each as an ActionItem (audience=operator, requires_human where creds needed) with spine fields populated",
+        "Mark credentials_required + reversible + evidence_expected per item; clears_when points at the integration-evidence contract",
+        "Wire provide_integration_actions through the real dashboard aggregation with per-source scope + freshness entries",
         "Dedupe by dedupe_key; no-secret-leak assertion",
-        "Fixture tests over the catalog projection"
+        "Fixture tests through the real provider + aggregation path"
       ],
-      "acceptance": "provide_integration_actions() emits one ActionItem per integration step through the same source-provider seam as the five shipped providers in operator_console.py, with the new SOURCE_INTEGRATION source kind and what/why/credentials_required/exact_command/evidence_expected/reversible populated from the integration_catalog; spine fields are populated - resolution_class reflects credential need (RESOLUTION_OPERATOR_ATTESTED or RESOLUTION_BLOCKED_EXTERNAL for credentialed steps, never RESOLUTION_COMMAND_RESOLVABLE for them) and clears_when names the evidence that resolves the item; dedupe_key is stable across rebuilds; no secrets (webhook URLs/tokens) appear in any item field. Verified by fixture tests through the real provider seam.",
+      "acceptance": "provide_integration_actions() emits one ActionItem per integration step through the same source-provider seam as the five shipped providers in operator_console.py, with the new SOURCE_INTEGRATION source kind, AND is wired through the real dashboard aggregation path (the same collect/build/write-cache pipeline the other providers flow through) with its own per-source scope and freshness entries - proven by a test that walks the real build, not a direct provider call alone. Command honesty (resolves the exact_command vocabulary gap): external operator commands (e.g. firebase deploy) are carried in a NEW display-only operator_command catalog field rendered as run-this-yourself copy and never passed through the validated exact_command boundary; exact_command is populated ONLY when a validated dontpanic command exists for the step, else None per the shipped honest-commands rule (producers emit None rather than a command that fails _validate_exact_command_or_raise). Each item populates what/why/credentials_required/operator_command-or-exact_command/evidence_expected/reversible from the integration_catalog; resolution_class is RESOLUTION_OPERATOR_ATTESTED or RESOLUTION_BLOCKED_EXTERNAL for credentialed steps (never RESOLUTION_COMMAND_RESOLVABLE for them); clears_when names the integration-evidence file that resolves the item; dedupe_key stable across rebuilds; no secrets in any field. Verified by fixture tests through the real provider + aggregation seams.",
       "passes": false,
       "depends_on": [],
       "introduces": [
@@ -22,7 +23,8 @@
         "SOURCE_INTEGRATION",
         "integration_catalog",
         "credentials_required",
-        "evidence_expected"
+        "evidence_expected",
+        "operator_command"
       ]
     },
     {
@@ -31,18 +33,20 @@
       "phase": 1,
       "description": "Static-dashboard smoke action (applies today): a runnable check that `dontpanic state export-dashboard` produces a static dashboard that renders, capturing the run output as evidence. Re-homes the static half of firebase-adapter F005 as an operator action.",
       "steps": [
-        "Implement a static-smoke runner: export-dashboard \u2192 assert artifacts present + parseable",
-        "Capture run output as an evidence ref",
-        "Wire as the F001 'static-dashboard smoke' ActionItem's exact command",
-        "Test: smoke passes on a fixture state; fails loudly on missing/garbled state"
+        "Implement write_integration_evidence() mirroring capabilities_setup_evidence patterns (schema_version, 0600/0700, sanitized output)",
+        "Implement the static-smoke runner: export-dashboard into a temp dir, assert artifacts present + parseable",
+        "Write passed/failed evidence records; wire as the F001 static-dashboard-smoke item's exact_command (a real dontpanic command)",
+        "Test: smoke passes on a fixture state and flips the evidence file; fails loudly + records outcome=failed on missing/garbled state"
       ],
-      "acceptance": "Running the static-dashboard smoke verifies export-dashboard artifacts render and records an evidence ref; it fails clearly on missing/garbled state; no Firebase credentials required.",
+      "acceptance": "Running the static-dashboard smoke invokes the real `dontpanic state export-dashboard`, verifies the exported artifacts are present and parseable, and writes an evidence record via a new write_integration_evidence() API that mirrors the shipped capabilities-setup evidence discipline: JSON file at $DONTPANIC_HOME/integrations/evidence/<integration_id>.json with schema_version, integration_id, action_id, captured_at, outcome (passed|failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed before write). This evidence file IS the contract F004's status derivation and the F001 clears_when predicates consume - same path, same schema, no other channel. The smoke fails clearly on missing/garbled state and writes outcome=failed evidence; no Firebase credentials required. Verified by tests over a fixture state dir.",
       "passes": false,
       "depends_on": [
         "F001"
       ],
       "introduces": [
-        "static_dashboard_smoke"
+        "static_dashboard_smoke",
+        "write_integration_evidence",
+        "integration_evidence"
       ]
     },
     {
@@ -51,19 +55,21 @@
       "phase": 2,
       "description": "Gated realtime/deploy actions: represent Firebase functions deploy + realtime smoke (code already shipped+tested in dashboard/functions/) as ActionItems gated on multi-operator need + credentials. Never auto-executes; surfaces the exact command + evidence the operator must capture. Re-homes firebase-adapter F003/F005 realtime half, parked behind its trigger.",
       "steps": [
-        "Model deploy + realtime-smoke as gated ActionItems (requires_human=true, credentials_required=true)",
-        "Encode the trigger condition (multi-operator dashboard needed) in the item's why/availability",
+        "Model deploy + realtime-smoke as always-rendered gated ActionItems (requires_human=true, credentials_required=true, operator_command display-only)",
+        "Encode trigger_condition as a static catalog field; met only via operator-attested evidence record",
+        "Credential presence = presence-only env-var NAME checks; never values, never probes",
         "Reference the shipped dashboard/functions/ + firestore.rules as prerequisites met",
-        "Test: items render as gated/unavailable until trigger + creds present; never execute in-repo"
+        "Test: items render gated until trigger evidence + creds present; never execute; offline fixtures only"
       ],
-      "acceptance": "Firebase deploy + realtime smoke appear as gated operator ActionItems carrying exact commands + required evidence, marked credentials_required and reversible-as-applicable with resolution_class RESOLUTION_OPERATOR_ATTESTED; they never execute in-repo and surface their trigger condition (multi-operator need) in the item text. Verified by fixture tests through the provider seam.",
+      "acceptance": "Firebase deploy + realtime smoke appear as operator ActionItems that ALWAYS render (gating is shown as state, never by hiding the item): each carries its external command in operator_command (display-only; exact_command=None per honest-commands), required evidence, credentials_required, reversible-as-applicable, and resolution_class RESOLUTION_OPERATOR_ATTESTED. Trigger semantics pinned: the trigger is a static catalog field (trigger_condition text, e.g. multi-operator need) that is un-met by default and met ONLY via an operator-attested integration-evidence record - never inferred from live environment state. Credential semantics pinned: credential presence is a presence-only check of declared env-var NAMES (values never read into item fields, no network probes), so the whole feature is provable offline with fixtures. Items never execute anything in-repo. Verified by fixture tests through the provider seam.",
       "passes": false,
       "depends_on": [
         "F001"
       ],
       "introduces": [
         "realtime_smoke_action",
-        "functions_deploy_action"
+        "functions_deploy_action",
+        "trigger_condition"
       ]
     },
     {
@@ -72,19 +78,20 @@
       "phase": 2,
       "description": "Integration status surfacing: per-integration status (configured / deployed / smoke-passing / pending) derived from the catalog + captured evidence and routed through the SHIPPED action surfaces (what-now-logic bands, render-gate, operator console action items) - no separate integrations panel; the new work is the status derivation feeding those surfaces, so the operator sees integration readiness at a glance rather than via command archaeology.",
       "steps": [
-        "Derive per-integration status from catalog + evidence refs",
-        "Render a dashboard integrations panel (configured/deployed/smoke-passing/pending)",
-        "Pending items link to their F001 ActionItem",
-        "Test: status reflects presence/absence of evidence; no secret leak"
+        "Implement the status matrix exactly as pinned in plan.md (per-integration evidence->status rows)",
+        "Route status + pending items through the existing what-now/operator-console surfaces (no new panel)",
+        "Pending items link to their F001 ActionItem; clears_when consumes the F002 evidence files",
+        "Test: each matrix row exercised by fixtures through the real producer-to-render path; no secret leak"
       ],
-      "acceptance": "Each integration's derived status is truthful against catalog + evidence fixtures (configured/deployed/smoke-passing/pending each exercised); integration items render deduped through the existing what-now/operator-console surfaces with pending integrations linking to their ActionItem (dedupe_key stable across rebuilds); resolved integrations clear via their clears_when predicate rather than hand-editing; rendering leaks no secrets. Verified by tests through the real producer-to-render path per the operator-outcome QA sufficiency contract (fixtures enter the real shell surface, not pre-baked shapes).",
+      "acceptance": "Per-integration status is derived from the catalog + integration-evidence files via the pinned status matrix in plan.md (one row per integration mapping evidence presence/outcome to pending/configured/deployed/smoke-passing; each status exercised by fixtures); integration items route through the EXISTING what-now/operator-console surfaces (no separate integrations panel) with pending integrations linking to their ActionItem (dedupe_key stable across rebuilds); resolved integrations clear via their clears_when predicate reading the same evidence files F002 writes - no hand-editing; rendering leaks no secrets. Verified by tests through the real producer-to-render path per the operator-outcome QA sufficiency contract (fixtures enter the real shell surface, not pre-baked shapes).",
       "passes": false,
       "depends_on": [
         "F001",
         "F002"
       ],
       "introduces": [
-        "integration_status"
+        "integration_status",
+        "integration_status_matrix"
       ]
     }
   ]

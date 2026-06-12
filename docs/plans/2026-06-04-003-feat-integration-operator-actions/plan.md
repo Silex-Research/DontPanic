@@ -72,8 +72,25 @@ surface, minimal code.
 - F003 Gated realtime/deploy actions: Firebase functions deploy + realtime smoke as
   ActionItems gated on multi-operator need + credentials. (Re-homes firebase-adapter
   F003/F005 realtime half; parked behind trigger.)
-- F004 Integration status surfacing: dashboard shows each integration as
-  configured / deployed / smoke-passing / pending, consuming the catalog.
+- F004 Integration status surfacing: per-integration status routed through the
+  existing what-now/operator-console surfaces (no separate integrations panel),
+  derived from catalog + evidence per the status matrix below.
+
+## Integration status matrix (F004 contract)
+
+Evidence = integration-evidence files written by write_integration_evidence()
+(F002 contract). Status is derived per integration:
+
+| integration | pending | configured | deployed | smoke-passing |
+|---|---|---|---|---|
+| static-dashboard | no evidence | n/a (no creds) | n/a | smoke evidence outcome=passed |
+| firebase-functions-deploy | no evidence | creds env-var names present (presence-only) | operator-attested deploy evidence | n/a (smoke is a separate row) |
+| firebase-realtime-smoke | no evidence | creds present + deploy evidence exists | n/a | operator-attested smoke evidence outcome=passed |
+| discord-webhook | no evidence | webhook env-var name present (presence-only) | n/a | n/a (configured is terminal) |
+| linear-credentials | no evidence | operator-attested credential evidence | n/a | n/a (configured is terminal; projection work tracked in ext-bridge) |
+
+A stale/failed evidence record (outcome=failed) keeps the integration at its prior
+floor and surfaces the failure in the item copy; statuses never regress silently.
 
 ## Scope (out)
 

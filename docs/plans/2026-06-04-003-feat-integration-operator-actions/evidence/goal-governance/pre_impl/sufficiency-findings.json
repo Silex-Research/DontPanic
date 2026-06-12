@@ -1,0 +1,83 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:3f92753d3141702dc0123bfff38599de45a44533899299e31074276f1946dfc7",
+  "generated_at": "2026-06-12T22:28:29Z",
+  "findings": [
+    {
+      "severity": "critical",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "wiring_gap",
+      "description": "The plan requires exact commands for Firebase deploy and realtime smoke ActionItems, but the shipped ActionItem constructor validates exact_command against the known DontPanic command vocabulary. The plan does not say whether those external Firebase commands become validated operator-only commands, wrapper commands, or a new validated command class, so the catalog can fail at construction or silently lose the exact command outcome.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Pin the exact command strategy before lock: either add an allowlisted external-command validation path with fixture tests, or define DontPanic wrapper commands that print/manual-gate the Firebase steps without executing them.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "integration-catalog-renders",
+      "gap_class": "wiring_gap",
+      "description": "Adding SOURCE_INTEGRATION and provide_integration_actions() is not enough to prove the standard operator surfaces render the items. The shipped dashboard collection path explicitly aggregates each provider and maintains per-source scope and freshness maps; the plan does not require wiring the new provider through that real collect_state/dashboard.build/write_cache path.",
+      "feature_refs": [
+        "F001",
+        "F004"
+      ],
+      "recommendation": "Add acceptance that integration items are included in dashboard.collect_state aggregation, source scope/freshness handling, write_cache/dashboard.build output, and CLI/dashboard renderer parity tests.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "static-smoke-evidence",
+      "gap_class": "integration_gap",
+      "description": "F002 says the static smoke captures run output as an evidence ref, while F004 consumes evidence refs to flip status, but no feature pins the evidence storage location, schema, write API, or clears_when predicate input. Without that contract, the smoke can pass and still fail the completion test requiring status to change without hand-editing.",
+      "feature_refs": [
+        "F002",
+        "F004"
+      ],
+      "recommendation": "Define the evidence ref format and persistence path, then require a fixture test where running the smoke writes that ref and the real provider-to-render path suppresses or updates the resolved ActionItem.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "status-derivation",
+      "gap_class": "parity_gap",
+      "description": "F004's description correctly says there is no separate integrations panel and status must route through shipped what-now/operator-console surfaces, but its steps still instruct implementation to render a dashboard integrations panel. That contradicts the objective contract and can lock a UI path the source-of-truth decision explicitly removed.",
+      "feature_refs": [
+        "F004"
+      ],
+      "recommendation": "Remove the integrations-panel step and replace it with status metadata or ActionItem rendering through the existing what-now bands, render gate, and operator console surfaces only.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "status-derivation",
+      "gap_class": "coverage_gap",
+      "description": "The plan names statuses configured, deployed, smoke-passing, and pending, but it does not pin the per-integration matrix mapping catalog entries and evidence refs to each status. Firebase, static dashboard, Linear, and Discord have different evidence shapes, so two implementations could satisfy the prose while linking or clearing different pending items.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Add a deterministic status matrix for each catalog item, including required evidence keys, derived status, pending ActionItem dedupe_key, and clears_when predicate.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "coverage_gap",
+      "description": "F003 says deploy and realtime-smoke items render gated or unavailable until trigger and credentials are present, but the trigger source and credential-presence semantics are not pinned. That leaves room for hiding gated items, probing real secrets, or making visibility depend on live environment state, all of which conflict with offline fixture proof and no-secret rendering.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Pin trigger evaluation to non-secret fixture/catalog state and require the gated items to render with the trigger condition visible even when credentials are absent; tests should assert no environment secret values are read or rendered.",
+      "finding_class": "scope_guard"
+    }
+  ]
+}
