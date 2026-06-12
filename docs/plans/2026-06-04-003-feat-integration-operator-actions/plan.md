@@ -29,6 +29,7 @@ privacy_tier: internal
 links:
   features: ./features.json
   decisions: ./decisions.jsonl
+  objective_contract: ./objective_contract.json
 ---
 
 # Integration operator-actions
