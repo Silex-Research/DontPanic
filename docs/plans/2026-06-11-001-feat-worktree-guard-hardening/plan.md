@@ -17,9 +17,8 @@ description: >
   guard/cleanup threat model one conjunct at a time. This plan owns the
   wrong-worktree refusal across every plan-mutating entry point and the
   health-gated, audit-first, no-force removal — both built on the canonical
-  binding_health predicate that v0 ships. DESIGN PASS REQUIRED BEFORE LOCK:
-  pin the complete threat model up front (see Design inputs) instead of
-  re-entering one-hole-per-round refinement.
+  binding_health predicate that v0 ships. Design pass COMPLETE (D003):
+  the threat model and the three policy calls are pinned up front.
 ---
 
 ## Target
@@ -39,25 +38,28 @@ threat-model design pass, not incremental acceptance edits. v0 ships the
 substrate (registry, create, snapshots, visibility, the binding_health
 predicate); this plan ships enforcement on top of it.
 
-## Design inputs (resolve in the pre-lock design pass — carried from v0 rounds)
+## Decided policies (D003 — the pre-lock design pass, operator 2026-06-11)
 
-- **Gitignored files in cleanup (v0 round-8 HIGH, plan_contract,
-  f-330122e8396e) — operator lean RECORDED in D002 and mirrored in F002:**
-  ignored files are still untracked human/workspace state and are PRESERVED
-  by default; cleanup reports them separately, and deleting them requires a
-  later explicit, audited cleanup command. The design pass finalizes the
-  mechanics (how git worktree remove's native handling of ignored files is
-  constrained or replaced), not the policy direction.
-- **Evidence-write durability (v0 round-8 MED, f-6d97ffb6949f):** the
-  override path must not perform guarded side effects unless the override
-  record AND binding snapshot are durably written first (fail closed on
-  evidence-write failure).
-- The complete guard threat model to pin in one pass: corrupt registry
-  (fail closed), unbound passthrough (valid registry only), canonical path
-  comparison (realpath both sides), binding_health conjuncts (exists /
-  is_git_worktree / belongs_to_recorded_repo_root / on_recorded_branch,
-  indeterminate = unhealthy), override evidence durability, no merge command
-  (CLI-surface owned), create rollback + audit-first removal ordering.
+- **Cleanup / gitignored files:** PRESERVED by default — they are still local
+  state. Removal is explicit, audited, and REFUSES unless the worktree is
+  clean under the applied policy: any gitignored content present blocks
+  removal with the ignored paths reported explicitly. Deleting ignored
+  content is a future explicit audited cleanup command, out of this plan.
+- **Operator-local config (the D011 environments_json friction):** default is
+  DECLARE missing/divergent config explicitly — never silent divergence.
+  Opt-in copy of a small declared-safe allowlist at create time. NO live
+  symlinks in v1 (a file would have to be explicitly marked safe and
+  non-secret, and none are).
+- **Evidence durability:** an override proceeds only after the override
+  record AND the binding snapshot are durably written; either write failing
+  refuses the guarded command (never proceed un-evidenced).
+- **The complete guard threat model, pinned:** corrupt registry fails closed;
+  unbound passthrough only under a valid registry; canonical (realpath)
+  path comparison both sides; the v0 binding_health conjuncts called, never
+  re-specified (exists / is_git_worktree / belongs_to_recorded_repo_root /
+  on_recorded_branch, indeterminate = unhealthy); override evidence
+  durability as above; no merge command (CLI-surface owned by F001);
+  audit-first removal ordering (unwritable audit log = no removal).
 
 ## Features
 
@@ -66,9 +68,12 @@ predicate); this plan ships enforcement on top of it.
   canonical binding_health predicate; corrupt registry fails closed; override
   requires a reason, durably records override + binding snapshot before any
   side effect; no-merge-command CLI-surface guard.
-- **F002** — safe cleanup: removal eligibility = binding_health AND clean per
-  the contract semantics decided in the design pass; audit-first ordering
-  (unwritable log = no removal); no force path; close never auto-removes.
+- **F002** — safe cleanup: removal eligibility = binding_health AND clean
+  AND no gitignored content present (preserved by default per D003, ignored
+  paths reported); audit-first ordering (unwritable log = no removal); no
+  force path; close never auto-removes.
+- **F003** — operator-local config policy: declare-missing/divergent
+  explicitly at create (default), opt-in allowlist copy, no symlinks in v1.
 
 ## Non-goals
 
