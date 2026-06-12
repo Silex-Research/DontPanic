@@ -2,45 +2,69 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:c93cc01d391d09eff5fbab85aa1c22150270f624d1bda8035a9a668b8a415255",
-  "generated_at": "2026-06-12T22:40:12Z",
+  "input_fingerprint": "sha256:415c018e86e5684a75505fc772c2571ea714bc8dd6cc748f884fcfe6f555a370",
+  "generated_at": "2026-06-12T23:03:04Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "gated-deploy-visibility",
-      "gap_class": "coverage_gap",
-      "description": "The plan requires exact credential requirements, but the proposed catalog mostly pins credentials_required as a boolean and does not lock the per-item env-var name list or display shape. Without a deterministic list of credential names, offline fixture checks and operator-facing setup guidance can pass while still failing to tell the operator what credentials are required.",
+      "journey_id": "status-derivation",
+      "gap_class": "integration_gap",
+      "description": "The plan conflicts on the source of truth for configured status: F002 says downstream consumers read only append-only evidence files, while the F004 matrix derives some configured states from env-var name presence. That can clear or advance integration status without captured evidence.",
       "feature_refs": [
         "F001",
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Pin env-var presence as display-only readiness context, or define an evidence-writing credential probe/attestation record as the only status-clearing input.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "wiring_gap",
+      "description": "The trigger condition for Firebase deploy/realtime work is met only by operator-attested evidence, but the attest command is specified only as integration/outcome/note and does not pin an action identifier or trigger-record type.",
+      "feature_refs": [
+        "F002",
         "F003"
       ],
-      "recommendation": "Pin a non-secret credential_requirements field as a list of required env-var names per integration item, render that list, and test that only names, never values, flow through provider, cache, what-now, and operator-console surfaces.",
+      "recommendation": "Add a deterministic attestation grammar for action_id and trigger records, then bind gated ActionItems to those exact records in clears_when/status derivation.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "status-derivation",
+      "gap_class": "wiring_gap",
+      "description": "Post-clear visibility is not mechanically pinned against the shipped clears_when suppression model. A pending item that clears via clears_when will be suppressed unless the plan defines a separate quiet status item or a band-transform path.",
+      "feature_refs": [
+        "F001",
+        "F004"
+      ],
+      "recommendation": "Specify whether cleared integrations re-emit as quiet status ActionItems, or whether integration clears_when changes band instead of suppressing the item.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
-      "journey_id": "gated-deploy-visibility",
+      "journey_id": "static-smoke-evidence",
       "gap_class": "coverage_gap",
-      "description": "F003 says gated Firebase deploy and realtime-smoke items always render, while F004 says only genuinely pending integrations occupy the needs-action band. The plan does not pin the band/status behavior for unmet triggers, so an implementation could either hide the item or incorrectly show not-yet-needed Firebase work as needing action.",
+      "description": "The static-dashboard smoke acceptance says rendered artifacts must exist, but artifact existence alone is weaker than render-proof and may not fail parseable-but-unrenderable dashboard state.",
       "feature_refs": [
-        "F003",
-        "F004"
+        "F002"
       ],
-      "recommendation": "Pin the gated-state matrix: unmet trigger renders visibly outside needs_action with trigger_condition copy, met trigger plus missing requirements becomes pending, and passed evidence moves the item to the quiet band.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Require the smoke to invoke the real dashboard renderer or browser/DOM path and assert non-empty rendered surfaces from the exported state.",
+      "finding_class": "implementation_detail"
     },
     {
-      "severity": "medium",
-      "journey_id": "static-smoke-evidence",
-      "gap_class": "integration_gap",
-      "description": "F002 tests the smoke writer and F004 tests status derivation with fixtures, but the plan does not require the completion-test path where the rendered static-dashboard ActionItem exact_command is executed, writes evidence, and then the real provider-to-render rebuild flips that integration's status without hand-editing.",
+      "severity": "high",
+      "journey_id": "integration-catalog-renders",
+      "gap_class": "parity_gap",
+      "description": "The proposed source/provider wiring pins the main build path, but the standard dashboard can also flow through fleet/project projection rehydration, where unknown sources and new display fields can be filtered or dropped.",
       "feature_refs": [
         "F001",
-        "F002",
         "F004"
       ],
-      "recommendation": "Add one offline end-to-end fixture test that reads the rendered static-dashboard item, runs its exact_command against fixture state, rebuilds the real cache/surface path, and asserts the static-dashboard integration moves to smoke-passing or quiet status.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Add explicit fleet/selected-dashboard projection coverage for SOURCE_INTEGRATION and all new display fields through fleet-what-now and operator-triage rendering.",
+      "finding_class": "plan_contract"
     }
   ]
 }

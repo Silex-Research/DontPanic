@@ -84,12 +84,13 @@ Evidence = integration-evidence files written by write_integration_evidence()
 | integration | pending | configured | deployed | smoke-passing |
 |---|---|---|---|---|
 | static-dashboard | no evidence | n/a (no creds) | n/a | smoke evidence outcome=passed |
-| firebase-functions-deploy | no evidence | creds env-var names present (presence-only) | operator-attested deploy evidence | n/a (smoke is a separate row) |
-| firebase-realtime-smoke | no evidence | creds present + deploy evidence exists | n/a | operator-attested smoke evidence outcome=passed |
-| discord-webhook | no evidence | webhook env-var name present (presence-only) | n/a | n/a (configured is terminal) |
-| linear-credentials | no evidence | operator-attested credential evidence | n/a | n/a (configured is terminal; projection work tracked in ext-bridge) |
+| firebase-functions-deploy | no evidence | attested credential-setup evidence (action_id firebase-creds) | attested deploy evidence (action_id firebase-deploy) | n/a (smoke is a separate row) |
+| firebase-realtime-smoke | no evidence | configured = deploy row reached deployed | n/a | attested smoke evidence outcome=passed (action_id firebase-realtime-smoke) |
+| discord-webhook | no evidence | attested webhook-setup evidence (action_id discord-webhook) | n/a | n/a (configured is terminal) |
+| linear-credentials | no evidence | attested credential evidence (action_id linear-creds) | n/a | n/a (configured is terminal; projection work tracked in ext-bridge) |
 
-Evidence files are append-only JSONL (one per integration; records never rewritten).
+Status derives EXCLUSIVELY from evidence records (env-var presence is a display
+hint, never a status driver). Evidence files are append-only JSONL (one per integration; records never rewritten).
 The status FLOOR is the highest status achieved by passed records in the history; a
 later outcome=failed record surfaces a failure flag in the item copy without
 regressing the floor - statuses never regress silently and prior success is never
