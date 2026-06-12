@@ -107,8 +107,30 @@ def js_module_id(rel_path: str) -> str:
     return f"js_module:{rel_path}"
 
 
+def ts_module_id(rel_path: str) -> str:
+    return f"ts_module:{rel_path}"
+
+
 def external_id(name: str) -> str:
     return f"external:{name}"
+
+
+# Plan C2 — TypeScript/TSX/JSX extraction. First-party TS can live anywhere
+# in a repo, so the TS scan is repo-rooted; the NON-PRODUCT trees below are
+# excluded from BOTH this scan and the baseline language presence scan:
+# documentation mockups (docs/design/* ships .jsx design canvases) and skill
+# assets (claude/skills/*/ carries .tsx templates) are reference material,
+# not product code, and must not pin a repo's coverage ceiling low.
+_TS_EXTS = (".ts", ".tsx", ".jsx")
+NON_PRODUCT_TREE_PREFIXES: tuple[str, ...] = ("docs/", "claude/skills/")
+TS_EXTRACTOR = "ts_import_crawler"
+
+
+def in_non_product_tree(rel_posix: str) -> bool:
+    """True when a repo-root-relative POSIX path sits inside a documentation-
+    mockup or skill-asset tree (single source of truth for C2 F002)."""
+    probe = rel_posix if rel_posix.endswith("/") else rel_posix + "/"
+    return any(probe.startswith(p) for p in NON_PRODUCT_TREE_PREFIXES)
 
 
 def _iter_js_files(repo_root: Path) -> list[Path]:
@@ -133,22 +155,93 @@ def _iter_js_files(repo_root: Path) -> list[Path]:
     return sorted(out)
 
 
-def _resolve_relative(spec: str, from_file: Path, repo_root: Path, known: set[Path]) -> Path | None:
-    """Resolve a relative import specifier to a known JS file, or None."""
+def _resolve_relative(
+    spec: str,
+    from_file: Path,
+    repo_root: Path,
+    known: set[Path],
+    exts: tuple[str, ...] = _JS_EXTS,
+) -> Path | None:
+    """Resolve a relative import specifier to a known module file, or None."""
     base = (from_file.parent / spec).resolve()
     candidates = [base]
-    if base.suffix not in _JS_EXTS:
-        candidates += [base.with_suffix(ext) for ext in _JS_EXTS]
-        candidates += [base / f"index{ext}" for ext in _JS_EXTS]
+    if base.suffix not in exts:
+        candidates += [base.with_suffix(ext) for ext in exts]
+        candidates += [base / f"index{ext}" for ext in exts]
     for c in candidates:
         if c in known:
             return c
     return None
 
 
+def _iter_ts_files(repo_root: Path) -> list[Path]:
+    """Plan C2 — repo-rooted bounded traversal for first-party .ts/.tsx/.jsx,
+    pruning the C1 skip-dirs, dot-dirs, and the non-product trees."""
+    root = Path(repo_root)
+    if not root.is_dir():
+        return []
+    out: list[Path] = []
+    seen = 0
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel_dir = Path(dirpath).relative_to(root).as_posix()
+        rel_prefix = "" if rel_dir == "." else rel_dir + "/"
+        dirnames[:] = sorted(
+            d
+            for d in dirnames
+            if d not in _SKIP_PARTS
+            and not d.startswith(".")
+            and not in_non_product_tree(rel_prefix + d)
+        )
+        for name in sorted(filenames):
+            seen += 1
+            if seen > _SCAN_ENTRY_CAP:
+                return sorted(out)
+            if name.endswith(_TS_EXTS):
+                out.append(Path(dirpath) / name)
+    return sorted(out)
+
+
+def extract_ts_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Plan C2 F001 — first-party TypeScript/TSX/JSX module graph: ts_module
+    nodes (source_path-bearing) + relative-import edges; import-type and
+    export-from forms parse through the SAME masked-specifier pipeline as C1;
+    an import that resolves to nothing surfaces as a low-confidence unresolved
+    endpoint, never dropped. Never raises."""
+    repo_root = Path(repo_root)
+    files = _iter_ts_files(repo_root)
+    return _extract_module_graph(
+        files,
+        repo_root,
+        mod_id=ts_module_id,
+        node_type="ts_module",
+        extractor=TS_EXTRACTOR,
+        resolve_exts=_TS_EXTS + _JS_EXTS,
+    )
+
+
 def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Return ``(nodes, edges)`` for the dashboard ES module graph. Never raises."""
     files = _iter_js_files(repo_root)
+    return _extract_module_graph(
+        files,
+        Path(repo_root),
+        mod_id=js_module_id,
+        node_type="js_module",
+        extractor="js_import_crawler",
+        resolve_exts=_JS_EXTS,
+    )
+
+
+def _extract_module_graph(
+    files: list[Path],
+    repo_root: Path,
+    *,
+    mod_id,
+    node_type: str,
+    extractor: str,
+    resolve_exts: tuple[str, ...],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Shared C1/C2 module-graph extraction over a pre-scanned file set."""
     known = {f.resolve() for f in files}
     rel_of = {f.resolve(): str(f.relative_to(repo_root)) for f in files}
 
@@ -158,7 +251,7 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
 
     for f in files:
         rel = str(f.relative_to(repo_root))
-        from_id = js_module_id(rel)
+        from_id = mod_id(rel)
         try:
             text = f.read_text(encoding="utf-8")
         except OSError:
@@ -168,7 +261,7 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
         nodes.append(
             {
                 "id": from_id,
-                "type": "js_module",
+                "type": node_type,
                 "lane_id": LANE_ID,
                 "title": f.name,
                 "summary": "",
@@ -201,7 +294,7 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
                     "from": from_id,
                     "to": ext_id,
                     "source_path": rel,  # the importer cites this edge (B1#1)
-                    "extractor": "js_import_crawler",
+                    "extractor": extractor,
                     "unresolved": True,
                 }
             )
@@ -228,9 +321,9 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
                 _add_external(spec, "unknown", detail="dynamic import — interpolated specifier")
                 continue
             if spec.startswith("."):
-                target = _resolve_relative(spec, f, repo_root, known)
+                target = _resolve_relative(spec, f, repo_root, known, resolve_exts)
                 if target is not None:
-                    to_id = js_module_id(rel_of[target])
+                    to_id = mod_id(rel_of[target])
                     if to_id != from_id:
                         edges.append(
                             {
@@ -239,7 +332,7 @@ def extract_js_modules(repo_root: Path) -> tuple[list[dict[str, Any]], list[dict
                                 "from": from_id,
                                 "to": to_id,
                                 "source_path": rel,  # importer cites this edge (B1#1)
-                                "extractor": "js_import_crawler",
+                                "extractor": extractor,
                             }
                         )
                     continue

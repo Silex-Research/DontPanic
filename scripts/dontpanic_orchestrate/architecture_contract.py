@@ -78,6 +78,7 @@ _NODE_EVIDENCE: dict[str, tuple[str, str, str]] = {
     "capability": ("manifest", "declared", "capability_manifest_scan"),
     "page": ("code", "observed", "dashboard_page_scan"),
     "js_module": ("code", "observed", "js_import_crawler"),
+    "ts_module": ("code", "observed", "ts_import_crawler"),  # Plan C2
     "metadata": ("manifest", "observed", "architecture_fingerprint"),
     "external": ("external", "declared", "capability_manifest_scan"),
     "step": ("doc", "declared", "authored_flow"),
@@ -101,6 +102,7 @@ EXTRACTORS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("capability_manifest_scan", "manifest", ("capability",)),
     ("dashboard_page_scan", "code", ("page",)),
     ("js_import_crawler", "code", ("js_module",)),  # Plan C slice 1
+    ("ts_import_crawler", "code", ("ts_module",)),  # Plan C2
     ("architecture_fingerprint", "manifest", ("metadata",)),
 )
 

@@ -2,7 +2,29 @@
   "task_id": "2026-06-08-005-feat-architecture-ts-extractor-plan-c2",
   "schema_version": "1.0",
   "features": [
-    {"id":"F001","category":"functional","description":"Parse first-party TypeScript/JSX ES imports into as-built ts_module nodes + relative-import edges, contract-stamped; import-type and re-export forms handled; bare/unresolved imports surface as low-confidence unresolved endpoints. Deterministic + bounded, mirroring the JS crawler.","acceptance":"an extractor scans first-party .ts/.tsx/.jsx files into ts_module nodes (source_path-bearing) plus relative-import edges; import-type and export-from forms are parsed; an import that resolves to nothing surfaces as a low-confidence unresolved endpoint (never dropped); build_view_state includes these nodes/edges with source_kind code.","passes":false,"introduces":["ts_module","ts_import_crawler"]},
-    {"id":"F002","category":"functional","description":"Exclude documentation mockups and vendored skill assets from the architecture model + the coverage language scan, and move typescript/jsx from unextracted to extracted, so a repo whose only TS/JSX was non-product is no longer falsely ceiling-capped.","acceptance":"documentation-mockup and skill-asset trees are excluded from both the extractor scan and the coverage presence scan; typescript and jsx are no longer reported as missing_extractor when first-party TS/JSX is extracted or absent; for DontPanic itself (only non-product TS/JSX) the confidence ceiling is no longer forced low by typescript/jsx.","passes":false,"introduces":["missing_extractor","confidence_ceiling"]}
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Parse first-party TypeScript/JSX ES imports into as-built ts_module nodes + relative-import edges, contract-stamped; import-type and re-export forms handled; bare/unresolved imports surface as low-confidence unresolved endpoints. Deterministic + bounded, mirroring the JS crawler.",
+      "acceptance": "an extractor scans first-party .ts/.tsx/.jsx files into ts_module nodes (source_path-bearing) plus relative-import edges; import-type and export-from forms are parsed; an import that resolves to nothing surfaces as a low-confidence unresolved endpoint (never dropped); build_view_state includes these nodes/edges with source_kind code.",
+      "passes": true,
+      "introduces": [
+        "ts_module",
+        "ts_import_crawler"
+      ],
+      "verified_by": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Exclude documentation mockups and vendored skill assets from the architecture model + the coverage language scan, and move typescript/jsx from unextracted to extracted, so a repo whose only TS/JSX was non-product is no longer falsely ceiling-capped.",
+      "acceptance": "documentation-mockup and skill-asset trees are excluded from both the extractor scan and the coverage presence scan; typescript and jsx are no longer reported as missing_extractor when first-party TS/JSX is extracted or absent; for DontPanic itself (only non-product TS/JSX) the confidence ceiling is no longer forced low by typescript/jsx.",
+      "passes": true,
+      "introduces": [
+        "missing_extractor",
+        "confidence_ceiling"
+      ],
+      "verified_by": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+    }
   ]
 }

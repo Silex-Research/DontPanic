@@ -34,12 +34,15 @@ def test_language_marker_matrix_pinned():
 
 
 def test_tier_split_pinned():
-    assert ab.TIER2_LANGUAGES == {"python", "javascript"}
-    assert ab.TIER1_LANGUAGES == {"typescript", "jsx", "swift", "kotlin", "go", "rust"}
-    # Scope guard: the tier-2 extractor set never grows in C0 (Plan C+ owns that).
+    # Plan C2 promoted typescript/jsx to tier 2 (ts_import_crawler) — the C0
+    # scope guard anticipated exactly this growth ("Plan C+ owns that").
+    assert ab.TIER2_LANGUAGES == {"python", "javascript", "typescript", "jsx"}
+    assert ab.TIER1_LANGUAGES == {"swift", "kotlin", "go", "rust"}
     assert ab.TIER2_EXTRACTORS == {
         "python": "python_import_crawler",
         "javascript": "js_import_crawler",
+        "typescript": "ts_import_crawler",
+        "jsx": "ts_import_crawler",
     }
 
 
