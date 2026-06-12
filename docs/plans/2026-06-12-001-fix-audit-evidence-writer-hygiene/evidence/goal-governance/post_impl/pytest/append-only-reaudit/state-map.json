@@ -1,7 +1,7 @@
 {
   "journey": "append-only-reaudit",
   "surface": "core",
-  "entered_through": "real writer seam — two sequential cd.dispatch_completion_audit calls on the same plan dir; on-disk audit directory inspected between calls",
+  "entered_through": "real writer seam \u2014 two sequential cd.dispatch_completion_audit calls on the same plan dir; on-disk audit directory inspected between calls",
   "states": {
     "second-audit-appends": [
       "TestF002AppendOnlyIterations::test_two_audits_write_two_iterations_first_preserved",
@@ -21,8 +21,11 @@
     ],
     "entry-points-derive-not-hardcode": [
       "TestF002AppendOnlyIterations::test_gate_entry_points_default_to_derived_iteration"
+    ],
+    "latest-reader-mixed-auditor": [
+      "TestF002AppendOnlyIterations::test_latest_reader_in_mixed_auditor_directory"
     ]
   },
-  "result": "7 passed",
+  "result": "8 passed",
   "paid_calls": 0
 }

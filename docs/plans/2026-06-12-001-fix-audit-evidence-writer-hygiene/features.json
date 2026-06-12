@@ -34,9 +34,9 @@
         "collision_refusal"
       ],
       "evidence": {
-        "tests": "scripts/dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations (7 tests)",
+        "tests": "scripts/dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF002AppendOnlyIterations (8 tests)",
         "journey_evidence": "evidence/goal-governance/post_impl/pytest/append-only-reaudit/",
-        "notes": "_next_iteration derives per-auditor max+1; _write_envelope refuses collisions naming the file; dispatch_completion_audit/audit_plan/close_plan default iteration=None (derived). Reader already selected highest iteration (_load_latest_audit_envelope) - pinned by test."
+        "notes": "_next_iteration derives per-auditor max+1; _write_envelope refuses collisions naming the file; dispatch_completion_audit/audit_plan/close_plan default iteration=None (derived). Reader already selected highest iteration (_load_latest_audit_envelope) - pinned by test. Audit-i2 overlay remediated (D004): _load_latest_audit_envelope grew an optional auditor filter (per-auditor highest) pinned by a mixed-auditor reader test; unscoped global behavior preserved for the completed-plan backstop."
       }
     }
   ]

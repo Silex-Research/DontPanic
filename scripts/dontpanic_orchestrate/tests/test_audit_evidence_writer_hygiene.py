@@ -192,6 +192,27 @@ class TestF002AppendOnlyIterations:
         t = _run(plan_dir, CLEAN_RESPONSE)
         assert t.iteration == 2  # not 6
 
+    def test_latest_reader_in_mixed_auditor_directory(self, plan_dir):
+        # codex audit-iteration overlay D004: per-auditor numbering means a
+        # foreign auditor's leftover envelope can carry a HIGHER iteration
+        # number than the current auditor's newest verdict. The reader must
+        # support per-auditor selection so callers can honour the contract's
+        # "highest iteration FOR THE AUDITOR".
+        _run(plan_dir, CLEAN_RESPONSE)  # codex iteration 1
+        t2 = _run(plan_dir, '[{"finding_id": "auditor-overlay-009", "agree": true, "severity_disposition": "agree", "comment": "later"}]')  # codex iteration 2
+        audit_dir = plan_dir / "evidence" / "goal-governance" / "post_impl" / "audit"
+        foreign = json.loads(Path(_real(t2.envelope_path)).read_text())
+        foreign["auditor_agent"] = "claude"
+        foreign["iteration"] = 5
+        foreign["findings_dispositions"] = []
+        (audit_dir / "audit-claude-5.json").write_text(json.dumps(foreign))
+        # auditor-scoped read: codex's own latest, not the foreign 5
+        scoped = cg._load_latest_audit_envelope(plan_dir, auditor="codex")
+        assert scoped.auditor_agent == "codex" and scoped.iteration == 2
+        # unscoped read keeps the historical global-highest behaviour
+        unscoped = cg._load_latest_audit_envelope(plan_dir)
+        assert unscoped.iteration == 5
+
     def test_gate_entry_points_default_to_derived_iteration(self):
         import inspect
 
