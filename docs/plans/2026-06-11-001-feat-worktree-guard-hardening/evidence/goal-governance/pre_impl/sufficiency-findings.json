@@ -2,63 +2,41 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
-  "generated_at": "2026-06-12T02:16:55Z",
+  "input_fingerprint": "sha256:cd15841291ff01894a13cfb570c27814446824c9993f6be128c6d3bc3debc9ab",
+  "generated_at": "2026-06-12T02:21:38Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "safe-cleanup",
       "gap_class": "integration_gap",
-      "description": "F002 states removal is eligible only when the binding passes binding_health, but later requires a registry-only completion path when the worktree path no longer exists after a prior audited removal intent. A missing worktree should fail binding_health, so the precedence between fail-closed health gating and registry-only completion is contradictory.",
+      "description": "F002 has an ordering ambiguity: it says the removal-OUTCOME entry is appended after destructive steps finish, but later says only then does it run git worktree remove and delete the registry binding. That leaves the audit/removal/registry mutation sequence underdetermined.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Explicitly define registry-only completion as a narrow exception: strict registry load plus matching removal-INTENT plus absent worktree may delete only the stale binding, with no filesystem deletion and its own audit behavior.",
+      "recommendation": "Pin the exact sequence as preflight, durable removal-INTENT append, git worktree remove without force, registry binding delete, then removal-OUTCOME append with defined behavior for each failure point.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
-      "journey_id": "local-config-honesty",
-      "gap_class": "parity_gap",
-      "description": "F003 says the initial allowlist entry is the repo-root-relative path environments_json while also saying it is the file named environments.json and that the exact string is pinned. That ambiguity can make implementation and tests disagree on the actual allowlisted path.",
-      "feature_refs": [
-        "F003"
-      ],
-      "recommendation": "Pin the module constant value unambiguously, likely exactly `environments.json`, and use a separate constant name if the identifier should be `environments_json`.",
-      "finding_class": "editorial"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "wrong-worktree-guard",
+      "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F001 requires an override flag with a required reason and says refusals name the exact override command, but the CLI spelling and reason argument shape are not pinned. The user-facing override journey needs deterministic command text and tests that prove the intended surface.",
+      "description": "F002 introduces a registry-only completion path after a prior audited intent, but the acceptance text only says it is itself audited. It does not pin whether that completion audit must be written before deleting the stale registry entry or how unwritable audit storage behaves on this path.",
       "feature_refs": [
-        "F001"
+        "F002"
       ],
-      "recommendation": "Pin the exact override option and reason syntax for all guarded entry points, then assert the refusal output and successful override path use that surface consistently.",
+      "recommendation": "Add explicit acceptance and tests for registry-only completion: audit entry first, refuse if that audit write fails, then delete only the stale registry binding.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
-      "journey_id": "safe-cleanup",
+      "journey_id": "local-config-honesty",
       "gap_class": "coverage_gap",
-      "description": "F002 specifies an important post-destruction failure mode where the worktree removal succeeds but the OUTCOME audit append fails, requiring a non-zero exit that says removal succeeded but outcome recording failed. The listed tests do not explicitly cover that behavior.",
+      "description": "F003 pins behavior when an allowlisted source file exists in repo_root, but it does not specify the source-absent matrix for environments.json. If the base checkout lacks the allowlisted file, create-time notices and --copy-local-config behavior could silently no-op.",
       "feature_refs": [
-        "F002"
+        "F003"
       ],
-      "recommendation": "Add a fixture that allows intent write and worktree removal, then fails the outcome append, asserting the exit status, message, filesystem state, and registry state.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "low",
-      "journey_id": "safe-cleanup",
-      "gap_class": "coverage_gap",
-      "description": "F002 adds safety rules for nested .git directories and registered submodules, including ignored-content preservation recursively, but the named test list does not include fixtures for those cases. Those rules protect the same local-state preservation outcome as ignored files in the parent worktree.",
-      "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Add explicit nested-.git and registered-submodule fixtures, including clean, dirty, untracked, and ignored-content cases where applicable.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Define and test source-absent cases explicitly: source absent and target absent, source absent and target present, and source absent with --copy-local-config.",
+      "finding_class": "matrix_pin"
     }
   ]
 }
