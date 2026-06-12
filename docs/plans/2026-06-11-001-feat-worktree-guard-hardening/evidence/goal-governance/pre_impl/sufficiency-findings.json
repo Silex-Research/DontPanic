@@ -2,40 +2,74 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:cd15841291ff01894a13cfb570c27814446824c9993f6be128c6d3bc3debc9ab",
-  "generated_at": "2026-06-12T02:21:38Z",
+  "input_fingerprint": "sha256:a849948a8a902db56928f3849dab72678a98c74ceee278057f37229a6ee83576",
+  "generated_at": "2026-06-12T02:47:06Z",
   "findings": [
     {
       "severity": "high",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "coverage_gap",
+      "description": "F001 pins durable override evidence in prose, but the proposed tests collapse the failure mode to a generic write-failure test. That does not prove independent write, flush, and fsync failures for the override record versus the binding snapshot all refuse before the guarded command executes.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Add injected failure fixtures for write, flush, and fsync on both evidence artifacts independently, including partial-success orderings, and assert no guarded side effect runs.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
       "journey_id": "safe-cleanup",
-      "gap_class": "integration_gap",
-      "description": "F002 has an ordering ambiguity: it says the removal-OUTCOME entry is appended after destructive steps finish, but later says only then does it run git worktree remove and delete the registry binding. That leaves the audit/removal/registry mutation sequence underdetermined.",
+      "gap_class": "coverage_gap",
+      "description": "F002 requires append AND fsync for removal intent and outcome entries, but the proposed tests name unwritable intent log and outcome append failure only. Fsync failure before physical removal is materially different and must be proven to refuse with the worktree untouched.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Pin the exact sequence as preflight, durable removal-INTENT append, git worktree remove without force, registry binding delete, then removal-OUTCOME append with defined behavior for each failure point.",
+      "recommendation": "Add explicit fsync-failure fixtures for the intent entry and final outcome entry, with assertions on filesystem state, registry state, exit status, and recovery guidance.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "safe-cleanup",
+      "gap_class": "integration_gap",
+      "description": "F002 says a git worktree remove failure appends an OUTCOME entry, but it does not pin what happens if that failure-outcome append or fsync itself fails. The step-level contract promises each failure arm is pinned, so this audit reporting failure path remains underspecified.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Define the step-5 outcome-write failure behavior explicitly: binding remains intact, command exits non-zero, the operator gets loud degraded-audit guidance, and a fixture proves it.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F002 introduces a registry-only completion path after a prior audited intent, but the acceptance text only says it is itself audited. It does not pin whether that completion audit must be written before deleting the stale registry entry or how unwritable audit storage behaves on this path.",
+      "description": "F002's cleanup policy covers registered submodules with modified, staged, untracked, or gitignored content, but the proposed test list only names a dirty-submodule refusal. That leaves the recursive preservation rule underpinned for ignored and untracked submodule content.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Add explicit acceptance and tests for registry-only completion: audit entry first, refuse if that audit write fails, then delete only the stale registry binding.",
+      "recommendation": "Add distinct submodule fixtures for staged-only, untracked-only, and gitignored-only content, each asserting reported paths and no physical removal.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "local-config-honesty",
-      "gap_class": "coverage_gap",
-      "description": "F003 pins behavior when an allowlisted source file exists in repo_root, but it does not specify the source-absent matrix for environments.json. If the base checkout lacks the allowlisted file, create-time notices and --copy-local-config behavior could silently no-op.",
+      "gap_class": "integration_gap",
+      "description": "F001 places worktree create outside the wrong-worktree guard, while F003 defines local-config comparison against repo_root without pinning which checkout supplies that source when create is invoked from an existing worktree or symlinked path. That leaves missing/divergent notices and opt-in copies dependent on invocation context.",
       "feature_refs": [
+        "F001",
         "F003"
       ],
-      "recommendation": "Define and test source-absent cases explicitly: source absent and target absent, source absent and target present, and source absent with --copy-local-config.",
+      "recommendation": "Define the local-config source root deterministically and add create tests from main checkout, an existing plan worktree, and a symlinked spelling of the same checkout.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "low",
+      "journey_id": "wrong-worktree-guard",
+      "gap_class": "coverage_gap",
+      "description": "F001 states that override requires a reason, but the proposed acceptance tests do not explicitly pin absent, empty, or whitespace-only reason refusal. Without that matrix cell, the durable evidence path could accept non-substantive override evidence.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Add parser or CLI-surface tests proving override without a nonblank reason refuses before any evidence write or guarded command execution.",
       "finding_class": "matrix_pin"
     }
   ]
