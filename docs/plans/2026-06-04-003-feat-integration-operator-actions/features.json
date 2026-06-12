@@ -6,7 +6,7 @@
       "id": "F001",
       "category": "functional",
       "phase": 1,
-      "description": "Integration ActionItem catalog: declare the operator-owned integration steps (Firebase functions deploy, Firebase realtime smoke, static-dashboard smoke, Linear credential setup, Discord webhook setup) as ActionItems, each carrying what/why/credentials_required/exact_command/evidence_expected/reversible. Data + projection, not credential handling.",
+      "description": "Integration ActionItem catalog: declare the operator-owned integration steps (Firebase functions deploy, Firebase realtime smoke, static-dashboard smoke, Linear credential setup, Discord webhook setup) as ActionItems produced by a new provide_integration_actions() source in operator_console.py with its own SOURCE_INTEGRATION source kind, each carrying what/why/credentials_required/exact_command/evidence_expected/reversible plus the shipped control-plane spine fields (audience, dedupe_key, plain_consequence, clears_when, resolution_class). Data + projection, not credential handling.",
       "steps": [
         "Enumerate the known operator integration steps + their exact commands",
         "Model each as an ActionItem (audience=operator, requires_human where creds needed)",
@@ -14,7 +14,7 @@
         "Dedupe by dedupe_key; no-secret-leak assertion",
         "Fixture tests over the catalog projection"
       ],
-      "acceptance": "The catalog emits one ActionItem per integration step with what/why/creds/exact-command/evidence/reversible populated; renders deduped across dashboard + CLI/JSON; leaks no secrets. Verified by fixture tests.",
+      "acceptance": "provide_integration_actions() emits one ActionItem per integration step through the same source-provider seam as gate/capability/reconcile/supervisor/architecture items, with source kind 'integration' and what/why/creds/exact-command/evidence/reversible populated; spine fields are populated (resolution_class reflects credentials_required - OPERATOR_ATTESTED or BLOCKED_EXTERNAL, never COMMAND_RESOLVABLE for credentialed steps; clears_when names the evidence that resolves the item); items render deduped across dashboard + CLI/JSON via the existing renderer-parity surfaces; leaks no secrets (webhook URLs/tokens never appear in item text). Verified by fixture tests through the real provider seam.",
       "passes": false,
       "depends_on": []
     },
@@ -56,14 +56,14 @@
       "id": "F004",
       "category": "functional",
       "phase": 2,
-      "description": "Integration status surfacing: the dashboard shows each integration as configured / deployed / smoke-passing / pending by consuming the catalog + captured evidence, so the operator sees integration readiness at a glance rather than via command archaeology.",
+      "description": "Integration status surfacing: per-integration status (configured / deployed / smoke-passing / pending) derived from the catalog + captured evidence and routed through the SHIPPED action surfaces (what-now-logic bands, render-gate, operator console action items) - no separate integrations panel; the new work is the status derivation feeding those surfaces, so the operator sees integration readiness at a glance rather than via command archaeology.",
       "steps": [
         "Derive per-integration status from catalog + evidence refs",
         "Render a dashboard integrations panel (configured/deployed/smoke-passing/pending)",
         "Pending items link to their F001 ActionItem",
         "Test: status reflects presence/absence of evidence; no secret leak"
       ],
-      "acceptance": "The dashboard shows truthful per-integration status driven by catalog + evidence; pending integrations link to their ActionItem; rendering leaks no secrets. Verified by tests.",
+      "acceptance": "Each integration's derived status is truthful against catalog + evidence fixtures (configured/deployed/smoke-passing/pending each exercised); pending integrations surface as ActionItems in the standard what-now flow with working linkage (dedupe_key stable across rebuilds); resolved integrations clear via their clears_when predicate rather than hand-editing; rendering through the existing dashboard surfaces leaks no secrets. Verified by tests through the real producer-to-render path (per the operator-outcome QA sufficiency contract: fixtures must enter the real shell surface, not assert pre-baked shapes).",
       "passes": false,
       "depends_on": [
         "F001",
