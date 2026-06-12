@@ -15,7 +15,7 @@
         "Dedupe by dedupe_key; no-secret-leak assertion",
         "Fixture tests through the real provider + aggregation path"
       ],
-      "acceptance": "provide_integration_actions() emits one ActionItem per integration step through the same source-provider seam as the five shipped providers in operator_console.py, with the new SOURCE_INTEGRATION source kind, AND is wired through the real dashboard aggregation path (the same collect/build/write-cache pipeline the other providers flow through) with its own per-source scope and freshness entries - proven by a test that walks the real build, not a direct provider call alone. Command honesty (resolves the exact_command vocabulary gap): external operator commands (e.g. firebase deploy) are carried in a NEW display-only operator_command catalog field rendered as run-this-yourself copy and never passed through the validated exact_command boundary; exact_command is populated ONLY when a validated dontpanic command exists for the step, else None per the shipped honest-commands rule (producers emit None rather than a command that fails _validate_exact_command_or_raise). Each item populates what/why/credentials_required/operator_command-or-exact_command/evidence_expected/reversible from the integration_catalog; resolution_class is RESOLUTION_OPERATOR_ATTESTED or RESOLUTION_BLOCKED_EXTERNAL for credentialed steps (never RESOLUTION_COMMAND_RESOLVABLE for them); clears_when names the integration-evidence file that resolves the item; dedupe_key stable across rebuilds; no secrets in any field. Verified by fixture tests through the real provider + aggregation seams.",
+      "acceptance": "provide_integration_actions() emits one ActionItem per integration step through the same source-provider seam as the five shipped providers in operator_console.py, with the new SOURCE_INTEGRATION source kind, AND is wired through the real dashboard aggregation path (the same collect/build/write-cache pipeline the other providers flow through) with its own per-source scope and freshness entries - proven by a test that walks the real build, not a direct provider call alone. Command honesty (resolves the exact_command vocabulary gap): external operator commands (e.g. firebase deploy) are carried in a NEW display-only operator_command catalog field rendered as run-this-yourself copy and never passed through the validated exact_command boundary; exact_command is populated ONLY when a validated dontpanic command exists for the step, else None per the shipped honest-commands rule (producers emit None rather than a command that fails _validate_exact_command_or_raise). Each item populates what/why/credentials_required/operator_command-or-exact_command/evidence_expected/reversible from the integration_catalog; resolution_class is RESOLUTION_OPERATOR_ATTESTED or RESOLUTION_BLOCKED_EXTERNAL for credentialed steps (never RESOLUTION_COMMAND_RESOLVABLE for them); clears_when names the integration-evidence file that resolves the item; dedupe_key stable across rebuilds; no secrets in any field. Verified by fixture tests through the real provider + aggregation seams. Serialization round-trip pinned: the new display fields (operator_command, credentials_required, evidence_expected, trigger_condition) are carried by ActionItem.to_dict and survive the shipped normalization chain (triage payload, what-now payload, operator-console rendering) without being dropped - proven by a round-trip test through each normalizer.",
       "passes": false,
       "depends_on": [],
       "introduces": [
@@ -31,14 +31,15 @@
       "id": "F002",
       "category": "functional",
       "phase": 1,
-      "description": "Static-dashboard smoke action (applies today): a runnable check that `dontpanic state export-dashboard` produces a static dashboard that renders, capturing the run output as evidence. Re-homes the static half of firebase-adapter F005 as an operator action.",
+      "description": "Integration evidence writer + entry points: (a) the static-dashboard smoke - a runnable check that `dontpanic state export-dashboard` output actually feeds the real dashboard build (render-proof, not just parse-proof); (b) an operator attestation command for steps whose proof lives outside the repo (deploys, external smokes, credential setups). Both write the same append-only evidence contract. Re-homes the static half of firebase-adapter F005 as an operator action.",
       "steps": [
-        "Implement write_integration_evidence() mirroring capabilities_setup_evidence patterns (schema_version, 0600/0700, sanitized output)",
-        "Implement the static-smoke runner: export-dashboard into a temp dir, assert artifacts present + parseable",
-        "Write passed/failed evidence records; wire as the F001 static-dashboard-smoke item's exact_command (a real dontpanic command)",
-        "Test: smoke passes on a fixture state and flips the evidence file; fails loudly + records outcome=failed on missing/garbled state"
+        "Implement write_integration_evidence() - append-only JSONL per integration, mirroring capabilities_setup_evidence sanitization/mode discipline",
+        "Implement the static-smoke runner: export-dashboard into a temp dir, run the real dashboard build over it, assert rendered output artifacts",
+        "Implement `dontpanic integrations attest` writing attestation records through the same writer",
+        "Write passed/failed evidence records; wire smoke as the F001 static-dashboard item's exact_command",
+        "Tests: smoke passes + appends on fixture state; fails loudly + records outcome=failed on garbled state; attest round-trips; prior records never rewritten"
       ],
-      "acceptance": "Running the static-dashboard smoke invokes the real `dontpanic state export-dashboard`, verifies the exported artifacts are present and parseable, and writes an evidence record via a new write_integration_evidence() API that mirrors the shipped capabilities-setup evidence discipline: a JSON file per integration under the DontPanic home integrations evidence directory, carrying schema_version, the integration identifier, action identifier, captured_at, outcome (passed or failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed before write). These evidence files are the SOLE channel downstream consumers read - the F001 clears_when predicates name them, and no other side channel exists. The smoke fails clearly on missing or garbled state and records outcome=failed evidence; no Firebase credentials required. Verified by tests over a fixture state dir.",
+      "acceptance": "Evidence contract: one append-only JSONL file per integration under the DontPanic home integrations evidence directory, records carrying schema_version, the integration identifier, action identifier, captured_at, source (smoke|attestation), outcome (passed or failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed); records are only ever appended via write_integration_evidence() - a later failed record never deletes or rewrites prior records, and these files are the SOLE channel downstream consumers read (the F001 clears_when predicates name them). Render-proof smoke: the static-dashboard smoke invokes the real `dontpanic state export-dashboard`, then runs the real dashboard build over the exported state and asserts the build succeeds and the rendered output artifacts exist - parseable-but-unrenderable state fails the smoke and records outcome=failed. Attestation capture: `dontpanic integrations attest` records an operator attestation (integration, outcome, note) through the same writer, so no evidence file is ever hand-edited. Verified by tests over a fixture state dir, including a garbled-state failure case and an attest-then-read round trip.",
       "passes": false,
       "depends_on": [
         "F001"
@@ -47,7 +48,8 @@
         "static_dashboard_smoke",
         "write_integration_evidence",
         "integration_evidence",
-        "integration_id"
+        "integration_id",
+        "integrations_attest"
       ]
     },
     {
@@ -79,12 +81,12 @@
       "phase": 2,
       "description": "Integration status surfacing: per-integration status (configured / deployed / smoke-passing / pending) derived from the catalog + captured evidence and routed through the SHIPPED action surfaces (what-now-logic bands, render-gate, operator console action items) - no separate integrations panel; the new work is the status derivation feeding those surfaces, so the operator sees integration readiness at a glance rather than via command archaeology.",
       "steps": [
-        "Implement the status matrix exactly as pinned in plan.md (per-integration evidence->status rows)",
-        "Route status + pending items through the existing what-now/operator-console surfaces (no new panel)",
+        "Implement the status matrix exactly as pinned in plan.md, deriving the floor from the append-only evidence history",
+        "Route status through the existing surfaces: pending integrations in the needs-action band, cleared integrations visible in the quiet band with status labels",
         "Pending items link to their F001 ActionItem; clears_when consumes the F002 evidence files",
-        "Test: each matrix row exercised by fixtures through the real producer-to-render path; no secret leak"
+        "Test: each matrix row + the failed-after-passed floor case + post-clear quiet-band visibility, through the real producer-to-render path; no secret leak"
       ],
-      "acceptance": "Per-integration status is derived from the catalog + integration-evidence files via the pinned status matrix in plan.md (one row per integration mapping evidence presence/outcome to pending/configured/deployed/smoke-passing; each status exercised by fixtures); integration items route through the EXISTING what-now/operator-console surfaces (no separate integrations panel) with pending integrations linking to their ActionItem (dedupe_key stable across rebuilds); resolved integrations clear via their clears_when predicate reading the same evidence files F002 writes - no hand-editing; rendering leaks no secrets. Verified by tests through the real producer-to-render path per the operator-outcome QA sufficiency contract (fixtures enter the real shell surface, not pre-baked shapes).",
+      "acceptance": "Per-integration status is derived from the catalog + the append-only evidence history via the pinned status matrix in plan.md: the status floor is the highest status achieved by passed records, a later failed record surfaces a failure flag in the item copy WITHOUT regressing the floor, and each matrix row is exercised by fixtures. Post-clear visibility pinned: integrations whose pending ActionItems have cleared do NOT disappear - they remain visible in the existing quiet band of the what-now/operator-console surfaces with their derived status label, while only genuinely pending integrations occupy the needs-action band; pending integrations link to their ActionItem (dedupe_key stable across rebuilds); resolution happens via clears_when reading the same evidence files F002 writes - no hand-editing; rendering leaks no secrets. Verified by tests through the real producer-to-render path per the operator-outcome QA sufficiency contract.",
       "passes": false,
       "depends_on": [
         "F001",

@@ -89,8 +89,13 @@ Evidence = integration-evidence files written by write_integration_evidence()
 | discord-webhook | no evidence | webhook env-var name present (presence-only) | n/a | n/a (configured is terminal) |
 | linear-credentials | no evidence | operator-attested credential evidence | n/a | n/a (configured is terminal; projection work tracked in ext-bridge) |
 
-A stale/failed evidence record (outcome=failed) keeps the integration at its prior
-floor and surfaces the failure in the item copy; statuses never regress silently.
+Evidence files are append-only JSONL (one per integration; records never rewritten).
+The status FLOOR is the highest status achieved by passed records in the history; a
+later outcome=failed record surfaces a failure flag in the item copy without
+regressing the floor - statuses never regress silently and prior success is never
+overwritten. After an integration's pending ActionItems clear, it remains visible in
+the quiet band of the existing what-now/operator-console surfaces with its derived
+status label; only pending integrations occupy the needs-action band.
 
 ## Scope (out)
 
