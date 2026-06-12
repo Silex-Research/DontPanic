@@ -2,52 +2,63 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:88d2a593e8c4e6ab2e91dbecb526e2d0f59b956bce42370f7c6c9d3ebced066a",
-  "generated_at": "2026-06-12T02:02:30Z",
+  "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+  "generated_at": "2026-06-12T02:16:55Z",
   "findings": [
+    {
+      "severity": "high",
+      "journey_id": "safe-cleanup",
+      "gap_class": "integration_gap",
+      "description": "F002 states removal is eligible only when the binding passes binding_health, but later requires a registry-only completion path when the worktree path no longer exists after a prior audited removal intent. A missing worktree should fail binding_health, so the precedence between fail-closed health gating and registry-only completion is contradictory.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Explicitly define registry-only completion as a narrow exception: strict registry load plus matching removal-INTENT plus absent worktree may delete only the stale binding, with no filesystem deletion and its own audit behavior.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "local-config-honesty",
+      "gap_class": "parity_gap",
+      "description": "F003 says the initial allowlist entry is the repo-root-relative path environments_json while also saying it is the file named environments.json and that the exact string is pinned. That ambiguity can make implementation and tests disagree on the actual allowlisted path.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Pin the module constant value unambiguously, likely exactly `environments.json`, and use a separate constant name if the identifier should be `environments_json`.",
+      "finding_class": "editorial"
+    },
     {
       "severity": "medium",
       "journey_id": "wrong-worktree-guard",
       "gap_class": "coverage_gap",
-      "description": "F001 requires override evidence to be durably written but only pins this as flushed, leaving the crash-durability contract ambiguous for the override record and binding snapshot.",
+      "description": "F001 requires an override flag with a required reason and says refusals name the exact override command, but the CLI spelling and reason argument shape are not pinned. The user-facing override journey needs deterministic command text and tests that prove the intended surface.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Define the durable-write standard before implementation, including whether file fsync, parent-directory fsync, atomic temp-file replacement, or append-only semantics are required, and add tests at that boundary.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
-      "journey_id": "safe-cleanup",
-      "gap_class": "coverage_gap",
-      "description": "F002 blocks unregistered nested .git directories but does not pin the policy for registered submodules containing dirty, untracked, or ignored local state that git worktree removal may still delete.",
-      "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Add an explicit submodule rule: either recursively require registered submodules to be clean and ignored-free, or block removal whenever populated submodules are present until a separate audited cleanup exists.",
+      "recommendation": "Pin the exact override option and reason syntax for all guarded entry points, then assert the refusal output and successful override path use that surface consistently.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F002 specifies a post-destruction removal-OUTCOME audit entry but does not pin behavior if that outcome append fails after git worktree remove succeeds.",
+      "description": "F002 specifies an important post-destruction failure mode where the worktree removal succeeds but the OUTCOME audit append fails, requiring a non-zero exit that says removal succeeded but outcome recording failed. The listed tests do not explicitly cover that behavior.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Require the command to exit non-zero, name the missing outcome audit, preserve the prior intent evidence, and define the rerun/status behavior for this partially completed state.",
+      "recommendation": "Add a fixture that allows intent write and worktree removal, then fails the outcome append, asserting the exit status, message, filesystem state, and registry state.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "low",
-      "journey_id": "local-config-honesty",
+      "journey_id": "safe-cleanup",
       "gap_class": "coverage_gap",
-      "description": "F003 says the initial allowlist entry is environments_json, but the contract needs an exact repo-root-relative path so tests and implementation cannot diverge on the local config file name.",
+      "description": "F002 adds safety rules for nested .git directories and registered submodules, including ignored-content preservation recursively, but the named test list does not include fixtures for those cases. Those rules protect the same local-state preservation outcome as ignored files in the parent worktree.",
       "feature_refs": [
-        "F003"
+        "F002"
       ],
-      "recommendation": "Pin the allowlist value as the literal repo-relative path, for example environments.json if that is intended, and make the test assert that exact path.",
-      "finding_class": "editorial"
+      "recommendation": "Add explicit nested-.git and registered-submodule fixtures, including clean, dirty, untracked, and ignored-content cases where applicable.",
+      "finding_class": "implementation_detail"
     }
   ]
 }

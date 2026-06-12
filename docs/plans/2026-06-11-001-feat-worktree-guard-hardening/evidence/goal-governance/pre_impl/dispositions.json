@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "dispositions": {
+    "f-662edc459cc1": {
+      "kind": "deferred_to_impl",
+      "reason": "The exact override-command spelling in refusal messages is an implementation detail: the implementation will print the literal flag it parses (single source: the argparse definition), and the guard tests assert the refusal names that exact command — provable in implementation, checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-4990228261b690a5",
+      "cell_key": "wrong-worktree-guard|coverage_gap|F001",
+      "cell_set": [
+        "fp-4990228261b690a5"
+      ],
+      "round": 5,
+      "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+      "recorded_at": "2026-06-12T02:18:51Z",
+      "recorded_by": "bayesian"
+    },
+    "f-bc50262f46e1": {
+      "kind": "deferred_to_impl",
+      "reason": "The outcome-append failure mode is substantively pinned in acceptance (non-zero exit stating removal-succeeded/outcome-unrecorded, completion keys on intent); the remaining ask is test enumeration, discharged by an implementation fixture simulating the failed append — checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-d4fcfa82b12444c1",
+      "cell_key": "safe-cleanup|coverage_gap|F002",
+      "cell_set": [
+        "fp-02b255ddd132c35a",
+        "fp-d4fcfa82b12444c1"
+      ],
+      "round": 5,
+      "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+      "recorded_at": "2026-06-12T02:18:51Z",
+      "recorded_by": "bayesian"
+    },
+    "f-3bb59beaafe5": {
+      "kind": "deferred_to_impl",
+      "reason": "Recursive submodule preservation mechanics (how status is probed inside registered submodules) are implementation detail under the already-pinned policy (any modified/staged/untracked/ignored submodule content refuses with paths); the implementation fixture builds a real submodule with local state — checked by the post-impl audit.",
+      "followup_plan": null,
+      "fingerprint": "fp-02b255ddd132c35a",
+      "cell_key": "safe-cleanup|coverage_gap|F002",
+      "cell_set": [
+        "fp-02b255ddd132c35a",
+        "fp-d4fcfa82b12444c1"
+      ],
+      "round": 5,
+      "input_fingerprint": "sha256:9849e1b052e025d006e410d8ed3af1ff205e3ac17b6fc08f427d34e7b5567205",
+      "recorded_at": "2026-06-12T02:18:52Z",
+      "recorded_by": "bayesian"
+    }
+  }
+}
