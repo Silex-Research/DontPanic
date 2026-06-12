@@ -160,6 +160,12 @@
         "status": "not_found"
       },
       {
+        "evidence_kind": "code",
+        "extractor": "ts_import_crawler",
+        "node_count": 0,
+        "status": "not_found"
+      },
+      {
         "evidence_kind": "manifest",
         "extractor": "architecture_fingerprint",
         "node_count": 1,

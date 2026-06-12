@@ -688,6 +688,12 @@ def build_view_state(
     nodes.extend(js_nodes)
     edges.extend(js_edges)
 
+    # Plan C2 — first-party TypeScript/TSX/JSX import graph (source_kind code
+    # via the evidence contract; non-product trees excluded at the extractor).
+    ts_nodes, ts_edges = _architecture_js.extract_ts_modules(repo_root)
+    nodes.extend(ts_nodes)
+    edges.extend(ts_edges)
+
     # Plan C0 — tier-0/1 weak baseline (language-agnostic). The render-truth
     # passthrough acceptance requires these low-confidence/filesystem items
     # to SURVIVE to the final payload.

@@ -1,0 +1,8 @@
+{
+  "journey": "non-product-scoping",
+  "test_file": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py",
+  "state_to_test": {
+    "only_nonproduct_tsx": "TestF002Exclusions::test_non_product_trees_excluded_from_extractor + test_non_product_trees_excluded_from_language_presence_scan + test_dontpanic_shape_only_non_product_ts_keeps_ceiling_unforced + test_docs_markers_still_detected_despite_language_exclusion",
+    "first_party_ts": "TestF002Exclusions::test_product_ts_is_detected_and_covered_not_missing_extractor"
+  }
+}

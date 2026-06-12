@@ -103,12 +103,11 @@ def test_javascript_fixture_with_ts_split(tmp_path: Path):
     vs = _view_state_for(root)
     baseline = vs["coverage"]["baseline"]
     assert baseline["per_language"]["javascript"] == "covered"
-    assert baseline["per_language"]["typescript"] == "missing_extractor", (
-        "TS in the same fixture pins the JS-vs-TS split: heuristic, never parser"
-    )
-    heuristic = [e for e in vs["edges"] if e["type"] == "heuristic_import"]
-    assert heuristic and all("ts" in e["from"] or "types" in e["from"] for e in heuristic), (
-        "only the TS file produces heuristic edges; plain JS is parser territory"
+    # Plan C2: typescript is parser-served (ts_import_crawler) — covered, and
+    # no heuristic counterpart edges are generated for it any more.
+    assert baseline["per_language"]["typescript"] == "covered"
+    assert not [e for e in vs["edges"] if e["type"] == "heuristic_import"], (
+        "both languages are parser territory now — no heuristic duplicates"
     )
 
 
@@ -152,10 +151,14 @@ def test_scope_guard_no_new_dashboard_page():
 
 
 def test_scope_guard_tier2_extractor_set_unchanged():
+    # Plan C2 is the anticipated "Plan C+": typescript/jsx joined the
+    # parser-backed set via ts_import_crawler.
     assert ab.TIER2_EXTRACTORS == {
         "python": "python_import_crawler",
         "javascript": "js_import_crawler",
-    }, "no NEW parser-backed extractor in C0 — that is Plan C+"
+        "typescript": "ts_import_crawler",
+        "jsx": "ts_import_crawler",
+    }
 
 
 def test_scope_guard_no_tier3_registration():

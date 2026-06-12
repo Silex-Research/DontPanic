@@ -100,11 +100,11 @@ def test_javascript_no_longer_missing_and_ceiling_lifts():
     missing_kinds = {m["evidence_kind"] for m in (cov.get("missing_extractors") or [])}
     # javascript IS extracted now (js_import_crawler) → never a missing kind.
     assert "javascript" not in missing_kinds
-    # HONESTY (audit B1#2): DontPanic itself ships unextracted .tsx/.jsx
-    # (docs/design mockups, remotion skill), so the ceiling is correctly capped —
-    # the Plan C slice-1 "ceiling lifts to high" claim was itself an over-claim.
-    assert "typescript" in missing_kinds or "jsx" in missing_kinds
-    assert cov["confidence_ceiling"] in {"low", "medium"}
+    # Plan C2: typescript/jsx are extracted kinds now (non-product trees are
+    # scoped out), so they never appear as missing — the B1#2 cap is resolved
+    # honestly rather than waived.
+    assert "typescript" not in missing_kinds and "jsx" not in missing_kinds
+    assert cov["confidence_ceiling"] in {"medium", "high"}
 
 
 # ── audit 2026-06-08 remediation: honest JS parsing ─────────────────────
@@ -166,12 +166,14 @@ def test_walk_prunes_node_modules(tmp_path):
     assert not any("node_modules" in p for p in paths)  # pruned, never walked (B1#6)
 
 
-def test_present_typescript_drops_ceiling(tmp_path):
-    # A repo with UNEXTRACTED TypeScript must not read "high" (B1#2).
+def test_present_typescript_without_ts_nodes_never_reads_high(tmp_path):
+    # B1#2 spirit under Plan C2: TS is an extracted kind now, so it is never
+    # "missing_extractor" — but a build whose node set carries NO ts_module
+    # output still must not read "high" (the ts extractor row is not_found).
     from dontpanic_orchestrate import architecture_contract as C
     (tmp_path / "app.tsx").write_text("export const X = 1;\n")
     nodes = [{"id": "m", "type": "module"}, {"id": "j", "type": "js_module"}]
     cov = C.compute_coverage(tmp_path, nodes)
     kinds = {m["evidence_kind"] for m in cov["missing_extractors"]}
-    assert "typescript" in kinds
-    assert cov["confidence_ceiling"] == "low"
+    assert "typescript" not in kinds
+    assert cov["confidence_ceiling"] != "high"

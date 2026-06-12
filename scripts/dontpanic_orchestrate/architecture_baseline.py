@@ -36,6 +36,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from dontpanic_orchestrate import architecture_js as _architecture_js
+
 # ──────────────────────────────  F001: pinned tables  ──────────────────────────────
 
 DETECTION_CLASSES: tuple[str, ...] = (
@@ -64,7 +66,9 @@ LANGUAGE_MARKER_MATRIX: dict[str, tuple[str, ...]] = {
 }
 """The closed C0 language marker matrix — extending it is Plan C+ scope."""
 
-TIER2_LANGUAGES: frozenset[str] = frozenset({"python", "javascript"})
+TIER2_LANGUAGES: frozenset[str] = frozenset(
+    {"python", "javascript", "typescript", "jsx"}  # typescript/jsx: Plan C2
+)
 """Languages with a parser-backed extractor TODAY. TypeScript/TSX and JSX are
 NOT parser-covered (the dashboard JS crawler reads .js/.mjs/.cjs only)."""
 
@@ -75,6 +79,8 @@ TIER1_LANGUAGES: frozenset[str] = (
 TIER2_EXTRACTORS: dict[str, str] = {
     "python": "python_import_crawler",
     "javascript": "js_import_crawler",
+    "typescript": "ts_import_crawler",  # Plan C2
+    "jsx": "ts_import_crawler",  # Plan C2
 }
 """The pinned tier-2 set — the F004 scope guard asserts this never grows in
 C0 (new parser extractors are Plan C+)."""
@@ -321,10 +327,15 @@ def detect_project(repo_root: Path, *, scan_cap: int | None = None) -> dict[str,
             candidate = (repo_root / marker_dir)
             if candidate.is_dir():
                 infra.add(kind)
+        in_non_product = _architecture_js.in_non_product_tree(rel_dir) if rel_dir != "." else False
         for fn in filenames:
             ext = os.path.splitext(fn)[1]
             lang = _EXT_TO_LANGUAGE.get(ext)
-            if lang:
+            # Plan C2 F002 — documentation-mockup and skill-asset trees are
+            # excluded from the LANGUAGE presence scan only (doc/adr marker
+            # detection above still sees them): reference .tsx/.jsx must not
+            # pin the coverage ceiling.
+            if lang and not in_non_product:
                 languages.add(lang)
             elif ext in SOURCE_LIKE_EXTRA_EXTENSIONS:
                 unrecognized.add(ext)

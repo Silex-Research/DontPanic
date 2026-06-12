@@ -168,6 +168,7 @@ def test_clean_python_repo_can_reach_high_ceiling(tmp_path):
         {"id": "c", "type": "capability"},
         {"id": "pg", "type": "page"},
         {"id": "j", "type": "js_module"},  # Plan C: JS is now a tracked extractor
+        {"id": "ts", "type": "ts_module"},  # Plan C2: TS is now a tracked extractor
         {"id": "md", "type": "metadata"},
     ]
     cov = C.compute_coverage(tmp_path, nodes)

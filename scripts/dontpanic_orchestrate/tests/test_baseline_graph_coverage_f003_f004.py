@@ -29,11 +29,11 @@ def _make_repo(tmp_path: Path, files: dict[str, str]) -> Path:
     return root
 
 
+# Plan C2 promoted typescript/jsx to tier 2 (parser-served by
+# ts_import_crawler) — they no longer belong in the tier-1 heuristic set.
 _TIER1_SAMPLES = {
     "swift": ("a.swift", "import Foundation\n"),
     "kotlin": ("a.kt", "import kotlin.io\n"),
-    "typescript": ("a.ts", "import x from './b'\n"),
-    "jsx": ("a.jsx", "import React from 'react'\n"),
     "go": ("a.go", 'import "fmt"\n'),
     "rust": ("a.rs", "use std::io;\n"),
 }
@@ -63,8 +63,11 @@ def test_tier_precedence_no_heuristic_for_parser_served(tmp_path: Path):
 
 
 def test_relative_import_resolves(tmp_path: Path):
+    # Plan C2: .ts is parser-served now — the go pattern still captures
+    # dot-relative specifiers, keeping the heuristic resolver's
+    # relative-target path exercised.
     root = _make_repo(
-        tmp_path, {"a.ts": "import b from './b'\n", "b.ts": "export default 1\n"}
+        tmp_path, {"a.go": 'import "./b"\n', "b.go": "package b\n"}
     )
     graph = ab.build_baseline_graph(root)
     edges = [e for e in graph["edges"] if e["type"] == "heuristic_import"]

@@ -3,7 +3,7 @@ id: 2026-06-08-005-feat-architecture-ts-extractor-plan-c2
 title: Architecture reconciler Plan C+ (slice 2) — TypeScript/JSX import extractor + non-product scoping
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: new_feature
 description: >
@@ -14,6 +14,9 @@ description: >
   (claude/skills/**/assets) are NON-PRODUCT and excluded from the architecture model
   (like node_modules), so DontPanic's own ceiling lifts off low truthfully rather than
   by ingesting mockup noise. Relative imports only (no tsconfig path/alias resolution).
+links:
+  features: ./features.json
+  objective_contract: ./objective_contract.json
 ---
 
 ## Target

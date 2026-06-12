@@ -77,12 +77,14 @@ def test_real_build_carries_coverage_block_with_js_now_extracted():
     assert "javascript" not in missing_kinds
     assert any(e["extractor"] == "js_import_crawler" and e["status"] == "covered"
                for e in cov["extractors"])
-    # HONESTY (audit 2026-06-08 B1#2): DontPanic itself ships UNEXTRACTED .tsx/.jsx
-    # (docs/design React mockups, remotion skill assets), so the ceiling must stay
-    # honestly capped — NOT "high". Removing javascript wholesale had wrongly
-    # presented the map as fully covered.
-    assert "typescript" in missing_kinds or "jsx" in missing_kinds
-    assert cov["confidence_ceiling"] in {"low", "medium"}
+    # Plan C2 resolved the B1#2 honesty cap the RIGHT way: DontPanic's .tsx/.jsx
+    # live only in documentation mockups and skill assets (non-product trees,
+    # excluded from the model), and first-party TS now has ts_import_crawler —
+    # typescript/jsx are never "missing_extractor" any more. The ceiling is no
+    # longer forced low by them (high still requires the TS extractor to have
+    # produced nodes, which DontPanic's zero first-party TS does not).
+    assert "typescript" not in missing_kinds and "jsx" not in missing_kinds
+    assert cov["confidence_ceiling"] in {"medium", "high"}
 
 
 def test_real_build_carries_layer_shell():

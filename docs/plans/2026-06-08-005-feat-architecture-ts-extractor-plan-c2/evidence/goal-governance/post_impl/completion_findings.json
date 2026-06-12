@@ -1,0 +1,13 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-12T18:55:55.815171+00:00",
+  "plan_id": "2026-06-08-005-feat-architecture-ts-extractor-plan-c2",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/pytest/non-product-scoping/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/non-product-scoping/state-map.json",
+    "evidence/goal-governance/post_impl/pytest/ts-as-built/pytest-output.txt",
+    "evidence/goal-governance/post_impl/pytest/ts-as-built/state-map.json"
+  ],
+  "findings": []
+}
