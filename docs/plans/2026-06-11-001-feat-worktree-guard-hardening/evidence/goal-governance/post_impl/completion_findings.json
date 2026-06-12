@@ -1,6 +1,6 @@
 {
   "audit_kind": "v1_evidence_coverage_heuristic",
-  "generated_at": "2026-06-12T13:51:07.606160+00:00",
+  "generated_at": "2026-06-12T14:52:08.504154+00:00",
   "plan_id": "2026-06-11-001-feat-worktree-guard-hardening",
   "contract_path": "./objective_contract.json",
   "evidence_manifest_uris": [
