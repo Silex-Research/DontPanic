@@ -2,43 +2,52 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:233ab535a462eaf0b0c69db2ff32a1f03398258c047b70596570fb3fb7865a7e",
-  "generated_at": "2026-06-12T01:53:17Z",
+  "input_fingerprint": "sha256:88d2a593e8c4e6ab2e91dbecb526e2d0f59b956bce42370f7c6c9d3ebced066a",
+  "generated_at": "2026-06-12T02:02:30Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "wrong-worktree-guard",
-      "gap_class": "integration_gap",
-      "description": "F001 declares the listed guarded commands to be the complete plan-mutating surface, but F002 and F003 introduce or modify plan worktree remove and plan worktree create, both of which mutate registry or worktree state. The plan needs an explicit decision that these commands are exempt from the wrong-worktree guard, or they need equivalent guard coverage.",
+      "gap_class": "coverage_gap",
+      "description": "F001 requires override evidence to be durably written but only pins this as flushed, leaving the crash-durability contract ambiguous for the override record and binding snapshot.",
       "feature_refs": [
-        "F001",
-        "F002",
-        "F003"
+        "F001"
       ],
-      "recommendation": "Pin create/remove as intentionally outside the wrong-worktree guard with rationale and regression tests, or add them to the guarded entry-point matrix.",
-      "finding_class": "scope_guard"
+      "recommendation": "Define the durable-write standard before implementation, including whether file fsync, parent-directory fsync, atomic temp-file replacement, or append-only semantics are required, and add tests at that boundary.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "high",
+      "journey_id": "safe-cleanup",
+      "gap_class": "coverage_gap",
+      "description": "F002 blocks unregistered nested .git directories but does not pin the policy for registered submodules containing dirty, untracked, or ignored local state that git worktree removal may still delete.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Add an explicit submodule rule: either recursively require registered submodules to be clean and ignored-free, or block removal whenever populated submodules are present until a separate audited cleanup exists.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "safe-cleanup",
-      "gap_class": "integration_gap",
-      "description": "F002 requires audit-first deletion, but the described audit record appears to encode a successful removal before the destructive git worktree remove step has actually succeeded. The registry-only completion path then relies on an audit log entry for successful removal, which can be ambiguous after partial failures.",
+      "gap_class": "coverage_gap",
+      "description": "F002 specifies a post-destruction removal-OUTCOME audit entry but does not pin behavior if that outcome append fails after git worktree remove succeeds.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Separate removal intent from removal completion, or pin the completion predicate so a pre-delete audit entry cannot be mistaken for proof that deletion succeeded.",
-      "finding_class": "plan_contract"
+      "recommendation": "Require the command to exit non-zero, name the missing outcome audit, preserve the prior intent evidence, and define the rerun/status behavior for this partially completed state.",
+      "finding_class": "implementation_detail"
     },
     {
-      "severity": "medium",
+      "severity": "low",
       "journey_id": "local-config-honesty",
       "gap_class": "coverage_gap",
-      "description": "F003 asserts that no symlinks are created in the new worktree, but it does not pin behavior when an allowlisted source file or preexisting target path is itself a symlink. That leaves a deterministic-rule gap for the no-symlinks-in-v1 policy and for copy-time overwrite refusal.",
+      "description": "F003 says the initial allowlist entry is environments_json, but the contract needs an exact repo-root-relative path so tests and implementation cannot diverge on the local config file name.",
       "feature_refs": [
         "F003"
       ],
-      "recommendation": "Add explicit refusal and reporting rules for symlinked allowlist source or target entries, with tests covering both cases.",
-      "finding_class": "matrix_pin"
+      "recommendation": "Pin the allowlist value as the literal repo-relative path, for example environments.json if that is intended, and make the test assert that exact path.",
+      "finding_class": "editorial"
     }
   ]
 }
