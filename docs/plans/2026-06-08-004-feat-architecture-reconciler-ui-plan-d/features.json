@@ -13,7 +13,10 @@
         "evidence_kind",
         "adr_intent_extractor"
       ],
-      "evidence": "architecture-logic.js renderCoverageBannerHTML (data-ceiling, incompleteness statement for low AND medium, extractor rows incl. adr_intent_extractor, missing_extractors) + plan-d-architecture-honesty.test.js ceiling matrix (low/medium/high) \u2014 medium case satisfies disposition f-fd7a77e67753"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F002",
@@ -30,7 +33,10 @@
         "conflicting_dependency",
         "unknown_confidence"
       ],
-      "evidence": "renderIntentPanelHTML \u2014 claims labelled declared, 3 distinct live-taxonomy badge classes, reserved 4 + unknown -> arch-diff-badge--reserved fallback proven at renderer-unit level w/ synthetic payloads (disposition obligation), populated:false -> No ADR claims found w/ zero badges"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F003",
@@ -45,7 +51,10 @@
         "not_found",
         "scan_truncated"
       ],
-      "evidence": "renderBaselinePanelHTML (rollup verbatim, per_language rows, 10-row EVIDENCE_TYPES table incl. reserved runtime tier, scan_truncated warning, notes verbatim, honest empty) + renderArchitectureMissingWarningHTML keyed by validation_warnings[].code==architecture_missing asserted BY NAME (disposition f-7031dc163096) + absent-state routing to populated surface"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F004",
@@ -58,7 +67,10 @@
         "heuristic_import",
         "heuristic_target"
       ],
-      "evidence": "layoutArchitectureGraph threads evidence fields; renderArchitectureMapSVG adds arch-edge--heuristic/--unresolved + arch-node--unresolved/--filesystem; legend gains 3 data-legend-evidence entries; survival test on producer-built view-state; nothing removed. Bonus: fixed normalizeEnvelope dropping coverage+layers"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F005",
@@ -73,7 +85,10 @@
         "unrecognized_extensions",
         "per_language"
       ],
-      "evidence": "architecture_view_state.py present branch attaches coverage.baseline; test_plan_d_producer_parity_f005.py deep-equality VALUE-identical parity both branches against same repo tree (red->green)"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     },
     {
       "id": "F006",
@@ -86,7 +101,10 @@
         "any_repo_journey",
         "architecture_missing"
       ],
-      "evidence": "test_plan_d_journey_fixtures_f006.py: real-producer fixture generation (fixed generated_at, determinism proven by double-generation byte-equality) + regen-guard contract test (drift fails, DONTPANIC_REGEN_FIXTURES=1 rewrites); plan-d-architecture-journey.test.js: 3 real createJarvis journeys \u2014 present (banner+baseline row detail+all-3 legend hooks by selector per disposition f-e4ac34645fd8+claim+badges+no raw JSON), absent (baseline surface+banner+architecture_missing+hooks), no-ADR (honest empty, zero badges). Sweeps: 4347 py + 1248 vitest green"
+      "verified_by": [
+        "pytest+vitest",
+        "codex-post-impl-audit"
+      ]
     }
   ]
 }

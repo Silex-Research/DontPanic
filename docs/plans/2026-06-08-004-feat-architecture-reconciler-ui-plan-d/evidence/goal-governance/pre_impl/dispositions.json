@@ -42,6 +42,20 @@
       "input_fingerprint": "sha256:034c2b4b89385abf266ee76b431438ce0c72fc87418e79802832a93be1208cf5",
       "recorded_at": "2026-06-11T16:34:49Z",
       "recorded_by": "bayesian"
+    },
+    "f-e34e0878c055": {
+      "kind": "deferred_to_impl",
+      "reason": "Record true-up (CodeRabbit PR#44): the lock-time regeneration re-keyed the round-3 low finding (f-7031dc163096 -> f-e34e0878c055); the gate outcome was unaffected (lows never block) but the disposition record should join against the CURRENT findings snapshot. Same resolution: the renderer consumes the producer's absence-marker field asserted BY NAME — discharged in implementation (renderArchitectureMissingWarningHTML keyed on validation_warnings[].code, tested).",
+      "followup_plan": null,
+      "fingerprint": "fp-9946223656621d55",
+      "cell_key": "any-repo-graph|wiring_gap|F003,F006",
+      "cell_set": [
+        "fp-9946223656621d55"
+      ],
+      "round": 4,
+      "input_fingerprint": "sha256:5f1bf127e0ed44689de338e7c06b734dd4a5eecd37613294f6a4fd08fa0bb9aa",
+      "recorded_at": "2026-06-12T01:12:02Z",
+      "recorded_by": "bayesian"
     }
   }
 }
