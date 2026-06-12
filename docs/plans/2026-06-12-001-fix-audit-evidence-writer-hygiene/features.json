@@ -16,7 +16,7 @@
       "evidence": {
         "tests": "scripts/dontpanic_orchestrate/tests/test_audit_evidence_writer_hygiene.py::TestF001CaptureSanitization (6 tests)",
         "journey_evidence": "evidence/goal-governance/post_impl/pytest/sanitized-capture/",
-        "notes": "sanitize_capture exported from completion_dispatch; applied pre-parse in dispatch_completion_audit and in _write_envelope; recorded path fields are placeholdered (writer recomputes real paths from plan_dir). Existing suite updated: 3 tests in test_completion_dispatch.py now map placeholders back for disk reads. Full sweep 4443 passed / 7 skipped."
+        "notes": "sanitize_capture exported from completion_dispatch; applied pre-parse in dispatch_completion_audit and in _write_envelope; recorded path fields are placeholdered (writer recomputes real paths from plan_dir). Existing suite updated: 3 tests in test_completion_dispatch.py now map placeholders back for disk reads. Full sweep 4444 passed / 7 skipped (final remediated tree; pre-remediation pass was 4443)."
       }
     },
     {
