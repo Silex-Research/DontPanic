@@ -3,7 +3,7 @@ id: 2026-06-08-005-feat-architecture-ts-extractor-plan-c2
 title: Architecture reconciler Plan C+ (slice 2) — TypeScript/JSX import extractor + non-product scoping
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-08"
 goal_type: new_feature
 description: >
