@@ -47,7 +47,7 @@
         "Tests: smoke passes + appends on fixture state; fails loudly + records outcome=failed on garbled state; attest round-trips; prior records never rewritten"
       ],
       "acceptance": "Evidence contract: one append-only JSONL file per integration under the DontPanic home integrations evidence directory, records carrying schema_version, the integration identifier, action identifier, captured_at, source (smoke|attestation), outcome (passed or failed), and sanitized details (file mode 0600, dir 0700, secret patterns scrubbed); records are only ever appended via write_integration_evidence() - a later failed record never deletes or rewrites prior records, and these files are the SOLE channel downstream consumers read (the F001 clears_when predicates name them). Render-proof smoke: the smoke is the literal command `dontpanic integrations smoke static-dashboard` (this exact string is the F001 static-dashboard item's exact_command and what the F004 end-to-end test executes); it invokes the real `dontpanic state export-dashboard`, then runs the real dashboard build over the exported state and asserts render-proof markers: the build succeeds AND the state's identifying values appear in the BUILT dashboard artifact itself (the rendered HTML/page output - matching in copied state JSON files does NOT count), so parseable-but-unrenderable or silently-empty renders fail the smoke and record outcome=failed. Attestation capture: `dontpanic integrations attest <integration> --action <action_id> --outcome passed|failed [--note]` records an operator attestation through the same writer - records carry source=attestation plus the action_id they attest (trigger attestations use the integration's declared trigger action_id), so every evidence record is attributable to a specific catalog action and no evidence file is ever hand-edited. Verified by tests over a fixture state dir, including a garbled-state failure case and an attest-then-read round trip.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ],
@@ -58,7 +58,11 @@
         "integrations_smoke",
         "static_dashboard_smoke",
         "write_integration_evidence"
-      ]
+      ],
+      "evidence": {
+        "tests": "scripts/dontpanic_orchestrate/tests/test_integration_evidence_f002.py (9) + test_integrations_cli_f002.py (8)",
+        "notes": "write_integration_evidence() append-only JSONL per integration under $DONTPANIC_HOME/integrations/evidence/<id>.jsonl (schema_version/integration_id/action_id/captured_at/source/outcome/sanitized details; 0600/0700; outcome+source validated; traversal-neutralized id; later failed record never rewrites prior). run_static_dashboard_smoke() runs the REAL dashboard.build over an exported state with write_what_now_cache + home-cache redirect, derives expected dedupe_keys via _gather_action_items, and asserts the producer's integration cards reach the BUILT what-now.json (not copied state JSON) - silently-empty/raising builds record outcome=failed (producer-card-fidelity per D008). integrations_cli.integrations_main: `smoke static-dashboard` (exit 0/4) + `attest <integration> --action <id> --outcome passed|failed [--note]` both write through the same writer; cli.py routes `integrations ...` to it. Full orchestrate sweep 4474 passed, 7 skipped."
+      }
     },
     {
       "id": "F003",
