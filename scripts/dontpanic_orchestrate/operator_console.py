@@ -1332,6 +1332,13 @@ def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | Non
             reversible=bool(entry.get("reversible", False)),
             plain_consequence=entry.get("plain_consequence"),
             dashboard_url=entry.get("dashboard_url"),
+            # Plan 2026-06-04-003 F001 (finding #5): the integration display
+            # fields must survive the fleet/project projection rehydration
+            # round-trip, not be silently dropped here.
+            operator_command=entry.get("operator_command"),
+            credential_env_vars=tuple(entry.get("credential_env_vars") or ()),
+            evidence_expected=entry.get("evidence_expected"),
+            trigger_condition=entry.get("trigger_condition"),
         )
     except (KeyError, ValueError, TypeError):
         return None

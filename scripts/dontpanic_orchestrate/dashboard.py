@@ -1124,6 +1124,16 @@ def _gather_action_items(
     # so budget/iteration/finalize decisions never drift between the two surfaces.
     operations_items = _gather_operations_items(plan_dirs_by_id)
 
+    # Plan 2026-06-04-003 F001: operator-owned integration steps, derived from
+    # the install-level append-only evidence history (integrations are global
+    # install state, like capabilities).
+    from dontpanic_orchestrate import integration_actions as _itg
+
+    integration_evidence_dir = global_config.dontpanic_home() / _itg.EVIDENCE_SUBDIR
+    integration_items = operator_console.provide_integration_actions(
+        integration_evidence_dir
+    )
+
     # Plan 2026-05-30-001 F016: surface the skill-recommendation missing-input
     # ActionChoice (and its shared dashboard affordance) as ActionItems built from
     # the SAME typed data the CLI `dontpanic skills recommend` prints, so the
@@ -1140,6 +1150,7 @@ def _gather_action_items(
         arch_items,
         operations_items,
         skill_items,
+        integration_items,
     )
     # F002 suppress-at-source: drop any item whose clears_when is already
     # satisfied against live state. Items with clears_when=None are kept
@@ -1158,6 +1169,14 @@ def _gather_action_items(
         # capability_ready suppresses a needs_setup/blocked card only once a
         # re-probe reports the capability ready (clear on evidence).
         "capabilities": _capabilities_live_state(capability_envelope),
+        # Plan 2026-06-04-003: integration_evidence_present reads the same
+        # append-only evidence files the provider derived its items from.
+        "integration_evidence": {
+            action.integration_id: _itg.read_evidence(
+                integration_evidence_dir, action.integration_id
+            )
+            for action in _itg.INTEGRATION_CATALOG
+        },
     }
     # Plan 2026-06-04-005 wiring: route EVERY card through the unified render gate
     # (F001) — suppress-unless-proven-live — instead of 001's render-unless-resolved
@@ -1178,6 +1197,7 @@ def _gather_action_items(
         operator_console.SOURCE_SUPERVISOR: _sl.Scope.GLOBAL.value,
         operator_console.SOURCE_GATE: _sl.Scope.PROJECT.value,
         operator_console.SOURCE_ARCHITECTURE: _sl.Scope.PROJECT.value,
+        operator_console.SOURCE_INTEGRATION: _sl.Scope.GLOBAL.value,
     }
     # All sources here were just evaluated at build time → fresh + ok. A source
     # whose producer input was absent (couldn't evaluate) is marked eval_ok=False
