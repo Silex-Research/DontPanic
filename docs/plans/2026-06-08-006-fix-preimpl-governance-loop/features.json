@@ -7,9 +7,26 @@
       "category": "functional",
       "description": "Add a production caller for the pre-impl sufficiency audit and make plan lock generate the findings when a gated plan is missing them, instead of dead-ending on a required-but-ungenerated artifact.",
       "acceptance": "a production entry drives the resolved cross-vendor auditor through the registered executor and persists sufficiency-findings.json; dontpanic plan lock invokes it for a gated goal_type when findings are absent, and degrades with an actionable message (not a dead-end) when no auditor is configured; verified by a test that runs the audit with an injected dispatch and asserts the artifact is written.",
-      "passes": false,
+      "passes": true,
       "introduces": [
         "generate_sufficiency_findings"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-14T21:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "e97b8fb",
+          "note": "Fix merged to main via PR #31 (the three pre-impl governance defects)."
+        },
+        {
+          "type": "url",
+          "uri": "https://github.com/Silex-Research/DontPanic/pull/31",
+          "note": "Merged PR carrying the fix; independently paid Codex-audited per D005 (needs_changes -> fixed-forward)."
+        }
       ]
     },
     {
@@ -17,18 +34,52 @@
       "category": "functional",
       "description": "Stop the pre-lock design-review volley from crashing when a feature carries an enum field, by serializing feature dicts to JSON-safe values.",
       "acceptance": "the design volley serializes feature dicts with enum values coerced to strings so the JSON serializer never raises the 'Object of type Category is not JSON serializable' error; a test asserts the real plan's feature dicts are JSON-serializable via the json-mode serialization and that the plain dump would have raised.",
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-14T21:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "e97b8fb",
+          "note": "Fix merged to main via PR #31 (the three pre-impl governance defects)."
+        },
+        {
+          "type": "url",
+          "uri": "https://github.com/Silex-Research/DontPanic/pull/31",
+          "note": "Merged PR carrying the fix; independently paid Codex-audited per D005 (needs_changes -> fixed-forward)."
+        }
+      ]
     },
     {
       "id": "F003",
       "category": "functional",
       "description": "Make the pre-impl sufficiency parser reuse the known-good post-impl Codex JSONL parser plus tolerant JSON coercion, so a Codex stream or a JSON value with trailing prose parses instead of being discarded; add a no-paid fixture replaying the wasted response and an end-to-end dry-run.",
       "acceptance": "the Codex streaming extractor lives in a shared module reused by both audit boundaries (single source of truth, no circular import); the sufficiency parser pulls the assistant-message payload from a Codex stream and tolerates a valid JSON value followed by trailing prose; a no-paid fixture replays the wasted-response shape into the sufficiency parser and gets findings, and an end-to-end dry-run runs draft \u2192 sufficiency audit \u2192 gate-sees-findings \u2192 design-volley-serializes without crashing.",
-      "passes": false,
+      "passes": true,
       "introduces": [
         "codex_stream",
         "extract_codex_streaming_payload",
         "coerce_first_json_value"
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-06-14T21:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "commit",
+          "uri": "e97b8fb",
+          "note": "Fix merged to main via PR #31 (the three pre-impl governance defects)."
+        },
+        {
+          "type": "url",
+          "uri": "https://github.com/Silex-Research/DontPanic/pull/31",
+          "note": "Merged PR carrying the fix; independently paid Codex-audited per D005 (needs_changes -> fixed-forward)."
+        }
       ]
     }
   ]

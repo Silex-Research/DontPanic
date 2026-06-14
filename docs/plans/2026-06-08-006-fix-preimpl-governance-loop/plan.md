@@ -3,7 +3,7 @@ id: 2026-06-08-006-fix-preimpl-governance-loop
 title: Fix the pre-impl governance loop (sufficiency caller + lock generation + Category serialization + Codex JSONL parser)
 type: fix
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-08"
 goal_type: incident
 links:
