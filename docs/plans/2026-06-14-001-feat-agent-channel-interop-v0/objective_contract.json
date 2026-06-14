@@ -11,7 +11,7 @@
         "explicit env vars are honored verbatim and beat all heuristics",
         "a recognized surface marker (TERM_PROGRAM) yields the right operator_surface; an unrecognized one yields unknown",
         "agent_runtime validates against the same source as agent_surface; unknown agents map to unknown_runtime",
-        "execution_locality resolves to one of local_mac/plan_worktree/dashboard_terminal/remote_vm/code_task/unknown"
+        "execution_locality resolves to one of local_mac/plan_worktree/dashboard_terminal/code_task/remote_vm/github_vm/unknown"
       ]
     },
     {
