@@ -1,0 +1,22 @@
+# Plan 2026-06-04-003 objective-contract evidence — journey: integration-catalog-renders
+# surface: core | tests: tests/test_integration_actions_f001.py, tests/test_integration_actions_wiring_f001.py
+# pytest exit: 0
+
+============================= test session starts ==============================
+collecting ... collected 13 items
+
+tests/test_integration_actions_f001.py::TestSourceKind::test_source_integration_is_valid PASSED [  7%]
+tests/test_integration_actions_f001.py::TestCatalogLiterals::test_one_item_per_catalog_action PASSED [ 15%]
+tests/test_integration_actions_f001.py::TestCatalogLiterals::test_static_smoke_exact_command_literal PASSED [ 23%]
+tests/test_integration_actions_f001.py::TestCatalogLiterals::test_external_commands_are_display_only PASSED [ 30%]
+tests/test_integration_actions_f001.py::TestCatalogLiterals::test_credential_env_var_names_literal PASSED [ 38%]
+tests/test_integration_actions_f001.py::TestSpineFields::test_credentialed_steps_never_command_resolvable PASSED [ 46%]
+tests/test_integration_actions_f001.py::TestSpineFields::test_clears_when_uses_registered_predicate PASSED [ 53%]
+tests/test_integration_actions_f001.py::TestSpineFields::test_dedupe_key_stable_across_rebuilds PASSED [ 61%]
+tests/test_integration_actions_f001.py::TestSerializationRoundTrip::test_display_fields_survive_to_dict PASSED [ 69%]
+tests/test_integration_actions_f001.py::TestNoSecrets::test_env_values_never_rendered PASSED [ 76%]
+tests/test_integration_actions_wiring_f001.py::test_integration_items_reach_the_real_gathered_set PASSED [ 84%]
+tests/test_integration_actions_wiring_f001.py::test_passed_evidence_suppresses_the_action_card_through_the_gate PASSED [ 92%]
+tests/test_integration_actions_wiring_f001.py::test_display_fields_survive_fleet_projection_rehydration PASSED [100%]
+
+============================== 13 passed in 0.27s ==============================

@@ -1,0 +1,53 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-14T00:28:01.484061+00:00",
+  "plan_id": "2026-06-04-003-feat-integration-operator-actions",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [],
+  "findings": [
+    {
+      "finding_id": "F2C-J001",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'integration-catalog-renders'",
+      "narrative": "The contract's user_journey 'integration-catalog-renders' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "core",
+      "journey": "integration-catalog-renders",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J002",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'static-smoke-evidence'",
+      "narrative": "The contract's user_journey 'static-smoke-evidence' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "core",
+      "journey": "static-smoke-evidence",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J003",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'gated-deploy-visibility'",
+      "narrative": "The contract's user_journey 'gated-deploy-visibility' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "core",
+      "journey": "gated-deploy-visibility",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J004",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'status-derivation'",
+      "narrative": "The contract's user_journey 'status-derivation' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "dashboard",
+      "journey": "status-derivation",
+      "matcher_string": null,
+      "evidence_uris": []
+    }
+  ]
+}
