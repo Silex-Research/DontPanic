@@ -73,8 +73,8 @@ not just enumerated.
 - **F001 — `operator_surface` axis + four-axis `InvocationContext`.** Reuses
   `agent_surface` for runtime and existing `ROLES` for worker roles. Sharp
   `execution_locality` enum: `local_mac | plan_worktree | dashboard_terminal |
-  remote_vm | code_task | unknown` (the Cowork-VM-vs-Mac-code-task distinction is
-  why this axis exists). Pure model + byte-stable serialization; secret-free.
+  code_task | remote_vm | github_vm | unknown` (the Cowork-VM-vs-Mac-code-task and
+  GitHub-VM distinctions are why this axis exists). Pure model + byte-stable serialization; secret-free.
 - **F002 — Channel/runtime detection (explicit-first, heuristic-second,
   unknown-last).** `DONT_PANIC_OPERATOR/_AGENT/_ROLE/_LOCALITY` → documented
   heuristics (`TERM_PROGRAM`, known-agent env markers) → explicit `unknown_*`.
