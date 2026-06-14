@@ -16,14 +16,15 @@
     },
     {
       "name": "easy-role-choice",
-      "description": "An operator says 'Claude is primary, Codex is auditor, Gemini is researcher' and sets it without hand-editing JSON, via an easy CLI and a dashboard role matrix. Operator roles are a layer separate from the worker-dispatch roles, so assigning a non-executor operator surface (e.g. Cursor as primary) is accepted.",
+      "description": "An operator says 'Claude is primary_operator, Codex is auditor, Gemini is researcher, Cursor is my primary_operator right now' and sets it without hand-editing JSON, via an easy CLI and a dashboard role matrix. Operator roles are PREFERENCES/intent, a layer separate from the worker-dispatch roles, so assigning a non-executor operator surface (e.g. Cursor as primary_operator) is accepted -- and never confers dispatch authority.",
       "surfaces": ["backend", "cli_human"],
       "states": ["set", "listed", "projected"],
       "acceptance_signals": [
         "setting an operator role writes operator_roles.* and never the worker roles.* namespace",
         "a non-executor surface (e.g. cursor) is accepted as an operator role without assert_registrable refusal",
         "the worker register-worker path still refuses non-executors (unchanged)",
-        "list returns the resolved operator-role map and the dashboard renders the role matrix"
+        "list returns the resolved operator-role map and the dashboard renders the role matrix",
+        "SAFETY INVARIANT: an operator_roles preference NEVER makes its subject dispatchable -- a surface holding only an operator role is refused at dispatch exactly as if no role were set; dispatch authority derives solely from AGENT_REGISTRY via worker roles.*"
       ]
     },
     {

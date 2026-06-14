@@ -87,12 +87,16 @@ not just enumerated.
   field-name checks); **no raw home paths** (sanitized like audit evidence);
   **retention/compaction** policy. PID/liveness-aware.
 - **F004 — Operator-role preferences (easy role choice), separate from worker
-  roles.** A settable operator-role layer (`primary | researcher | reviewer |
-  designer | tester | release_manager`) stored under a distinct config namespace
-  (`operator_roles.*`), with **no `assert_registrable` guard** (operator surfaces
-  like Cursor are not executors). Easy CLI to set/list ("Claude primary, Codex
-  auditor, Gemini researcher") and a dashboard role-matrix projection. Does NOT
-  touch the worker `roles.*` namespace or `agent register-worker`.
+  roles.** A settable operator-role layer (`primary_operator | researcher |
+  reviewer | designer | tester | release_operator`) stored under a distinct config
+  namespace (`operator_roles.*`), with **no `assert_registrable` guard** (operator
+  surfaces like Cursor are not executors). Easy CLI to set/list ("Claude
+  primary_operator, Codex auditor, Gemini researcher") and a dashboard role-matrix
+  projection. Does NOT touch the worker `roles.*` namespace or `agent
+  register-worker`. **Safety invariant (D009): `operator_roles.*` are
+  preferences/intent, NOT dispatch authorization — a Cursor `primary_operator`
+  preference never implies DontPanic can spawn Cursor as a worker; dispatch
+  authority derives solely from `AGENT_REGISTRY` via worker `roles.*`.**
 - **F005 — Channel doctor + operator-surface capability manifest shape.** Extend
   the capability schema with an operator-surface/runtime manifest `kind` (no
   `agent-channels.json`) and seed manifests for real surfaces (e.g. cursor,
