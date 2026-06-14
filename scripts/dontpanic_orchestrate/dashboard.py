@@ -1130,8 +1130,12 @@ def _gather_action_items(
     from dontpanic_orchestrate import integration_actions as _itg
 
     integration_evidence_dir = global_config.dontpanic_home() / _itg.EVIDENCE_SUBDIR
-    integration_items = operator_console.provide_integration_actions(
-        integration_evidence_dir
+    # F001 pending ACTION items (suppress via clears_when once evidence lands) +
+    # F004 always-rendered informational STATUS items (one per integration, info
+    # band) that keep CLEARED integrations visible with their derived status.
+    integration_items = (
+        operator_console.provide_integration_actions(integration_evidence_dir)
+        + operator_console.provide_integration_status_items(integration_evidence_dir)
     )
 
     # Plan 2026-05-30-001 F016: surface the skill-recommendation missing-input

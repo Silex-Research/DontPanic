@@ -103,7 +103,7 @@
         "Test: each matrix row + the failed-after-passed floor case + post-clear quiet-band visibility, through the real producer-to-render path; no secret leak"
       ],
       "acceptance": "Per-integration status is derived EXCLUSIVELY from the catalog + the append-only evidence history via the pinned status matrix in plan.md (evidence files are the sole status driver; env-var presence is a display hint on item copy and never advances status): the status floor is the highest status achieved by passed records, a later failed record surfaces a failure flag in the item copy WITHOUT regressing the floor, and each matrix row is exercised by fixtures. Post-clear visibility pinned mechanically against the shipped clears_when suppression model: each integration emits TWO items - the pending ACTION item (clears and suppresses normally via clears_when) and a separate informational STATUS item (audience=operator, band info, always rendered, carrying the derived status label); only genuinely pending integrations' action items occupy the needs_action band, and the info status item is what keeps cleared integrations visible; pending integrations link to their ActionItem (dedupe_key stable across rebuilds); resolution happens via the registered integration_evidence_present predicate reading the same evidence files F002 writes - no hand-editing; rendering leaks no secrets. Verified by tests through the real producer-to-render path per the operator-outcome QA sufficiency contract. End-to-end completion journey pinned: one test executes the rendered static-dashboard ActionItem's actual exact_command (the real smoke), which writes evidence through the F002 writer, then re-runs the real provider-to-render rebuild and asserts that integration's status flipped and its pending item cleared - no hand-editing anywhere in the loop.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
@@ -112,7 +112,11 @@
         "integration_status",
         "integration_status_item",
         "integration_status_matrix"
-      ]
+      ],
+      "evidence": {
+        "tests": "scripts/dontpanic_orchestrate/tests/test_integration_status_f004.py (12)",
+        "notes": "derive_integration_status() in integration_actions.py implements the plan.md status matrix EXCLUSIVELY from the append-only evidence history (env-var presence never advances status): per-integration floor = highest status proven by passed records (pending<configured<deployed<smoke-passing), realtime 'configured' cross-derives from the deploy integration reaching deployed; a later failed record raises failure_flag WITHOUT regressing the floor. provide_integration_status_items() in operator_console.py emits one ALWAYS-rendered info-band STATUS item per integration (distinct id namespace integration-status:<id>, clears_when=None so never suppressed, exact_command=None/automatable=False), the sibling to the pending ACTION item \u2014 it keeps CLEARED integrations visible with their derived label. dashboard._gather_action_items concatenates action+status items. Tests: all 5 matrix rows incl. cross-derived realtime, failed-after-passed floor + only-failed-pending cases, status items always render + carry derived label, post-clear visibility through real _gather_action_items (action suppressed, status remains), no-secret-leak, AND the end-to-end completion journey: real build -> run the rendered item's actual exact_command (dontpanic integrations smoke static-dashboard) via the CLI -> F002 writer records evidence -> real rebuild flips status pending->smoke-passing and clears the pending item, no hand-editing. Status items survive fleet rehydration round-trip. Full orchestrate sweep 4498 passed, 7 skipped."
+      }
     }
   ]
 }

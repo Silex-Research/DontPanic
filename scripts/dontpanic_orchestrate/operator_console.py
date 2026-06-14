@@ -1072,6 +1072,73 @@ def provide_integration_actions(
     return _sort(items)
 
 
+# Status STATUS items use a distinct id namespace so they coexist with the
+# pending ACTION items (same SOURCE_INTEGRATION, same GLOBAL scope/freshness).
+SOURCE_INTEGRATION_STATUS_PREFIX = f"{SOURCE_INTEGRATION}-status"
+
+
+def provide_integration_status_items(
+    evidence_dir: Path,
+    *,
+    now: _dt.datetime | None = None,
+) -> tuple[ActionItem, ...]:
+    """Plan 2026-06-04-003 F004 — one ALWAYS-rendered informational STATUS item
+    per integration, carrying the status derived EXCLUSIVELY from the append-only
+    evidence history (the plan.md status matrix).
+
+    This is the sibling to ``provide_integration_actions``: the pending ACTION
+    item clears + suppresses via clears_when once its evidence lands, while this
+    info-band STATUS item is what keeps a CLEARED integration visible (with its
+    derived status label) in the quiet/info band. It is never actionable
+    (exact_command=None, automatable=False) and clears_when=None so it is never
+    suppressed; a later failed record raises a failure flag in the copy WITHOUT
+    regressing the derived floor.
+    """
+    from dontpanic_orchestrate import integration_actions as _itg
+
+    updated_at = _now_iso(now)
+    statuses = _itg.derive_integration_status(evidence_dir)
+
+    items: list[ActionItem] = []
+    for integration_id, st in statuses.items():
+        item_id = f"{SOURCE_INTEGRATION_STATUS_PREFIX}:{integration_id}"
+        detail_parts = [
+            f"Derived status: {st.status} "
+            "(from the attested integration-evidence history)."
+        ]
+        if st.failure_flag:
+            suffix = f" ({st.failure_detail})" if st.failure_detail else ""
+            detail_parts.append(
+                f"Heads up: a later attempt failed{suffix}; the status floor "
+                f"is held at {st.status} and never regresses."
+            )
+        items.append(
+            ActionItem(
+                id=item_id,
+                source=SOURCE_INTEGRATION,
+                band=Band.INFO,
+                title=f"{integration_id}: {st.status}",
+                detail=" ".join(detail_parts),
+                exact_command=None,
+                automatable=False,
+                human_required_reason=(
+                    "informational status only — derived from evidence, runs nothing"
+                ),
+                evidence_uri=str(_itg.evidence_file(evidence_dir, integration_id)),
+                updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR,),
+                dedupe_key=item_id,
+                reversible=True,
+                plain_consequence=(
+                    f"Informational — reflects the {integration_id} integration's "
+                    "derived status; DontPanic runs nothing from this item."
+                ),
+                resolution_class=RESOLUTION_OPERATOR_ATTESTED,
+            )
+        )
+    return _sort(items)
+
+
 def _sort(items: Iterable[ActionItem]) -> tuple[ActionItem, ...]:
     """Deterministic sort: band priority, then source priority, then id.
 

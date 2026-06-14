@@ -197,6 +197,111 @@ def latest_outcome(
     return outcome
 
 
+# ── F004: per-integration status derivation (the plan.md status matrix) ────────
+STATUS_PENDING = "pending"
+STATUS_CONFIGURED = "configured"
+STATUS_DEPLOYED = "deployed"
+STATUS_SMOKE_PASSING = "smoke-passing"
+
+# Lattice ordering — status only ever moves UP its own ladder (floor-from-history).
+_STATUS_ORDER: dict[str, int] = {
+    STATUS_PENDING: 0,
+    STATUS_CONFIGURED: 1,
+    STATUS_DEPLOYED: 2,
+    STATUS_SMOKE_PASSING: 3,
+}
+
+# integration_id -> ordered list of (status_label, gating_action_id): the status
+# reached once a PASSED evidence record exists for that action id. This encodes
+# EXACTLY the plan.md "Integration status matrix (F004 contract)" table; it must
+# not drift without a plan amendment. (firebase-realtime-smoke's "configured"
+# rung is cross-derived from the deploy integration below, not an evidence row.)
+_STATUS_MILESTONES: dict[str, tuple[tuple[str, str], ...]] = {
+    "static-dashboard": ((STATUS_SMOKE_PASSING, "static-dashboard-smoke"),),
+    "firebase-functions-deploy": (
+        (STATUS_CONFIGURED, "firebase-creds"),
+        (STATUS_DEPLOYED, "firebase-deploy"),
+    ),
+    "firebase-realtime-smoke": ((STATUS_SMOKE_PASSING, "firebase-realtime-smoke"),),
+    "discord-webhook": ((STATUS_CONFIGURED, "discord-webhook"),),
+    "linear-credentials": ((STATUS_CONFIGURED, "linear-creds"),),
+}
+
+
+@dataclasses.dataclass(frozen=True)
+class IntegrationStatus:
+    """Derived status for one integration (F004).
+
+    ``status`` is the FLOOR — the highest status proven by a passed evidence
+    record (never regresses). ``failure_flag`` is raised when the most recent
+    record for any milestone action is a failure, WITHOUT lowering the floor.
+    """
+
+    integration_id: str
+    status: str
+    failure_flag: bool
+    failure_detail: str | None
+    has_evidence: bool
+
+
+def _catalog_integration_ids() -> list[str]:
+    ids: list[str] = []
+    for action in INTEGRATION_CATALOG:
+        if action.integration_id not in ids:
+            ids.append(action.integration_id)
+    return ids
+
+
+def derive_integration_status(evidence_dir: Path) -> dict[str, IntegrationStatus]:
+    """Derive per-integration status EXCLUSIVELY from the append-only evidence
+    history, per the plan.md status matrix (F004).
+
+    Status derives from evidence records ONLY — env-var presence is never read
+    here. The floor is the highest status reached by passed records; a later
+    failed record raises a failure flag without regressing the floor.
+    """
+    ids = _catalog_integration_ids()
+    histories = {i: read_evidence(evidence_dir, i) for i in ids}
+
+    # Pass 1: evidence-driven floor per integration.
+    floor: dict[str, str] = {}
+    for integration_id in ids:
+        records = histories[integration_id]
+        reached = STATUS_PENDING
+        for label, action_id in _STATUS_MILESTONES.get(integration_id, ()):
+            if has_passed_evidence(records, action_id) and (
+                _STATUS_ORDER[label] > _STATUS_ORDER[reached]
+            ):
+                reached = label
+        floor[integration_id] = reached
+
+    # Pass 2: cross-integration rung — the realtime smoke is "configured" once
+    # the deploy integration has reached "deployed" (matrix row), never lower.
+    realtime = "firebase-realtime-smoke"
+    deploy = "firebase-functions-deploy"
+    if realtime in floor and deploy in floor:
+        if _STATUS_ORDER[floor[deploy]] >= _STATUS_ORDER[STATUS_DEPLOYED] and (
+            _STATUS_ORDER[floor[realtime]] < _STATUS_ORDER[STATUS_CONFIGURED]
+        ):
+            floor[realtime] = STATUS_CONFIGURED
+
+    result: dict[str, IntegrationStatus] = {}
+    for integration_id in ids:
+        records = histories[integration_id]
+        failure_detail: str | None = None
+        for _label, action_id in _STATUS_MILESTONES.get(integration_id, ()):
+            if latest_outcome(records, action_id) == "failed":
+                failure_detail = f"latest {action_id} attempt recorded outcome=failed"
+        result[integration_id] = IntegrationStatus(
+            integration_id=integration_id,
+            status=floor[integration_id],
+            failure_flag=failure_detail is not None,
+            failure_detail=failure_detail,
+            has_evidence=bool(records),
+        )
+    return result
+
+
 # ── F002: append-only evidence writer ─────────────────────────────────────────
 def _now_iso(now: _dt.datetime | None = None) -> str:
     ts = now if now is not None else _dt.datetime.now(_dt.timezone.utc)
