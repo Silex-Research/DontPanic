@@ -480,6 +480,17 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
     ),
     "init": SubcommandSpec(positional_max=None),
     "smoke": SubcommandSpec(positional_max=None),
+    # Plan 2026-06-04-003 — operator integration actions. Only `integrations
+    # smoke <integration>` is ever a VALIDATED exact_command (verb + integration
+    # = 2 positionals, no flags); the `attest` verb rides the display-only
+    # operator_command field per the honest-commands rule and is NEVER validated
+    # here, so its flags are intentionally NOT accepted as exact_command tokens
+    # (CodeRabbit #4 — mirror the real validated runtime surface, not the whole
+    # CLI shape).
+    "integrations": SubcommandSpec(
+        positional_max=2,
+        value_flags=frozenset(),
+    ),
     "architecture": _ARCHITECTURE_SPEC,
     "showcase": SubcommandSpec(positional_max=None),
     "capabilities": _CAPABILITIES_SPEC,

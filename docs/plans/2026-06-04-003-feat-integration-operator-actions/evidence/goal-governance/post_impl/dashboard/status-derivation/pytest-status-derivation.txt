@@ -1,0 +1,21 @@
+# Plan 2026-06-04-003 objective-contract evidence — journey: status-derivation
+# surface: dashboard | tests: tests/test_integration_status_f004.py
+# pytest exit: 0
+
+============================= test session starts ==============================
+collecting ... collected 12 items
+
+tests/test_integration_status_f004.py::TestStatusMatrixRows::test_all_integrations_pending_with_no_evidence PASSED [  8%]
+tests/test_integration_status_f004.py::TestStatusMatrixRows::test_static_dashboard_smoke_passing PASSED [ 16%]
+tests/test_integration_status_f004.py::TestStatusMatrixRows::test_firebase_deploy_configured_then_deployed PASSED [ 25%]
+tests/test_integration_status_f004.py::TestStatusMatrixRows::test_realtime_configured_cross_derives_from_deploy_deployed PASSED [ 33%]
+tests/test_integration_status_f004.py::TestStatusMatrixRows::test_discord_and_linear_configured_terminal PASSED [ 41%]
+tests/test_integration_status_f004.py::TestFloorFromHistory::test_failed_after_passed_keeps_floor_and_flags PASSED [ 50%]
+tests/test_integration_status_f004.py::TestFloorFromHistory::test_only_failed_records_stay_pending_with_flag PASSED [ 58%]
+tests/test_integration_status_f004.py::TestStatusItemsAlwaysRender::test_one_status_item_per_integration_info_band PASSED [ 66%]
+tests/test_integration_status_f004.py::TestStatusItemsAlwaysRender::test_status_item_carries_derived_label PASSED [ 75%]
+tests/test_integration_status_f004.py::TestPostClearVisibilityThroughRealGather::test_cleared_action_disappears_but_status_item_remains PASSED [ 83%]
+tests/test_integration_status_f004.py::TestNoSecretLeak::test_status_items_carry_no_secret_shapes PASSED [ 91%]
+tests/test_integration_status_f004.py::TestEndToEndCompletionJourney::test_smoke_command_writes_evidence_then_rebuild_flips_status PASSED [100%]
+
+============================== 12 passed in 1.71s ==============================

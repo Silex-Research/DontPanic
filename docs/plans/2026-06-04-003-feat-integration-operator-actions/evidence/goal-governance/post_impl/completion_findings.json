@@ -1,0 +1,13 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-14T00:54:17.032655+00:00",
+  "plan_id": "2026-06-04-003-feat-integration-operator-actions",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/core/gated-deploy-visibility/pytest-gated-deploy-visibility.txt",
+    "evidence/goal-governance/post_impl/core/integration-catalog-renders/pytest-integration-catalog-renders.txt",
+    "evidence/goal-governance/post_impl/core/static-smoke-evidence/pytest-static-smoke-evidence.txt",
+    "evidence/goal-governance/post_impl/dashboard/status-derivation/pytest-status-derivation.txt"
+  ],
+  "findings": []
+}

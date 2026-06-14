@@ -1,0 +1,21 @@
+# Plan 2026-06-04-003 objective-contract evidence — journey: gated-deploy-visibility
+# surface: core | tests: tests/test_integration_gated_bands_f003.py
+# pytest exit: 0
+
+============================= test session starts ==============================
+collecting ... collected 12 items
+
+tests/test_integration_gated_bands_f003.py::TestUntriggeredRendersInfo::test_gated_row_is_info_and_visible_when_trigger_unmet[firebase-functions-deploy-firebase-creds-False] PASSED [  8%]
+tests/test_integration_gated_bands_f003.py::TestUntriggeredRendersInfo::test_gated_row_is_info_and_visible_when_trigger_unmet[firebase-functions-deploy-firebase-deploy-False] PASSED [ 16%]
+tests/test_integration_gated_bands_f003.py::TestUntriggeredRendersInfo::test_gated_row_is_info_and_visible_when_trigger_unmet[firebase-realtime-smoke-firebase-realtime-smoke-True] PASSED [ 25%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsAbsentRendersAdvisory::test_advisory_names_missing_env_var[firebase-functions-deploy-firebase-creds-False] PASSED [ 33%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsAbsentRendersAdvisory::test_advisory_names_missing_env_var[firebase-functions-deploy-firebase-deploy-False] PASSED [ 41%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsAbsentRendersAdvisory::test_advisory_names_missing_env_var[firebase-realtime-smoke-firebase-realtime-smoke-True] PASSED [ 50%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsPresentRendersNeedsAction::test_needs_action_when_trigger_and_creds_present[firebase-functions-deploy-firebase-creds-False] PASSED [ 58%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsPresentRendersNeedsAction::test_needs_action_when_trigger_and_creds_present[firebase-functions-deploy-firebase-deploy-False] PASSED [ 66%]
+tests/test_integration_gated_bands_f003.py::TestTriggerMetCredentialsPresentRendersNeedsAction::test_needs_action_when_trigger_and_creds_present[firebase-realtime-smoke-firebase-realtime-smoke-True] PASSED [ 75%]
+tests/test_integration_gated_bands_f003.py::TestTriggerIsAttestationOnly::test_env_credentials_alone_do_not_meet_the_trigger PASSED [ 83%]
+tests/test_integration_gated_bands_f003.py::TestTriggerIsAttestationOnly::test_passed_action_evidence_suppresses_the_action_item PASSED [ 91%]
+tests/test_integration_gated_bands_f003.py::TestNoSecretLeakInRenderedItems::test_no_credential_values_in_any_gated_item_field PASSED [100%]
+
+============================== 12 passed in 0.14s ==============================

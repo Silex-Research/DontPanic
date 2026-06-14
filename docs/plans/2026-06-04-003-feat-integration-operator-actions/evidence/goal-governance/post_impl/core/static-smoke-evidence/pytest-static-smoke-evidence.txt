@@ -1,0 +1,26 @@
+# Plan 2026-06-04-003 objective-contract evidence — journey: static-smoke-evidence
+# surface: core | tests: tests/test_integration_evidence_f002.py, tests/test_integrations_cli_f002.py
+# pytest exit: 0
+
+============================= test session starts ==============================
+collecting ... collected 17 items
+
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_append_one_record_with_required_fields PASSED [  5%]
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_append_only_never_rewrites_prior_records PASSED [ 11%]
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_secret_values_sanitized_in_details PASSED [ 17%]
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_file_and_dir_modes_tightened PASSED [ 23%]
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_outcome_must_be_passed_or_failed PASSED [ 29%]
+tests/test_integration_evidence_f002.py::TestEvidenceWriter::test_path_traversal_in_integration_id_is_neutralized PASSED [ 35%]
+tests/test_integration_evidence_f002.py::TestRenderProofSmoke::test_smoke_passes_when_producer_cards_reach_built_artifact PASSED [ 41%]
+tests/test_integration_evidence_f002.py::TestRenderProofSmoke::test_smoke_fails_on_silently_empty_render PASSED [ 47%]
+tests/test_integration_evidence_f002.py::TestRenderProofSmoke::test_smoke_fails_when_build_raises PASSED [ 52%]
+tests/test_integrations_cli_f002.py::TestSmokeVerb::test_smoke_static_dashboard_passes_and_records_evidence PASSED [ 58%]
+tests/test_integrations_cli_f002.py::TestSmokeVerb::test_smoke_unknown_integration_is_usage_error PASSED [ 64%]
+tests/test_integrations_cli_f002.py::TestAttestVerb::test_attest_records_passed_attestation PASSED [ 70%]
+tests/test_integrations_cli_f002.py::TestAttestVerb::test_attest_records_failed_attestation PASSED [ 76%]
+tests/test_integrations_cli_f002.py::TestAttestVerb::test_attest_rejects_bad_outcome PASSED [ 82%]
+tests/test_integrations_cli_f002.py::TestAttestVerb::test_attest_requires_action PASSED [ 88%]
+tests/test_integrations_cli_f002.py::TestNoVerb::test_no_subcommand_returns_usage PASSED [ 94%]
+tests/test_integrations_cli_f002.py::TestCliDispatch::test_cli_routes_integrations_to_integrations_main PASSED [100%]
+
+============================== 17 passed in 2.38s ==============================

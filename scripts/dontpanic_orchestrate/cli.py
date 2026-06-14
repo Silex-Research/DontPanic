@@ -5459,6 +5459,10 @@ def main(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.smoke import smoke_main as _smoke_main
 
         return _smoke_main(raw[1:])
+    if raw and raw[0] == "integrations":
+        from dontpanic_orchestrate.integrations_cli import integrations_main as _itg_main
+
+        return _itg_main(raw[1:])
     if raw and raw[0] == "architecture":
         from dontpanic_orchestrate import architecture as _arch
 

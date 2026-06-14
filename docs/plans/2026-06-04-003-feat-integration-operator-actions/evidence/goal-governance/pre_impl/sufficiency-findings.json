@@ -1,0 +1,69 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:bc97e60859f74e4616892c55fc79d0142bd4dd1e07076a2329b29d3aadf3dc66",
+  "generated_at": "2026-06-12T23:16:31Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "status-derivation",
+      "gap_class": "parity_gap",
+      "description": "F004 says each integration emits two items, but F001 requires one ActionItem per catalog action step. Firebase functions has separate credential and deploy steps, so a two-items-per-integration rule would either collapse distinct pending actions or conflict with the completion test's one-truthful-ActionItem-per-step requirement.",
+      "feature_refs": [
+        "F001",
+        "F004"
+      ],
+      "recommendation": "Pin cardinality as one STATUS item per integration plus one ACTION item per unresolved catalog action row, with firebase-creds and firebase-deploy clearing independently.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "coverage_gap",
+      "description": "The Firebase trigger is defined as action_id firebase-trigger, but the catalog does not make it a visible operator action or otherwise provide the exact attestation command that satisfies the trigger. The operator can see the gated deploy/realtime items but lacks a first-class, rendered path to mark multi-operator need as met.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Add either a catalog row for firebase-trigger or require the gated items to render the exact trigger attestation command and evidence expectation, then test the trigger-unmet to trigger-met transition through rendered output.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "gated-deploy-visibility",
+      "gap_class": "wiring_gap",
+      "description": "F003 intentionally renders trigger-unmet deploy/realtime items as info, and F004 renders status items as info, but the shipped operator-console triage path treats info/advisory as quiet and the default console only shows needs_auth, needs_decision, and uncertain. The plan does not pin how these always-visible integration items appear in the standard operator-console surface.",
+      "feature_refs": [
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Specify the operator-console model and renderer changes that keep integration info/status items visible without promoting them to needs_action, and cover that path with fixture-render tests.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "static-smoke-evidence",
+      "gap_class": "integration_gap",
+      "description": "The render-proof smoke says it runs the real dashboard build over export-dashboard output and checks built rendered artifacts, but it does not pin the actual render mechanism. For a static SPA, copied state JSON and static build output can diverge from browser-rendered DOM, so the smoke could remain parse-proof rather than render-proof.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Pin the smoke to a concrete offline render path, such as building/exporting state, loading the dashboard with that state in a headless browser or equivalent DOM renderer, and asserting identifying values in the rendered page output.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "status-derivation",
+      "gap_class": "coverage_gap",
+      "description": "The status matrix says a later failed record surfaces a failure flag without regressing the status floor, but it does not define record ordering or malformed-record handling. Captured timestamps, JSONL append order, duplicate records, and unknown action_ids can produce different derived statuses unless the deterministic rule is pinned.",
+      "feature_refs": [
+        "F002",
+        "F004"
+      ],
+      "recommendation": "Define JSONL append order as the history order, require attestation writes to reject unknown integration/action pairs, and add matrix fixtures for duplicate, out-of-order timestamp, malformed, and failed-after-passed records.",
+      "finding_class": "matrix_pin"
+    }
+  ]
+}

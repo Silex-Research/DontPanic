@@ -3,7 +3,7 @@ id: 2026-06-04-003-feat-integration-operator-actions
 title: Integration operator-actions (deploy / credentials / smoke)
 type: feat
 tier: cross-cutting
-status: draft
+status: completed
 date: "2026-06-04"
 goal_type: new_feature
 description: >
@@ -29,6 +29,7 @@ privacy_tier: internal
 links:
   features: ./features.json
   decisions: ./decisions.jsonl
+  objective_contract: ./objective_contract.json
 ---
 
 # Integration operator-actions
@@ -71,8 +72,47 @@ surface, minimal code.
 - F003 Gated realtime/deploy actions: Firebase functions deploy + realtime smoke as
   ActionItems gated on multi-operator need + credentials. (Re-homes firebase-adapter
   F003/F005 realtime half; parked behind trigger.)
-- F004 Integration status surfacing: dashboard shows each integration as
-  configured / deployed / smoke-passing / pending, consuming the catalog.
+- F004 Integration status surfacing: per-integration status routed through the
+  existing what-now/operator-console surfaces (no separate integrations panel),
+  derived from catalog + evidence per the status matrix below.
+
+## Integration catalog (F001 literal rows)
+
+| integration_id | action_id | command (operator_command unless marked exact) | credential_env_vars | evidence_expected |
+|---|---|---|---|---|
+| static-dashboard | static-dashboard-smoke | `dontpanic integrations smoke static-dashboard` (exact_command) | [] | smoke record outcome=passed |
+| firebase-functions-deploy | firebase-creds | provision Firebase service credentials, then `dontpanic integrations attest firebase-functions-deploy --action firebase-creds --outcome passed` | [FIREBASE_TOKEN] | attestation record (action_id firebase-creds) |
+| firebase-functions-deploy | firebase-deploy | `firebase deploy --only functions` (operator_command), then attest with --action firebase-deploy | [FIREBASE_TOKEN] | attestation record (action_id firebase-deploy) |
+| firebase-realtime-smoke | firebase-realtime-smoke | follow dashboard/functions/RUNBOOK.md smoke, then attest with --action firebase-realtime-smoke | [FIREBASE_TOKEN] | attestation record outcome=passed |
+| discord-webhook | discord-webhook | set the Discord webhook env var, then attest with --action discord-webhook | [DONTPANIC_DISCORD_WEBHOOK_URL] | attestation record (action_id discord-webhook) |
+| linear-credentials | linear-creds | provision Linear API credentials, then attest with --action linear-creds | [LINEAR_API_KEY] | attestation record (action_id linear-creds) |
+
+Trigger: firebase-deploy and firebase-realtime-smoke carry trigger_condition
+"multi-operator dashboard need" (trigger attestation action_id firebase-trigger).
+Fixtures assert these literals; implementation MUST NOT drift from this table
+without a plan amendment.
+
+## Integration status matrix (F004 contract)
+
+Evidence = integration-evidence files written by write_integration_evidence()
+(F002 contract). Status is derived per integration:
+
+| integration | pending | configured | deployed | smoke-passing |
+|---|---|---|---|---|
+| static-dashboard | no evidence | n/a (no creds) | n/a | smoke evidence outcome=passed |
+| firebase-functions-deploy | no evidence | attested credential-setup evidence (action_id firebase-creds) | attested deploy evidence (action_id firebase-deploy) | n/a (smoke is a separate row) |
+| firebase-realtime-smoke | no evidence | configured = deploy row reached deployed | n/a | attested smoke evidence outcome=passed (action_id firebase-realtime-smoke) |
+| discord-webhook | no evidence | attested webhook-setup evidence (action_id discord-webhook) | n/a | n/a (configured is terminal) |
+| linear-credentials | no evidence | attested credential evidence (action_id linear-creds) | n/a | n/a (configured is terminal; projection work tracked in ext-bridge) |
+
+Status derives EXCLUSIVELY from evidence records (env-var presence is a display
+hint, never a status driver). Evidence files are append-only JSONL (one per integration; records never rewritten).
+The status FLOOR is the highest status achieved by passed records in the history; a
+later outcome=failed record surfaces a failure flag in the item copy without
+regressing the floor - statuses never regress silently and prior success is never
+overwritten. After an integration's pending ActionItems clear, it remains visible in
+the quiet band of the existing what-now/operator-console surfaces with its derived
+status label; only pending integrations occupy the needs-action band.
 
 ## Scope (out)
 

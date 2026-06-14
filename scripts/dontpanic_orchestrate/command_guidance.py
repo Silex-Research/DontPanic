@@ -159,6 +159,10 @@ _CLASS_BY_COMMAND: dict[str, CommandClass] = {
     "showcase": CommandClass.READONLY_INSPECTION,
     "skills": CommandClass.READONLY_INSPECTION,
     "smoke": CommandClass.DIAGNOSTIC_INSPECTION,
+    # Plan 2026-06-04-003: `integrations attest` appends an evidence record
+    # (a guarded local write), so the surface classifies as config mutation
+    # even though `integrations smoke` alone is diagnostic.
+    "integrations": CommandClass.CONFIG_MUTATION,
     "state": CommandClass.READONLY_INSPECTION,
     "what-now": CommandClass.READONLY_INSPECTION,
 }
@@ -312,6 +316,9 @@ _EXAMPLES_BY_COMMAND: dict[str, tuple[CommandExample, ...]] = {
         _example("skills", "recommend", "--format", "json", description="Inspect skill recommendations."),
     ),
     "smoke": (_example("smoke", description="Run smoke checks."),),
+    "integrations": (
+        _example("integrations", "smoke", "static-dashboard", description="Run the static-dashboard integration smoke."),
+    ),
     "state": (_example("state", description="Export state."),),
     "what-now": (
         _example("what-now", "<plan>", "--format", "json", description="Inspect current actions."),

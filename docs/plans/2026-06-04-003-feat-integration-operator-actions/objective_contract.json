@@ -1,0 +1,59 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "2026-06-04 plans-vs-operator-actions audit (deploy/credential/smoke work belongs in the action model, not implementation features) + D001 lock-time re-validation against main@4de6671: the five shipped ActionItem source providers in operator_console.py, the control-plane spine fields, state_cli.py export-dashboard, and dashboard/functions/ code+tests are the substrate this plan composes.",
+  "completion_test": "An operator opening the standard what-now/operator-console surface sees one truthful ActionItem per integration step (deploy/smokes/credential setups) with exact command, evidence expectation, and credential requirements; running the static-dashboard smoke captures evidence that flips that integration's derived status without hand-editing; gated Firebase deploy/realtime-smoke items render with their trigger condition and never auto-execute; no secrets appear anywhere in rendered output. Proven offline by fixture tests through the real provider-to-render path - zero paid calls, no live Firebase.",
+  "user_journeys": [
+    {
+      "name": "integration-catalog-renders",
+      "description": "provide_integration_actions() emits the catalog and the items render deduped through the real console/dashboard surfaces with spine fields populated and no secret leakage",
+      "surfaces": [
+        "core",
+        "dashboard"
+      ],
+      "states": [
+        "catalog-emitted",
+        "spine-fields-populated",
+        "renders-deduped",
+        "no-secret-leak"
+      ]
+    },
+    {
+      "name": "static-smoke-evidence",
+      "description": "the static-dashboard smoke runs export-dashboard, verifies artifacts render, records an evidence ref, and fails clearly on missing/garbled state",
+      "surfaces": [
+        "core"
+      ],
+      "states": [
+        "smoke-passes-with-evidence",
+        "fails-clearly-on-bad-state",
+        "no-credentials-needed"
+      ]
+    },
+    {
+      "name": "gated-deploy-visibility",
+      "description": "Firebase deploy + realtime smoke appear as credential-gated operator items with exact commands and trigger condition, and never execute in-repo",
+      "surfaces": [
+        "core",
+        "dashboard"
+      ],
+      "states": [
+        "gated-items-render",
+        "never-auto-executes",
+        "trigger-condition-surfaced"
+      ]
+    },
+    {
+      "name": "status-derivation",
+      "description": "per-integration status derived from catalog + captured evidence routes through the shipped what-now surfaces; pending links to its ActionItem; resolution clears via clears_when",
+      "surfaces": [
+        "dashboard"
+      ],
+      "states": [
+        "pending",
+        "configured",
+        "deployed",
+        "smoke-passing"
+      ]
+    }
+  ]
+}

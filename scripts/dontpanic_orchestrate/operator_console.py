@@ -163,6 +163,9 @@ SOURCE_CAPABILITY = "capability"
 SOURCE_RECONCILE = "reconcile"
 SOURCE_SUPERVISOR = "supervisor"
 SOURCE_ARCHITECTURE = "architecture"
+# Plan 2026-06-04-003 F001 — operator-owned integration steps (deploy /
+# credentials / smokes) modelled as ActionItems, never executed in-repo.
+SOURCE_INTEGRATION = "integration"
 
 # Plan 2026-06-04-005 F004 — the lower-priority section uncertainty (demotion)
 # cards render under: never Needs Action, always "Status could not be refreshed".
@@ -175,6 +178,7 @@ _VALID_SOURCES: frozenset[str] = frozenset(
         SOURCE_RECONCILE,
         SOURCE_SUPERVISOR,
         SOURCE_ARCHITECTURE,
+        SOURCE_INTEGRATION,
     }
 )
 
@@ -184,6 +188,7 @@ _SOURCE_PRIORITY: dict[str, int] = {
     SOURCE_CAPABILITY: 2,
     SOURCE_SUPERVISOR: 3,
     SOURCE_ARCHITECTURE: 4,
+    SOURCE_INTEGRATION: 5,
 }
 
 
@@ -344,6 +349,15 @@ class ActionItem:
     # advisory placement; SECTION_STATUS_UNCERTAIN marks an uncertainty card built
     # by build_uncertainty_card (a stale/failed source the gate demoted).
     section: str | None = None
+    # Plan 2026-06-04-003 F001 — integration display fields. operator_command
+    # is the honest-commands escape hatch: an EXTERNAL command rendered as
+    # run-this-yourself copy that never passes the validated exact_command
+    # boundary. credential_env_vars carries env-var NAMES only (presence is
+    # display data; values are never read into item fields).
+    operator_command: str | None = None
+    credential_env_vars: tuple[str, ...] = ()
+    evidence_expected: str | None = None
+    trigger_condition: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -413,6 +427,10 @@ class ActionItem:
             "dashboard_url": self.dashboard_url,
             "clears_when": self.clears_when.to_dict() if self.clears_when else None,
             "resolution_class": self.resolution_class,
+            "operator_command": self.operator_command,
+            "credential_env_vars": list(self.credential_env_vars),
+            "evidence_expected": self.evidence_expected,
+            "trigger_condition": self.trigger_condition,
         }
 
 
@@ -940,6 +958,187 @@ def collapse_demoted_to_uncertainty(
     return cards
 
 
+def provide_integration_actions(
+    evidence_dir: Path,
+    *,
+    now: _dt.datetime | None = None,
+) -> tuple[ActionItem, ...]:
+    """Plan 2026-06-04-003 F001 — map the literal integration catalog into
+    ActionItems, deriving state from the append-only evidence history ONLY
+    (env-var presence is a display hint, never a status driver).
+
+    Band semantics (F003): untriggered gated rows render as ``info``
+    (not-yet-needed, never hidden); trigger-met-but-credentials-absent rows
+    render as ``advisory`` naming the missing env-var NAMES; ready rows are
+    ``needs_action``. Rows whose own evidence already satisfies their
+    clears_when predicate are not emitted as ACTION items (F004 surfaces
+    their status separately).
+
+    Honest-commands (CP-D008): external commands ride the display-only
+    ``operator_command`` field; ``exact_command`` is set ONLY for validated
+    dontpanic commands (the static smoke).
+    """
+    from dontpanic_orchestrate import integration_actions as _itg
+    from dontpanic_orchestrate.action_resolvability import ClearsWhen
+
+    updated_at = _now_iso(now)
+    histories = {
+        action.integration_id: _itg.read_evidence(evidence_dir, action.integration_id)
+        for action in _itg.INTEGRATION_CATALOG
+    }
+
+    items: list[ActionItem] = []
+    for action in _itg.INTEGRATION_CATALOG:
+        records = histories[action.integration_id]
+        if _itg.has_passed_evidence(records, action.action_id):
+            continue  # resolved — F004 renders the status item instead
+
+        creds_present = all(name in os.environ for name in action.credential_env_vars)
+        trigger_met = action.trigger_condition is None or _itg.has_passed_evidence(
+            records, _itg.TRIGGER_ACTION_FIREBASE
+        )
+
+        if not trigger_met:
+            band = Band.INFO
+            state_note = f"Not yet needed — gated on: {action.trigger_condition}."
+        elif action.credential_env_vars and not creds_present:
+            band = Band.ADVISORY
+            state_note = (
+                "Waiting on credential provisioning: "
+                + ", ".join(action.credential_env_vars)
+                + "."
+            )
+        else:
+            band = Band.NEEDS_ACTION
+            state_note = None
+
+        detail_parts = [action.why]
+        if state_note:
+            detail_parts.append(state_note)
+        if action.operator_command:
+            detail_parts.append(f"Run yourself: {action.operator_command}")
+        if action.credential_env_vars:
+            detail_parts.append(
+                "Credentials required: " + ", ".join(action.credential_env_vars)
+            )
+        detail_parts.append(f"Evidence expected: {action.evidence_expected}")
+
+        automatable = action.exact_command is not None and not action.credential_env_vars
+        if automatable:
+            resolution = RESOLUTION_COMMAND_RESOLVABLE
+            reason = None
+        else:
+            resolution = RESOLUTION_OPERATOR_ATTESTED
+            reason = (
+                "operator-owned step: external command and/or credentials "
+                "DontPanic never executes or reads"
+            )
+
+        item_id = f"{SOURCE_INTEGRATION}:{action.integration_id}:{action.action_id}"
+        items.append(
+            ActionItem(
+                id=item_id,
+                source=SOURCE_INTEGRATION,
+                band=band,
+                title=action.what,
+                detail=" ".join(detail_parts),
+                exact_command=action.exact_command,
+                automatable=automatable,
+                human_required_reason=reason,
+                evidence_uri=str(_itg.evidence_file(evidence_dir, action.integration_id)),
+                updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR, AUDIENCE_HUMAN),
+                dedupe_key=item_id,
+                reversible=action.reversible,
+                plain_consequence=(
+                    f"Records evidence for the {action.integration_id} integration; "
+                    "nothing runs against external services from DontPanic itself."
+                ),
+                clears_when=ClearsWhen(
+                    predicate="integration_evidence_present",
+                    params={
+                        "integration_id": action.integration_id,
+                        "action_id": action.action_id,
+                        "outcome": "passed",
+                    },
+                ),
+                resolution_class=resolution,
+                trigger_condition=action.trigger_condition,
+                operator_command=action.operator_command,
+                credential_env_vars=action.credential_env_vars,
+                evidence_expected=action.evidence_expected,
+            )
+        )
+    return _sort(items)
+
+
+# Status STATUS items use a distinct id namespace so they coexist with the
+# pending ACTION items (same SOURCE_INTEGRATION, same GLOBAL scope/freshness).
+SOURCE_INTEGRATION_STATUS_PREFIX = f"{SOURCE_INTEGRATION}-status"
+
+
+def provide_integration_status_items(
+    evidence_dir: Path,
+    *,
+    now: _dt.datetime | None = None,
+) -> tuple[ActionItem, ...]:
+    """Plan 2026-06-04-003 F004 — one ALWAYS-rendered informational STATUS item
+    per integration, carrying the status derived EXCLUSIVELY from the append-only
+    evidence history (the plan.md status matrix).
+
+    This is the sibling to ``provide_integration_actions``: the pending ACTION
+    item clears + suppresses via clears_when once its evidence lands, while this
+    info-band STATUS item is what keeps a CLEARED integration visible (with its
+    derived status label) in the quiet/info band. It is never actionable
+    (exact_command=None, automatable=False) and clears_when=None so it is never
+    suppressed; a later failed record raises a failure flag in the copy WITHOUT
+    regressing the derived floor.
+    """
+    from dontpanic_orchestrate import integration_actions as _itg
+
+    updated_at = _now_iso(now)
+    statuses = _itg.derive_integration_status(evidence_dir)
+
+    items: list[ActionItem] = []
+    for integration_id, st in statuses.items():
+        item_id = f"{SOURCE_INTEGRATION_STATUS_PREFIX}:{integration_id}"
+        detail_parts = [
+            f"Derived status: {st.status} "
+            "(from the attested integration-evidence history)."
+        ]
+        if st.failure_flag:
+            suffix = f" ({st.failure_detail})" if st.failure_detail else ""
+            detail_parts.append(
+                f"Heads up: a later attempt failed{suffix}; the status floor "
+                f"is held at {st.status} and never regresses."
+            )
+        items.append(
+            ActionItem(
+                id=item_id,
+                source=SOURCE_INTEGRATION,
+                band=Band.INFO,
+                title=f"{integration_id}: {st.status}",
+                detail=" ".join(detail_parts),
+                exact_command=None,
+                automatable=False,
+                human_required_reason=(
+                    "informational status only — derived from evidence, runs nothing"
+                ),
+                evidence_uri=str(_itg.evidence_file(evidence_dir, integration_id)),
+                updated_at=updated_at,
+                audience=(AUDIENCE_OPERATOR,),
+                dedupe_key=item_id,
+                reversible=True,
+                plain_consequence=(
+                    f"Informational — reflects the {integration_id} integration's "
+                    "derived status; DontPanic runs nothing from this item."
+                ),
+                resolution_class=RESOLUTION_OPERATOR_ATTESTED,
+            )
+        )
+    return _sort(items)
+
+
 def _sort(items: Iterable[ActionItem]) -> tuple[ActionItem, ...]:
     """Deterministic sort: band priority, then source priority, then id.
 
@@ -1200,6 +1399,13 @@ def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | Non
             reversible=bool(entry.get("reversible", False)),
             plain_consequence=entry.get("plain_consequence"),
             dashboard_url=entry.get("dashboard_url"),
+            # Plan 2026-06-04-003 F001 (finding #5): the integration display
+            # fields must survive the fleet/project projection rehydration
+            # round-trip, not be silently dropped here.
+            operator_command=entry.get("operator_command"),
+            credential_env_vars=tuple(entry.get("credential_env_vars") or ()),
+            evidence_expected=entry.get("evidence_expected"),
+            trigger_condition=entry.get("trigger_condition"),
         )
     except (KeyError, ValueError, TypeError):
         return None
