@@ -77,7 +77,7 @@
         "Test: items render gated until trigger evidence + creds present; never execute; offline fixtures only"
       ],
       "acceptance": "Firebase deploy + realtime smoke appear as operator ActionItems that ALWAYS render (gating is shown as state, never by hiding the item): each carries its external command in operator_command (display-only; exact_command=None per honest-commands), required evidence, credentials_required, reversible-as-applicable, and resolution_class RESOLUTION_OPERATOR_ATTESTED. Trigger semantics pinned: the trigger is a static catalog field (trigger_condition text, e.g. multi-operator need) that is un-met by default and met ONLY via an operator-attested integration-evidence record - never inferred from live environment state. Credential semantics pinned: credential presence is a presence-only check of declared env-var NAMES (values never read into item fields, no network probes), so the whole feature is provable offline with fixtures. Items never execute anything in-repo. Verified by fixture tests through the provider seam. Band semantics pinned: using the SHIPPED band vocabulary (needs_action/advisory/info/ready): a gated item whose trigger_condition is un-met renders as info with a not-yet-needed label (visible, never hidden, never needs_action); trigger-met-but-credentials-absent renders as advisory with copy naming the missing credential env-var names (waiting on provisioning); trigger-met-with-credentials renders as needs_action (ready for the operator to execute). Fixture tests cover all three states.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ],
@@ -85,7 +85,11 @@
         "realtime_smoke_action",
         "functions_deploy_action",
         "trigger_condition"
-      ]
+      ],
+      "evidence": {
+        "tests": "scripts/dontpanic_orchestrate/tests/test_integration_gated_bands_f003.py (12)",
+        "notes": "Band semantics for the three gated Firebase rows (firebase-creds, firebase-deploy, firebase-realtime-smoke) proven through the provide_integration_actions provider seam across all THREE states: trigger un-met -> info (not-yet-needed, always rendered, never hidden); trigger-met-creds-absent -> advisory naming the missing FIREBASE_TOKEN env-var NAME; trigger-met-creds-present -> needs_action. Trigger is met ONLY via an operator-attested evidence record (firebase-trigger action id), never inferred from live env (env creds alone keep the row at info). Presence-only env-var NAME check: a set value never surfaces in any item field or to_dict serialization (no-secret-leak). Items carry exact_command=None + operator_command (honest-commands), resolution_class=RESOLUTION_OPERATOR_ATTESTED, automatable=False (never executes). Passed action evidence suppresses the action item (F004 status item takes over). Offline fixtures only. Provider logic shipped in F001; this feature is its fixture proof."
+      }
     },
     {
       "id": "F004",
