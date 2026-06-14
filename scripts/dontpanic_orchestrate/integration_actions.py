@@ -148,7 +148,10 @@ INTEGRATION_CATALOG: tuple[IntegrationAction, ...] = (
 
 
 def evidence_file(evidence_dir: Path, integration_id: str) -> Path:
-    return Path(evidence_dir) / f"{integration_id}.jsonl"
+    # Canonicalize the id on BOTH read and write so a non-canonical id always
+    # resolves to the same on-disk file (no read/write path asymmetry) and can
+    # never escape evidence_dir via path separators (CodeRabbit #6).
+    return Path(evidence_dir) / f"{_safe_integration_id(integration_id)}.jsonl"
 
 
 def read_evidence(evidence_dir: Path, integration_id: str) -> list[dict[str, Any]]:
@@ -162,7 +165,15 @@ def read_evidence(evidence_dir: Path, integration_id: str) -> list[dict[str, Any
     if not path.is_file():
         return []
     records: list[dict[str, Any]] = []
-    for line in path.read_text().splitlines():
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        # A permission/IO/decoding failure degrades to empty history rather
+        # than taking down the whole provider (CodeRabbit #5). Evidence is
+        # advisory input to status derivation; an unreadable file is treated
+        # the same as a missing one.
+        return []
+    for line in text.splitlines():
         line = line.strip()
         if not line:
             continue
@@ -367,9 +378,13 @@ def write_integration_evidence(
     except OSError:
         pass
 
+    # Canonicalize the id at the boundary so the stored record matches the
+    # on-disk filename and downstream lookups keyed on the canonical id resolve
+    # (CodeRabbit #6 — no raw-id-in-record vs sanitized-filename asymmetry).
+    safe_id = _safe_integration_id(integration_id)
     record: dict[str, Any] = {
         "schema_version": EVIDENCE_SCHEMA_VERSION,
-        "integration_id": integration_id,
+        "integration_id": safe_id,
         "action_id": action_id,
         "captured_at": _now_iso(now),
         "source": source,
@@ -378,7 +393,7 @@ def write_integration_evidence(
     if details:
         record["details"] = _sanitize_evidence(dict(details))
 
-    target = evidence_file(evidence_dir, _safe_integration_id(integration_id))
+    target = evidence_file(evidence_dir, safe_id)
     with target.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, sort_keys=True) + "\n")
     try:

@@ -63,7 +63,10 @@ class TestCatalogLiterals:
             "integration:discord-webhook:discord-webhook",
             "integration:linear-credentials:linear-creds",
         }
-        assert expected <= ids
+        # EXACTLY one action item per catalog action row over a clean ledger —
+        # not "at least these", so an unexpected/extra emitted row fails the
+        # test (CodeRabbit #7).
+        assert ids == expected
 
     def test_static_smoke_exact_command_literal(self, evidence_dir):
         smoke = next(
