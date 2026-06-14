@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-06-14-002-feat-experience-readiness-gate-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "description": "Consumer-family taxonomy + evidence vocabulary. Map the existing 8 qa-sufficiency surface classes into two families (human, agent); add a consumer dimension to the journey model. Add an evidence_class vocabulary and a data_provenance marker as NEW optional fields on EvidenceRef WITHOUT inventing new EvidenceRef.type enum values: each evidence_class maps to a valid existing type, and data_provenance is one of seeded|real|degraded.",
+      "acceptance": "A pure module defines SurfaceFamily (human, agent) with a total, tested mapping from every one of the 8 existing surface classes to exactly one family. The objective_contract UserJourney gains optional consumer (human|agent|both) and fixture_only (bool); unknown consumer values are rejected. EvidenceRef gains optional evidence_class and data_provenance (seeded|real|degraded) fields in the agent-conventions schema + Pydantic model + validator, with a VERSION bump; the EvidenceRef.type enum is NOT extended (test asserts the 8 existing type values are unchanged) and a documented table maps each evidence_class to a valid existing type. Tests cover the total surface->family mapping, consumer validation, the new optional fields parsing, and the no-new-type-value invariant.",
+      "introduces": ["SurfaceFamily", "consumer", "evidence_class", "data_provenance", "fixture_only"],
+      "passes": false,
+      "phase": 0
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Evidence-class typing rule. Pure function from a claim's surface_class/consumer to the required evidence_class(es), plus a checker that matches a claim's evidence by evidence_class AND data_provenance. Seeded evidence does not satisfy a consumer-readiness claim unless the journey is fixture_only. Mismatch is advisory (warn) at implementation time; the close gate (F005) decides blocking.",
+      "acceptance": "required_evidence_classes(surface_class) is pure and returns at minimum: human read-only/interactive UI -> {screenshot|recording|journey_walk}; cli_human -> {terminal_transcript}; mutation -> {idempotency, rollback}; agent mcp_tool/api -> {tool_call_transcript|contract_test, structured_error}; qualitative -> {rubric|human_signoff}. A checker, given a claim's surface_class + its evidence (evidence_class + data_provenance), returns satisfied | evidence_class_mismatch (names the missing class) | seeded_masks_readiness (a required class is present but only with data_provenance=seeded while the journey is not fixture_only). Tests: (1) UI claim with only test_output -> evidence_class_mismatch; (2) UI claim with a real screenshot -> satisfied; (3) UI claim satisfied only by a seeded screenshot on a non-fixture_only journey -> seeded_masks_readiness; (4) same on a fixture_only journey -> satisfied. The function is pure (no I/O, no input mutation).",
+      "introduces": ["required_evidence_classes", "evidence_class_mismatch", "seeded_masks_readiness"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 1
+    },
+    {
+      "id": "F003",
+      "category": "observability",
+      "description": "Agent-surface evidence class in the runtime-evidence harness. Three dogfoodable EvidenceSource adapters reusing harness.py Protocol composition and the evidence/goal-governance/post_impl/<source>/<journey>/ convention: (a) CLI non-interactive transcript, (b) MCP tool-call transcript driving DontPanic's own in-process mcp_server (tools/list + a read-only tool), (c) schema/contract-stability check. Each sets evidence_class + a valid EXISTING EvidenceRef.type + data_provenance, with honest typed-skip.",
+      "acceptance": "Three new EvidenceSource adapters register with the harness; each returns list[EvidenceRef] whose type is a valid EXISTING enum value (e.g. log for transcripts, test_output for the contract check, file for artifacts), whose evidence_class is the agent vocabulary (tool_call_transcript | cli_transcript | contract_check), and whose data_provenance is set. Artifacts land under evidence/goal-governance/post_impl/<source>/<journey>/. The MCP source invokes the in-process mcp_server (tools/list + one read-only tool e.g. list_projects or status) and records request+response with no secret-shaped field. Each source emits a typed-skip EvidenceRef (data_provenance=degraded or a skip marker) with an operator-readable reason rather than raising when its prerequisite is absent. A harness test runs all three against a fixture journey and asserts artifacts + the source-agnostic invariant (dispatch by registration, never hardcoded source name). No live paid call is made.",
+      "introduces": ["tool_call_transcript", "cli_transcript", "contract_check", "agent EvidenceSource adapters"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 1
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Per-family degraded honesty + structured cross-surface agreement. Add required_data_sources and allowed_degraded_modes (keyed by a shared data-source key, e.g. capability id) to the journey contract. A checker verifies degradation is honest per family and that a typed-skip counts as honest-unavailability evidence rather than journey success, and that human and agent journeys for the same objective agree on capability-availability/provenance compared by the shared key (structured, not prose).",
+      "acceptance": "The UserJourney contract accepts required_data_sources[] (each with a stable data_source key) and allowed_degraded_modes[]. A pure checker reports: (1) degraded_dishonest when a required data_source is absent but neither an honest human label nor a structured agent capability_unavailable signal is evidenced; (2) that a typed-skip EvidenceRef for a data_source is treated as honest-unavailability evidence and NEVER as a satisfying consumer-surface capture (test asserts a journey 'covered' only by typed-skips is not satisfied); (3) cross_surface_disagreement when the human and agent journeys for the same objective assert different availability or provenance for the SAME data_source key (comparison is on structured fields keyed by data_source, not on description text). Tests cover honest-degradation pass, degraded_dishonest, typed-skip-not-success, and a keyed UI-promises-more-than-API disagreement. Pure, no I/O.",
+      "introduces": ["required_data_sources", "allowed_degraded_modes", "capability_unavailable", "degraded_dishonest", "cross_surface_disagreement", "data_source key"],
+      "depends_on": ["F001", "F002"],
+      "passes": false,
+      "phase": 2
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Close-time enforcement + disposition. Extend completion_auditor to emit consumer_outcome_unproven and apply the enforcement posture: a pure posture function returns block|advisory by goal_type. At plan close, product-class plans (goal_type in {parity, new_feature, migration, incident}, the objective-contract-required set) with declared consumer journeys BLOCK unless each declared consumer outcome is satisfied (F002), explicitly deferred as a non-goal, or operator-dispositioned; internal substrate plans (goal_type in {mechanical, infra, refactor}) are advisory unless opted in. Typed-skip and seeded evidence do not count as consumer-surface captures.",
+      "acceptance": "enforcement_posture(goal_type, opted_in) is pure and returns block for goal_type in {parity, new_feature, migration, incident} and advisory for {mechanical, infra, refactor} unless opted_in. completion_auditor emits consumer_outcome_unproven (added to the gap_class taxonomy with a severity rank) when a contract journey declares consumer in {human, agent} and its matched evidence is not a satisfying consumer-surface capture per F002/F004 (substrate-only, seeded-only on a non-fixture_only journey, or typed-skip-only all fail to satisfy). At close on a product-class plan, an unsatisfied + non-deferred + non-dispositioned consumer outcome BLOCKS (close returns a blocking disposition requiring satisfy/defer/disposition); the same on a substrate plan warns. Tests: (1) product-class human journey with only API-test evidence -> consumer_outcome_unproven AND close blocked; (2) same with a real screenshot capture -> no finding, close not blocked; (3) seeded-only screenshot on a non-fixture_only journey -> blocked; (4) operator disposition recorded -> close allowed; (5) substrate plan with the same gap -> warn, not blocked; (6) a journey 'covered' only by typed-skips -> consumer_outcome_unproven. Requires >=1 real (non-seeded) end-to-end journey per objective claim per declared consumer.",
+      "introduces": ["consumer_outcome_unproven", "enforcement_posture"],
+      "depends_on": ["F002", "F003", "F004"],
+      "passes": false,
+      "phase": 2
+    }
+  ]
+}
