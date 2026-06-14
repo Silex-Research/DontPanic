@@ -1,0 +1,65 @@
+{
+  "task_id": "2026-06-14-001-feat-agent-channel-interop-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "description": "Introduce operator_surface as a first-class typed axis and a four-axis InvocationContext (operator_surface x agent_runtime x role x execution_locality), reusing agent_surface for the runtime axis and existing ROLES for worker roles. execution_locality is a sharp enum, not a thin local|remote, so the Cowork-VM-vs-Mac-code-task distinction is representable. New engine module; no parallel runtime/capability registry.",
+      "acceptance": "A pure module defines an OperatorSurface enum (at minimum terminal, dashboard, codex_app, claude_desktop, claude_dispatch, antigravity, cursor, github_agent_hq, remote_vm, unknown), an ExecutionLocality enum (exactly local_mac, plan_worktree, dashboard_terminal, remote_vm, code_task, unknown), and an InvocationContext dataclass with exactly the fields operator_surface, agent_runtime, role, execution_locality. agent_runtime values validate against the SAME source as agent_surface (unknown agents map to unknown_runtime, not an invented registry entry). Serialization round-trips byte-stable (no timestamps) and a test asserts no field name contains _token/_key/_secret and that every enum member round-trips.",
+      "introduces": ["OperatorSurface", "ExecutionLocality", "InvocationContext"],
+      "passes": false,
+      "phase": 0
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Resolve an InvocationContext explicit-first, heuristic-second, unknown-last. Explicit env vars override everything; documented process/env heuristics fill gaps; anything unresolved becomes an explicit unknown_* member rather than a guess. Pure resolver; reuses the execution_environment.py env-plumbing pattern.",
+      "acceptance": "resolve_context(env, *, repo, plan) returns an InvocationContext where: (1) DONT_PANIC_OPERATOR / DONT_PANIC_AGENT / DONT_PANIC_ROLE / DONT_PANIC_LOCALITY when set are honored verbatim and beat all heuristics; (2) with no explicit vars, documented heuristics (at least TERM_PROGRAM -> operator_surface, a known agent env marker -> agent_runtime) populate fields; (3) any unresolved field is set to the axis's unknown_* member, never a most-likely guess (an unrecognized TERM_PROGRAM yields unknown, not a wrong surface); (4) the function is pure (no I/O, no mutation of the passed env). Tests cover explicit-wins, each heuristic, and unknown-fallback.",
+      "introduces": ["resolve_context", "DONT_PANIC_OPERATOR", "DONT_PANIC_AGENT", "DONT_PANIC_ROLE", "DONT_PANIC_LOCALITY"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 1
+    },
+    {
+      "id": "F003",
+      "category": "observability",
+      "description": "Record every DontPanic CLI invocation to a sanitized, concurrency-safe presence ledger. Each record carries the four-axis context plus repo/worktree/branch/plan, the command, started_at/finished_at/last_seen, result, and locality. Hardened for multiple simultaneous agents: atomic/locked append, command-string argument redaction (not just field-name checks), no raw home paths, and a retention/compaction policy.",
+      "acceptance": "Running any dontpanic subcommand appends exactly one InvocationRecord to ~/.dontpanic/invocations.jsonl (path via global_config.dontpanic_home, redirectable by the test env so the suite never writes the real home). Each record contains the four-axis context (F001), repo + worktree + branch + plan (or null), command, started_at, finished_at, last_seen, result (ok|error|interrupted), and locality. Writing is wired at ONE seam in cli.py and is (a) atomic/lock-safe: a concurrency test issuing N simultaneous appends yields N well-formed lines with no interleaving/corruption; (b) sanitized: a token-shaped argument in the command string is redacted, and no absolute home path appears (asserted by test); (c) bounded: a documented retention/compaction step caps the ledger (test shows old records compacted). result=error is recorded for a failing command.",
+      "introduces": ["InvocationRecord", "invocations.jsonl", "finished_at", "last_seen", "redact_command", "compact_ledger"],
+      "depends_on": ["F001", "F002"],
+      "passes": false,
+      "phase": 2
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Operator-role preferences: make choosing roles easy ('Claude primary, Codex auditor, Gemini researcher') via a settable operator-role layer that is SEPARATE from the worker-dispatch ROLES (implementer/auditor/goal_auditor). Operator roles are stored under a distinct config namespace and have NO assert_registrable guard, so operator surfaces that are not executors (e.g. cursor) can be assigned. Plus a dashboard role-matrix projection.",
+      "acceptance": "An OPERATOR_ROLES set (at minimum primary, researcher, reviewer, designer, tester, release_manager) is defined distinct from agent_surface.ROLES. An easy CLI sets and lists them, writing operator_roles.<role> = <name> to a distinct config key (global default, project-scoped optional) WITHOUT invoking assert_registrable (a non-executor surface like cursor is accepted). A test asserts: (1) setting an operator role never writes the worker roles.* namespace and never refuses a non-executor; (2) the worker register-worker path still refuses non-executors (unchanged); (3) list returns the resolved operator-role map; (4) a pure projection renders the role matrix consumed by the dashboard. No conflation between the two role namespaces.",
+      "introduces": ["operator_roles", "OPERATOR_ROLES", "role matrix projection"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 1
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Channel doctor + operator-surface capability-manifest shape. Extend the capability schema with an operator-surface/runtime manifest kind (no agent-channels.json) and seed manifests for real surfaces (e.g. cursor, claude_desktop, codex_app, antigravity). dontpanic doctor --channel <surface> (alias --operator-surface) reuses the existing doctor_registry + capability verify.probes to report whether that surface is usable.",
+      "acceptance": "The capability schema accepts a new kind for operator surfaces/runtimes (e.g. operator_surface) with the fields doctor needs (verify.probes, requires, owner_boundary) and at least two seeded manifests for real surfaces are added under capabilities/. dontpanic doctor --channel <surface> (and alias --operator-surface) resolves that surface's manifest and runs its probes via doctor_registry, reporting PATH / home / repo visibility / worktree-binding / config / MCP availability with pass/warn/fail per check; an unknown surface name exits non-zero with an actionable message; no agent-channels.json file is introduced (asserted by test). The doctor remains non-blocking/structural-safe when run with --skip-auth.",
+      "introduces": ["doctor --channel", "--operator-surface", "operator_surface capability kind"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 2
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "description": "Derived dashboard 'Operator Channels' panel joining the invocation ledger (F003) + capabilities incl. operator-surface manifests (F005) + worktree bindings + operator roles (F004). No new registry; derived at build time and emitted as dashboard state JSON alongside operator-triage.json. Conflict/health semantics go beyond same-plan to include worktree-binding health and dispatchability.",
+      "acceptance": "A producer builds a channel-view object derived ONLY from the ledger + capabilities/*.json (incl. operator-surface manifests) + worktree bindings + operator_roles; a test asserts NO agent-channels.json is introduced and that supports_* / dispatchability for a known runtime derive from capabilities + AGENT_REGISTRY, not hardcoded. A pure JS logic module derives panel buckets active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable, plus the operator-role matrix, with vitest unit tests per bucket (including same-plan and operator-only-not-dispatchable). The panel renders all active+needs-attention items uncapped. A real-state journey test boots the dashboard shell against a real producer-emitted fixture (not a hand-authored synthetic) and a Python fixture<->producer contract test guards the producer/consumer shape (QA-sufficiency contract).",
+      "introduces": ["operator-channels-logic.js", "operator-channels panel", "remote_only", "same_branch", "unhealthy_worktree_binding", "remote_cannot_mutate_local", "operator_only_runtime_not_dispatchable"],
+      "depends_on": ["F003", "F004", "F005"],
+      "passes": false,
+      "phase": 3
+    }
+  ]
+}

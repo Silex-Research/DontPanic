@@ -1,0 +1,80 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The originating operator spec for 'Agent Channel Interop v0' (recorded in decisions.jsonl D001) AS RECONCILED against the existing DontPanic platform AND AS REVISED by the operator's lock-review critique (D002, D004-D008). The promise is the spec's underlying goal — DontPanic as a channel + role orchestration layer for arbitrary agent surfaces that makes role choice easy and proves each surface is usable — NOT the literal seven-feature decomposition (which duplicated executors, capabilities/doctor, the roles command, and agent-manifest). The reconciliation (operator_surface is the only fully-absent axis; no parallel agent-channels.json) and the critique-driven recut (settable operator roles + channel doctor in v0; hardened ledger; sharp locality; worktree-aware conflicts; operator-surface capability-manifest shape) are part of the contract.",
+  "user_journeys": [
+    {
+      "name": "context-detected-on-every-invocation",
+      "description": "An operator runs a DontPanic command from a terminal, Cursor, Claude Desktop, the Codex app, Antigravity, or a remote VM. DontPanic resolves the four-axis context (operator_surface x agent_runtime x role x execution_locality) explicit-first (DONT_PANIC_*), then via documented heuristics, then falls back to an explicit unknown_* value rather than guessing. Locality is sharp enough to tell a plan-worktree run from a remote-VM or code-task run.",
+      "surfaces": ["backend"],
+      "states": ["explicit", "heuristic", "unknown-fallback"],
+      "acceptance_signals": [
+        "explicit env vars are honored verbatim and beat all heuristics",
+        "a recognized surface marker (TERM_PROGRAM) yields the right operator_surface; an unrecognized one yields unknown",
+        "agent_runtime validates against the same source as agent_surface; unknown agents map to unknown_runtime",
+        "execution_locality resolves to one of local_mac/plan_worktree/dashboard_terminal/remote_vm/code_task/unknown"
+      ]
+    },
+    {
+      "name": "easy-role-choice",
+      "description": "An operator says 'Claude is primary, Codex is auditor, Gemini is researcher' and sets it without hand-editing JSON, via an easy CLI and a dashboard role matrix. Operator roles are a layer separate from the worker-dispatch roles, so assigning a non-executor operator surface (e.g. Cursor as primary) is accepted.",
+      "surfaces": ["backend", "cli_human"],
+      "states": ["set", "listed", "projected"],
+      "acceptance_signals": [
+        "setting an operator role writes operator_roles.* and never the worker roles.* namespace",
+        "a non-executor surface (e.g. cursor) is accepted as an operator role without assert_registrable refusal",
+        "the worker register-worker path still refuses non-executors (unchanged)",
+        "list returns the resolved operator-role map and the dashboard renders the role matrix"
+      ]
+    },
+    {
+      "name": "prove-a-surface-is-usable",
+      "description": "An operator asks 'will DontPanic work from Codex / Claude / Antigravity / Cursor?' and runs dontpanic doctor --channel <surface>. The doctor resolves that surface's capability manifest and reports PATH / home / repo visibility / worktree binding / config / MCP availability with pass/warn/fail.",
+      "surfaces": ["backend", "cli_human"],
+      "states": ["pass", "warn", "fail", "unknown-surface"],
+      "acceptance_signals": [
+        "an operator-surface capability manifest kind exists in the EXISTING capability schema with at least two seeded manifests; no agent-channels.json is introduced",
+        "dontpanic doctor --channel <surface> (alias --operator-surface) runs the surface's probes via doctor_registry and reports per-check pass/warn/fail",
+        "an unknown surface name exits non-zero with an actionable message",
+        "doctor remains structural-safe under --skip-auth"
+      ]
+    },
+    {
+      "name": "invocation-presence-recorded-safely",
+      "description": "After commands run from multiple surfaces and multiple concurrent agents, an append-only presence ledger records each invocation's four-axis context + repo/worktree/branch/plan + timing + result + locality, without corruption, raw home paths, or tokens leaked from command arguments.",
+      "surfaces": ["backend"],
+      "states": ["appended", "concurrent", "sanitized", "compacted"],
+      "acceptance_signals": [
+        "each CLI invocation appends exactly one well-formed InvocationRecord",
+        "N simultaneous appends yield N intact lines with no interleaving (atomic/lock-safe)",
+        "a token-shaped command argument is redacted and no absolute home path appears",
+        "a retention/compaction step bounds the ledger; result=error is recorded for a failing command"
+      ]
+    },
+    {
+      "name": "operator-channels-panel",
+      "description": "An operator opens the dashboard and sees an Operator Channels panel derived from the ledger + capabilities + worktree bindings + operator roles: which channels are active, stale, remote-only, conflicting on a plan/branch/repo, on an unhealthy worktree binding, unable to mutate local state from remote, or an operator-only runtime that cannot be dispatched — plus the role matrix.",
+      "surfaces": ["backend", "web"],
+      "states": ["active", "stale", "remote_only", "same_plan_conflict", "same_branch", "unhealthy_worktree_binding", "operator_only_runtime_not_dispatchable"],
+      "acceptance_signals": [
+        "the channel view is derived only from ledger + capabilities + worktree bindings + operator_roles; a test asserts no agent-channels.json and supports_*/dispatchability derive from capabilities + AGENT_REGISTRY",
+        "the panel renders all listed conflict/health buckets with vitest tests per bucket",
+        "the panel renders all active and needs-attention items uncapped",
+        "the journey test boots the dashboard shell against a real producer-emitted fixture under a Python<->JS contract test (no synthetic stand-in)"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)",
+    "resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)",
+    "ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)",
+    "operator-role tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list + matrix projection (F004)",
+    "doctor tests: operator-surface manifest kind + seeded manifests, doctor --channel per-check output, unknown-surface non-zero, no agent-channels.json, --skip-auth safe (F005)",
+    "dashboard tests: derivation-only (no agent-channels.json) + per-bucket vitest + real-producer journey + Python<->JS contract (F006)"
+  ],
+  "non_goals": [
+    "fully-open adapter marketplace (third-party adapter submission/registry format)",
+    "remote-locality enforcement or routing (v0 records and surfaces local-vs-remote only)",
+    "any new agent-channels.json registry file"
+  ],
+  "completion_test": "All six features pass: operator_surface + sharp execution_locality exist with a round-tripping InvocationContext (F001); resolution is explicit-first/heuristic-second/unknown-last and never silently wrong (F002); the presence ledger is atomic, sanitized, and bounded under concurrency (F003); operator roles are settable separately from worker roles with the easy 'Claude primary / Codex auditor / Gemini researcher' UX and matrix (F004); doctor --channel proves a named surface is usable via the existing doctor framework + a new operator-surface capability-manifest kind with no agent-channels.json (F005); and the dashboard derives an Operator Channels panel with worktree-aware conflict/health buckets under a real-producer contract test (F006)."
+}
