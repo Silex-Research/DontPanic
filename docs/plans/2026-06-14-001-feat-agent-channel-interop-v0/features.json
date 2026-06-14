@@ -34,9 +34,9 @@
     {
       "id": "F004",
       "category": "functional",
-      "description": "Operator-role PREFERENCES (intent), make choosing roles easy ('Claude primary_operator, Codex auditor, Gemini researcher, Cursor as primary_operator') via a settable operator-role layer SEPARATE from the worker-dispatch ROLES (implementer/auditor/goal_auditor). SAFETY INVARIANT: operator_roles.* express preference/intent ONLY and are NEVER dispatch authorization — assigning a surface/agent an operator role must never make DontPanic able to spawn it as a worker. Stored under a distinct config namespace with NO assert_registrable guard, so non-executor surfaces (e.g. cursor) can be a preferred operator. Plus a dashboard role-matrix projection.",
-      "acceptance": "An OPERATOR_ROLES set (at minimum primary_operator, researcher, reviewer, designer, tester, release_operator) is defined distinct from agent_surface.ROLES. An easy CLI sets and lists them, writing operator_roles.<role> = <name> to a distinct config key (global default, project-scoped optional) WITHOUT invoking assert_registrable (a non-executor surface like cursor is accepted). A test asserts: (1) setting an operator role never writes the worker roles.* namespace and never refuses a non-executor; (2) the worker register-worker path still refuses non-executors (unchanged); (3) list returns the resolved operator-role map; (4) a pure projection renders the role matrix consumed by the dashboard. SAFETY INVARIANT test: setting operator_roles.primary_operator = cursor (a non-executor) does NOT make cursor appear in worker-dispatch resolution and does NOT make it dispatchable — dispatch authority derives SOLELY from executors/AGENT_REGISTRY via the worker roles.* namespace, so dispatching a surface that holds only an operator-role preference is refused exactly as if no role were set. No conflation between the two role namespaces.",
-      "introduces": ["operator_roles", "OPERATOR_ROLES", "role matrix projection"],
+      "description": "Operator-role PREFERENCES config layer (intent) — an easy CLI to set and list operator roles ('Claude primary_operator, Codex auditor, Gemini researcher, Cursor as primary_operator'), stored under a distinct config namespace operator_roles.* that is SEPARATE from the worker role namespace and carries NO assert_registrable guard, so non-executor surfaces (e.g. cursor) can be a preferred operator. Config-write mechanics only; the read-only projection and the dispatch boundary are owned by their own features.",
+      "acceptance": "An OPERATOR_ROLES set (at minimum primary_operator, researcher, reviewer, designer, tester, release_operator) is defined distinct from agent_surface.ROLES. An easy CLI sets and lists them, writing operator_roles.<role> = <name> to a distinct config key (global default, project-scoped optional) WITHOUT invoking assert_registrable (a non-executor surface like cursor is accepted). A test asserts: (1) setting an operator role writes only the operator_roles.* config key, never the worker role namespace, and never refuses a non-executor; (2) list returns the resolved operator-role map. No conflation between the two role namespaces.",
+      "introduces": ["operator_roles", "OPERATOR_ROLES"],
       "depends_on": ["F001"],
       "passes": false,
       "phase": 1
@@ -44,22 +44,62 @@
     {
       "id": "F005",
       "category": "functional",
-      "description": "Channel doctor + operator-surface capability-manifest shape. Extend the capability schema with an operator-surface/runtime manifest kind (no agent-channels.json) and seed manifests for real surfaces (e.g. cursor, claude_desktop, codex_app, antigravity). dontpanic doctor --channel <surface> (alias --operator-surface) reuses the existing doctor_registry + capability verify.probes to report whether that surface is usable.",
-      "acceptance": "The capability schema accepts a new kind for operator surfaces/runtimes (e.g. operator_surface) with the fields doctor needs (verify.probes, requires, owner_boundary) and at least two seeded manifests for real surfaces are added under capabilities/. dontpanic doctor --channel <surface> (and alias --operator-surface) resolves that surface's manifest and runs its probes via doctor_registry, reporting PATH / home / repo visibility / worktree-binding / config / MCP availability with pass/warn/fail per check; an unknown surface name exits non-zero with an actionable message; no agent-channels.json file is introduced (asserted by test). The doctor remains non-blocking/structural-safe when run with --skip-auth.",
-      "introduces": ["doctor --channel", "--operator-surface", "operator_surface capability kind"],
-      "depends_on": ["F001"],
+      "description": "Read-only dashboard operator-role matrix projection. A pure projection renders the operator_roles.* preferences as a role matrix consumed by the dashboard, shown SEPARATELY from the worker-dispatch roles so the two namespaces never conflate in the rendered view. Projection only — no mutation, no dispatch semantics.",
+      "acceptance": "A pure projection renders the operator-role matrix consumed by the dashboard from the operator_roles config (F004). A test asserts: (1) the projection is pure (derived from operator_roles, no I/O and no mutation of inputs); (2) it returns/renders the resolved operator-role map; (3) operator-role PREFERENCES are rendered distinctly from worker roles.* (no conflation of the two namespaces in the matrix). The projection surfaces preferences as intent only and carries no dispatchability claim.",
+      "introduces": ["role matrix projection"],
+      "depends_on": ["F004"],
       "passes": false,
       "phase": 2
     },
     {
       "id": "F006",
+      "category": "security",
+      "description": "Dispatch-safety guard for the SAFETY INVARIANT (D009): operator_roles.* express preference/intent ONLY and are NEVER dispatch authorization. Assigning a surface/agent an operator role must never make DontPanic able to spawn it as a worker. Dispatch authority derives SOLELY from executors/AGENT_REGISTRY via the worker roles.* namespace. This feature pins that boundary in the dispatch path and proves it.",
+      "acceptance": "SAFETY INVARIANT test: setting operator_roles.primary_operator = cursor (a non-executor) does NOT make cursor appear in worker-dispatch resolution and does NOT make it dispatchable — dispatch authority derives SOLELY from executors/AGENT_REGISTRY via the worker roles.* namespace, so dispatching a surface that holds only an operator-role preference is refused exactly as if no role were set. A preference-only surface is refused at dispatch. A test asserts no operator_roles read path can grant or widen dispatchability, and that the worker register-worker / assert_registrable path is unchanged by the presence of operator-role preferences.",
+      "introduces": ["dispatch_safety_guard"],
+      "depends_on": ["F004"],
+      "passes": false,
+      "phase": 2
+    },
+    {
+      "id": "F007",
       "category": "functional",
-      "description": "Derived dashboard 'Operator Channels' panel joining the invocation ledger (F003) + capabilities incl. operator-surface manifests (F005) + worktree bindings + operator roles (F004). No new registry; derived at build time and emitted as dashboard state JSON alongside operator-triage.json. Conflict/health semantics go beyond same-plan to include worktree-binding health and dispatchability.",
-      "acceptance": "A producer builds a channel-view object derived ONLY from the ledger + capabilities/*.json (incl. operator-surface manifests) + worktree bindings + operator_roles; a test asserts NO agent-channels.json is introduced and that supports_* / dispatchability for a known runtime derive from capabilities + AGENT_REGISTRY, not hardcoded. A pure JS logic module derives panel buckets active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable, plus the operator-role matrix, with vitest unit tests per bucket (including same-plan and operator-only-not-dispatchable). The panel renders all active+needs-attention items uncapped. A real-state journey test boots the dashboard shell against a real producer-emitted fixture (not a hand-authored synthetic) and a Python fixture<->producer contract test guards the producer/consumer shape (QA-sufficiency contract).",
-      "introduces": ["operator-channels-logic.js", "operator-channels panel", "remote_only", "same_branch", "unhealthy_worktree_binding", "remote_cannot_mutate_local", "operator_only_runtime_not_dispatchable"],
-      "depends_on": ["F003", "F004", "F005"],
+      "description": "Channel doctor CLI: dontpanic doctor --channel <surface> (alias --operator-surface) reuses the existing doctor_registry + capability verify.probes to report whether a named operator surface is usable. Consumes the operator-surface capability-manifest kind from F008; introduces no agent-channels.json.",
+      "acceptance": "dontpanic doctor --channel <surface> (and alias --operator-surface) resolves that surface's operator-surface capability manifest (F008) and runs its probes via doctor_registry, reporting PATH / home / repo visibility / worktree-binding / config / MCP availability with pass/warn/fail per check; an unknown surface name exits non-zero with an actionable message; no agent-channels.json file is introduced (asserted by test). The doctor remains non-blocking/structural-safe when run with --skip-auth.",
+      "introduces": ["doctor --channel", "--operator-surface"],
+      "depends_on": ["F008", "F001"],
       "passes": false,
       "phase": 3
+    },
+    {
+      "id": "F008",
+      "category": "schema",
+      "description": "Operator-surface capability-manifest shape. Extend the EXISTING capability schema with an operator-surface/runtime manifest kind (no parallel agent-channels.json) and seed manifests for real surfaces (e.g. cursor, claude_desktop, codex_app, antigravity) so named surfaces are actually supportable, not just enumerated.",
+      "acceptance": "The capability schema accepts a new kind for operator surfaces/runtimes (e.g. operator_surface) with the fields doctor needs (verify.probes, requires, owner_boundary), and at least two seeded manifests for real surfaces are added under capabilities/. A test asserts no agent-channels.json file is introduced.",
+      "introduces": ["operator_surface capability kind"],
+      "depends_on": ["F001"],
+      "passes": false,
+      "phase": 2
+    },
+    {
+      "id": "F009",
+      "category": "functional",
+      "description": "Channel-view producer + pure JS logic module. A build-time producer derives a channel-view object ONLY from the invocation ledger (F003) + capabilities incl. operator-surface manifests (F008) + worktree bindings + operator_roles (F004) and emits it as dashboard state JSON alongside operator-triage.json (no new registry). A pure JS logic module derives the panel buckets + operator-role matrix. Conflict/health semantics go beyond same-plan to worktree-binding health and dispatchability.",
+      "acceptance": "A producer builds a channel-view object derived ONLY from the ledger + capabilities/*.json (incl. operator-surface manifests) + worktree bindings + operator_roles; a test asserts NO agent-channels.json is introduced and that supports_* / dispatchability for a known runtime derive from capabilities + AGENT_REGISTRY, not hardcoded. A pure JS logic module derives panel buckets active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable, plus the operator-role matrix, with vitest unit tests per bucket (including same-plan and operator-only-not-dispatchable).",
+      "introduces": ["operator-channels-logic.js", "remote_only", "same_branch", "unhealthy_worktree_binding", "remote_cannot_mutate_local", "operator_only_runtime_not_dispatchable"],
+      "depends_on": ["F003", "F004", "F005", "F006", "F008"],
+      "passes": false,
+      "phase": 3
+    },
+    {
+      "id": "F010",
+      "category": "functional",
+      "description": "Dashboard 'Operator Channels' panel. Renders the buckets and operator-role matrix derived by F009, following the operator-triage/v0 producer<->render boundary, read-only. Enters through the real surface: real producer -> real shell journey + a Python fixture<->producer contract test.",
+      "acceptance": "The panel renders all active and needs-attention items uncapped across the F009 buckets (active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable) plus the operator-role matrix. A real-state journey test boots the dashboard shell against a real producer-emitted fixture (not a hand-authored synthetic) and a Python fixture<->producer contract test guards the producer/consumer shape (QA-sufficiency contract).",
+      "introduces": ["operator-channels panel"],
+      "depends_on": ["F009"],
+      "passes": false,
+      "phase": 4
     }
   ]
 }

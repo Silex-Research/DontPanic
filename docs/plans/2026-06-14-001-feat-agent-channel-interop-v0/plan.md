@@ -86,32 +86,56 @@ not just enumerated.
   agents**; command-string **arg redaction** (tokens/secrets in args, not just
   field-name checks); **no raw home paths** (sanitized like audit evidence);
   **retention/compaction** policy. PID/liveness-aware.
-- **F004 — Operator-role preferences (easy role choice), separate from worker
-  roles.** A settable operator-role layer (`primary_operator | researcher |
-  reviewer | designer | tester | release_operator`) stored under a distinct config
-  namespace (`operator_roles.*`), with **no `assert_registrable` guard** (operator
-  surfaces like Cursor are not executors). Easy CLI to set/list ("Claude
-  primary_operator, Codex auditor, Gemini researcher") and a dashboard role-matrix
-  projection. Does NOT touch the worker `roles.*` namespace or `agent
-  register-worker`. **Safety invariant (D009): `operator_roles.*` are
-  preferences/intent, NOT dispatch authorization — a Cursor `primary_operator`
-  preference never implies DontPanic can spawn Cursor as a worker; dispatch
-  authority derives solely from `AGENT_REGISTRY` via worker `roles.*`.**
-- **F005 — Channel doctor + operator-surface capability manifest shape.** Extend
-  the capability schema with an operator-surface/runtime manifest `kind` (no
-  `agent-channels.json`) and seed manifests for real surfaces (e.g. cursor,
-  claude_desktop, codex_app, antigravity). `dontpanic doctor --channel <surface>`
-  (alias `--operator-surface`) reuses the existing `doctor_registry` +
-  capability `verify.probes` to report PATH / home / repo / worktree-binding /
-  config / MCP visibility for that surface. Answers "will this work from
-  Codex/Claude/Antigravity/Cursor?".
-- **F006 — Derived dashboard "Operator Channels" panel.** Joins the invocation
-  ledger + capabilities (incl. the new operator-surface manifests) + worktree
-  bindings + operator roles into a read-only panel, following the
-  `operator-triage/v0` producer↔render boundary. Conflict/health buckets:
-  `active`, `stale`, `remote_only`, **same_plan_conflict**, **same_branch**,
-  **same_repo**, **unhealthy_worktree_binding**, **remote_cannot_mutate_local**,
-  **operator_only_runtime_not_dispatchable**, plus the operator-role matrix.
+The original operator-role (F004), channel-doctor (F005), and dashboard-panel
+(F006) features each spanned multiple surfaces (CLI mutation + dashboard render +
+orchestration safety). Per the lock-review recut (**D010**) they are split into
+single-surface features so each is independently testable, auditable, and not
+partially-satisfiable. The operator-role work becomes F004/F005/F006; the
+channel doctor becomes F007/F008; the dashboard panel becomes F009/F010.
+
+- **F004 — Operator-role preferences config CLI (mechanics only).** A settable
+  operator-role layer (`primary_operator | researcher | reviewer | designer |
+  tester | release_operator`) stored under a distinct config namespace
+  (`operator_roles.*`), with **no `assert_registrable` guard** (operator surfaces
+  like Cursor are not executors). Easy CLI to set/list ("Claude primary_operator,
+  Codex auditor, Gemini researcher"). Does NOT touch the worker `roles.*`
+  namespace or `agent register-worker`. Config mechanics only — projection (F005)
+  and safety guard (F006) are split out.
+- **F005 — Operator-role dashboard matrix projection.** A read-only pure
+  projection that renders the `operator_roles.*` preferences as a role matrix
+  consumed by the dashboard, shown separately from the worker-dispatch roles so
+  the two namespaces never conflate. Projection only; no mutation.
+- **F006 — Dispatch-safety guard (Safety invariant, D009).** `operator_roles.*`
+  are preferences/intent, **NOT dispatch authorization** — a Cursor
+  `primary_operator` preference never implies DontPanic can spawn Cursor as a
+  worker; dispatch authority derives solely from `AGENT_REGISTRY` via worker
+  `roles.*`. This feature pins that boundary in the dispatch path and proves a
+  preference-only surface is refused at dispatch exactly as if no role were set.
+- **F007 — Channel doctor CLI.** `dontpanic doctor --channel <surface>` (alias
+  `--operator-surface`) reuses the existing `doctor_registry` + capability
+  `verify.probes` to report PATH / home / repo / worktree-binding / config / MCP
+  visibility for a named surface (per-check pass/warn/fail; unknown surface →
+  non-zero; `--skip-auth` safe). Consumes the manifest kind from F008. Answers
+  "will this work from Codex/Claude/Antigravity/Cursor?".
+- **F008 — Operator-surface capability-manifest shape.** Extend the existing
+  capability schema with an operator-surface/runtime manifest `kind` (no
+  `agent-channels.json`) and seed ≥2 manifests for real surfaces (e.g. cursor,
+  claude_desktop, codex_app, antigravity) with the fields doctor needs
+  (`verify.probes`, `requires`, `owner_boundary`). So named surfaces are
+  supportable, not just enumerated.
+- **F009 — Channel-view producer + pure JS logic.** A build-time producer derives
+  a channel-view object **only** from the ledger (F003) + capabilities incl.
+  operator-surface manifests (F008) + worktree bindings + operator roles
+  (F004), emitted as dashboard state JSON alongside `operator-triage.json` (no new
+  registry). A pure JS logic module derives the buckets — `active`, `stale`,
+  `remote_only`, **same_plan_conflict**, **same_branch**, **same_repo**,
+  **unhealthy_worktree_binding**, **remote_cannot_mutate_local**,
+  **operator_only_runtime_not_dispatchable** — plus the operator-role matrix, with
+  vitest tests per bucket. `supports_*`/dispatchability derive from
+  capabilities + `AGENT_REGISTRY`, not hardcoded.
+- **F010 — Dashboard "Operator Channels" panel.** Renders the F009 buckets and
+  role matrix in a read-only panel, following the `operator-triage/v0`
+  producer↔render boundary. Renders all active + needs-attention items uncapped.
   Enters through the real surface: real producer → real shell journey + a Python
   fixture↔producer contract test (QA-sufficiency).
 
@@ -119,31 +143,35 @@ not just enumerated.
 
 - **Fully open adapter marketplace** — a third-party adapter submission/registry
   format. New surfaces/runtimes are added by extending the existing capability
-  manifests (F005), not a marketplace. (Originating F007.)
+  manifests (F008), not a marketplace. (Originating F007 of the spec.)
 - **Remote-locality enforcement / routing** — v0 *records and surfaces*
   local-vs-remote and `remote_cannot_mutate_local`; it does not gate or route by
   locality.
 - **No new `agent-channels.json` registry.** Channel/role views are derived
-  (F006) from existing registries + the operator-surface manifests (F005).
+  (F009/F010) from existing registries + the operator-surface manifests (F008).
 
 ## Surfaces touched
 
 schema (`claude/shared/schemas/` — InvocationContext, operator-surface capability
 kind, operator_roles), engine (`scripts/dontpanic_orchestrate/` — detection,
 ledger, roles, doctor wiring, producer), CLI (`cli.py` seam + roles/doctor
-subcommands), dashboard (`dashboard/lib`, `pages`, `state`, `tests`). F006 is the
-only engine→dashboard pair and is split producer (engine) / render (dashboard)
-with a contract test at the boundary.
+subcommands), dashboard (`dashboard/lib`, `pages`, `state`, `tests`). The
+engine→dashboard work is split producer (F009, engine) / render (F010, dashboard)
+with a Python↔JS contract test at the boundary; the operator-role projection is
+likewise split engine-config (F004) / render (F005). Each feature touches a
+single primary surface.
 
 ## Scope-lint note (advisory)
 
-`plan-review` flags `over_surface` on multi-touch features and `missing_prereq`
-on declared symbols (env vars, record fields, role/locality/bucket names, secret
-guards) — these are introduced/declared here or inherent to a detection/security
-feature. F003/F006 follow the established "engine producer writes dashboard/ledger
-state" pattern (cf. `operator-triage.json`), not genuine surface bleed.
-Re-confirm at `pre_impl`; the implementer may split F005's manifest-shape work
-from the doctor wiring if a single dispatch risks timeout.
+After the D010 single-surface recut, the multi-touch `over_surface`/`likely_timeout`
+shape flags should be resolved (F004/F005/F006 split the operator-role work;
+F007/F008 split the doctor from its manifest schema; F009/F010 split the producer
+from the panel). Any residual `plan-review` flags are expected to be
+`missing_prereq` on symbols **declared by this plan** (env vars, record fields,
+role/locality/bucket names, the dispatch-safety guard) — introduced/declared in
+the owning feature's `introduces[]` — or the established "engine producer writes
+dashboard/ledger state" pattern (cf. `operator-triage.json`, F009→F010), not
+genuine surface bleed. Re-confirm at `pre_impl`.
 
 ## Decisions
 
@@ -152,4 +180,7 @@ D002 **operator roles are settable in v0** as a layer separate from worker roles
 D003 forbid `agent-channels.json`; D004 defer only open-adapter marketplace +
 remote enforcement; D005 ledger concurrency/redaction/retention pins; D006 sharp
 locality enum; D007 operator-surface capability-manifest shape so named surfaces
-are supportable; D008 channel doctor pulled into v0.
+are supportable; D008 channel doctor pulled into v0; **D009 SAFETY INVARIANT —
+`operator_roles.*` are preferences/intent, never dispatch authority**; **D010
+lock-review single-surface recut** splitting the original F004/F005/F006 into the
+ten-feature set (F001–F010) so each feature touches one primary surface.

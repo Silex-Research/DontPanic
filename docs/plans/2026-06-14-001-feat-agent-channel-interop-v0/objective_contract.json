@@ -68,14 +68,18 @@
     "unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)",
     "resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)",
     "ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)",
-    "operator-role tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list + matrix projection (F004)",
-    "doctor tests: operator-surface manifest kind + seeded manifests, doctor --channel per-check output, unknown-surface non-zero, no agent-channels.json, --skip-auth safe (F005)",
-    "dashboard tests: derivation-only (no agent-channels.json) + per-bucket vitest + real-producer journey + Python<->JS contract (F006)"
+    "operator-role config tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list returns resolved map (F004)",
+    "operator-role projection test: pure dashboard role-matrix projection rendered distinctly from worker roles.* (F005)",
+    "dispatch-safety test: operator_roles preference NEVER confers dispatchability; preference-only surface refused at dispatch; AGENT_REGISTRY/roles.* sole authority (F006)",
+    "doctor tests: doctor --channel per-check output, unknown-surface non-zero, --skip-auth safe (F007)",
+    "manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)",
+    "producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)",
+    "panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)"
   ],
   "non_goals": [
     "fully-open adapter marketplace (third-party adapter submission/registry format)",
     "remote-locality enforcement or routing (v0 records and surfaces local-vs-remote only)",
     "any new agent-channels.json registry file"
   ],
-  "completion_test": "All six features pass: operator_surface + sharp execution_locality exist with a round-tripping InvocationContext (F001); resolution is explicit-first/heuristic-second/unknown-last and never silently wrong (F002); the presence ledger is atomic, sanitized, and bounded under concurrency (F003); operator roles are settable separately from worker roles with the easy 'Claude primary / Codex auditor / Gemini researcher' UX and matrix (F004); doctor --channel proves a named surface is usable via the existing doctor framework + a new operator-surface capability-manifest kind with no agent-channels.json (F005); and the dashboard derives an Operator Channels panel with worktree-aware conflict/health buckets under a real-producer contract test (F006)."
+  "completion_test": "All ten features pass: operator_surface + sharp execution_locality exist with a round-tripping InvocationContext (F001); resolution is explicit-first/heuristic-second/unknown-last and never silently wrong (F002); the presence ledger is atomic, sanitized, and bounded under concurrency (F003); operator roles are settable separately from worker roles with the easy 'Claude primary / Codex auditor / Gemini researcher' config UX (F004) and a read-only dashboard role matrix (F005); the SAFETY INVARIANT holds — an operator-role preference never confers dispatchability, which derives solely from AGENT_REGISTRY via worker roles.* (F006); doctor --channel proves a named surface is usable via the existing doctor framework (F007) using a new operator-surface capability-manifest kind with no agent-channels.json (F008); and the dashboard derives an Operator Channels panel from a channel-view producer (F009) with worktree-aware conflict/health buckets, rendered under a real-producer Python<->JS contract test (F010)."
 }
