@@ -157,6 +157,7 @@ agents one shared operating surface:
 | Local dashboard | A read-only console for What Now, status, capabilities, gates, and scope. It only flags work it can prove is live; anything it can't refresh shows as "could not be refreshed" rather than as fake work | `dontpanic dashboard build`, `open`, `serve` |
 | Multi-repo registry | Lets one DontPanic install manage many projects | `dontpanic projects add`, `list`, `show`, `remove` |
 | Capability readiness | Shows which external integrations are ready, missing setup, or blocked | `dontpanic capabilities status`, `setup` |
+| Integration operator-actions | Runs an integration smoke (render-proof, not just parse-proof) and records operator attestations for steps whose proof lives outside the repo — deploys, external smokes, credential setup — as append-only evidence that flips the integration's status in the console | `dontpanic integrations smoke`, `integrations attest` |
 | Install reconciliation | Detects stale local setup after the platform evolves | `dontpanic reconcile baseline`, `reconcile check` |
 | Architecture map | Generates a visual map, keeps it current during `dashboard serve`, and detects drift after manual edits | `dontpanic architecture regen`, `status`, `diff` |
 | Release-impact advisory | Warns when public docs, changelog, schemas, or onboarding may need updates | `dontpanic next`, `dontpanic plan lock` |

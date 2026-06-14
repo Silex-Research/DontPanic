@@ -46,6 +46,34 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-06-14 — Integration operator-actions: `dontpanic integrations` (plan 2026-06-04-003)
+
+### Added
+- New `dontpanic integrations` command group:
+  - `dontpanic integrations smoke <integration>` — runs an integration smoke. The
+    bundled `static-dashboard` smoke is render-proof: it runs the real dashboard
+    build over exported state and asserts the producer cards reach the BUILT
+    `what-now.json` artifact (not just parseable state JSON), recording a
+    pass/fail evidence record.
+  - `dontpanic integrations attest <integration> --action <action-id> --outcome passed|failed [--note]`
+    — records an operator attestation for steps whose proof lives outside the
+    repo (Firebase deploy, external/realtime smokes, credential setup), so every
+    integration evidence record is attributable to a specific catalog action and
+    no evidence file is ever hand-edited.
+- Integration ActionItems in the dashboard / operator console: one truthful card
+  per integration step (static-dashboard smoke, Firebase functions deploy +
+  realtime smoke, Discord webhook, Linear credentials) carrying its exact or
+  display-only command, required credential env-var NAMES, and evidence
+  expectation. Gated steps render with their trigger condition and never
+  auto-execute; an always-rendered status item shows each integration's derived
+  status (pending → configured → deployed → smoke-passing) so cleared
+  integrations stay visible.
+- Append-only integration evidence under `$DONTPANIC_HOME/integrations/evidence/`
+  (one JSONL file per integration; 0600/0700; secrets scrubbed) — the sole
+  channel that drives integration status and clears the action cards.
+
+Surfaces affected: cli_help, root_changelog, dashboard
+
 ## 2026-06-06 — README rewrite for clarity and reader-first voice
 
 ### Changed
