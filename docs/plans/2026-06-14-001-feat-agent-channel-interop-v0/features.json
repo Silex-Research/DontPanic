@@ -151,8 +151,21 @@
       "depends_on": [
         "F004"
       ],
-      "passes": false,
-      "phase": 2
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F006-test_dispatch_safety_guard.txt",
+          "captured_at": "2026-06-15T03:29:12+00:00",
+          "captured_by": "claude",
+          "note": "7 passed — D009 proof: operator_roles.primary_operator=cursor never makes cursor dispatchable; dispatchable set == AGENT_REGISTRY regardless of preferences; refusal identical with/without preference; register-worker path unchanged; is_dispatchable never reads operator_roles (poisoned-read invariance)"
+        }
+      ]
     },
     {
       "id": "F007",
