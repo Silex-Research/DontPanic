@@ -1,0 +1,98 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:50ad8025664fbabe3bef3ab73b029c19d38db16fe5d6ed8b77ced491237f1d33",
+  "generated_at": "2026-06-15T15:05:41Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "wiring_gap",
+      "description": "The evidence_class vocabulary is not pinned as one closed set: F002 names terminal_transcript and contract_test, while F003 emits cli_transcript and contract_check, so captured agent evidence can fail the checker and close gate.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003",
+        "F005"
+      ],
+      "recommendation": "Define a single EvidenceClass enum/table in F001 and require every checker, adapter, and enforcement test to use those exact values.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "critical",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "coverage_gap",
+      "description": "F004 adds required_data_sources to journeys but does not specify where evidence records structured data_source, availability, provenance, and capability_unavailable assertions, making keyed cross-surface comparison underspecified.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Add a structured evidence signal model or EvidenceRef fields for data_source key, availability, provenance, degradation mode, and skip reason.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "close-time-enforcement-and-disposition",
+      "gap_class": "coverage_gap",
+      "description": "F001 allows consumer=both, but F005 only describes enforcement for journeys declaring consumer in {human, agent}, leaving the required per-family close-time proof for both ambiguous.",
+      "feature_refs": [
+        "F001",
+        "F005"
+      ],
+      "recommendation": "Normalize consumer=both into human and agent obligations, then add close-gate tests requiring one satisfying journey per family.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "The required_evidence_classes API collapses surface, consumer, and claim kind even though mutation and qualitative claims are not surface classes and may share a surface with read-only claims.",
+      "feature_refs": [
+        "F002",
+        "F005"
+      ],
+      "recommendation": "Make the rule key on surface_class, consumer family, and claim kind, with a deterministic matrix for read-only, interactive, mutation, qualitative, and agent contract cases.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "parity_gap",
+      "description": "The contract says real-or-honestly-degraded data can prove readiness and F004 says honest degradation passes, but F005 requires at least one real non-seeded end-to-end journey, so degraded close behavior is unresolved.",
+      "feature_refs": [
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Pin the close matrix cell for honest degradation: either count structured degraded capture as satisfying, or require explicit deferral/disposition when no real data exists.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "close-time-enforcement-and-disposition",
+      "gap_class": "wiring_gap",
+      "description": "F005 relies on explicit non-goal deferral and operator disposition to allow close, but the plan does not define the structured fields or validation needed to distinguish them from ordinary prose.",
+      "feature_refs": [
+        "F005"
+      ],
+      "recommendation": "Add a disposition/deferral schema keyed by objective claim and consumer family, with reason, operator marker, and tests proving only structured dispositions unblock close.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
+      "gap_class": "wiring_gap",
+      "description": "F003 says typed-skip may use data_provenance=degraded or a skip marker, but F001 only permits seeded, real, or degraded, so the skip representation could violate the schema.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Represent typed-skip with allowed provenance plus explicit skip status and reason fields, not with a new data_provenance value.",
+      "finding_class": "implementation_detail"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}

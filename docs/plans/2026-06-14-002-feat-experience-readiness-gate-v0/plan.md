@@ -141,9 +141,10 @@ v0; findings flow through existing completion-audit / operator-triage rendering.
 ## Scope-lint note (advisory)
 
 `plan-review` will flag `missing_prereq` on declared field/class/finding names
-(`consumer`, `evidence_class`, `data_provenance`, `evidence_class_mismatch`,
-`seeded_masks_readiness`, `capability_unavailable`, `degraded_dishonest`,
-`cross_surface_disagreement`, `consumer_outcome_unproven`, `required_data_sources`,
+(`consumer`, `evidence_class`, `data_provenance`, `data_source`, `availability`,
+`claim_kind`, `evidence_class_mismatch`, `seeded_masks_readiness`,
+`capability_unavailable`, `degraded_dishonest`, `cross_surface_disagreement`,
+`consumer_outcome_unproven`, `consumer_outcome_dispositions`, `required_data_sources`,
 `allowed_degraded_modes`, `fixture_only`) — all introduced/declared here.
 F003 may flag `over_surface` (engine module writing under `evidence/`) — the
 established runtime-evidence harness pattern. Re-confirm at `pre_impl`.
@@ -162,4 +163,13 @@ Channel Interop v0 (main `da48bb3`): cli_agent/mcp_tool are evidence/consumer
 surfaces (not operator_surfaces); agent/runtime + operator-surface + capability ids
 normalize through Plan 1's `normalize_identifier` canonical id spaces; consumer
 family {human,agent,both} is cross-referenced to — not conflated with — the
-operator-role value domain.**
+operator-role value domain.** **D012–D018 (round-1 sufficiency tightening, 2026-06-15):
+D018 pin `evidence_class` as one closed enum (reconcile F002↔F003 drift: `contract_check`,
+`cli_transcript` vs `terminal_transcript`); D012 keyed availability lives in structured
+EvidenceRef fields `data_source`+`availability` (not prose); D013 `consumer=both` requires
+both families proven; D014 `required_evidence_classes(surface_class, consumer, claim_kind)`
+disentangles claim kind from surface; D015 the ≥1-real requirement is journey-EXECUTION
+provenance — honest in-journey data-source degradation still satisfies; D016 deferral/
+disposition are structured (non_goal naming {journey,consumer} / `consumer_outcome_dispositions[]`),
+not prose; D017 typed-skip = `availability=unavailable`+`data_provenance=degraded`, no new
+provenance value. (D011 = the auto-recorded `--allow-oversize` scope-gate override.)**
