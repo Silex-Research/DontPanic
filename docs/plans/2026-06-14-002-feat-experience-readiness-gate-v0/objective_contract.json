@@ -1,63 +1,24 @@
 {
   "goal_type": "new_feature",
-  "source_of_truth": "The originating operator spec for a 'Product Readiness / Human Journey Gate', evolved by the operator into an 'Experience Readiness Gate' with human and agent consumer families (D001), AS RECONCILED against the existing platform AND AS REVISED by lock-review (D002, D006-D009). The promise: a consumer-facing claim cannot be closed by substrate evidence alone; readiness is proven per consumer family with evidence matching the surface on real-or-honestly-degraded data; and this is ENFORCED at plan close for product-class plans (block/defer/disposition), not merely warned. Seeded fixtures must not mask product-data emptiness, typed-skip is honest-unavailability evidence not success, and cross-surface agreement is compared on structured keys. The reconciliation, the human/agent split, the enforcement posture, and the QuantRE-is-a-separate-consumer-plan carve-out (D004) are part of the contract.",
+  "source_of_truth": "The close-time ENFORCEMENT half of the Experience Readiness Gate (split 2026-06-15, D025; sibling typing plan = 2026-06-15-001 / 2a). This plan owns the deterministic consumer_outcome_gate, the activation rule, the block/advisory/noop posture matrix, consumer-cardinality enforcement, and structured deferral/disposition. It CONSUMES 2a's vocabulary (closed surface_class/evidence_class enums, consumer families, structured EvidenceRef fields, the typing rule + degraded checker) and MUST NOT lock until 2a is merged. The promise: a declared consumer-facing outcome on a product-class or consumer-journey-bearing plan cannot close unproven; enforcement is deterministic at close (not LLM-triage-dependent); product claims cannot dodge by omitting a flag or a journey.",
   "user_journeys": [
-    {
-      "name": "author-declares-consumers-and-surface-evidence",
-      "description": "A plan author writes a feature/objective claiming a consumer-facing outcome, declares the consumer family (human, agent, both) and surface(s), and is told which evidence_class is required. Evidence carries a data_provenance marker (seeded|real|degraded) so the gate can tell real-data proof from fixture rendering.",
-      "surfaces": ["backend"],
-      "states": ["declared", "typed"],
-      "acceptance_signals": [
-        "every existing surface class maps to exactly one consumer family",
-        "a journey may declare consumer in {human, agent, both} and fixture_only; unknown consumer values are rejected",
-        "EvidenceRef gains optional evidence_class (a single CLOSED enum), data_provenance, data_source, and availability fields WITHOUT new EvidenceRef.type enum values; each evidence_class maps to a valid existing type",
-        "required_evidence_classes(surface_class, consumer, claim_kind) returns the correct class(es) drawn only from the closed enum; claim_kind in {read_only, mutation, qualitative} is a separate dimension from surface_class"
-      ]
-    },
-    {
-      "name": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "description": "A consumer-facing claim carrying only substrate evidence, or only seeded evidence on a non-fixture_only journey, is flagged. This catches the original failure (the 2026-06-05-001 Global-tools miss and the QuantRE seeded-fixtures-mask-emptiness pattern).",
-      "surfaces": ["backend"],
-      "states": ["satisfied", "evidence_class_mismatch", "seeded_masks_readiness"],
-      "acceptance_signals": [
-        "a UI claim with only test_output -> evidence_class_mismatch",
-        "a UI claim with a real screenshot -> satisfied",
-        "a UI claim satisfied only by a seeded screenshot on a non-fixture_only journey -> seeded_masks_readiness; the same on a fixture_only journey -> satisfied",
-        "an agent MCP/API claim with only a unit test -> evidence_class_mismatch until a tool-call/contract transcript is present",
-        "a mutation claim_kind requires idempotency+rollback in addition to its surface/consumer base (claim_kind is a separate input from surface_class)"
-      ]
-    },
-    {
-      "name": "agent-surface-evidence-is-capturable-and-dogfooded",
-      "description": "An agent journey is proven with agent-class evidence DontPanic produces itself: a CLI non-interactive transcript, an in-process MCP tool-call transcript, and a schema/contract check. Each carries an existing EvidenceRef.type + an agent evidence_class + data_provenance; an unavailable source skips honestly.",
-      "surfaces": ["backend", "mcp_tool", "cli_agent"],
-      "states": ["captured", "skipped-with-reason"],
-      "acceptance_signals": [
-        "transcript/contract artifacts use existing EvidenceRef.type values (log/test_output/file) with an agent evidence_class and data_provenance set",
-        "the MCP source invokes the in-process mcp_server (tools/list + one read-only tool) and records request+response with no secret-shaped field",
-        "an unavailable source emits a typed-skip EvidenceRef (availability=unavailable + data_provenance=degraded, no new provenance value) with an operator-readable reason, not an exception",
-        "the harness dispatches sources by registration (source-agnostic invariant intact); no live paid call is made"
-      ]
-    },
-    {
-      "name": "degraded-honesty-and-structured-agreement",
-      "description": "When a required data source is unavailable, both families degrade honestly (human label; agent structured capability_unavailable), a typed-skip proves honest unavailability rather than success, and human and agent journeys for the same objective agree on availability/provenance compared by a shared data_source key.",
-      "surfaces": ["backend"],
-      "states": ["honest-degraded", "dishonest", "disagreement"],
-      "acceptance_signals": [
-        "a required data_source with no EvidenceRef carrying availability=unavailable for that key (from either family) -> degraded_dishonest; the checker reads structured EvidenceRef fields {data_source, availability, data_provenance}, never prose",
-        "a journey 'covered' only by typed-skips is NOT satisfied (typed-skip = honest unavailability, not success)",
-        "human vs agent journeys asserting different availability/provenance for the SAME data_source key -> cross_surface_disagreement (compared on structured fields, not prose)",
-        "an honestly-degraded journey (label or structured signal present) passes"
-      ]
-    },
     {
       "name": "close-time-enforcement-and-disposition",
       "description": "At plan close, declared consumer outcomes on product-class plans BLOCK unless satisfied, explicitly deferred, or operator-dispositioned; internal substrate plans warn. The failure mode 'plan completes even though the consumer outcome was not proven' is prevented.",
-      "surfaces": ["backend"],
-      "states": ["proven", "blocked", "deferred", "dispositioned", "advisory"],
+      "surfaces": [
+        "backend"
+      ],
+      "states": [
+        "proven",
+        "blocked",
+        "deferred",
+        "dispositioned",
+        "advisory"
+      ],
       "acceptance_signals": [
-        "the gate ACTIVATES via ANY of opt_in / a journey declaring consumer / product-class goal_type or product metadata (opt_in is not the only path); product-class or consumer-journey-bearing plans block, a substrate plan opted-in with no journeys warns, pure substrate no-ops",
+        "the gate ACTIVATES via ANY of opt_in / a journey declaring consumer / product-class goal_type or product metadata (opt_in is not the only path; product claims cannot dodge by omitting the flag)",
+        "ANY consumer-journey-bearing plan blocks an unproven outcome regardless of opt_in; the advisory/warn path is ONLY a substrate plan opted-in with NO consumer journeys (D030 — resolves the round-3 activation/posture contradiction)",
+        "a product-class plan that declares NO consumer journey emits no_consumer_journey_declared (advisory) rather than silently passing (D031 — closes the no-journey dodge)",
         "a product-class human journey closed with only API-test (or seeded-only, or typed-skip-only) evidence raises consumer_outcome_unproven AND blocks close",
         "the same with a real consumer-surface capture -> no finding, close not blocked",
         "a STRUCTURED non-goal deferral naming {journey, consumer} or a STRUCTURED consumer_outcome_dispositions[] record {journey, consumer, reason, dispositioned_by, at} allows close (prose alone does not); a substrate plan with the same gap warns rather than blocks",
@@ -67,18 +28,13 @@
     }
   ],
   "required_evidence": [
-    "tests for the surface->family total mapping, consumer/fixture_only validation, and the new EvidenceRef fields with the no-new-type-value invariant (F001)",
-    "typing-rule tests: substrate mismatch, real-screenshot satisfied, seeded_masks_readiness on non-fixture vs fixture journeys (F002)",
-    "harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)",
-    "checker tests: honest-degradation pass, degraded_dishonest, typed-skip-not-success, keyed cross_surface_disagreement (F004)",
     "enforcement tests: posture matrix, product-class block on substrate/seeded/typed-skip-only, real-capture pass, defer/disposition allows close, substrate-plan warn (F005)"
   ],
   "non_goals": [
-    "the QuantRE Product Readiness plan (route inventory, persona journeys, maps/ATTOM, appraisal export, persona signoff) — a separate consumer-side plan in QuantRE's repo authored against this gate",
-    "re-building human-surface capture (web/iOS/Android/backend adapters already exist)",
-    "default-blocking on internal substrate plans (advisory unless opted in)",
-    "accessibility / visual-regression / empty-state depth",
-    "webhook / background-job / repo-PR agent sources beyond the dogfoodable CLI+MCP+contract trio"
+    "the TYPING/EVIDENCE layer (surface_class/evidence_class/consumer/data_source/availability schema, typing rule, agent harness, degraded checker) — sibling plan 2a (2026-06-15-001); this plan CONSUMES it",
+    "the QuantRE Product Readiness plan (separate consumer-side plan)",
+    "re-building human-surface capture",
+    "accessibility / visual-regression / empty-state depth"
   ],
-  "completion_test": "All five features pass: surfaces map totally into human/agent families, journeys carry validated consumer/fixture_only, and EvidenceRef carries new evidence_class + data_provenance fields with no invented type values (F001); the typing rule flags substrate-only and seeded-only closes of consumer-facing claims (F002); three agent EvidenceSource adapters capture agent-class evidence on existing type values with honest typed-skip and the source-agnostic invariant intact (F003); the checker distinguishes honest degradation from silent failure, treats typed-skip as honest-unavailability not success, and detects keyed cross-surface disagreement (F004); and completion_auditor enforces at close — blocking product-class plans on unproven consumer outcomes unless deferred or dispositioned, warning on substrate plans, and requiring one real end-to-end journey EXECUTION per objective claim per declared consumer — with consumer=both requiring both families, honest in-journey data-source degradation still satisfying, and only a structured deferral/disposition (not prose) permitting close (F005)."
+  "completion_test": "One feature passes: completion_gate.close_plan invokes a DETERMINISTIC pre-flip consumer_outcome_gate that, for activated plans (opt_in OR consumer-journey OR product-class/metadata), blocks the active->completed flip on an unproven consumer outcome independent of the codex F0 triage; consumer=both requires both families; deferral/disposition are structured; a substrate plan opted-in with no journeys warns; a product-class plan with no declared consumer journey emits no_consumer_journey_declared. Consumes 2a's vocabulary; does not re-define it."
 }
