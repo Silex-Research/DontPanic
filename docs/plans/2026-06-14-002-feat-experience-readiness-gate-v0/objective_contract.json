@@ -57,7 +57,7 @@
       "surfaces": ["backend"],
       "states": ["proven", "blocked", "deferred", "dispositioned", "advisory"],
       "acceptance_signals": [
-        "enforcement_posture returns block for goal_type in {parity, new_feature, migration, incident} and advisory for {mechanical, infra, refactor} unless opted in",
+        "the gate ACTIVATES via ANY of opt_in / a journey declaring consumer / product-class goal_type or product metadata (opt_in is not the only path); product-class or consumer-journey-bearing plans block, a substrate plan opted-in with no journeys warns, pure substrate no-ops",
         "a product-class human journey closed with only API-test (or seeded-only, or typed-skip-only) evidence raises consumer_outcome_unproven AND blocks close",
         "the same with a real consumer-surface capture -> no finding, close not blocked",
         "a STRUCTURED non-goal deferral naming {journey, consumer} or a STRUCTURED consumer_outcome_dispositions[] record {journey, consumer, reason, dispositioned_by, at} allows close (prose alone does not); a substrate plan with the same gap warns rather than blocks",
