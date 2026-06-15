@@ -150,7 +150,8 @@ def test_optional_when_filtered_out_of_profile():
 
 
 def test_run_status_renders_all_four_checked_in_manifests():
-    """Acceptance #1: runs against the four checked-in manifests."""
+    """Acceptance #1: runs against all checked-in manifests (original four +
+    the four F008 operator_surface manifests)."""
     envelope = cs.run_status(
         capability_index=load_capabilities(REPO_ROOT),
         probes=[],  # forces graceful-degradation path
@@ -163,6 +164,11 @@ def test_run_status_renders_all_four_checked_in_manifests():
         "discord-notify",
         "firebase-dashboard",
         "linear",
+        # F008 operator_surface manifests (plan 2026-06-14-001)
+        "antigravity",
+        "claude_desktop",
+        "codex_app",
+        "cursor",
     }
     text = cs.render_text(envelope)
     assert "Capability status (schema 1.0.0)" in text
@@ -513,6 +519,11 @@ def test_graceful_degradation_when_no_probes_have_capability_id(tmp_path: Path):
         "discord-notify",
         "firebase-dashboard",
         "linear",
+        # F008 operator_surface manifests (plan 2026-06-14-001)
+        "antigravity",
+        "claude_desktop",
+        "codex_app",
+        "cursor",
     }
 
 

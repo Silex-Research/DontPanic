@@ -1,0 +1,48 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 38 items
+
+tests/test_operator_roles.py::TestNamespaceIsolation::test_set_operator_role_writes_operator_roles_key PASSED [  2%]
+tests/test_operator_roles.py::TestNamespaceIsolation::test_set_operator_role_does_not_touch_roles_namespace PASSED [  5%]
+tests/test_operator_roles.py::TestNamespaceIsolation::test_set_accepts_non_executor_surface_cursor PASSED [  7%]
+tests/test_operator_roles.py::TestNamespaceIsolation::test_set_does_not_call_assert_registrable PASSED [ 10%]
+tests/test_operator_roles.py::TestValueNormalization::test_runtime_id_codex_normalizes_to_codex PASSED [ 13%]
+tests/test_operator_roles.py::TestValueNormalization::test_runtime_id_claude_normalizes_to_claude PASSED [ 15%]
+tests/test_operator_roles.py::TestValueNormalization::test_surface_id_cursor_normalizes_to_cursor PASSED [ 18%]
+tests/test_operator_roles.py::TestValueNormalization::test_surface_id_antigravity_normalizes_to_antigravity PASSED [ 21%]
+tests/test_operator_roles.py::TestValueNormalization::test_human_lowercase_normalizes_to_human PASSED [ 23%]
+tests/test_operator_roles.py::TestValueNormalization::test_human_titlecase_normalizes_to_human PASSED [ 26%]
+tests/test_operator_roles.py::TestValueNormalization::test_unrecognized_value_normalizes_to_unknown_role PASSED [ 28%]
+tests/test_operator_roles.py::TestValueNormalization::test_alias_claude_code_normalizes_to_claude PASSED [ 31%]
+tests/test_operator_roles.py::TestValueNormalization::test_alias_codex_cli_normalizes_to_codex PASSED [ 34%]
+tests/test_operator_roles.py::TestValueNormalization::test_alias_openai_codex_normalizes_to_codex PASSED [ 36%]
+tests/test_operator_roles.py::TestValueNormalization::test_empty_string_normalizes_to_unknown_role PASSED [ 39%]
+tests/test_operator_roles.py::TestValueNormalization::test_whitespace_only_normalizes_to_unknown_role PASSED [ 42%]
+tests/test_operator_roles.py::TestValueNormalization::test_surface_id_terminal_normalizes_to_terminal PASSED [ 44%]
+tests/test_operator_roles.py::TestValueNormalization::test_surface_id_claude_desktop_normalizes_to_claude_desktop PASSED [ 47%]
+tests/test_operator_roles.py::TestValueNormalization::test_gemini_runtime_normalizes_to_gemini PASSED [ 50%]
+tests/test_operator_roles.py::TestValueNormalization::test_grok_runtime_normalizes_to_grok PASSED [ 52%]
+tests/test_operator_roles.py::TestListOperatorRoles::test_list_returns_empty_map_when_no_config PASSED [ 55%]
+tests/test_operator_roles.py::TestListOperatorRoles::test_list_returns_provenance_for_global_entries PASSED [ 57%]
+tests/test_operator_roles.py::TestListOperatorRoles::test_list_entry_has_expected_keys PASSED [ 60%]
+tests/test_operator_roles.py::TestListOperatorRoles::test_list_with_project_path_returns_merged_provenance PASSED [ 63%]
+tests/test_operator_roles.py::TestProjectOverridesGlobal::test_project_value_overrides_global PASSED [ 65%]
+tests/test_operator_roles.py::TestProjectOverridesGlobal::test_global_value_preserved_when_project_does_not_override PASSED [ 68%]
+tests/test_operator_roles.py::TestProjectOverridesGlobal::test_project_overrides_multiple_roles_independently PASSED [ 71%]
+tests/test_operator_roles.py::TestNamespaceDisjointness::test_operator_roles_constant_is_defined PASSED [ 73%]
+tests/test_operator_roles.py::TestNamespaceDisjointness::test_operator_roles_contains_required_keys PASSED [ 76%]
+tests/test_operator_roles.py::TestNamespaceDisjointness::test_operator_roles_differ_from_worker_roles PASSED [ 78%]
+tests/test_operator_roles.py::TestNamespaceDisjointness::test_operator_roles_has_keys_not_in_worker_roles PASSED [ 81%]
+tests/test_operator_roles.py::TestNamespaceDisjointness::test_operator_roles_has_keys_not_in_invocation_context_roles PASSED [ 84%]
+tests/test_operator_roles.py::TestArgparseSurface::test_add_operator_roles_subparser_exists PASSED [ 86%]
+tests/test_operator_roles.py::TestArgparseSurface::test_run_operator_roles_command_exists PASSED [ 89%]
+tests/test_operator_roles.py::TestArgparseSurface::test_subparser_registers_operator_roles_command PASSED [ 92%]
+tests/test_operator_roles.py::TestArgparseSurface::test_set_then_list_roundtrip_via_command_handler PASSED [ 94%]
+tests/test_operator_roles.py::TestAuditorIncluded::test_auditor_in_operator_roles PASSED [ 97%]
+tests/test_operator_roles.py::TestAuditorIncluded::test_setting_auditor_operator_role_to_cursor_succeeds PASSED [100%]
+
+============================== 38 passed in 0.16s ==============================

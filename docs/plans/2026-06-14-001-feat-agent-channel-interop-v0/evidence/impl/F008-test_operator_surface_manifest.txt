@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 13 items
+
+tests/test_operator_surface_manifest.py::test_valid_operator_surface_manifest_validates PASSED [  7%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[config] PASSED [ 15%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[home] PASSED [ 23%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[mcp_availability] PASSED [ 30%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[path] PASSED [ 38%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[repo_visibility] PASSED [ 46%]
+tests/test_operator_surface_manifest.py::test_operator_surface_manifest_missing_probe_fails[worktree_binding] PASSED [ 53%]
+tests/test_operator_surface_manifest.py::test_seeded_surface_manifest_loads_and_has_minimum_probes[antigravity] PASSED [ 61%]
+tests/test_operator_surface_manifest.py::test_seeded_surface_manifest_loads_and_has_minimum_probes[claude_desktop] PASSED [ 69%]
+tests/test_operator_surface_manifest.py::test_seeded_surface_manifest_loads_and_has_minimum_probes[codex_app] PASSED [ 76%]
+tests/test_operator_surface_manifest.py::test_seeded_surface_manifest_loads_and_has_minimum_probes[cursor] PASSED [ 84%]
+tests/test_operator_surface_manifest.py::test_exactly_four_surfaces_seeded_no_gemini_grok PASSED [ 92%]
+tests/test_operator_surface_manifest.py::test_no_agent_channels_json_in_repo PASSED [100%]
+
+============================== 13 passed in 0.22s ==============================

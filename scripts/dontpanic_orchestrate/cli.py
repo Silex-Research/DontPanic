@@ -5344,6 +5344,7 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  operator-roles set|list        Operator-role PREFERENCES (intent only; never dispatch authority)
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
   doctor                         Run local readiness checks
@@ -5374,6 +5375,28 @@ Compatibility:
 Use `dontpanic <command> --help` for command-specific options.""",
         file=file,
     )
+
+
+def _operator_roles_main(argv: list[str]) -> int:
+    """``dontpanic operator-roles set|list`` — operator-role PREFERENCE config
+    (intent only, never dispatch authority; D009/F004). Thin wrapper that builds
+    a parser from the operator_roles module's own subparser registrar and prints
+    the resolved map (with scope provenance) as JSON for ``list``."""
+    from dontpanic_orchestrate import operator_roles
+
+    parser = argparse.ArgumentParser(prog="dontpanic operator-roles")
+    sub = parser.add_subparsers(dest="_or_top")
+    operator_roles.add_operator_roles_subparser(sub)
+    # The registrar nests under an "operator-roles" command; strip that layer so
+    # `dontpanic operator-roles set ...` maps onto the registrar's subcommands.
+    args = parser.parse_args(["operator-roles", *argv])
+    if getattr(args, "or_action", None) is None:
+        parser.parse_args(["operator-roles", "--help"])
+        return 2
+    result = operator_roles.run_operator_roles_command(args)
+    if result is not None:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -5429,6 +5452,8 @@ def main(argv: list[str] | None = None) -> int:
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
         return _roles_main(raw[1:])
+    if raw and raw[0] == "operator-roles":
+        return _operator_roles_main(raw[1:])
     if raw and raw[0] == "skills":
         return _skills_main(raw[1:])
     if raw and raw[0] == "mcp":

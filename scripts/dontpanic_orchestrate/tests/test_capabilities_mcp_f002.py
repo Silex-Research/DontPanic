@@ -122,13 +122,17 @@ class TestFullStatusEnvelope:
         assert "capabilities" in out
         assert isinstance(out["capabilities"], list)
         assert "advisory_notes" in out
-        # The four manifests checked into the repo must surface.
+        # All checked-in manifests (original four + four operator_surface kinds) must surface.
         ids = {c["capability_id"] for c in out["capabilities"]}
         assert ids == {
             "agent-claude-cli",
             "discord-notify",
             "firebase-dashboard",
             "linear",
+            "antigravity",
+            "claude_desktop",
+            "codex_app",
+            "cursor",
         }
 
     def test_envelope_keys_match_cli_render_json(self, no_cache_writes):

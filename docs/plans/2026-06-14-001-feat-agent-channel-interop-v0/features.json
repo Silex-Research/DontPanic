@@ -97,8 +97,21 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false,
-      "phase": 1
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F004-test_operator_roles.txt",
+          "captured_at": "2026-06-15T02:29:12+00:00",
+          "captured_by": "claude",
+          "note": "38 passed — operator_roles.* distinct namespace (never config.json/worker roles), no assert_registrable (non-executor cursor accepted), value-domain union runtime/surface/human/unknown_role normalized, global-vs-project precedence + scope provenance"
+        }
+      ]
     },
     {
       "id": "F005",
@@ -157,8 +170,21 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false,
-      "phase": 2
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F008-test_operator_surface_manifest.txt",
+          "captured_at": "2026-06-15T02:29:12+00:00",
+          "captured_by": "claude",
+          "note": "13 passed — operator_surface capability kind, six-probe minimum set enforced (missing-probe fails), exactly 4 seeded surfaces (cursor/claude_desktop/codex_app/antigravity), no agent-channels.json"
+        }
+      ]
     },
     {
       "id": "F009",
