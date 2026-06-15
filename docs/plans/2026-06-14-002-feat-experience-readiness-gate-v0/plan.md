@@ -157,4 +157,9 @@ is a separate consumer plan; D005 reuse-not-duplicate; D006 `evidence_class`/
 `data_provenance` are new EvidenceRef fields, no invented `type` values; D007
 seeded evidence cannot satisfy readiness unless `fixture_only`; D008 typed-skip is
 honest-unavailability evidence, not success; D009 cross-surface agreement compares
-structured claims by shared data-source key.
+structured claims by shared data-source key; **D010 alignment with the merged Agent
+Channel Interop v0 (main `da48bb3`): cli_agent/mcp_tool are evidence/consumer
+surfaces (not operator_surfaces); agent/runtime + operator-surface + capability ids
+normalize through Plan 1's `normalize_identifier` canonical id spaces; consumer
+family {human,agent,both} is cross-referenced to — not conflated with — the
+operator-role value domain.**
