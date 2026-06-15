@@ -173,6 +173,40 @@ the owning feature's `introduces[]` — or the established "engine producer writ
 dashboard/ledger state" pattern (cf. `operator-triage.json`, F009→F010), not
 genuine surface bleed. Re-confirm at `pre_impl`.
 
+## Sufficiency round 1 — determinism pins (D013)
+
+The first paid pre-impl audit returned 10 findings, all resolved by tightening
+acceptance (no code, no re-lock). The shape:
+
+- **Canonical-id + alias contract (F001).** Axis ids are lowercase
+  snake/kebab-stable canonical ids; display labels are aliases only. A pure
+  `normalize_identifier` maps user inputs (`Claude Code` / `claude-cli` /
+  `Anthropic Claude` → `claude`) to canonical ids and every unrecognized value to
+  `unknown_*` (never an invented id). The SAME id set is the single source for
+  resolution (F002), `operator_roles` values (F004), capability-manifest ids
+  (F008), and dashboard labels (F010). Canonical sets:
+  `operator_surface = terminal, codex_app, claude_desktop, claude_dispatch,
+  antigravity, cursor, github_agent_hq, remote_vm, github_vm, unknown_surface`;
+  `agent_runtime = claude, codex, gemini, grok, cursor, antigravity, opencode,
+  aider, unknown_runtime`; `execution_locality = local_mac, plan_worktree,
+  dashboard_terminal, code_task, remote_vm, github_vm, unknown_locality`.
+- **Deterministic detection (F002).** A rule table with a named cell per
+  `execution_locality` member; unrecognized explicit `DONT_PANIC_*` values →
+  `unknown_*`.
+- **Ledger (F003).** Dual path representation — `path_display` (home-scrubbed,
+  UI/evidence) + `path_key` (stable non-secret equality/conflict key; never the
+  scrubbed string); exactly-one-record under argparse/import failure,
+  KeyboardInterrupt, SIGTERM (`result=interrupted`); compaction preserves the
+  fields F009/F010 need to reproduce active/stale/conflict buckets.
+- **Operator roles (F004).** Global-vs-project precedence (project wins) +
+  per-entry scope provenance + a CLI scope shape.
+- **Doctor/manifest (F008).** Standard probe vocabulary + minimum probe set every
+  manifest must declare; seed **exactly four** surfaces (cursor, claude_desktop,
+  codex_app, antigravity); Gemini/Grok stay runtimes, not surfaces.
+- **Panel (F009/F010).** A single LOCKED bucket rule matrix (active/stale
+  threshold, conflict precedence, same_repo-vs-same_branch overlap, active-only
+  conflicts) governs producer AND renderer.
+
 ## Decisions
 
 See `decisions.jsonl`. Headline: D001 keep-the-four-axis-frame + no-new-registry;
@@ -183,4 +217,8 @@ locality enum; D007 operator-surface capability-manifest shape so named surfaces
 are supportable; D008 channel doctor pulled into v0; **D009 SAFETY INVARIANT —
 `operator_roles.*` are preferences/intent, never dispatch authority**; **D010
 lock-review single-surface recut** splitting the original F004/F005/F006 into the
-ten-feature set (F001–F010) so each feature touches one primary surface.
+ten-feature set (F001–F010) so each feature touches one primary surface; **D011**
+records the first scope-gate `--allow-oversize` override and **D012** the second;
+**D013 sufficiency round-1 determinism pins** (see section above) resolving the 10
+findings with the operator's three design defaults (canonical-id/alias contract,
+four seeded surfaces, dual path representation).
