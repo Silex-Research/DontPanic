@@ -39,12 +39,16 @@ sys.path.insert(0, str(HERE.parents[2]))
 from dontpanic_orchestrate import project_config  # noqa: E402
 from dontpanic_orchestrate.sufficiency_auditor import (  # noqa: E402
     PRE_IMPL_FINDINGS_ARTIFACT,
+    SUFFICIENCY_FINDING_CLASSES,
     SUFFICIENCY_GAP_CLASSES,
+    SUFFICIENCY_RAW_RESPONSE_ARTIFACT,
     SufficiencyAuditError,
+    SufficiencyParseOutcome,
     _build_sufficiency_prompt,
     _load_objective_contract,
     _parse_sufficiency_response,
     _resolve_goal_auditor_agent,
+    parse_sufficiency_findings,
     run_sufficiency_audit,
 )
 
@@ -468,3 +472,153 @@ def test_run_sufficiency_audit_propagates_contract_load_failure(
         run_sufficiency_audit(plan_dir, dispatch=_should_not_be_called)
     # No evidence file should have been created
     assert not (plan_dir / "evidence" / "goal-governance" / "pre_impl").exists()
+
+
+# ──────────────────────────────  (j) resilient parse — degradation + raw persist  ──────────────────────────────
+# Plan 2026-06-14-001 dogfood defect: a single finding whose `gap_class` carried a
+# `finding_class` value (scope_guard) made Pydantic reject the WHOLE paid response,
+# and the raw output was never persisted (validate-before-write), so an expensive
+# cross-vendor audit was lost. The resilient path persists raw first, validates each
+# finding independently, remaps a misplaced finding_class value, and quarantines the
+# rest with raw retained — never silently passing a malformed response as clean.
+
+
+def _ok_finding(journey: str = "onboarding", gap: str = "coverage_gap", severity: str = "medium") -> dict:
+    return {
+        "severity": severity,
+        "journey_id": journey,
+        "gap_class": gap,
+        "description": "A sufficiently long finding description of at least forty characters.",
+        "feature_refs": [],
+    }
+
+
+def test_finding_classes_constant_includes_scope_guard() -> None:
+    assert "scope_guard" in SUFFICIENCY_FINDING_CLASSES
+    # gap_class and finding_class taxonomies are disjoint vocabularies
+    assert set(SUFFICIENCY_FINDING_CLASSES).isdisjoint(set(SUFFICIENCY_GAP_CLASSES))
+
+
+def test_parse_findings_remaps_finding_class_value_in_gap_class() -> None:
+    payload = json.dumps(
+        [
+            _ok_finding("onboarding", "coverage_gap"),
+            {
+                **_ok_finding("publish-flow"),
+                "gap_class": "scope_guard",  # a finding_class value mislabeled into gap_class
+                "description": "A non-goal guard the auditor put in gap_class instead of finding_class.",
+            },
+            _ok_finding("onboarding", "wiring_gap"),
+        ]
+    )
+    outcome = parse_sufficiency_findings(payload)
+    assert isinstance(outcome, SufficiencyParseOutcome)
+    assert len(outcome.findings) == 3  # all three preserved, the middle one recovered
+    assert outcome.malformed == []
+    recovered = outcome.findings[1]
+    assert recovered.gap_class == "coverage_gap"  # conservative default
+    assert recovered.finding_class == "scope_guard"  # moved into the right field
+    assert any("scope_guard" in n and "remap" in n.lower() for n in outcome.notes)
+
+
+def test_parse_findings_quarantines_unrecoverable_but_keeps_valid() -> None:
+    payload = json.dumps(
+        [
+            _ok_finding("onboarding", "coverage_gap"),
+            {**_ok_finding("publish-flow"), "severity": "catastrophic"},  # not remappable
+        ]
+    )
+    outcome = parse_sufficiency_findings(payload)
+    assert len(outcome.findings) == 1
+    assert outcome.findings[0].journey_id == "onboarding"
+    assert len(outcome.malformed) == 1
+    assert outcome.malformed[0]["raw"]["severity"] == "catastrophic"  # raw retained
+    assert any("quarantin" in n.lower() for n in outcome.notes)
+
+
+def test_parse_findings_raises_when_all_malformed_no_valid() -> None:
+    # zero valid + at least one malformed → never silently "clean": raise.
+    payload = json.dumps([{**_ok_finding(), "severity": "catastrophic"}])
+    with pytest.raises(SufficiencyAuditError):
+        parse_sufficiency_findings(payload)
+
+
+def test_parse_findings_empty_array_is_clean() -> None:
+    outcome = parse_sufficiency_findings("[]")
+    assert outcome.findings == []
+    assert outcome.malformed == []
+
+
+def test_parse_findings_non_array_and_non_json_raise() -> None:
+    with pytest.raises(SufficiencyAuditError, match="must be a JSON array"):
+        parse_sufficiency_findings('{"findings": []}')
+    with pytest.raises(SufficiencyAuditError, match="not valid JSON"):
+        parse_sufficiency_findings("{ not json")
+
+
+def test_run_sufficiency_audit_persists_raw_and_recovers_scope_guard(
+    synthetic_plan: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(project_config, "find_project_for_plan_dir", lambda _: None)
+    raw = json.dumps(
+        [
+            _ok_finding("onboarding", "coverage_gap"),
+            {
+                **_ok_finding("publish-flow"),
+                "gap_class": "scope_guard",
+                "description": "A non-goal guard mislabeled as gap_class instead of finding_class.",
+            },
+        ]
+    )
+    findings = run_sufficiency_audit(synthetic_plan, dispatch=lambda _a, _p: raw)
+    assert len(findings) == 2  # recovered, not discarded
+
+    pre_impl = synthetic_plan / "evidence" / "goal-governance" / "pre_impl"
+    raw_path = pre_impl / SUFFICIENCY_RAW_RESPONSE_ARTIFACT
+    assert raw_path.is_file()
+    assert "scope_guard" in raw_path.read_text()  # raw persisted
+
+    out = json.loads((pre_impl / PRE_IMPL_FINDINGS_ARTIFACT).read_text())
+    assert len(out["findings"]) == 2
+    assert out.get("malformed_findings") == []
+    assert any("scope_guard" in n for n in out.get("parser_notes", []))
+
+
+def test_run_sufficiency_audit_persists_raw_even_when_unparseable(
+    synthetic_plan: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(project_config, "find_project_for_plan_dir", lambda _: None)
+    with pytest.raises(SufficiencyAuditError):
+        run_sufficiency_audit(synthetic_plan, dispatch=lambda _a, _p: "this is not json at all")
+
+    pre_impl = synthetic_plan / "evidence" / "goal-governance" / "pre_impl"
+    raw_path = pre_impl / SUFFICIENCY_RAW_RESPONSE_ARTIFACT
+    assert raw_path.is_file()  # raw persisted BEFORE the parse failed
+    assert "not json at all" in raw_path.read_text()
+    # the findings artifact must NOT be written for an unusable response
+    assert not (pre_impl / PRE_IMPL_FINDINGS_ARTIFACT).is_file()
+
+
+def test_run_sufficiency_audit_scrubs_home_path_from_persisted_raw(
+    synthetic_plan: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The codex CLI streams tool-telemetry that can embed the operator's absolute
+    # home path. The raw-response writer must sanitize BEFORE persisting (the
+    # standing evidence-scrubbing constraint) — home -> <home>.
+    monkeypatch.setattr(project_config, "find_project_for_plan_dir", lambda _: None)
+    home = str(Path.home())
+    raw = (
+        json.dumps([_ok_finding("onboarding", "coverage_gap")])
+        + f"\n# codex pwd telemetry: {home}/Documents/GitHub/DontPanic\n"
+    )
+    run_sufficiency_audit(synthetic_plan, dispatch=lambda _a, _p: raw)
+    raw_path = (
+        synthetic_plan / "evidence" / "goal-governance" / "pre_impl"
+        / SUFFICIENCY_RAW_RESPONSE_ARTIFACT
+    )
+    txt = raw_path.read_text()
+    assert home not in txt, "absolute operator home path leaked into persisted raw response"
+    assert "<home>" in txt, "home path was not replaced with the <home> placeholder"
