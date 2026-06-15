@@ -47,8 +47,21 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false,
-      "phase": 1
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:09:56+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F002-test_resolve_context.txt",
+          "captured_at": "2026-06-15T02:09:56+00:00",
+          "captured_by": "claude",
+          "note": "20 passed — explicit-first wins, unrecognized-explicit->unknown_*, named cell per ExecutionLocality member + per seeded surface, agent marker, unknown-last, purity/determinism"
+        }
+      ]
     },
     {
       "id": "F003",
