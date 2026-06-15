@@ -137,8 +137,21 @@
       "depends_on": [
         "F004"
       ],
-      "passes": false,
-      "phase": 2
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:45:09+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F005-test_operator_role_matrix.txt",
+          "captured_at": "2026-06-15T03:45:09+00:00",
+          "captured_by": "claude",
+          "note": "4 passed — pure projection (no I/O, no input mutation, deterministic); returns resolved operator-role map w/ scope provenance; operator_roles vs worker_roles rendered as DISTINCT namespaces (no conflation; operator value not in worker section); operator section intent_only=true + dispatch_authority=false (no dispatchability claim)"
+        }
+      ]
     },
     {
       "id": "F006",
