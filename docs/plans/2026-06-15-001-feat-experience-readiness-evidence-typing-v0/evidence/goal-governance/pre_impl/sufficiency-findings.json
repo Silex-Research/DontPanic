@@ -1,0 +1,140 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:2e86a65d194aa9a38028a9217408bd808c2fbdd66e0b45cdde3d954ce79c93ba",
+  "generated_at": "2026-06-15T17:48:23Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "coverage_gap",
+      "description": "The journey model makes consumer optional, but the objective requires declaring the intended consumer family for consumer-facing outcomes. If omission remains valid, typing and consumer-surface validation can be bypassed before close-time enforcement ever sees stable vocabulary.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Pin whether consumer is required for all readiness-gated journeys, or define an explicit legacy/default path that cannot satisfy this objective's completion tests.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "The seeded evidence rule depends on fixture_only, but the plan only says fixture_only is optional and does not pin its default. Missing fixture_only semantics can make seeded_masks_readiness nondeterministic for older or partially-authored journeys.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Define fixture_only default explicitly, preferably false, and require tests for omitted fixture_only on seeded-only evidence.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "wiring_gap",
+      "description": "The typing function is specified for one surface_class, but journeys can declare multiple surfaces and consumer=both. The plan does not pin journey-level aggregation semantics that require at least one human-surface requirement and at least one agent-surface requirement to be satisfied together.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Add a deterministic journey-level derivation rule: validate declared surfaces, derive requirements per surface, then conjunct the required groups for all surfaces needed by the consumer declaration.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "The structured_error rule depends on a degraded or error-path claim, but claim_kind is otherwise closed to read_only, mutation, and qualitative. There is no pinned input field that tells the pure typing rule when an error path is being evaluated.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Add an explicit error_path or outcome_mode input, or extend and test the closed claim_kind vocabulary if that is intended.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "The mutation requirement notation is ambiguous: the prose says idempotency plus rollback are both required, but the requirement-expression example could be read as alternatives or as malformed grouping.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Specify mutation as two conjunctive groups, for example [{idempotency}, {rollback}], appended to the base surface requirement.",
+      "finding_class": "editorial"
+    },
+    {
+      "severity": "critical",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "parity_gap",
+      "description": "F004 says degraded_dishonest only when neither family provides availability=unavailable for a required data_source, but the user journey requires both human and agent families to degrade honestly. One family could silently omit its degraded signal while the other family masks the failure.",
+      "feature_refs": [
+        "F004"
+      ],
+      "recommendation": "For consumer=both, require an honest unavailable signal from each applicable family, then separately compare shared structured fields for disagreement.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "wiring_gap",
+      "description": "The checker needs to compare human and agent EvidenceRefs by data_source, but EvidenceRef does not gain an explicit surface_class, consumer_family, or source-family attribution field. Inferring family from evidence_class is underspecified and breaks for shared classes such as structured_error.",
+      "feature_refs": [
+        "F001",
+        "F004"
+      ],
+      "recommendation": "Pin where family attribution lives: on EvidenceRef, on the containing journey/surface binding, or on a typed evidence-source wrapper, then test mixed-family evidence sets.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "coverage_gap",
+      "description": "F004 adds allowed_degraded_modes to the contract but never specifies how the checker validates or consumes those modes. That leaves an accepted schema field with no behavioral effect in the honesty gate.",
+      "feature_refs": [
+        "F004"
+      ],
+      "recommendation": "Define allowed_degraded_modes as either enforced policy or remove it from this plan; if enforced, add tests for allowed and disallowed degraded modes.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
+      "gap_class": "integration_gap",
+      "description": "The CLI transcript adapter is required to be non-interactive and no live paid call may be made, but the plan does not pin the command contract, fixture mode, or environment guard that prevents accidental paid external execution.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Define a deterministic fixture-safe CLI invocation for tests and require the adapter to fail closed or typed-skip when only paid/live execution is available.",
+      "finding_class": "scope_guard"
+    },
+    {
+      "severity": "low",
+      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
+      "gap_class": "coverage_gap",
+      "description": "The contract names the typed-skip reason-location fix as D028, while F003 labels the same acceptance point as D029. This drift can cause implementers to miss the exact round-3 typing fix the objective says is in scope.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Normalize the decision identifier for typed-skip reason location across the plan before implementation starts.",
+      "finding_class": "editorial"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "F002 references a close gate named F005 even though close-time enforcement is explicitly out of scope and delegated to sibling plan 2b. This creates an implementation target that is not part of the objective contract.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Replace the F005 reference with the sibling 2b close-time enforcement plan and state that this plan only emits typed advisory results.",
+      "finding_class": "scope_guard"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": [
+    "finding[1]: gap_class 'matrix_pin' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'",
+    "finding[3]: gap_class 'matrix_pin' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'",
+    "finding[10]: gap_class 'scope_guard' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'"
+  ]
+}
