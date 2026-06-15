@@ -1,0 +1,8 @@
+ RUN  v4.1.8 <home>/Documents/GitHub/DontPanic/dashboard
+
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  23:08:51
+   Duration  340ms (transform 19ms, setup 0ms, import 26ms, tests 5ms, environment 196ms)
+

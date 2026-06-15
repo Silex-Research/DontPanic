@@ -259,8 +259,28 @@
         "F006",
         "F008"
       ],
-      "passes": false,
-      "phase": 3
+      "passes": true,
+      "phase": 3,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T04:08:51+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F009-producer-test.txt",
+          "captured_at": "2026-06-15T04:08:51+00:00",
+          "captured_by": "claude",
+          "note": "8 passed — producer derives channel-view from D015 sources only; projects ONLY compaction-retained fields (command/started_at dropped); path_key equality not display; supports_dispatch/dispatchability derive from AGENT_REGISTRY not hardcoded; operator-only runtime surfaced non-dispatchable; embeds F005 role matrix + worktree bindings; scrubbed JSON; no agent-channels.json"
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F009-logic-vitest.txt",
+          "captured_at": "2026-06-15T04:08:51+00:00",
+          "captured_by": "claude",
+          "note": "13 vitest — operator-channels-logic.js LOCKED rule matrix cell-by-cell: active/stale boundary + fail-closed; conflict precedence same_plan>same_branch>same_repo over ACTIVE records only; path_key (not display) equality; remote_only / remote_cannot_mutate_local; unhealthy_worktree_binding; operator_only_runtime_not_dispatchable; every bucket id always present"
+        }
+      ]
     },
     {
       "id": "F010",
