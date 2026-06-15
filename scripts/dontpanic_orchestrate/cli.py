@@ -2368,7 +2368,37 @@ def _doctor_main(argv: list[str]) -> int:
             "registry name or filesystem path."
         ),
     )
+    parser.add_argument(
+        "--channel",
+        "--operator-surface",
+        dest="channel",
+        type=str,
+        default=None,
+        metavar="SURFACE",
+        help=(
+            "Plan 2026-06-14-001 F007: diagnose whether a named operator surface "
+            "(e.g. cursor, claude_desktop, codex_app, antigravity) is usable. "
+            "Normalizes the name (F001), resolves its operator_surface capability "
+            "manifest (F008), and reports the minimum probe set with pass/warn/fail."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # F007: --channel short-circuits the full battery and diagnoses one operator
+    # surface (structural-safe under --skip-auth; the minimum probe set has no
+    # auth probe). Three outcomes: ok / recognized_unseeded / unknown_surface.
+    if args.channel is not None:
+        from dontpanic_orchestrate import channel_doctor
+
+        result = channel_doctor.diagnose_channel(args.channel, skip_auth=args.skip_auth)
+        if args.json:
+            print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+        else:
+            print(f"channel: {result.surface}  outcome: {result.outcome}")
+            print(result.message)
+            for check in result.checks:
+                print(f"  [{check['status'].upper():>4}] {check['probe']}")
+        return result.exit_code
 
     # Lazy import: scripts/ may not be on sys.path when the console script
     # is installed via pipx. Add it before importing jarvis_doctor.

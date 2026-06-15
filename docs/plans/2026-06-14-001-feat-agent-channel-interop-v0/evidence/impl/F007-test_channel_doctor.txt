@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 12 items
+
+tests/test_channel_doctor.py::test_seeded_surface_runs_full_minimum_probe_set[cursor] PASSED [  8%]
+tests/test_channel_doctor.py::test_seeded_surface_runs_full_minimum_probe_set[claude_desktop] PASSED [ 16%]
+tests/test_channel_doctor.py::test_seeded_surface_runs_full_minimum_probe_set[codex_app] PASSED [ 25%]
+tests/test_channel_doctor.py::test_seeded_surface_runs_full_minimum_probe_set[antigravity] PASSED [ 33%]
+tests/test_channel_doctor.py::test_alias_input_normalizes_to_canonical_surface PASSED [ 41%]
+tests/test_channel_doctor.py::test_recognized_unseeded_surface_is_advisory_not_unsupported PASSED [ 50%]
+tests/test_channel_doctor.py::test_unknown_surface_exits_nonzero_with_actionable_message PASSED [ 58%]
+tests/test_channel_doctor.py::test_skip_auth_is_structural_safe PASSED   [ 66%]
+tests/test_channel_doctor.py::test_no_agent_channels_json_file_exists PASSED [ 75%]
+tests/test_channel_doctor.py::test_cli_doctor_channel_json_round_trips PASSED [ 83%]
+tests/test_channel_doctor.py::test_cli_operator_surface_alias_flag PASSED [ 91%]
+tests/test_channel_doctor.py::test_cli_doctor_channel_unknown_surface_nonzero PASSED [100%]
+
+============================== 12 passed in 0.36s ==============================

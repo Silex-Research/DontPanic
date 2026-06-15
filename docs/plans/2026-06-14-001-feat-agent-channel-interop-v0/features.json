@@ -181,8 +181,21 @@
         "F008",
         "F001"
       ],
-      "passes": false,
-      "phase": 3
+      "passes": true,
+      "phase": 3,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:36:30+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F007-test_channel_doctor.txt",
+          "captured_at": "2026-06-15T03:36:30+00:00",
+          "captured_by": "claude",
+          "note": "12 passed — dontpanic doctor --channel/--operator-surface: 3 D015 outcomes (ok runs full 6-probe minimum set per seeded surface / recognized_unseeded advisory for terminal / unknown_surface exits nonzero w/ actionable message), alias-normalizes via F001, structural-safe --skip-auth, no agent-channels.json, CLI JSON round-trip"
+        }
+      ]
     },
     {
       "id": "F008",
