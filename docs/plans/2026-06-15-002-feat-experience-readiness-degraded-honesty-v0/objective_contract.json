@@ -1,0 +1,34 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The degraded-honesty + structured cross-surface-AGREEMENT half of the Experience Readiness typing layer, CARVED OUT of 2a-core (2026-06-15-001) by operator split decision after F004 produced high findings in consecutive rounds (per-family honesty, F002/F004 shared exclusion, objective-level comparison keying). This plan CONSUMES 2a-core's shared EvidenceRef fields (data_source, availability, consumer_family, degraded_mode) and the closed surface_class/evidence_class enums; it MUST NOT lock until 2a-core is merged. It owns: per-family degradation honesty, allowed_degraded_modes consumption, the typed-skip-vs-real discriminator at the evidence-set level, and OBJECTIVE-LEVEL cross-surface availability/provenance agreement keyed by (objective, data_source).",
+  "user_journeys": [
+    {
+      "name": "degraded-honesty-and-structured-agreement",
+      "description": "When a required data source is unavailable, both families degrade honestly (human label; agent structured capability_unavailable), a typed-skip proves honest unavailability rather than success, and human and agent journeys for the same objective agree on availability/provenance compared by a shared data_source key.",
+      "surfaces": [
+        "backend"
+      ],
+      "states": [
+        "honest-degraded",
+        "dishonest",
+        "disagreement"
+      ],
+      "acceptance_signals": [
+        "a required data_source with no EvidenceRef carrying availability=unavailable for that key (from either family) -> degraded_dishonest; the checker reads structured EvidenceRef fields {data_source, availability, data_provenance}, never prose",
+        "a journey 'covered' only by typed-skips is NOT satisfied (typed-skip = honest unavailability, not success)",
+        "human vs agent journeys asserting different availability/provenance for the SAME data_source key -> cross_surface_disagreement (compared on structured fields, not prose)",
+        "an honestly-degraded journey (label or structured signal present) passes",
+        "cross_surface_disagreement is computed at the OBJECTIVE level: EvidenceRefs grouped by objective key then by data_source; the comparison boundary is the (objective, data_source) pair (D006)"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "checker tests: per-family degraded_dishonest, allowed_degraded_modes consumption, typed-skip-not-success discriminator, and OBJECTIVE-level keyed cross_surface_disagreement (F001)"
+  ],
+  "non_goals": [
+    "the TYPING/SCHEMA/HARNESS layer (surface_class/evidence_class/consumer/EvidenceRef fields, typing rule, agent harness) — sibling plan 2a-core (2026-06-15-001); this plan CONSUMES it",
+    "close-time enforcement (the consumer_outcome_gate) — plan 2b (2026-06-14-002)",
+    "the QuantRE Product Readiness plan; rebuilding human-surface capture; accessibility/visual depth"
+  ],
+  "completion_test": "One feature passes: a pure checker over 2a-core's structured EvidenceRef fields reports per-family degraded_dishonest (each required consumer_family must carry its own honest availability=unavailable signal), validates degraded_mode against the journey's allowed_degraded_modes, treats typed-skip as honest-unavailability never success (evidence-set discriminator), and detects cross_surface_disagreement at the OBJECTIVE level keyed by (objective, data_source). Consumes 2a-core vocabulary; does not redefine it."
+}

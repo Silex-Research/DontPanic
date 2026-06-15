@@ -1,6 +1,6 @@
 {
   "goal_type": "new_feature",
-  "source_of_truth": "The Experience Readiness Gate, SPLIT (operator decision 2026-06-15) into a typing/evidence layer (this plan, 2a) and a close-time enforcement layer (sibling plan 2b). This plan owns the vocabulary and capture: it proves the platform can DECLARE the intended consumer + surface, TYPE the required evidence_class, CAPTURE agent-surface evidence DontPanic produces itself, and CHECK honest degradation + structured cross-surface agreement. It does NOT decide close blocking — that is 2b, which consumes this stable vocabulary. Human/agent consumer families, the closed surface_class/evidence_class enums, structured EvidenceRef fields (data_source/availability), seeded!=readiness, typed-skip=honest-unavailability, and the round-3 typing fixes (D025-D028) are part of the contract.",
+  "source_of_truth": "The Experience Readiness Gate, SPLIT (operator decision 2026-06-15) into a typing/evidence layer (this plan, 2a) and a close-time enforcement layer (sibling plan 2b). This plan owns the vocabulary and capture: it proves the platform can DECLARE the intended consumer + surface, TYPE the required evidence_class, CAPTURE agent-surface evidence DontPanic produces itself, and capture typed-skips carrying the shared EvidenceRef fields. Degraded-honesty + structured cross-surface agreement is carved out to a sibling follow-up (2026-06-15-002 / 2a-F004) after F004 produced high findings in consecutive rounds (operator split decision). It does NOT decide close blocking — that is 2b, which consumes this stable vocabulary. Human/agent consumer families, the closed surface_class/evidence_class enums, structured EvidenceRef fields (data_source/availability), seeded!=readiness, typed-skip=honest-unavailability, and the round-3 typing fixes (D025-D028) are part of the contract.",
   "user_journeys": [
     {
       "name": "author-declares-consumers-and-surface-evidence",
@@ -59,38 +59,20 @@
         "the harness dispatches sources by registration (source-agnostic invariant intact); no live paid call is made",
         "a typed-skip carries its operator-readable reason in EvidenceRef.note (+ artifact body for transcript/log sources); the reason location is asserted (D028)"
       ]
-    },
-    {
-      "name": "degraded-honesty-and-structured-agreement",
-      "description": "When a required data source is unavailable, both families degrade honestly (human label; agent structured capability_unavailable), a typed-skip proves honest unavailability rather than success, and human and agent journeys for the same objective agree on availability/provenance compared by a shared data_source key.",
-      "surfaces": [
-        "backend"
-      ],
-      "states": [
-        "honest-degraded",
-        "dishonest",
-        "disagreement"
-      ],
-      "acceptance_signals": [
-        "a required data_source with no EvidenceRef carrying availability=unavailable for that key (from either family) -> degraded_dishonest; the checker reads structured EvidenceRef fields {data_source, availability, data_provenance}, never prose",
-        "a journey 'covered' only by typed-skips is NOT satisfied (typed-skip = honest unavailability, not success)",
-        "human vs agent journeys asserting different availability/provenance for the SAME data_source key -> cross_surface_disagreement (compared on structured fields, not prose)",
-        "an honestly-degraded journey (label or structured signal present) passes"
-      ]
     }
   ],
   "required_evidence": [
     "tests for the surface->family total mapping, consumer/fixture_only validation, and the new EvidenceRef fields with the no-new-type-value invariant (F001)",
     "typing-rule tests: substrate mismatch, real-screenshot satisfied, seeded_masks_readiness on non-fixture vs fixture journeys (F002)",
-    "harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)",
-    "checker tests: honest-degradation pass, degraded_dishonest, typed-skip-not-success, keyed cross_surface_disagreement (F004)"
+    "harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)"
   ],
   "non_goals": [
     "CLOSE-TIME ENFORCEMENT (the consumer_outcome_gate, activation rules, posture matrix, deferral/disposition) — sibling plan 2b (2026-06-15-002), which consumes this plan's vocabulary and locks only after 2a merges",
+    "DEGRADED HONESTY + CROSS-SURFACE AGREEMENT (per-family honesty, allowed_degraded_modes consumption, objective-level comparison key, data-source availability agreement) — sibling follow-up 2026-06-15-002 (2a-F004); the shared EvidenceRef fields (data_source/availability/consumer_family/degraded_mode) are defined HERE in F001 and consumed THERE",
     "the QuantRE Product Readiness plan — a separate consumer-side plan in QuantRE's repo authored against the gate",
     "re-building human-surface capture (web/iOS/Android/backend adapters already exist)",
     "accessibility / visual-regression / empty-state depth",
     "webhook / background-job / repo-PR agent sources beyond the dogfoodable CLI+MCP+contract trio"
   ],
-  "completion_test": "Four features pass: surfaces map totally into human/agent families with a CLOSED surface_class enum and consumer x surface validation, EvidenceRef carries evidence_class + data_provenance + data_source + availability with no invented type values and availability-requires-data_source (F001); the typing rule returns explicit conjunctive-group requirements drawn from the closed evidence_class enum, flags substrate-only/seeded-only closes, and treats an agent tool/contract transcript as sufficient for read-only success (F002); three agent EvidenceSource adapters capture agent-class evidence on existing type values with honest typed-skip whose reason location is explicit (F003); and the checker distinguishes honest degradation from silent failure, treats typed-skip as honest-unavailability not success, and detects keyed cross-surface disagreement on structured fields (F004). Close-time enforcement is explicitly out of scope (sibling plan 2b)."
+  "completion_test": "Three features pass: surfaces map totally into human/agent families with a CLOSED, PINNED surface_class enum + consumer x surface validation; EvidenceRef carries evidence_class + data_provenance + data_source + availability + consumer_family + degraded_mode with no invented type values, availability-requires-data_source+consumer_family (F001); the typing rule returns explicit conjunctive-group requirements TOTAL over the surface_class enum, flags substrate-only/seeded-only/missing-provenance closes, and treats an agent transcript as sufficient for read-only success (F002); three agent EvidenceSource adapters capture agent-class evidence on existing type values with honest typed-skip carrying the shared fields, all-adapter no-secret, and explicit reason location (F003). Degraded honesty + cross-surface agreement is out of scope (sibling 2a-F004)."
 }

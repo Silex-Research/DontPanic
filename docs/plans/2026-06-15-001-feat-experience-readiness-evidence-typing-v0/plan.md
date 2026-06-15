@@ -1,6 +1,6 @@
 ---
 id: 2026-06-15-001-feat-experience-readiness-evidence-typing-v0
-title: Experience Readiness — consumer-family evidence typing v0 (2a)
+title: Experience Readiness — consumer-family evidence typing v0 (2a-core, F001–F003)
 type: feat
 tier: cross-cutting
 status: draft
@@ -86,17 +86,19 @@ Grounding (substrate exists; this plan adds the typed vocabulary on top):
   existing `EvidenceRef.type` + `data_provenance`, with honest typed-skip whose
   reason lives in `EvidenceRef.note` (+ artifact body for transcript/log
   sources) (D029).
-- **F004 — Per-family degraded honesty + structured cross-surface agreement.**
-  `required_data_sources` + `allowed_degraded_modes` on the journey; a pure
-  checker over the structured EvidenceRef fields reports `degraded_dishonest`,
-  treats typed-skip as honest-unavailability (never success), and flags
-  `cross_surface_disagreement` keyed by `data_source`.
+- **(carved out) F004 — degraded honesty + cross-surface agreement** → moved to
+  sibling follow-up **2a-F004** (`2026-06-15-002`) by operator split (D055), after
+  F004 produced high findings in consecutive rounds (per-family, shared-exclusion,
+  objective-level keying). 2a-core still defines the shared `EvidenceRef` fields it
+  consumes.
 
 ## Non-goals (deferred / out of scope)
 
+- **Degraded honesty + cross-surface agreement** — sibling follow-up **2a-F004**
+  (`2026-06-15-002`); 2a-core owns the shared EvidenceRef fields, 2a-F004 consumes
+  them. (D055)
 - **Close-time enforcement** (the `consumer_outcome_gate`, activation rules,
-  posture matrix, deferral/disposition) — sibling plan **2b**
-  (`2026-06-15-002`), locks after 2a merges.
+  posture matrix, deferral/disposition) — plan **2b** (`2026-06-14-002`).
 - The QuantRE Product Readiness plan (separate consumer-side plan).
 - Re-building human-surface capture (already exists).
 - Accessibility / visual-regression / empty-state depth.
