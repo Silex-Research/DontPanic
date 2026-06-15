@@ -5400,6 +5400,35 @@ def _operator_roles_main(argv: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Public CLI entry point. Wraps the dispatch in the F003 invocation-ledger
+    seam: start a recorder, run the command, finalize EXACTLY ONE record in a
+    ``finally`` (covering normal return, error rc, argparse SystemExit, early
+    failure, KeyboardInterrupt, and SIGTERM). The ledger is fail-open — it never
+    changes the command's behavior or exit code."""
+    from dontpanic_orchestrate import invocation_ledger
+
+    raw_argv = argv if argv is not None else sys.argv[1:]
+    recorder = invocation_ledger.start_recording(raw_argv)
+    result = invocation_ledger.RESULT_OK
+    try:
+        rc = _run_cli(argv)
+        if rc not in (0, None):
+            result = invocation_ledger.RESULT_ERROR
+        return rc
+    except KeyboardInterrupt:
+        result = invocation_ledger.RESULT_INTERRUPTED
+        raise
+    except SystemExit as exc:
+        result = invocation_ledger.RESULT_OK if exc.code in (0, None) else invocation_ledger.RESULT_ERROR
+        raise
+    except BaseException:
+        result = invocation_ledger.RESULT_ERROR
+        raise
+    finally:
+        recorder.finalize(result)
+
+
+def _run_cli(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     # --version / -V prints the public package name and version, resolving
     # to `dontpanic_orchestrate.__version__` as the single source of truth.

@@ -82,8 +82,21 @@
         "F001",
         "F002"
       ],
-      "passes": false,
-      "phase": 2
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:55:13+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F003-test_invocation_ledger.txt",
+          "captured_at": "2026-06-15T02:55:13+00:00",
+          "captured_by": "claude",
+          "note": "14 passed — exactly-one-record across ordinary/argparse-fail/KeyboardInterrupt/exception/SIGTERM, redaction, path_display+path_key (home-scrubbed, key!=display, stable), 24-thread concurrency intact, compaction preserves buckets"
+        }
+      ]
     },
     {
       "id": "F004",
