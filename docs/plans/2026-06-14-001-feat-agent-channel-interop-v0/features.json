@@ -293,8 +293,28 @@
       "depends_on": [
         "F009"
       ],
-      "passes": false,
-      "phase": 4
+      "passes": true,
+      "phase": 4,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T04:18:09+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F010-producer-contract.txt",
+          "captured_at": "2026-06-15T04:18:09+00:00",
+          "captured_by": "claude",
+          "note": "2 passed — Python producer<->fixture contract: dashboard/tests/fixtures/real-state/operator-channels.json is VERBATIM build_channel_view output (drift-guarded); consumed shape keys present; no home leak"
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F010-journey-vitest.txt",
+          "captured_at": "2026-06-15T04:18:09+00:00",
+          "captured_by": "claude",
+          "note": "2 vitest journey — boots REAL createJarvis() shell against the real producer fixture; panel renders all 9 F009 buckets + operator-role matrix; counts match deriveBuckets exactly (consumes locked matrix, no re-derivation); same_plan_conflict uncapped; honest empty surface when state absent. Full dashboard vitest 1263 passed."
+        }
+      ]
     }
   ]
 }

@@ -26,6 +26,8 @@ describe('core.js: real page-module surface (2026-06-05-002 F001)', () => {
       'pages/health/health.js',
       'pages/architecture/architecture.js',
       'pages/capabilities/capabilities.js',
+      // Plan 2026-06-14-001 F010 — Operator Channels panel (channel-view render).
+      'pages/operator-channels/operator-channels.js',
       'pages/settings/settings.js',
     ]);
   });

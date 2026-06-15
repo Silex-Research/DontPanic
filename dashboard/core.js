@@ -300,6 +300,10 @@ function JARVIS_LITERAL() { return {
       // model `dontpanic plan worktree list` and the operator brief render).
       // Missing → null so the console shows an honest "no state" line.
       { key: 'activeWorktrees', file: 'active-worktrees.json', nullableMissing: true },
+      // Plan 2026-06-14-001 F010 — the channel-view model (F009 producer) feeds
+      // the Operator Channels panel. Missing → null so the panel shows an honest
+      // "run dashboard build" line rather than a fabricated empty surface.
+      { key: 'operatorChannels', file: 'operator-channels.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),
@@ -623,6 +627,7 @@ export const pageModules = [
   'pages/health/health.js',
   'pages/architecture/architecture.js',
   'pages/capabilities/capabilities.js',
+  'pages/operator-channels/operator-channels.js',
   'pages/settings/settings.js',
 ];
 
