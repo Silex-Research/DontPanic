@@ -207,6 +207,31 @@ acceptance (no code, no re-lock). The shape:
   threshold, conflict precedence, same_repo-vs-same_branch overlap, active-only
   conflicts) governs producer AND renderer.
 
+## Sufficiency round 2 — contract pins (D015)
+
+A second paid audit (on the now-hardened auditor, which validated itself live by
+remapping two `gap_class='matrix_pin'` findings) returned 8 findings, all resolved
+by tightening (no code, no further re-lock):
+
+- **`auditor` operator role (F004)** — added to `OPERATOR_ROLES` because the UX
+  promises "Codex auditor"; intent only, never dispatch authority.
+- **Operator-role value domain (F004)** — union of `agent_runtime` ids,
+  `operator_surface` ids, the literal `human`, and `unknown_role`, normalized via
+  the F001 alias table; unrecognized → `unknown_role`.
+- **Per-surface detection (F002)** — a named detection cell for **each** seeded
+  surface, not only generic `TERM_PROGRAM`; plus `DONT_PANIC_AGENT` →
+  `unknown_runtime`.
+- **`unknown_role` explicit (F001)** — canonical role-axis member + value-domain
+  fallback.
+- **F009 source-of-truth fix** — `AGENT_REGISTRY` is now **explicit** in the
+  enumerated derive-only-from set, resolving the "only from [4]" vs
+  "capabilities + AGENT_REGISTRY" contradiction.
+- **Doctor three outcomes (F007)** — recognized+seeded → per-check; recognized but
+  **unseeded** → advisory `recognized_unseeded`; unknown → non-zero.
+- **Full bucket matrix (F009)** — deterministic criterion + precedence for
+  `remote_only`, `remote_cannot_mutate_local`, `unhealthy_worktree_binding`, and
+  `operator_only_runtime_not_dispatchable`.
+
 ## Decisions
 
 See `decisions.jsonl`. Headline: D001 keep-the-four-axis-frame + no-new-registry;
@@ -221,4 +246,8 @@ ten-feature set (F001–F010) so each feature touches one primary surface; **D01
 records the first scope-gate `--allow-oversize` override and **D012** the second;
 **D013 sufficiency round-1 determinism pins** (see section above) resolving the 10
 findings with the operator's three design defaults (canonical-id/alias contract,
-four seeded surfaces, dual path representation).
+four seeded surfaces, dual path representation); **D014** records the third
+`--allow-oversize` override (re-lock on the rebased branch); **D015 sufficiency
+round-2 contract pins** resolving the 8 round-2 findings (auditor role,
+operator-role value-domain union, per-surface detection, unknown_role, F009
+AGENT_REGISTRY source fix, recognized_unseeded doctor outcome, full bucket matrix).

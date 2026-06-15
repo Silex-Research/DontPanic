@@ -19,7 +19,9 @@
         "agent_runtime validates against the same source as agent_surface; unknown agents map to unknown_runtime",
         "execution_locality resolves to one of local_mac/plan_worktree/dashboard_terminal/code_task/remote_vm/github_vm/unknown_locality",
         "a deterministic rule table reaches EACH execution_locality member (local_mac/plan_worktree/dashboard_terminal/code_task/remote_vm/github_vm) via a named cell",
-        "an unrecognized explicit DONT_PANIC_* value maps to that axis's unknown_* member (never rejected, never a wrong guess)"
+        "an unrecognized explicit DONT_PANIC_* value maps to that axis's unknown_* member (never rejected, never a wrong guess)",
+        "each seeded operator_surface (cursor, codex_app, claude_desktop, antigravity) has a named per-surface detection cell, not only generic TERM_PROGRAM",
+        "an unrecognized DONT_PANIC_AGENT value maps to unknown_runtime"
       ]
     },
     {
@@ -41,7 +43,9 @@
         "list returns the resolved operator-role map and the dashboard renders the role matrix",
         "SAFETY INVARIANT: an operator_roles preference NEVER makes its subject dispatchable -- a surface holding only an operator role is refused at dispatch exactly as if no role were set; dispatch authority derives solely from AGENT_REGISTRY via worker roles.*",
         "names use the canonical-id + alias contract (D013): user inputs normalize to canonical ids, unknowns become unknown_*",
-        "a project-scoped operator role overrides the global default for the same role and list output carries scope provenance"
+        "a project-scoped operator role overrides the global default for the same role and list output carries scope provenance",
+        "OPERATOR_ROLES includes auditor (operator intent only, never dispatch authority)",
+        "operator-role value domain = union of agent_runtime ids, operator_surface ids, human, and unknown_role; unrecognized values normalize to unknown_role"
       ]
     },
     {
@@ -63,7 +67,8 @@
         "an unknown surface name exits non-zero with an actionable message",
         "doctor remains structural-safe under --skip-auth",
         "exactly the four named operator surfaces (cursor, claude_desktop, codex_app, antigravity) are seeded; Gemini/Grok stay runtimes, not surfaces",
-        "the operator_surface manifest kind pins a minimum probe set (PATH/home/repo/worktree-binding/config/MCP) every manifest must declare"
+        "the operator_surface manifest kind pins a minimum probe set (PATH/home/repo/worktree-binding/config/MCP) every manifest must declare",
+        "a recognized-but-unseeded surface reports advisory recognized_unseeded (not pretend-unsupported); only unknown_surface exits non-zero"
       ]
     },
     {
@@ -109,7 +114,9 @@
         "the panel renders all active and needs-attention items uncapped",
         "the journey test boots the dashboard shell against a real producer-emitted fixture under a Python<->JS contract test (no synthetic stand-in)",
         "a single locked bucket rule matrix (active/stale threshold, conflict precedence, same_repo-vs-same_branch overlap, active-only conflicts) governs producer AND renderer",
-        "conflict equality uses path_key, never the scrubbed display string"
+        "conflict equality uses path_key, never the scrubbed display string",
+        "dispatchability is sourced from AGENT_REGISTRY, which is explicit in F009's enumerated derive-only-from set (ledger, capabilities, worktree bindings, operator_roles, AGENT_REGISTRY)",
+        "the locked rule matrix pins a deterministic criterion + precedence for remote_only, remote_cannot_mutate_local, unhealthy_worktree_binding, and operator_only_runtime_not_dispatchable"
       ]
     }
   ],
@@ -124,7 +131,8 @@
     "manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)",
     "producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)",
     "panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)",
-    "determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)"
+    "determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)",
+    "round-2 pins (D015): auditor role + operator-role value-domain union (F004); per-surface detection cells + DONT_PANIC_AGENT->unknown_runtime (F002); unknown_role canonical (F001); recognized_unseeded doctor outcome (F007); AGENT_REGISTRY in F009 source set + full bucket rule matrix (F009)"
   ],
   "non_goals": [
     "fully-open adapter marketplace (third-party adapter submission/registry format)",
