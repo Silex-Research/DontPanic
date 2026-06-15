@@ -1,0 +1,135 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:f17d732cb77ce4a2125b91cb0aa0da30f365849c077e21f41fce0252b62ddda1",
+  "generated_at": "2026-06-15T00:51:52Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "context-detected-on-every-invocation",
+      "gap_class": "coverage_gap",
+      "description": "The plan names a sharp ExecutionLocality enum but does not pin deterministic heuristics for plan_worktree, dashboard_terminal, code_task, remote_vm, and github_vm. Without explicit rule cells, the implementation can pass enum round-trip tests while still failing the journey's promise to distinguish Mac, plan worktree, code task, and remote VM runs.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Add a locality resolution matrix covering explicit env, plan/worktree inputs, dashboard terminal markers, code-task markers, SSH/remote markers, GitHub VM markers, and unknown fallback.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "context-detected-on-every-invocation",
+      "gap_class": "coverage_gap",
+      "description": "Explicit DONT_PANIC_* handling says values are honored verbatim, but the axes are typed enums and only unknown agents are specified. The plan does not say whether an unrecognized explicit operator, role, or locality is rejected, preserved, or mapped to unknown, creating a silent-wrong risk at the highest-precedence layer.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Define invalid explicit-value behavior per axis, preferably fail-actionably or map to the axis unknown value with provenance, and add tests for each axis.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "easy-role-choice",
+      "gap_class": "integration_gap",
+      "description": "The plan does not define a shared naming and alias contract across OperatorSurface enum values, agent_runtime values, operator_roles config values, capability manifest ids, and dashboard labels. User-facing inputs like Claude, Codex, Gemini, Cursor are ambiguous against values such as claude_desktop, claude_dispatch, codex_app, and existing worker registry names.",
+      "feature_refs": [
+        "F001",
+        "F004",
+        "F005",
+        "F008",
+        "F009"
+      ],
+      "recommendation": "Add a canonical surface/runtime id plus alias table and require every CLI, manifest, resolver, role projection, and producer join to use it.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "easy-role-choice",
+      "gap_class": "coverage_gap",
+      "description": "F004 allows global defaults and optional project-scoped operator roles, but the plan does not pin precedence, list output provenance, or the CLI shape for setting global versus project intent. That leaves the role matrix and resolved map behavior underdetermined when both scopes contain the same role.",
+      "feature_refs": [
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Specify layered precedence, explicit flags or defaults for scope, and list output that shows effective value plus source scope.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "prove-a-surface-is-usable",
+      "gap_class": "coverage_gap",
+      "description": "F008 only requires at least two seeded operator-surface manifests, while the journey asks whether DontPanic works from Codex, Claude, Antigravity, and Cursor. If only two are seeded, doctor can be implemented correctly and still fail the named-surface proof promised to the operator.",
+      "feature_refs": [
+        "F001",
+        "F007",
+        "F008"
+      ],
+      "recommendation": "Lock the v0 seeded-surface set and require manifests for every surface that doctor treats as known in v0, including the named journey surfaces or explicitly mark unsupported ones unknown.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "prove-a-surface-is-usable",
+      "gap_class": "integration_gap",
+      "description": "The doctor journey requires PATH, home, repo visibility, worktree binding, config, and MCP availability checks, but F008 only says manifests contain verify.probes without requiring a standard probe vocabulary or minimum probe set. A manifest could validate while omitting checks the doctor must report.",
+      "feature_refs": [
+        "F007",
+        "F008"
+      ],
+      "recommendation": "Define required probe ids or capabilities for operator_surface manifests and make doctor output fail or warn actionably when a required probe is absent.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "invocation-presence-recorded-safely",
+      "gap_class": "integration_gap",
+      "description": "F003 requires records to contain repo and worktree while also asserting no absolute home path appears. The plan does not define the sanitized path representation that preserves equality for conflict detection without leaking /Users-style home paths.",
+      "feature_refs": [
+        "F003",
+        "F009"
+      ],
+      "recommendation": "Specify stable redacted identifiers, such as <home>-relative paths plus hashes, and require the producer to use those identifiers for repo/worktree equality.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "invocation-presence-recorded-safely",
+      "gap_class": "wiring_gap",
+      "description": "The ledger is wired at one CLI seam and tests result=error, but the plan does not pin coverage for argparse failures, early config/import failures, KeyboardInterrupt, or SIGTERM-style interruption. Those are common invocation outcomes and can bypass exactly-one-record guarantees if the seam is too low in cli.py.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Define the top-level wrapper boundary and add evidence for parse error, early exception, and interrupted result recording.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "operator-channels-panel",
+      "gap_class": "integration_gap",
+      "description": "F003 compaction bounds the ledger, while F009 derives active, stale, and conflict buckets from that same ledger. The plan does not state what compacted records retain, so retention could erase the evidence needed to classify stale channels or cross-surface conflicts.",
+      "feature_refs": [
+        "F003",
+        "F009",
+        "F010"
+      ],
+      "recommendation": "Define a compaction summary shape that preserves last_seen, result, context, repo/worktree/branch/plan identifiers, and enough per-channel history for bucket derivation.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "operator-channels-panel",
+      "gap_class": "coverage_gap",
+      "description": "The panel buckets are listed, but deterministic rules are not pinned for active versus stale thresholds, conflict precedence, same_repo versus same_branch overlap, and whether conflicts consider only active records. Vitest per-bucket tests will not prevent incompatible producer and renderer interpretations unless the rule matrix is locked.",
+      "feature_refs": [
+        "F009",
+        "F010"
+      ],
+      "recommendation": "Add a bucket rule table with thresholds, eligibility, precedence, deduplication behavior, and fixture rows for overlapping classifications.",
+      "finding_class": "matrix_pin"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}
