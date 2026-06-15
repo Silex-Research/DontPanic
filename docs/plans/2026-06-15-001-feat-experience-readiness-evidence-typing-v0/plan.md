@@ -47,11 +47,20 @@ paid sufficiency rounds but the **enforcement** matrix (activation × posture ×
 deferral × consumer-cardinality × no-journey) kept surfacing new high/critical
 conceptual layers each round. Per operator decision (D025) the two are split:
 
-- **2a (this plan)** — vocabulary + capture + checks. Mostly settled; the four
-  round-3 typing findings are pinned here as D026–D029.
-- **2b (`2026-06-15-002`)** — the `consumer_outcome_gate` and the enforcement
+- **2a-core (this plan)** — vocabulary + agent capture + the typing checker.
+- **2a-F004 (`2026-06-15-002`)** — degraded honesty + cross-surface agreement,
+  carved out (D055); consumes 2a-core's vocabulary.
+- **2b (`2026-06-14-002`)** — the `consumer_outcome_gate` and the enforcement
   posture/activation/disposition matrix. Built ON 2a's vocabulary; stays draft
-  and does not lock until 2a is merged.
+  and does not lock until 2a-core is merged.
+
+**Scope of 2a-core (D060): shared vocabulary now, agent enforcement now, human
+producer typing later.** F001 defines the FULL shared `EvidenceRef` vocabulary for
+both human and agent families. F003 proves the AGENT producers populate it. F002's
+fail-closed rich typing is ENFORCED on agent-family surfaces only; human-family
+surfaces whose evidence lacks the new fields are `not_yet_typed` (legacy_untyped
+compatibility), never invalid — human-surface field population is a named
+follow-up, so nothing here contradicts the "don't rebuild human capture" non-goal.
 
 Grounding (substrate exists; this plan adds the typed vocabulary on top):
 
@@ -77,13 +86,20 @@ Grounding (substrate exists; this plan adds the typed vocabulary on top):
 - **F002 — Evidence-class typing rule.** Pure
   `required_evidence_classes(surface_class, consumer, claim_kind)` returning
   explicit conjunctive groups (`a|b` = at-least-one) drawn only from F001's
-  closed enum; checker → `satisfied | evidence_class_mismatch |
-  seeded_masks_readiness`. Agent tool/contract transcript alone satisfies a
-  read-only success; `structured_error` only for error-path claims (D028).
+  closed enum; checker takes the **full `EvidenceRef[]`** and returns a
+  **per-`(surface_class, group)` result list** (journey verdict = satisfied iff
+  every entry satisfied) with statuses `satisfied | evidence_class_mismatch |
+  seeded_masks_readiness | missing_provenance | not_yet_typed`. Agent
+  tool/contract transcript alone satisfies a read-only success; `structured_error`
+  only for error-path claims (D028). **Enforcement scope (D060): fail-closed rich
+  typing applies to AGENT-family surfaces** (the surfaces F003 produces);
+  human-family surfaces lacking the new fields return `not_yet_typed`
+  (legacy_untyped compatibility), never a fail-closed rejection.
 - **F003 — Agent-surface evidence class in the harness.** Three dogfoodable
   `EvidenceSource` adapters (CLI transcript; in-process MCP tool-call via
   `mcp_server`; schema/contract check), each setting `evidence_class` + a valid
-  existing `EvidenceRef.type` + `data_provenance`, with honest typed-skip whose
+  existing `EvidenceRef.type` + `data_provenance` + `surface_class` (the
+  adapter's agent surface) + the shared fields, with honest typed-skip whose
   reason lives in `EvidenceRef.note` (+ artifact body for transcript/log
   sources) (D029).
 - **(carved out) F004 — degraded honesty + cross-surface agreement** → moved to
@@ -101,6 +117,12 @@ Grounding (substrate exists; this plan adds the typed vocabulary on top):
   posture matrix, deferral/disposition) — plan **2b** (`2026-06-14-002`).
 - The QuantRE Product Readiness plan (separate consumer-side plan).
 - Re-building human-surface capture (already exists).
+- **Human-surface field population + human-surface enforcement** — 2a-core defines
+  the shared vocabulary for BOTH families but only ENFORCES it on agent surfaces
+  (it produces those via F003). Stamping `surface_class`/`availability`/
+  `consumer_family`/`data_provenance` onto existing human producers, and enforcing
+  rich typing for human surfaces, is an explicit **follow-up** — human evidence
+  lacking the fields is `not_yet_typed` here, not invalid (D060).
 - Accessibility / visual-regression / empty-state depth.
 - Webhook / background-job / repo-PR agent sources beyond the CLI+MCP+contract
   trio.

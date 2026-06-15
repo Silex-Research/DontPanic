@@ -2,88 +2,67 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:600a1227dc933df0634846e99bf86e1bf18d3ca9c5a449a118167f859d8da5b6",
-  "generated_at": "2026-06-15T18:28:40Z",
+  "input_fingerprint": "sha256:49175a02656bb0ee231b9b57bb8dbdd21cf7a6f76d28403cd72431a534a816e9",
+  "generated_at": "2026-06-15T20:07:11Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "author-declares-consumers-and-surface-evidence",
-      "gap_class": "coverage_gap",
-      "description": "F001 requires a total SurfaceFamily mapping, but the proposed plan does not pin the exact family for every closed surface_class member. Ambiguous cells like external_integration, service_batch, and backend-derived surfaces can change consumer x surface validation outcomes.",
-      "feature_refs": [
-        "F001"
-      ],
-      "recommendation": "Add an explicit table assigning each closed surface_class to exactly one family before implementation locks.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "author-declares-consumers-and-surface-evidence",
-      "gap_class": "coverage_gap",
-      "description": "The journey.surfaces token mapping named in F001 lists web, backend, mcp_tool, cli_agent, and cli_human, but does not pin tokens for mobile_app or external_integration even though those are closed surface_class values and mobile human capture already exists.",
-      "feature_refs": [
-        "F001"
-      ],
-      "recommendation": "Enumerate every accepted journey.surfaces token, including existing mobile and external-integration tokens, and map each to a closed surface_class.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "gap_class": "coverage_gap",
-      "description": "F002 states that agent_mcp_tool read_only success is satisfied by tool_call_transcript or contract_check, but the listed tests do not include the required unit-test-only mismatch and transcript-satisfied agent API/MCP cases from the journey contract.",
-      "feature_refs": [
-        "F002"
-      ],
-      "recommendation": "Add explicit typing-rule tests for agent_mcp_tool with only test_output, with tool_call_transcript, and with contract_check.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
       "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
       "gap_class": "wiring_gap",
-      "description": "F003 typed-skip EvidenceRefs specify availability=unavailable and data_provenance=degraded, but do not require data_source, consumer_family, or degraded_mode, which F001/F004 need for validation and per-family degradation checks.",
+      "description": "F003 does not explicitly require successful or typed-skip adapter EvidenceRefs to carry EvidenceRef.surface_class, while F002 makes missing surface_class structurally ineligible for satisfying any surface group.",
       "feature_refs": [
         "F001",
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Require every F003 typed-skip to populate data_source, consumer_family=agent, and a degraded_mode accepted by the journey when it represents a degraded data source.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
-      "gap_class": "parity_gap",
-      "description": "The no-secret assertion is pinned only for the MCP transcript path, while the required evidence asks harness tests for all three agent adapters to be no-secret. CLI and contract artifacts could leak secret-shaped fields without violating the written F003 acceptance.",
-      "feature_refs": [
+        "F002",
         "F003"
       ],
-      "recommendation": "Apply the same no-secret-shaped-field assertion to CLI transcript and contract-check artifacts, preferably through shared harness validation.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
-      "journey_id": "degraded-honesty-and-structured-agreement",
-      "gap_class": "integration_gap",
-      "description": "F004 describes a pure checker mostly at the journey evidence-set level, but the contract requires human and agent journeys for the same objective to agree by shared data_source key. The objective-level collection and comparison boundary is not pinned.",
-      "feature_refs": [
-        "F004"
-      ],
-      "recommendation": "Define whether the checker accepts an objective-level evidence set or add an aggregator that groups journeys by objective and data_source before running cross-family agreement.",
+      "recommendation": "Pin the surface_class emitted by each adapter and assert it for both available and unavailable outputs: cli_agent for the CLI source, agent_mcp_tool for the MCP source, and the intended contract-check surface explicitly.",
       "finding_class": "plan_contract"
     },
     {
-      "severity": "medium",
+      "severity": "high",
       "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "gap_class": "wiring_gap",
-      "description": "EvidenceRef data_provenance is optional for compatibility, but F002 does not define how consumer-readiness evidence with an evidence_class and missing data_provenance is handled. That leaves seeded-versus-real enforcement dependent on implementation choices.",
+      "gap_class": "integration_gap",
+      "description": "F002 requires availability, consumer_family, surface_class, and data_provenance for evidence to satisfy readiness, but the plan does not define how existing human-surface screenshot or recording producers will populate those new fields.",
       "feature_refs": [
         "F001",
         "F002"
       ],
-      "recommendation": "Specify that evidence lacking data_provenance cannot satisfy consumer-readiness requirements, or add an explicit validation error for missing provenance on typed evidence.",
-      "finding_class": "plan_contract"
+      "recommendation": "Add a normalization or metadata-enrichment step for existing human evidence sources, with tests proving a real screenshot EvidenceRef can satisfy the new checker without rebuilding the adapters.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
+      "gap_class": "coverage_gap",
+      "description": "The typed-skip shape is described, but validation is not fully pinned against malformed unavailable evidence such as unavailable plus real provenance, missing degraded_mode, missing reason note, or missing evidence_class.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Add explicit schema and harness tests rejecting invalid typed-skip combinations and asserting note, data_source, consumer_family, degraded_mode, evidence_class, type, data_provenance, availability, and surface_class.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "coverage_gap",
+      "description": "The pinned token map still has an ambiguity: it claims a total deterministic map over eight journey surface tokens but writes ios/android as a combined token, which leaves the accepted token domain unclear.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Pin every accepted journey.surfaces token individually, including whether ios and android are separate accepted tokens, and test that each token maps to exactly one surface_class while unknown tokens fail closed.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
+      "gap_class": "coverage_gap",
+      "description": "The checker returns a single status even though journey-level aggregation can create multiple independent per-surface and conjunctive-group failures, so mixed missing_provenance, seeded, and mismatch cases are not deterministic.",
+      "feature_refs": [
+        "F002"
+      ],
+      "recommendation": "Pin either a per-surface result shape or a strict precedence order for aggregate status selection, including how missing groups with alternative evidence classes are reported.",
+      "finding_class": "matrix_pin"
     }
   ],
   "malformed_findings": [],
