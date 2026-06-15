@@ -3,7 +3,7 @@ id: 2026-06-14-001-feat-agent-channel-interop-v0
 title: Agent Channel Interop v0 — operator-surface axis, easy role choice, channel doctor, presence
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-14"
 goal_type: new_feature
 description: >
