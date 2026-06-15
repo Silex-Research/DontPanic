@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 7 items
+
+tests/test_dispatch_safety_guard.py::test_operator_role_on_non_executor_does_not_grant_dispatch PASSED [ 14%]
+tests/test_dispatch_safety_guard.py::test_refusal_is_identical_whether_or_not_a_preference_is_set PASSED [ 28%]
+tests/test_dispatch_safety_guard.py::test_dispatchable_set_is_exactly_agent_registry_regardless_of_preferences PASSED [ 42%]
+tests/test_dispatch_safety_guard.py::test_a_real_executor_stays_dispatchable_with_or_without_a_preference PASSED [ 57%]
+tests/test_dispatch_safety_guard.py::test_register_worker_path_unchanged_by_operator_role_presence PASSED [ 71%]
+tests/test_dispatch_safety_guard.py::test_preference_only_surfaces_are_proven_non_dispatchable PASSED [ 85%]
+tests/test_dispatch_safety_guard.py::test_dispatchability_never_reads_operator_roles PASSED [100%]
+
+============================== 7 passed in 0.12s ===============================

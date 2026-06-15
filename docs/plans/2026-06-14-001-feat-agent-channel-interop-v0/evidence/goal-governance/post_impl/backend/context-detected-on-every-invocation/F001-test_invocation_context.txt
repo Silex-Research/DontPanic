@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 11 items
+
+tests/test_invocation_context.py::test_operator_surface_membership_is_exact PASSED [  9%]
+tests/test_invocation_context.py::test_execution_locality_membership_is_exact PASSED [ 18%]
+tests/test_invocation_context.py::test_agent_runtime_canonical_ids_and_role_axis_reuse_worker_roles PASSED [ 27%]
+tests/test_invocation_context.py::test_invocation_context_has_exactly_four_fields PASSED [ 36%]
+tests/test_invocation_context.py::test_no_field_name_contains_secret_shapes PASSED [ 45%]
+tests/test_invocation_context.py::test_normalize_aliases_to_canonical_ids PASSED [ 54%]
+tests/test_invocation_context.py::test_normalize_unrecognized_maps_to_axis_unknown_member PASSED [ 63%]
+tests/test_invocation_context.py::test_normalize_is_pure_and_handles_empty PASSED [ 72%]
+tests/test_invocation_context.py::test_normalize_rejects_unknown_axis PASSED [ 81%]
+tests/test_invocation_context.py::test_serialization_round_trips_byte_stable PASSED [ 90%]
+tests/test_invocation_context.py::test_every_enum_member_round_trips PASSED [100%]
+
+============================== 11 passed in 0.13s ==============================
