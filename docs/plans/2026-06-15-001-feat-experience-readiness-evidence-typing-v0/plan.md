@@ -87,9 +87,11 @@ Grounding (substrate exists; this plan adds the typed vocabulary on top):
   `required_evidence_classes(surface_class, consumer, claim_kind)` returning
   explicit conjunctive groups (`a|b` = at-least-one) drawn only from F001's
   closed enum; checker takes the **full `EvidenceRef[]`** and returns a
-  **per-`(surface_class, group)` result list** (journey verdict = satisfied iff
-  every entry satisfied) with statuses `satisfied | evidence_class_mismatch |
-  seeded_masks_readiness | missing_provenance | not_yet_typed`. Agent
+  **per-`(surface_class, group)` result list** with statuses `satisfied |
+  evidence_class_mismatch | seeded_masks_readiness | missing_provenance |
+  not_yet_typed`, plus a **tri-state journey verdict** (D062) — `satisfied` /
+  `agent_satisfied_human_pending` / `unsatisfied` — so the agent-now/human-later
+  deferral is honest at the journey level, never a misleading failure. Agent
   tool/contract transcript alone satisfies a read-only success; `structured_error`
   only for error-path claims (D028). **Enforcement scope (D060): fail-closed rich
   typing applies to AGENT-family surfaces** (the surfaces F003 produces);
