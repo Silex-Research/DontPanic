@@ -31,6 +31,7 @@ import json
 import os
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -82,10 +83,34 @@ GapClass = Literal[
     "integration_gap",
 ]
 
+SUFFICIENCY_FINDING_CLASSES: tuple[str, ...] = (
+    "plan_contract",
+    "implementation_detail",
+    "editorial",
+    "scope_guard",
+    "matrix_pin",
+)
+"""Convergence ``finding_class`` taxonomy (plan 2026-06-09-002) — a DIFFERENT
+axis from :data:`SUFFICIENCY_GAP_CLASSES`. The two vocabularies are disjoint;
+an auditor that emits a finding-class value (e.g. ``scope_guard``) in the
+``gap_class`` field is misrouting it. The resilient parser remaps that case
+rather than discarding the whole paid response (plan 2026-06-14-001 dogfood)."""
+
+_REMAP_GAP_CLASS_DEFAULT: str = "coverage_gap"
+"""Conservative ``gap_class`` assigned when a finding's ``gap_class`` actually
+held a ``finding_class`` value — we move the value to ``finding_class`` and
+default the gap-class to the most general "something is uncovered" class."""
+
 PRE_IMPL_FINDINGS_ARTIFACT: str = "sufficiency-findings.json"
 """Filename under ``evidence/goal-governance/pre_impl/`` per F0's path
 convention (mirrors :data:`nested_orchestration.GOAL_GOVERNANCE_EVIDENCE_PREFIX`).
 """
+
+SUFFICIENCY_RAW_RESPONSE_ARTIFACT: str = "sufficiency-raw-response.txt"
+"""Raw auditor response, persisted UNDER the same pre_impl dir BEFORE any
+validation runs (plan 2026-06-14-001 dogfood). A schema mismatch on a single
+finding previously discarded the whole expensive cross-vendor response with no
+recovery path; persisting raw-first makes every paid response recoverable."""
 
 FINDINGS_SCHEMA_VERSION: str = "v1"
 """Artifact schema version. ``v1`` adds ``input_fingerprint`` + ``generated_at``
@@ -571,6 +596,156 @@ def _parse_sufficiency_response(response: str) -> list[SufficiencyFinding]:
     return findings
 
 
+# ──────────────────────────────  resilient parse (plan 2026-06-14-001)  ──────────────────────────────
+
+
+@dataclass(frozen=True)
+class SufficiencyParseOutcome:
+    """Result of resiliently parsing an auditor response.
+
+    ``findings`` are valid (or recovered-via-remap) findings preserved from the
+    response; ``malformed`` are elements that could not be validated, retained
+    verbatim (``raw``) with their ``errors`` so a paid response is never silently
+    dropped; ``notes`` are human-readable degradation messages surfaced to the
+    operator. Plan 2026-06-14-001: replaces the all-or-nothing parse that let one
+    mislabeled ``gap_class`` discard an entire paid cross-vendor response."""
+
+    findings: list[SufficiencyFinding] = field(default_factory=list)
+    malformed: list[dict[str, Any]] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def degraded(self) -> bool:
+        return bool(self.malformed) or bool(self.notes)
+
+
+def _gap_class_error(errors: list[dict[str, Any]]) -> bool:
+    """True iff a validation error set targets the ``gap_class`` field."""
+    return any("gap_class" in tuple(e.get("loc", ())) for e in errors)
+
+
+def _attempt_finding_class_remap(item: dict[str, Any]) -> tuple[dict[str, Any], str] | None:
+    """If ``item['gap_class']`` actually holds a ``finding_class`` value (e.g.
+    ``scope_guard``), return a coerced copy that moves the value into
+    ``finding_class`` and defaults ``gap_class`` conservatively, plus a note.
+    Returns ``None`` when no such remap applies (so the caller quarantines)."""
+    gap_value = item.get("gap_class")
+    if not isinstance(gap_value, str) or gap_value not in SUFFICIENCY_FINDING_CLASSES:
+        return None
+    coerced = dict(item)
+    coerced["gap_class"] = _REMAP_GAP_CLASS_DEFAULT
+    # Preserve an already-set finding_class; only fill it from the misrouted value.
+    if not coerced.get("finding_class"):
+        coerced["finding_class"] = gap_value
+    note = (
+        f"gap_class {gap_value!r} is a finding_class value — remapped into "
+        f"finding_class; gap_class defaulted to {_REMAP_GAP_CLASS_DEFAULT!r}"
+    )
+    return coerced, note
+
+
+def parse_sufficiency_findings(response: str) -> SufficiencyParseOutcome:
+    """Resiliently parse the auditor's JSON output (plan 2026-06-14-001).
+
+    Catastrophic shapes still raise :class:`SufficiencyAuditError`: a non-JSON
+    body, a non-array top-level value, or a non-empty array with ZERO valid
+    findings (so a wholly-malformed response is never silently accepted as
+    "clean / no gaps"). Otherwise every element is validated INDEPENDENTLY:
+
+      * valid findings are kept;
+      * a finding whose ``gap_class`` carried a ``finding_class`` value is
+        remapped and recovered (the 2026-06-14 dogfood defect);
+      * anything still invalid is quarantined into ``malformed`` with its raw
+        payload + errors retained, and a visible note is emitted.
+    """
+    from dontpanic_orchestrate.codex_stream import (
+        coerce_first_json_value,
+        extract_codex_streaming_payload,
+    )
+
+    stream_payload = extract_codex_streaming_payload(response)
+    source = stream_payload if stream_payload is not None else response
+    try:
+        payload = coerce_first_json_value(source)
+    except json.JSONDecodeError as exc:
+        raise SufficiencyAuditError(
+            f"sufficiency auditor response is not valid JSON: {exc.msg}"
+        ) from exc
+
+    if not isinstance(payload, list):
+        raise SufficiencyAuditError(
+            f"sufficiency auditor response must be a JSON array, got {type(payload).__name__}"
+        )
+
+    findings: list[SufficiencyFinding] = []
+    malformed: list[dict[str, Any]] = []
+    notes: list[str] = []
+
+    for index, item in enumerate(payload):
+        if not isinstance(item, dict):
+            malformed.append(
+                {"index": index, "raw": item, "errors": "element is not a JSON object"}
+            )
+            notes.append(f"finding[{index}]: not a JSON object — quarantined, raw retained")
+            continue
+        try:
+            findings.append(SufficiencyFinding.model_validate(item))
+            continue
+        except ValidationError as exc:
+            errors = exc.errors()
+
+        # Recover the specific 2026-06-14 case: a finding_class value in gap_class.
+        if _gap_class_error(errors):
+            remap = _attempt_finding_class_remap(item)
+            if remap is not None:
+                coerced, note = remap
+                try:
+                    findings.append(SufficiencyFinding.model_validate(coerced))
+                    notes.append(f"finding[{index}]: {note}")
+                    continue
+                except ValidationError as exc2:
+                    errors = exc2.errors()
+
+        malformed.append(
+            {"index": index, "raw": item, "errors": [str(e) for e in errors]}
+        )
+        notes.append(
+            f"finding[{index}]: failed validation — quarantined, raw retained "
+            f"({len(errors)} error(s))"
+        )
+
+    if payload and not findings and malformed:
+        # A non-empty response yielded zero usable findings: refuse rather than
+        # let the gate read it as a clean / sufficient plan.
+        raise SufficiencyAuditError(
+            "sufficiency auditor response had no usable findings; "
+            f"{len(malformed)} malformed element(s) quarantined: "
+            f"{[m['index'] for m in malformed]}"
+        )
+
+    return SufficiencyParseOutcome(findings=findings, malformed=malformed, notes=notes)
+
+
+def _persist_raw_sufficiency_response(plan_dir: Path, *, auditor: str, response: str) -> Path:
+    """Write the raw auditor response to the pre_impl evidence dir BEFORE any
+    validation. Always runs on the production path so a parse failure (or any
+    future schema drift) never discards a paid response (plan 2026-06-14-001).
+
+    Sanitized at the writer (the only correct fix point — committed evidence is
+    immutable): the codex CLI streams tool-telemetry that can embed the operator's
+    absolute home path / identity, so we reuse the same capture-time sanitizer the
+    post-impl audit evidence writer uses (home -> <home>, user@host -> redacted)."""
+    from dontpanic_orchestrate.completion_dispatch import sanitize_capture
+
+    raw_text = response if isinstance(response, str) else str(response)
+    raw_path = goal_governance_evidence_path(
+        plan_dir, "pre_impl", SUFFICIENCY_RAW_RESPONSE_ARTIFACT
+    )
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_path.write_text(sanitize_capture(raw_text))
+    return raw_path
+
+
 # ──────────────────────────────  entry point  ──────────────────────────────
 
 
@@ -641,7 +816,26 @@ def run_sufficiency_audit(
         )
 
     response = dispatch(auditor, prompt)
-    findings = _parse_sufficiency_response(response)
+
+    # Persist the raw auditor response BEFORE any validation (plan 2026-06-14-001):
+    # a schema mismatch on a single finding must never discard the whole expensive
+    # cross-vendor response with no recovery path.
+    _persist_raw_sufficiency_response(plan_dir, auditor=auditor, response=response)
+
+    # Resilient parse: validate findings independently, remap a misrouted
+    # finding_class-in-gap_class value, quarantine the rest (raw retained), and
+    # refuse a wholly-malformed response rather than treat it as clean.
+    outcome = parse_sufficiency_findings(response)
+    findings = outcome.findings
+    for note in outcome.notes:
+        print(f"[sufficiency audit] parser note: {note}", file=sys.stderr)
+    if outcome.malformed:
+        print(
+            f"[sufficiency audit] WARNING: {len(outcome.malformed)} finding(s) were "
+            "malformed and quarantined (raw retained in the findings artifact); "
+            "they are NOT silently accepted as clean.",
+            file=sys.stderr,
+        )
 
     out_path = goal_governance_evidence_path(plan_dir, "pre_impl", PRE_IMPL_FINDINGS_ARTIFACT)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -658,6 +852,10 @@ def run_sufficiency_audit(
                 "input_fingerprint": input_fingerprint,
                 "generated_at": _utc_now_iso(),
                 "findings": [f.model_dump() for f in findings],
+                # Visibility: a malformed response is never silently dropped — the
+                # quarantined elements + degradation notes ride in the artifact.
+                "malformed_findings": outcome.malformed,
+                "parser_notes": outcome.notes,
             },
             indent=2,
             ensure_ascii=False,
@@ -748,9 +946,13 @@ __all__ = [
     "DispatchFn",
     "GapClass",
     "PRE_IMPL_FINDINGS_ARTIFACT",
+    "SUFFICIENCY_FINDING_CLASSES",
     "SUFFICIENCY_GAP_CLASSES",
+    "SUFFICIENCY_RAW_RESPONSE_ARTIFACT",
     "SufficiencyAuditError",
     "SufficiencyFinding",
+    "SufficiencyParseOutcome",
     "generate_sufficiency_findings",
+    "parse_sufficiency_findings",
     "run_sufficiency_audit",
 ]
