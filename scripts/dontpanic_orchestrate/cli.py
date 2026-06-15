@@ -2368,7 +2368,37 @@ def _doctor_main(argv: list[str]) -> int:
             "registry name or filesystem path."
         ),
     )
+    parser.add_argument(
+        "--channel",
+        "--operator-surface",
+        dest="channel",
+        type=str,
+        default=None,
+        metavar="SURFACE",
+        help=(
+            "Plan 2026-06-14-001 F007: diagnose whether a named operator surface "
+            "(e.g. cursor, claude_desktop, codex_app, antigravity) is usable. "
+            "Normalizes the name (F001), resolves its operator_surface capability "
+            "manifest (F008), and reports the minimum probe set with pass/warn/fail."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # F007: --channel short-circuits the full battery and diagnoses one operator
+    # surface (structural-safe under --skip-auth; the minimum probe set has no
+    # auth probe). Three outcomes: ok / recognized_unseeded / unknown_surface.
+    if args.channel is not None:
+        from dontpanic_orchestrate import channel_doctor
+
+        result = channel_doctor.diagnose_channel(args.channel, skip_auth=args.skip_auth)
+        if args.json:
+            print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+        else:
+            print(f"channel: {result.surface}  outcome: {result.outcome}")
+            print(result.message)
+            for check in result.checks:
+                print(f"  [{check['status'].upper():>4}] {check['probe']}")
+        return result.exit_code
 
     # Lazy import: scripts/ may not be on sys.path when the console script
     # is installed via pipx. Add it before importing jarvis_doctor.
@@ -5344,6 +5374,7 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  operator-roles set|list        Operator-role PREFERENCES (intent only; never dispatch authority)
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
   doctor                         Run local readiness checks
@@ -5376,7 +5407,58 @@ Use `dontpanic <command> --help` for command-specific options.""",
     )
 
 
+def _operator_roles_main(argv: list[str]) -> int:
+    """``dontpanic operator-roles set|list`` — operator-role PREFERENCE config
+    (intent only, never dispatch authority; D009/F004). Thin wrapper that builds
+    a parser from the operator_roles module's own subparser registrar and prints
+    the resolved map (with scope provenance) as JSON for ``list``."""
+    from dontpanic_orchestrate import operator_roles
+
+    parser = argparse.ArgumentParser(prog="dontpanic operator-roles")
+    sub = parser.add_subparsers(dest="_or_top")
+    operator_roles.add_operator_roles_subparser(sub)
+    # The registrar nests under an "operator-roles" command; strip that layer so
+    # `dontpanic operator-roles set ...` maps onto the registrar's subcommands.
+    args = parser.parse_args(["operator-roles", *argv])
+    if getattr(args, "or_action", None) is None:
+        parser.parse_args(["operator-roles", "--help"])
+        return 2
+    result = operator_roles.run_operator_roles_command(args)
+    if result is not None:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
+    """Public CLI entry point. Wraps the dispatch in the F003 invocation-ledger
+    seam: start a recorder, run the command, finalize EXACTLY ONE record in a
+    ``finally`` (covering normal return, error rc, argparse SystemExit, early
+    failure, KeyboardInterrupt, and SIGTERM). The ledger is fail-open — it never
+    changes the command's behavior or exit code."""
+    from dontpanic_orchestrate import invocation_ledger
+
+    raw_argv = argv if argv is not None else sys.argv[1:]
+    recorder = invocation_ledger.start_recording(raw_argv)
+    result = invocation_ledger.RESULT_OK
+    try:
+        rc = _run_cli(argv)
+        if rc not in (0, None):
+            result = invocation_ledger.RESULT_ERROR
+        return rc
+    except KeyboardInterrupt:
+        result = invocation_ledger.RESULT_INTERRUPTED
+        raise
+    except SystemExit as exc:
+        result = invocation_ledger.RESULT_OK if exc.code in (0, None) else invocation_ledger.RESULT_ERROR
+        raise
+    except BaseException:
+        result = invocation_ledger.RESULT_ERROR
+        raise
+    finally:
+        recorder.finalize(result)
+
+
+def _run_cli(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     # --version / -V prints the public package name and version, resolving
     # to `dontpanic_orchestrate.__version__` as the single source of truth.
@@ -5429,6 +5511,8 @@ def main(argv: list[str] | None = None) -> int:
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
         return _roles_main(raw[1:])
+    if raw and raw[0] == "operator-roles":
+        return _operator_roles_main(raw[1:])
     if raw and raw[0] == "skills":
         return _skills_main(raw[1:])
     if raw and raw[0] == "mcp":

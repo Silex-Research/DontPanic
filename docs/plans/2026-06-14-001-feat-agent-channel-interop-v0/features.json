@@ -1,0 +1,320 @@
+{
+  "task_id": "2026-06-14-001-feat-agent-channel-interop-v0",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "description": "Introduce operator_surface as a first-class typed axis and a four-axis InvocationContext (operator_surface x agent_runtime x role x execution_locality), reusing agent_surface for the runtime axis and existing ROLES for worker roles. execution_locality is a sharp enum, not a thin local|remote, so the Cowork-VM-vs-Mac-code-task distinction is representable. Also pins the canonical-id + alias contract (D013) shared by every downstream axis so user-facing inputs never become divergent vocabularies. New engine module; no parallel runtime/capability registry.",
+      "acceptance": "A pure module defines: an OperatorSurface enum (exactly terminal, codex_app, claude_desktop, claude_dispatch, antigravity, cursor, github_agent_hq, remote_vm, github_vm, unknown_surface); an ExecutionLocality enum (exactly local_mac, plan_worktree, dashboard_terminal, code_task, remote_vm, github_vm, unknown_locality); and an InvocationContext dataclass with exactly the fields operator_surface, agent_runtime, role, execution_locality. agent_runtime validates against the SAME source as agent_surface, with canonical ids at least claude, codex, gemini, grok, cursor, antigravity, opencode, aider (unknown agents map to unknown_runtime, not an invented entry). The role axis reuses the existing worker ROLES (implementer, auditor, goal_auditor) as its canonical ids plus an explicit unknown_role member for an unrecognized role (every axis has its own unknown_* member: unknown_surface, unknown_runtime, unknown_role, unknown_locality). CANONICAL-ID + ALIAS CONTRACT (D013): every axis id is a lowercase snake/kebab-stable canonical id; display labels are aliases ONLY; a pure normalize_identifier(value, axis) maps known aliases/user inputs to the canonical id (e.g. 'Claude Code'/'claude-cli'/'Anthropic Claude' -> claude) and maps every unrecognized value to that axis's unknown_* member (never an invented id); the SAME canonical-id set is the single source consumed by resolution (F002), operator_roles values (F004), capability-manifest ids (F008), and dashboard labels (F010). Serialization round-trips byte-stable (no timestamps). Tests assert: every enum member round-trips; representative aliases normalize to the right canonical id; an unrecognized value normalizes to unknown_*; no field name contains _token/_key/_secret.",
+      "introduces": [
+        "OperatorSurface",
+        "ExecutionLocality",
+        "InvocationContext",
+        "normalize_identifier",
+        "canonical id contract",
+        "unknown_role"
+      ],
+      "passes": true,
+      "phase": 0,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T01:53:41+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F001-test_invocation_context.txt",
+          "captured_at": "2026-06-15T01:53:41+00:00",
+          "captured_by": "claude",
+          "note": "11 passed — OperatorSurface/ExecutionLocality exact membership, InvocationContext 4-field + secret-free, normalize_identifier alias contract + unknown_* fallback, byte-stable round-trip"
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "description": "Resolve an InvocationContext explicit-first, heuristic-second, unknown-last. Explicit env vars override everything; a documented deterministic rule table fills gaps; anything unresolved (or any unrecognized explicit value) becomes that axis's unknown_* member via normalize_identifier (F001) rather than a guess. Pure resolver; reuses the execution_environment.py env-plumbing pattern.",
+      "acceptance": "resolve_context(env, *, repo, plan) returns an InvocationContext where: (1) DONT_PANIC_OPERATOR / DONT_PANIC_AGENT / DONT_PANIC_ROLE / DONT_PANIC_LOCALITY when set are honored verbatim and beat all heuristics — but each explicit value is run through normalize_identifier (F001), so an UNRECOGNIZED explicit operator/role/locality maps to that axis's unknown_* member (never rejected, never a wrong guess); (2) with no explicit vars, a DOCUMENTED DETERMINISTIC RULE TABLE maps named markers to fields — a named rule cell for each ExecutionLocality member (local_mac, plan_worktree, dashboard_terminal, code_task, remote_vm, github_vm) AND a named per-surface detection cell for EACH seeded operator_surface (cursor, codex_app, claude_desktop, antigravity) rather than only a generic TERM_PROGRAM fallback, plus a known agent env marker -> agent_runtime; (3) any unresolved field is set to the axis's unknown_* member, never a most-likely guess; (4) the function is pure (no I/O, no mutation of the passed env). Tests cover: explicit-wins; an unrecognized explicit DONT_PANIC_AGENT value maps to unknown_runtime, and unrecognized-explicit-value -> unknown_* for operator AND role (-> unknown_role) AND locality; EACH ExecutionLocality member is reachable by a named rule cell AND EACH seeded operator_surface is reachable by its named detection cell (so the per-named-surface and Mac / plan-worktree / code-task / remote-VM / github-VM distinctions are provable, not just enum round-trip); and unknown-fallback.",
+      "introduces": [
+        "resolve_context",
+        "DONT_PANIC_OPERATOR",
+        "DONT_PANIC_AGENT",
+        "DONT_PANIC_ROLE",
+        "DONT_PANIC_LOCALITY",
+        "locality rule table"
+      ],
+      "depends_on": [
+        "F001"
+      ],
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:09:56+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F002-test_resolve_context.txt",
+          "captured_at": "2026-06-15T02:09:56+00:00",
+          "captured_by": "claude",
+          "note": "20 passed — explicit-first wins, unrecognized-explicit->unknown_*, named cell per ExecutionLocality member + per seeded surface, agent marker, unknown-last, purity/determinism"
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "observability",
+      "description": "Record every DontPanic CLI invocation to a sanitized, concurrency-safe presence ledger. Each record carries the four-axis context plus repo/worktree/branch/plan, the command, timing, result, and locality. Hardened for multiple simultaneous agents: atomic/locked append, command-string argument redaction, dual path representation (home-scrubbed display + stable non-secret equality key), exactly-one-record under abnormal exits, and a retention/compaction policy that preserves the fields the channel-view derivation (F009) needs.",
+      "acceptance": "Running any dontpanic subcommand appends exactly one InvocationRecord to ~/.dontpanic/invocations.jsonl (path via global_config.dontpanic_home, redirectable by the test env). Each record contains the four-axis context (F001), repo + worktree + branch + plan (or null), command, started_at, finished_at, last_seen, result (ok|error|interrupted), and locality. PATHS (D013): every path field is stored as a PAIR — path_display (home-scrubbed for UI/evidence, e.g. ~/.dontpanic/worktrees/...) AND path_key (a stable non-secret canonical key/hash for equality + conflict detection); a test asserts no absolute home path appears in path_display, that path_key is NEVER the scrubbed display string, and that path_key is stable across runs for the same real path. WIRING: at ONE seam in cli.py, exactly-one-well-formed-record holds even under (a) argparse failure, (b) early config/import failure, (c) KeyboardInterrupt, and (d) SIGTERM-style interruption (recorded result=interrupted) — wired high enough via atexit/finally/signal handling; tests cover each abnormal exit plus result=error for a failing command. CONCURRENCY: N simultaneous appends yield N intact lines (atomic/lock-safe). REDACTION: a token-shaped command argument is redacted. RETENTION: a documented compaction step bounds the ledger AND preserves the fields F009/F010 need to reproduce active/stale/conflict classification (repo, branch, plan, path_key, last_seen, locality, dispatchability inputs) WITHOUT rereading raw deleted records; a test shows a compacted ledger yields the same buckets as the pre-compaction ledger.",
+      "introduces": [
+        "InvocationRecord",
+        "invocations.jsonl",
+        "finished_at",
+        "last_seen",
+        "redact_command",
+        "compact_ledger",
+        "path_display",
+        "path_key"
+      ],
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:55:13+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F003-test_invocation_ledger.txt",
+          "captured_at": "2026-06-15T02:55:13+00:00",
+          "captured_by": "claude",
+          "note": "14 passed — exactly-one-record across ordinary/argparse-fail/KeyboardInterrupt/exception/SIGTERM, redaction, path_display+path_key (home-scrubbed, key!=display, stable), 24-thread concurrency intact, compaction preserves buckets"
+        }
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "description": "Operator-role PREFERENCES config layer (intent) — an easy CLI to set and list operator roles ('Claude primary_operator, Codex auditor, Gemini researcher, Cursor as primary_operator'), stored under a distinct config namespace operator_roles.* that is SEPARATE from the worker role namespace and carries NO assert_registrable guard, so non-executor surfaces (e.g. cursor) can be a preferred operator. Pins global-vs-project precedence + provenance. Config-write mechanics only; the read-only projection and the dispatch boundary are owned by their own features.",
+      "acceptance": "An OPERATOR_ROLES set (at minimum primary_operator, auditor, researcher, reviewer, designer, tester, release_operator) is defined distinct from agent_surface.ROLES — auditor is included because the promised UX ('Codex auditor') needs it, and like every operator role it is PREFERENCE/INTENT ONLY, never worker-dispatch authority (D009/F006). An easy CLI sets and lists them, writing operator_roles.<role> = <value> to a distinct config key WITHOUT invoking assert_registrable (a non-executor surface like cursor is accepted). VALUE DOMAIN (D015): an operator-role value is the union of { agent_runtime ids (claude, codex, gemini, grok, ...), operator_surface ids (cursor, antigravity, codex_app, claude_desktop, ...), the literal human, and unknown_role }; every value is normalized through the F001 canonical alias table, and an unrecognized value becomes unknown_role (never an invented id). SCOPE (D013): the CLI distinguishes a GLOBAL default from a PROJECT-scoped value; when both scopes set the same role, PROJECT overrides global; list output carries PROVENANCE (which scope each resolved value came from). A test asserts: (1) setting an operator role writes only the operator_roles.* config key, never the worker role namespace, and never refuses a non-executor; (2) the value domain accepts a runtime id (codex), a surface id (cursor), and human, and normalizes an unrecognized value to unknown_role; (3) list returns the resolved operator-role map with per-entry scope provenance; (4) a project-scoped value for a role overrides the global default for that role. No conflation between the two role namespaces.",
+      "introduces": [
+        "operator_roles",
+        "OPERATOR_ROLES"
+      ],
+      "depends_on": [
+        "F001"
+      ],
+      "passes": true,
+      "phase": 1,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F004-test_operator_roles.txt",
+          "captured_at": "2026-06-15T02:29:12+00:00",
+          "captured_by": "claude",
+          "note": "38 passed — operator_roles.* distinct namespace (never config.json/worker roles), no assert_registrable (non-executor cursor accepted), value-domain union runtime/surface/human/unknown_role normalized, global-vs-project precedence + scope provenance"
+        }
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "description": "Read-only dashboard operator-role matrix projection. A pure projection renders the operator_roles.* preferences as a role matrix consumed by the dashboard, shown SEPARATELY from the worker-dispatch roles so the two namespaces never conflate in the rendered view. Projection only — no mutation, no dispatch semantics.",
+      "acceptance": "A pure projection renders the operator-role matrix consumed by the dashboard from the operator_roles config (F004), preserving each entry's scope provenance (global vs project). A test asserts: (1) the projection is pure (derived from operator_roles, no I/O and no mutation of inputs); (2) it returns/renders the resolved operator-role map; (3) operator-role PREFERENCES are rendered distinctly from worker roles.* (no conflation of the two namespaces in the matrix). The projection surfaces preferences as intent only and carries no dispatchability claim.",
+      "introduces": [
+        "role matrix projection"
+      ],
+      "depends_on": [
+        "F004"
+      ],
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:45:09+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F005-test_operator_role_matrix.txt",
+          "captured_at": "2026-06-15T03:45:09+00:00",
+          "captured_by": "claude",
+          "note": "4 passed — pure projection (no I/O, no input mutation, deterministic); returns resolved operator-role map w/ scope provenance; operator_roles vs worker_roles rendered as DISTINCT namespaces (no conflation; operator value not in worker section); operator section intent_only=true + dispatch_authority=false (no dispatchability claim)"
+        }
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "security",
+      "description": "Dispatch-safety guard for the SAFETY INVARIANT (D009): operator_roles.* express preference/intent ONLY and are NEVER dispatch authorization. Assigning a surface/agent an operator role must never make DontPanic able to spawn it as a worker. Dispatch authority derives SOLELY from executors/AGENT_REGISTRY via the worker roles.* namespace. This feature pins that boundary in the dispatch path and proves it.",
+      "acceptance": "SAFETY INVARIANT test: setting operator_roles.primary_operator = cursor (a non-executor) does NOT make cursor appear in worker-dispatch resolution and does NOT make it dispatchable — dispatch authority derives SOLELY from executors/AGENT_REGISTRY via the worker roles.* namespace, so dispatching a surface that holds only an operator-role preference is refused exactly as if no role were set. A preference-only surface is refused at dispatch. A test asserts no operator_roles read path can grant or widen dispatchability, and that the worker register-worker / assert_registrable path is unchanged by the presence of operator-role preferences.",
+      "introduces": [
+        "dispatch_safety_guard"
+      ],
+      "depends_on": [
+        "F004"
+      ],
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F006-test_dispatch_safety_guard.txt",
+          "captured_at": "2026-06-15T03:29:12+00:00",
+          "captured_by": "claude",
+          "note": "7 passed — D009 proof: operator_roles.primary_operator=cursor never makes cursor dispatchable; dispatchable set == AGENT_REGISTRY regardless of preferences; refusal identical with/without preference; register-worker path unchanged; is_dispatchable never reads operator_roles (poisoned-read invariance)"
+        }
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "description": "Channel doctor CLI: dontpanic doctor --channel <surface> (alias --operator-surface) reuses the existing doctor_registry + capability verify.probes to report whether a named operator surface is usable. Consumes the operator-surface capability-manifest kind from F008; introduces no agent-channels.json.",
+      "acceptance": "dontpanic doctor --channel <surface> (and alias --operator-surface) normalizes the surface name via F001 normalize_identifier, resolves that surface's operator-surface capability manifest (F008), and runs its probes via doctor_registry, reporting the MINIMUM probe set (PATH, home, repo visibility, worktree-binding, config, MCP availability) with pass/warn/fail per check. THREE OUTCOMES (D015): (a) a normalized-recognized surface WITH a seeded manifest (F008) runs its probes and reports per-check pass/warn/fail; (b) a name that normalizes to a RECOGNIZED operator_surface id but has NO seeded manifest reports an advisory recognized_unseeded status (the surface is a known channel, just not yet manifested) rather than pretending it is unsupported; (c) a name that normalizes to unknown_surface exits non-zero with an actionable message. No agent-channels.json file is introduced (asserted by test). The doctor remains non-blocking/structural-safe when run with --skip-auth.",
+      "introduces": [
+        "doctor --channel",
+        "--operator-surface",
+        "recognized_unseeded"
+      ],
+      "depends_on": [
+        "F008",
+        "F001"
+      ],
+      "passes": true,
+      "phase": 3,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T03:36:30+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F007-test_channel_doctor.txt",
+          "captured_at": "2026-06-15T03:36:30+00:00",
+          "captured_by": "claude",
+          "note": "12 passed — dontpanic doctor --channel/--operator-surface: 3 D015 outcomes (ok runs full 6-probe minimum set per seeded surface / recognized_unseeded advisory for terminal / unknown_surface exits nonzero w/ actionable message), alias-normalizes via F001, structural-safe --skip-auth, no agent-channels.json, CLI JSON round-trip"
+        }
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "schema",
+      "description": "Operator-surface capability-manifest shape. Extend the EXISTING capability schema with an operator-surface/runtime manifest kind (no parallel agent-channels.json), pin a standard probe vocabulary + minimum probe set, and seed manifests for the four explicitly named commercial operator surfaces so doctor's named-surface promise is real, not just enumerated.",
+      "acceptance": "The capability schema accepts a new kind for operator surfaces/runtimes (e.g. operator_surface) whose manifest id is a canonical operator_surface id (F001) and whose fields include verify.probes, requires, and owner_boundary. PROBE CONTRACT (D013): the kind pins a STANDARD probe vocabulary and a MINIMUM probe set every operator_surface manifest MUST declare — PATH, home, repo-visibility, worktree-binding, config, MCP-availability — so a manifest cannot validate while omitting a check the doctor must report; a test asserts each seeded manifest declares the full minimum set. SEEDING (D013): seed EXACTLY the four named operator surfaces cursor, claude_desktop, codex_app, antigravity (Gemini/Grok remain agent runtimes/operator agents, NOT app surfaces — no surface manifest is seeded for them). A test asserts no agent-channels.json file is introduced.",
+      "introduces": [
+        "operator_surface capability kind",
+        "operator_surface probe vocabulary"
+      ],
+      "depends_on": [
+        "F001"
+      ],
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T02:29:12+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F008-test_operator_surface_manifest.txt",
+          "captured_at": "2026-06-15T02:29:12+00:00",
+          "captured_by": "claude",
+          "note": "13 passed — operator_surface capability kind, six-probe minimum set enforced (missing-probe fails), exactly 4 seeded surfaces (cursor/claude_desktop/codex_app/antigravity), no agent-channels.json"
+        }
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "functional",
+      "description": "Channel-view producer + pure JS logic module. A build-time producer derives a channel-view object ONLY from the invocation ledger (F003) + capabilities incl. operator-surface manifests (F008) + worktree bindings + operator_roles (F004) and emits it as dashboard state JSON alongside operator-triage.json (no new registry). A pure JS logic module derives the panel buckets + operator-role matrix from a LOCKED deterministic rule matrix so producer and renderer cannot diverge. Conflict equality uses path_key (F003), never the scrubbed display string.",
+      "acceptance": "A producer builds a channel-view object derived ONLY from existing registries + ledgers — the enumerated source set (D015) is: the invocation ledger (F003), capabilities/*.json (incl. operator-surface manifests, F008), worktree bindings, operator_roles (F004), and AGENT_REGISTRY (the sole dispatchability source). Conflict/equality comparisons use path_key (F003), never path_display; derivation reads only compaction-retained fields, never raw deleted records. A test asserts NO agent-channels.json is introduced and that supports_* / dispatchability for a known runtime derive from capabilities + AGENT_REGISTRY (in the enumerated source set above), not hardcoded. A pure JS logic module derives panel buckets active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable, plus the operator-role matrix, governed by a LOCKED RULE MATRIX (D013) that pins a deterministic criterion + precedence for EVERY bucket: the active-vs-stale threshold (from last_seen); conflict precedence ordering and same_repo-vs-same_branch-vs-same_plan overlap resolution; that conflict buckets consider only active records; remote_only (locality in {remote_vm, github_vm} with no co-active local record); remote_cannot_mutate_local (a remote-locality record whose target is a local-only repo/worktree); unhealthy_worktree_binding (a worktree binding failing its health check); and operator_only_runtime_not_dispatchable (a runtime present in operator_roles but absent from AGENT_REGISTRY dispatchability). Vitest asserts the rule matrix cell-by-cell for EACH bucket (incl. same-plan, the four above, and a stale/active boundary case).",
+      "introduces": [
+        "operator-channels-logic.js",
+        "remote_only",
+        "same_branch",
+        "unhealthy_worktree_binding",
+        "remote_cannot_mutate_local",
+        "operator_only_runtime_not_dispatchable",
+        "channel bucket rule matrix"
+      ],
+      "depends_on": [
+        "F003",
+        "F004",
+        "F005",
+        "F006",
+        "F008"
+      ],
+      "passes": true,
+      "phase": 3,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T04:08:51+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F009-producer-test.txt",
+          "captured_at": "2026-06-15T04:08:51+00:00",
+          "captured_by": "claude",
+          "note": "8 passed — producer derives channel-view from D015 sources only; projects ONLY compaction-retained fields (command/started_at dropped); path_key equality not display; supports_dispatch/dispatchability derive from AGENT_REGISTRY not hardcoded; operator-only runtime surfaced non-dispatchable; embeds F005 role matrix + worktree bindings; scrubbed JSON; no agent-channels.json"
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F009-logic-vitest.txt",
+          "captured_at": "2026-06-15T04:08:51+00:00",
+          "captured_by": "claude",
+          "note": "13 vitest — operator-channels-logic.js LOCKED rule matrix cell-by-cell: active/stale boundary + fail-closed; conflict precedence same_plan>same_branch>same_repo over ACTIVE records only; path_key (not display) equality; remote_only / remote_cannot_mutate_local; unhealthy_worktree_binding; operator_only_runtime_not_dispatchable; every bucket id always present"
+        }
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "functional",
+      "description": "Dashboard 'Operator Channels' panel. Renders the buckets and operator-role matrix derived by F009 per the locked rule matrix (no independent re-interpretation), following the operator-triage/v0 producer<->render boundary, read-only. Enters through the real surface: real producer -> real shell journey + a Python fixture<->producer contract test.",
+      "acceptance": "The panel renders all active and needs-attention items uncapped across the F009 buckets (active, stale, remote_only, same_plan_conflict, same_branch, same_repo, unhealthy_worktree_binding, remote_cannot_mutate_local, operator_only_runtime_not_dispatchable) plus the operator-role matrix, consuming the F009 locked rule matrix rather than re-deriving thresholds/precedence. Surface labels are display aliases of the canonical ids (F001). A real-state journey test boots the dashboard shell against a real producer-emitted fixture (not a hand-authored synthetic) and a Python fixture<->producer contract test guards the producer/consumer shape (QA-sufficiency contract).",
+      "introduces": [
+        "operator-channels panel"
+      ],
+      "depends_on": [
+        "F009"
+      ],
+      "passes": true,
+      "phase": 4,
+      "verified_by": [
+        "claude"
+      ],
+      "verified_at": "2026-06-15T04:18:09+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F010-producer-contract.txt",
+          "captured_at": "2026-06-15T04:18:09+00:00",
+          "captured_by": "claude",
+          "note": "2 passed — Python producer<->fixture contract: dashboard/tests/fixtures/real-state/operator-channels.json is VERBATIM build_channel_view output (drift-guarded); consumed shape keys present; no home leak"
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/impl/F010-journey-vitest.txt",
+          "captured_at": "2026-06-15T04:18:09+00:00",
+          "captured_by": "claude",
+          "note": "2 vitest journey — boots REAL createJarvis() shell against the real producer fixture; panel renders all 9 F009 buckets + operator-role matrix; counts match deriveBuckets exactly (consumes locked matrix, no re-derivation); same_plan_conflict uncapped; honest empty surface when state absent. Full dashboard vitest 1263 passed."
+        }
+      ]
+    }
+  ]
+}

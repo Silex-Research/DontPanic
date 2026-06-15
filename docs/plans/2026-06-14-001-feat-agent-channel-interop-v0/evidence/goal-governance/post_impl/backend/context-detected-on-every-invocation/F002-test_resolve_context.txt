@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 20 items
+
+tests/test_resolve_context.py::test_explicit_vars_win_over_all_heuristics PASSED [  5%]
+tests/test_resolve_context.py::test_unrecognized_explicit_values_map_to_axis_unknown PASSED [ 10%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[local_mac] PASSED [ 15%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[plan_worktree] PASSED [ 20%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[dashboard_terminal] PASSED [ 25%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[code_task] PASSED [ 30%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[remote_vm] PASSED [ 35%]
+tests/test_resolve_context.py::test_every_execution_locality_member_reachable_by_named_cell[github_vm] PASSED [ 40%]
+tests/test_resolve_context.py::test_every_seeded_surface_reachable_by_named_cell[cursor] PASSED [ 45%]
+tests/test_resolve_context.py::test_every_seeded_surface_reachable_by_named_cell[codex_app] PASSED [ 50%]
+tests/test_resolve_context.py::test_every_seeded_surface_reachable_by_named_cell[claude_desktop] PASSED [ 55%]
+tests/test_resolve_context.py::test_every_seeded_surface_reachable_by_named_cell[antigravity] PASSED [ 60%]
+tests/test_resolve_context.py::test_locality_local_mac_via_named_marker PASSED [ 65%]
+tests/test_resolve_context.py::test_locality_plan_worktree_via_repo_path PASSED [ 70%]
+tests/test_resolve_context.py::test_locality_dashboard_remote_codetask_github_each_reachable PASSED [ 75%]
+tests/test_resolve_context.py::test_each_seeded_surface_detected_by_its_marker PASSED [ 80%]
+tests/test_resolve_context.py::test_known_agent_env_marker_resolves_agent_runtime PASSED [ 85%]
+tests/test_resolve_context.py::test_empty_env_resolves_all_unknown_no_guessing PASSED [ 90%]
+tests/test_resolve_context.py::test_resolver_is_pure_no_mutation_and_deterministic PASSED [ 95%]
+tests/test_resolve_context.py::test_plan_supplies_repo_when_repo_omitted PASSED [100%]
+
+============================== 20 passed in 0.14s ==============================

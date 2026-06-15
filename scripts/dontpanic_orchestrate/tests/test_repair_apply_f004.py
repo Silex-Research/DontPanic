@@ -144,10 +144,13 @@ import json  # noqa: E402
 
 
 def _snapshot_tree(root):
+    # The invocation ledger (2026-06-14-001 F003) is by-design observability
+    # written on EVERY dontpanic invocation; it is orthogonal to repair-target
+    # mutation, so exclude it from the "repair mutates nothing" snapshot.
     return {
         str(p.relative_to(root)): p.stat().st_mtime_ns
         for p in root.rglob("*")
-        if p.is_file()
+        if p.is_file() and "invocations.jsonl" not in str(p)
     }
 
 

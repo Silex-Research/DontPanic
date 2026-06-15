@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 14 items
+
+tests/test_invocation_ledger.py::test_make_path_pair_scrubs_display_and_keys_distinctly PASSED [  7%]
+tests/test_invocation_ledger.py::test_redact_command_redacts_token_shaped_argument PASSED [ 14%]
+tests/test_invocation_ledger.py::test_recorder_writes_one_well_formed_record PASSED [ 21%]
+tests/test_invocation_ledger.py::test_recorder_finalize_is_idempotent PASSED [ 28%]
+tests/test_invocation_ledger.py::test_recorder_records_each_result[ok] PASSED [ 35%]
+tests/test_invocation_ledger.py::test_recorder_records_each_result[error] PASSED [ 42%]
+tests/test_invocation_ledger.py::test_recorder_records_each_result[interrupted] PASSED [ 50%]
+tests/test_invocation_ledger.py::test_main_records_exactly_one_for_ordinary_command PASSED [ 57%]
+tests/test_invocation_ledger.py::test_main_records_one_on_argparse_failure PASSED [ 64%]
+tests/test_invocation_ledger.py::test_main_records_interrupted_on_keyboardinterrupt PASSED [ 71%]
+tests/test_invocation_ledger.py::test_main_records_error_on_unexpected_exception PASSED [ 78%]
+tests/test_invocation_ledger.py::test_sigterm_handler_records_interrupted_once PASSED [ 85%]
+tests/test_invocation_ledger.py::test_concurrent_appends_yield_intact_lines PASSED [ 92%]
+tests/test_invocation_ledger.py::test_compaction_bounds_ledger_and_preserves_buckets PASSED [100%]
+
+============================== 14 passed in 0.22s ==============================

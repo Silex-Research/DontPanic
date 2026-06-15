@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "id": "cursor",
+  "title": "Cursor operator surface",
+  "kind": "operator_surface",
+  "category": "operator-surface",
+  "summary": "Cursor IDE operator surface — the operator engages DontPanic from inside the Cursor AI-native editor environment.",
+  "setup_required": false,
+  "setup_doc": "docs/GETTING_STARTED.md#setup-tracks--pick-yours",
+  "default_in_profiles": [],
+  "use_cases": [],
+  "requires": {
+    "commands": [],
+    "env": [],
+    "files": ["~/.dontpanic/config.json"],
+    "services": [],
+    "auth": [],
+    "config": ["roles.implementer"]
+  },
+  "verify": {
+    "doctor_profiles": [],
+    "probes": [
+      "path",
+      "home",
+      "repo_visibility",
+      "worktree_binding",
+      "config",
+      "mcp_availability"
+    ],
+    "readiness": "Cursor surface is usable when PATH resolves dontpanic, the DontPanic home directory is present, the repo is visible, any declared worktree binding is healthy, the operator config is valid, and MCP is reachable."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "invocation context resolution for cursor surface",
+      "probe dispatch via doctor registry",
+      "canonical surface id from F001 OperatorSurface enum"
+    ],
+    "adapter": [],
+    "operator": [
+      "installs and runs Cursor IDE",
+      "connects DontPanic CLI or MCP server to Cursor workspace"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "none",
+    "allowed_path": "Operator surface manifests are read-only descriptors; DontPanic does not mutate the Cursor IDE runtime or its workspace state.",
+    "forbidden": [
+      "DontPanic must not write to Cursor IDE settings or workspace files directly"
+    ]
+  },
+  "notes": [
+    "Cursor is an external operator surface; DontPanic does not bundle or install it.",
+    "MCP availability probe checks whether the DontPanic MCP server is reachable from within the Cursor environment."
+  ]
+}

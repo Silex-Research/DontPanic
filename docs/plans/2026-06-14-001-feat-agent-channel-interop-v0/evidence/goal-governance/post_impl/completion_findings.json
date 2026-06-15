@@ -1,0 +1,154 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-15T13:09:59.017945+00:00",
+  "plan_id": "2026-06-14-001-feat-agent-channel-interop-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/backend/context-detected-on-every-invocation/F001-test_invocation_context.txt",
+    "evidence/goal-governance/post_impl/backend/context-detected-on-every-invocation/F002-test_resolve_context.txt",
+    "evidence/goal-governance/post_impl/backend/easy-role-choice/F004-test_operator_roles.txt",
+    "evidence/goal-governance/post_impl/backend/easy-role-choice/F005-test_operator_role_matrix.txt",
+    "evidence/goal-governance/post_impl/backend/invocation-presence-recorded-safely/F003-test_invocation_ledger.txt",
+    "evidence/goal-governance/post_impl/backend/invocation-presence-recorded-safely/F006-test_dispatch_safety_guard.txt",
+    "evidence/goal-governance/post_impl/backend/operator-channels-panel/F009-logic-vitest.txt",
+    "evidence/goal-governance/post_impl/backend/operator-channels-panel/F009-producer-test.txt",
+    "evidence/goal-governance/post_impl/backend/operator-channels-panel/F010-journey-vitest.txt",
+    "evidence/goal-governance/post_impl/backend/operator-channels-panel/F010-producer-contract.txt",
+    "evidence/goal-governance/post_impl/backend/prove-a-surface-is-usable/F007-test_channel_doctor.txt",
+    "evidence/goal-governance/post_impl/backend/prove-a-surface-is-usable/F008-test_operator_surface_manifest.txt"
+  ],
+  "findings": [
+    {
+      "finding_id": "F2C-E001",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)' not captured",
+      "narrative": "The contract declares required_evidence='unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E002",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)' not captured",
+      "narrative": "The contract declares required_evidence='resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E003",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)' not captured",
+      "narrative": "The contract declares required_evidence='ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E004",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'operator-role config tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list returns resolved map (F004)' not captured",
+      "narrative": "The contract declares required_evidence='operator-role config tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list returns resolved map (F004)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "operator-role config tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list returns resolved map (F004)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E005",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'operator-role projection test: pure dashboard role-matrix projection rendered distinctly from worker roles.* (F005)' not captured",
+      "narrative": "The contract declares required_evidence='operator-role projection test: pure dashboard role-matrix projection rendered distinctly from worker roles.* (F005)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "operator-role projection test: pure dashboard role-matrix projection rendered distinctly from worker roles.* (F005)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E006",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'dispatch-safety test: operator_roles preference NEVER confers dispatchability; preference-only surface refused at dispatch; AGENT_REGISTRY/roles.* sole authority (F006)' not captured",
+      "narrative": "The contract declares required_evidence='dispatch-safety test: operator_roles preference NEVER confers dispatchability; preference-only surface refused at dispatch; AGENT_REGISTRY/roles.* sole authority (F006)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "dispatch-safety test: operator_roles preference NEVER confers dispatchability; preference-only surface refused at dispatch; AGENT_REGISTRY/roles.* sole authority (F006)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E007",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'doctor tests: doctor --channel per-check output, unknown-surface non-zero, --skip-auth safe (F007)' not captured",
+      "narrative": "The contract declares required_evidence='doctor tests: doctor --channel per-check output, unknown-surface non-zero, --skip-auth safe (F007)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "doctor tests: doctor --channel per-check output, unknown-surface non-zero, --skip-auth safe (F007)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E008",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)' not captured",
+      "narrative": "The contract declares required_evidence='manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E009",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)' not captured",
+      "narrative": "The contract declares required_evidence='producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E010",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)' not captured",
+      "narrative": "The contract declares required_evidence='panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E011",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)' not captured",
+      "narrative": "The contract declares required_evidence='determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E012",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'round-2 pins (D015): auditor role + operator-role value-domain union (F004); per-surface detection cells + DONT_PANIC_AGENT->unknown_runtime (F002); unknown_role canonical (F001); recognized_unseeded doctor outcome (F007); AGENT_REGISTRY in F009 source set + full bucket rule matrix (F009)' not captured",
+      "narrative": "The contract declares required_evidence='round-2 pins (D015): auditor role + operator-role value-domain union (F004); per-surface detection cells + DONT_PANIC_AGENT->unknown_runtime (F002); unknown_role canonical (F001); recognized_unseeded doctor outcome (F007); AGENT_REGISTRY in F009 source set + full bucket rule matrix (F009)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "context-detected-on-every-invocation",
+      "matcher_string": "round-2 pins (D015): auditor role + operator-role value-domain union (F004); per-surface detection cells + DONT_PANIC_AGENT->unknown_runtime (F002); unknown_role canonical (F001); recognized_unseeded doctor outcome (F007); AGENT_REGISTRY in F009 source set + full bucket rule matrix (F009)",
+      "evidence_uris": []
+    }
+  ]
+}

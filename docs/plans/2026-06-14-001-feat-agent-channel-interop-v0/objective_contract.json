@@ -1,0 +1,143 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The originating operator spec for 'Agent Channel Interop v0' (recorded in decisions.jsonl D001) AS RECONCILED against the existing DontPanic platform AND AS REVISED by the operator's lock-review critique (D002, D004-D008). The promise is the spec's underlying goal — DontPanic as a channel + role orchestration layer for arbitrary agent surfaces that makes role choice easy and proves each surface is usable — NOT the literal seven-feature decomposition (which duplicated executors, capabilities/doctor, the roles command, and agent-manifest). The reconciliation (operator_surface is the only fully-absent axis; no parallel agent-channels.json) and the critique-driven recut (settable operator roles + channel doctor in v0; hardened ledger; sharp locality; worktree-aware conflicts; operator-surface capability-manifest shape) are part of the contract.",
+  "user_journeys": [
+    {
+      "name": "context-detected-on-every-invocation",
+      "description": "An operator runs a DontPanic command from a terminal, Cursor, Claude Desktop, the Codex app, Antigravity, or a remote VM. DontPanic resolves the four-axis context (operator_surface x agent_runtime x role x execution_locality) explicit-first (DONT_PANIC_*), then via documented heuristics, then falls back to an explicit unknown_* value rather than guessing. Locality is sharp enough to tell a plan-worktree run from a remote-VM or code-task run.",
+      "surfaces": [
+        "backend"
+      ],
+      "states": [
+        "explicit",
+        "heuristic",
+        "unknown-fallback"
+      ],
+      "acceptance_signals": [
+        "explicit env vars are honored verbatim and beat all heuristics",
+        "a recognized surface marker (TERM_PROGRAM) yields the right operator_surface; an unrecognized one yields unknown",
+        "agent_runtime validates against the same source as agent_surface; unknown agents map to unknown_runtime",
+        "execution_locality resolves to one of local_mac/plan_worktree/dashboard_terminal/code_task/remote_vm/github_vm/unknown_locality",
+        "a deterministic rule table reaches EACH execution_locality member (local_mac/plan_worktree/dashboard_terminal/code_task/remote_vm/github_vm) via a named cell",
+        "an unrecognized explicit DONT_PANIC_* value maps to that axis's unknown_* member (never rejected, never a wrong guess)",
+        "each seeded operator_surface (cursor, codex_app, claude_desktop, antigravity) has a named per-surface detection cell, not only generic TERM_PROGRAM",
+        "an unrecognized DONT_PANIC_AGENT value maps to unknown_runtime"
+      ]
+    },
+    {
+      "name": "easy-role-choice",
+      "description": "An operator says 'Claude is primary_operator, Codex is auditor, Gemini is researcher, Cursor is my primary_operator right now' and sets it without hand-editing JSON, via an easy CLI and a dashboard role matrix. Operator roles are PREFERENCES/intent, a layer separate from the worker-dispatch roles, so assigning a non-executor operator surface (e.g. Cursor as primary_operator) is accepted -- and never confers dispatch authority.",
+      "surfaces": [
+        "backend",
+        "cli_human"
+      ],
+      "states": [
+        "set",
+        "listed",
+        "projected"
+      ],
+      "acceptance_signals": [
+        "setting an operator role writes operator_roles.* and never the worker roles.* namespace",
+        "a non-executor surface (e.g. cursor) is accepted as an operator role without assert_registrable refusal",
+        "the worker register-worker path still refuses non-executors (unchanged)",
+        "list returns the resolved operator-role map and the dashboard renders the role matrix",
+        "SAFETY INVARIANT: an operator_roles preference NEVER makes its subject dispatchable -- a surface holding only an operator role is refused at dispatch exactly as if no role were set; dispatch authority derives solely from AGENT_REGISTRY via worker roles.*",
+        "names use the canonical-id + alias contract (D013): user inputs normalize to canonical ids, unknowns become unknown_*",
+        "a project-scoped operator role overrides the global default for the same role and list output carries scope provenance",
+        "OPERATOR_ROLES includes auditor (operator intent only, never dispatch authority)",
+        "operator-role value domain = union of agent_runtime ids, operator_surface ids, human, and unknown_role; unrecognized values normalize to unknown_role"
+      ]
+    },
+    {
+      "name": "prove-a-surface-is-usable",
+      "description": "An operator asks 'will DontPanic work from Codex / Claude / Antigravity / Cursor?' and runs dontpanic doctor --channel <surface>. The doctor resolves that surface's capability manifest and reports PATH / home / repo visibility / worktree binding / config / MCP availability with pass/warn/fail.",
+      "surfaces": [
+        "backend",
+        "cli_human"
+      ],
+      "states": [
+        "pass",
+        "warn",
+        "fail",
+        "unknown-surface"
+      ],
+      "acceptance_signals": [
+        "an operator-surface capability manifest kind exists in the EXISTING capability schema with at least two seeded manifests; no agent-channels.json is introduced",
+        "dontpanic doctor --channel <surface> (alias --operator-surface) runs the surface's probes via doctor_registry and reports per-check pass/warn/fail",
+        "an unknown surface name exits non-zero with an actionable message",
+        "doctor remains structural-safe under --skip-auth",
+        "exactly the four named operator surfaces (cursor, claude_desktop, codex_app, antigravity) are seeded; Gemini/Grok stay runtimes, not surfaces",
+        "the operator_surface manifest kind pins a minimum probe set (PATH/home/repo/worktree-binding/config/MCP) every manifest must declare",
+        "a recognized-but-unseeded surface reports advisory recognized_unseeded (not pretend-unsupported); only unknown_surface exits non-zero"
+      ]
+    },
+    {
+      "name": "invocation-presence-recorded-safely",
+      "description": "After commands run from multiple surfaces and multiple concurrent agents, an append-only presence ledger records each invocation's four-axis context + repo/worktree/branch/plan + timing + result + locality, without corruption, raw home paths, or tokens leaked from command arguments.",
+      "surfaces": [
+        "backend"
+      ],
+      "states": [
+        "appended",
+        "concurrent",
+        "sanitized",
+        "compacted"
+      ],
+      "acceptance_signals": [
+        "each CLI invocation appends exactly one well-formed InvocationRecord",
+        "N simultaneous appends yield N intact lines with no interleaving (atomic/lock-safe)",
+        "a token-shaped command argument is redacted and no absolute home path appears",
+        "a retention/compaction step bounds the ledger; result=error is recorded for a failing command",
+        "paths are stored as path_display (home-scrubbed) + path_key (stable non-secret equality key); the scrubbed display is never the equality key",
+        "exactly-one-record holds under argparse failure, early import failure, KeyboardInterrupt, and SIGTERM (result=interrupted); compaction preserves the fields needed to reproduce stale/conflict buckets"
+      ]
+    },
+    {
+      "name": "operator-channels-panel",
+      "description": "An operator opens the dashboard and sees an Operator Channels panel derived from the ledger + capabilities + worktree bindings + operator roles: which channels are active, stale, remote-only, conflicting on a plan/branch/repo, on an unhealthy worktree binding, unable to mutate local state from remote, or an operator-only runtime that cannot be dispatched — plus the role matrix.",
+      "surfaces": [
+        "backend",
+        "web"
+      ],
+      "states": [
+        "active",
+        "stale",
+        "remote_only",
+        "same_plan_conflict",
+        "same_branch",
+        "unhealthy_worktree_binding",
+        "operator_only_runtime_not_dispatchable"
+      ],
+      "acceptance_signals": [
+        "the channel view is derived only from ledger + capabilities + worktree bindings + operator_roles; a test asserts no agent-channels.json and supports_*/dispatchability derive from capabilities + AGENT_REGISTRY",
+        "the panel renders all listed conflict/health buckets with vitest tests per bucket",
+        "the panel renders all active and needs-attention items uncapped",
+        "the journey test boots the dashboard shell against a real producer-emitted fixture under a Python<->JS contract test (no synthetic stand-in)",
+        "a single locked bucket rule matrix (active/stale threshold, conflict precedence, same_repo-vs-same_branch overlap, active-only conflicts) governs producer AND renderer",
+        "conflict equality uses path_key, never the scrubbed display string",
+        "dispatchability is sourced from AGENT_REGISTRY, which is explicit in F009's enumerated derive-only-from set (ledger, capabilities, worktree bindings, operator_roles, AGENT_REGISTRY)",
+        "the locked rule matrix pins a deterministic criterion + precedence for remote_only, remote_cannot_mutate_local, unhealthy_worktree_binding, and operator_only_runtime_not_dispatchable"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "unit tests: OperatorSurface + ExecutionLocality enums + InvocationContext round-trip + secret-free invariant (F001)",
+    "resolver tests: explicit-wins / each heuristic / unknown-fallback incl. locality (F002)",
+    "ledger tests: well-formed record, concurrent atomic append, arg redaction, no-home-path, compaction, result=error (F003)",
+    "operator-role config tests: writes operator_roles.* not roles.*, accepts non-executor, register-worker still refuses, list returns resolved map (F004)",
+    "operator-role projection test: pure dashboard role-matrix projection rendered distinctly from worker roles.* (F005)",
+    "dispatch-safety test: operator_roles preference NEVER confers dispatchability; preference-only surface refused at dispatch; AGENT_REGISTRY/roles.* sole authority (F006)",
+    "doctor tests: doctor --channel per-check output, unknown-surface non-zero, --skip-auth safe (F007)",
+    "manifest-schema tests: operator-surface manifest kind + >=2 seeded manifests, no agent-channels.json (F008)",
+    "producer tests: derivation-only (no agent-channels.json) + supports_*/dispatchability from capabilities+AGENT_REGISTRY + per-bucket vitest (F009)",
+    "panel tests: uncapped active+needs-attention render + real-producer journey + Python<->JS contract (F010)",
+    "determinism pins (D013): locality rule-table cell per member + unrecognized->unknown_* (F002); path_display+path_key + abnormal-exit one-record + compaction-preserves-buckets (F003); global/project precedence+provenance (F004); minimum probe set + 4 seeded surfaces (F008); locked bucket rule matrix incl. path_key equality (F009/F010); canonical-id+alias contract (F001)",
+    "round-2 pins (D015): auditor role + operator-role value-domain union (F004); per-surface detection cells + DONT_PANIC_AGENT->unknown_runtime (F002); unknown_role canonical (F001); recognized_unseeded doctor outcome (F007); AGENT_REGISTRY in F009 source set + full bucket rule matrix (F009)"
+  ],
+  "non_goals": [
+    "fully-open adapter marketplace (third-party adapter submission/registry format)",
+    "remote-locality enforcement or routing (v0 records and surfaces local-vs-remote only)",
+    "any new agent-channels.json registry file"
+  ],
+  "completion_test": "All ten features pass: operator_surface + sharp execution_locality exist with a round-tripping InvocationContext (F001); resolution is explicit-first/heuristic-second/unknown-last and never silently wrong (F002); the presence ledger is atomic, sanitized, and bounded under concurrency (F003); operator roles are settable separately from worker roles with the easy 'Claude primary / Codex auditor / Gemini researcher' config UX (F004) and a read-only dashboard role matrix (F005); the SAFETY INVARIANT holds — an operator-role preference never confers dispatchability, which derives solely from AGENT_REGISTRY via worker roles.* (F006); doctor --channel proves a named surface is usable via the existing doctor framework (F007) using a new operator-surface capability-manifest kind with no agent-channels.json (F008); and the dashboard derives an Operator Channels panel from a channel-view producer (F009) with worktree-aware conflict/health buckets, rendered under a real-producer Python<->JS contract test (F010)."
+}

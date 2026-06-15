@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 8 items
+
+tests/test_operator_channels.py::test_record_projection_keeps_only_compaction_retained_fields PASSED [ 12%]
+tests/test_operator_channels.py::test_conflict_equality_uses_path_key_not_display PASSED [ 25%]
+tests/test_operator_channels.py::test_dispatchability_derives_from_agent_registry_not_hardcoded PASSED [ 37%]
+tests/test_operator_channels.py::test_operator_role_value_runtime_surfaced_as_non_dispatchable PASSED [ 50%]
+tests/test_operator_channels.py::test_embeds_operator_role_matrix_and_worktree_bindings PASSED [ 62%]
+tests/test_operator_channels.py::test_schema_and_state_revision_present PASSED [ 75%]
+tests/test_operator_channels.py::test_write_channel_view_state_emits_scrubbed_json PASSED [ 87%]
+tests/test_operator_channels.py::test_no_agent_channels_json_introduced PASSED [100%]
+
+============================== 8 passed in 0.26s ===============================

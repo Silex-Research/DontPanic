@@ -916,6 +916,17 @@ def build(
                 _wt_msg = f"active-worktrees state skipped: {_wt_exc}"
                 warnings.append(_wt_msg)
                 warn(_wt_msg)
+            # Plan 2026-06-14-001 F009 — write the channel-view MODEL next to
+            # what-now.json so the Operator Channels panel (F010) renders the
+            # SAME view derived from the D015 source set (ledger + capabilities +
+            # worktree bindings + operator_roles + AGENT_REGISTRY). Best-effort:
+            # a failure here never fails the build.
+            try:
+                from dontpanic_orchestrate import operator_channels as _operator_channels
+
+                _operator_channels.write_channel_view_state(out_dir / "operator-channels.json")
+            except Exception as _oc_exc:  # noqa: BLE001
+                warnings.append(f"operator-channels state skipped: {_oc_exc}")
             # write_cache merges by default (merge_event_sidecar=True); pass
             # the already-merged list and disable the inner merge to avoid
             # double-application that would be a no-op anyway.

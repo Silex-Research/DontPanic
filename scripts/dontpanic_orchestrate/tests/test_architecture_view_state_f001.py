@@ -1135,7 +1135,9 @@ class TestCommandCatalogCoversCliSurface:
         # documented in the module docstring, not the printed help.
         import inspect
 
-        dispatch_source = inspect.getsource(cli_mod.main)
+        # The flat dispatch table lives in ``_run_cli`` (``main`` is the F003
+        # invocation-ledger wrapper around it).
+        dispatch_source = inspect.getsource(cli_mod._run_cli)
         for entry in avs._COMMAND_CATALOG:
             tokens = entry["name"].split()
             assert tokens[0] == "dontpanic"

@@ -185,6 +185,53 @@ def validate_capability_file(
     return manifest
 
 
+# ── operator_surface probe contract (D013) ─────────────────────────────────────
+
+#: Canonical snake_case probe ids that form the standard probe vocabulary.
+#: Every ``operator_surface`` manifest MUST declare all six; validation fails if
+#: any are missing.
+OPERATOR_SURFACE_MINIMUM_PROBES: frozenset[str] = frozenset(
+    {
+        "path",
+        "home",
+        "repo_visibility",
+        "worktree_binding",
+        "config",
+        "mcp_availability",
+    }
+)
+
+
+def validate_operator_surface_manifest(
+    path: Path | str,
+    *,
+    repo_root: Path | str | None = None,
+) -> CapabilityManifest:
+    """Validate an ``operator_surface`` capability manifest.
+
+    Runs the standard :func:`validate_capability_file` check, then additionally
+    asserts that the manifest:
+
+    - has ``kind == "operator_surface"``
+    - declares all six minimum probes from :data:`OPERATOR_SURFACE_MINIMUM_PROBES`
+
+    Raises :class:`CapabilityManifestError` on any violation.
+    """
+    manifest = validate_capability_file(path, repo_root=repo_root)
+    if manifest.kind != "operator_surface":
+        raise CapabilityManifestError(
+            f"{path}: expected kind 'operator_surface', got {manifest.kind!r}"
+        )
+    declared: frozenset[str] = frozenset(manifest.verify.probes)
+    missing = OPERATOR_SURFACE_MINIMUM_PROBES - declared
+    if missing:
+        raise CapabilityManifestError(
+            f"{path}: operator_surface manifest is missing minimum probe(s): "
+            f"{sorted(missing)!r}"
+        )
+    return manifest
+
+
 def _repo_root(repo_root: Path | str | None) -> Path:
     if repo_root is None:
         return Path(__file__).resolve().parents[2]
@@ -260,7 +307,9 @@ __all__ = [
     "CapabilityOwnerBoundary",
     "CapabilityRequires",
     "CapabilityVerify",
+    "OPERATOR_SURFACE_MINIMUM_PROBES",
     "SetupStep",
     "load_capabilities",
     "validate_capability_file",
+    "validate_operator_surface_manifest",
 ]

@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 4 items
+
+tests/test_operator_role_matrix.py::test_projection_is_pure_no_mutation_and_deterministic PASSED [ 25%]
+tests/test_operator_role_matrix.py::test_returns_resolved_map_with_scope_provenance PASSED [ 50%]
+tests/test_operator_role_matrix.py::test_operator_preferences_render_distinctly_from_worker_roles PASSED [ 75%]
+tests/test_operator_role_matrix.py::test_operator_section_is_intent_only_no_dispatchability_claim PASSED [100%]
+
+============================== 4 passed in 0.12s ===============================

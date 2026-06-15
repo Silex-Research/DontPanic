@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- <home>/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: <home>/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 2 items
+
+tests/test_operator_channels_fixture_contract.py::test_fixture_is_verbatim_producer_output PASSED [ 50%]
+tests/test_operator_channels_fixture_contract.py::test_consumed_shape_keys_present PASSED [100%]
+
+============================== 2 passed in 0.12s ===============================

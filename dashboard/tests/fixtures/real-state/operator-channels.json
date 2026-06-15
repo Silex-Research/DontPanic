@@ -1,0 +1,170 @@
+{
+  "schema": "operator-channels/v0",
+  "records": [
+    {
+      "operator_surface": "cursor",
+      "agent_runtime": "claude",
+      "role": "implementer",
+      "execution_locality": "plan_worktree",
+      "locality": "plan_worktree",
+      "repo": {
+        "path_display": "<home>/proj",
+        "path_key": "repo-main"
+      },
+      "worktree": {
+        "path_display": "<home>/wt-a",
+        "path_key": "wt-a"
+      },
+      "branch": "feat/x",
+      "plan": "2026-06-14-001",
+      "last_seen": "2026-06-14T12:00:00Z",
+      "result": "ok"
+    },
+    {
+      "operator_surface": "codex_app",
+      "agent_runtime": "codex",
+      "role": "auditor",
+      "execution_locality": "local_mac",
+      "locality": "local_mac",
+      "repo": {
+        "path_display": "<home>/proj",
+        "path_key": "repo-main"
+      },
+      "worktree": null,
+      "branch": "feat/y",
+      "plan": "2026-06-14-001",
+      "last_seen": "2026-06-14T12:01:00Z",
+      "result": "ok"
+    },
+    {
+      "operator_surface": "terminal",
+      "agent_runtime": "claude",
+      "role": "implementer",
+      "execution_locality": "local_mac",
+      "locality": "local_mac",
+      "repo": {
+        "path_display": "<home>/old",
+        "path_key": "repo-old"
+      },
+      "worktree": null,
+      "branch": "main",
+      "plan": null,
+      "last_seen": "2020-01-01T00:00:00Z",
+      "result": "error"
+    },
+    {
+      "operator_surface": "github_agent_hq",
+      "agent_runtime": "claude",
+      "role": "implementer",
+      "execution_locality": "github_vm",
+      "locality": "github_vm",
+      "repo": {
+        "path_display": "<home>/wt-bad",
+        "path_key": "wt-bad"
+      },
+      "worktree": {
+        "path_display": "<home>/wt-bad",
+        "path_key": "wt-bad"
+      },
+      "branch": "feat/remote",
+      "plan": "2026-06-12-001",
+      "last_seen": "2026-06-14T12:02:00Z",
+      "result": "ok"
+    }
+  ],
+  "runtimes": [
+    {
+      "id": "aider",
+      "supports_dispatch": false,
+      "has_capability_manifest": false
+    },
+    {
+      "id": "antigravity",
+      "supports_dispatch": false,
+      "has_capability_manifest": true
+    },
+    {
+      "id": "claude",
+      "supports_dispatch": true,
+      "has_capability_manifest": false
+    },
+    {
+      "id": "codex",
+      "supports_dispatch": true,
+      "has_capability_manifest": false
+    },
+    {
+      "id": "cursor",
+      "supports_dispatch": false,
+      "has_capability_manifest": true
+    },
+    {
+      "id": "gemini",
+      "supports_dispatch": false,
+      "has_capability_manifest": false
+    },
+    {
+      "id": "grok",
+      "supports_dispatch": false,
+      "has_capability_manifest": false
+    },
+    {
+      "id": "opencode",
+      "supports_dispatch": false,
+      "has_capability_manifest": false
+    }
+  ],
+  "dispatchable_agents": [
+    "claude",
+    "codex"
+  ],
+  "worktree_bindings": [
+    {
+      "path_key": "wt-a",
+      "path_display": "<home>/wt-a",
+      "plan": "2026-06-14-001",
+      "branch": "feat/x",
+      "healthy": true
+    },
+    {
+      "path_key": "wt-bad",
+      "path_display": "<home>/wt-bad",
+      "plan": "2026-06-12-001",
+      "branch": "feat/remote",
+      "healthy": false
+    }
+  ],
+  "operator_roles": {
+    "operator_roles": {
+      "intent_only": true,
+      "dispatch_authority": false,
+      "entries": [
+        {
+          "role": "auditor",
+          "value": "codex",
+          "scope": "global"
+        },
+        {
+          "role": "primary_operator",
+          "value": "cursor",
+          "scope": "global"
+        },
+        {
+          "role": "researcher",
+          "value": "gemini",
+          "scope": "global"
+        }
+      ]
+    },
+    "worker_roles": {
+      "dispatch_authority": true,
+      "entries": []
+    }
+  },
+  "data_quality": {
+    "record_count": 4,
+    "runtime_count": 8,
+    "binding_count": 2
+  },
+  "state_revision": "8b3b95f20511"
+}

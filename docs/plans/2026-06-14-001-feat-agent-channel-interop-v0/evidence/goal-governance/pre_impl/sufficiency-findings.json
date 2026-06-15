@@ -1,0 +1,10 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:f441be5756241cd656c1ddf3b34247ca835392c63f9d2752a69a538fdf4327a1",
+  "generated_at": "2026-06-15T01:45:47Z",
+  "findings": [],
+  "malformed_findings": [],
+  "parser_notes": []
+}
