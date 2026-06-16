@@ -2,40 +2,40 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:d24d7412f0311ebf02961d92b540b980af2aedb8ea2f9283a6976ed922158138",
-  "generated_at": "2026-06-16T19:16:56Z",
+  "input_fingerprint": "sha256:300b19b47412e3671f6f1bea5c71c2aa3eb3cc8289f93d43e9901e60bb17f61f",
+  "generated_at": "2026-06-16T20:30:38Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "critical",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "parity_gap",
-      "description": "F001 still contains stale substrate-posture wording: internal substrate plans are described as advisory unless opted in, which conflicts with the D030/D043 rule that any consumer-journey-bearing plan, including substrate, blocks an undeferred unproven outcome.",
+      "description": "F001 introduces a fixture_only exemption where seeded-only evidence is not satisfied but also does not block. The objective contract says declared consumer outcomes on activated product-class or consumer-journey-bearing plans block unless satisfied, structurally deferred, or dispositioned, and seeded-only journeys fail. fixture_only is not listed as an allowed close bypass.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Replace the stale wording with the exact D030 posture rule: warn only for substrate plus opt-in plus no consumer journeys; otherwise consumer-journey-bearing plans block when unproven.",
-      "finding_class": "plan_contract"
+      "recommendation": "Remove the fixture_only close bypass, or explicitly model fixture_only as a structured deferral/disposition path with the same {journey, consumer} accountability required by the contract.",
+      "finding_class": "scope_guard"
     },
     {
       "severity": "high",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "parity_gap",
-      "description": "F001 preserves binary consumer=both language stating both families must be proven and a missing family is unproven, but the locked contract requires the D035 carve-out where a required human family with not_yet_typed evidence becomes consumer_outcome_pending and does not block.",
+      "description": "F001 still contains stale posture wording that says the pure posture function returns block|advisory by goal_type and that internal substrate plans are advisory unless opted in. That conflicts with the objective's D030/D043 rule that any consumer-journey-bearing plan, including substrate, blocks an undeferred unproven outcome.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Qualify every consumer=both rule with the D035 status table before lock: enforced agent missing or unproven blocks; typed-but-unsatisfied families block; human not_yet_typed is advisory pending.",
-      "finding_class": "plan_contract"
+      "recommendation": "Rewrite the remaining summary text so posture is driven by activation plus consumer-journey presence/product metadata, with substrate advisory only for opted-in substrate plans with no consumer journeys.",
+      "finding_class": "editorial"
     },
     {
       "severity": "medium",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "coverage_gap",
-      "description": "The seeded-evidence test only pins seeded-only screenshots on a non-fixture_only journey, leaving ambiguity about whether a fixture_only seeded journey could accidentally satisfy the close-time real-execution requirement.",
+      "description": "The posture matrix statement says enforcement_posture returns block when active and product-class goal_type or product metadata is present, even when has_consumer_journey is false. The objective requires product-class plans with no declared consumer journey to emit no_consumer_journey_declared as advisory and not block close.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Add an explicit test or contract sentence that no seeded-only journey, including any fixture_only variant, satisfies the close-time consumer outcome for product-class objective claims.",
+      "recommendation": "Pin the matrix cells for product-class/no-consumer-journey as active with advisory no_consumer_journey_declared and no close block, distinct from block-eligible cells with declared unproven journeys.",
       "finding_class": "matrix_pin"
     }
   ],
