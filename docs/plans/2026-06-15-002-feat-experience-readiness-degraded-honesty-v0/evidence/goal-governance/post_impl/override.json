@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "Sole completion finding F2C-E001 is a v1_evidence_coverage_heuristic false-positive: the required_evidence prose is not a literal substring of the artifact uri/note, but the artifact IS present at evidence/goal-governance/post_impl/pytest/degraded-honesty-and-structured-agreement/pytest.txt and the feature evidence_refs describe it. Codex disposed F2C-E001 agree:false / no_finding, confirming the pytest covers per-family degraded_dishonest, allowed_degraded_modes rejection, typed-skip-not-success discriminator, and objective-level keyed cross_surface_disagreement. envelope status=disagree is matcher-limitation-only (matcher inspects metadata not bytes, per the finding's own narrative + D002). Mirrors 2a-core close.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-16T16:31:57Z",
+  "plan_id": "2026-06-15-002-feat-experience-readiness-degraded-honesty-v0",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "audit envelope status='disagree' (cross-vendor disagreement or auditor response failed schema)",
+  "features_hash": "sha256:e222660e05c19bf728148ce4b1a5db768e9cbaa905eacf53a010a9d02824a460",
+  "objective_contract_hash": "sha256:4fabf1b8d9d11ad528f0175d0a6e9acb86cf15f8fe2b956792e0dc2f04304d7a",
+  "completion_findings_hash": "sha256:21bdf26c25a6c85d8608034126f7be3e1a09f5161a510c689872682d9351f921",
+  "evidence_manifest_hash": "sha256:3ee8cdbd0967256215b3197348f78713784c218b826e7705fffdab5f85e0bc12"
+}

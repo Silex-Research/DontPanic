@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "Round 3 findings are matrix/test-pin obligations, not unresolved design gaps: unlisted allowed_degraded_modes rejection, multi-objective cross-surface isolation, and required_data_sources declaring both families for the plan journey. These are accepted as implementation obligations and will be pinned by TDD before close. Proceeding via recorded override to avoid another paid enumeration round.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-16T16:12:56Z",
+  "plan_id": "2026-06-15-002-feat-experience-readiness-degraded-honesty-v0",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:b616747f1e045520497090507b07c0d76d52eb44756993b00313ff1190b36ac3",
+  "objective_contract_hash": "sha256:4fabf1b8d9d11ad528f0175d0a6e9acb86cf15f8fe2b956792e0dc2f04304d7a",
+  "sufficiency_findings_hash": "sha256:5b8331d15de262658b46829eaac23e6e9c7e77bb6abf527b2e6259db54fc70cc"
+}
