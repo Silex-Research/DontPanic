@@ -2,79 +2,41 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:18fc435caac6df6788c473d1cb8f0ac3f96e7151be771c7d871f6fe076f37463",
-  "generated_at": "2026-06-15T17:28:10Z",
+  "input_fingerprint": "sha256:5224a0bffe7e0901e67a0a071cdebed3ffa1ef0a1f2a311280a1d07ee977a24c",
+  "generated_at": "2026-06-16T17:43:51Z",
   "findings": [
     {
       "severity": "critical",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "parity_gap",
-      "description": "F005 has a contradictory enforcement cell for substrate plans that declare consumer journeys. One test says the unflagged substrate plan only warns, while the activation and no-dodge rules say any consumer-journey-bearing plan blocks when unproven.",
+      "description": "F001's D034/D035 pending rule lets consumer=both close when the agent family is proven but the human family is not_yet_typed, while the objective contract says consumer=both requires both families proven and a missing family yields consumer_outcome_unproven unless structurally deferred or dispositioned.",
       "feature_refs": [
-        "F005"
+        "F001"
       ],
-      "recommendation": "Pin the matrix so consumer-journey-bearing plans block regardless of opt-in; reserve advisory for substrate plans activated solely by opt-in with no consumer journeys.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "high",
-      "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "gap_class": "parity_gap",
-      "description": "The F002 requirement expression for agent_mcp_tool read_only appears to require structured_error in addition to a tool transcript or contract check. That conflicts with the journey promise that a successful tool-call or contract transcript satisfies the claim.",
-      "feature_refs": [
-        "F002",
-        "F004"
-      ],
-      "recommendation": "Make structured_error conditional on degraded or unavailable capability paths, not a conjunctive requirement for healthy agent read-only evidence.",
+      "recommendation": "Resolve the contract before lock: either amend the objective contract to explicitly allow the platform-level human-not-yet-typed pending exception, or make F001 block unless a structured deferral/disposition exists.",
       "finding_class": "plan_contract"
-    },
-    {
-      "severity": "high",
-      "journey_id": "author-declares-consumers-and-surface-evidence",
-      "gap_class": "coverage_gap",
-      "description": "The plan maps each surface_class to one family, but it does not pin validation between declared consumer and declared surfaces. A consumer=both journey could be declared with only a human surface, or an agent journey with only read_only_ui, leaving required evidence derivation ambiguous.",
-      "feature_refs": [
-        "F001",
-        "F002",
-        "F005"
-      ],
-      "recommendation": "Add a consumer/surface compatibility rule: human requires at least one human-family surface, agent requires at least one agent-family surface, and both requires at least one of each or a deterministic unproven finding.",
-      "finding_class": "matrix_pin"
     },
     {
       "severity": "high",
       "journey_id": "close-time-enforcement-and-disposition",
-      "gap_class": "coverage_gap",
-      "description": "Product-class activation is pinned, but the plan does not state what happens when a product-class objective has no declared consumer journey. That leaves a dodge path where the gate activates but has no consumer outcome to evaluate.",
-      "feature_refs": [
-        "F005"
-      ],
-      "recommendation": "Add a missing-consumer-journey finding or explicit no-op rule for product-class plans with no declared consumer journeys, and test that path.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "degraded-honesty-and-structured-agreement",
       "gap_class": "wiring_gap",
-      "description": "F001 leaves data_source optional even when availability is present, but F004 depends on keyed availability/provenance comparison. An unavailable EvidenceRef without data_source cannot prove honest degradation or participate in cross-surface agreement.",
+      "description": "Product metadata is listed as an activation and posture input, but the proposed feature does not define the concrete metadata keys, parser, or close_plan wiring that makes product/migration/readiness/ux/consumer-facing delivery deterministic.",
       "feature_refs": [
-        "F001",
-        "F004"
+        "F001"
       ],
-      "recommendation": "Add a validator invariant that availability implies data_source, at least for required_data_sources and typed-skip evidence used by the checker.",
+      "recommendation": "Pin the product_metadata schema and extraction path, then add a metadata-only activation test so product claims cannot dodge enforcement through non-goal_type metadata.",
       "finding_class": "implementation_detail"
     },
     {
       "severity": "medium",
-      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
+      "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "coverage_gap",
-      "description": "The F003 acceptance requires typed-skip evidence to carry an operator-readable reason, but the schema changes and tests do not pin where that reason lives or that it is asserted. This risks silent unavailable skips that are structurally valid but operationally opaque.",
+      "description": "The required evidence calls for product-class blocking on substrate-only evidence, but the listed tests cover API-only, seeded-only, typed-skip-only, real capture, and degraded honesty without a dedicated substrate-only product-class close-block case.",
       "feature_refs": [
-        "F001",
-        "F003"
+        "F001"
       ],
-      "recommendation": "Pin a reason field, metadata location, or artifact convention for typed-skip reasons and add a harness assertion that it is present.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Add a deterministic close_plan test where a product-class journey is covered only by substrate/internal evidence and verify consumer_outcome_unproven plus blocked status flip.",
+      "finding_class": "matrix_pin"
     }
   ],
   "malformed_findings": [],
