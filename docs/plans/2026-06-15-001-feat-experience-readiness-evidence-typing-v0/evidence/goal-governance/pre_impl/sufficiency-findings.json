@@ -2,69 +2,71 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:49175a02656bb0ee231b9b57bb8dbdd21cf7a6f76d28403cd72431a534a816e9",
-  "generated_at": "2026-06-15T20:07:11Z",
+  "input_fingerprint": "sha256:a5846752a80f3ee50069e4b2b58f428934f8de5bd6019b20571997000a18e704",
+  "generated_at": "2026-06-16T04:22:46Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
-      "gap_class": "wiring_gap",
-      "description": "F003 does not explicitly require successful or typed-skip adapter EvidenceRefs to carry EvidenceRef.surface_class, while F002 makes missing surface_class structurally ineligible for satisfying any surface group.",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "integration_gap",
+      "description": "The plan allows journey.consumer=both, but F002's required_evidence_classes API is defined over a single consumer value and only pins invalid-tuple behavior for human and agent. It does not state whether consumer=both is accepted per surface, rewritten into the surface's pinned family, or rejected at the pure-function boundary.",
       "feature_refs": [
         "F001",
-        "F002",
-        "F003"
+        "F002"
       ],
-      "recommendation": "Pin the surface_class emitted by each adapter and assert it for both available and unavailable outputs: cli_agent for the CLI source, agent_mcp_tool for the MCP source, and the intended contract-check surface explicitly.",
+      "recommendation": "Pin consumer=both semantics explicitly: either make it journey-level only and call F002 with the derived concrete SurfaceFamily for each surface_class, or define and test the exact both x surface_class matrix.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "high",
       "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "gap_class": "integration_gap",
-      "description": "F002 requires availability, consumer_family, surface_class, and data_provenance for evidence to satisfy readiness, but the plan does not define how existing human-surface screenshot or recording producers will populate those new fields.",
+      "gap_class": "coverage_gap",
+      "description": "The qualitative claim_kind cell is not coherent across the closed surface_class enum. F002 states qualitative returns rubric|human_signoff, but agent-family surfaces with consumer=agent are otherwise valid tuples and would be asked to satisfy a human-only evidence group.",
       "feature_refs": [
         "F001",
         "F002"
       ],
-      "recommendation": "Add a normalization or metadata-enrichment step for existing human evidence sources, with tests proving a real screenshot EvidenceRef can satisfy the new checker without rebuilding the adapters.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "agent-surface-evidence-is-capturable-and-dogfooded",
-      "gap_class": "coverage_gap",
-      "description": "The typed-skip shape is described, but validation is not fully pinned against malformed unavailable evidence such as unavailable plus real provenance, missing degraded_mode, missing reason note, or missing evidence_class.",
-      "feature_refs": [
-        "F001",
-        "F003"
-      ],
-      "recommendation": "Add explicit schema and harness tests rejecting invalid typed-skip combinations and asserting note, data_source, consumer_family, degraded_mode, evidence_class, type, data_provenance, availability, and surface_class.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "author-declares-consumers-and-surface-evidence",
-      "gap_class": "coverage_gap",
-      "description": "The pinned token map still has an ambiguity: it claims a total deterministic map over eight journey surface tokens but writes ios/android as a combined token, which leaves the accepted token domain unclear.",
-      "feature_refs": [
-        "F001"
-      ],
-      "recommendation": "Pin every accepted journey.surfaces token individually, including whether ios and android are separate accepted tokens, and test that each token maps to exactly one surface_class while unknown tokens fail closed.",
+      "recommendation": "Pin qualitative requirements per family or reject qualitative for agent-family surfaces with a tested explicit error.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "typing-rule-rejects-substrate-and-seeded-only-closes",
-      "gap_class": "coverage_gap",
-      "description": "The checker returns a single status even though journey-level aggregation can create multiple independent per-surface and conjunctive-group failures, so mixed missing_provenance, seeded, and mismatch cases are not deterministic.",
+      "gap_class": "integration_gap",
+      "description": "F002 contains conflicting aggregation language: it says aggregation granularity is surface_class and same-class tokens form one group, but also says each declared surface forms its own requirement set and groups are not deduplicated across surfaces. This leaves ios+android and other same-class token cases ambiguous.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Pin either a per-surface result shape or a strict precedence order for aggregate status selection, including how missing groups with alternative evidence classes are reported.",
+      "recommendation": "Rewrite the aggregation rule around one unit only, preferably surface_class as stated by D065, and add an explicit ios+android same-class aggregation test.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "coverage_gap",
+      "description": "F001 requires a documented evidence_class to existing EvidenceRef.type table, but the proposed feature does not pin the table cells for the full closed evidence_class enum. F003 only constrains the agent subset, leaving human, mutation, and structured classes open to inconsistent implementation choices.",
+      "feature_refs": [
+        "F001",
+        "F003"
+      ],
+      "recommendation": "Pin the complete evidence_class -> allowed EvidenceRef.type mapping in F001 and assert every enum member is covered exactly as intended.",
       "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "author-declares-consumers-and-surface-evidence",
+      "gap_class": "wiring_gap",
+      "description": "F001 says consumer is required for journeys asserting a consumer-facing outcome, but the plan does not define the structural signal used to determine that a journey is consumer-facing. Without that discriminator, omission rejection can drift between always-required and heuristically-required behavior.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Define the validator trigger explicitly, such as all objective_contract.user_journeys under this gate require consumer, or add a concrete consumer_facing boolean and test both branches.",
+      "finding_class": "implementation_detail"
     }
   ],
   "malformed_findings": [],
-  "parser_notes": []
+  "parser_notes": [
+    "finding[1]: gap_class 'matrix_pin' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'",
+    "finding[3]: gap_class 'matrix_pin' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'"
+  ]
 }

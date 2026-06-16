@@ -1,0 +1,19 @@
+{
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  },
+  "tool_names": [
+    "approve_gate",
+    "capabilities.get_status",
+    "dispatch",
+    "list_projects",
+    "read_evidence",
+    "state_snapshot",
+    "state_stream",
+    "status",
+    "validate_plan"
+  ],
+  "pinned_read_only_tool": "status"
+}

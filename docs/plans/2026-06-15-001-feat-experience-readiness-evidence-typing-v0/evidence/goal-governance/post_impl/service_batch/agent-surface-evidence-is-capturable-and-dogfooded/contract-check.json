@@ -1,0 +1,9 @@
+{
+  "targets": [
+    "features_model",
+    "objective_contract_model",
+    "experience_readiness"
+  ],
+  "validated_typed_ref": true,
+  "rejects_family_contradiction": true
+}

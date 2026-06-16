@@ -22,7 +22,24 @@
         "web_interactive",
         "ClaimKind"
       ],
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/pytest/author-declares-consumers-and-surface-evidence/pytest.txt",
+          "captured_by": "claude",
+          "note": "27 F001 tests pass: total surface->family map, 9-token surface map, ClaimKind incl error_path, full evidence_class->type table, consumer x surface validation, EvidenceRef typing invariants (D027/D060/D064/D065), model wiring"
+        },
+        {
+          "type": "file",
+          "uri": "claude/shared/schemas/v1.0/models/experience_readiness.py",
+          "captured_by": "claude",
+          "note": "F001 vocabulary + validators (agent-conventions VERSION 1.12.0->1.13.0)"
+        }
+      ]
     },
     {
       "id": "F002",
@@ -45,7 +62,24 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/pytest/typing-rule-rejects-substrate-and-seeded-only-closes/pytest.txt",
+          "captured_by": "claude",
+          "note": "16 F002 tests pass: read_only matrix x all surface/consumer, mutation/qualitative/error_path groups, invalid-tuple rejection, typed-skip never satisfies, per-(surface,group) output, one-ref-one-group, tri-state verdict, seeded/missing_provenance"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/experience_readiness_typing.py",
+          "captured_by": "claude",
+          "note": "F002 typing rule + tri-state checker"
+        }
+      ]
     },
     {
       "id": "F003",
@@ -61,7 +95,55 @@
       "depends_on": [
         "F001"
       ],
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "log",
+          "uri": "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list.json",
+          "captured_by": "agent-evidence-source",
+          "evidence_class": "tool_call_transcript",
+          "data_provenance": "real",
+          "data_source": "mcp:tools/list",
+          "availability": "available",
+          "consumer_family": "agent",
+          "surface_class": "agent_mcp_tool",
+          "note": "live in-process MCP tools/list incl pinned read-only status tool"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/service_batch/agent-surface-evidence-is-capturable-and-dogfooded/contract-check.json",
+          "captured_by": "agent-evidence-source",
+          "evidence_class": "contract_check",
+          "data_provenance": "real",
+          "data_source": "agent_conventions_schema",
+          "availability": "available",
+          "consumer_family": "agent",
+          "surface_class": "service_batch",
+          "note": "post-bump schema contract-check: typed ref validates + family-contradiction rejected"
+        },
+        {
+          "type": "log",
+          "uri": "evidence/goal-governance/post_impl/cli_agent/agent-surface-evidence-is-capturable-and-dogfooded/skip-cli_agent.txt",
+          "captured_by": "agent-evidence-source",
+          "evidence_class": "cli_transcript",
+          "data_provenance": "degraded",
+          "data_source": "dontpanic_cli",
+          "availability": "unavailable",
+          "consumer_family": "agent",
+          "surface_class": "cli_agent",
+          "degraded_mode": "cli_absent",
+          "note": "honest typed-skip: dontpanic CLI not on PATH in capture env"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/pytest/agent-surface-evidence-is-capturable-and-dogfooded/pytest.txt",
+          "captured_by": "claude",
+          "note": "9 F003 tests pass: pinned argv/offline-guard/stdout-schema, in-process MCP, contract-check, typed-skips, no-secret, source-agnostic harness dispatch"
+        }
+      ]
     }
   ]
 }

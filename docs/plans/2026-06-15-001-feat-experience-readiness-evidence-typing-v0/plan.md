@@ -3,7 +3,7 @@ id: 2026-06-15-001-feat-experience-readiness-evidence-typing-v0
 title: Experience Readiness — consumer-family evidence typing v0 (2a-core, F001–F003)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-15"
 goal_type: new_feature
 description: >
