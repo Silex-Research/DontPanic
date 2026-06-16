@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /private/tmp/dontpanic-p2a
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 17 items
+
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_execution_classes_are_the_closed_2a_core_subset_d011 PASSED [  5%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_honest_degradation_all_required_families_down_is_honest PASSED [ 11%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_one_family_masking_while_other_down_is_degraded_dishonest_d003 PASSED [ 17%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_neither_family_test_is_insufficient_only_masking_trips_it PASSED [ 23%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_unlisted_degraded_mode_is_degraded_dishonest_obligation1 PASSED [ 29%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_listed_degraded_mode_is_honest_obligation1_complement PASSED [ 35%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_journey_covered_only_by_typed_skips_is_not_satisfied PASSED [ 41%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_discriminator_same_unavailable_tuple_with_vs_without_real_execution PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_seeded_execution_ref_does_not_satisfy PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_ui_available_vs_api_unavailable_is_cross_surface_disagreement PASSED [ 58%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_multi_objective_isolation_no_cross_contamination_obligation2 PASSED [ 64%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_any_unavailable_dominates_reduction_d012 PASSED [ 70%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_pure_unavailable_reduces_to_unavailable_degraded_d012 PASSED [ 76%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_typed_human_unavailable_label_is_consumed_d007 PASSED [ 82%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_untyped_required_human_family_is_pending_not_honest_d015 PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_untyped_required_agent_family_when_down_is_dishonest_not_pending PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py::test_plan_journey_required_data_sources_declares_both_families_obligation3 PASSED [100%]
+
+============================== 17 passed in 0.12s ==============================

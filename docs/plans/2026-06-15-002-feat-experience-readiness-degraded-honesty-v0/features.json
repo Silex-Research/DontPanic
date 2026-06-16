@@ -17,7 +17,30 @@
         "required_families"
       ],
       "depends_on": [],
-      "passes": false
+      "passes": true,
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/pytest/degraded-honesty-and-structured-agreement/pytest.txt",
+          "captured_by": "claude",
+          "note": "17 F004 tests pass: honest-degradation, masking=degraded_dishonest (D003), unlisted allowed_degraded_modes rejection (D004/obligation1), typed-skip-not-success + discriminator with/without real execution (D005/D011), UI-available-vs-API-unavailable disagreement (D006), multi-objective cross-surface isolation (obligation2), deterministic reduction + conflict (D012), typed human label consumed (D007), tri-state untyped-human=pending vs untyped-agent=dishonest (D015), plan-journey both-families requirement (obligation3)"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/experience_readiness_honesty.py",
+          "captured_by": "claude",
+          "note": "Pure degraded-honesty + cross-surface agreement checker; consumes MERGED 2a-core enums (D008/D009), no schema redefinition"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_experience_readiness_honesty_f004.py",
+          "captured_by": "claude",
+          "note": "Named tests pinning the 5 acceptance cases + the 3 round-3 implementation obligations (D018)"
+        }
+      ]
     }
   ]
 }
