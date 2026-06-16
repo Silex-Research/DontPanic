@@ -1,10 +1,10 @@
 {
   "audit_kind": "v1_evidence_coverage_heuristic",
-  "generated_at": "2026-06-16T14:40:37.284630+00:00",
+  "generated_at": "2026-06-16T15:21:19.177192+00:00",
   "plan_id": "2026-06-15-001-feat-experience-readiness-evidence-typing-v0",
   "contract_path": "./objective_contract.json",
   "evidence_manifest_uris": [
-    "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list.json",
+    "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list-and-status.json",
     "evidence/goal-governance/post_impl/cli_agent/agent-surface-evidence-is-capturable-and-dogfooded/skip-cli_agent.txt",
     "evidence/goal-governance/post_impl/pytest/agent-surface-evidence-is-capturable-and-dogfooded/pytest.txt",
     "evidence/goal-governance/post_impl/pytest/author-declares-consumers-and-surface-evidence/pytest.txt",
