@@ -3,7 +3,7 @@ id: 2026-06-15-002-feat-experience-readiness-degraded-honesty-v0
 title: Experience Readiness — degraded honesty + cross-surface agreement v0 (2a-F004)
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-15"
 goal_type: new_feature
 description: >

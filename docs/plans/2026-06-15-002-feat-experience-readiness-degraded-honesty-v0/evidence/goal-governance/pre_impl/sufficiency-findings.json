@@ -1,0 +1,22 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:8c3f2ebc3b85e05b9381e325509cb35684718384a512bc4ef6daa0c0d4e5e8eb",
+  "generated_at": "2026-06-16T16:12:56Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "degraded-honesty-and-structured-agreement",
+      "gap_class": "parity_gap",
+      "description": "F001 introduces human_not_yet_typed_pending for a required human family with no structured unavailable EvidenceRef, but the objective contract says each required consumer_family must carry its own honest availability=unavailable signal and that absence of such evidence is degraded_dishonest. This creates an unresolved semantic exception for missing human-family evidence before implementation locks.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Decide whether an untyped required human family is contractually pending or degraded_dishonest, then pin that rule in the completion tests so absence of structured human evidence cannot be interpreted differently by the checker.",
+      "finding_class": "plan_contract"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}
