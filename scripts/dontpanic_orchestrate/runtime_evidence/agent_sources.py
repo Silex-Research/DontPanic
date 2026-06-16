@@ -193,12 +193,26 @@ def mcp_transcript_source(plan_dir, *, dispatch=_default_mcp_dispatch, clock=Non
         if MCP_READONLY_TOOL not in tool_names:
             return skip("status_tool_absent",
                         f"skipped: pinned read-only tool {MCP_READONLY_TOOL!r} not in tools/list")
-        transcript = {"request": request, "tool_names": sorted(tool_names),
-                      "pinned_read_only_tool": MCP_READONLY_TOOL}
+        # F003/D045: ACTUALLY INVOKE the pinned read-only status tool and record
+        # request+response — tools/list alone is not proof of the journey outcome.
+        status_request = {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                          "params": {"name": MCP_READONLY_TOOL, "arguments": {}}}
+        try:
+            status_response = dispatch(status_request)
+        except Exception as exc:  # noqa: BLE001
+            return skip("status_call_failed", f"skipped: status tool call fault: {type(exc).__name__}")
+        if (not isinstance(status_response, dict) or status_response.get("error")
+                or (status_response.get("result") or {}).get("isError")):
+            return skip("status_call_errored", "skipped: status tool call returned an error envelope")
+        transcript = {
+            "tools_list": {"request": request, "tool_names": sorted(tool_names),
+                           "pinned_read_only_tool": MCP_READONLY_TOOL},
+            "status_call": {"request": status_request, "response": status_response},
+        }
         body = json.dumps(transcript, indent=2, ensure_ascii=False)
-        uri, hash_ = _write(plan_dir, name, journey, "mcp-tools-list.json", body)
+        uri, hash_ = _write(plan_dir, name, journey, "mcp-tools-list-and-status.json", body)
         return [_success_ref(uri=uri, hash_=hash_, evidence_class="tool_call_transcript",
-                             surface_class="agent_mcp_tool", data_source="mcp:tools/list", clock=clock)]
+                             surface_class="agent_mcp_tool", data_source="mcp:tools/list+status", clock=clock)]
 
     return _BoundSource(name=name, _fn=_collect)
 

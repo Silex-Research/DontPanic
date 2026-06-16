@@ -102,15 +102,15 @@
       "evidence_refs": [
         {
           "type": "log",
-          "uri": "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list.json",
+          "uri": "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list-and-status.json",
           "captured_by": "agent-evidence-source",
           "evidence_class": "tool_call_transcript",
           "data_provenance": "real",
-          "data_source": "mcp:tools/list",
+          "data_source": "mcp:tools/list+status",
           "availability": "available",
           "consumer_family": "agent",
           "surface_class": "agent_mcp_tool",
-          "note": "live in-process MCP tools/list incl pinned read-only status tool"
+          "note": "live in-process MCP: tools/list (incl pinned status tool) + actual status tool invocation request+response recorded (D045)"
         },
         {
           "type": "test_output",
@@ -134,8 +134,8 @@
           "availability": "unavailable",
           "consumer_family": "agent",
           "surface_class": "cli_agent",
-          "degraded_mode": "cli_absent",
-          "note": "honest typed-skip: dontpanic CLI not on PATH in capture env"
+          "degraded_mode": "cli_contract_unmet",
+          "note": "honest typed-skip: dontpanic 'doctor --json' exit=2 / stdout off pinned schema in capture env (matches artifact body; D029 consistency)"
         },
         {
           "type": "test_output",

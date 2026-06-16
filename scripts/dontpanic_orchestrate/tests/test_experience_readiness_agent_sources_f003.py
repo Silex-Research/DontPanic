@@ -68,7 +68,11 @@ def test_cli_offline_guard_unset_yields_typed_skip(tmp_path):
     assert r.data_provenance == "degraded"
     assert r.degraded_mode == "offline_guard_unset"
     assert r.note and r.surface_class == "cli_agent"
-    assert "reason:" in _read(tmp_path, r)  # artifact body carries the reason
+    body = _read(tmp_path, r)
+    # D029: reason location explicit + asserted; ref degraded_mode/note CONSISTENT with body
+    assert "reason:" in body
+    assert f"degraded_mode: {r.degraded_mode}" in body
+    assert r.note in body
 
 
 def test_cli_contract_unmet_and_absent_yield_typed_skips(tmp_path):
@@ -102,8 +106,13 @@ def test_mcp_success_via_in_process_server_lists_status_tool(tmp_path):
     assert r.surface_class == "agent_mcp_tool"
     assert r.availability == "available" and r.consumer_family == "agent"
     assert r.data_provenance == "real"
-    body = _read(tmp_path, r)
-    assert a.MCP_READONLY_TOOL in body  # pinned read-only tool present in tools/list
+    import json
+    body = json.loads(_read(tmp_path, r))
+    # D045: tools/list AND an actual status tool invocation (request+response) recorded
+    assert a.MCP_READONLY_TOOL in body["tools_list"]["tool_names"]
+    assert body["status_call"]["request"]["params"]["name"] == a.MCP_READONLY_TOOL
+    assert body["status_call"]["request"]["method"] == "tools/call"
+    assert "response" in body["status_call"]
 
 
 def test_mcp_status_tool_absent_yields_typed_skip(tmp_path):
@@ -113,6 +122,18 @@ def test_mcp_status_tool_absent_yields_typed_skip(tmp_path):
     src = a.mcp_transcript_source(tmp_path, dispatch=dispatch)
     (r,) = src.collect(JOURNEY)
     assert r.degraded_mode == "status_tool_absent" and r.availability == "unavailable"
+
+
+def test_mcp_status_call_error_yields_typed_skip(tmp_path):
+    # tools/list lists status, but the status call returns an error envelope
+    def dispatch(msg):
+        if msg["method"] == "tools/list":
+            return {"result": {"tools": [{"name": a.MCP_READONLY_TOOL}]}}
+        return {"result": {"isError": True, "content": []}}
+
+    src = a.mcp_transcript_source(tmp_path, dispatch=dispatch)
+    (r,) = src.collect(JOURNEY)
+    assert r.degraded_mode == "status_call_errored" and r.availability == "unavailable"
 
 
 # --- contract-check -----------------------------------------------------------

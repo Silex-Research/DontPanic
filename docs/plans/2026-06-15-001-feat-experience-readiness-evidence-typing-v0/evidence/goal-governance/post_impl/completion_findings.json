@@ -1,0 +1,49 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-16T14:40:37.284630+00:00",
+  "plan_id": "2026-06-15-001-feat-experience-readiness-evidence-typing-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/agent_mcp_tool/agent-surface-evidence-is-capturable-and-dogfooded/mcp-tools-list.json",
+    "evidence/goal-governance/post_impl/cli_agent/agent-surface-evidence-is-capturable-and-dogfooded/skip-cli_agent.txt",
+    "evidence/goal-governance/post_impl/pytest/agent-surface-evidence-is-capturable-and-dogfooded/pytest.txt",
+    "evidence/goal-governance/post_impl/pytest/author-declares-consumers-and-surface-evidence/pytest.txt",
+    "evidence/goal-governance/post_impl/pytest/typing-rule-rejects-substrate-and-seeded-only-closes/pytest.txt",
+    "evidence/goal-governance/post_impl/service_batch/agent-surface-evidence-is-capturable-and-dogfooded/contract-check.json"
+  ],
+  "findings": [
+    {
+      "finding_id": "F2C-E001",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'tests for the surface->family total mapping, consumer/fixture_only validation, and the new EvidenceRef fields with the no-new-type-value invariant (F001)' not captured",
+      "narrative": "The contract declares required_evidence='tests for the surface->family total mapping, consumer/fixture_only validation, and the new EvidenceRef fields with the no-new-type-value invariant (F001)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "author-declares-consumers-and-surface-evidence",
+      "matcher_string": "tests for the surface->family total mapping, consumer/fixture_only validation, and the new EvidenceRef fields with the no-new-type-value invariant (F001)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E002",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'typing-rule tests: substrate mismatch, real-screenshot satisfied, seeded_masks_readiness on non-fixture vs fixture journeys (F002)' not captured",
+      "narrative": "The contract declares required_evidence='typing-rule tests: substrate mismatch, real-screenshot satisfied, seeded_masks_readiness on non-fixture vs fixture journeys (F002)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "author-declares-consumers-and-surface-evidence",
+      "matcher_string": "typing-rule tests: substrate mismatch, real-screenshot satisfied, seeded_masks_readiness on non-fixture vs fixture journeys (F002)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E003",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)' not captured",
+      "narrative": "The contract declares required_evidence='harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "author-declares-consumers-and-surface-evidence",
+      "matcher_string": "harness tests for the three agent EvidenceSource adapters using existing type values + agent evidence_class + typed-skip + source-agnostic + no-secret (F003)",
+      "evidence_uris": []
+    }
+  ]
+}
