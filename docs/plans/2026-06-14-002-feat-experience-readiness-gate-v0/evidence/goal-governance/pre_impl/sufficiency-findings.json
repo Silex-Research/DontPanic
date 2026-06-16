@@ -2,41 +2,63 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:5224a0bffe7e0901e67a0a071cdebed3ffa1ef0a1f2a311280a1d07ee977a24c",
-  "generated_at": "2026-06-16T17:43:51Z",
+  "input_fingerprint": "sha256:aa3fff58b5fd66e33515cc2861553cd56c47d5df725d25ed47d716fc8d45e16c",
+  "generated_at": "2026-06-16T17:54:41Z",
   "findings": [
     {
-      "severity": "critical",
+      "severity": "high",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "parity_gap",
-      "description": "F001's D034/D035 pending rule lets consumer=both close when the agent family is proven but the human family is not_yet_typed, while the objective contract says consumer=both requires both families proven and a missing family yields consumer_outcome_unproven unless structurally deferred or dispositioned.",
+      "description": "F001 still contains stale substrate-posture wording saying the same unproven consumer gap on a substrate plan warns, while the contract and later D030 text require any consumer-journey-bearing plan, including substrate, to block unless structurally deferred or dispositioned.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Resolve the contract before lock: either amend the objective contract to explicitly allow the platform-level human-not-yet-typed pending exception, or make F001 block unless a structured deferral/disposition exists.",
+      "recommendation": "Remove or narrow the stale substrate warning language so advisory is only the substrate opted-in/no-consumer-journey cell.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "high",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "wiring_gap",
-      "description": "Product metadata is listed as an activation and posture input, but the proposed feature does not define the concrete metadata keys, parser, or close_plan wiring that makes product/migration/readiness/ux/consumer-facing delivery deterministic.",
+      "description": "The delivery_class parser is specified only for valid enum values and absent metadata. An invalid frontmatter value is not pinned, so a typo could be treated like absent/substrate and weaken the product_metadata activation path.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Pin the product_metadata schema and extraction path, then add a metadata-only activation test so product claims cannot dodge enforcement through non-goal_type metadata.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Define invalid delivery_class handling deterministically, preferably fail-closed or emit a blocking/explicit validation finding, and add a parser test.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "close-time-enforcement-and-disposition",
       "gap_class": "coverage_gap",
-      "description": "The required evidence calls for product-class blocking on substrate-only evidence, but the listed tests cover API-only, seeded-only, typed-skip-only, real capture, and degraded honesty without a dedicated substrate-only product-class close-block case.",
+      "description": "The contract requires posture-matrix evidence, but F001 lists scenario tests rather than a complete matrix over opt_in, has_consumer_journey, product-class goal_type, and product_metadata.",
       "feature_refs": [
         "F001"
       ],
-      "recommendation": "Add a deterministic close_plan test where a product-class journey is covered only by substrate/internal evidence and verify consumer_outcome_unproven plus blocked status flip.",
+      "recommendation": "Add a table-driven test for experience_readiness_active and enforcement_posture covering all deterministic trigger/posture cells.",
       "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "close-time-enforcement-and-disposition",
+      "gap_class": "integration_gap",
+      "description": "The real execution requirement is per objective claim per declared consumer, but the proposed tests do not pin objective-keyed grouping or prevent one real execution from satisfying multiple journeys that share a data_source.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Add a close-gate test with two objective journeys sharing a data_source where only one has a real execution; the uncovered journey must remain unproven.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "close-time-enforcement-and-disposition",
+      "gap_class": "wiring_gap",
+      "description": "F001 records consumer_outcome_pending as structured advisory state, but it does not pin the taxonomy/output shape the way it does for consumer_outcome_unproven and no_consumer_journey_declared.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Register consumer_outcome_pending with advisory severity and a deterministic finding shape, then assert that shape in the pending human not_yet_typed test.",
+      "finding_class": "implementation_detail"
     }
   ],
   "malformed_findings": [],
