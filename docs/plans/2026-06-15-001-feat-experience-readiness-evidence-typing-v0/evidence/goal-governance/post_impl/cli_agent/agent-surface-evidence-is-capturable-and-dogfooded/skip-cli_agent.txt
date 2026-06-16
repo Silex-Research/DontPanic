@@ -1,0 +1,5 @@
+reason: skipped: argv exit=2 or stdout off pinned schema ['ok']
+source: cli_agent
+journey: agent-surface-evidence-is-capturable-and-dogfooded
+degraded_mode: cli_contract_unmet
+data_source: dontpanic_cli

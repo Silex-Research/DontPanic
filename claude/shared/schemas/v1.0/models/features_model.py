@@ -7,7 +7,15 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, conint, constr
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    conint,
+    constr,
+    model_validator,
+)
 
 
 class Category(Enum):
@@ -54,6 +62,45 @@ class EvidenceRef(BaseModel):
         None, description='Agent or tool that captured the evidence'
     )
     note: str | None = None
+    # --- Experience Readiness typing fields (plan 2026-06-15-001 F001) --------
+    # All optional + backward-compatible: an EvidenceRef carrying none of these
+    # is a legacy/untyped ref (F002 treats human-family untyped evidence as
+    # not_yet_typed). Validated against the closed experience_readiness enums.
+    evidence_class: str | None = Field(
+        None, description='Closed evidence_class enum (experience_readiness)'
+    )
+    data_provenance: str | None = Field(
+        None, description='seeded | real | degraded'
+    )
+    data_source: str | None = Field(None, description='Stable key the evidence proves')
+    availability: str | None = Field(None, description='available | unavailable')
+    consumer_family: str | None = Field(None, description='human | agent')
+    degraded_mode: str | None = Field(
+        None, description='Selected degraded mode (required when data_provenance=degraded)'
+    )
+    surface_class: str | None = Field(
+        None, description='Closed surface_class enum naming the surface this evidence attests'
+    )
+
+    @model_validator(mode='after')
+    def _validate_experience_readiness_typing(self) -> 'EvidenceRef':
+        # Lazy + path-robust import: the models dir may be on sys.path directly
+        # (top-level import) or via the `models` package (harness inserts v1.0).
+        try:
+            from experience_readiness import validate_evidence_typing
+        except ImportError:  # pragma: no cover - import-path fallback
+            from models.experience_readiness import validate_evidence_typing
+        validate_evidence_typing(
+            surface_class=self.surface_class,
+            consumer_family=self.consumer_family,
+            availability=self.availability,
+            data_source=self.data_source,
+            data_provenance=self.data_provenance,
+            degraded_mode=self.degraded_mode,
+            note=self.note,
+            evidence_class=self.evidence_class,
+        )
+        return self
 
 
 class Feature(BaseModel):

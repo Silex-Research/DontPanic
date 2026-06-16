@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class GoalType(Enum):
@@ -44,6 +44,35 @@ class UserJourney(BaseModel):
     """
     What the auditor should look for to confirm journey coverage. Optional but recommended.
     """
+    consumer: str | None = None
+    """
+    Experience Readiness (plan 2026-06-15-001 F001): the intended consumer family
+    — human | agent | both. REQUIRED for any journey asserting a consumer-facing
+    outcome (D030); optional for substrate-only journeys.
+    """
+    fixture_only: bool = False
+    """
+    F001 (D031): when true, seeded evidence satisfies a consumer-readiness claim
+    (the journey is explicitly a fixture/example, not a real-data assertion).
+    """
+
+    @model_validator(mode='after')
+    def _validate_consumer_surface(self) -> 'UserJourney':
+        # Only journeys that OPT IN by declaring `consumer` get consumer x
+        # surface validation (D026). Surfaces are journey tokens resolved to
+        # closed surface_classes; unknown tokens fail closed.
+        if self.consumer is None:
+            return self
+        try:
+            from experience_readiness import resolve_surface_token, validate_consumer_surface
+        except ImportError:  # pragma: no cover - import-path fallback
+            from models.experience_readiness import (
+                resolve_surface_token,
+                validate_consumer_surface,
+            )
+        surface_classes = [resolve_surface_token(t) for t in (self.surfaces or [])]
+        validate_consumer_surface(self.consumer, surface_classes)
+        return self
 
 
 class ObjectiveContract(BaseModel):
