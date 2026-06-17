@@ -4,7 +4,7 @@
   "user_journeys": [
     {
       "name": "close-time-enforcement-and-disposition",
-      "description": "At plan close, declared consumer outcomes on product-class plans BLOCK unless satisfied, explicitly deferred, or operator-dispositioned; internal substrate plans warn. The failure mode 'plan completes even though the consumer outcome was not proven' is prevented.",
+      "description": "At plan close, declared consumer outcomes on product-class or consumer-journey-bearing plans BLOCK only when unproven, undeferred, and undispositioned; pending is advisory, while satisfied, deferred, or dispositioned outcomes allow close. Product-class plans with no journeys and substrate plans opted in with no journeys warn. The failure mode 'plan completes even though the consumer outcome was not proven' is prevented.",
       "surfaces": [
         "backend"
       ],
@@ -16,13 +16,13 @@
         "advisory"
       ],
       "acceptance_signals": [
-        "the gate ACTIVATES via ANY of opt_in / a journey declaring consumer / product-class goal_type / product_metadata (opt_in is not the only path; product claims cannot dodge by omitting the flag). product_metadata is parsed from plan.md frontmatter delivery_class: a deterministic enum {product|migration|readiness|ux|consumer_facing} -> product-class (activates + block-eligible), {substrate|mechanical|infra|refactor} -> substrate (advisory only)",
+        "the gate ACTIVATES via ANY of opt_in / a journey declaring consumer / product-class goal_type / product_metadata product-class signal (opt_in is not the only path; product claims cannot dodge by omitting the flag). product_metadata is parsed from plan.md frontmatter delivery_class: a deterministic enum {product|migration|readiness|ux|consumer_facing} -> product-class, {substrate|mechanical|infra|refactor} -> substrate/non-product, ABSENT delivery_class -> no product_metadata signal, and an unrecognized NON-EMPTY value -> product-class fail-closed",
         "ANY consumer-journey-bearing plan blocks an unproven outcome regardless of opt_in; the advisory/warn path is ONLY a substrate plan opted-in with NO consumer journeys (D030 — resolves the round-3 activation/posture contradiction)",
         "a product-class plan that declares NO consumer journey emits no_consumer_journey_declared (advisory) rather than silently passing (D031 — closes the no-journey dodge)",
         "a product-class human journey closed with only API-test (or seeded-only, or typed-skip-only) evidence raises consumer_outcome_unproven AND blocks close",
         "the same with a real consumer-surface capture -> no finding, close not blocked",
         "a STRUCTURED non-goal deferral naming {journey, consumer} or a STRUCTURED consumer_outcome_dispositions[] record {journey, consumer, reason, dispositioned_by, at} allows close (prose alone does not). Posture is per D030, NOT per substrate/product label: ANY consumer-journey-bearing plan (incl. substrate) BLOCKS an undeferred/undispositioned unproven outcome; the warn-only path is EXCLUSIVELY a substrate plan opted-in with NO consumer journeys",
-        "consumer=both requires both families proven, with the not_yet_typed carve-out (D035): a TYPED-but-unsatisfied family OR a missing/unproven ENFORCED AGENT family -> consumer_outcome_unproven (blocks unless structurally deferred or dispositioned); a required HUMAN family that is not_yet_typed (2a-core D060 — no structured evidence at all) -> consumer_outcome_pending (advisory, the platform-level human-typing deferral; NOT unproven, no explicit non_goal required)",
+        "consumer=both is tri-state per D035: a TYPED-but-unsatisfied family OR a missing/unproven ENFORCED AGENT family -> consumer_outcome_unproven (blocks unless structurally deferred or dispositioned); a required HUMAN family that is not_yet_typed (2a-core D060 — no structured evidence at all) -> consumer_outcome_pending (advisory, the platform-level human-typing deferral; NOT unproven, no explicit non_goal required)",
         "close requires >=1 real (non-seeded) end-to-end journey EXECUTION per objective claim per declared consumer; a required_data_source honestly degraded (availability=unavailable) WITHIN a real journey still satisfies (only entirely seeded / substrate-only / typed-skip-only journeys fail)"
       ]
     }
@@ -36,5 +36,5 @@
     "re-building human-surface capture",
     "accessibility / visual-regression / empty-state depth"
   ],
-  "completion_test": "One feature passes: completion_gate.close_plan invokes a DETERMINISTIC pre-flip consumer_outcome_gate that, for activated plans (opt_in OR consumer-journey OR product-class/metadata), blocks the active->completed flip on an unproven consumer outcome independent of the codex F0 triage; consumer=both requires both families; deferral/disposition are structured; a substrate plan opted-in with no journeys warns; a product-class plan with no declared consumer journey emits no_consumer_journey_declared. Consumes 2a's vocabulary; does not re-define it."
+  "completion_test": "One feature passes: completion_gate.close_plan invokes a DETERMINISTIC pre-flip consumer_outcome_gate that, for activated plans (opt_in OR consumer-journey OR product-class/metadata), blocks the active->completed flip on an unproven undeferred undispositioned consumer outcome independent of the codex F0 triage; consumer=both applies the D035 not-yet-typed human pending carve-out; deferral/disposition are structured; a substrate plan opted-in with no journeys warns; a product-class plan with no declared consumer journey emits no_consumer_journey_declared. Consumes 2a's vocabulary; does not re-define it."
 }

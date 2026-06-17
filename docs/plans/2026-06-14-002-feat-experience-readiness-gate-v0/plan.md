@@ -65,8 +65,12 @@ Do not lock 2b until 2a is merged to main.
   INDEPENDENT of the codex F0 cluster triage (whose only blocking triage is
   `child_plan`). Activation: opt_in (`experience_readiness_opt_in`) OR any
   journey declaring `consumer` OR product-class `goal_type`/metadata. Posture:
-  consumer-journey-bearing/product-class → block; substrate opted-in with no
-  journeys → advisory; otherwise no-op. `consumer=both` requires both families.
+  consumer-journey-bearing plans block only on an unproven, undeferred,
+  undispositioned outcome; pending is a per-journey advisory outcome;
+  satisfied/deferred/dispositioned outcomes allow close; product-class plans
+  with no journeys and substrate plans opted-in with no journeys are advisory;
+  otherwise no-op. `consumer=both` applies the D035 not-yet-typed human pending
+  carve-out rather than a binary both-families-proven rule.
   Deferral (structured non_goal naming {journey, consumer}) and disposition
   (`consumer_outcome_dispositions[]`) are structured, not prose. **Round-3
   resolutions:** D030 (consumer-journey-bearing always blocks regardless of
