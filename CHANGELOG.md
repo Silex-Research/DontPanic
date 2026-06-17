@@ -46,7 +46,56 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
-## 2026-06-14 — Integration operator-actions: `dontpanic integrations` (plan 2026-06-04-003)
+## 2026-06-17 — Experience Readiness Gate: consumer-outcome enforcement at close (plans 2026-06-15-001 / 2026-06-15-002 / 2026-06-14-002)
+
+### Added
+- **Evidence typing vocabulary (2a-core, plan 2026-06-15-001).** Shared closed
+  enums an EvidenceRef can now carry — `surface_class` (8 values across two
+  families: human = read_only_ui / interactive_ui / mobile_app / cli_human; agent
+  = agent_mcp_tool / cli_agent / external_integration / service_batch),
+  `evidence_class`, `consumer_family`, `data_provenance` (seeded | real |
+  degraded), `availability`, `degraded_mode` — plus a typing rule
+  (`check_journey`) that says which evidence classes a given surface + claim kind
+  requires. Fail-closed enforcement applies to agent-family surfaces today; a
+  human surface lacking the structured fields is `not_yet_typed`, never invalid
+  (shared vocabulary now, agent enforcement now, human-producer typing later).
+- **Degraded-honesty + cross-surface agreement checker (plan 2026-06-15-002,
+  "001").** `check_degraded_honesty` verifies that when a required data source is
+  down, every declared family degrades *honestly* (an explicit
+  `availability=unavailable` signal) — one family masking an outage while another
+  degrades is `degraded_dishonest`; a degraded mode not in the journey's
+  `allowed_degraded_modes` is dishonest; the human-vs-agent views for the same
+  `(objective, data_source)` must agree. A real, non-seeded journey-EXECUTION
+  ref is required for a journey to count as proven — a set of only
+  unavailable/typed-skip evidence is honest about being down but not a success.
+- **Close-time `consumer_outcome_gate` (plan 2026-06-14-002, "002").** A pure,
+  deterministic gate that `dontpanic plan close` runs BEFORE the active→completed
+  flip and independently of the cross-model audit triage. It activates when a
+  plan opts in, declares a consumer journey, has a product-class `goal_type`, or
+  `product_metadata` (parsed from plan.md `delivery_class`) marks it
+  product-class. When active and a consumer-journey-bearing plan has a declared
+  outcome that is unproven — and not structurally deferred (an objective-contract
+  `non_goal` naming `{journey, consumer}`) or operator-dispositioned (a structured
+  `consumer_outcome_dispositions[]` record; prose never satisfies) — the close is
+  **blocked**. A product-class plan with no consumer journey emits an advisory
+  `no_consumer_journey_declared`; a substrate plan opted in with no journeys emits
+  an advisory `substrate_opt_in_advisory`; neither blocks. Posture is gated on
+  *has a consumer journey*, never on `goal_type` alone.
+- New `gap_class` taxonomy entries: `consumer_outcome_unproven` (blocking),
+  `consumer_outcome_pending` (advisory), `no_consumer_journey_declared`
+  (advisory), `substrate_opt_in_advisory` (advisory).
+
+### Changed
+- `dontpanic plan close` can now refuse to close (or flag) a product-class /
+  consumer-journey-bearing plan whose user-facing outcome was not proven on a
+  real surface. Plans with none of the activation triggers (substrate work, no
+  consumer journeys, not opted in) are unaffected — the gate is a no-op for them.
+  A required human family that is `not_yet_typed` is recorded as `pending`
+  (advisory) rather than blocking, *except* when it is the only evidence for a
+  human-only journey — there it is unproven and blocks, so a human-facing claim
+  with zero proof is never silently passed.
+
+Surfaces affected: cli (plan close behavior), root_changelog
 
 ### Added
 - New `dontpanic integrations` command group:
