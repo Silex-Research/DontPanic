@@ -1,0 +1,45 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /private/tmp/dontpanic-p2-lock
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 35 items
+
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[product-ProductClass.product_class] PASSED [  2%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[migration-ProductClass.product_class] PASSED [  5%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[ux-ProductClass.product_class] PASSED [  8%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[consumer_facing-ProductClass.product_class] PASSED [ 11%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[readiness-ProductClass.product_class] PASSED [ 14%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[substrate-ProductClass.substrate] PASSED [ 17%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[mechanical-ProductClass.substrate] PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[infra-ProductClass.substrate] PASSED [ 22%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[refactor-ProductClass.substrate] PASSED [ 25%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[None-None] PASSED [ 28%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[-None] PASSED [ 31%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[prodct-ProductClass.product_class] PASSED [ 34%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_parse_product_metadata_absent_recognized_invalid[nonsense-ProductClass.product_class] PASSED [ 37%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_active_via_each_path_and_absent_metadata_is_inactive PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_classify_satisfied_requires_typing_honest_and_real_execution PASSED [ 42%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_classify_seeded_no_real_execution_is_unproven PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_classify_degraded_dishonest_is_unproven PASSED [ 48%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_classify_pending_advisory_only_when_other_family_satisfied_D051 PASSED [ 51%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_1_product_human_journey_unproven_blocks PASSED [ 54%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_2_real_capture_satisfied_not_blocked PASSED [ 57%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_4_structured_disposition_allows_close PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_5_substrate_no_journeys_not_opted_in_noop PASSED [ 62%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_7_consumer_both_only_human_capture_agent_unproven_blocks PASSED [ 65%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_9_gate_is_deterministic_independent_of_triage PASSED [ 68%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_10_substrate_opt_in_with_unproven_journey_blocks PASSED [ 71%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_11_no_dodge_product_unproven_without_opt_in_blocks PASSED [ 74%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_12_any_journey_bearing_plan_blocks_regardless_of_opt_in PASSED [ 77%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_13_product_no_journey_emits_no_consumer_journey_declared_advisory PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_14_consumer_both_agent_proven_human_pending_advisory_not_blocked PASSED [ 82%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_17_structured_non_goal_deferral_allows_close PASSED [ 85%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_19_substrate_opt_in_no_journeys_named_advisory_D052 PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_20_no_consumer_journey_finding_never_blocks PASSED [ 91%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_27_human_only_not_yet_typed_blocks_not_pending PASSED [ 94%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_28_consumer_both_agent_unsatisfied_human_pending_blocks PASSED [ 97%]
+scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py::test_d053_opt_in_only_no_journey_absent_metadata_substrate_advisory PASSED [100%]
+
+============================== 35 passed in 0.15s ==============================

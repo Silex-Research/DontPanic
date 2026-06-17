@@ -20,8 +20,31 @@
         "substrate_opt_in_advisory"
       ],
       "depends_on": [],
-      "passes": false,
-      "phase": 2
+      "passes": true,
+      "phase": 2,
+      "verified_by": [
+        "claude"
+      ],
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/goal-governance/post_impl/pytest/close-time-enforcement-and-disposition/pytest.txt",
+          "captured_by": "claude",
+          "note": "35 F001 gate tests pass: parse_product_metadata (absent/recognized/typo D048/D044), activation D022, classify_outcome tri-state incl D051 human-only-blocks constraint, deterministic posture/block matrix (tests 1-20), D051 obligations (27 human-only blocks / 28 agent-unsatisfied blocks), D052 named substrate_opt_in_advisory, D053 absent-metadata cell"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/experience_readiness_gate.py",
+          "captured_by": "claude",
+          "note": "Pure deterministic consumer_outcome_gate consuming MERGED 2a-core + 2a-F004 checkers; no schema redefinition"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_experience_readiness_gate_f001.py",
+          "captured_by": "claude",
+          "note": "35 named tests pinning the acceptance matrix + D051/D052/D053 implementation obligations"
+        }
+      ]
     }
   ]
 }
