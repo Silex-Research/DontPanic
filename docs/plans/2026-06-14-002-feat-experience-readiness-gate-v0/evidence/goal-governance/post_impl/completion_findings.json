@@ -1,0 +1,22 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-06-17T17:43:31.294774+00:00",
+  "plan_id": "2026-06-14-002-feat-experience-readiness-gate-v0",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [
+    "evidence/goal-governance/post_impl/pytest/close-time-enforcement-and-disposition/pytest.txt"
+  ],
+  "findings": [
+    {
+      "finding_id": "F2C-E001",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'enforcement tests: posture matrix, product-class block on substrate/seeded/typed-skip-only, real-capture pass, defer/disposition allows close, substrate-plan warn (F005)' not captured",
+      "narrative": "The contract declares required_evidence='enforcement tests: posture matrix, product-class block on substrate/seeded/typed-skip-only, real-capture pass, defer/disposition allows close, substrate-plan warn (F005)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "backend",
+      "journey": "close-time-enforcement-and-disposition",
+      "matcher_string": "enforcement tests: posture matrix, product-class block on substrate/seeded/typed-skip-only, real-capture pass, defer/disposition allows close, substrate-plan warn (F005)",
+      "evidence_uris": []
+    }
+  ]
+}

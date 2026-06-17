@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "Sole completion finding F2C-E001 is the v1_evidence_coverage_heuristic false-positive (envelope status flaps disagree/pass across re-dispatches on the same heuristic finding). The pytest artifact IS present at evidence/goal-governance/post_impl/pytest/close-time-enforcement-and-disposition/pytest.txt and feature evidence_refs describe the 35 gate tests (posture matrix, product-class block on substrate/seeded/typed-skip, real-capture pass, defer/disposition allows close, substrate advisory); codex disposed F2C-E001 agree:false / no_finding. Matcher inspects metadata not bytes (its own narrative + D002). Mirrors 2a-core + 2a-F004 closes.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-17T17:44:24Z",
+  "plan_id": "2026-06-14-002-feat-experience-readiness-gate-v0",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "audit envelope status='disagree' (cross-vendor disagreement or auditor response failed schema)",
+  "features_hash": "sha256:c5099982141e04b4c7a9d60dc80e2261fb77c75472c128ccd55900bca35e7a84",
+  "objective_contract_hash": "sha256:0f933b6fda5f62d684439168e4711ab695ef809994b517ccaa8aab5cc2ad109a",
+  "completion_findings_hash": "sha256:4925b978a2d0d3e0fc498e17f0e5190583193ffd419bb2fc93b4e6874a3be35e",
+  "evidence_manifest_hash": "sha256:f4c14c73b3ffbd9d602e0902e70bbde5cff22b9e7c41e267676b0517a327b424"
+}

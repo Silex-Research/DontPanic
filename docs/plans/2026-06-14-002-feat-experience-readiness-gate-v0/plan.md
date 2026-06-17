@@ -3,7 +3,7 @@ id: 2026-06-14-002-feat-experience-readiness-gate-v0
 title: Experience Readiness — close-time enforcement v0 (2b)
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-14"
 goal_type: new_feature
 description: >
