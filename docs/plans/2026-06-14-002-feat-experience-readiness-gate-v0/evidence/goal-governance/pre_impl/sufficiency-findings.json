@@ -2,32 +2,9 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:f64d67682a8cfc993f7b9287f3584ff717a5a327a3033a56b88311651d11b7a4",
-  "generated_at": "2026-06-17T00:20:29Z",
-  "findings": [
-    {
-      "severity": "medium",
-      "journey_id": "close-time-enforcement-and-disposition",
-      "gap_class": "coverage_gap",
-      "description": "F001 says a substrate plan opted in with no consumer journeys is advisory or warn, but the taxonomy and tests never pin a structured finding id or output shape for that warning. The user-facing outcome requires a surfaced warning, not just an internal posture enum.",
-      "feature_refs": [
-        "F001"
-      ],
-      "recommendation": "Add a named advisory finding for the substrate opt-in/no-journey case, or explicitly reuse an existing finding, and assert its structured output shape in tests.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "high",
-      "journey_id": "close-time-enforcement-and-disposition",
-      "gap_class": "parity_gap",
-      "description": "F001 maps human_not_yet_typed_pending to consumer_outcome_pending at the generic per-journey layer, while the objective describes the D035 pending carve-out specifically for consumer=both. Without an explicit guard, a human-only journey with no structured human evidence could close as advisory instead of blocking as an unproven declared human outcome.",
-      "feature_refs": [
-        "F001"
-      ],
-      "recommendation": "Constrain the not-yet-typed human pending carve-out to the intended consumer=both case with the enforced agent family satisfied, or explicitly expand the contract and tests if human-only pending is intended.",
-      "finding_class": "plan_contract"
-    }
-  ],
+  "input_fingerprint": "sha256:301aa00f909f1c248756ceac76b8566e09b99aa108ce7040d0e6396b99338294",
+  "generated_at": "2026-06-17T16:09:34Z",
+  "findings": [],
   "malformed_findings": [],
   "parser_notes": []
 }
