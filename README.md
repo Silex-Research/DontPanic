@@ -71,6 +71,14 @@ request changes, or reject. And a set of circuit breakers watch for waste;
 in practice you'll hit the budget and no-progress ones, and there's a global
 kill-switch behind them.
 
+When a plan claims a user-facing outcome — a screen, an API, an agent tool —
+DontPanic checks at close time that the outcome was actually demonstrated on the
+real surface, not just asserted in prose or faked with seed data. If the proof
+isn't there, the close is blocked (or flagged, for lower-stakes plans) until it's
+shown, explicitly deferred, or a human signs off. Surfaces it can't yet
+machine-check — today, most human-facing ones — are held as "pending" rather than
+waved through, so a gap is visible instead of silent.
+
 Everything leaves a trail: transcripts, audit JSON, signoff, gate state, and an
 `INBOX.md` log, all on disk.
 
@@ -154,6 +162,7 @@ agents one shared operating surface:
 | Planning readiness | Shows which plans and features are ready, blocked, or risky to run in parallel | `dontpanic next` |
 | Cross-model dispatch | Separates implementation from approval | `dontpanic dispatch-from-plan` |
 | Human gates | Pauses risky work until the operator reviews evidence | `dontpanic approve`, `resume`, `ps` |
+| Experience readiness | Before a plan that touches a user-facing surface can close, checks the consumer outcome was actually proven on a real surface — not just asserted in prose or faked with seed data — and blocks or flags it when it wasn't | (runs inside `dontpanic plan close`) |
 | Local dashboard | A read-only console for What Now, status, capabilities, gates, and scope. It only flags work it can prove is live; anything it can't refresh shows as "could not be refreshed" rather than as fake work | `dontpanic dashboard build`, `open`, `serve` |
 | Multi-repo registry | Lets one DontPanic install manage many projects | `dontpanic projects add`, `list`, `show`, `remove` |
 | Capability readiness | Shows which external integrations are ready, missing setup, or blocked | `dontpanic capabilities status`, `setup` |
