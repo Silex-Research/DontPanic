@@ -1,7 +1,7 @@
 {
   "goal_type": "new_feature",
   "source_of_truth": "The fleet dashboard renders only registered projects but presents them as 'where DontPanic is used.' Observed usage lives in ~/.dontpanic/invocations.jsonl keyed by a per-path hash (path_key) that does not canonicalize across worktrees, and temp worktrees are deleted before the dashboard runs. This plan stamps durable canonical-repo identity at write time, backfills history once from operator-local evidence, and exposes a metadata-only registry-vs-observed reconciliation, without ever recommending temp paths.",
-  "completion_test": "Done when an isolated fixture registry with DontPanic absent plus dogfooding ledger records from p2a/p2-lock/main produces exactly one canonical used_unregistered 'dontpanic' candidate keyed on canonical_repo_key, while a D010-like fixture registry with DontPanic registered classifies the same canonical repo as registered_active. `dontpanic projects discover --json` emits scrubbed display + keys + counts/recency + suggestion status only, with no temp path ever recommended, no raw home path, and no reconstructed raw add-command path in JSON; default human output may print the locally reconstructed add command. This is backed by a ledger writer that stamps a nullable canonical_repo at log time (durable_checkout describing the canonical, temp paths never self-canonicalized), explicit ledger-to-observed_canonical and registry-to-registered_canonical adapters, pinned C5 defaults (window_days=14, min_count=2, timestamp=last_seen, inclusive boundaries), and a one-time idempotent backfill of historical records that normalizes any written path_display through the shared scrubber while refusing temp canonical evidence, while repo.path_key stays unchanged for bucket/conflict logic. The seven binding contracts C1-C7 are defined in plan.md and decisions D003-D008.",
+  "completion_test": "Done when an isolated fixture registry with DontPanic absent plus dogfooding ledger records from p2a/p2-lock/main produces exactly one canonical used_unregistered 'dontpanic' candidate keyed on canonical_repo_key with a safe suggested_name, while a D010-like fixture registry with DontPanic registered classifies the same canonical repo as registered_active. `dontpanic projects discover --json` emits scrubbed display + keys + counts/recency + suggestion status + suggested_name only, with no temp path ever recommended, no raw home path, and no reconstructed raw add-command path in JSON; default human output may print the locally reconstructed add command. registered_path_missing rows use registry_name + registry_missing_key with canonical_repo_key=null. This is backed by a ledger writer that stamps a nullable canonical_repo at log time (durable_checkout describing the canonical, temp paths never self-canonicalized), compaction that preserves observed_count, explicit ledger-to-observed_canonical and registry-to-registered_canonical adapters, pinned C5 defaults (window_days=14, min_count=2, timestamp=last_seen, inclusive boundaries), and a one-time idempotent backfill of historical records that validates the exact evidence schema and normalizes any written path_display through the shared scrubber while refusing temp canonical evidence, while repo.path_key stays unchanged for bucket/conflict logic. The seven binding contracts C1-C7 are defined in plan.md and decisions D003-D008.",
   "user_journeys": [
     {
       "name": "operator-runs-discover-and-sees-canonical-truth",
@@ -16,12 +16,15 @@
       "acceptance_signals": [
         "discover --json keys candidates on canonical_repo_key",
         "The ledger-to-observed_canonical adapter skips records without canonical_repo, aggregates count + max last_seen by canonical_repo_key, preserves scrubbed display, and never reads command",
+        "Compacted ledger rows preserve observed_count, and legacy rows without observed_count count as 1",
         "The registry-to-registered_canonical adapter computes registered canonical keys and path_exists before pure reconcile; reconcile itself performs no filesystem/git IO",
+        "registered_path_missing rows are keyed by registry_name + registry_missing_key with canonical_repo_key=null",
         "With an isolated registry where DontPanic is absent, the three observed DontPanic paths collapse to one used_unregistered candidate",
         "With a D010-like registry where DontPanic is registered, the same canonical repo is registered_active",
         "Default policy is deterministic: window_days=14, min_count=2, timestamp=last_seen, inclusive observed_count and recency boundaries",
+        "used_unregistered rows carry a project-name-regex-safe suggested_name derived from scrubbed display and canonical key",
         "Temp-prefixed paths never appear as recommended projects",
-        "--json output contains scrubbed display + keys + counts/recency + suggestion status only; no raw home path and no reconstructed raw add-command path",
+        "--json output contains scrubbed display + keys + counts/recency + suggestion status + suggested_name only; no raw home path and no reconstructed raw add-command path",
         "A record with a secret-shaped command still yields clean output"
       ]
     },
@@ -56,6 +59,7 @@
       "acceptance_signals": [
         "--dry-run reports would-stamp / would-skip / already-stamped counts",
         "Re-running produces no further mutation",
+        "The evidence file schema is exact: schema_version 1.0, canonical_repos map, and observation_path_key_to_canonical map to lists of canonical keys",
         "Ambiguous or absent observation keys are skipped and reported",
         "The C4 evidence matrix skips malformed fields, path_key mismatch, origin_key conflict, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, and durable_checkout=true claimed for a temp canonical path",
         "Literal home-path evidence is normalized to <home>-scrubbed path_display before any canonical_repo write",

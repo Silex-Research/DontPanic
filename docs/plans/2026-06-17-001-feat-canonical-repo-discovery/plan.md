@@ -91,17 +91,19 @@ correct, never re-derived from lossy evidence. Observation identity
 ## Sequence
 
 1. **F001 — Ledger writer stamps canonical repo identity** (prerequisite).
-2. **F002 — One-time canonical backfill engine** for the 51 historical records,
+2. **F006 — Backfill evidence schema**: exact C4 evidence file shape and
+   malformed/ambiguous classification.
+3. **F002 — One-time canonical backfill engine** for the 51 historical records,
    consuming the operator-local evidence captured while the temp worktrees still
    exist.
-3. **F003 — Ledger adapter + pure reconciliation function**: read
+4. **F003 — Ledger adapter + pure reconciliation function**: read
    `invocations.jsonl` into `observed_canonical` rows, then join registry vs
    observed canonical repos into the four-state projection, thresholds/decay
    (C5), durability gating (C3), metadata-only (C6). No CLI, no formatting.
-4. **F004 — `discover [--json]` CLI**: thin wrapper that renders F003's
+5. **F004 — `discover [--json]` CLI**: thin wrapper that renders F003's
    projection with the privacy boundary (C1) — scrubbed display + keys only,
    add-command path reconstructed operator-locally.
-5. **F005 — Backfill operator entrypoint**: exposes the C4-pinned migration
+6. **F005 — Backfill operator entrypoint**: exposes the C4-pinned migration
    command, default path resolution, status behavior, and report schema for the
    F002 engine.
 
@@ -178,6 +180,11 @@ persisting a raw path.
   bucket / conflict / locality logic. Observation identity and discovery
   identity are different equivalence classes and stay separate. Existing
   `_bucket_key` / conflict behavior is unchanged.
+- Invocation records may carry an `observed_count` integer. Legacy records
+  without the field count as `1`. `compact_ledger` must sum `observed_count`
+  when it collapses duplicate records into one preserved row. Discovery uses
+  summed `observed_count`, never raw row count, so C5 thresholds remain
+  deterministic before and after ledger compaction.
 
 ### C3 — Canonical attribution & durability gating (three disjoint cases)
 A temp path (`/tmp`, `/private/tmp`, `/var/folders`) is **never stamped as a
@@ -212,6 +219,36 @@ consumes it **idempotently** (re-runnable, no duplicate mutation) and **refuses
 ambiguous mappings** (a record whose observation key maps to more than one
 canonical repo, or whose canonical repo cannot be confirmed, is left untouched
 and reported, never guessed).
+
+The evidence file schema is exact:
+
+```json
+{
+  "schema_version": "1.0",
+  "canonical_repos": {
+    "<canonical_path_key>": {
+      "path_key": "<canonical_path_key>",
+      "path_display": "<scrubbed-display>",
+      "durable_checkout": true,
+      "origin_key": "<optional-origin-key>",
+      "observed_under_temp_prefix": true
+    }
+  },
+  "observation_path_key_to_canonical": {
+    "<observed_path_key>": ["<canonical_path_key>"]
+  }
+}
+```
+
+Required top-level keys are `schema_version`, `canonical_repos`, and
+`observation_path_key_to_canonical`. `schema_version` must be `"1.0"`.
+`canonical_repos` is a map keyed by canonical path key; each value may contain
+only `path_key`, `path_display`, `durable_checkout`, optional `origin_key`, and
+optional `observed_under_temp_prefix`. `observation_path_key_to_canonical` is a
+map from observed path key to a list of canonical path keys. Exactly one entry in
+that list is confirmable; zero, more than one, a non-list value, an unknown
+canonical key, or a canonical object whose `path_key` differs from its map key is
+malformed/ambiguous and must skip with a reason.
 
 Evidence confirmation is deterministic and uses the evidence file as the sole
 historical source of truth. For a ledger record lacking `canonical_repo`, a
@@ -285,6 +322,31 @@ recommendations. The `discover` command wires these defaults and exposes
 overrides (`--window-days`, `--min-count`) that feed the same policy object used
 by tests. A repo that is merely present in the append-only ledger is **not** a
 recommendation; the ledger is never treated as unbounded fresh product input.
+
+Projection identity is explicit:
+
+- `used_unregistered`, `registered_active`, and `registered_stale` rows are keyed
+  by `canonical_repo_key`.
+- `registered_path_missing` rows cannot be keyed by `canonical_repo_key` because
+  the path cannot be probed/canonicalized. They are keyed by
+  `registry_missing_key = sha256(normalized stored registry path)[:16]` plus
+  `registry_name`; their `canonical_repo_key` is `null`. F004 JSON preserves this
+  shape so missing-path rows cannot masquerade as canonical repo rows.
+
+Suggested project names are deterministic and safe:
+
+- Derive the base from the basename of the scrubbed canonical `path_display`
+  (`<home>/src/DontPanic` -> `DontPanic`; literal outside-home paths use their
+  basename). Lowercase it, replace every non-`[a-z0-9-]` character with `-`,
+  collapse repeated hyphens, trim leading/trailing hyphens, and use `project` if
+  the result is empty.
+- The result must match `^[a-z0-9][a-z0-9-]{0,63}$`. If it collides with a
+  registered project name or another suggested row, append
+  `-<canonical_repo_key[:8]>`, truncating the base so the whole name stays at
+  most 64 characters.
+- `discover --json` may include `suggested_name` because it is derived from
+  scrubbed display + hashed key only. The real path remains human-output only per
+  C1.
 
 ### C6 — No command parsing
 Discovery derives **only** from structured `repo` / `canonical_repo` metadata and
