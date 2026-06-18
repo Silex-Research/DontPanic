@@ -91,8 +91,9 @@ correct, never re-derived from lossy evidence. Observation identity
 ## Sequence
 
 1. **F001 — Ledger writer stamps canonical repo identity** (prerequisite).
-2. **F002 — One-time canonical backfill** of the 51 historical records, consuming
-   the operator-local evidence captured while the temp worktrees still exist.
+2. **F002 — One-time canonical backfill engine** for the 51 historical records,
+   consuming the operator-local evidence captured while the temp worktrees still
+   exist.
 3. **F003 — Ledger adapter + pure reconciliation function**: read
    `invocations.jsonl` into `observed_canonical` rows, then join registry vs
    observed canonical repos into the four-state projection, thresholds/decay
@@ -100,6 +101,9 @@ correct, never re-derived from lossy evidence. Observation identity
 4. **F004 — `discover [--json]` CLI**: thin wrapper that renders F003's
    projection with the privacy boundary (C1) — scrubbed display + keys only,
    add-command path reconstructed operator-locally.
+5. **F005 — Backfill operator entrypoint**: exposes the C4-pinned migration
+   command, default path resolution, status behavior, and report schema for the
+   F002 engine.
 
 F003 and F004 are split so each fits a single sized dispatch (pure logic vs CLI
 surface), per the sizing discipline; together they are the "discover --json"
@@ -149,6 +153,14 @@ In every case the operator runs the command themselves (no dashboard mutation).
 The reconstructed path is computed in the read-time process and never persisted
 or served. This must pass the existing `_assert_no_secret_shapes` /
 `scrub_secrets` checks.
+
+Any `canonical_repo` written by the ledger writer or backfill MUST use the
+scrubbed `path_display` produced by `make_path_pair` / the shared scrubber for
+the reconstructed local path. A literal evidence display that resolves under
+`Path.home()` is never copied through as raw text; it is normalized to the
+`<home>`-scrubbed display before write. If the recomputed scrubbed display cannot
+be produced or fails the path-key confirmation, the row is skipped rather than
+persisting a raw path.
 
 ### C2 — Canonical repo contract
 - `repo` = the **observed execution directory** (the worktree/checkout the command
@@ -214,23 +226,65 @@ backfill candidate is **CONFIRMED** iff:
   key is identical; and
 - `path_display` is reconstructable by the C1 home-token or literal-display
   rules, and recomputing the path pair from that reconstructed local path yields
-  the same `path_key`.
+  the same `path_key`;
+- the reconstructed canonical path is NOT under a temp prefix (`/tmp`,
+  `/private/tmp`, `/var/folders`); and
+- the canonical display to be written is the recomputed scrubbed display, not the
+  raw evidence display.
 
 Any absent observation key, conflicting canonical key, `path_key` mismatch,
 `origin_key` mismatch, non-reconstructable scrub token, malformed field, or
-failed path-key confirmation is **SKIP + report reason**. The backfill does not
-probe deleted temp worktrees and does not parse `command`.
+failed path-key confirmation is **SKIP + report reason**. A reconstructed
+canonical path under a temp prefix, or an evidence row that claims
+`durable_checkout=true` for such a temp canonical path, is also **SKIP + report
+reason** because it contradicts C3. The backfill does not probe deleted temp
+worktrees and does not parse `command`.
 
 The implementation also adds a repo-local guard for overridden
 `DONTPANIC_HOME`: `.gitignore` must ignore `.dontpanic/canonical-backfill-evidence.json`,
 and tests/doc evidence must prove this operator evidence file is never tracked.
 
+The backfill operator surface is:
+
+```bash
+dontpanic projects backfill-canonical [--dry-run] [--json] \
+  [--ledger <path>] [--evidence <path>]
+```
+
+Default paths are resolved through the same `DONTPANIC_HOME` / global-config
+logic as the ledger writer: ledger defaults to `invocation_ledger.ledger_path()`;
+evidence defaults to `$DONTPANIC_HOME/canonical-backfill-evidence.json`. `--dry-run`
+performs all validation and reports without writing. Exit code contract:
+
+- `0`: command completed; report may include skipped rows.
+- `2`: usage error, missing/malformed evidence file, unreadable ledger, or
+  atomic write failure.
+
+The JSON report shape is stable for tests and operator use:
+
+```json
+{
+  "would_stamp": 0,
+  "stamped": 0,
+  "already_stamped": 0,
+  "would_skip": [{"path_key": "...", "reason": "..."}],
+  "skipped": [{"path_key": "...", "reason": "..."}],
+  "ledger_path": "<scrubbed-display>",
+  "evidence_path": "<scrubbed-display>",
+  "dry_run": true
+}
+```
+
 ### C5 — Decay / thresholds
 `discover --json` applies a **minimum recency and count policy from day one**,
-even if conservative (e.g. observed within N days AND ≥ M invocations).
-A repo that is merely present in the append-only ledger is **not** a
-recommendation. Thresholds are explicit, documented, and tested — the ledger is
-never treated as unbounded fresh product input.
+with concrete defaults: `window_days = 14`, `min_count = 2`, timestamp field =
+`last_seen`. A used-unregistered candidate passes iff
+`observed_count >= min_count` **and** `last_seen >= now - window_days` (inclusive
+boundary). Missing or invalid `last_seen` fails closed and is excluded from
+recommendations. The `discover` command wires these defaults and exposes
+overrides (`--window-days`, `--min-count`) that feed the same policy object used
+by tests. A repo that is merely present in the append-only ledger is **not** a
+recommendation; the ledger is never treated as unbounded fresh product input.
 
 ### C6 — No command parsing
 Discovery derives **only** from structured `repo` / `canonical_repo` metadata and

@@ -2,65 +2,69 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:dc0ac0b86fb9dda1535ecde21a9e55f6d0f7d5f2b1c8f7a264c2a8d8fff29ca4",
-  "generated_at": "2026-06-18T04:47:30Z",
+  "input_fingerprint": "sha256:ca3977a4300c43c54bac449465a6d817fb530b037f5ed7e2f476f359ca74eb4b",
+  "generated_at": "2026-06-18T13:19:04Z",
   "findings": [
+    {
+      "severity": "critical",
+      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
+      "gap_class": "coverage_gap",
+      "description": "F002 validates that a reconstructed evidence path recomputes to the same path_key, but it does not explicitly reject or normalize a literal path_display that is actually under Path.home(). Such evidence could stamp a raw home path into historical canonical_repo data, and F003/F004 would then preserve or serialize it, violating the C1 privacy boundary.",
+      "feature_refs": [
+        "F002",
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Pin a C4 validation rule that compares evidence path_display against make_path_pair(reconstructed_path).path_display and only writes the scrubbed display; reject literal absolute paths under Path.home().",
+      "finding_class": "matrix_pin"
+    },
     {
       "severity": "high",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
       "gap_class": "wiring_gap",
-      "description": "F003 declares a pure reconcile(registry, observed_canonical, now, policy) function, while F004 only says it loads observed canonical repos. No proposed feature pins the ledger-to-observed_canonical adapter that reads invocations.jsonl, ignores records without canonical_repo, aggregates count and max last_seen by canonical_repo_key, preserves scrubbed display, and proves command is never read.",
+      "description": "F003 describes reconcile() as a pure function, but its steps also require registered-side keys to be computed via the F001 filesystem/git canonicalization. That creates an unresolved boundary: registered_active and registered_path_missing need canonical keys and path-existence facts, but the pure reconciliation input contract does not define where those facts come from.",
       "feature_refs": [
         "F003",
         "F004"
       ],
-      "recommendation": "Add an explicit IO adapter contract between F002/F004 and F003: ledger records in, observed_canonical rows out, keyed by canonical_repo.path_key with count/max last_seen/path_display/durable_checkout only.",
+      "recommendation": "Split a registry-to-canonical adapter from reconcile(), and define the exact registered row shape passed into the pure function, including canonical_repo_key, scrubbed display, path_exists, and any unresolved-path status.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "high",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
       "gap_class": "parity_gap",
-      "description": "F004 mixes two incompatible output expectations: JSON must contain scrubbed display plus counts only with no raw home path, but the tests also require a home-substituted projects add suggestion. If that suggestion appears in --json, C1 and the completion test fail; if it is human-only, the modality boundary is not pinned.",
-      "feature_refs": [
-        "F004"
-      ],
-      "recommendation": "Pin the render matrix: --json never serializes reconstructed raw add paths, while human output may print locally reconstructed commands. Add separate JSON and human-output tests for all three C1 reconstruction cases.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "integration_gap",
-      "description": "D010 says the durable DontPanic checkout was already registered, but the journey expects the p2a/p2-lock/main fixture to yield one used_unregistered candidate. Correct reconciliation would classify that same canonical repo as registered_active when the D010 registry state is present.",
+      "description": "The plan requires a minimum recency and count threshold, but the default policy values, timestamp field, boundary inclusivity, and CLI default wiring are not pinned. The isolated p2a/p2-lock/main fixture can only deterministically produce exactly one candidate if these policy cells are fixed before implementation.",
       "feature_refs": [
         "F003",
         "F004"
       ],
-      "recommendation": "Pin the completion fixture registry state: test used_unregistered with DontPanic absent from the registry, and separately test registered_active with the D010-like registered state.",
-      "finding_class": "plan_contract"
+      "recommendation": "Define conservative default values for window_days and min_count, specify which ledger timestamp drives last_seen, and pin inclusive/exclusive threshold behavior for tests and CLI output.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
       "gap_class": "coverage_gap",
-      "description": "F002 requires refusing any canonical mapping that cannot be confirmed, but the evidence contract does not define deterministic confirmation rules once temp worktrees are gone. Implementers could either guess from scrubbed evidence or over-skip valid historical rows, breaking the required one-time backfill.",
+      "description": "F002 says a temp-prefix path must never be written as a canonical recommendation source, but the deterministic C4 skip matrix does not explicitly include a reconstructed canonical path under /tmp, /private/tmp, or /var/folders, nor an evidence row that marks such a path durable_checkout=true.",
       "feature_refs": [
-        "F002"
+        "F002",
+        "F003",
+        "F004"
       ],
-      "recommendation": "Define the evidence validation matrix: allowed canonical_repo fields, how <home> displays are reconstructed for confirmation, how literal paths are checked, how non-reconstructable scrub tokens are skipped, and when path_key/origin_key mismatches become ambiguity.",
+      "recommendation": "Add a C4 matrix cell that reconstructs the canonical display, applies the same temp-prefix test as F001, and skips any evidence whose canonical path is temp-prefixed regardless of durable_checkout.",
       "finding_class": "matrix_pin"
     },
     {
-      "severity": "low",
+      "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "coverage_gap",
-      "description": "F002 acceptance says the local evidence file is excluded or ignored, but the steps do not name the ignore mechanism. Because DONTPANIC_HOME can be overridden during tests or local development, relying on ~/.dontpanic being outside the repo is weaker than the promised commit guard.",
+      "gap_class": "wiring_gap",
+      "description": "F002 promises a command or script with --dry-run, but the operator-facing entrypoint, ledger path resolution, DONTPANIC_HOME override behavior, exit codes, and dry-run/report schema are not specified. That leaves the backfill journey hard to test and ambiguous for the operator running the one-time migration.",
       "feature_refs": [
         "F002"
       ],
-      "recommendation": "Add an explicit ignore or exclude entry for repo-local .dontpanic/canonical-backfill-evidence.json and a small check or doc note proving the operator evidence file is never tracked.",
-      "finding_class": "scope_guard"
+      "recommendation": "Name the entrypoint and pin its inputs, default ledger/evidence paths, home override behavior, exit-code contract, and machine-readable dry-run counts before implementation locks.",
+      "finding_class": "implementation_detail"
     }
   ],
   "malformed_findings": [],
