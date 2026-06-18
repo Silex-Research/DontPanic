@@ -1,0 +1,77 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "The fleet dashboard renders only registered projects but presents them as 'where DontPanic is used.' Observed usage lives in ~/.dontpanic/invocations.jsonl keyed by a per-path hash (path_key) that does not canonicalize across worktrees, and temp worktrees are deleted before the dashboard runs. This plan stamps durable canonical-repo identity at write time, backfills history once from operator-local evidence, and exposes a metadata-only registry-vs-observed reconciliation, without ever recommending temp paths.",
+  "binding_contracts": [
+    "C1 storage/privacy boundary: sanitized display + hashed keys in persisted/served state; real paths local-only; no raw home path or origin URL persisted.",
+    "C2 canonical contract: repo.path_key = observation identity; canonical_repo_key = discovery identity; canonical_repo_key must not replace repo.path_key in bucket/conflict/locality logic.",
+    "C3 durability gating: temp-prefixed paths never recommended; fail-closed on resolution failure.",
+    "C4 backfill source of truth: evidence file local-only/uncommitted; idempotent; refuses ambiguous mappings.",
+    "C5 decay/thresholds: minimum recency AND count from day one, tested.",
+    "C6 no command parsing: discovery uses structured metadata only.",
+    "C7 no unrelated install side effects (architecture hook removed, out of scope)."
+  ],
+  "user_journeys": [
+    {
+      "name": "operator-runs-discover-and-sees-canonical-truth",
+      "description": "An operator who has dogfooded DontPanic from temp worktrees runs `dontpanic projects discover --json` and sees exactly one canonical 'dontpanic' candidate (collapsing p2a/p2-lock/main), not three temp-path phantoms, with an observed count and a recency that passes the threshold.",
+      "surfaces": ["infra"],
+      "states": [
+        "ledger_has_canonical_repo_stamped",
+        "historical_records_backfilled",
+        "discover_invoked",
+        "single_canonical_candidate_emitted"
+      ],
+      "acceptance_signals": [
+        "discover --json keys candidates on canonical_repo_key",
+        "The three observed DontPanic paths collapse to one used_unregistered candidate",
+        "Temp-prefixed paths never appear as recommended projects",
+        "Output contains scrubbed display + counts only; no raw home path",
+        "A record with a secret-shaped command still yields clean output"
+      ]
+    },
+    {
+      "name": "writer-stamps-canonical-identity-without-breaking-buckets",
+      "description": "A new invocation in a linked worktree records a canonical_repo resolving to the main checkout while repo.path_key stays the worktree path; existing conflict/bucket behavior is unchanged.",
+      "surfaces": ["infra"],
+      "states": [
+        "invocation_in_worktree",
+        "canonical_resolved_at_write_time",
+        "observed_repo_key_preserved",
+        "bucket_logic_unchanged"
+      ],
+      "acceptance_signals": [
+        "canonical_repo {path_key, path_display, durable_checkout, origin_key?} present on the record, resolving to the durable main checkout",
+        "repo.path_key equals the observed worktree path key",
+        "_bucket_key / conflict regression test passes unchanged",
+        "A temp worktree resolving to durable DontPanic stamps canonical_repo.durable_checkout=true (C3 case 3a); an unresolved temp path stamps NO canonical_repo (C3 case 3b)",
+        "No raw home path or origin URL persisted"
+      ]
+    },
+    {
+      "name": "backfill-is-idempotent-and-refuses-ambiguity",
+      "description": "The operator runs the one-time backfill against the captured evidence; matching historical records gain canonical_repo, a second run is a no-op, and any ambiguous/unconfirmable mapping is reported and left untouched.",
+      "surfaces": ["infra"],
+      "states": [
+        "evidence_file_loaded",
+        "unambiguous_records_stamped",
+        "ambiguous_records_skipped_and_reported",
+        "rerun_is_noop"
+      ],
+      "acceptance_signals": [
+        "--dry-run reports would-stamp / would-skip / already-stamped counts",
+        "Re-running produces no further mutation",
+        "Ambiguous or absent observation keys are skipped and reported",
+        "Ledger record order and unrelated fields preserved",
+        "Evidence file is not committed (excluded/ignored)"
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "Dashboard render-time worktree grouping",
+    "One-click registration / dashboard mutation",
+    "Per-repo nagging ActionItems",
+    "What-Now advisory, selector count badge, cwd nudge, honesty disclosure line (deferred, demand-gated)",
+    "Firebase / remote sync",
+    "git-hook behavior"
+  ]
+}

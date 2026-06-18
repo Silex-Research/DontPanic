@@ -1,0 +1,85 @@
+{
+  "task_id": "2026-06-17-001-feat-canonical-repo-discovery",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "phase": 1,
+      "description": "Ledger writer stamps a nullable canonical_repo {path_key, path_display, durable_checkout, origin_key?} at write time, alongside the observed `repo`, resolving via the C3 three-case rule. ALGORITHM (pinned): canonical_root = run `git -C <observed_root> rev-parse --path-format=absolute --git-common-dir`; the returned common-dir points at the MAIN worktree's git dir for both a main checkout and a linked worktree; canonical_root = the parent dir of that common-dir when it ends in `/.git` (a linked-worktree `.git` FILE still resolves the common-dir to the main repo, so this collapses worktrees to their main checkout); if the common-dir does not end in `.git` (bare repo) or no working tree exists, treat as unresolved. worktrees.py only COMPARES common-dirs (binding_health, line ~259) and does NOT return the main-checkout path, so add a new small helper rather than reusing it. CASES (C3): (1) durable+git -> canonical=main-checkout root, durable_checkout=true; (2) durable+non-git (rev-parse fails) -> canonical=self (observed root), durable_checkout=true; (3) temp-observed -> 3a resolves to a durable canonical root => canonical=that root, durable_checkout=true; 3b resolution fails OR canonical root is itself temp => NO canonical_repo stamped (field absent). durable_checkout is a property of the CANONICAL repo (is it non-temp/on-disk-stable), never of the observed path. A temp path is never stamped as canonical and is never self-canonicalized. Records read by older code without the field must continue to load.",
+      "steps": [
+        "Read invocation_ledger.py (path_key/make_path_pair, _detect_repo_root, _detect_branch, start_recording base dict, _bucket_key, compaction/_BUCKET_KEY_FIELDS) and worktrees.py (~line 259, binding_health: it COMPARES common-dirs, does not return the main checkout path) before any change.",
+        "Add canonicalize_repo(observed_root) -> {canonical_root|None, origin_url|None, durable_checkout} implementing the pinned algorithm: single `git -C <root> rev-parse --path-format=absolute --git-common-dir` probe, derive canonical_root = parent of common-dir ending in `/.git`; classify into the three C3 cases using a temp-prefix test (/tmp, /private/tmp, /var/folders) on BOTH the observed root and the resolved canonical root. Case 3b returns canonical_root=None. No shelling beyond the one probe (+ optional one `remote get-url origin`).",
+        "In start_recording, when canonical_root is not None stamp canonical_repo = make_path_pair(canonical_root) plus durable_checkout and optional origin_key (hash of the normalized origin URL; never the raw URL — C1). When canonical_root is None (case 3b), omit canonical_repo entirely. Leave the observed `repo` and repo.path_key untouched (C2).",
+        "Ensure _bucket_key and conflict/locality logic continue to key on repo.path_key, NOT canonical_repo_key (C2). Add a regression test asserting bucket behavior is unchanged.",
+        "Extend compaction-preserved fields so canonical_repo survives compact_ledger (else grouping breaks post-compaction).",
+        "Confirm no raw home path or raw origin URL is persisted: extend/verify the no-secret-shape assertion over the new fields (C1).",
+        "Tests, one per C3 case: (1) durable git checkout -> canonical=self-root, durable=true; (1) linked worktree of a durable repo -> canonical=main-checkout root, durable=true; (2) durable non-git dir -> canonical=self, durable=true; (3a) temp worktree of a durable repo -> canonical=durable main, durable=true; (3b) temp dir with failed/temp resolution -> NO canonical_repo field; plus legacy record without canonical_repo still loads; bucket-key regression; no-secret-shape over new fields."
+      ],
+      "acceptance": "(1) When resolvable to a durable root, records carry canonical_repo {path_key, path_display, durable_checkout=true, origin_key?}, surviving compaction; when unresolvable from a temp path (C3 case 3b) the field is absent, never a temp canonical. (2) repo.path_key is unchanged and still drives bucket/conflict/locality logic, proven by a regression test (C2). (3) durable_checkout describes the canonical repo; a temp worktree of a durable repo yields durable_checkout=true (C2/C3-3a), and a temp path is never self-canonicalized (C3). (4) No raw home path or raw origin URL is persisted anywhere (C1). (5) Records written before this feature still load. (6) Tests cover all three C3 cases (incl. worktree-to-main and temp-no-stamp), legacy-record, bucket-regression, and no-secret-shape.",
+      "introduces": ["canonical_repo", "canonical_repo_key", "path_key", "path_display", "durable_checkout", "origin_key"],
+      "passes": false,
+      "depends_on": [],
+      "verified_by": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 2,
+      "description": "One-time, idempotent canonical backfill over historical invocations.jsonl using the operator-local evidence file captured while the temp worktrees still exist. Provide a command/script that reads ~/.dontpanic/canonical-backfill-evidence.json (observation path_key -> canonical_repo mapping) and stamps canonical_repo onto matching historical records that lack it. The evidence file is local operator evidence and is NOT committed (C4). The backfill is re-runnable without duplicate mutation, and refuses ambiguous mappings (a record whose observation key maps to >1 canonical repo, or an unconfirmable canonical) — those are left untouched and reported.",
+      "steps": [
+        "Define the evidence-file contract (already captured shape: canonical_repo + observation_path_key_to_canonical map keyed by observed path_key). Validate it loads and is well-formed; refuse to run on a malformed/missing file with a clear message.",
+        "Implement an idempotent pass: for each ledger record lacking canonical_repo, look up record.repo.path_key in the evidence map; if exactly one unambiguous canonical entry exists, stamp canonical_repo {path_key, path_display, durable_checkout, origin_key?} from it; if the record already has canonical_repo, skip (idempotence).",
+        "Refuse ambiguous mappings: if an observation key is absent, maps to conflicting canonical entries, or the canonical cannot be confirmed, leave the record untouched and add it to a reported `skipped` list with reason (C4).",
+        "Never write a temp-prefix path as a canonical recommendation source; durable_checkout is copied from the evidence entry (C3).",
+        "Write the updated ledger atomically (temp-file + rename), preserving record order and all existing fields; do not parse or alter the command field (C6).",
+        "Add a --dry-run mode that reports counts (would-stamp / would-skip-ambiguous / already-stamped) without writing.",
+        "Tests: idempotent re-run is a no-op; unambiguous match stamps correctly; ambiguous/absent keys are skipped+reported; malformed evidence refuses cleanly; record order + other fields preserved; the 51-record fixture (p2a/p2-lock/main) collapses to one canonical repo key."
+      ],
+      "acceptance": "(1) A backfill command (with --dry-run) consumes ~/.dontpanic/canonical-backfill-evidence.json and stamps canonical_repo onto matching historical records, idempotently (re-run is a no-op). (2) Ambiguous or unconfirmable mappings are refused and reported, never guessed (C4). (3) The evidence file is treated as local-only and is not committed (enforced by exclusion/ignore + doc note). (4) The command field is never parsed (C6). (5) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key. (6) Ledger record order and unrelated fields are preserved.",
+      "passes": false,
+      "depends_on": ["F001"],
+      "verified_by": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F003",
+      "category": "infra",
+      "phase": 3,
+      "description": "Pure registry-vs-observed reconciliation function (no CLI, no output formatting). reconcile(registry, observed_canonical, now, policy) joins the project registry against observed canonical repos derived from the ledger and returns {used_unregistered, registered_active, registered_stale, registered_path_missing} keyed on canonical_repo_key. Applies the minimum recency/count threshold (C5), durability-gates temp paths out of recommendations (C3), dedupes to one row per canonical_repo_key, and derives only from structured metadata and timestamps (C6).",
+      "steps": [
+        "Implement reconcile(registry, observed_canonical, now, policy) returning the four-state projection keyed on canonical_repo_key; registered-side keys are computed via the same canonicalization as F001 so a registered worktree path reconciles correctly.",
+        "Apply the decay/threshold policy (C5): used_unregistered requires observed within policy.window_days AND >= policy.min_count; document conservative defaults and make them overridable.",
+        "Durability-gate (C3): exclude any candidate whose canonical resolution is non-durable / temp-prefixed from used_unregistered; such usage contributes only to a durable canonical repo when one is resolvable.",
+        "Dedupe candidates to one row per canonical_repo_key (the p2a/p2-lock/main case yields a single `dontpanic` candidate), summing observed_count and taking max last_seen.",
+        "Metadata-only (C6): the function reads only repo/canonical_repo metadata + timestamps, never record.command.",
+        "Tests: empty-registry/zero-observed yields empty arrays; threshold filters low-count/old repos; temp-prefix usage never appears as used_unregistered; the three-path fixture collapses to one used_unregistered candidate; registered-but-missing-path classification; a secret-shaped command record still produces clean output."
+      ],
+      "acceptance": "(1) reconcile() returns {used_unregistered, registered_active, registered_stale, registered_path_missing} keyed on canonical_repo_key, unit-tested as a pure function, with zero-state yielding empty arrays. (2) A minimum recency AND count threshold is applied from day one and is tested (C5). (3) Temp-prefix / non-durable usage never appears as used_unregistered (C3); the p2a/p2-lock/main fixture yields exactly one canonical candidate. (4) The function reads only structured metadata + timestamps, never the command field (C6). (5) registered_path_missing is classified for a registered repo whose path no longer exists.",
+      "introduces": ["used_unregistered", "registered_active", "registered_stale", "registered_path_missing", "reconcile", "observed_canonical"],
+      "passes": false,
+      "depends_on": ["F001", "F002"],
+      "verified_by": [],
+      "evidence_refs": []
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 4,
+      "description": "`dontpanic projects discover [--json]` CLI wrapping the F003 reconcile function. Loads the registry and observed canonical repos, calls reconcile, and renders JSON and concise human output. Privacy boundary (C1): emits canonical_repo_key + scrubbed path_display + counts only. The suggested `dontpanic projects add` path is reconstructed operator-locally at render time by the three C1 rules: (a) path_display with a <home> token -> substitute str(Path.home()); (b) literal path_display (no scrub token, e.g. outside $HOME) -> use verbatim; (c) display with a non-reconstructable scrub token (<operator>/<host>) -> emit a placeholder `<path>` command and mark needs-manual-path, never guessed. No raw path is ever persisted or serialized.",
+      "steps": [
+        "Add the `discover` subcommand to the existing `dontpanic projects` CLI; --json emits the reconcile projection, default prints a concise human summary of used_unregistered + stale + path_missing.",
+        "Reconstruct the add-command path operator-locally per C1 rules (a) home-token -> Path.home() substitution, (b) literal -> verbatim, (c) non-reconstructable scrub token -> literal `<path>` placeholder + needs-manual-path flag. Never persist or read a raw absolute path; never fabricate one.",
+        "Assert no raw home path appears anywhere in the --json output (reuse the no-secret-shape assertion).",
+        "Never touch record.command in the CLI path either (C6).",
+        "Tests: --json shape matches the reconcile contract; human output lists candidates; no raw home path in JSON; the three-path fixture yields one add suggestion with the home-substituted path; a canonical path OUTSIDE $HOME yields a verbatim-literal add path; a non-reconstructable display yields the placeholder `<path>` command + needs-manual-path; empty-state serializes cleanly."
+      ],
+      "acceptance": "(1) `dontpanic projects discover --json` serializes the F003 reconcile projection; default human output is concise; empty-state serializes to empty arrays without error. (2) Output contains canonical_repo_key + scrubbed display + counts only; no raw home path appears in the JSON (C1). (3) The add-command path is reconstructed operator-locally by the three C1 rules — home-token substitution, literal-verbatim for outside-$HOME, and a placeholder `<path>` (never a guessed path) for non-reconstructable displays. (4) The CLI path never parses record.command (C6). (5) The p2a/p2-lock/main fixture yields exactly one add-command suggestion for the canonical repo.",
+      "passes": false,
+      "depends_on": ["F003"],
+      "verified_by": [],
+      "evidence_refs": []
+    }
+  ]
+}
