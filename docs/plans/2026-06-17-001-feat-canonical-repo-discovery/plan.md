@@ -93,9 +93,10 @@ correct, never re-derived from lossy evidence. Observation identity
 1. **F001 — Ledger writer stamps canonical repo identity** (prerequisite).
 2. **F002 — One-time canonical backfill** of the 51 historical records, consuming
    the operator-local evidence captured while the temp worktrees still exist.
-3. **F003 — Pure reconciliation function**: registry vs observed canonical repos,
-   four-state projection, thresholds/decay (C5), durability gating (C3),
-   metadata-only (C6). No CLI, no formatting.
+3. **F003 — Ledger adapter + pure reconciliation function**: read
+   `invocations.jsonl` into `observed_canonical` rows, then join registry vs
+   observed canonical repos into the four-state projection, thresholds/decay
+   (C5), durability gating (C3), metadata-only (C6). No CLI, no formatting.
 4. **F004 — `discover [--json]` CLI**: thin wrapper that renders F003's
    projection with the privacy boundary (C1) — scrubbed display + keys only,
    add-command path reconstructed operator-locally.
@@ -136,11 +137,18 @@ these rules (no other source; never fabricate a path):
   existing `UnknownProjectError.add_command`) and mark the row needs-manual-path.
   Do **not** guess the path.
 
-In every case the operator runs the command themselves (no dashboard mutation),
-and the rendered JSON still carries only the scrubbed display + hashed key — the
-reconstructed path is computed in the read-time process and never persisted or
-served. This must pass the existing `_assert_no_secret_shapes` / `scrub_secrets`
-checks.
+Render modality is binding:
+
+- `discover --json` **never** serializes a reconstructed raw add path. It carries
+  only scrubbed display, hashed keys, counts, recency, and a suggestion status
+  such as `can_render_command` / `needs_manual_path`.
+- Default human output may print a locally reconstructed
+  `dontpanic projects add ...` command using the three rules above.
+
+In every case the operator runs the command themselves (no dashboard mutation).
+The reconstructed path is computed in the read-time process and never persisted
+or served. This must pass the existing `_assert_no_secret_shapes` /
+`scrub_secrets` checks.
 
 ### C2 — Canonical repo contract
 - `repo` = the **observed execution directory** (the worktree/checkout the command
@@ -192,6 +200,30 @@ consumes it **idempotently** (re-runnable, no duplicate mutation) and **refuses
 ambiguous mappings** (a record whose observation key maps to more than one
 canonical repo, or whose canonical repo cannot be confirmed, is left untouched
 and reported, never guessed).
+
+Evidence confirmation is deterministic and uses the evidence file as the sole
+historical source of truth. For a ledger record lacking `canonical_repo`, a
+backfill candidate is **CONFIRMED** iff:
+
+- `record.repo.path_key` appears in `observation_path_key_to_canonical`;
+- that observation key maps to exactly one canonical repo key;
+- the referenced `canonical_repo` object contains only allowed fields
+  `{path_key, path_display, durable_checkout, origin_key?, observed_under_temp_prefix?}`;
+- `canonical_repo.path_key` matches the mapped canonical key;
+- any `origin_key` present in multiple evidence entries for the same canonical
+  key is identical; and
+- `path_display` is reconstructable by the C1 home-token or literal-display
+  rules, and recomputing the path pair from that reconstructed local path yields
+  the same `path_key`.
+
+Any absent observation key, conflicting canonical key, `path_key` mismatch,
+`origin_key` mismatch, non-reconstructable scrub token, malformed field, or
+failed path-key confirmation is **SKIP + report reason**. The backfill does not
+probe deleted temp worktrees and does not parse `command`.
+
+The implementation also adds a repo-local guard for overridden
+`DONTPANIC_HOME`: `.gitignore` must ignore `.dontpanic/canonical-backfill-evidence.json`,
+and tests/doc evidence must prove this operator evidence file is never tracked.
 
 ### C5 — Decay / thresholds
 `discover --json` applies a **minimum recency and count policy from day one**,
