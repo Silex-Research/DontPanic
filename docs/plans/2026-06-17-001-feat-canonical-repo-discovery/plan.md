@@ -98,7 +98,7 @@ correct, never re-derived from lossy evidence. Observation identity
    exist.
 4. **F003 — Ledger adapter + pure reconciliation function**: read
    `invocations.jsonl` into `observed_canonical` rows, then join registry vs
-   observed canonical repos into the four-state projection, thresholds/decay
+   observed canonical repos into the registry/usage projection, thresholds/decay
    (C5), durability gating (C3), metadata-only (C6). No CLI, no formatting.
 5. **F004 — `discover [--json]` CLI**: thin wrapper that renders F003's
    projection with the privacy boundary (C1) — scrubbed display + keys only,
@@ -251,11 +251,17 @@ Required top-level keys are `schema_version`, `canonical_repos`, and
 `observation_path_key_to_canonical`. `schema_version` must be `"1.0"`.
 `canonical_repos` is a map keyed by canonical path key; each value may contain
 only `path_key`, `path_display`, `durable_checkout`, optional `origin_key`, and
-optional `observed_under_temp_prefix`. `observation_path_key_to_canonical` is a
-map from observed path key to a list of canonical path keys. Exactly one entry in
-that list is confirmable; zero, more than one, a non-list value, an unknown
-canonical key, or a canonical object whose `path_key` differs from its map key is
-malformed/ambiguous and must skip with a reason.
+optional `observed_under_temp_prefix`. Required fields are `path_key` (string),
+`path_display` (string), and `durable_checkout` (boolean). Optional
+`origin_key`, when present, must be a hash-shaped string accepted by the shared
+no-secret-shape assertion; raw origin URLs are malformed evidence and must never
+be copied. Optional `observed_under_temp_prefix`, when present, is boolean.
+`observation_path_key_to_canonical` is a map from observed path key to a list of
+canonical path keys. Exactly one entry in that list is confirmable; zero, more
+than one, a non-list value, an unknown canonical key, a missing or incorrectly
+typed required field, a raw-secret-shaped value, or a canonical object whose
+`path_key` differs from its map key is malformed/ambiguous and must skip with a
+reason.
 
 Evidence confirmation is deterministic and uses the evidence file as the sole
 historical source of truth. For a ledger record lacking `canonical_repo`, a
@@ -265,6 +271,9 @@ backfill candidate is **CONFIRMED** iff:
 - that observation key maps to exactly one canonical repo key;
 - the referenced `canonical_repo` object contains only allowed fields
   `{path_key, path_display, durable_checkout, origin_key?, observed_under_temp_prefix?}`;
+- required fields are present with the exact C4 types, optional fields have the
+  exact C4 types when present, and `_assert_no_secret_shapes` passes over the
+  object before any field is copied;
 - `canonical_repo.path_key` matches the mapped canonical key;
 - `path_display` is reconstructable by the C1 home-token or literal-display
   rules, and recomputing the path pair from that reconstructed local path yields
@@ -277,8 +286,9 @@ backfill candidate is **CONFIRMED** iff:
 `origin_key` is copied only from the single confirmed canonical evidence object;
 because the schema is keyed by one canonical path key, there is no separate
 `origin_key` conflict cell. Any absent observation key, conflicting canonical
-key, `path_key` mismatch, non-reconstructable scrub token, malformed field, or
-failed path-key confirmation is **SKIP + report reason**. A reconstructed
+key, missing required field, type mismatch, raw-secret-shaped value, `path_key`
+mismatch, non-reconstructable scrub token, malformed field, or failed path-key
+confirmation is **SKIP + report reason**. A reconstructed
 canonical path under a temp prefix, or an evidence row that claims
 `durable_checkout=true` for such a temp canonical path, is also **SKIP + report
 reason** because it contradicts C3. The backfill does not probe deleted temp
@@ -311,7 +321,7 @@ The JSON report shape is stable for tests and operator use:
   "would_stamp": 0,
   "stamped": 0,
   "already_stamped": 0,
-  "would_skip": [{"path_key": "...", "reason": "..."}],
+  "would_skip": 0,
   "skipped": [{"path_key": "...", "reason": "..."}],
   "ledger_path": "<scrubbed-display>",
   "evidence_path": "<scrubbed-display>",
@@ -341,11 +351,13 @@ Projection identity is explicit:
 
 - `used_unregistered`, `registered_active`, and `registered_stale` rows are keyed
   by `canonical_repo_key`.
-- `registered_path_missing` rows cannot be keyed by `canonical_repo_key` because
-  the path cannot be probed/canonicalized. They are keyed by
-  `registry_missing_key = sha256(normalized stored registry path)[:16]` plus
+- `registered_path_missing` and `registered_unresolved` rows cannot be keyed by
+  `canonical_repo_key` because the path cannot be probed/canonicalized or
+  canonicalization failed despite path existence. They are keyed by
+  `registry_path_key = sha256(normalized stored registry path)[:16]` plus
   `registry_name`; their `canonical_repo_key` is `null`. F004 JSON preserves this
-  shape so missing-path rows cannot masquerade as canonical repo rows.
+  shape so missing/unresolved registry rows cannot masquerade as canonical repo
+  rows.
 
 Suggested project names are deterministic and safe:
 
@@ -365,7 +377,11 @@ Suggested project names are deterministic and safe:
 Registered-row classification is a pinned matrix:
 
 - Missing registered path (`path_exists=false`) -> `registered_path_missing`
-  keyed by `registry_name + registry_missing_key`, with `canonical_repo_key=null`.
+  keyed by `registry_name + registry_path_key`, with `canonical_repo_key=null`
+  and `canonicalization_status="missing"`.
+- Registered path exists, but canonicalization fails -> `registered_unresolved`
+  keyed by `registry_name + registry_path_key`, with `canonical_repo_key=null`
+  and `canonicalization_status="unresolved"`.
 - Explicitly inactive registry entries (`active=false`) -> no
   `registered_active` or `registered_stale` row; they remain inventory only.
 - Registered, path exists, not inactive, and no observed row -> `registered_stale`.

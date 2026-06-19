@@ -2,69 +2,44 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:b25f5bec19c1ba42f1408ff2d0af58f0d4391ea0ca6038042d159ac004d2fe61",
-  "generated_at": "2026-06-18T23:01:43Z",
+  "input_fingerprint": "sha256:6fb7fc374a155cc6719efcdf4de165d792bb799f2cea4d73e1ea16370bc68302",
+  "generated_at": "2026-06-19T04:13:48Z",
   "findings": [
     {
       "severity": "high",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "coverage_gap",
-      "description": "The plan does not pin the classification matrix for registered_active versus registered_stale. F003 carries registry active, observed_count, and last_seen, but it never states whether registered_active means registry-active, recently observed above C5 thresholds, or both, nor how inactive registered rows, missing observations, low-count observations, or invalid timestamps classify.",
-      "feature_refs": [
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Add a truth table for registered rows covering registry active/null/false, observed present/absent, count threshold, recency threshold, and invalid timestamps, then bind F003/F004 tests to it.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "high",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "coverage_gap",
-      "description": "Compaction invariance is asserted, but the mixed-attribution case is not pinned. If one bucket contains rows with canonical_repo and rows without canonical_repo, summing all rows into one compacted record can either inflate canonical observed_count or drop attribution depending on which row is preserved.",
-      "feature_refs": [
-        "F001",
-        "F003"
-      ],
-      "recommendation": "Define how compact_ledger handles buckets with missing or differing canonical_repo values while keeping _bucket_key unchanged, and add a before/after F003 assertion for mixed canonical and non-canonical rows.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "integration_gap",
-      "description": "F002 rewrites invocations.jsonl atomically with a temp-file rename, but the plan does not coordinate that rewrite with the existing ledger writer's flock-based append path. A concurrent invocation during backfill could be appended to the old file handle and then lost by the rename.",
-      "feature_refs": [
-        "F001",
-        "F002",
-        "F005"
-      ],
-      "recommendation": "Pin a shared ledger lock or an explicit quiescence/refusal rule for backfill, and test that concurrent appends are not lost or that the command safely refuses while the ledger is active.",
-      "finding_class": "implementation_detail"
-    },
-    {
-      "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
       "gap_class": "coverage_gap",
-      "description": "The C4 matrix requires origin_key conflicts to skip, but the evidence schema is a canonical_repos map keyed by unique canonical path key, so the plan does not define what value can conflict with what during backfill of records that lack canonical_repo.",
+      "description": "The F006/F002 backfill evidence contract validates allowed field names but does not pin required canonical_repo field presence, value types, durable_checkout semantics, or an origin_key hash/no-secret shape before copying origin_key into the ledger. A malformed evidence object could therefore stamp an incomplete canonical_repo or persist a raw origin-shaped value despite the C1/C4 privacy boundary.",
       "feature_refs": [
         "F006",
         "F002"
       ],
-      "recommendation": "Specify the origin_key comparison source, such as duplicate evidence entries, an observed repo field, or prior stamped records, or remove the origin_key-conflict cell if it is not representable.",
+      "recommendation": "Pin canonical evidence object validation: require path_key, path_display, and durable_checkout with expected types and durable_checkout=true for accepted canonical entries, validate origin_key as the expected hash form or pass it through the same no-secret-shape guard, and test missing/false/malformed values.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
+      "gap_class": "coverage_gap",
+      "description": "F003 introduces registered_canonical.canonicalization_status, but the reconcile contract does not define what happens when a registered path exists yet canonicalization cannot produce a canonical_repo_key. The C5 table says existing registered paths become registered_stale or registered_active, while the projection also says non-missing rows are keyed by canonical_repo_key, leaving this failure cell unclassified.",
+      "feature_refs": [
+        "F003",
+        "F004"
+      ],
+      "recommendation": "Add an explicit matrix cell for path_exists=true with failed canonicalization, including output class, key shape, JSON fields, and tests, or guarantee the registry adapter always derives a deterministic canonical_repo_key for any existing durable path.",
       "finding_class": "matrix_pin"
     },
     {
-      "severity": "low",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "coverage_gap",
-      "description": "C7 and the non-goals exclude git-hook behavior, but none of the proposed feature acceptances add a negative guard around the projects CLI changes. F004 and F005 will edit the same command surface where hook-related behavior could accidentally reappear.",
+      "severity": "medium",
+      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
+      "gap_class": "parity_gap",
+      "description": "The journey acceptance requires --dry-run to report would-stamp, would-skip, and already-stamped counts, but the pinned C4 report schema uses would_stamp as a count while would_skip is a list of skipped row objects. That mismatch leaves operator-facing status and tests ambiguous before implementation locks.",
       "feature_refs": [
-        "F004",
+        "F002",
         "F005"
       ],
-      "recommendation": "Add a small scope-guard test or review checklist item proving discover and backfill-canonical do not install, modify, or depend on project git hooks.",
-      "finding_class": "scope_guard"
+      "recommendation": "Align the report schema with the acceptance signal by adding an explicit would_skip count, renaming the detailed list, or updating the contract so the list length is the stable count semantics.",
+      "finding_class": "plan_contract"
     }
   ],
   "malformed_findings": [],
