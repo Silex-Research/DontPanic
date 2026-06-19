@@ -2,56 +2,69 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:eef52dc9fe43c8be5718912dae5e070230036d0d48e4a1a633bb3d39c1e735eb",
-  "generated_at": "2026-06-18T17:10:08Z",
+  "input_fingerprint": "sha256:b25f5bec19c1ba42f1408ff2d0af58f0d4391ea0ca6038042d159ac004d2fe61",
+  "generated_at": "2026-06-18T23:01:43Z",
   "findings": [
     {
       "severity": "high",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "integration_gap",
-      "description": "F003 says missing registry paths emit path_exists=false with no canonical_repo_key, while reconcile is required to return registered_path_missing keyed on canonical_repo_key. That is an impossible key contract for the missing-path state and leaves F004 JSON shape ambiguous.",
+      "gap_class": "coverage_gap",
+      "description": "The plan does not pin the classification matrix for registered_active versus registered_stale. F003 carries registry active, observed_count, and last_seen, but it never states whether registered_active means registry-active, recently observed above C5 thresholds, or both, nor how inactive registered rows, missing observations, low-count observations, or invalid timestamps classify.",
       "feature_refs": [
         "F003",
         "F004"
       ],
-      "recommendation": "Pin registered_path_missing identity separately, such as registry name plus scrubbed registered path key with canonical_repo_key null, or require the adapter to compute a distinct registry_path_key for missing paths.",
-      "finding_class": "plan_contract"
+      "recommendation": "Add a truth table for registered rows covering registry active/null/false, observed present/absent, count threshold, recency threshold, and invalid timestamps, then bind F003/F004 tests to it.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "high",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "integration_gap",
-      "description": "F001 only preserves canonical_repo through compact_ledger, but F003's C5 threshold depends on observed_count. Ledger compaction collapses duplicate invocation records without retaining a count, and F003 refers to summing observed_count on records that may not carry that field, so compacted ledgers can undercount usage and make min_count nondeterministic.",
+      "gap_class": "coverage_gap",
+      "description": "Compaction invariance is asserted, but the mixed-attribution case is not pinned. If one bucket contains rows with canonical_repo and rows without canonical_repo, summing all rows into one compacted record can either inflate canonical observed_count or drop attribution depending on which row is preserved.",
       "feature_refs": [
         "F001",
         "F003"
       ],
-      "recommendation": "Pin a count-preservation rule for compaction and the ledger adapter: each legacy row contributes 1, compacted rows carry an observed_count or duplicate_count, and F003 sums that field while preserving max last_seen.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "wiring_gap",
-      "description": "The completion test expects a canonical 'dontpanic' candidate and human output may print dontpanic projects add <name> <path>, but F003/F004 do not pin how an unregistered candidate gets a safe project name. Rows have scrubbed display and keys, while registry names must satisfy the project-name pattern.",
-      "feature_refs": [
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Pin suggested-name derivation and fallback behavior, including normalization to the registry name pattern, collision handling, and whether JSON carries suggested_name or only a needs-manual-name status.",
+      "recommendation": "Define how compact_ledger handles buckets with missing or differing canonical_repo values while keeping _bucket_key unchanged, and add a before/after F003 assertion for mixed canonical and non-canonical rows.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "coverage_gap",
-      "description": "F002 says to define the evidence-file contract from an already captured shape, but the proposed locked plan still does not spell out an exact JSON schema for canonical_repo entries and observation_path_key_to_canonical values. The C4 skip matrix depends on detecting multiple canonical keys and malformed fields deterministically.",
+      "gap_class": "integration_gap",
+      "description": "F002 rewrites invocations.jsonl atomically with a temp-file rename, but the plan does not coordinate that rewrite with the existing ledger writer's flock-based append path. A concurrent invocation during backfill could be appended to the old file handle and then lost by the rename.",
       "feature_refs": [
+        "F001",
         "F002",
         "F005"
       ],
-      "recommendation": "Pin the evidence JSON schema before implementation, including top-level keys, canonical repo map shape, observation mapping cardinality, optional fields, versioning, and malformed-input behavior.",
+      "recommendation": "Pin a shared ledger lock or an explicit quiescence/refusal rule for backfill, and test that concurrent appends are not lost or that the command safely refuses while the ledger is active.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
+      "gap_class": "coverage_gap",
+      "description": "The C4 matrix requires origin_key conflicts to skip, but the evidence schema is a canonical_repos map keyed by unique canonical path key, so the plan does not define what value can conflict with what during backfill of records that lack canonical_repo.",
+      "feature_refs": [
+        "F006",
+        "F002"
+      ],
+      "recommendation": "Specify the origin_key comparison source, such as duplicate evidence entries, an observed repo field, or prior stamped records, or remove the origin_key-conflict cell if it is not representable.",
       "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "low",
+      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
+      "gap_class": "coverage_gap",
+      "description": "C7 and the non-goals exclude git-hook behavior, but none of the proposed feature acceptances add a negative guard around the projects CLI changes. F004 and F005 will edit the same command surface where hook-related behavior could accidentally reappear.",
+      "feature_refs": [
+        "F004",
+        "F005"
+      ],
+      "recommendation": "Add a small scope-guard test or review checklist item proving discover and backfill-canonical do not install, modify, or depend on project git hooks.",
+      "finding_class": "scope_guard"
     }
   ],
   "malformed_findings": [],

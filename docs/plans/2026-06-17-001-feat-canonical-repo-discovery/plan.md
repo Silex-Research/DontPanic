@@ -185,6 +185,13 @@ persisting a raw path.
   when it collapses duplicate records into one preserved row. Discovery uses
   summed `observed_count`, never raw row count, so C5 thresholds remain
   deterministic before and after ledger compaction.
+- If a compaction bucket contains mixed canonical attribution (some rows have
+  `canonical_repo` and some do not, or rows carry different `canonical_repo`
+  keys), `compact_ledger` must preserve the existing observation bucket behavior
+  but **must not** invent a canonical attribution for the compacted row. It marks
+  the row `canonical_compaction_conflict=true`, omits canonical discovery fields
+  from that compacted row, and discovery ignores it rather than inflating or
+  dropping canonical usage counts silently.
 
 ### C3 — Canonical attribution & durability gating (three disjoint cases)
 A temp path (`/tmp`, `/private/tmp`, `/var/folders`) is **never stamped as a
@@ -259,8 +266,6 @@ backfill candidate is **CONFIRMED** iff:
 - the referenced `canonical_repo` object contains only allowed fields
   `{path_key, path_display, durable_checkout, origin_key?, observed_under_temp_prefix?}`;
 - `canonical_repo.path_key` matches the mapped canonical key;
-- any `origin_key` present in multiple evidence entries for the same canonical
-  key is identical; and
 - `path_display` is reconstructable by the C1 home-token or literal-display
   rules, and recomputing the path pair from that reconstructed local path yields
   the same `path_key`;
@@ -269,8 +274,10 @@ backfill candidate is **CONFIRMED** iff:
 - the canonical display to be written is the recomputed scrubbed display, not the
   raw evidence display.
 
-Any absent observation key, conflicting canonical key, `path_key` mismatch,
-`origin_key` mismatch, non-reconstructable scrub token, malformed field, or
+`origin_key` is copied only from the single confirmed canonical evidence object;
+because the schema is keyed by one canonical path key, there is no separate
+`origin_key` conflict cell. Any absent observation key, conflicting canonical
+key, `path_key` mismatch, non-reconstructable scrub token, malformed field, or
 failed path-key confirmation is **SKIP + report reason**. A reconstructed
 canonical path under a temp prefix, or an evidence row that claims
 `durable_checkout=true` for such a temp canonical path, is also **SKIP + report
@@ -312,6 +319,13 @@ The JSON report shape is stable for tests and operator use:
 }
 ```
 
+Write mode must coordinate with the live invocation writer. The backfill command
+acquires the same ledger lock used by append/write paths and holds it across the
+full read/validate/write/temp-file/rename critical section. A concurrent
+invocation append must either be serialized into the rewritten ledger or the
+backfill must fail without replacing the ledger; it must never be lost by an
+uncoordinated rename.
+
 ### C5 — Decay / thresholds
 `discover --json` applies a **minimum recency and count policy from day one**,
 with concrete defaults: `window_days = 14`, `min_count = 2`, timestamp field =
@@ -348,6 +362,23 @@ Suggested project names are deterministic and safe:
   scrubbed display + hashed key only. The real path remains human-output only per
   C1.
 
+Registered-row classification is a pinned matrix:
+
+- Missing registered path (`path_exists=false`) -> `registered_path_missing`
+  keyed by `registry_name + registry_missing_key`, with `canonical_repo_key=null`.
+- Explicitly inactive registry entries (`active=false`) -> no
+  `registered_active` or `registered_stale` row; they remain inventory only.
+- Registered, path exists, not inactive, and no observed row -> `registered_stale`.
+- Registered, path exists, not inactive, observed row has missing/invalid
+  `last_seen` -> `registered_stale`.
+- Registered, path exists, not inactive, observed row has
+  `observed_count < min_count` -> `registered_stale`.
+- Registered, path exists, not inactive, observed row has
+  `last_seen < now - window_days` -> `registered_stale`.
+- Registered, path exists, not inactive, and observed row passes both inclusive
+  thresholds (`observed_count >= min_count` and
+  `last_seen >= now - window_days`) -> `registered_active`.
+
 ### C6 — No command parsing
 Discovery derives **only** from structured `repo` / `canonical_repo` metadata and
 timestamps. It **never** reads, parses, or surfaces the free-text `command`
@@ -359,6 +390,10 @@ The architecture pre-commit hook that `dontpanic projects add` installs is
 **out of scope** for this plan and was removed before branching (no prior hook
 existed to chain). This plan does not depend on or modify git-hook behavior;
 any hook change would be a separate plan.
+
+F004 (`discover`) and F005 (`backfill-canonical`) must carry negative tests or
+doc evidence proving they do not install, modify, remove, chain, read, or depend
+on git hooks as part of their command paths.
 
 ## Non-goals
 
