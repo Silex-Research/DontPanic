@@ -2,44 +2,45 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:6fb7fc374a155cc6719efcdf4de165d792bb799f2cea4d73e1ea16370bc68302",
-  "generated_at": "2026-06-19T04:13:48Z",
+  "input_fingerprint": "sha256:2819639db27be72d5a97ef2476e741883a0667c0ccc8405c3521b3f483cf0b3a",
+  "generated_at": "2026-06-19T04:54:35Z",
   "findings": [
     {
-      "severity": "high",
+      "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
       "gap_class": "coverage_gap",
-      "description": "The F006/F002 backfill evidence contract validates allowed field names but does not pin required canonical_repo field presence, value types, durable_checkout semantics, or an origin_key hash/no-secret shape before copying origin_key into the ledger. A malformed evidence object could therefore stamp an incomplete canonical_repo or persist a raw origin-shaped value despite the C1/C4 privacy boundary.",
+      "description": "F006 validates durable_checkout only as a boolean and F002 copies it from evidence, but once the reconstructed canonical path is confirmed non-temp, C3 implies durable_checkout must be true. The plan rejects durable_checkout=true for a temp canonical path, but does not reject or recompute durable_checkout=false for a confirmed durable canonical, which could stamp records that F003 later skips.",
       "feature_refs": [
         "F006",
-        "F002"
+        "F002",
+        "F003"
       ],
-      "recommendation": "Pin canonical evidence object validation: require path_key, path_display, and durable_checkout with expected types and durable_checkout=true for accepted canonical entries, validate origin_key as the expected hash form or pass it through the same no-secret-shape guard, and test missing/false/malformed values.",
+      "recommendation": "Pin backfill confirmation to require durable_checkout === true for any confirmed non-temp canonical path, or recompute it as true instead of copying evidence; add a false-on-non-temp evidence test.",
       "finding_class": "plan_contract"
     },
     {
       "severity": "medium",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
       "gap_class": "coverage_gap",
-      "description": "F003 introduces registered_canonical.canonicalization_status, but the reconcile contract does not define what happens when a registered path exists yet canonicalization cannot produce a canonical_repo_key. The C5 table says existing registered paths become registered_stale or registered_active, while the projection also says non-missing rows are keyed by canonical_repo_key, leaving this failure cell unclassified.",
+      "description": "F004 says discover --json emits scrubbed display, keys, counts, recency, suggestion status, and suggested_name, but neither F003 nor F004 pins the exact JSON field names, value types, or suggestion_status enum. That leaves the completion test and downstream metadata substrate open to incompatible interpretations.",
       "feature_refs": [
         "F003",
         "F004"
       ],
-      "recommendation": "Add an explicit matrix cell for path_exists=true with failed canonicalization, including output class, key shape, JSON fields, and tests, or guarantee the registry adapter always derives a deterministic canonical_repo_key for any existing durable path.",
+      "recommendation": "Define the exact top-level arrays and per-row JSON schemas, including observed_count, last_seen/recency representation, path_display, canonical_repo_key, fallback registry fields, suggested_name placement, and suggestion_status enum values.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "parity_gap",
-      "description": "The journey acceptance requires --dry-run to report would-stamp, would-skip, and already-stamped counts, but the pinned C4 report schema uses would_stamp as a count while would_skip is a list of skipped row objects. That mismatch leaves operator-facing status and tests ambiguous before implementation locks.",
+      "gap_class": "integration_gap",
+      "description": "F002 says the backfill engine holds the live writer ledger lock, while F005 says the entrypoint acquires the same lock across the F002 sequence. Without a single pinned lock owner or reentrant transaction API, implementation can double-acquire a non-reentrant lock or accidentally run part of validation outside the critical section.",
       "feature_refs": [
         "F002",
         "F005"
       ],
-      "recommendation": "Align the report schema with the acceptance signal by adding an explicit would_skip count, renaming the detailed list, or updating the contract so the list length is the stable count semantics.",
-      "finding_class": "plan_contract"
+      "recommendation": "Pin the lock boundary explicitly: either F005 owns the lock and calls an unlocked F002 transaction body, or F002 owns the full locked write-mode transaction and F005 only dispatches it.",
+      "finding_class": "implementation_detail"
     }
   ],
   "malformed_findings": [],
