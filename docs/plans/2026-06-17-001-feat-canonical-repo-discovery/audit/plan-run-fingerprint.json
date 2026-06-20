@@ -1,0 +1,155 @@
+{
+  "captured_at": "2026-06-20T18:20:32Z",
+  "decision_lines": [
+    "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
+    "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
+    "D003\u001f9bd5d166789691cf2c46b0b877585ea8bc00083a1ddf0a725bdeadfced6f00f7",
+    "D004\u001f7e456a0fe16caad9c68f8da34a8f38cd0c9cb3357a771a13f4c8647b94650e72",
+    "D005\u001fe5d2658e9c32e9fe2361555e070ee250297e6b34f8c02c58e6b490c65e3f6585",
+    "D006\u001f1d906ab3ca7897c80e072c1d1478ecec6510b46e406f2b4efe05d22e00bc1690",
+    "D007\u001f0fac137fa22c91f6d73df586caac1ea92c5230148c0b5d2ba0883b6fd8c919b7",
+    "D008\u001fb7925ea44455c3e0b2ade6ce8db8c144ad529467b8e2890444e73c84e6ceb20f",
+    "D009\u001fd11b506945a5db392c263e0b102723d334eb377ef33549eb8f48601acaea0726",
+    "D010\u001fe9bbf5963d834b98314d9d4913d806160e1783fade892f2460a091824d078a8a",
+    "D011\u001fc3b73a36993800517b4313e6966efdb200a24e1b9ca1c6e26e079ae448f16f01",
+    "D012\u001fe1c011544553b8a47e2e710b08eab5e7e20fe7a1663553a907f3b580c7432c8a",
+    "D013\u001fe0b21821e75fc67bd4f482da8a7e271471fe562bc67298e52862adc67a111107",
+    "D014\u001f726904a92e87e755c22d07c36baa0729124935772ebaf123710ba7fd7d9f527b",
+    "D015\u001f9865bf11ed6d21794c1afcc9ea90db82b0df6b666a183da1751d559d68a42fdd",
+    "D016\u001ff7e366c8874176888015db7cc5cd06177bf9bbb6cb78ec71de93691dd5fade20",
+    "D017\u001f1f8ef08152507f5e6b30a392fd4e85850ef00f5bb7da493de09cc3f2a819726b",
+    "D018\u001f69ff43184e6e15a9035eba3bf9b4a7627c124a48b91728f9ce668accbd2f7243",
+    "D019\u001f1fb5209f9dfff3f1b36b48ef17bd89e2a50932d7220a5c874a17fb3711793b2a",
+    "D020\u001fc9c5fbe9f1866c3c83dbb04e6e8803f2cf6c81a49f6a86b155ec6732887bbffb",
+    "D021\u001ff326e695107b8dd89888d3a841540b90419809aeeec6972be890e5c245147338",
+    "D022\u001fc4b8bc612486d47defda48fc663f5cdd75491856a7cec60ba70ccb5cee887225",
+    "D023\u001fcdf793726e76e1ea040452d997890e635ceecc2b8d9ae6d4b4c55fc81eac7d28",
+    "D024\u001f55be1a21b642b5b8e9ca7b0cb7416439ddeac534f8f9df86250f8efa6ab8c5f6",
+    "D025\u001f17c7581fd5d9e7c55f9ed5cd0367091ba0b6cf3b6294c4047995b9c20d9d5136",
+    "D026\u001f7a77143f4267410f6992b64112d41d9f1db41eb467d0f8445611c8856582abda",
+    "D027\u001f2392e54a67920733395acadb2fd8d81d774179d773ab1487bddc9e860c550a88",
+    "D028\u001f5fe89149efd6e42b1161697e165cfd4639cb658bf4c4c23da9ab46d67ea132a1",
+    "D029\u001f6993ffabf40a4e2764bc87621962cd37fc4d620290046847aa586e52caf80b0d",
+    "D030\u001f33c9410496f91a79a0aff3823855d3f60bdadcaa5c05dc4bceabe50b0aebe613",
+    "D031\u001f96146c794f80ada9482417e59ba9c540c1b4dfa8eb88cf63a4cb80b3b65010dc",
+    "D032\u001f894fcade933a4a3a9835400b9aab9df12c7a195466735c3951be81a537b060c6",
+    "D033\u001f9896da4df8d4b72486500326690ef80b805dfa00ff7bb098b9cf3ad0f19f28e5",
+    "D034\u001f94450bee5643dcbe3d9ed0d71c52f01acaec7dfa55d56578f9af0a920e1aceb9",
+    "D035\u001f47d7dd09bdaa73c3332957a7539c6336b5f0273c84d6d329b5657bfa2443a2f9",
+    "D036\u001f6a773a708ee27bbd51f3174ede9c69f7a42e0a707f2a4b1b5a6716947a471539",
+    "D037\u001ffee70b414f040ae8524f3efa72e3b05e768f687d650d9d307b8785ad4b1d62b3",
+    "D038\u001f715b17c244f2c37b99a0eb60da75c2b115d1c7b97d51285c85fede1110a59338",
+    "D039\u001f297e4a6dc94094be89f18655e9bcd9b21048fa0ec1002282753a7ffadd182f6e",
+    "D040\u001fda47de6cad10ac0d62f9a0fe434f84ad11af6b3f9efb43b052369fc47239bd8c",
+    "D041\u001f1af12d55278438f9695405f04f614e7b1e93d8fc929916c9efdc21609d7637d1",
+    "D042\u001ff1c711aeb5ae7a5ec2816f3e47265a4bdb3ad6eefe627a49da12f635ce10b69c",
+    "D043\u001ff260c6dc120c002e6377030406bfc1b926d7dae9df03fcd752ba52ded34cd1ed"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "(1) When resolvable to a durable root, records carry canonical_repo {path_key, path_display, durable_checkout=true, origin_key?}, surviving compaction; when unresolvable from a temp path (C3 case 3b) the field is absent, never a temp canonical. (2) repo.path_key is unchanged and still drives bucket/conflict/locality logic, proven by a regression test (C2). (3) compact_ledger usage-count invariant, proven by a before/after fixture: in a fixture of duplicate records, legacy/no-field rows count as 1 and rows carrying observed_count sum correctly; compacted output preserves the same derive_buckets grouping plus the summed observed_count, and canonical_repo survives compaction; F003 reads the identical observed_count for a canonical repo before and after compaction (a before==after assertion, not merely 'a count test exists'). (4) Mixed-attribution compaction is fail-closed and tested: a bucket containing both canonical-bearing and legacy/non-canonical rows, or multiple canonical keys, emits canonical_compaction_conflict=true, omits canonical_repo, carries no canonical observed_count, and F003 ignores it so observed_count is neither inflated nor dropped silently. (5) durable_checkout describes the canonical repo; a temp worktree of a durable repo yields durable_checkout=true (C2/C3-3a), and a temp path is never self-canonicalized (C3). (6) No raw home path or raw origin URL is persisted anywhere (C1). (7) Records written before this feature still load; tests cover all three C3 cases, legacy-record, bucket-regression, compaction count invariance, mixed-attribution compaction conflict, C8 sidecar-lock acquisition on BOTH the append path and compact_ledger (concurrent-append serialization, plus a compaction-vs-append and compaction-vs-backfill race proving no lost write and no stale-inode rename), and no-secret-shape.",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": false
+      },
+      "F002": {
+        "acceptance": "(1) The backfill engine consumes the F006 evidence contract and stamps canonical_repo onto matching historical records idempotently (re-run is a no-op), and any written path_display is the recomputed scrubbed display; literal evidence under the operator home is normalized to <home> and never copied through raw. (2) The deterministic C4 evidence matrix is implemented and tested: absent key, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, durable_checkout=true claimed for a temp canonical path, and durable_checkout=false claimed for a confirmed-durable canonical path are refused and reported, never guessed; durable_checkout written to the ledger is recomputed from the reconstructed canonical path, never trusted from evidence; origin_key is copied only from the single confirmed canonical evidence object after hash-shape/no-secret validation. (3) Backfill write mode runs inside the held C8 sidecar-lock context owned by the F005 entrypoint (F002 requires it and refuses direct write without it \u2014 no self-acquire); because both the live writer and the backfill acquire the sidecar lock BEFORE opening the ledger data file, no concurrent writer can hold a stale data-file inode across the rename; a concurrent append is serialized into the rewritten ledger or the backfill fails without replacement (exit 2), never lost. Evidence defects are split per C4 into file-fatal (exit 2, stamp nothing) vs per-record row-level skip+report (exit 0). (4) The evidence file is local-only and not committed, enforced by repo-local ignore plus commit-guard test/doc check. (5) The command field is never parsed (C6). (6) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key; ledger record order and unrelated fields are preserved.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F006"
+        ],
+        "passes": false
+      },
+      "F003": {
+        "acceptance": "(1) observed_canonical_from_ledger() is implemented and tested as the explicit ledger adapter: records without canonical_repo or with canonical_compaction_conflict=true are skipped, rows aggregate observed_count by canonical_repo.path_key with legacy/no-field rows counting as 1, scrubbed path_display is preserved, durable_checkout is carried, max last_seen is preserved, and record.command is never read. (2) registered_canonical_from_registry() is implemented and tested as the registry adapter: existing paths are canonicalized before pure reconcile; missing and unresolved paths emit canonical_repo_key=null, registry_path_key=sha256(normalized stored registry path)[:16], canonicalization_status, and scrubbed path_display; multiple active-eligible entries canonicalizing to one canonical_repo_key dedupe to a single row with the deterministic lexicographically-first registry_name winner, registry_conflict=true, and conflicting_registry_names; dedup considers ONLY active-eligible entries (eligibility determined before winner selection), so an inactive/path-missing/unresolved entry can never suppress an active entry for the same key regardless of name order. (3) reconcile() returns {used_unregistered, registered_active, registered_stale, registered_path_missing, registered_unresolved}; canonical rows are keyed on canonical_repo_key, registered_path_missing and registered_unresolved rows are keyed by registry_name + registry_path_key with canonical_repo_key=null; reconcile has no filesystem/git IO and zero-state yields empty arrays. (4) C5 defaults and registered-row truth table are pinned and tested: window_days=14, min_count=2, timestamp=last_seen, inclusive observed_count >= min_count and last_seen >= now-window_days; missing path -> registered_path_missing; unresolved canonicalization -> registered_unresolved; inactive -> no active/stale row; existing canonicalized registered path with absent/invalid/stale/low-count observed row -> registered_stale; existing canonicalized registered path passing both thresholds -> registered_active; a registered row with no observed row for its canonical_repo_key emits observed_count=0 and last_seen=null, and the ledger adapter skips invalid timestamps rather than poisoning the aggregate. (5) Mixed-attribution compacted rows marked canonical_compaction_conflict do not inflate or drop canonical observed_count. (6) suggested_name derivation for used_unregistered rows is deterministic, project-name-regex safe, collision-safe with canonical_repo_key hash suffix, and JSON-safe. (7) Temp-prefix / non-durable usage never appears as used_unregistered (C3); isolated/D010-like fixtures produce used_unregistered vs registered_active; registered_path_missing and registered_unresolved key shapes are tested; adapters/reconcile never read command (C6).",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F002"
+        ],
+        "passes": false
+      },
+      "F004": {
+        "acceptance": "(1) `dontpanic projects discover --json` serializes the F003 reconcile projection in the pinned field contract after building both observed_canonical and registered_canonical; default human output is concise; empty-state serializes to empty arrays without error. (2) The command supplies the C5 default values and configured CLI overrides to F003 reconcile inputs; F003 owns policy correctness and the active/stale truth-table tests. (3) JSON output contains canonical_repo_key + scrubbed display + counts/recency + suggestion_status + suggested_name only; no raw home path and no reconstructed add-command path appear in JSON (C1); registered_path_missing and registered_unresolved JSON rows carry canonical_repo_key=null plus registry_name and registry_path_key and NO observed_count/last_seen (those two null-keyed states have no canonical key to join observed usage to, matching the C5 narrowing), not a fake canonical key; registered_active/registered_stale rows carry registry_conflict + conflicting_registry_names and emit observed_count=0/last_seen=null when no observed row exists; the exact --json field names, value types, and suggestion_status enum (can_render_command|needs_manual_path) match the pinned field contract in this feature's description. (4) Default human output reconstructs the add-command path operator-locally using suggested_name and the three C1 path rules. (5) The CLI path never parses record.command (C6), never installs/modifies/removes/chains/reads/depends on git hooks (C7), and the isolated/D010-like fixtures produce used_unregistered vs registered_active respectively.",
+        "agents_required": null,
+        "depends_on": [
+          "F003"
+        ],
+        "passes": false
+      },
+      "F005": {
+        "acceptance": "(1) The C4-pinned backfill entrypoint consumes default global-config evidence/ledger paths or explicit overrides, supports preview and write modes, reports with the stable schema, and follows the C4 status contract. (2) Write mode makes F005 the sole C8 sidecar-lock owner \u2014 it acquires the `<ledger>.lock` sidecar once (before opening the data file) and passes a held-lock context into F002 (which refuses direct write without it, never self-acquiring), holding it across the full critical section \u2014 and tests prove a concurrent append is serialized or the backfill refuses without replacing the ledger, with no double-acquire and no stale-inode rename loss. (3) Reported ledger/evidence paths are scrubbed. (4) Tests cover configured-home defaults, explicit path overrides, no-write preview behavior, single-lock-owner / no-double-acquire, status behavior, report schema, and the C7 negative hook guard.",
+        "agents_required": null,
+        "depends_on": [
+          "F002"
+        ],
+        "passes": false
+      },
+      "F006": {
+        "acceptance": "(1) The C4 evidence contract is implemented and tested: required top-level keys, version 1.0, canonical repo map keyed by canonical path key, observation-key map with list values, only allowed canonical repo fields, required field presence, exact value types, and no-secret-shape validation before any field can be copied. (2) Malformed or ambiguous evidence is classified deterministically and split into file-fatal vs row-level (C4): file-fatal structural defects (not valid JSON/parse error, missing required top-level keys, wrong schema_version, top-level type error where canonical_repos or observation map is not a map) abort the whole run; row-level per-record defects (unknown canonical references, mismatched path keys, unknown fields, missing required fields, wrong value types, raw-secret-shaped values, non-list values, zero or multiple mappings for a record) are skip+report. (3) Optional origin and temp-observed fields are accepted only in the allowed canonical repo shape; origin_key must be hash-shaped and is rejected if it looks like a raw origin URL. F006 validates durable_checkout only as a boolean shape; its semantic truth is recomputed by F002 against the reconstructed canonical path.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F006",
+      "F002",
+      "F005",
+      "F003",
+      "F004"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "b9a971813c7b38c65e4fcd1bb522d2f2c66465856bf19ab85247372f67f043c6",
+    "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
+    "features.json": "43301e98372e8e4a0bc8251fb627a5b45ae62811a7fa8d0746f9826ff309a767",
+    "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
+    "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1781979632.0763018,
+    "decisions.jsonl": 1781975243.321752,
+    "features.json": 1781975074.1578598,
+    "objective_contract.json": 1781842638.7315779,
+    "plan.md": 1781976958.7608259
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_impl"
+    ],
+    "completed_stages": [
+      "pre_impl"
+    ]
+  },
+  "objective_hash": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
+  "plan_semantics": {
+    "agents_required": [
+      "claude",
+      "codex"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-05-03-001-feat-global-install-project-registry",
+      "2026-05-23-005-feat-dashboard-project-selector-v0"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 3,
+      "no_progress_threshold": 2,
+      "wall_clock_hours": 8
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}

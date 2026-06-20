@@ -10,7 +10,7 @@
       "steps": [
         "Read invocation_ledger.py (path_key/make_path_pair, _detect_repo_root, _detect_branch, start_recording base dict, _bucket_key, compaction/_BUCKET_KEY_FIELDS) and worktrees.py (~line 259, binding_health: it COMPARES common-dirs, does not return the main checkout path) before any change.",
         "Add canonicalize_repo(observed_root) -> {canonical_root|None, origin_url|None, durable_checkout} implementing the pinned algorithm: single `git -C <root> rev-parse --path-format=absolute --git-common-dir` probe, derive canonical_root = parent of common-dir ending in `/.git`; classify into the three C3 cases using a temp-prefix test (/tmp, /private/tmp, /var/folders) on BOTH the observed root and the resolved canonical root. Case 3b returns canonical_root=None. No shelling beyond the one probe (+ optional one `remote get-url origin`).",
-        "In start_recording, when canonical_root is not None stamp canonical_repo = make_path_pair(canonical_root) plus durable_checkout and optional origin_key (hash of the normalized origin URL; never the raw URL — C1). When canonical_root is None (case 3b), omit canonical_repo entirely. Leave the observed `repo` and repo.path_key untouched (C2).",
+        "In start_recording, when canonical_root is not None stamp canonical_repo = make_path_pair(canonical_root) plus durable_checkout and optional origin_key (hash of the normalized origin URL; never the raw URL \u2014 C1). When canonical_root is None (case 3b), omit canonical_repo entirely. Leave the observed `repo` and repo.path_key untouched (C2).",
         "Adopt the C8 sidecar lock on the live append path: acquire `<ledger>.lock` via flock BEFORE opening invocations.jsonl for append and release after. This is the coordination point the F002 backfill relies on for atomic-rename safety (no writer can hold a stale data-file inode across the backfill rename). This changes the live writer contract and is in scope.",
         "Ensure _bucket_key and conflict/locality logic continue to key on repo.path_key, NOT canonical_repo_key (C2). Add a regression test asserting bucket behavior is unchanged.",
         "Extend compaction-preserved fields so canonical_repo survives compact_ledger (else grouping breaks post-compaction) and compacted rows carry observed_count = sum of collapsed record observed_count values, with legacy/no-field records counting as 1. If a compaction bucket mixes canonical-bearing and non-canonical rows, or mixes different canonical_repo.path_key values, preserve the existing observed bucket but omit canonical_repo, set canonical_compaction_conflict=true, and do not carry a canonical observed_count. Additionally, compact_ledger MUST acquire the C8 sidecar lock (`<ledger>.lock`) via flock BEFORE opening the ledger and hold it across its full read+rewrite+temp-file+rename sequence (it is a whole-file rewrite ending in a rename, exactly like the backfill, so it is the third writer in the C8 protocol); flock-unavailable -> fail closed exit 2. This in-scope change keeps a concurrent append or backfill rename from racing compaction.",
@@ -18,11 +18,26 @@
         "Tests, one per C3 case: (1) durable git checkout -> canonical=self-root, durable=true; (1) linked worktree of a durable repo -> canonical=main-checkout root, durable=true; (2) durable non-git dir -> canonical=self, durable=true; (3a) temp worktree of a durable repo -> canonical=durable main, durable=true; (3b) temp dir with failed/temp resolution -> NO canonical_repo field; plus legacy record without canonical_repo still loads; bucket-key regression; no-secret-shape over new fields."
       ],
       "acceptance": "(1) When resolvable to a durable root, records carry canonical_repo {path_key, path_display, durable_checkout=true, origin_key?}, surviving compaction; when unresolvable from a temp path (C3 case 3b) the field is absent, never a temp canonical. (2) repo.path_key is unchanged and still drives bucket/conflict/locality logic, proven by a regression test (C2). (3) compact_ledger usage-count invariant, proven by a before/after fixture: in a fixture of duplicate records, legacy/no-field rows count as 1 and rows carrying observed_count sum correctly; compacted output preserves the same derive_buckets grouping plus the summed observed_count, and canonical_repo survives compaction; F003 reads the identical observed_count for a canonical repo before and after compaction (a before==after assertion, not merely 'a count test exists'). (4) Mixed-attribution compaction is fail-closed and tested: a bucket containing both canonical-bearing and legacy/non-canonical rows, or multiple canonical keys, emits canonical_compaction_conflict=true, omits canonical_repo, carries no canonical observed_count, and F003 ignores it so observed_count is neither inflated nor dropped silently. (5) durable_checkout describes the canonical repo; a temp worktree of a durable repo yields durable_checkout=true (C2/C3-3a), and a temp path is never self-canonicalized (C3). (6) No raw home path or raw origin URL is persisted anywhere (C1). (7) Records written before this feature still load; tests cover all three C3 cases, legacy-record, bucket-regression, compaction count invariance, mixed-attribution compaction conflict, C8 sidecar-lock acquisition on BOTH the append path and compact_ledger (concurrent-append serialization, plus a compaction-vs-append and compaction-vs-backfill race proving no lost write and no stale-inode rename), and no-secret-shape.",
-      "introduces": ["canonical_repo", "canonical_repo_key", "path_key", "path_display", "durable_checkout", "origin_key", "observed_count", "canonical_compaction_conflict"],
-      "passes": false,
+      "introduces": [
+        "canonical_repo",
+        "canonical_repo_key",
+        "path_key",
+        "path_display",
+        "durable_checkout",
+        "origin_key",
+        "observed_count",
+        "canonical_compaction_conflict"
+      ],
+      "passes": true,
       "depends_on": [],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "codex"
+      ],
+      "evidence_refs": [
+        "audit/codex-auditor-F001-i2.json",
+        "scripts/dontpanic_orchestrate/invocation_ledger.py",
+        "scripts/dontpanic_orchestrate/tests/test_invocation_ledger_canonical.py"
+      ]
     },
     {
       "id": "F006",
@@ -36,9 +51,14 @@
         "Tests cover valid evidence, missing required top-level keys, wrong version, unknown canonical key, mismatched path key, non-list mapping, zero mappings, multiple mappings, unknown canonical fields, missing required fields, wrong value types, raw origin URL / no-secret-shape failure, and optional hash-shaped origin/temp-observed fields."
       ],
       "acceptance": "(1) The C4 evidence contract is implemented and tested: required top-level keys, version 1.0, canonical repo map keyed by canonical path key, observation-key map with list values, only allowed canonical repo fields, required field presence, exact value types, and no-secret-shape validation before any field can be copied. (2) Malformed or ambiguous evidence is classified deterministically and split into file-fatal vs row-level (C4): file-fatal structural defects (not valid JSON/parse error, missing required top-level keys, wrong schema_version, top-level type error where canonical_repos or observation map is not a map) abort the whole run; row-level per-record defects (unknown canonical references, mismatched path keys, unknown fields, missing required fields, wrong value types, raw-secret-shaped values, non-list values, zero or multiple mappings for a record) are skip+report. (3) Optional origin and temp-observed fields are accepted only in the allowed canonical repo shape; origin_key must be hash-shaped and is rejected if it looks like a raw origin URL. F006 validates durable_checkout only as a boolean shape; its semantic truth is recomputed by F002 against the reconstructed canonical path.",
-      "introduces": ["canonical_repos", "observation_path_key_to_canonical"],
+      "introduces": [
+        "canonical_repos",
+        "observation_path_key_to_canonical"
+      ],
       "passes": false,
-      "depends_on": ["F001"],
+      "depends_on": [
+        "F001"
+      ],
       "verified_by": [],
       "evidence_refs": []
     },
@@ -53,13 +73,16 @@
         "Implement an idempotent pass: for each ledger record lacking canonical_repo, stamp canonical_repo {path_key, path_display, durable_checkout, origin_key?} only when the evidence-matrix check returns CONFIRMED, writing the RECOMPUTED durable_checkout (not the evidence value); if evidence provides a literal absolute path under Path.home(), normalize the written path_display to the recomputed <home>-scrubbed value; if the record already has canonical_repo, skip (idempotence).",
         "Refuse ambiguous/unconfirmable mappings: absent observation key, multiple canonical keys, malformed canonical_repo field, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed canonical path under a temp prefix, durable_checkout=true claimed for a temp canonical path, or durable_checkout=false claimed for a confirmed-durable (non-temp) canonical path leaves the record untouched and adds it to a reported `skipped` list with reason (C4).",
         "Never write a temp-prefix path as a canonical recommendation source; durable_checkout is recomputed from the reconstructed canonical path, never copied from evidence (C3).",
-        "Write the updated ledger atomically (temp-file + rename) inside the held-ledger-lock context supplied by the F005 entrypoint — F002 never acquires the lock itself and refuses to write without a held-lock context — across the full read/validate/write/rename critical section; preserve record order and all existing fields; do not parse or alter the command field (C6).",
+        "Write the updated ledger atomically (temp-file + rename) inside the held-ledger-lock context supplied by the F005 entrypoint \u2014 F002 never acquires the lock itself and refuses to write without a held-lock context \u2014 across the full read/validate/write/rename critical section; preserve record order and all existing fields; do not parse or alter the command field (C6).",
         "Add the repo-local guard for overridden DONTPANIC_HOME: .gitignore ignores `.dontpanic/canonical-backfill-evidence.json`, and a test/doc check proves the evidence file is never tracked.",
         "Tests: idempotent re-run is a no-op; unambiguous match stamps the recomputed durable_checkout correctly; literal home path evidence writes <home>-scrubbed display; durable_checkout=true claimed for a temp canonical and durable_checkout=false claimed for a confirmed-durable canonical both SKIP; ambiguous/absent keys are skipped+reported; malformed evidence refuses cleanly; missing required fields, wrong types, and raw origin URL/no-secret-shape failures skip before copy; non-reconstructable scrub token skips; path_key mismatch skips; origin_key is copied from the single confirmed canonical entry only after hash-shape validation; reconstructed temp canonical path skips even when durable_checkout=true; record order + other fields preserved; F002 refuses direct write without a held-lock context; concurrent append under the F005-owned writer lock is serialized or the backfill refuses without replacing the ledger; the 51-record fixture (p2a/p2-lock/main) collapses to one canonical repo key; evidence-file ignore/commit guard is covered."
       ],
-      "acceptance": "(1) The backfill engine consumes the F006 evidence contract and stamps canonical_repo onto matching historical records idempotently (re-run is a no-op), and any written path_display is the recomputed scrubbed display; literal evidence under the operator home is normalized to <home> and never copied through raw. (2) The deterministic C4 evidence matrix is implemented and tested: absent key, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, durable_checkout=true claimed for a temp canonical path, and durable_checkout=false claimed for a confirmed-durable canonical path are refused and reported, never guessed; durable_checkout written to the ledger is recomputed from the reconstructed canonical path, never trusted from evidence; origin_key is copied only from the single confirmed canonical evidence object after hash-shape/no-secret validation. (3) Backfill write mode runs inside the held C8 sidecar-lock context owned by the F005 entrypoint (F002 requires it and refuses direct write without it — no self-acquire); because both the live writer and the backfill acquire the sidecar lock BEFORE opening the ledger data file, no concurrent writer can hold a stale data-file inode across the rename; a concurrent append is serialized into the rewritten ledger or the backfill fails without replacement (exit 2), never lost. Evidence defects are split per C4 into file-fatal (exit 2, stamp nothing) vs per-record row-level skip+report (exit 0). (4) The evidence file is local-only and not committed, enforced by repo-local ignore plus commit-guard test/doc check. (5) The command field is never parsed (C6). (6) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key; ledger record order and unrelated fields are preserved.",
+      "acceptance": "(1) The backfill engine consumes the F006 evidence contract and stamps canonical_repo onto matching historical records idempotently (re-run is a no-op), and any written path_display is the recomputed scrubbed display; literal evidence under the operator home is normalized to <home> and never copied through raw. (2) The deterministic C4 evidence matrix is implemented and tested: absent key, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, durable_checkout=true claimed for a temp canonical path, and durable_checkout=false claimed for a confirmed-durable canonical path are refused and reported, never guessed; durable_checkout written to the ledger is recomputed from the reconstructed canonical path, never trusted from evidence; origin_key is copied only from the single confirmed canonical evidence object after hash-shape/no-secret validation. (3) Backfill write mode runs inside the held C8 sidecar-lock context owned by the F005 entrypoint (F002 requires it and refuses direct write without it \u2014 no self-acquire); because both the live writer and the backfill acquire the sidecar lock BEFORE opening the ledger data file, no concurrent writer can hold a stale data-file inode across the rename; a concurrent append is serialized into the rewritten ledger or the backfill fails without replacement (exit 2), never lost. Evidence defects are split per C4 into file-fatal (exit 2, stamp nothing) vs per-record row-level skip+report (exit 0). (4) The evidence file is local-only and not committed, enforced by repo-local ignore plus commit-guard test/doc check. (5) The command field is never parsed (C6). (6) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key; ledger record order and unrelated fields are preserved.",
       "passes": false,
-      "depends_on": ["F001", "F006"],
+      "depends_on": [
+        "F001",
+        "F006"
+      ],
       "verified_by": [],
       "evidence_refs": []
     },
@@ -76,10 +99,18 @@
         "Render the stable report schema from C4 with scrubbed ledger/evidence paths: would_stamp, would_skip, already_stamped, and stamped are counts; skipped is the detail list of {path_key, reason} rows.",
         "Tests: default path resolution honors the configured home; explicit ledger/evidence overrides are used; preview mode does not write; concurrent append is not lost during write mode; F002 refuses direct write without a held-lock context and F005 acquires the lock exactly once (no double-acquire of the non-reentrant lock); status behavior and report schema are covered; negative hook guard proves the command does not install, modify, remove, chain, read, or depend on git hooks."
       ],
-      "acceptance": "(1) The C4-pinned backfill entrypoint consumes default global-config evidence/ledger paths or explicit overrides, supports preview and write modes, reports with the stable schema, and follows the C4 status contract. (2) Write mode makes F005 the sole C8 sidecar-lock owner — it acquires the `<ledger>.lock` sidecar once (before opening the data file) and passes a held-lock context into F002 (which refuses direct write without it, never self-acquiring), holding it across the full critical section — and tests prove a concurrent append is serialized or the backfill refuses without replacing the ledger, with no double-acquire and no stale-inode rename loss. (3) Reported ledger/evidence paths are scrubbed. (4) Tests cover configured-home defaults, explicit path overrides, no-write preview behavior, single-lock-owner / no-double-acquire, status behavior, report schema, and the C7 negative hook guard.",
-      "introduces": ["--dry-run", "--json", "--ledger", "--evidence", "DONTPANIC_HOME"],
+      "acceptance": "(1) The C4-pinned backfill entrypoint consumes default global-config evidence/ledger paths or explicit overrides, supports preview and write modes, reports with the stable schema, and follows the C4 status contract. (2) Write mode makes F005 the sole C8 sidecar-lock owner \u2014 it acquires the `<ledger>.lock` sidecar once (before opening the data file) and passes a held-lock context into F002 (which refuses direct write without it, never self-acquiring), holding it across the full critical section \u2014 and tests prove a concurrent append is serialized or the backfill refuses without replacing the ledger, with no double-acquire and no stale-inode rename loss. (3) Reported ledger/evidence paths are scrubbed. (4) Tests cover configured-home defaults, explicit path overrides, no-write preview behavior, single-lock-owner / no-double-acquire, status behavior, report schema, and the C7 negative hook guard.",
+      "introduces": [
+        "--dry-run",
+        "--json",
+        "--ledger",
+        "--evidence",
+        "DONTPANIC_HOME"
+      ],
       "passes": false,
-      "depends_on": ["F002"],
+      "depends_on": [
+        "F002"
+      ],
       "verified_by": [],
       "evidence_refs": []
     },
@@ -100,9 +131,33 @@
         "Tests: ledger adapter skips missing canonical_repo and canonical_compaction_conflict rows; ledger adapter aggregates observed_count defaulting legacy rows to 1 plus max last_seen by canonical_repo.path_key; mixed-attribution compacted rows do not inflate or drop a canonical observed_count; ledger adapter preserves scrubbed display; ledger adapter never reads command (secret-shaped command fixture); registry adapter emits registry_path_key and canonical_repo_key=null for missing and unresolved registered paths and canonical keys for existing canonicalized paths; reconcile has no filesystem/git IO; empty-registry/zero-observed yields empty arrays; default threshold filters low-count/old/repos at inclusive boundaries and is stable after compacted observed_count rows; registered active/stale truth-table cells are tested for absent observed row, invalid/missing last_seen, low count, old last_seen, inactive entry, unresolved canonicalization, and passing thresholds; a registered row with no observed canonical row emits observed_count=0 and last_seen=null (no fabricated values); the ledger adapter skips an invalid last_seen without poisoning the max-last_seen aggregate; multiple active registry entries canonicalizing to one canonical_repo_key dedupe to a single row with lexicographically-first registry_name winner, registry_conflict=true, and conflicting_registry_names; a mixed active/inactive duplicate set where the inactive entry sorts lexicographically first still yields the ACTIVE entry's registered row (the inactive one never suppresses it); temp-prefix usage never appears as used_unregistered; suggested_name derivation/collision/hash suffix is tested; isolated fixture registry with the target repo absent yields one used_unregistered candidate; D010-like fixture registry with the target repo present yields registered_active; registered_path_missing and registered_unresolved classification/key shapes are tested."
       ],
       "acceptance": "(1) observed_canonical_from_ledger() is implemented and tested as the explicit ledger adapter: records without canonical_repo or with canonical_compaction_conflict=true are skipped, rows aggregate observed_count by canonical_repo.path_key with legacy/no-field rows counting as 1, scrubbed path_display is preserved, durable_checkout is carried, max last_seen is preserved, and record.command is never read. (2) registered_canonical_from_registry() is implemented and tested as the registry adapter: existing paths are canonicalized before pure reconcile; missing and unresolved paths emit canonical_repo_key=null, registry_path_key=sha256(normalized stored registry path)[:16], canonicalization_status, and scrubbed path_display; multiple active-eligible entries canonicalizing to one canonical_repo_key dedupe to a single row with the deterministic lexicographically-first registry_name winner, registry_conflict=true, and conflicting_registry_names; dedup considers ONLY active-eligible entries (eligibility determined before winner selection), so an inactive/path-missing/unresolved entry can never suppress an active entry for the same key regardless of name order. (3) reconcile() returns {used_unregistered, registered_active, registered_stale, registered_path_missing, registered_unresolved}; canonical rows are keyed on canonical_repo_key, registered_path_missing and registered_unresolved rows are keyed by registry_name + registry_path_key with canonical_repo_key=null; reconcile has no filesystem/git IO and zero-state yields empty arrays. (4) C5 defaults and registered-row truth table are pinned and tested: window_days=14, min_count=2, timestamp=last_seen, inclusive observed_count >= min_count and last_seen >= now-window_days; missing path -> registered_path_missing; unresolved canonicalization -> registered_unresolved; inactive -> no active/stale row; existing canonicalized registered path with absent/invalid/stale/low-count observed row -> registered_stale; existing canonicalized registered path passing both thresholds -> registered_active; a registered row with no observed row for its canonical_repo_key emits observed_count=0 and last_seen=null, and the ledger adapter skips invalid timestamps rather than poisoning the aggregate. (5) Mixed-attribution compacted rows marked canonical_compaction_conflict do not inflate or drop canonical observed_count. (6) suggested_name derivation for used_unregistered rows is deterministic, project-name-regex safe, collision-safe with canonical_repo_key hash suffix, and JSON-safe. (7) Temp-prefix / non-durable usage never appears as used_unregistered (C3); isolated/D010-like fixtures produce used_unregistered vs registered_active; registered_path_missing and registered_unresolved key shapes are tested; adapters/reconcile never read command (C6).",
-      "introduces": ["used_unregistered", "registered_active", "registered_stale", "registered_path_missing", "registered_unresolved", "reconcile", "observed_canonical", "observed_canonical_from_ledger", "registered_canonical", "registered_canonical_from_registry", "path_exists", "canonicalization_status", "registry_name", "window_days", "min_count", "observed_count", "registry_path_key", "suggested_name", "registry_conflict", "conflicting_registry_names"],
+      "introduces": [
+        "used_unregistered",
+        "registered_active",
+        "registered_stale",
+        "registered_path_missing",
+        "registered_unresolved",
+        "reconcile",
+        "observed_canonical",
+        "observed_canonical_from_ledger",
+        "registered_canonical",
+        "registered_canonical_from_registry",
+        "path_exists",
+        "canonicalization_status",
+        "registry_name",
+        "window_days",
+        "min_count",
+        "observed_count",
+        "registry_path_key",
+        "suggested_name",
+        "registry_conflict",
+        "conflicting_registry_names"
+      ],
       "passes": false,
-      "depends_on": ["F001", "F002"],
+      "depends_on": [
+        "F001",
+        "F002"
+      ],
       "verified_by": [],
       "evidence_refs": []
     },
@@ -119,9 +174,17 @@
         "Tests: --json field names, value types, and the suggestion_status enum (\"can_render_command\"|\"needs_manual_path\") exactly match the pinned field contract and contain no reconstructed raw add path; registered_path_missing and registered_unresolved JSON carry registry_name + registry_path_key and canonical_repo_key=null; registered_active/registered_stale JSON carry registry_conflict + conflicting_registry_names and emit observed_count=0/last_seen=null when no observed row exists; JSON includes safe suggested_name for used_unregistered rows; CLI default policy uses window_days=14/min_count=2/last_seen inclusive boundaries and overrides pass through; JSON reflects the C5 registered active/stale truth table for inactive, missing path, unresolved canonicalization, absent observed row, invalid timestamp, low count, stale recency, and passing thresholds; human output lists candidates and may include reconstructed commands with suggested_name; no raw home path in JSON; isolated fixture registry with DontPanic absent yields one used_unregistered suggestion; D010-like fixture registry with DontPanic registered yields registered_active, not used_unregistered; a home-display candidate yields a home-substituted command only in human output; a canonical path OUTSIDE $HOME yields a verbatim-literal human command; a non-reconstructable display yields the placeholder `<path>` command + needs-manual-path; empty-state serializes cleanly; negative hook guard proves the command does not install, modify, remove, chain, read, or depend on git hooks."
       ],
       "acceptance": "(1) `dontpanic projects discover --json` serializes the F003 reconcile projection in the pinned field contract after building both observed_canonical and registered_canonical; default human output is concise; empty-state serializes to empty arrays without error. (2) The command supplies the C5 default values and configured CLI overrides to F003 reconcile inputs; F003 owns policy correctness and the active/stale truth-table tests. (3) JSON output contains canonical_repo_key + scrubbed display + counts/recency + suggestion_status + suggested_name only; no raw home path and no reconstructed add-command path appear in JSON (C1); registered_path_missing and registered_unresolved JSON rows carry canonical_repo_key=null plus registry_name and registry_path_key and NO observed_count/last_seen (those two null-keyed states have no canonical key to join observed usage to, matching the C5 narrowing), not a fake canonical key; registered_active/registered_stale rows carry registry_conflict + conflicting_registry_names and emit observed_count=0/last_seen=null when no observed row exists; the exact --json field names, value types, and suggestion_status enum (can_render_command|needs_manual_path) match the pinned field contract in this feature's description. (4) Default human output reconstructs the add-command path operator-locally using suggested_name and the three C1 path rules. (5) The CLI path never parses record.command (C6), never installs/modifies/removes/chains/reads/depends on git hooks (C7), and the isolated/D010-like fixtures produce used_unregistered vs registered_active respectively.",
-      "introduces": ["--window-days", "--min-count", "suggestion_status", "can_render_command", "needs_manual_path"],
+      "introduces": [
+        "--window-days",
+        "--min-count",
+        "suggestion_status",
+        "can_render_command",
+        "needs_manual_path"
+      ],
       "passes": false,
-      "depends_on": ["F003"],
+      "depends_on": [
+        "F003"
+      ],
       "verified_by": [],
       "evidence_refs": []
     }

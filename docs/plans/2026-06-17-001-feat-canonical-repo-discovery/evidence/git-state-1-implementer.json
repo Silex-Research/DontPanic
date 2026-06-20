@@ -1,0 +1,18 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "scripts/dontpanic_orchestrate/invocation_ledger.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/INBOX.md",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_orchestrate/tests/test_invocation_ledger_canonical.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}
