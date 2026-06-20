@@ -2,47 +2,9 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:4d23b593d17d418fa046cef8dfbebd4d344112aea6cc934532bb126ee962c40d",
-  "generated_at": "2026-06-20T17:01:00Z",
-  "findings": [
-    {
-      "severity": "medium",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "parity_gap",
-      "description": "The output contract says discover JSON carries counts and recency, and C5 says registered_path_missing and registered_unresolved rows without observed usage emit observed_count=0 and last_seen=null, but F004's pinned JSON row schema for those two states omits both fields.",
-      "feature_refs": [
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Either add observed_count and last_seen to registered_path_missing and registered_unresolved JSON rows with 0/null defaults, or explicitly amend C5/objective wording so those states are exempt.",
-      "finding_class": "plan_contract"
-    },
-    {
-      "severity": "medium",
-      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
-      "gap_class": "coverage_gap",
-      "description": "Duplicate registry canonicalization is pinned for multiple entries sharing one canonical_repo_key, but the mixed active/inactive case is not deterministic. A lexicographically first inactive entry could suppress an active entry for the same canonical repo if dedupe happens before the active/stale truth table.",
-      "feature_refs": [
-        "F003",
-        "F004"
-      ],
-      "recommendation": "Pin duplicate handling across active flags, such as choosing the lexicographically first active entry when any active colliders exist, while inactive-only collisions remain inventory-only.",
-      "finding_class": "matrix_pin"
-    },
-    {
-      "severity": "high",
-      "journey_id": "writer-stamps-canonical-identity-without-breaking-buckets",
-      "gap_class": "integration_gap",
-      "description": "C8 frames the sidecar lock as the coordination protocol for ledger writers, but F001 only pins lock acquisition for live appends while compact_ledger also rewrites invocations.jsonl. A concurrent compaction could still race an append or backfill rename unless it joins the same sidecar protocol or is explicitly proven out of scope.",
-      "feature_refs": [
-        "F001",
-        "F002",
-        "F005"
-      ],
-      "recommendation": "Require compact_ledger and any ledger rewrite path to acquire the same sidecar lock before opening the data file, or pin a non-concurrency invariant with tests showing compaction cannot run during append/backfill.",
-      "finding_class": "implementation_detail"
-    }
-  ],
+  "input_fingerprint": "sha256:458e80981d3b8afdd05428ca64e83de4dc1d069791cba2ae5258007e741da587",
+  "generated_at": "2026-06-20T17:35:58Z",
+  "findings": [],
   "malformed_findings": [],
   "parser_notes": []
 }

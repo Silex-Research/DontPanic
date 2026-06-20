@@ -15,7 +15,7 @@ description: |
   real multi-project usage data exists.
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-06-17"
 goal_type: new_feature
 surfaces:
