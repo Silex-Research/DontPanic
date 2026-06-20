@@ -27,6 +27,15 @@
         "pre_merge"
       ],
       "stage": "pre_merge"
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-20T20:07:40Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
     }
   ],
   "gate_events": [
@@ -40,7 +49,7 @@
   "completed_stages": [
     "pre_impl"
   ],
-  "paused_at": "2026-06-20T18:50:31Z",
+  "paused_at": "2026-06-20T20:07:40Z",
   "pause_gates": [
     "pre_merge"
   ],

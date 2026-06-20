@@ -70,12 +70,33 @@
         "canonical_repos",
         "observation_path_key_to_canonical"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "codex"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F006-i1.json",
+          "captured_by": "codex",
+          "note": "Iter-1 signed_off, 0 findings; iter-0 high (untracked impl/test files, patch-completeness) closed by source commit 9bf36e5."
+        },
+        {
+          "type": "commit",
+          "uri": "9bf36e5",
+          "captured_by": "claude",
+          "note": "C4 evidence contract: file-fatal (EvidenceFatalError) vs row-level (EvidenceResolution) tiers, shape-only validation, no-secret + hash-shape origin_key."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_canonical_evidence_f006.py",
+          "captured_by": "claude",
+          "note": "37 evidence-contract cases (valid, all file-fatal tiers, all row-level defect classes); 60 passed with ledger regression."
+        }
+      ]
     },
     {
       "id": "F002",

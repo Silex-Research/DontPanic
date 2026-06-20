@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-20T18:20:32Z",
+  "captured_at": "2026-06-20T19:58:13Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -51,7 +51,7 @@
         "acceptance": "(1) When resolvable to a durable root, records carry canonical_repo {path_key, path_display, durable_checkout=true, origin_key?}, surviving compaction; when unresolvable from a temp path (C3 case 3b) the field is absent, never a temp canonical. (2) repo.path_key is unchanged and still drives bucket/conflict/locality logic, proven by a regression test (C2). (3) compact_ledger usage-count invariant, proven by a before/after fixture: in a fixture of duplicate records, legacy/no-field rows count as 1 and rows carrying observed_count sum correctly; compacted output preserves the same derive_buckets grouping plus the summed observed_count, and canonical_repo survives compaction; F003 reads the identical observed_count for a canonical repo before and after compaction (a before==after assertion, not merely 'a count test exists'). (4) Mixed-attribution compaction is fail-closed and tested: a bucket containing both canonical-bearing and legacy/non-canonical rows, or multiple canonical keys, emits canonical_compaction_conflict=true, omits canonical_repo, carries no canonical observed_count, and F003 ignores it so observed_count is neither inflated nor dropped silently. (5) durable_checkout describes the canonical repo; a temp worktree of a durable repo yields durable_checkout=true (C2/C3-3a), and a temp path is never self-canonicalized (C3). (6) No raw home path or raw origin URL is persisted anywhere (C1). (7) Records written before this feature still load; tests cover all three C3 cases, legacy-record, bucket-regression, compaction count invariance, mixed-attribution compaction conflict, C8 sidecar-lock acquisition on BOTH the append path and compact_ledger (concurrent-append serialization, plus a compaction-vs-append and compaction-vs-backfill race proving no lost write and no stale-inode rename), and no-secret-shape.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
         "acceptance": "(1) The backfill engine consumes the F006 evidence contract and stamps canonical_repo onto matching historical records idempotently (re-run is a no-op), and any written path_display is the recomputed scrubbed display; literal evidence under the operator home is normalized to <home> and never copied through raw. (2) The deterministic C4 evidence matrix is implemented and tested: absent key, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, durable_checkout=true claimed for a temp canonical path, and durable_checkout=false claimed for a confirmed-durable canonical path are refused and reported, never guessed; durable_checkout written to the ledger is recomputed from the reconstructed canonical path, never trusted from evidence; origin_key is copied only from the single confirmed canonical evidence object after hash-shape/no-secret validation. (3) Backfill write mode runs inside the held C8 sidecar-lock context owned by the F005 entrypoint (F002 requires it and refuses direct write without it \u2014 no self-acquire); because both the live writer and the backfill acquire the sidecar lock BEFORE opening the ledger data file, no concurrent writer can hold a stale data-file inode across the rename; a concurrent append is serialized into the rewritten ledger or the backfill fails without replacement (exit 2), never lost. Evidence defects are split per C4 into file-fatal (exit 2, stamp nothing) vs per-record row-level skip+report (exit 0). (4) The evidence file is local-only and not committed, enforced by repo-local ignore plus commit-guard test/doc check. (5) The command field is never parsed (C6). (6) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key; ledger record order and unrelated fields are preserved.",
@@ -106,16 +106,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "b9a971813c7b38c65e4fcd1bb522d2f2c66465856bf19ab85247372f67f043c6",
+    "audit/gate-state.json": "ef4248e9adb49ebb77f2f37de3f660dfc9e15e3753c71fb62328dc1e4d5fee39",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
-    "features.json": "43301e98372e8e4a0bc8251fb627a5b45ae62811a7fa8d0746f9826ff309a767",
+    "features.json": "800b76f4928fb856ab522512a48066052958d84d168c23d1d91e9466a481fe9c",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1781979632.0763018,
+    "audit/gate-state.json": 1781981431.3885825,
     "decisions.jsonl": 1781975243.321752,
-    "features.json": 1781975074.1578598,
+    "features.json": 1781985473.462212,
     "objective_contract.json": 1781842638.7315779,
     "plan.md": 1781976958.7608259
   },

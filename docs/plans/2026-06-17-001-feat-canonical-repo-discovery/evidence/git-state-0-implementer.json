@@ -2,14 +2,22 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": "scripts/dontpanic_orchestrate/invocation_ledger.py",
+      "path": "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/patch-completeness-0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/plan-run-fingerprint.json",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/INBOX.md",
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/",
-    "scripts/dontpanic_orchestrate/tests/test_invocation_ledger_canonical.py"
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F006-i0.json",
+    "scripts/dontpanic_orchestrate/canonical_evidence.py",
+    "scripts/dontpanic_orchestrate/tests/test_canonical_evidence_f006.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
