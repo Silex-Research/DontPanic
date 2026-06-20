@@ -34,9 +34,24 @@
         "codex"
       ],
       "evidence_refs": [
-        "audit/codex-auditor-F001-i2.json",
-        "scripts/dontpanic_orchestrate/invocation_ledger.py",
-        "scripts/dontpanic_orchestrate/tests/test_invocation_ledger_canonical.py"
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i2.json",
+          "captured_by": "codex",
+          "note": "Iter-2 signed_off, 0 findings; iter-0 high fail-open (unlocked append on flock failure) + test-coverage findings remediated by iter-2."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_invocation_ledger_canonical.py",
+          "captured_by": "claude",
+          "note": "C3 cases, bucket regression, compaction count invariance, C8 append+compaction sidecar locks, compaction-vs-append/backfill races, no-secret-shape. 37 ledger tests green."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/invocation_ledger.py",
+          "captured_by": "claude",
+          "note": "canonicalize_repo + start_recording stamp + C8 sidecar lock on append/compact_ledger."
+        }
       ]
     },
     {
