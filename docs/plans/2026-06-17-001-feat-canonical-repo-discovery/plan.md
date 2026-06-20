@@ -409,23 +409,36 @@ Registered-row classification is a pinned matrix:
   thresholds (`observed_count >= min_count` and
   `last_seen >= now - window_days`) -> `registered_active`.
 
-Emitted observed fields are pinned. A `registered_stale`,
-`registered_path_missing`, or `registered_unresolved` row that has **no** observed
-row emits `observed_count = 0` and `last_seen = null` (never omitted, never an
-inflated value). The ledger adapter, when aggregating observed rows by
+Emitted observed fields are pinned. A `registered_stale` (or `registered_active`)
+row that has **no** observed row emits `observed_count = 0` and `last_seen = null`
+(never omitted, never an inflated value). `registered_path_missing` and
+`registered_unresolved` rows carry **no** `observed_count`/`last_seen` at all:
+their `canonical_repo_key` is `null`, so no observed usage can be joined to them;
+they expose only `registry_name`, `registry_path_key`, `path_display`, and
+`canonicalization_status` (matching F004's pinned JSON row schema for those two
+states). The ledger adapter, when aggregating observed rows by
 `canonical_repo_key`, **skips** any contributing record whose `last_seen` is
 missing or unparseable rather than letting one bad timestamp fail the whole
 canonical row; if every contributing record has an invalid `last_seen`, the
 aggregated `last_seen` is `null` and the row fails the recency threshold
 (fail-closed).
 
-Duplicate canonicalization is deduped deterministically. When two or more
-**active** registry entries canonicalize to the same `canonical_repo_key`,
-reconcile emits exactly **one** registered row for that key, choosing the entry
-whose `registry_name` sorts lexicographically first as the winner; the row carries
-`registry_conflict = true` and `conflicting_registry_names` (the sorted list of
-all colliding names) so the collision is visible rather than silently dropped.
-Reconcile never emits multiple rows sharing one `canonical_repo_key`.
+Duplicate canonicalization is deduped deterministically, and dedup is applied
+**only to the set eligible for a `registered_active`/`registered_stale` row** —
+i.e. entries with `active=true`, `path_exists=true`, and successful
+canonicalization. Inactive (`active=false`), path-missing, and unresolved entries
+are **excluded** from the canonical-key dedup and handled solely by their own
+matrix rows; an inactive (or path-missing/unresolved) entry can therefore **never**
+suppress an active entry for the same `canonical_repo_key`, regardless of
+lexicographic order. When two or more such **eligible active** entries canonicalize
+to the same `canonical_repo_key`, reconcile emits exactly **one** registered row
+for that key, choosing the entry whose `registry_name` sorts lexicographically
+first as the winner; the row carries `registry_conflict = true` and
+`conflicting_registry_names` (the sorted list of all colliding **active** names) so
+the collision is visible rather than silently dropped. Reconcile never emits
+multiple rows sharing one `canonical_repo_key`. (Active/inactive eligibility is
+determined before winner selection, so the dedup order can never invert the
+truth-table outcome.)
 
 ### C6 — No command parsing
 Discovery derives **only** from structured `repo` / `canonical_repo` metadata and
@@ -444,20 +457,29 @@ doc evidence proving they do not install, modify, remove, chain, read, or depend
 on git hooks as part of their command paths.
 
 ### C8 — Ledger write coordination (sidecar lock)
-All writers of `invocations.jsonl` — the **live invocation writer** (F001's append
-path) and the **one-time backfill** (F002 engine, owned by F005) — coordinate
-through a single dedicated **sidecar lock file** (`<ledger>.lock`, acquired with
-`flock`), NEVER a lock on the ledger data-file inode. The protocol: acquire the
-sidecar lock BEFORE opening the data file, hold it across the write, release
-after. The live append path holds it across open+append; the backfill holds it
-across read+validate+write+temp-file+rename. Locking a sidecar file (not the data
+**Every** writer of `invocations.jsonl` coordinates through a single dedicated
+**sidecar lock file** (`<ledger>.lock`, acquired with `flock`), NEVER a lock on the
+ledger data-file inode. There are exactly three writers and all three MUST join the
+protocol: (1) the **live invocation writer** (F001's append path), (2) the
+**ledger compaction** (`compact_ledger`, also F001-owned), which rewrites the whole
+ledger via temp-file + atomic rename, and (3) the **one-time backfill** (F002
+engine, owned by F005), which also rewrites via temp-file + rename. The protocol:
+acquire the sidecar lock BEFORE opening the data file, hold it across the write,
+release after. The live append path holds it across open+append; **`compact_ledger`
+holds it across its full read+rewrite+temp-file+rename sequence**; the backfill
+holds it across read+validate+write+temp-file+rename. Because compaction and
+backfill are both whole-file rewrites that end in a rename, each MUST hold the
+sidecar across the rename so a concurrent append or the other rewrite can never
+strand a stale inode or be lost. Locking a sidecar file (not the data
 inode) is what makes the atomic rename safe — a writer can never open the old
 inode before the rename and write to the orphaned inode after replacement,
-because it must hold the sidecar lock to open at all, and the backfill holds that
-lock across the rename. **This changes the live writer contract:** F001's append
-path must adopt the sidecar lock; that change is in scope and tested
-(concurrent-append serialization). On any platform where `flock` is unavailable,
-the backfill fails closed (exit 2) rather than performing an uncoordinated rename.
+because it must hold the sidecar lock to open at all, and the rewriter (compaction
+or backfill) holds that lock across the rename. **This changes the live writer
+contract:** both F001's append path AND F001's `compact_ledger` must adopt the
+sidecar lock; those changes are in scope and tested (concurrent-append
+serialization, and a compaction-vs-append / compaction-vs-backfill race). On any
+platform where `flock` is unavailable, any rewriter (compaction or backfill) fails
+closed (exit 2) rather than performing an uncoordinated rename.
 
 ## Prepared prerequisites
 
