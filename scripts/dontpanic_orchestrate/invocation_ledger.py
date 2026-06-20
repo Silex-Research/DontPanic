@@ -43,7 +43,7 @@ import signal
 import subprocess
 import threading
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -388,6 +388,153 @@ def _rewriter_sidecar_lock(target: Path) -> Iterator[None]:
             fh.close()
 
 
+#: Process-local, module-private capability sentinel gating *construction* of a
+#: HeldLedgerLock (defence-in-depth against accidental direct construction). It is
+#: NOT the security boundary: because module attributes are readable in Python a
+#: forger can pass ``il._LOCK_GUARD``, so authorization does NOT trust this — it is
+#: decided by :meth:`HeldLedgerLock.authorizes`, which binds the token to the
+#: specific live :func:`hold_ledger_lock` acquisition (see ``_LIVE_LOCK_LEASES``)
+#: and probes the genuine OS-level sidecar lock state (see :func:`_sidecar_lock_held`).
+_LOCK_GUARD: object = object()
+
+#: Registry of *lease capabilities* for the :func:`hold_ledger_lock` acquisitions
+#: that are live RIGHT NOW. Each acquisition mints a fresh, unique capability
+#: object, stores it in the yielded token, and registers it here for the duration
+#: of the context; the ``finally`` arm discards it on exit. Membership is an
+#: IDENTITY check, so a token authorizes only while *its own* acquisition is live —
+#: NOT merely because some unrelated holder has the sidecar lock. A forged token
+#: (direct construction) carries no registered capability and can never match, which
+#: is what binds write authority to the F005-owned held-lock context. We hold the
+#: capability objects by ``id`` paired with a strong ref so identity is exact and
+#: ``id`` reuse after GC cannot alias a stale lease to a live one.
+_LIVE_LOCK_LEASES: dict[int, object] = {}
+
+
+def _sidecar_lock_held(target: Path) -> bool:
+    """True iff the C8 rewriter sidecar lock for ``target`` is GENUINELY held right
+    now — by the live :func:`hold_ledger_lock` context in this process, or by any
+    other process. Probes by opening a FRESH descriptor to the sidecar and trying a
+    non-blocking exclusive ``flock``:
+
+    * acquire succeeds -> nobody holds it -> release at once and return ``False``.
+    * ``EWOULDBLOCK`` (an :class:`OSError`) -> a holder exists -> return ``True``.
+
+    ``flock`` locks are associated with the open file description, so a *separate*
+    open in the SAME process still contends with the held lock — which is exactly
+    what lets this probe verify the live context's lock WITHOUT trusting any
+    in-process token field. This is the real authorization boundary, closing the
+    forgeable-``_guard``-sentinel gap. If ``flock`` is unsupported the rewriter
+    seam fails closed (no genuine lock can ever be held), so we report ``False``."""
+    lock_path = _sidecar_lock_path(target)
+    fh = None
+    try:
+        fh = open(lock_path, "a+", encoding="utf-8")  # noqa: SIM115 — closed in finally
+    except OSError:
+        return False
+    try:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            # Contended: a genuine holder exists (this is the authorized case).
+            return True
+        except AttributeError:
+            # flock unsupported on this platform: hold_ledger_lock() fails closed,
+            # so no genuine lock can ever be held -> never authorize.
+            return False
+        # Acquired -> nobody held it -> not authorized. Release the probe at once.
+        with contextlib.suppress(OSError):
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+        return False
+    finally:
+        fh.close()
+
+
+@dataclass
+class HeldLedgerLock:
+    """Proof token that the C8 rewriter sidecar lock for a specific ledger is
+    currently held.
+
+    Minted by :func:`hold_ledger_lock` — the sole-owner acquire seam the F005
+    backfill entrypoint uses. The F002 backfill engine REQUIRES one to enter write
+    mode and refuses to write without it (it never self-acquires the lock).
+
+    Authorization is NOT a trust-the-token check: :meth:`authorizes` binds the
+    token to a SPECIFIC live acquisition via its per-acquisition ``_lease``
+    capability (registered in ``_LIVE_LOCK_LEASES`` only while that acquisition's
+    context is live), and additionally probes the genuine OS-level sidecar lock. A
+    token forged via the readable ``il._LOCK_GUARD`` sentinel — or any other direct
+    construction — carries no registered lease, so it cannot authorize a write even
+    when an UNRELATED genuine :func:`hold_ledger_lock` context happens to hold the
+    sidecar lock at that instant. The ``active`` flag (cleared on context exit)
+    short-circuits a released token before either check."""
+
+    target: Path
+    active: bool = True
+    _guard: object = field(default=None, repr=False, compare=False)
+    _lease: object = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        # Defence-in-depth against ACCIDENTAL direct construction only. This is NOT
+        # the security boundary (the sentinel is process-readable, hence forgeable);
+        # authorizes() probes the real OS lock and is what actually gates writes.
+        if self._guard is not _LOCK_GUARD:
+            raise RuntimeError(
+                "HeldLedgerLock cannot be constructed directly; a held-lock proof "
+                "is minted by hold_ledger_lock() (C8 sole-owner acquire seam)"
+            )
+
+    def authorizes(self, ledger_target: str | Path) -> bool:
+        """True iff this token authorizes a write to ``ledger_target`` RIGHT NOW.
+
+        Four gates, all required:
+
+        1. the token has not been released (``active``);
+        2. its target matches ``ledger_target`` by absolute path;
+        3. its per-acquisition ``_lease`` is the EXACT capability registered for a
+           live :func:`hold_ledger_lock` context (identity membership in
+           ``_LIVE_LOCK_LEASES``) — this binds the token to ITS OWN acquisition, so
+           a forged token does not ride on an unrelated holder's lock; and
+        4. the C8 sidecar lock for that target is GENUINELY held at this instant
+           (verified against the OS, defence-in-depth on top of gate 3).
+
+        A token forged via the readable ``il._LOCK_GUARD`` sentinel carries no
+        registered lease, so it fails gate 3 EVEN when some other genuine
+        :func:`hold_ledger_lock` context concurrently holds the sidecar lock — which
+        is what actually binds write authority to the F005-owned held-lock context."""
+        if not self.active:
+            return False
+        if os.path.abspath(str(self.target)) != os.path.abspath(str(ledger_target)):
+            return False
+        if self._lease is None or _LIVE_LOCK_LEASES.get(id(self._lease)) is not self._lease:
+            return False
+        return _sidecar_lock_held(self.target)
+
+
+@contextlib.contextmanager
+def hold_ledger_lock(target: Path | None = None) -> Iterator[HeldLedgerLock]:
+    """Acquire the C8 rewriter sidecar lock and yield a :class:`HeldLedgerLock`
+    proof token (C8 sole-owner acquire seam).
+
+    The F005 backfill entrypoint is the sole owner: it calls this exactly once and
+    passes the yielded token into the F002 engine, which refuses to write without
+    it and never re-acquires. The token's ``active`` flag is cleared on exit, so a
+    token can never authorize a post-release write. flock-unavailable fails closed
+    (``SystemExit(2)``) exactly like :func:`_rewriter_sidecar_lock`."""
+    resolved = Path(target) if target is not None else ledger_path()
+    with _rewriter_sidecar_lock(resolved):
+        # Mint a fresh, unique lease capability and register it for the lifetime of
+        # THIS acquisition. authorizes() checks identity membership, so the token is
+        # bound to this specific context — not to "any holder of the sidecar lock".
+        lease = object()
+        _LIVE_LOCK_LEASES[id(lease)] = lease
+        token = HeldLedgerLock(target=resolved, _guard=_LOCK_GUARD, _lease=lease)
+        try:
+            yield token
+        finally:
+            token.active = False
+            _LIVE_LOCK_LEASES.pop(id(lease), None)
+
+
 # ──────────────────────────────  atomic append  ──────────────────────────────
 
 
@@ -717,15 +864,18 @@ def _collapse_bucket(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 __all__ = [
+    "HeldLedgerLock",
     "InvocationRecord",
     "InvocationRecorder",
     "LEDGER_FILENAME",
+    "LedgerLockUnavailable",
     "RESULT_ERROR",
     "RESULT_INTERRUPTED",
     "RESULT_OK",
     "canonicalize_repo",
     "compact_ledger",
     "derive_buckets",
+    "hold_ledger_lock",
     "ledger_path",
     "make_path_pair",
     "redact_command",

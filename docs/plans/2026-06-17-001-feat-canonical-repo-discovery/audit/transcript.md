@@ -14,3 +14,11 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 | 2026-06-20T20:04:35Z | F006 | i0 | codex / auditor | needs_changes | 781,812 / 13,663 | [codex-auditor-F006-i0.json](audit/codex-auditor-F006-i0.json) |
 | 2026-06-20T20:05:25Z | F006 | i1 | claude / implementer | signed_off | 264,932 / 2,683 | [claude-implementer-F006-i1.json](audit/claude-implementer-F006-i1.json) |
 | 2026-06-20T20:07:40Z | F006 | i1 | codex / auditor | signed_off | 1,059,513 / 13,456 | [codex-auditor-F006-i1.json](audit/codex-auditor-F006-i1.json) |
+| 2026-06-20T20:30:00Z | F002 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F002-i0.json](audit/claude-implementer-F002-i0.json) |
+| 2026-06-20T20:33:20Z | F002 | i0 | codex / auditor | needs_changes | 1,484,228 / 16,968 | [codex-auditor-F002-i0.json](audit/codex-auditor-F002-i0.json) |
+| 2026-06-20T20:41:32Z | F002 | i1 | claude / implementer | signed_off | 5,558,211 / 36,509 | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |
+| 2026-06-20T20:43:13Z | F002 | i1 | codex / auditor | needs_changes | 1,054,508 / 10,359 | [codex-auditor-F002-i1.json](audit/codex-auditor-F002-i1.json) |
+| 2026-06-20T20:46:50Z | F002 | i2 | claude / implementer | signed_off | 741,113 / 16,249 | [claude-implementer-F002-i2.json](audit/claude-implementer-F002-i2.json) |
+| 2026-06-20T20:48:35Z | F002 | i2 | codex / auditor | needs_changes | 761,838 / 10,802 | [codex-auditor-F002-i2.json](audit/codex-auditor-F002-i2.json) |
+| 2026-06-20T20:51:41Z | F002 | i3 | claude / implementer | signed_off | 802,833 / 12,436 | [claude-implementer-F002-i3.json](audit/claude-implementer-F002-i3.json) |
+| 2026-06-20T20:54:00Z | F002 | i3 | codex / auditor | signed_off | 1,319,135 / 13,190 | [codex-auditor-F002-i3.json](audit/codex-auditor-F002-i3.json) |

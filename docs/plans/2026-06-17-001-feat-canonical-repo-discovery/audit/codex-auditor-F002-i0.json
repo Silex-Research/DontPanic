@@ -1,0 +1,57 @@
+{
+  "task_id": "2026-06-17-001-feat-canonical-repo-discovery",
+  "audit_id": "2026-06-17-001-feat-canonical-repo-discovery#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-20T20:30:00Z",
+  "completed_at": "2026-06-20T20:33:20Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-17-001-feat-canonical-repo-discovery-nycy65yw target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 340733 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1484228,
+    "tokens_out": 16968,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-canonical-discovery\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic-canonical-discovery\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is present and matches `{Repo, Env: dev, Project: (none)}`; `target_context.commands_run` is empty, so no forbidden command shapes found.\n\nFINDING (high, correctness): F002’s held-lock proof is forgeable, so direct write mode can be authorized without the C8 sidecar lock actually being held. Evidence: [invocation_ledger.py](/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/scripts/dontpanic_orchestrate/invocation_ledger.py:391) exposes a public `HeldLedgerLock(target, active=True)` dataclass, and a direct construction returned `authorizes(...) == True`. Recommendation: make the token unforgeable/private to `hold_ledger_lock` or validate an internal nonce/owned context, and add a test that forged tokens are rejected.\n\nFINDING (medium, correctness): Write-mode lock refusal happens after evidence loading, so direct write without a held lock does not reliably refuse first and validation is not fully inside the required held-lock gate. Evidence: [canonical_backfill.py](/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/scripts/dontpanic_orchestrate/canonical_backfill.py:328) loads evidence before the lock check at line 347; missing evidence with `dry_run=False, lock=None` raised `EvidenceFatalError missing_evidence_file` instead of `BackfillWriteError`. Recommendation: for `dry_run=False`, validate the held lock before loading eviden",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -q scripts/dontpanic_orchestrate/tests/test_canonical_backfill_f002.py -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import sys; sys.path.insert(0, 'scripts'); from dontpanic_orchestrate import canonical_backfill as cb; print(cb.EVIDENCE_FILENAME)\"",
+      "PYTHONDONTWRITEBYTECODE=1 python -c \"import sys; from pathlib import Path; sys.path.insert(0, 'scripts'); from dontpanic_orchestrate import invocation_ledger as il; print(il.HeldLedgerLock(Path('/tmp/ledger.jsonl')).authorizes('/tmp/ledger.jsonl'))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "F002’s held-lock proof is forgeable, so direct write mode can be authorized without the C8 sidecar lock actually being held. Evidence: [invocation_ledger.py](/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/scripts/dontpanic_orchestrate/invocation_ledger.py:391) exposes a public `HeldLedgerLock(target, active=True)` dataclass, and a direct construction returned `authorizes(...) == True`. Recommendation: make the token unforgeable/private to `hold_ledger_lock` or validate an interna",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Write-mode lock refusal happens after evidence loading, so direct write without a held lock does not reliably refuse first and validation is not fully inside the required held-lock gate. Evidence: [canonical_backfill.py](/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/scripts/dontpanic_orchestrate/canonical_backfill.py:328) loads evidence before the lock check at line 347; missing evidence with `dry_run=False, lock=None` raised `EvidenceFatalError missing_evidence_file` instead of",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F002",
+      "issue": "The implementer audit did not contain successful validation, and I could not run the focused pytest suite in this read-only sandbox. Evidence: the audit says `DISPATCH TIMED OUT` with `audit_status: blocked`; my pytest run failed before collection with `No usable temporary directory found`. Recommendation: rerun the F002 tests in an environment with a writable temp directory and record the passing test output. Checks run: $ git status --short $ git diff --stat HEAD~1 $ PYTHONDONTWRITEBYTECODE=1 ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

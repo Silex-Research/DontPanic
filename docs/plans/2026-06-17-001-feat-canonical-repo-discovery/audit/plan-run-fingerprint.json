@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-20T19:58:13Z",
+  "captured_at": "2026-06-20T20:20:00Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -93,7 +93,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       }
     },
     "feature_ids": [
@@ -106,16 +106,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "ef4248e9adb49ebb77f2f37de3f660dfc9e15e3753c71fb62328dc1e4d5fee39",
+    "audit/gate-state.json": "a191375d3a15da300a6b9d305bce7fd4fa30079b43237643d053918e52b77ebf",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
-    "features.json": "800b76f4928fb856ab522512a48066052958d84d168c23d1d91e9466a481fe9c",
+    "features.json": "11fb4a707477ba9880babbc594a14a02e7d073bc331fff5c810c7d192dba28ca",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1781981431.3885825,
+    "audit/gate-state.json": 1781986060.533861,
     "decisions.jsonl": 1781975243.321752,
-    "features.json": 1781985473.462212,
+    "features.json": 1781986790.928742,
     "objective_contract.json": 1781842638.7315779,
     "plan.md": 1781976958.7608259
   },

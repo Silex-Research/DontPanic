@@ -114,13 +114,34 @@
         "Tests: idempotent re-run is a no-op; unambiguous match stamps the recomputed durable_checkout correctly; literal home path evidence writes <home>-scrubbed display; durable_checkout=true claimed for a temp canonical and durable_checkout=false claimed for a confirmed-durable canonical both SKIP; ambiguous/absent keys are skipped+reported; malformed evidence refuses cleanly; missing required fields, wrong types, and raw origin URL/no-secret-shape failures skip before copy; non-reconstructable scrub token skips; path_key mismatch skips; origin_key is copied from the single confirmed canonical entry only after hash-shape validation; reconstructed temp canonical path skips even when durable_checkout=true; record order + other fields preserved; F002 refuses direct write without a held-lock context; concurrent append under the F005-owned writer lock is serialized or the backfill refuses without replacing the ledger; the 51-record fixture (p2a/p2-lock/main) collapses to one canonical repo key; evidence-file ignore/commit guard is covered."
       ],
       "acceptance": "(1) The backfill engine consumes the F006 evidence contract and stamps canonical_repo onto matching historical records idempotently (re-run is a no-op), and any written path_display is the recomputed scrubbed display; literal evidence under the operator home is normalized to <home> and never copied through raw. (2) The deterministic C4 evidence matrix is implemented and tested: absent key, missing required field, wrong value type, raw-secret-shaped value, path_key mismatch, non-reconstructable scrub token, failed path-key confirmation, reconstructed temp canonical path, durable_checkout=true claimed for a temp canonical path, and durable_checkout=false claimed for a confirmed-durable canonical path are refused and reported, never guessed; durable_checkout written to the ledger is recomputed from the reconstructed canonical path, never trusted from evidence; origin_key is copied only from the single confirmed canonical evidence object after hash-shape/no-secret validation. (3) Backfill write mode runs inside the held C8 sidecar-lock context owned by the F005 entrypoint (F002 requires it and refuses direct write without it \u2014 no self-acquire); because both the live writer and the backfill acquire the sidecar lock BEFORE opening the ledger data file, no concurrent writer can hold a stale data-file inode across the rename; a concurrent append is serialized into the rewritten ledger or the backfill fails without replacement (exit 2), never lost. Evidence defects are split per C4 into file-fatal (exit 2, stamp nothing) vs per-record row-level skip+report (exit 0). (4) The evidence file is local-only and not committed, enforced by repo-local ignore plus commit-guard test/doc check. (5) The command field is never parsed (C6). (6) A fixture mirroring the 51 records collapses the three observed paths to one canonical repo key; ledger record order and unrelated fields are preserved.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F006"
       ],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "codex"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i3.json",
+          "captured_by": "codex",
+          "note": "Iter-3 signed_off; 3 rounds closed a forgeable held-lock proof (write authority now bound to identity-checked live lease + OS sidecar probe). iter-3 residual was advisory sandbox-pytest only."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_canonical_backfill_f002.py",
+          "captured_by": "claude",
+          "note": "106 passed (F002+F006+ledger). 8 held-lock/forge security tests: unforgeable proof, forged-token reject (incl. unrelated-lock-held), refuse-without/refuse-before-load, released/foreign-lock reject, concurrent-append serialized. Run by operator (auditor sandbox could not run pytest)."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/canonical_backfill.py",
+          "captured_by": "claude",
+          "note": "One-time idempotent backfill engine: recompute durable canonicalization, file-fatal vs row-skip, held-C8-lock write across read/validate/temp/rename, dry-run report."
+        }
+      ]
     },
     {
       "id": "F005",

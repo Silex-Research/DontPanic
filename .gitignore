@@ -100,6 +100,13 @@ dashboard/state/supervisors.json
 dashboard/state/what-now.json
 dashboard/state/projects/
 
+# Canonical-backfill evidence (plan 2026-06-17-001 F002 / C4). Local operator
+# evidence captured while temp worktrees still existed; maps observed path keys
+# to durable canonical repos. NEVER committed — it can reference private paths.
+# Consumed by `dontpanic projects backfill-canonical`. The default lives under
+# $DONTPANIC_HOME; this guard covers a repo-local override of DONTPANIC_HOME.
+.dontpanic/canonical-backfill-evidence.json
+
 # Maintainer-private convenience scripts (campaign-specific billing queries,
 # personal cron wrappers, etc.) — clearly out of the OSS surface.
 /scripts/maintainer/
