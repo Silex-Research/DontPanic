@@ -2,47 +2,71 @@
   "schema_version": "v1",
   "auditor": "codex",
   "implementer": null,
-  "input_fingerprint": "sha256:2819639db27be72d5a97ef2476e741883a0667c0ccc8405c3521b3f483cf0b3a",
-  "generated_at": "2026-06-19T04:54:35Z",
+  "input_fingerprint": "sha256:985e45ec0556c117e487498713e5846e1b633338f8378341be3d14fa14c42e84",
+  "generated_at": "2026-06-20T00:52:51Z",
   "findings": [
+    {
+      "severity": "high",
+      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
+      "gap_class": "integration_gap",
+      "description": "The backfill concurrency guarantee depends on a held ledger lock, but the plan does not pin the lock identity/protocol needed for atomic rename safety. Locking the ledger data file itself can still lose an append if a writer opens the old inode before the backfill rename and writes after replacement.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F005"
+      ],
+      "recommendation": "Pin a stable sidecar lock file or equivalent shared lock abstraction, require live append, compaction, and backfill to use it, and test the pre-open-before-rename append race explicitly.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "high",
+      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
+      "gap_class": "missing_feature",
+      "description": "The plan consumes captured canonical-backfill evidence but does not define how the operator obtains that evidence while temp worktrees still exist, nor does it declare the evidence file as an explicit prepared prerequisite. Without that, the real historical dogfooding records can be impossible to backfill after temp cleanup.",
+      "feature_refs": [],
+      "recommendation": "Add a small evidence-capture feature or explicitly pin an operator-prepared prerequisite with required capture timing, sample artifact, and validation command before backfill implementation locks.",
+      "finding_class": "plan_contract"
+    },
     {
       "severity": "medium",
       "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "coverage_gap",
-      "description": "F006 validates durable_checkout only as a boolean and F002 copies it from evidence, but once the reconstructed canonical path is confirmed non-temp, C3 implies durable_checkout must be true. The plan rejects durable_checkout=true for a temp canonical path, but does not reject or recompute durable_checkout=false for a confirmed durable canonical, which could stamp records that F003 later skips.",
+      "gap_class": "wiring_gap",
+      "description": "F006 says zero or multiple observation mappings are rejected as malformed or ambiguous, while F002/F005 promise ambiguous records are skipped and reported in the per-record skipped list. The plan does not pin which evidence defects are file-fatal versus row-level skip reasons.",
       "feature_refs": [
         "F006",
         "F002",
-        "F003"
+        "F005"
       ],
-      "recommendation": "Pin backfill confirmation to require durable_checkout === true for any confirmed non-temp canonical path, or recompute it as true instead of copying evidence; add a false-on-non-temp evidence test.",
-      "finding_class": "plan_contract"
+      "recommendation": "Split the C4 matrix into file-fatal schema errors and per-record unconfirmable mappings, then pin exit codes and report rows for each cell.",
+      "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
       "journey_id": "operator-runs-discover-and-sees-canonical-truth",
       "gap_class": "coverage_gap",
-      "description": "F004 says discover --json emits scrubbed display, keys, counts, recency, suggestion status, and suggested_name, but neither F003 nor F004 pins the exact JSON field names, value types, or suggestion_status enum. That leaves the completion test and downstream metadata substrate open to incompatible interpretations.",
+      "description": "The registered_stale JSON schema requires observed_count as an integer even when the registered repo has no observed row, but the plan never pins the emitted value. It also does not define whether the ledger adapter ignores invalid timestamps during aggregation or lets an invalid max last_seen fail the whole canonical row.",
       "feature_refs": [
         "F003",
         "F004"
       ],
-      "recommendation": "Define the exact top-level arrays and per-row JSON schemas, including observed_count, last_seen/recency representation, path_display, canonical_repo_key, fallback registry fields, suggested_name placement, and suggestion_status enum values.",
+      "recommendation": "Pin absent-observation output as observed_count=0 and last_seen=null, and define timestamp aggregation as max valid timestamp with all-invalid rows failing closed, or explicitly choose the opposite.",
       "finding_class": "matrix_pin"
     },
     {
       "severity": "medium",
-      "journey_id": "backfill-is-idempotent-and-refuses-ambiguity",
-      "gap_class": "integration_gap",
-      "description": "F002 says the backfill engine holds the live writer ledger lock, while F005 says the entrypoint acquires the same lock across the F002 sequence. Without a single pinned lock owner or reentrant transaction API, implementation can double-acquire a non-reentrant lock or accidentally run part of validation outside the critical section.",
+      "journey_id": "operator-runs-discover-and-sees-canonical-truth",
+      "gap_class": "coverage_gap",
+      "description": "Reconcile rows are keyed by canonical_repo_key and the output has only one registry_name, but duplicate active registry entries can canonicalize to the same repo. The plan does not say whether to dedupe, choose a deterministic winner, emit a conflict, or return multiple rows with the same canonical key.",
       "feature_refs": [
-        "F002",
-        "F005"
+        "F003",
+        "F004"
       ],
-      "recommendation": "Pin the lock boundary explicitly: either F005 owns the lock and calls an unlocked F002 transaction body, or F002 owns the full locked write-mode transaction and F005 only dispatches it.",
-      "finding_class": "implementation_detail"
+      "recommendation": "Pin duplicate registered-canonical handling before implementation, including deterministic registry_name selection or an explicit conflict classification.",
+      "finding_class": "matrix_pin"
     }
   ],
   "malformed_findings": [],
-  "parser_notes": []
+  "parser_notes": [
+    "finding[4]: gap_class 'matrix_pin' is a finding_class value — remapped into finding_class; gap_class defaulted to 'coverage_gap'"
+  ]
 }

@@ -329,12 +329,26 @@ The JSON report shape is stable for tests and operator use:
 }
 ```
 
-Write mode must coordinate with the live invocation writer. The backfill command
-acquires the same ledger lock used by append/write paths and holds it across the
-full read/validate/write/temp-file/rename critical section. A concurrent
-invocation append must either be serialized into the rewritten ledger or the
-backfill must fail without replacing the ledger; it must never be lost by an
-uncoordinated rename.
+Write mode must coordinate with the live invocation writer through the dedicated
+**sidecar lock file** defined in C8 — NOT a lock on the ledger data-file inode.
+The backfill command acquires the C8 sidecar lock and holds it across the full
+read/validate/write/temp-file/rename critical section. Because every writer
+acquires the same sidecar lock BEFORE opening the ledger data file, no concurrent
+writer can hold a stale data-file inode across the backfill rename. A concurrent
+invocation append is therefore serialized after the backfill, or the backfill
+fails without replacing the ledger; it can never be lost by an uncoordinated
+rename.
+
+Evidence defects split into two tiers. **File-fatal** defects abort the whole run
+with exit 2 and stamp nothing: not valid JSON / parse error, missing required
+top-level keys, `schema_version != "1.0"`, or a top-level structural type error
+(`canonical_repos` not a map, `observation_path_key_to_canonical` not a map).
+**Row-level** defects are per-record SKIP + report (exit 0, listed in `skipped`):
+an absent observation key, a list mapping to zero or multiple canonicals for that
+record, an unknown canonical reference, a missing/mistyped required field or
+raw-secret-shaped value on the referenced canonical, a `path_key` mismatch, a
+non-reconstructable scrub token, a failed path-key confirmation, or a temp /
+durable-contradiction canonical. Row-level skips never abort the run.
 
 ### C5 — Decay / thresholds
 `discover --json` applies a **minimum recency and count policy from day one**,
@@ -395,6 +409,24 @@ Registered-row classification is a pinned matrix:
   thresholds (`observed_count >= min_count` and
   `last_seen >= now - window_days`) -> `registered_active`.
 
+Emitted observed fields are pinned. A `registered_stale`,
+`registered_path_missing`, or `registered_unresolved` row that has **no** observed
+row emits `observed_count = 0` and `last_seen = null` (never omitted, never an
+inflated value). The ledger adapter, when aggregating observed rows by
+`canonical_repo_key`, **skips** any contributing record whose `last_seen` is
+missing or unparseable rather than letting one bad timestamp fail the whole
+canonical row; if every contributing record has an invalid `last_seen`, the
+aggregated `last_seen` is `null` and the row fails the recency threshold
+(fail-closed).
+
+Duplicate canonicalization is deduped deterministically. When two or more
+**active** registry entries canonicalize to the same `canonical_repo_key`,
+reconcile emits exactly **one** registered row for that key, choosing the entry
+whose `registry_name` sorts lexicographically first as the winner; the row carries
+`registry_conflict = true` and `conflicting_registry_names` (the sorted list of
+all colliding names) so the collision is visible rather than silently dropped.
+Reconcile never emits multiple rows sharing one `canonical_repo_key`.
+
 ### C6 — No command parsing
 Discovery derives **only** from structured `repo` / `canonical_repo` metadata and
 timestamps. It **never** reads, parses, or surfaces the free-text `command`
@@ -410,6 +442,36 @@ any hook change would be a separate plan.
 F004 (`discover`) and F005 (`backfill-canonical`) must carry negative tests or
 doc evidence proving they do not install, modify, remove, chain, read, or depend
 on git hooks as part of their command paths.
+
+### C8 — Ledger write coordination (sidecar lock)
+All writers of `invocations.jsonl` — the **live invocation writer** (F001's append
+path) and the **one-time backfill** (F002 engine, owned by F005) — coordinate
+through a single dedicated **sidecar lock file** (`<ledger>.lock`, acquired with
+`flock`), NEVER a lock on the ledger data-file inode. The protocol: acquire the
+sidecar lock BEFORE opening the data file, hold it across the write, release
+after. The live append path holds it across open+append; the backfill holds it
+across read+validate+write+temp-file+rename. Locking a sidecar file (not the data
+inode) is what makes the atomic rename safe — a writer can never open the old
+inode before the rename and write to the orphaned inode after replacement,
+because it must hold the sidecar lock to open at all, and the backfill holds that
+lock across the rename. **This changes the live writer contract:** F001's append
+path must adopt the sidecar lock; that change is in scope and tested
+(concurrent-append serialization). On any platform where `flock` is unavailable,
+the backfill fails closed (exit 2) rather than performing an uncoordinated rename.
+
+## Prepared prerequisites
+
+The canonical-backfill evidence file (`~/.dontpanic/canonical-backfill-evidence.json`,
+consumed by F002 per C4) is a **prepared operator prerequisite that was already
+captured on 2026-06-17**, while the temp worktrees still existed on disk. It was
+produced by resolving each observed repo path to its canonical repo via
+`git -C <path> rev-parse --git-common-dir` (plus origin) and persisting the
+`{observed_path_key -> canonical_repo}` mapping locally (uncommitted, C4). This
+capture is a **one-time, time-sensitive operator action**: once `/tmp` is reaped
+the temp worktrees vanish and the mapping is unrecoverable, which is why it was
+done up front rather than left to implementation time. It is a declared
+prerequisite for F002, not a feature this plan builds; F002 consumes it and fails
+closed if it is absent or malformed (C4).
 
 ## Non-goals
 
