@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-20T21:03:48Z",
+  "captured_at": "2026-06-21T04:17:48Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -85,7 +85,7 @@
         "depends_on": [
           "F002"
         ],
-        "passes": false
+        "passes": true
       },
       "F006": {
         "acceptance": "(1) The C4 evidence contract is implemented and tested: required top-level keys, version 1.0, canonical repo map keyed by canonical path key, observation-key map with list values, only allowed canonical repo fields, required field presence, exact value types, and no-secret-shape validation before any field can be copied. (2) Malformed or ambiguous evidence is classified deterministically and split into file-fatal vs row-level (C4): file-fatal structural defects (not valid JSON/parse error, missing required top-level keys, wrong schema_version, top-level type error where canonical_repos or observation map is not a map) abort the whole run; row-level per-record defects (unknown canonical references, mismatched path keys, unknown fields, missing required fields, wrong value types, raw-secret-shaped values, non-list values, zero or multiple mappings for a record) are skip+report. (3) Optional origin and temp-observed fields are accepted only in the allowed canonical repo shape; origin_key must be hash-shaped and is rejected if it looks like a raw origin URL. F006 validates durable_checkout only as a boolean shape; its semantic truth is recomputed by F002 against the reconstructed canonical path.",
@@ -106,16 +106,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "3b04a4bdec2f73c2b9a3f6f9fc1f9cdf1d9c82c12639a04bc2fb340be677d7fd",
+    "audit/gate-state.json": "6280e8f1cd843d68bd29c943df17a8cc7778134b680f4409107ff1760f733f97",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
-    "features.json": "d7b4bfc08b68c916e118b09bae649ac563347d8df152a3e6e9b4d24581f64796",
+    "features.json": "c2ab5333471508c2962d11c9aa5c56d1f2b725154abb561dea212033c8b98ec2",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1781988840.3016064,
+    "audit/gate-state.json": 1781989888.3401568,
     "decisions.jsonl": 1781975243.321752,
-    "features.json": 1781989420.1754289,
+    "features.json": 1782015447.4562335,
     "objective_contract.json": 1781842638.7315779,
     "plan.md": 1781976958.7608259
   },

@@ -415,3 +415,57 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/docs/p
 </details>
 
 ===
+---
+timestamp: 2026-06-21T04:17:48Z
+event: gate_hit
+plan_id: 2026-06-17-001-feat-canonical-repo-discovery
+unmet_gates: breaker:environmental_blocker
+target_env: dev
+target_project: (none)
+feature_id: F003
+---
+
+Supervisor paused before iteration 0.
+
+Declared gates: ['breaker:environmental_blocker']
+Cleared gates : ['pre_impl']
+Awaiting      : ['breaker:environmental_blocker']
+
+Clear one (preferred): python -m dontpanic_orchestrate approve 2026-06-17-001-feat-canonical-repo-discovery <gate>
+Clear all (explicit):  python -m dontpanic_orchestrate resume 2026-06-17-001-feat-canonical-repo-discovery --all
+
+===
+<!-- rendered annotation 2026-06-21T04:17:48Z -->
+**Approval needed on 2026-06-17-001-feat-canonical-repo-discovery** _(band: needs_action)_
+
+Supervisor paused at gate `upfront` (stage `upfront`). Operator must approve before dispatch continues.
+
+Run:
+
+```
+dontpanic approve 2026-06-17-001-feat-canonical-repo-discovery upfront
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic-canonical-discovery/docs/plans/2026-06-17-001-feat-canonical-repo-discovery/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F003`
+- `inbox_event` = `gate_hit`
+- `plan_id` = `2026-06-17-001-feat-canonical-repo-discovery`
+- `subtype` = `upfront`
+- `target_env` = `dev`
+
+</details>
+
+===
+---
+timestamp: 2026-06-21T04:20:08Z
+event: gate_cleared
+plan_id: 2026-06-17-001-feat-canonical-repo-discovery
+gate: breaker:environmental_blocker
+---
+
+Operator cleared gate 'breaker:environmental_blocker' via 'approve'.
+
+===
