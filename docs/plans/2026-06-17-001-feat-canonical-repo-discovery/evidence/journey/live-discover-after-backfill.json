@@ -1,0 +1,36 @@
+{
+  "used_unregistered": [],
+  "registered_active": [
+    {
+      "canonical_repo_key": "69cde678a1af3590",
+      "registry_name": "dontpanic",
+      "path_display": "<home>/Documents/GitHub/DontPanic",
+      "observed_count": 65,
+      "last_seen": "2026-06-21T05:38:34Z",
+      "registry_conflict": false,
+      "conflicting_registry_names": []
+    }
+  ],
+  "registered_stale": [
+    {
+      "canonical_repo_key": "033b920a791f43fe",
+      "registry_name": "spindineswift",
+      "path_display": "<home>/Documents/GitHub/SpinDineSwift",
+      "observed_count": 0,
+      "last_seen": null,
+      "registry_conflict": false,
+      "conflicting_registry_names": []
+    },
+    {
+      "canonical_repo_key": "290470dfb53eee2e",
+      "registry_name": "quantre-migration",
+      "path_display": "<home>/Documents/GitHub/QuantRE-Production-main",
+      "observed_count": 0,
+      "last_seen": null,
+      "registry_conflict": false,
+      "conflicting_registry_names": []
+    }
+  ],
+  "registered_path_missing": [],
+  "registered_unresolved": []
+}

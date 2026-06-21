@@ -1,0 +1,17 @@
+{
+  "used_unregistered": [],
+  "registered_active": [
+    {
+      "canonical_repo_key": "71c82a6d4d1051db",
+      "registry_name": "dontpanic",
+      "path_display": "<home>/Documents/GitHub/DontPanic",
+      "observed_count": 51,
+      "last_seen": "2026-06-19T05:31:43Z",
+      "registry_conflict": false,
+      "conflicting_registry_names": []
+    }
+  ],
+  "registered_stale": [],
+  "registered_path_missing": [],
+  "registered_unresolved": []
+}

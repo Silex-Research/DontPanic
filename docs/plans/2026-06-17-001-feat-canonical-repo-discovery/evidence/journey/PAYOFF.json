@@ -1,0 +1,32 @@
+{
+  "captured": "2026-06-21 live ~/.dontpanic ledger after backfill",
+  "backfill": {
+    "stamped": 54,
+    "skipped_absent_key": 40,
+    "already_stamped_on_rerun": 64,
+    "idempotent_second_run_stamped": 0
+  },
+  "discover": {
+    "registered_active": [
+      {
+        "registry_name": "dontpanic",
+        "observed_count": 65,
+        "canonical_repo_key": "69cde678a1af3590"
+      }
+    ],
+    "registered_stale": [
+      {
+        "registry_name": "spindineswift",
+        "observed_count": 0,
+        "canonical_repo_key": "033b920a791f43fe"
+      },
+      {
+        "registry_name": "quantre-migration",
+        "observed_count": 0,
+        "canonical_repo_key": "290470dfb53eee2e"
+      }
+    ],
+    "used_unregistered": []
+  },
+  "outcome": "DontPanic dogfooding now visible: registered_active observed_count=65 (was invisible pre-plan)."
+}
