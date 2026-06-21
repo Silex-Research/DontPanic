@@ -34,3 +34,9 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 
 **2026-06-21T04:33:32Z** — feature **F003** terminal: `stopped_environmental_blocker` after 2 round(s) — verdict=blocked reconciled to environmental_blocker on round 2: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
 
+| 2026-06-21T04:42:21Z | F004 | i0 | claude / implementer | signed_off | 5,268,518 / 32,828 | [claude-implementer-F004-i0.json](audit/claude-implementer-F004-i0.json) |
+| 2026-06-21T04:45:40Z | F004 | i0 | codex / auditor | needs_changes | 2,481,209 / 17,623 | [codex-auditor-F004-i0.json](audit/codex-auditor-F004-i0.json) |
+| 2026-06-21T04:48:20Z | F004 | i1 | claude / implementer | signed_off | 1,448,354 / 11,430 | [claude-implementer-F004-i1.json](audit/claude-implementer-F004-i1.json) |
+| 2026-06-21T04:50:54Z | F004 | i1 | codex / auditor | needs_changes | 1,603,827 / 13,463 | [codex-auditor-F004-i1.json](audit/codex-auditor-F004-i1.json) |
+| 2026-06-21T04:52:07Z | F004 | i2 | claude / implementer | signed_off | 603,853 / 4,735 | [claude-implementer-F004-i2.json](audit/claude-implementer-F004-i2.json) |
+| 2026-06-21T04:54:35Z | F004 | i2 | codex / auditor | signed_off | 1,804,675 / 11,915 | [codex-auditor-F004-i2.json](audit/codex-auditor-F004-i2.json) |

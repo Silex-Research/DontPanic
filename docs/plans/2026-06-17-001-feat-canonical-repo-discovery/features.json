@@ -287,12 +287,33 @@
         "can_render_command",
         "needs_manual_path"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
       ],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "codex"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i2.json",
+          "captured_by": "codex",
+          "note": "iter-2 signed_off 0 findings. iter-0 caught a HIGH security finding: discover --json did not enforce the C1 no-raw-home-path boundary at the render/emit layer (privacy leak) + medium shell-quote; iter-1 low ruff lint. All fixed."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py",
+          "captured_by": "claude",
+          "note": "177 passed + ruff clean. C1: raw-home-in-projection scrubbed at JSON boundary (regression for iter-0 high), no raw home path, no reconstructed add-path in JSON; field contract (used_unregistered/registered_active/path_missing null-keyed); registry_conflict; shell-quoted human command; C1 3-rule human reconstruction; C6 command never surfaced; C7 hook guard."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/canonical_discovery_render.py",
+          "captured_by": "claude",
+          "note": "discover render layer enforcing C1 at emit; cli.py adds `dontpanic projects discover [--json]`."
+        }
+      ]
     }
   ]
 }

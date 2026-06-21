@@ -2,10 +2,6 @@
   "staged": [],
   "unstaged_modified": [
     {
-      "path": ".gitignore",
-      "status": "M"
-    },
-    {
       "path": "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/INBOX.md",
       "status": "M"
     },
@@ -34,18 +30,18 @@
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/invocation_ledger.py",
+      "path": "scripts/dontpanic_orchestrate/cli.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F002-i1.json",
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F002-i2.json",
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/codex-auditor-F002-i0.json",
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/codex-auditor-F002-i1.json",
-    "scripts/dontpanic_orchestrate/canonical_backfill.py",
-    "scripts/dontpanic_orchestrate/tests/test_canonical_backfill_f002.py"
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F004-i0.json",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F004-i1.json",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F004-i2.json",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/codex-auditor-F004-i0.json",
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/codex-auditor-F004-i1.json",
+    "scripts/dontpanic_orchestrate/canonical_discovery_render.py",
+    "scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

@@ -1593,12 +1593,13 @@ def _quota_caps_main(argv: list[str]) -> int:
 
 
 _PROJECTS_USAGE = (
-    "usage: dontpanic projects {add|list|show|remove|backfill-canonical} [args] [--json]\n"
+    "usage: dontpanic projects {add|list|show|remove|discover|backfill-canonical} [args] [--json]\n"
     "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
     "                    [--onboard] [--dry-run]\n"
     "  list\n"
     "  show <name>\n"
     "  remove <name> [--yes]    (default is dry-run preview)\n"
+    "  discover [--json] [--window-days N] [--min-count N]\n"
     "  backfill-canonical [--dry-run] [--json] [--ledger PATH] [--evidence PATH]"
 )
 
@@ -1634,6 +1635,8 @@ def _projects_main(argv: list[str]) -> int:
         return _projects_show(rest)
     if sub == "remove":
         return _projects_remove(rest)
+    if sub == "discover":
+        return _projects_discover(rest)
     if sub == "backfill-canonical":
         return _projects_backfill_canonical(rest)
     print(f"[projects] unknown subcommand: {sub!r}", file=sys.stderr)
@@ -1993,6 +1996,134 @@ def _projects_remove(argv: list[str]) -> int:
     else:
         print(f"[projects remove] removed {removed.name!r}")
     return 0
+
+
+def _read_ledger_records(target: Path) -> list[dict]:
+    """Read the invocation ledger into a list of parsed records for discovery.
+
+    Read-only and lenient: a missing ledger yields no records, and a single
+    malformed line is skipped rather than aborting a read-only discovery scan.
+    Never reads or parses ``record.command`` (C6) — only structured records are
+    returned and the F003 adapters take it from there."""
+    if not target.exists():
+        return []
+    records: list[dict] = []
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            records.append(obj)
+    return records
+
+
+def _projects_discover(argv: list[str]) -> int:
+    """Plan 2026-06-17-001 F004 — ``dontpanic projects discover [--json]``.
+
+    Thin CLI wrapper over the F003 logic core. It loads the invocation ledger and
+    the project registry, builds ``observed_canonical`` and ``registered_canonical``
+    via the F003 adapters, wires the C5 default policy
+    (``window_days=14``, ``min_count=2``, ``last_seen``, inclusive boundaries) with
+    ``--window-days`` / ``--min-count`` overrides, calls the pure ``reconcile``, and
+    renders the result.
+
+    Privacy boundary (C1): ``--json`` serializes only scrubbed ``path_display`` +
+    hashed keys + counts/recency + ``suggestion_status`` + ``suggested_name`` — never
+    a reconstructed raw add path; the output is run through the shared
+    no-secret-shape assertion before a byte is emitted. Default human output is the
+    only surface that reconstructs a real ``dontpanic projects add`` path, computed
+    operator-locally per the three C1 rules.
+
+    This command never reads ``record.command`` (C6) and never installs, modifies,
+    removes, chains, reads, or depends on any git hook (C7); it only reads the
+    ledger + registry.
+
+    Exit codes:
+      0  discovery rendered (including the empty state)
+      2  usage error, or a JSON secret-shape regression (refuse to emit)
+    """
+    from dontpanic_orchestrate import canonical_discovery as canonical_discovery
+    from dontpanic_orchestrate import canonical_discovery_render as render
+    from dontpanic_orchestrate import invocation_ledger as invocation_ledger
+    from dontpanic_orchestrate import operator_console as operator_console
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects discover",
+        add_help=True,
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Emit the pinned --json field contract instead of a human summary.",
+    )
+    parser.add_argument(
+        "--window-days",
+        type=int,
+        default=canonical_discovery.DiscoveryPolicy.window_days,
+        dest="window_days",
+        help="Recency window in days (C5 default: 14, inclusive boundary).",
+    )
+    parser.add_argument(
+        "--min-count",
+        type=int,
+        default=canonical_discovery.DiscoveryPolicy.min_count,
+        dest="min_count",
+        help="Minimum observed_count threshold (C5 default: 2, inclusive boundary).",
+    )
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        if exc.code in (0, None):
+            raise
+        return 2
+
+    records = _read_ledger_records(invocation_ledger.ledger_path())
+    observed = canonical_discovery.observed_canonical_from_ledger(records)
+
+    reg = projects_registry.load_registry()
+    registered = canonical_discovery.registered_canonical_from_registry(reg.projects)
+
+    policy = canonical_discovery.DiscoveryPolicy(
+        window_days=args.window_days,
+        min_count=args.min_count,
+    )
+    now = _now_iso_utc()
+    projection = canonical_discovery.reconcile(registered, observed, now, policy)
+
+    if args.as_json:
+        payload = render.build_discover_json(projection)
+        # C1: refuse to emit if any serialized string matches a secret shape (no
+        # raw home path / token ever reaches --json). The projection only carries
+        # scrubbed displays + hashed keys, so this is a defensive guard.
+        try:
+            operator_console._assert_no_secret_shapes(payload)  # noqa: SLF001
+        except ValueError as exc:
+            print(f"[projects discover] refusing to emit JSON: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        sys.stdout.write(render.render_discover_text(projection))
+    return 0
+
+
+def _now_iso_utc() -> str:
+    """Current UTC instant as an ISO-8601 ``...Z`` string for the discovery policy."""
+    import datetime as _dt
+
+    return (
+        _dt.datetime.now(tz=_dt.timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def _projects_backfill_canonical(argv: list[str]) -> int:

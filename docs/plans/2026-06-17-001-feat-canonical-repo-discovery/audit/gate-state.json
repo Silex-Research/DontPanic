@@ -79,6 +79,15 @@
       "gate": "breaker:environmental_blocker",
       "at": "2026-06-21T04:35:14Z",
       "actor": "operator"
+    },
+    {
+      "action": "pause",
+      "at": "2026-06-21T04:54:35Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
     }
   ],
   "gate_events": [
@@ -91,5 +100,10 @@
   ],
   "completed_stages": [
     "pre_impl"
-  ]
+  ],
+  "paused_at": "2026-06-21T04:54:35Z",
+  "pause_gates": [
+    "pre_merge"
+  ],
+  "pending_stage": "pre_merge"
 }

@@ -1,0 +1,48 @@
+{
+  "task_id": "2026-06-17-001-feat-canonical-repo-discovery",
+  "audit_id": "2026-06-17-001-feat-canonical-repo-discovery#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-21T04:42:21Z",
+  "completed_at": "2026-06-21T04:45:40Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F004-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-17-001-feat-canonical-repo-discovery-zzj6m0_m target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 680800 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2481209,
+    "tokens_out": 17623,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic-canonical-discovery\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F004] Repo: DontPanic-canonical-discovery  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. The implementer’s target declaration is correct (`Repo: DontPanic-canonical-discovery`, `Env: dev`, `Project: (none)`), and their `target_context.commands_run` contains only pytest commands with no forbidden command shapes.\n\nFINDING (high, security): `discover --json` does not enforce the C1 “no raw home path” boundary at the render/emit boundary. Evidence: `canonical_discovery_render._used_unregistered_json` and registered row renderers pass `path_display` through verbatim, while `cli.py:2108` only calls `_assert_no_secret_shapes`; that guard does not detect raw home paths. I verified a payload with `/Users/bayesian/raw` passes `_assert_no_secret_shapes` and remains in JSON. Recommendation: sanitize every emitted `path_display` with the shared scrubber, or add an explicit raw-`Path.home()` rejection before JSON emission, plus a regression that injects a raw current-home `path_display` into the projection/ledger.\n\nFINDING (medium, correctness): Human add commands are not shell-quoted, so valid reconstructed paths with spaces/metacharacters produce broken copy-paste commands. Evidence: `canonical_discovery_render.py:91-93` concatenates `path_arg` directly; a path `/Users/me/My Repos/myrepo` renders as `dontpanic projects add myrepo /Users/me/My Repos/myrepo`. Recommendation: use `shlex.quote` for concrete path arguments while preserving the literal `<path>` placeholder for manual ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short && git diff --stat HEAD~1..HEAD && git diff --name-only HEAD~1..HEAD",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c \"import ast; paths=['scripts/dontpanic_orchestrate/cli.py','scripts/dontpanic_orchestrate/canonical_discovery_render.py','scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py']; [ast.parse(open(p, encoding='utf-8').read(), filename=p) for p in paths]; print('syntax ok:', ', '.join(paths))\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "feature_id": "F004",
+      "issue": "`discover --json` does not enforce the C1 “no raw home path” boundary at the render/emit boundary. Evidence: `canonical_discovery_render._used_unregistered_json` and registered row renderers pass `path_display` through verbatim, while `cli.py:2108` only calls `_assert_no_secret_shapes`; that guard does not detect raw home paths. I verified a payload with `/Users/bayesian/raw` passes `_assert_no_secret_shapes` and remains in JSON. Recommendation: sanitize every emitted `path_display` with the sha",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F004",
+      "issue": "Human add commands are not shell-quoted, so valid reconstructed paths with spaces/metacharacters produce broken copy-paste commands. Evidence: `canonical_discovery_render.py:91-93` concatenates `path_arg` directly; a path `/Users/me/My Repos/myrepo` renders as `dontpanic projects add myrepo /Users/me/My Repos/myrepo`. Recommendation: use `shlex.quote` for concrete path arguments while preserving the literal `<path>` placeholder for manual cases. Checks run: $ git status --short && git diff --sta",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

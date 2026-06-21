@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-21T04:20:19Z",
+  "captured_at": "2026-06-21T04:35:15Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -69,7 +69,7 @@
           "F001",
           "F002"
         ],
-        "passes": false
+        "passes": true
       },
       "F004": {
         "acceptance": "(1) `dontpanic projects discover --json` serializes the F003 reconcile projection in the pinned field contract after building both observed_canonical and registered_canonical; default human output is concise; empty-state serializes to empty arrays without error. (2) The command supplies the C5 default values and configured CLI overrides to F003 reconcile inputs; F003 owns policy correctness and the active/stale truth-table tests. (3) JSON output contains canonical_repo_key + scrubbed display + counts/recency + suggestion_status + suggested_name only; no raw home path and no reconstructed add-command path appear in JSON (C1); registered_path_missing and registered_unresolved JSON rows carry canonical_repo_key=null plus registry_name and registry_path_key and NO observed_count/last_seen (those two null-keyed states have no canonical key to join observed usage to, matching the C5 narrowing), not a fake canonical key; registered_active/registered_stale rows carry registry_conflict + conflicting_registry_names and emit observed_count=0/last_seen=null when no observed row exists; the exact --json field names, value types, and suggestion_status enum (can_render_command|needs_manual_path) match the pinned field contract in this feature's description. (4) Default human output reconstructs the add-command path operator-locally using suggested_name and the three C1 path rules. (5) The CLI path never parses record.command (C6), never installs/modifies/removes/chains/reads/depends on git hooks (C7), and the isolated/D010-like fixtures produce used_unregistered vs registered_active respectively.",
@@ -106,16 +106,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "50f44dab7f70ed032740d6cdd526bfc32324b61d6960d84287ed52bd0c73d1ac",
+    "audit/gate-state.json": "39c5ea8a3538ca7fad7383b5fff00480384819fdd20c9b31736eeed3acb7a4e9",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
-    "features.json": "c2ab5333471508c2962d11c9aa5c56d1f2b725154abb561dea212033c8b98ec2",
+    "features.json": "121f575a47dd767455d4564481f7dafce1bb9b6f811ce0c053ae04400bec6aad",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1782015608.0776834,
+    "audit/gate-state.json": 1782016514.3846586,
     "decisions.jsonl": 1781975243.321752,
-    "features.json": 1782015447.4562335,
+    "features.json": 1782016514.594609,
     "objective_contract.json": 1781842638.7315779,
     "plan.md": 1781976958.7608259
   },
