@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-21T04:17:48Z",
+  "captured_at": "2026-06-21T04:20:19Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -106,14 +106,14 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "6280e8f1cd843d68bd29c943df17a8cc7778134b680f4409107ff1760f733f97",
+    "audit/gate-state.json": "50f44dab7f70ed032740d6cdd526bfc32324b61d6960d84287ed52bd0c73d1ac",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
     "features.json": "c2ab5333471508c2962d11c9aa5c56d1f2b725154abb561dea212033c8b98ec2",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1781989888.3401568,
+    "audit/gate-state.json": 1782015608.0776834,
     "decisions.jsonl": 1781975243.321752,
     "features.json": 1782015447.4562335,
     "objective_contract.json": 1781842638.7315779,

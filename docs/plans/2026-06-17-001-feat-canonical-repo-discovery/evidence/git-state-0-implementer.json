@@ -8,15 +8,12 @@
     {
       "path": "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/plan-run-fingerprint.json",
       "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
-      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F005-i0.json",
-    "scripts/dontpanic_orchestrate/tests/test_projects_backfill_canonical_f005.py"
+    "docs/plans/2026-06-17-001-feat-canonical-repo-discovery/audit/claude-implementer-F003-i0.json",
+    "scripts/dontpanic_orchestrate/canonical_discovery.py",
+    "scripts/dontpanic_orchestrate/tests/test_canonical_discovery_f003.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

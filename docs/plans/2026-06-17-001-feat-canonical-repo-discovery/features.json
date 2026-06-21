@@ -231,13 +231,41 @@
         "registry_conflict",
         "conflicting_registry_names"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002"
       ],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i0.json",
+          "captured_by": "codex",
+          "note": "iter-0 medium (real): suggested_name not collision-safe when hash-suffixed fallback also taken \u2014 fixed by implementer."
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i1.json",
+          "captured_by": "codex",
+          "note": "iter-1 residual advisory only (environmental: audit sandbox no temp dir). stopped_environmental_blocker; resolved via operator-local verification."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_canonical_discovery_f003.py",
+          "captured_by": "operator",
+          "note": "OPERATOR-VERIFIED: 149 passed (F003+F002+F006+F005+ledger). Covers collision-when-hash-also-taken + dense-collision set; D042 active-eligible dedup (inactive-first never suppresses active); D039 no-observed 0/null; D040 registry_conflict; D041 path_missing/unresolved key shapes; C6 reconcile no filesystem IO; C5 truth table; C3 non-durable never recommended."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/canonical_discovery.py",
+          "captured_by": "claude",
+          "note": "Ledger+registry adapters + pure reconcile (5-state projection); collision-safe suggested_name."
+        }
+      ]
     },
     {
       "id": "F004",
