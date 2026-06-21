@@ -1593,12 +1593,13 @@ def _quota_caps_main(argv: list[str]) -> int:
 
 
 _PROJECTS_USAGE = (
-    "usage: dontpanic projects {add|list|show|remove} [args] [--json]\n"
+    "usage: dontpanic projects {add|list|show|remove|backfill-canonical} [args] [--json]\n"
     "  add <name> <path> [--force --yes] [--implementer X] [--auditor Y] [--notes ...]\n"
     "                    [--onboard] [--dry-run]\n"
     "  list\n"
     "  show <name>\n"
-    "  remove <name> [--yes]    (default is dry-run preview)"
+    "  remove <name> [--yes]    (default is dry-run preview)\n"
+    "  backfill-canonical [--dry-run] [--json] [--ledger PATH] [--evidence PATH]"
 )
 
 
@@ -1633,6 +1634,8 @@ def _projects_main(argv: list[str]) -> int:
         return _projects_show(rest)
     if sub == "remove":
         return _projects_remove(rest)
+    if sub == "backfill-canonical":
+        return _projects_backfill_canonical(rest)
     print(f"[projects] unknown subcommand: {sub!r}", file=sys.stderr)
     print(_PROJECTS_USAGE, file=sys.stderr)
     return 2
@@ -1990,6 +1993,146 @@ def _projects_remove(argv: list[str]) -> int:
     else:
         print(f"[projects remove] removed {removed.name!r}")
     return 0
+
+
+def _projects_backfill_canonical(argv: list[str]) -> int:
+    """Plan 2026-06-17-001 F005 — operator entrypoint for the one-time canonical
+    backfill (the C4-pinned ``dontpanic projects backfill-canonical`` surface).
+
+    This is a thin wrapper over the F002 engine (:mod:`canonical_backfill`). It
+    resolves default ledger/evidence paths through the same ``$DONTPANIC_HOME``
+    logic the live ledger writer uses, supports preview (``--dry-run``) and write
+    modes, renders the stable C4 report schema with scrubbed paths, and follows
+    the C4 status contract (exit 0 even when rows are skipped; exit 2 on
+    usage/input/write failure).
+
+    Lock ownership (C8): in **write** mode this entrypoint is the SOLE C8 sidecar-
+    lock owner. It acquires the ``<ledger>.lock`` sidecar exactly once via
+    :func:`invocation_ledger.hold_ledger_lock` — the same sidecar the live append
+    path acquires — and passes the held-lock proof into the F002 engine, which
+    refuses to write without it and never re-acquires. The lock is held across the
+    engine's whole read/validate/write/temp-file/rename critical section, so a
+    concurrent append is serialized after the backfill (or the backfill fails
+    without replacing the ledger), never lost. On a platform lacking ``flock``,
+    :func:`hold_ledger_lock` fails closed with ``SystemExit(2)`` rather than
+    performing an uncoordinated rename; we surface that as exit 2.
+
+    This command does NOT install, modify, remove, chain, read, or depend on any
+    git hook (C7); it touches only the ledger + evidence files.
+    """
+    from dontpanic_orchestrate import canonical_backfill as canonical_backfill
+    from dontpanic_orchestrate import canonical_evidence as canonical_evidence
+    from dontpanic_orchestrate import invocation_ledger as invocation_ledger
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic projects backfill-canonical",
+        add_help=True,
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="Validate and report without writing (preview mode). No lock acquired.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Emit the stable C4 report as JSON instead of a human summary.",
+    )
+    parser.add_argument(
+        "--ledger",
+        default=None,
+        help="Override the invocation ledger path (default: $DONTPANIC_HOME/invocations.jsonl).",
+    )
+    parser.add_argument(
+        "--evidence",
+        default=None,
+        help="Override the evidence file path "
+        "(default: $DONTPANIC_HOME/canonical-backfill-evidence.json).",
+    )
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        # argparse exits 0 for --help (let it through) and non-zero on a usage
+        # error; normalize the latter to the C4 usage-failure code (exit 2).
+        if exc.code in (0, None):
+            raise
+        return 2
+
+    # Resolve the ledger target explicitly so the lock we acquire and the file the
+    # engine rewrites are provably the SAME path (no ambient re-resolution drift).
+    target = Path(args.ledger) if args.ledger is not None else invocation_ledger.ledger_path()
+    ev_path = Path(args.evidence) if args.evidence is not None else None
+
+    try:
+        if args.dry_run:
+            # Preview: no write, no lock (F002 requires a lock only for write mode).
+            report = canonical_backfill.run_backfill(
+                ledger_path=target,
+                evidence_path=ev_path,
+                dry_run=True,
+            )
+        else:
+            # Write mode: F005 is the SOLE C8 lock owner. Acquire the sidecar lock
+            # EXACTLY ONCE and hand the held-lock proof to the engine, which never
+            # self-acquires. flock-unavailable -> SystemExit(2) from the seam.
+            with invocation_ledger.hold_ledger_lock(target) as lock:
+                report = canonical_backfill.run_backfill(
+                    ledger_path=target,
+                    evidence_path=ev_path,
+                    dry_run=False,
+                    lock=lock,
+                )
+    except canonical_evidence.EvidenceFatalError as exc:
+        # File-fatal evidence defect (C4): stamp nothing, exit 2.
+        print(
+            f"[projects backfill-canonical] evidence file is unusable: {exc.reason}",
+            file=sys.stderr,
+        )
+        return 2
+    except canonical_backfill.BackfillError as exc:
+        # Unreadable ledger or atomic write/rename failure, or a missing held lock
+        # (C4 write-failure): the ledger is left in place, exit 2.
+        print(f"[projects backfill-canonical] {exc}", file=sys.stderr)
+        return 2
+    except SystemExit as exc:
+        # flock unavailable on this platform: fail closed (C8) rather than an
+        # uncoordinated rename. Normalize to the C4 write-failure code.
+        if exc.code in (0, None):
+            raise
+        print(
+            "[projects backfill-canonical] ledger lock unavailable on this platform; "
+            "refusing an uncoordinated ledger rewrite (C8)",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.as_json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        _print_backfill_report(report)
+    # C4 status contract: a completed run is exit 0 even when rows are skipped.
+    return 0
+
+
+def _print_backfill_report(report: dict) -> None:
+    """Human summary of the stable C4 backfill report (scrubbed paths only)."""
+    mode = "dry-run (preview)" if report.get("dry_run") else "write"
+    print(f"[projects backfill-canonical] mode: {mode}")
+    print(f"  ledger:   {report.get('ledger_path', '')}")
+    print(f"  evidence: {report.get('evidence_path', '')}")
+    if report.get("dry_run"):
+        print(f"  would stamp:     {report.get('would_stamp', 0)}")
+    else:
+        print(f"  stamped:         {report.get('stamped', 0)}")
+    print(f"  already stamped: {report.get('already_stamped', 0)}")
+    print(f"  would skip:      {report.get('would_skip', 0)}")
+    skipped = report.get("skipped") or []
+    if skipped:
+        print(f"  skipped ({len(skipped)}):")
+        for row in skipped:
+            print(f"    - {row.get('path_key', '')}: {row.get('reason', '')}")
 
 
 _MANIFEST_USAGE = (

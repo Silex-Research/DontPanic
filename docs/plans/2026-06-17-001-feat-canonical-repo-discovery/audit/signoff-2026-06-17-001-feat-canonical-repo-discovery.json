@@ -1,0 +1,24 @@
+{
+  "task_id": "2026-06-17-001-feat-canonical-repo-discovery",
+  "signoff_id": "2026-06-17-001-feat-canonical-repo-discovery#signoff#0",
+  "iteration": 0,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F005-i0.json",
+    "audit/codex-auditor-F005-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 1,
+    "needs_changes_count": 0,
+    "blocked_count": 1,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.",
+  "next_action": "remediate",
+  "decided_at": "2026-06-20T21:11:28Z"
+}

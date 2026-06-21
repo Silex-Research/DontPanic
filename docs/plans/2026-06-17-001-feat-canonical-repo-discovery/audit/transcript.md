@@ -22,3 +22,8 @@ One line per dispatch. Authoritative state lives in `audit/<agent>-<role>-<featu
 | 2026-06-20T20:48:35Z | F002 | i2 | codex / auditor | needs_changes | 761,838 / 10,802 | [codex-auditor-F002-i2.json](audit/codex-auditor-F002-i2.json) |
 | 2026-06-20T20:51:41Z | F002 | i3 | claude / implementer | signed_off | 802,833 / 12,436 | [claude-implementer-F002-i3.json](audit/claude-implementer-F002-i3.json) |
 | 2026-06-20T20:54:00Z | F002 | i3 | codex / auditor | signed_off | 1,319,135 / 13,190 | [codex-auditor-F002-i3.json](audit/codex-auditor-F002-i3.json) |
+| 2026-06-20T21:09:34Z | F005 | i0 | claude / implementer | signed_off | 3,259,502 / 26,331 | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-06-20T21:11:27Z | F005 | i0 | codex / auditor | blocked | 999,972 / 12,310 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |
+
+**2026-06-20T21:11:28Z** — feature **F005** terminal: `stopped_environmental_blocker` after 1 round(s) — verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+

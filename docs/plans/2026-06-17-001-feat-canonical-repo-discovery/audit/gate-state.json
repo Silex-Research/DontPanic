@@ -45,6 +45,13 @@
         "pre_merge"
       ],
       "stage": "pre_merge"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-06-20T21:11:28Z",
+      "actor": "supervisor",
+      "reason": "verdict=blocked reconciled to environmental_blocker on round 1: every auditor finding classified as advisory (aggregate=environmental_reproduction_failure); promoted to stopped_environmental_blocker per F003 ENVIRONMENTAL_BLOCKER semantics; recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
     }
   ],
   "gate_events": [
@@ -62,5 +69,8 @@
   "pause_gates": [
     "pre_merge"
   ],
-  "pending_stage": "pre_merge"
+  "pending_stage": "pre_merge",
+  "active_breakers": [
+    "breaker:environmental_blocker"
+  ]
 }

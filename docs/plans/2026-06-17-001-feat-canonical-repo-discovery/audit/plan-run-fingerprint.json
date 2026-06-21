@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-20T20:20:00Z",
+  "captured_at": "2026-06-20T21:03:48Z",
   "decision_lines": [
     "D001\u001fb58be53795fba630f5857be9b7b3c717e14880538a3bd56cbe2b51eaceb8e3b2",
     "D002\u001fe06471217a0541dc8a433eb023598b131eff20e8163aa18f52a1014e2a43a1bf",
@@ -60,7 +60,7 @@
           "F001",
           "F006"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "(1) observed_canonical_from_ledger() is implemented and tested as the explicit ledger adapter: records without canonical_repo or with canonical_compaction_conflict=true are skipped, rows aggregate observed_count by canonical_repo.path_key with legacy/no-field rows counting as 1, scrubbed path_display is preserved, durable_checkout is carried, max last_seen is preserved, and record.command is never read. (2) registered_canonical_from_registry() is implemented and tested as the registry adapter: existing paths are canonicalized before pure reconcile; missing and unresolved paths emit canonical_repo_key=null, registry_path_key=sha256(normalized stored registry path)[:16], canonicalization_status, and scrubbed path_display; multiple active-eligible entries canonicalizing to one canonical_repo_key dedupe to a single row with the deterministic lexicographically-first registry_name winner, registry_conflict=true, and conflicting_registry_names; dedup considers ONLY active-eligible entries (eligibility determined before winner selection), so an inactive/path-missing/unresolved entry can never suppress an active entry for the same key regardless of name order. (3) reconcile() returns {used_unregistered, registered_active, registered_stale, registered_path_missing, registered_unresolved}; canonical rows are keyed on canonical_repo_key, registered_path_missing and registered_unresolved rows are keyed by registry_name + registry_path_key with canonical_repo_key=null; reconcile has no filesystem/git IO and zero-state yields empty arrays. (4) C5 defaults and registered-row truth table are pinned and tested: window_days=14, min_count=2, timestamp=last_seen, inclusive observed_count >= min_count and last_seen >= now-window_days; missing path -> registered_path_missing; unresolved canonicalization -> registered_unresolved; inactive -> no active/stale row; existing canonicalized registered path with absent/invalid/stale/low-count observed row -> registered_stale; existing canonicalized registered path passing both thresholds -> registered_active; a registered row with no observed row for its canonical_repo_key emits observed_count=0 and last_seen=null, and the ledger adapter skips invalid timestamps rather than poisoning the aggregate. (5) Mixed-attribution compacted rows marked canonical_compaction_conflict do not inflate or drop canonical observed_count. (6) suggested_name derivation for used_unregistered rows is deterministic, project-name-regex safe, collision-safe with canonical_repo_key hash suffix, and JSON-safe. (7) Temp-prefix / non-durable usage never appears as used_unregistered (C3); isolated/D010-like fixtures produce used_unregistered vs registered_active; registered_path_missing and registered_unresolved key shapes are tested; adapters/reconcile never read command (C6).",
@@ -106,16 +106,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "a191375d3a15da300a6b9d305bce7fd4fa30079b43237643d053918e52b77ebf",
+    "audit/gate-state.json": "3b04a4bdec2f73c2b9a3f6f9fc1f9cdf1d9c82c12639a04bc2fb340be677d7fd",
     "decisions.jsonl": "7bb297fe4768b2da88e0fbceecbb2be7962f4993205d466fa048c690e14c283c",
-    "features.json": "11fb4a707477ba9880babbc594a14a02e7d073bc331fff5c810c7d192dba28ca",
+    "features.json": "d7b4bfc08b68c916e118b09bae649ac563347d8df152a3e6e9b4d24581f64796",
     "objective_contract.json": "e5bfcb8844566ddfa9f64d57f0595beb441804b43e6be825f1bf228f5b81b33b",
     "plan.md": "1b2ac700610375ef59f20eaf0281930a21983407b8087d4bd58b7c6ef2b9f9df"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1781986060.533861,
+    "audit/gate-state.json": 1781988840.3016064,
     "decisions.jsonl": 1781975243.321752,
-    "features.json": 1781986790.928742,
+    "features.json": 1781989420.1754289,
     "objective_contract.json": 1781842638.7315779,
     "plan.md": 1781976958.7608259
   },

@@ -164,12 +164,33 @@
         "--evidence",
         "DONTPANIC_HOME"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
       ],
-      "verified_by": [],
-      "evidence_refs": []
+      "verified_by": [
+        "operator"
+      ],
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F005-i0.json",
+          "captured_by": "codex",
+          "note": "Volley stopped_environmental_blocker: sole finding was advisory/environmental (audit sandbox has no writable temp dir; pytest could not run). ZERO correctness findings \u2014 code read clean. Resolved per ENVIRONMENTAL_BLOCKER escape via operator-local verification."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_projects_backfill_canonical_f005.py",
+          "captured_by": "operator",
+          "note": "OPERATOR-VERIFIED (auditor sandbox could not execute): 109 passed (F005+F002+F006+ledger). Covers sole-lock-owner (acquire-once, F002 never self-acquires), flock-unavailable fail-closed exit 2, concurrent-append serialization, default $DONTPANIC_HOME + overrides, exit codes (skip->0, file-fatal/missing/unreadable/usage->2), pinned report schema, C7 negative hook guard."
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/cli.py",
+          "captured_by": "claude",
+          "note": "`dontpanic projects backfill-canonical` entrypoint (+145/-2): sole C8 sidecar-lock owner, default-path resolution, dry-run/report, exit codes."
+        }
+      ]
     },
     {
       "id": "F003",
