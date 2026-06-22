@@ -46,6 +46,16 @@ class ProjectsRegistryError(ValueError):
     this to exit 2 with the message printed to stderr."""
 
 
+class RegistryUnreadableError(Exception):
+    """Raised by :func:`load_registry_strict` when the registry file is PRESENT
+    but UNDETERMINABLE — unreadable, invalid JSON, or schema-violating. A
+    *missing* file is NOT undeterminable (it is the clean zero state) and never
+    raises. Deliberately NOT a :class:`ProjectsRegistryError` so it does not
+    inherit the CLI's exit-2 semantics: it is a degradation signal for read-only
+    consumers (e.g. the F003 upgrade predicates) that must distinguish a
+    genuinely empty registry from one they could not parse."""
+
+
 class ProjectEntry(BaseModel):
     """One registered project. ``name`` is the primary key; ``path`` is
     stored absolute (caller can pass ``~/...`` and it is normalized at
@@ -119,29 +129,42 @@ def _utcnow_iso() -> str:
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_registry() -> Registry:
-    """Load the registry. Total: missing file → empty (zero state); invalid
-    JSON / unreadable / schema-violating → WARN + empty. Never raises."""
+def load_registry_strict() -> Registry:
+    """Load the registry, distinguishing zero-state from undeterminable.
+
+    A *missing* file is the clean zero state and returns an empty
+    :class:`Registry`. A file that is PRESENT but unreadable / invalid JSON /
+    schema-violating raises :class:`RegistryUnreadableError` rather than silently
+    degrading to empty — so a read-only consumer can fail OPEN on an
+    undeterminable registry instead of mistaking it for "no tracked projects"."""
     path = registry_path()
     if not path.is_file():
         return Registry()
     try:
         raw = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
-        _LOG.warning(
-            "projects registry at %s is unreadable or invalid JSON (%s); using empty registry",
-            path,
-            exc,
-        )
-        return Registry()
+        raise RegistryUnreadableError(
+            f"projects registry at {path} is unreadable or invalid JSON: {exc}"
+        ) from exc
     try:
         return Registry.model_validate(raw)
     except Exception as exc:  # pydantic.ValidationError or similar
-        _LOG.warning(
-            "projects registry at %s failed schema validation (%s); using empty registry",
-            path,
-            exc,
-        )
+        raise RegistryUnreadableError(
+            f"projects registry at {path} failed schema validation: {exc}"
+        ) from exc
+
+
+def load_registry() -> Registry:
+    """Load the registry. Total: missing file → empty (zero state); invalid
+    JSON / unreadable / schema-violating → WARN + empty. Never raises.
+
+    Lenient wrapper over :func:`load_registry_strict` for callers that want the
+    historic warn-and-empty contract; read-only consumers that must tell zero
+    state apart from an undeterminable file should call the strict variant."""
+    try:
+        return load_registry_strict()
+    except RegistryUnreadableError as exc:
+        _LOG.warning("%s; using empty registry", exc)
         return Registry()
 
 
@@ -265,9 +288,11 @@ __all__ = [
     "ProjectsRegistryError",
     "REGISTRY_FILENAME",
     "Registry",
+    "RegistryUnreadableError",
     "add_project",
     "find_project",
     "load_registry",
+    "load_registry_strict",
     "registry_path",
     "remove_project",
     "save_registry",

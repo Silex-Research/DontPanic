@@ -2,16 +2,16 @@
 status: operator_finished
 reason_class: operator_verified
 plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
-feature_id: F002
-closed_at: 2026-06-22T13:45:07Z
+feature_id: F003
+closed_at: 2026-06-22T14:09:20Z
 latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F002
+# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F003
 
 ## Operator decision
 
-This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex auditor signed off iter=1 with no findings; terminal was a patch-completeness hygiene block (untracked test + ride-along files), not a defect. Operator verified independently: seed test 15/15, full release_manifest module 44/44, both docs/upgrade/releases.json and the packaged data/ mirror validate under the schema and are byte-identical, F001 loader reads baseline + 3 Experience Readiness advisories + 1 canonical-discovery required action, and pyproject/MANIFEST.in ship manifest+schema for wheel and sdist (D049).. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
+This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=1 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_predicates_f003.py + ride-along), not a defect. Operator verified: F003 predicate tests 29/29, registry-loader regression 122/122 across all load_registry consumers, upgrade_predicates.py has zero write-path references (D028 read-only), and the projects_registry.py change is additive (load_registry_strict + RegistryUnreadableError; lenient load_registry wrapper preserves historic warn-and-empty contract). Codex's pytest was blocked by its read-only sandbox tempdir; operator ran the suite live.. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,35 +19,35 @@ This feature was finished under terminal class `operator_verified` via the opera
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 4 (see structured target_context.commands_run)
+- Command: 2 (see structured target_context.commands_run)
 
-[F002] Repo: DontPanic  
+[F003] Repo: DontPanic  
 Env: dev  
 Project: (none)
 
-Overall verdict: signed_off. No findings. The implementer audit declares `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; `target_context.commands_run` contains only a local pytest command and no forbidden command shapes. The seed manifest and packaged mirror validate against the canonical schema, the baseline is below the earliest seeded release, canonical discovery is `required` with preview/apply/verify and a non-null probe, and evidence captures the implementer’s 15 passing tests.
+Overall verdict: signed_off. Implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly; structured `target_context` matches (`env=dev`, `project=null`), and I found no forbidden command shapes in `target_context.commands_run`. No findings.
 
 Checks run:
-$ git status --short  
-$ git diff --stat HEAD~1  
-$ PYTHONPATH=../scripts PYTHONDONTWRITEBYTECODE=1 py...
+$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py -q
+$ ruff check scripts/dontpanic_orchestrate/upgrade_predicates.py scripts/dontpanic_orchestrate/projects_registry.py scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py
+
+Pytest could not start i...
 
 ## Rationale (operator)
 
-There was no finding to re-dispatch: Codex signed off at iter=1 with zero findings.
-The terminal `blocked` state was the patch-completeness gate refusing auto-signoff
-because the new test (`test_release_manifest_seed.py`) was untracked and several
-deliverables/ride-along files were unstaged — a hygiene block, not an implementation
-defect. The operator staged every deliverable and independently re-verified the work
-(seed test 15/15, full `release_manifest` module 44/44, both manifest copies validate
-and are byte-identical, the F001 loader reads the contracted baseline + 3 advisories +
-1 required action, and the wheel/sdist package-data declarations are present), so
-operator-finish is the correct close path.
+Codex signed off iter=1 with no findings; the terminal `blocked` was the
+patch-completeness hygiene gate (untracked `test_upgrade_predicates_f003.py` +
+unstaged ride-along), not an implementation defect — same class as F002. Operator
+staged the deliverables and re-verified: predicate tests 29/29; the
+`projects_registry.py` refactor (new `load_registry_strict` + `RegistryUnreadableError`,
+lenient `load_registry` wrapper) is additive and passed a 122-test regression
+across every `load_registry` consumer; and `upgrade_predicates.py` has zero
+write-path references, upholding the D028 read-only / no-mutation contract.
 
-Follow-up: none required. The patch-completeness behavior is working as designed
-(a freshly authored test file SHOULD be staged before signoff); the dispatch recipe
-for this plan already accounts for it via the operator-resolved close path. Recorded
-as D057.
+Codex could not run pytest in its read-only audit sandbox (no writable tempdir —
+the known auditor-sandbox constraint), so the operator ran the suite live; this is
+why operator-verified close, not auditor-test-evidence, is the close basis.
+Follow-up: none. Recorded as D058.
 
 ## Evidence references
 

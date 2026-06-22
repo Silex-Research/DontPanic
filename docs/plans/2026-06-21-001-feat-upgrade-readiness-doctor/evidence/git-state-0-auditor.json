@@ -16,19 +16,14 @@
     {
       "path": "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-implementer.json",
       "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/data/releases.json",
-      "status": "M"
     }
   ],
   "untracked": [
-    "MANIFEST.in",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F002-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F002-i0-release-manifest-seed-tests.txt",
-    "docs/upgrade/",
-    "scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py"
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F003-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F003-predicate-registry-tests.txt",
+    "scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py",
+    "scripts/dontpanic_orchestrate/upgrade_predicates.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

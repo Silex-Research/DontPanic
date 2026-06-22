@@ -1,0 +1,36 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 1,
+  "started_at": "2026-06-22T13:55:51Z",
+  "completed_at": "2026-06-22T14:04:44Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F003-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-78py5f_h target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4763 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3462048,
+    "tokens_out": 37703,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F003] Both findings are fixed and verified. The auditor's exact reproduction now returns `satisfied=False`, and all targeted + adjacent suites are green with ruff clean.\n\nRepo: DontPanic\nEnv: dev\nProject: (none)\n\nSide-effect commands invoked:\n```\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f002_projects_registry.py scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py -q\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py scripts/dontpanic_orchestrate/tests/test_projects_backfill_canonical_f005.py -q\n$ ruff check scripts/dontpanic_orchestrate/upgrade_predicates.py scripts/dontpanic_orchestrate/projects_registry.py scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py -q  (tee → evidence/F003-predicate-registry-tests.txt)\n```\n\n**Finding 1 (high, correctness — outcome probe cleared on ANY registered_active row, not DontPanic's):** `canonical_discovery_registered_active` now resolves the running instance's own identity and filters the projection to it. I added `self_canonical_key` / `self_registry_name` seams to `PredicateContext` plus `_self_canonical_ke",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f002_projects_registry.py scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_projects_discover_f004.py scripts/dontpanic_orchestrate/tests/test_projects_backfill_canonical_f005.py -q",
+      "ruff check scripts/dontpanic_orchestrate/upgrade_predicates.py scripts/dontpanic_orchestrate/projects_registry.py scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py -q  (tee → evidence/F003-predicate-registry-tests.txt)"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

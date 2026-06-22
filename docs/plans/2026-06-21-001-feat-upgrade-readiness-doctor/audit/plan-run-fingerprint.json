@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-22T13:23:44Z",
+  "captured_at": "2026-06-22T13:46:53Z",
   "decision_lines": [
     "D001\u001f297061b9497aafad361be36ef7256d54428b47d8d48487b58e1d39b91e2aa24f",
     "D002\u001f94647b5a3afff7d32163aa707587e184056dfcbe9fbd326ed231920c57cf8385",
@@ -56,7 +56,8 @@
     "D053\u001fb4ae352f36bfa3a24aca02fa6ec781a1cc6bce70bd572cea9c9d5c59b2f11ff6",
     "D054\u001fc72a1f04bdb229be8250e269fe27a086926b4041d376d3c852e437026e71d0bd",
     "D055\u001f51316137e34f44c0faa8c3510b05a2a335db29af472a09152147d03d3eee4eb1",
-    "D056\u001fe37e2895f3a8081768f898b628a156f3b29406655ef9d51750846d220f525503"
+    "D056\u001fe37e2895f3a8081768f898b628a156f3b29406655ef9d51750846d220f525503",
+    "D057\u001f22a227b06afdbf7ba0980b14b632132ee739632a14de5ed1ae424a17b4b786d1"
   ],
   "features_semantics": {
     "by_id": {
@@ -72,7 +73,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "predicate_registry resolves status_probe and applies_when keys; canonical_discovery_registered_active returns satisfied=true whenever DontPanic reconciles to registered_active INCLUDING when a stale/malformed evidence file is present (dedicated test) and false (with detail) for stale/missing/unresolved/error; evidence validity gates only canonical_backfill_evidence_valid, not the outcome probe. has_tracked_projects reflects registry presence; status_probe error -> not satisfied (fail-closed) while applies_when error -> applies true. Tests cover every state. An unknown status_probe key resolves to satisfied=false with an error detail (never satisfied), and an unknown applies_when key to applies=true with an error detail; neither crashes assembly (dedicated tests). Every predicate is read-only: a dedicated test runs each predicate and asserts NO registry/evidence/config/ledger/state mutation occurs (no-mutation contract, D028); canonical_discovery_registered_active uses only the reconcile read path. Test output for this feature is captured under evidence/ at close (D048).",
@@ -160,15 +161,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "7a3ba2e0c482b95a4a3689eaf4c52e7ced2ab048897c18f9c4dffda4b07affb5",
-    "decisions.jsonl": "739a86821824a5e4f7f639d135cbc38429b3fce8f5ccee916c491b660699c900",
-    "features.json": "ddbdc471f1cf2e54cd84641904219370261eb89e7180a122464b9274066885bb",
+    "decisions.jsonl": "c40d1e5869a3db1b21b6ebcaea6d3256574c33934f0af3f0f32110b5fc71d91b",
+    "features.json": "744aada484fa8d52f2b119951ae4c3e287b54d86251ac66004bfa10350f7f313",
     "objective_contract.json": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
     "plan.md": "b4897ff3d0432cc1ded03be4c35955d1e6b9ca7772729c2e4b3796a39938386f"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1782087438.4475276,
-    "decisions.jsonl": 1782133094.929186,
-    "features.json": 1782089427.735708,
+    "decisions.jsonl": 1782135957.7411592,
+    "features.json": 1782135907.9017787,
     "objective_contract.json": 1782065085.915136,
     "plan.md": 1782087249.8380733
   },

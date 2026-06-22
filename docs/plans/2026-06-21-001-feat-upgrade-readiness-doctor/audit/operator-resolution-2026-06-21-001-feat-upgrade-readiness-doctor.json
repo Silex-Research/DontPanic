@@ -1,10 +1,10 @@
 {
   "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
-  "feature_id": "F002",
+  "feature_id": "F003",
   "class": "operator_verified",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-06-22T13:45:07Z",
+  "resolved_at": "2026-06-22T14:09:20Z",
   "terminal_class": "operator_verified",
-  "note": "Codex auditor signed off iter=1 with no findings; terminal was a patch-completeness hygiene block (untracked test + ride-along files), not a defect. Operator verified independently: seed test 15/15, full release_manifest module 44/44, both docs/upgrade/releases.json and the packaged data/ mirror validate under the schema and are byte-identical, F001 loader reads baseline + 3 Experience Readiness advisories + 1 canonical-discovery required action, and pyproject/MANIFEST.in ship manifest+schema for wheel and sdist (D049)."
+  "note": "Codex signed off iter=1 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_predicates_f003.py + ride-along), not a defect. Operator verified: F003 predicate tests 29/29, registry-loader regression 122/122 across all load_registry consumers, upgrade_predicates.py has zero write-path references (D028 read-only), and the projects_registry.py change is additive (load_registry_strict + RegistryUnreadableError; lenient load_registry wrapper preserves historic warn-and-empty contract). Codex's pytest was blocked by its read-only sandbox tempdir; operator ran the suite live."
 }
