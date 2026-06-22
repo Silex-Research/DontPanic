@@ -3832,7 +3832,8 @@ def _plan_lock_main(argv: list[str]) -> int:
             "Operator override: bypass blocking sufficiency findings with a "
             "recorded reason. Writes evidence/goal-governance/pre_impl/"
             "override.json (durable but invalidated by changes to "
-            "features.json / objective contract / sufficiency findings)."
+            "the features contract / objective contract / sufficiency findings; "
+            "normal passes:true close-out state does not stale it)."
         ),
     )
     # Plan 2026-06-01-001 F004: pre-lock design gate operator override.

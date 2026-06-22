@@ -25,10 +25,12 @@ and ``critical`` block lock. ``low`` and ``advisory`` pass.
 **Override (locked, F004 design):** durable but **input-bound**. The
 operator's ``--ignore-sufficiency-findings <reason>`` writes
 ``evidence/goal-governance/pre_impl/override.json`` with SHA-256 hashes
-of features.json + the objective contract + the sufficiency findings.
+of the features contract, the objective contract, and the sufficiency findings.
 Downstream gate calls honor the override only if all three hashes still
-match the on-disk inputs. Any material change invalidates the override
-and the gate refuses again.
+match the on-disk inputs. Runtime feature completion fields are excluded
+from the features contract hash so normal ``passes:true`` close-out writes do
+not invalidate a lock-time sufficiency override; material contract changes
+still invalidate the override and the gate refuses again.
 
 **Coverage:**
 
@@ -139,6 +141,67 @@ def _sha256_hex(path: Path) -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
+_FEATURE_EXECUTION_STATE_KEYS: frozenset[str] = frozenset(
+    {
+        "passes",
+        "evidence_refs",
+        "verified_by",
+        "verified_at",
+    }
+)
+
+
+def _features_contract_hash(features_json: Path) -> str:
+    """Hash only the plan contract carried by ``features.json``.
+
+    ``features.json`` is both the pre-implementation contract and the
+    implementation progress ledger. Lock-time sufficiency overrides must bind
+    to the former, not the latter: closing F001 normally flips ``passes:true``
+    and appends verification evidence, and that should not make the operator's
+    pre-impl override stale for F002. Contract-bearing fields such as
+    description, steps, acceptance, dependencies, and introduces remain
+    hash-bound.
+    """
+    try:
+        raw = json.loads(features_json.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SufficiencyGateError(f"{features_json}: malformed features.json: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise SufficiencyGateError(f"{features_json}: features.json must be a JSON object")
+    features = raw.get("features")
+    if not isinstance(features, list):
+        raise SufficiencyGateError(
+            f"{features_json}: features.json must contain a top-level features list"
+        )
+
+    normalized: dict[str, Any] = {}
+    for key, value in raw.items():
+        if key == "features":
+            normalized_features: list[Any] = []
+            for feature in features:
+                if isinstance(feature, dict):
+                    normalized_features.append(
+                        {
+                            k: v
+                            for k, v in feature.items()
+                            if k not in _FEATURE_EXECUTION_STATE_KEYS
+                        }
+                    )
+                else:
+                    normalized_features.append(feature)
+            normalized["features"] = normalized_features
+        else:
+            normalized[key] = value
+
+    data = json.dumps(
+        normalized,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(data).hexdigest()}"
+
+
 def _findings_path(plan_dir: Path) -> Path:
     return goal_governance_evidence_path(plan_dir, "pre_impl", PRE_IMPL_FINDINGS_ARTIFACT)
 
@@ -165,7 +228,7 @@ def _resolve_objective_contract_path(plan_dir: Path, plan_data: dict[str, Any]) 
 
 
 def _compute_input_hashes(plan_dir: Path, plan_data: dict[str, Any]) -> dict[str, str]:
-    """Compute SHA-256 hashes of features.json + objective contract +
+    """Compute SHA-256 hashes of the features contract + objective contract +
     sufficiency findings. All three must exist; missing files raise
     FileNotFoundError, which the caller translates into a domain message."""
     features_json = plan_dir / "features.json"
@@ -182,7 +245,7 @@ def _compute_input_hashes(plan_dir: Path, plan_data: dict[str, Any]) -> dict[str
             "scripts/dontpanic_orchestrate/sufficiency_auditor.py)"
         )
     return {
-        "features_hash": _sha256_hex(features_json),
+        "features_hash": _features_contract_hash(features_json),
         "objective_contract_hash": _sha256_hex(contract_path),
         "sufficiency_findings_hash": _sha256_hex(findings),
     }

@@ -16,8 +16,9 @@ Covers the 6 cases enumerated in F004 step 6:
 
 Plus extras covering the locked design points:
 
-  - input-bound override invalidation (B): edit features.json after
-    override → next gate call refuses with stale-override error;
+  - input-bound override invalidation (B): edit the features contract after
+    override → next gate call refuses, while execution-state-only close-out
+    writes do not stale the override;
   - blocking threshold (A): medium severity blocks lock;
   - dispatch backstop: hand-edited active plan with blocking findings
     is refused at first dispatch_volley call.
@@ -390,8 +391,38 @@ def test_override_honored_on_subsequent_gate_calls(tmp_path: Path) -> None:
     enforce_sufficiency_gate(plan_dir)  # idempotent
 
 
-def test_override_invalidated_when_features_change(tmp_path: Path) -> None:
-    """Threshold B: override is input-bound. Edit features.json after
+def test_override_survives_feature_completion_state_change(tmp_path: Path) -> None:
+    """Normal feature close-out mutates execution state, not the pre-impl
+    contract. That must not stale a lock-time sufficiency override and block
+    the next feature dispatch."""
+    plan_dir = _write_plan(
+        tmp_path / "override-survives-closeout",
+        findings=[
+            {
+                "severity": "high",
+                "journey_id": "onboarding",
+                "gap_class": "coverage_gap",
+                "description": "Onboarding gap that operator initially bypassed.",
+                "feature_refs": [],
+            }
+        ],
+    )
+    lock_plan(plan_dir, override_reason="initial bypass", approved_by="op")
+
+    features = json.loads((plan_dir / "features.json").read_text())
+    features["features"][0]["passes"] = True
+    features["features"][0]["verified_by"] = ["operator"]
+    features["features"][0]["verified_at"] = "2026-06-22T00:00:00Z"
+    features["features"][0]["evidence_refs"] = [
+        {"type": "test_output", "uri": "evidence/f001-tests.txt"}
+    ]
+    (plan_dir / "features.json").write_text(json.dumps(features))
+
+    enforce_sufficiency_gate(plan_dir)
+
+
+def test_override_invalidated_when_features_contract_changes(tmp_path: Path) -> None:
+    """Threshold B: override is input-bound. Edit the features contract after
     override → next gate call refuses with stale-override error."""
     plan_dir = _write_plan(
         tmp_path / "stale-override-features",
