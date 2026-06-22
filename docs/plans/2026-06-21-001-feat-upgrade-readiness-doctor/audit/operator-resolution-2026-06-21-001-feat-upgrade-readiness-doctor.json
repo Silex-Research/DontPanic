@@ -1,10 +1,10 @@
 {
   "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
-  "feature_id": "F009",
+  "feature_id": "F010",
   "class": "operator_verified",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-06-22T16:54:36Z",
+  "resolved_at": "2026-06-22T17:53:20Z",
   "terminal_class": "operator_verified",
-  "note": "Codex signed off iter=0 (no findings); terminal was patch-completeness hygiene. D063 full-status check caught TWO gate-missed untracked files (upgrade_drift_lint.py module + docs/upgrade/README.md) beyond the flagged test — all staged. Operator verified: 11/11 drift-lint tests; docs/upgrade/README.md present (12KB, documents manifest contract + full action field set + baseline scope + first-run policy + no-mutation boundary); CHANGELOG.md links releases.json + gains the upgrade-readiness entry; docs/RELEASE_IMPACT.md notes the relationship; drift lint is advisory-only (warn-only, never raises, main exits 0, only flags post-baseline CHANGELOG sections lacking a manifest entry per D008/D018). Codex pytest blocked by read-only sandbox; operator ran live."
+  "note": "Codex signed off iter=2 (2 contested rounds then clean, no findings); terminal patch-completeness hygiene (untracked e2e test + ride-along); no stray untracked source modules (D063 check clean). Operator verified the safety-critical e2e: 3/3 tests via real subprocess doctor CLI. D043 mutation isolation — apply runs ONLY against a disposable instance (own  + fixture registry + repointed subprocess /Users/bayesian so Path.home() can't reach the real home), torn down after, never the operator's real registry. D038 single satisfying path — pre-apply verify-alone asserted NOT to satisfy, no fixture-toggle anywhere, probe flips solely because the apply command stamped the ledger, broken apply OR verify fails the journey. D032/D014 — apply+verify commands extracted from the LIVE report and run verbatim (codex i0/i1 hardened from hand-written substitutes); journey + live capture persisted under evidence/. Codex pytest blocked by read-only sandbox; operator ran live."
 }

@@ -1,0 +1,32 @@
+{
+  "summary": {
+    "installed_commit": "545ba4d",
+    "latest_release_id": "2026-06-17-001-canonical-discovery",
+    "last_seen_release": null,
+    "last_seen_commit": null,
+    "pending_required": 0,
+    "pending_advisory": 0,
+    "update_state": "up_to_date",
+    "marker_state": "absent",
+    "upstream": {
+      "fetched_upstream_commit": null,
+      "upstream_status": "unknown",
+      "remediation": "Upstream position unknown: this branch has no tracked upstream ref. Set one with `git branch --set-upstream-to=origin/<branch>` to enable behind/ahead detection.",
+      "upstream_ref": null
+    }
+  },
+  "required": [],
+  "advisory": [],
+  "migration_status": [
+    {
+      "release_id": "2026-06-17-001-canonical-discovery",
+      "action_id": "backfill-canonical-discovery",
+      "applies": true,
+      "status_probe_key": "canonical_discovery_registered_active",
+      "satisfied": true,
+      "state": "satisfied",
+      "detail": "DontPanic is registered_active (canonical repo: dontpanic)",
+      "evidence_uri": null
+    }
+  ]
+}

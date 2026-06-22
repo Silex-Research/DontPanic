@@ -1,0 +1,39 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-22T17:35:02Z",
+  "completed_at": "2026-06-22T17:36:26Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F010-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-eus4x5ym target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1336700 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 816562,
+    "tokens_out": 8491,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F010] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes.\n\nFINDING (high, test_coverage): F010’s core journey does not actually drive the real doctor/apply/verify CLI path. Evidence: [test_update_journey_e2e_f010.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_update_journey_e2e_f010.py:239) calls `doctor.check_upgrade_readiness`, `build_upgrade_report`, and private `cli._projects_*` functions instead of executing the extracted CLI commands; the only out-of-process `doctor --upgrade --json` run is the separate live read-only evidence capture. Recommendation: make the journey execute the public command path, using the apply/verify command strings from the report against the isolated temp `DONTPANIC_HOME`, then re-run public doctor CLI and assert the transition.\n\nNo EC5 finding: implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` in summary; structured `target_context.env=dev`, `project=null`, and commands contain no forbidden command shapes.\n\nChecks run:\n$ PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_update_journey_e2e_f010.py -q\n\nThat check could not start in this read-only sandbox because Python/pytest found no usable writable temp directory.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_update_journey_e2e_f010.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F010",
+      "issue": "F010’s core journey does not actually drive the real doctor/apply/verify CLI path. Evidence: [test_update_journey_e2e_f010.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_update_journey_e2e_f010.py:239) calls `doctor.check_upgrade_readiness`, `build_upgrade_report`, and private `cli._projects_*` functions instead of executing the extracted CLI commands; the only out-of-process `doctor --upgrade --json` run is the separate live read-only evidence capture. R",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

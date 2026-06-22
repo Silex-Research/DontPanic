@@ -2,16 +2,16 @@
 status: operator_finished
 reason_class: operator_verified
 plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
-feature_id: F009
-closed_at: 2026-06-22T16:54:36Z
+feature_id: F010
+closed_at: 2026-06-22T17:53:20Z
 latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F009
+# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F010
 
 ## Operator decision
 
-This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (no findings); terminal was patch-completeness hygiene. D063 full-status check caught TWO gate-missed untracked files (upgrade_drift_lint.py module + docs/upgrade/README.md) beyond the flagged test — all staged. Operator verified: 11/11 drift-lint tests; docs/upgrade/README.md present (12KB, documents manifest contract + full action field set + baseline scope + first-run policy + no-mutation boundary); CHANGELOG.md links releases.json + gains the upgrade-readiness entry; docs/RELEASE_IMPACT.md notes the relationship; drift lint is advisory-only (warn-only, never raises, main exits 0, only flags post-baseline CHANGELOG sections lacking a manifest entry per D008/D018). Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
+This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=2 (2 contested rounds then clean, no findings); terminal patch-completeness hygiene (untracked e2e test + ride-along); no stray untracked source modules (D063 check clean). Operator verified the safety-critical e2e: 3/3 tests via real subprocess doctor CLI. D043 mutation isolation — apply runs ONLY against a disposable instance (own  + fixture registry + repointed subprocess /Users/bayesian so Path.home() can't reach the real home), torn down after, never the operator's real registry. D038 single satisfying path — pre-apply verify-alone asserted NOT to satisfy, no fixture-toggle anywhere, probe flips solely because the apply command stamped the ledger, broken apply OR verify fails the journey. D032/D014 — apply+verify commands extracted from the LIVE report and run verbatim (codex i0/i1 hardened from hand-written substitutes); journey + live capture persisted under evidence/. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -21,33 +21,37 @@ This feature was finished under terminal class `operator_verified` via the opera
 - Project: (none)
 - Command: 2 (see structured target_context.commands_run)
 
-[F009] Repo: DontPanic  
+[F010] Repo: DontPanic  
 Env: dev  
-Project: (none)
+Project: (none)  
+Command: PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_update_journey_e2e_f010.py -q
 
-Overall verdict: signed_off.
+Verdict: signed_off.
 
-FINDING (advisory, documentation): The new post-baseline `CHANGELOG.md` entry is intentionally warn-only drift right now. Evidence: `upgrade_drift_lint` exits 0 but reports `CHANGELOG.md:63 [2026-06-22] Upgrade-readiness layer in dontpanic doctor` has no matching `docs/upgrade/releases.json` entry. Recommendation: either add a 2026-06-22 manifest entry when this surface should be announced by `doctor --upgrade`, or explicitly accept this as a warn-only v0 advisory.
-
-Implementer target context checks passed: summary declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`; structured...
+No FINDING entries. The implementer declared `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; structured `target_context.env=dev`, `project=null` matches. Their `commands_run` contains only the targeted pytest command and the evidence-capture redirection variant, with no forbidden command shapes. The F010 test now drives the real CLI path out-of-process, extracts apply/verify commands from the report, proves verify-alone does not satisfy, applies against isolat...
 
 ## Rationale (operator)
 
-Codex signed off (iter=0); the terminal `blocked` was patch-completeness hygiene.
-The D063 full-status check caught two gate-missed untracked deliverables
-(`upgrade_drift_lint.py` + `docs/upgrade/README.md`) beyond the flagged test — all
-staged. Operator verified: 11/11 drift-lint tests; README documents the manifest
-contract, full action field set, baseline scope, first-run policy, and no-mutation
-boundary; CHANGELOG links releases.json + gains the surface entry; the lint is
-advisory-only (warn-only, never raises, exits 0).
+Codex signed off (iter=2 after two contested rounds, no findings); the terminal
+`blocked` was patch-completeness hygiene (untracked e2e test + ride-along), not a
+defect, and the D063 stray-untracked-source check was clean. F010 is the
+safety-critical end-to-end journey, so the operator verified its contract directly:
+3/3 tests driving the real `dontpanic doctor` CLI out-of-process.
 
-Codex's one advisory FINDING is the lint dogfooding itself: the new CHANGELOG entry
-for this upgrade-readiness surface is post-baseline and has no matching
-releases.json entry, so the lint warns. Accepted as warn-only for v0 (D065): the
-surface announcing itself in its own first release is a merge-time decision, not
-in-scope for F009 — the lint behaving exactly as designed is the proof it works,
-not a defect. Follow-up (deferred, not blocking): when this surface is announced,
-add a 2026-06-22 manifest release entry. Recorded as D065.
+- D043 mutation isolation: the apply command runs only against a disposable
+  instance with its own `$DONTPANIC_HOME`, fixture registry, and a repointed
+  subprocess `$HOME` (so `Path.home()` resolution cannot reach the operator's real
+  home), torn down after; the only touch of the real instance is the read-only
+  upgrade-report capture.
+- D038 single satisfying path: pre-apply verify-alone is asserted NOT to satisfy;
+  there is no fixture-toggle anywhere; the probe flips solely because the apply
+  command stamped the ledger; a broken apply OR a broken verify fails the journey.
+- D032/D014: apply + verify commands are extracted from the LIVE report and run
+  verbatim (codex i0/i1 hardened this from hand-written substitutes); the journey
+  transcript (97KB) + live `--upgrade --json` capture are persisted under evidence/.
+
+This is the final feature — the upgrade-readiness plan (F001–F010) is fully
+implemented. Follow-up: none for F010. Recorded as D066.
 
 ## Evidence references
 

@@ -375,12 +375,23 @@
       "introduces": [
         "update_journey_e2e"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006",
         "F007",
         "F008"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-22T17:53:20Z"
     }
   ]
 }

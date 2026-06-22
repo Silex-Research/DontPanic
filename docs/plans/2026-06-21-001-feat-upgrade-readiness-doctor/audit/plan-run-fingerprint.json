@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-22T16:39:03Z",
+  "captured_at": "2026-06-22T17:25:39Z",
   "decision_lines": [
     "D001\u001f297061b9497aafad361be36ef7256d54428b47d8d48487b58e1d39b91e2aa24f",
     "D002\u001f94647b5a3afff7d32163aa707587e184056dfcbe9fbd326ed231920c57cf8385",
@@ -64,7 +64,8 @@
     "D061\u001faf18cfa68855e68fee1980ac5502c509468e051d17c5139249d1f31ed4ec51df",
     "D062\u001f78265efa37c8170cf439742e463ba24b541638966396fabb0ce9e02b9f8f567f",
     "D063\u001f19200726a4ea48e520bdd19fa1973447fd93747f792e9c42f364ab62dbec04de",
-    "D064\u001fa01e9918e22190c7af2b37442ed4d7b0221d5cacb9f6d5b2d1d588f52c7fec2a"
+    "D064\u001fa01e9918e22190c7af2b37442ed4d7b0221d5cacb9f6d5b2d1d588f52c7fec2a",
+    "D065\u001fffdd391cdf69c016ee9c2d33d7fff90d95ca343eb55181f77e81ea14f1397def"
   ],
   "features_semantics": {
     "by_id": {
@@ -140,7 +141,7 @@
           "F006",
           "F008"
         ],
-        "passes": false
+        "passes": true
       },
       "F010": {
         "acceptance": "update_journey_e2e reproduces fresh-update -> doctor WARN -> full report (summary + pending required) -> probe satisfied -> action clears + WARN gone + update_state transition, through the real doctor CLI; a captured live upgrade report (JSON) on the real instance (canonical-discovery item reflecting the actual probe) and the journey transcript are saved under evidence/. The required action is satisfied by running its APPLY-labeled command (the real migration step) and then PROVEN by the verify-labeled command; a broken apply or verify command fails the journey (D032, supersedes D025). The apply-labeled command runs only against a disposable isolated fixture instance (an isolated temp HOME + fixture registry), never the operator's real registry, and is torn down after; the real-instance evidence is the read-only upgrade report only (D043, test/isolation asserted). Test output for this feature is captured under evidence/ at close (D048).",
@@ -168,15 +169,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "7a3ba2e0c482b95a4a3689eaf4c52e7ced2ab048897c18f9c4dffda4b07affb5",
-    "decisions.jsonl": "e2e272fced79a040776579450ff4349ab6a0d977136118a6f22558b01daafc04",
-    "features.json": "1dc186dfe1182317356605b7610c08a03863e7551cacc8aa91bf958dd90031b9",
+    "decisions.jsonl": "c3239e5a19ee794ceb7c9474f9dfd649c009bc9f523818fe8a59b280194b3aa2",
+    "features.json": "d47f050ba246bfbd09dd8b22c90ca85ccbaa691cc4b440784b0e62353c9aa709",
     "objective_contract.json": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
     "plan.md": "b4897ff3d0432cc1ded03be4c35955d1e6b9ca7772729c2e4b3796a39938386f"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1782087438.4475276,
-    "decisions.jsonl": 1782146336.5278354,
-    "features.json": 1782146116.3049526,
+    "decisions.jsonl": 1782149121.006309,
+    "features.json": 1782147276.2852204,
     "objective_contract.json": 1782065085.915136,
     "plan.md": 1782087249.8380733
   },
