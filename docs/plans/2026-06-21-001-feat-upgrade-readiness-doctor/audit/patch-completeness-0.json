@@ -5,30 +5,30 @@
     {
       "mode": "test_file_untracked",
       "files": [
-        "scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py"
+        "scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py"
       ],
       "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
       "severity": "block",
-      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py"
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py"
     },
     {
       "mode": "unstaged_dirty_state",
       "files": [
+        "CHANGELOG.md",
+        "docs/RELEASE_IMPACT.md",
         "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md",
-        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
-        "scripts/dontpanic_doctor.py",
-        "scripts/dontpanic_orchestrate/cli.py"
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json"
       ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json,scripts/dontpanic_doctor.py,scripts/dontpanic_orchestrate/cli.py",
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
       "severity": "block",
       "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
     }
   ],
   "files": [
-    "scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py",
+    "scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py",
+    "CHANGELOG.md",
+    "docs/RELEASE_IMPACT.md",
     "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
-    "scripts/dontpanic_doctor.py",
-    "scripts/dontpanic_orchestrate/cli.py"
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json"
   ]
 }

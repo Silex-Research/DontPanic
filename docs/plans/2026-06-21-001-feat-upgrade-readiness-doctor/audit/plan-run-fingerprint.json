@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-22T16:26:36Z",
+  "captured_at": "2026-06-22T16:39:03Z",
   "decision_lines": [
     "D001\u001f297061b9497aafad361be36ef7256d54428b47d8d48487b58e1d39b91e2aa24f",
     "D002\u001f94647b5a3afff7d32163aa707587e184056dfcbe9fbd326ed231920c57cf8385",
@@ -63,7 +63,8 @@
     "D060\u001f6ae68c7ebf90e571123cbd54a43dab0e3c3c32e3cff3995dbb75890f073036b5",
     "D061\u001faf18cfa68855e68fee1980ac5502c509468e051d17c5139249d1f31ed4ec51df",
     "D062\u001f78265efa37c8170cf439742e463ba24b541638966396fabb0ce9e02b9f8f567f",
-    "D063\u001f19200726a4ea48e520bdd19fa1973447fd93747f792e9c42f364ab62dbec04de"
+    "D063\u001f19200726a4ea48e520bdd19fa1973447fd93747f792e9c42f364ab62dbec04de",
+    "D064\u001fa01e9918e22190c7af2b37442ed4d7b0221d5cacb9f6d5b2d1d588f52c7fec2a"
   ],
   "features_semantics": {
     "by_id": {
@@ -122,7 +123,7 @@
           "F004",
           "F006"
         ],
-        "passes": false
+        "passes": true
       },
       "F008": {
         "acceptance": "The dashboard exposes an always-shown upgrade-status signal (status line + update_state + counts + last_seen_release + installed_commit) as a Tools & Setup / Health row present in the up-to-date case too; upgrade_action_items are the drill-down (probe-pending required -> needs_action with its command, undismissed advisory -> advisory, dismissed/satisfied absent/info) with stable ids and a stable-key sort. Tests assert the status row across states and that projections contain no secret shapes. The status projection carries upstream_status and the row reflects behind-newest when known; it never shows 'up to date' while upstream_status is behind (D031, test). The projection carries last_seen_commit and the last-acknowledged display renders it (never installed_commit, which is shown separately as the current checkout) (D037, test). With marker_state=absent the row renders 'never acknowledged' (not a synthetic latest acknowledgement) (D042, test). Test output for this feature is captured under evidence/ at close (D048). The ActionItem source vocabulary (+ sort/validation) admits source='upgrade': an upgrade item validates, is not dropped, and sorts with a stable key in the existing provider path (D052, test).",
@@ -167,15 +168,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "7a3ba2e0c482b95a4a3689eaf4c52e7ced2ab048897c18f9c4dffda4b07affb5",
-    "decisions.jsonl": "7fc7a430508df275799e6c6a956546701a11f225b9c1c1ee708c9a8e411f4111",
-    "features.json": "ab9bfddbc6ea69c9d64139a9b0eb89e6d38b48c3e0de9bf23b9250db4d2679b0",
+    "decisions.jsonl": "e2e272fced79a040776579450ff4349ab6a0d977136118a6f22558b01daafc04",
+    "features.json": "1dc186dfe1182317356605b7610c08a03863e7551cacc8aa91bf958dd90031b9",
     "objective_contract.json": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
     "plan.md": "b4897ff3d0432cc1ded03be4c35955d1e6b9ca7772729c2e4b3796a39938386f"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1782087438.4475276,
-    "decisions.jsonl": 1782145588.461591,
-    "features.json": 1782145351.702842,
+    "decisions.jsonl": 1782146336.5278354,
+    "features.json": 1782146116.3049526,
     "objective_contract.json": 1782065085.915136,
     "plan.md": 1782087249.8380733
   },

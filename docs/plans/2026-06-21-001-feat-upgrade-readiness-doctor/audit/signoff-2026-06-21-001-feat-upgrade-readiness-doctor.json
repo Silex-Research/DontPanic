@@ -7,8 +7,8 @@
     "claude"
   ],
   "audits": [
-    "audit/claude-implementer-F007-i0.json",
-    "audit/codex-auditor-F007-i0.json"
+    "audit/claude-implementer-F009-i0.json",
+    "audit/codex-auditor-F009-i0.json"
   ],
   "vote_summary": {
     "signed_off_count": 2,
@@ -17,7 +17,7 @@
     "inconclusive_count": 0
   },
   "signoff": true,
-  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (clean first pass, no findings); terminal was patch-completeness hygiene (untracked test_doctor_acknowledge_f007.py + ride-along). No stray untracked source modules (D063 check clean). Operator verified the safety-critical invariants: 15/15 tests; D004 test_acknowledge_does_not_clear_probe_failing_required asserts acknowledge silences advisories + advances marker (pending_advisory=0, last_seen=r3) but req3 (failing probe) STAYS pending (pending_required=1, req3 in required[]); control test proves pending-ness comes from the live probe not acknowledge; D015 test_acknowledge_is_the_only_path_that_writes_the_marker confirms acknowledge is the sole writer via write_upgrade_state. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (no findings); terminal was patch-completeness hygiene. D063 full-status check caught TWO gate-missed untracked files (upgrade_drift_lint.py module + docs/upgrade/README.md) beyond the flagged test — all staged. Operator verified: 11/11 drift-lint tests; docs/upgrade/README.md present (12KB, documents manifest contract + full action field set + baseline scope + first-run policy + no-mutation boundary); CHANGELOG.md links releases.json + gains the upgrade-readiness entry; docs/RELEASE_IMPACT.md notes the relationship; drift lint is advisory-only (warn-only, never raises, main exits 0, only flags post-baseline CHANGELOG sections lacking a manifest entry per D008/D018). Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-06-22T16:35:16Z"
+  "decided_at": "2026-06-22T16:54:36Z"
 }

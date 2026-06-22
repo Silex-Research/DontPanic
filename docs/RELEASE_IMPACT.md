@@ -19,6 +19,7 @@ the code change.
 | Surface | What it means | Typical owner |
 |---|---|---|
 | `root_changelog` | Entry in this repo's root `CHANGELOG.md` (product-facing). | Plan author |
+| `upgrade_manifest` | Entry in `docs/upgrade/releases.json` (the machine upgrade contract `dontpanic doctor --upgrade` reads). Required when a release lands an operator action (backfill/migration/config write) or an operator-visible change an upgrading instance should be told about. | Plan author |
 | `shared_changelog` | Entry in `claude/shared/CHANGELOG.md` (agent-conventions subtree). | Plan author + agent-conventions maintainer |
 | `readme` | `README.md` at repo root. | Plan author |
 | `onboarding` | `docs/GETTING_STARTED.md`, `docs/AGENT_QUICKSTART.md`, `init`/`doctor` CLI flow text. | Plan author |
@@ -42,6 +43,7 @@ files, evidence — usually need neither changelog.
 | `capabilities/*.json` | `root_changelog`, `capability_manifest` | Capability surface — declared setup steps and bindings are public. |
 | `claude/shared/schemas/**/*.json`, `claude/shared/schemas/**/models/*.py` | `shared_changelog`, `schemas` (and `root_changelog` if the CLI starts enforcing) | Agent-conventions schema change. Root entry only when DontPanic's own behavior changes too. |
 | `scripts/dontpanic_orchestrate/cli.py` (argparse `help=`, new subcommand, flag rename) | `root_changelog`, `cli_help` | CLI is the canonical operator surface. |
+| A release with an operator migration/backfill/config-write, or any operator-visible change an upgrading instance should be told about | `root_changelog`, `upgrade_manifest` | `dontpanic doctor --upgrade` reads `docs/upgrade/releases.json`; see `docs/upgrade/README.md`. |
 | `docs/architecture/**`, `docs/architecture.json` | `architecture` | Architecture map; auto-regenerated, but a major refactor that changes the architecture-map contract belongs in the root changelog too. |
 | Repo metadata files (`.github/repository.yml`, social preview, topics, `pyproject.toml` description) | `root_changelog`, `public_metadata` | Discoverability signals. |
 | `scripts/dontpanic_orchestrate/**` interior modules NOT named above (planner, breakers, runner, executors), `tests/**`, `evidence/**`, `audit/**`, `docs/plans/**`, `decisions.jsonl`, ledger files | usually none | Internal implementation — neither changelog required. |
@@ -83,6 +85,12 @@ Before locking a plan, the author answers:
    topics, discoverability copy, or any other public-facing identity surface?
 9. **Changelog.** Based on the answers above, does this require a root
    `CHANGELOG.md` entry, a `claude/shared/CHANGELOG.md` entry, or both?
+10. **Upgrade manifest.** Does the release require an operator action after
+    pulling (backfill, migration, config write) or otherwise land an
+    operator-visible change an upgrading instance should be told about? If so it
+    needs a `docs/upgrade/releases.json` entry so `dontpanic doctor --upgrade`
+    surfaces it — see `docs/upgrade/README.md`. The advisory drift lint warns when
+    a post-baseline CHANGELOG section lacks one.
 
 If the answer to any of 1-8 is yes, the plan's feature acceptance MUST name
 the surface and the update it ships. "We will remember to update the README"

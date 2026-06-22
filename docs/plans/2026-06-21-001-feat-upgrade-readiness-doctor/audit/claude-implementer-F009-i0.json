@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-22T16:39:04Z",
+  "completed_at": "2026-06-22T16:46:21Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-gq53h_ok target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3547 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3087286,
+    "tokens_out": 31917,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F009] The change set is complete and scoped correctly — the manifest seed (`releases.json` + packaged mirror) is untouched, so the 4-release seed test stays green.\n\n## Summary\n\nI implemented F009 (authoring guide + changelog linkage) for the upgrade-readiness doctor plan, following red/green TDD for the lint. **Side-effect commands run** (read-only test/lint runs only — no cloud/env mutation):\n\n```\n$ PYTHONPATH=scripts python3 -m dontpanic_orchestrate.upgrade_drift_lint\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py -q\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py -q\n```\n\nI wrote `docs/upgrade/README.md` as the full manifest authoring guide — the machine-contract framing, when a release needs an entry, the complete per-action field set (kind/severity/detail/commands/introduced_commands/applies_when/status_probe/success_message/failure_message/human_next_step/docs_url/evidence_uri) with the required-action invariants, `show_on_first_run` + first-run policy, how to add a fail-closed status_probe vs fail-open applies_when predicate, the baseline scope (D018/D039), and the no-mutation v0 boundary (D007/D028). I linked `CHANGELOG.md` to `docs/upgrade/releases.json` (new \"Relationship to releases.json\" section) and added the dated `2026-06-22` entry for the doctor up",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python3 -m dontpanic_orchestrate.upgrade_drift_lint",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py -q",
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_release_impact_f003.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

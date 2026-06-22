@@ -1419,3 +1419,148 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-06-22T16:39:03Z
+event: volley_start
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+feature_id: F009
+---
+
+impl=claude aud=codex cap=3 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-06-22T16:39:03Z
+event: volley_start
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+feature_id: F009
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=3
+
+===
+---
+timestamp: 2026-06-22T16:48:05Z
+event: volley_terminal
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+final_status: signed_off
+rounds: 1
+feature_id: F009
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F009-i0.json', 'codex-auditor-F009-i0.json']
+reason: auditor signed off
+
+===
+<!-- rendered annotation 2026-06-22T16:48:05Z -->
+**AI work finished on 2026-06-21-001-feat-upgrade-readiness-doctor** _(band: ready)_
+
+Volley completed after 1 round(s) with `signed_off`. No action needed.
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F009`
+- `final_status` = `signed_off`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `1`
+- `plan_id` = `2026-06-21-001-feat-upgrade-readiness-doctor`
+- `rounds` = `1`
+
+</details>
+
+===
+---
+timestamp: 2026-06-22T16:48:05Z
+event: breaker:patch_incomplete
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/patch-completeness-0.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py
+  unstaged_dirty_state | block | CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-06-22T16:48:05Z
+event: volley_crash_caught
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+feature_id: F009
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py
+  unstaged_dirty_state | block | CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-06-22T16:48:05Z
+event: volley_terminal
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+final_status: blocked
+rounds: 1
+feature_id: F009
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F009-i0.json', 'codex-auditor-F009-i0.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_upgrade_drift_lint_f009.py
+  unstaged_dirty_state | block | CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: CHANGELOG.md,docs/RELEASE_IMPACT.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+<!-- rendered annotation 2026-06-22T16:48:06Z -->
+**Blocked work on 2026-06-21-001-feat-upgrade-readiness-doctor — blocked** _(band: needs_action)_
+
+Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-06-21-001-feat-upgrade-readiness-doctor --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F009`
+- `final_status` = `blocked`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `1`
+- `plan_id` = `2026-06-21-001-feat-upgrade-readiness-doctor`
+- `rounds` = `1`
+
+</details>
+
+===
+---
+timestamp: 2026-06-22T16:54:36Z
+event: feature_operator_resolved
+plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
+feature_id: F009
+reason_class: operator_verified
+---
+
+Operator closed feature F009 as operator_resolved (class=operator_verified).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-06-21-001-feat-upgrade-readiness-doctor.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

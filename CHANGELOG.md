@@ -31,6 +31,20 @@ files, and plan-ledger updates usually belong in neither.
 See `docs/RELEASE_IMPACT.md` for the full path/surface pattern table that
 determines which changelog (if any) a change requires.
 
+## Relationship to `docs/upgrade/releases.json`
+
+This file is the **prose, human** record of operator-visible change. Its machine
+counterpart is the **upgrade release manifest**,
+[`docs/upgrade/releases.json`](docs/upgrade/releases.json) — the structured
+contract `dontpanic doctor --upgrade` reads to tell an upgrading instance which
+operator actions are required vs advisory, with exact copyable commands and a
+live satisfaction probe. A release that lands an operator action (a backfill,
+migration, or config write) belongs in BOTH: a prose entry here and a manifest
+entry there. See [`docs/upgrade/README.md`](docs/upgrade/README.md) for the
+manifest authoring guide and the baseline scope. An advisory, warn-only drift
+lint flags operator-visible dated sections below that lack a matching manifest
+entry.
+
 ## Format
 
 Entries are reverse-chronological. Each entry is a single release or
@@ -45,6 +59,49 @@ behavioral surface change with the date, a short summary, and a
 
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
+
+## 2026-06-22 — Upgrade-readiness layer in `dontpanic doctor` (plan 2026-06-21-001)
+
+### Added
+- **Upgrade-readiness surface in `dontpanic doctor`.** Doctor is now
+  changelog-aware about upgrades, driven by a structured release manifest
+  ([`docs/upgrade/releases.json`](docs/upgrade/releases.json)). Plain `dontpanic
+  doctor` emits one concise WARN with the count of pending upgrade actions and the
+  remediation command; `dontpanic doctor --upgrade` renders the full report led by
+  a version/update summary (installed_commit, latest_release_id, last_seen_release,
+  pending_required, pending_advisory, update_state); `dontpanic doctor --upgrade
+  --json` emits that summary plus `required[]` / `advisory[]` / `migration_status[]`
+  with exact copyable commands. Required actions reflect a live detection
+  **status_probe** gated by an **applies_when** predicate — never the marker (a
+  probe-failing required action stays pending across `--acknowledge`).
+- **`dontpanic doctor --acknowledge`.** Advances the per-instance marker
+  (`~/.dontpanic/upgrade-state.json`: last-seen release/commit + dismissed
+  advisories) to silence advisory noise. It never clears a probe-failing required
+  action. First run bootstraps the marker to the latest release and shows only
+  `show_on_first_run` advisories, so a fresh instance is not flooded; required
+  actions still surface via their probes.
+- **Dashboard upgrade-status row.** The operator console / dashboard gains a
+  persistent version/update-readiness STATUS row (Tools & Setup / Health) from the
+  same summary — "up to date" / "N upgrade actions pending" / "last acknowledged …"
+  — present even in the up-to-date case, with ActionItems as the drill-down
+  (probe-failing required → `needs_action`, advisory → `advisory`).
+- **Release manifest contract + authoring guide.** `docs/upgrade/releases.json`
+  (validated by `upgrade-releases.schema.json` + the `UpgradeManifest` Pydantic
+  model) is the machine source of truth for upgrade intent — each release declares
+  required/advisory actions with exact commands, applicability + satisfaction
+  predicates, and operator copy. [`docs/upgrade/README.md`](docs/upgrade/README.md)
+  documents the full action field set, `show_on_first_run` + first-run policy, how
+  to add a predicate, the baseline scope, and the **no-mutation** v0 boundary
+  (doctor detects + explains + prints commands; it never runs the migration
+  itself).
+- **Advisory CHANGELOG ↔ manifest drift lint** (`upgrade_drift_lint.py`).
+  Warn-only and baseline-scoped: it asserts every operator-visible CHANGELOG dated
+  section after the manifest baseline has a matching `releases.json` entry. It
+  never blocks in v0.
+
+Surfaces affected: cli_help (`dontpanic doctor --upgrade` / `--upgrade --json` /
+`--acknowledge`), doctor, dashboard, onboarding, root_changelog, release-impact
+docs.
 
 ## 2026-06-17 — Experience Readiness Gate: consumer-outcome enforcement at close (plans 2026-06-15-001 / 2026-06-15-002 / 2026-06-14-002)
 
