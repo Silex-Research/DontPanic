@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   renderHealthHTML,
   renderInstallHealthCardHTML,
+  renderUpgradeStatusCardHTML,
   renderSetupDriftCardHTML,
   renderBuildWarningsCardHTML,
   renderSecurityCardHTML,
@@ -31,9 +32,25 @@ describe('renderHealthHTML: composition', () => {
 
   it('includes every required card kind so no card silently disappears', () => {
     const html = renderHealthHTML({});
-    for (const kind of ['install', 'reconcile', 'build_warnings', 'security', 'budget', 'fleet']) {
+    for (const kind of ['upgrade', 'install', 'reconcile', 'build_warnings', 'security', 'budget', 'fleet']) {
       expect(html).toContain(`data-kind="${kind}"`);
     }
+  });
+
+  it('renders the upgrade status row even in the positive up-to-date case (D011)', () => {
+    const upToDate = {
+      status_line: 'DontPanic: up to date',
+      update_state: 'up_to_date',
+      upstream_status: 'current',
+      behind_upstream: false,
+      pending_required: 0,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      last_acknowledged: 'Last acknowledged: r1 (commit ackc0de)',
+    };
+    const html = renderHealthHTML({ upgradeStatus: upToDate });
+    expect(html).toContain('data-kind="upgrade"');
+    expect(html).toContain('DontPanic: up to date');
   });
 
   it('escapes a malicious selectedProject value (no raw script tag)', () => {
@@ -99,6 +116,111 @@ describe('renderInstallHealthCardHTML', () => {
     const html = renderInstallHealthCardHTML(env);
     expect(html).toContain('Install is healthy');
     expect(html).toContain('hlth-card--green');
+  });
+});
+
+// ── Upgrade status card (Plan 2026-06-21-001 F008 — always-shown row) ──
+
+describe('renderUpgradeStatusCardHTML', () => {
+  it('renders the missing-data card when the projection is null', () => {
+    const html = renderUpgradeStatusCardHTML(null);
+    expect(html).toContain('Upgrade status — no data yet');
+    expect(html).toContain('dashboard/state/upgrade-status.json');
+    expect(html).toContain('hlth-card--muted');
+  });
+
+  it('renders a green up-to-date row that surfaces the status line + installed commit', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: 'DontPanic: up to date',
+      update_state: 'up_to_date',
+      upstream_status: 'current',
+      behind_upstream: false,
+      pending_required: 0,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      last_acknowledged: 'Last acknowledged: r1 (commit ackc0de)',
+    });
+    expect(html).toContain('data-kind="upgrade"');
+    expect(html).toContain('hlth-card--green');
+    expect(html).toContain('DontPanic: up to date');
+    expect(html).toContain('cur1234');
+  });
+
+  it('renders a red row with the count when required actions are pending', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: 'DontPanic: 2 upgrade actions pending',
+      update_state: 'required_pending',
+      upstream_status: 'current',
+      behind_upstream: false,
+      pending_required: 2,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      last_acknowledged: 'never acknowledged',
+    });
+    expect(html).toContain('hlth-card--red');
+    expect(html).toContain('DontPanic: 2 upgrade actions pending');
+  });
+
+  it('never reads up-to-date while upstream is behind (D031)', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: 'DontPanic: behind the newest DontPanic (run `git pull`)',
+      update_state: 'up_to_date',
+      upstream_status: 'behind',
+      behind_upstream: true,
+      pending_required: 0,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      last_acknowledged: 'Last acknowledged: r1 (commit ackc0de)',
+    });
+    // A behind checkout is a red signal even with a clean update_state.
+    expect(html).toContain('hlth-card--red');
+    expect(html).toContain('behind the newest DontPanic');
+    expect(html).not.toContain('up to date with the tracked');
+    expect(html).toContain('git pull');
+  });
+
+  it('renders the last-acknowledged line from the projection (last_seen, not installed)', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: 'DontPanic: up to date',
+      update_state: 'up_to_date',
+      upstream_status: 'current',
+      behind_upstream: false,
+      pending_required: 0,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      last_seen_commit: 'ackc0de',
+      last_acknowledged: 'Last acknowledged: r1 (commit ackc0de)',
+    });
+    expect(html).toContain('Last acknowledged: r1 (commit ackc0de)');
+    // installed_commit appears as its own row, never inside the ack line.
+    expect(html).toContain('cur1234');
+  });
+
+  it('renders "never acknowledged" when the marker is absent (D042)', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: 'DontPanic: up to date',
+      update_state: 'up_to_date',
+      upstream_status: 'current',
+      behind_upstream: false,
+      pending_required: 0,
+      pending_advisory: 0,
+      installed_commit: 'cur1234',
+      marker_state: 'absent',
+      last_acknowledged: 'never acknowledged',
+    });
+    expect(html).toContain('never acknowledged');
+  });
+
+  it('escapes a malicious status line (no raw script tag)', () => {
+    const html = renderUpgradeStatusCardHTML({
+      status_line: '<script>alert(1)</script>',
+      update_state: 'unknown',
+      upstream_status: 'unknown',
+      pending_required: 0,
+      pending_advisory: 0,
+    });
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;');
   });
 });
 

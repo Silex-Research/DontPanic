@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-22T16:05:12Z",
+  "completed_at": "2026-06-22T16:07:45Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F008-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-1uz4g5yj target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 194890 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1716819,
+    "tokens_out": 12979,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration matches `{Repo: DontPanic, Env: dev, Project: (none)}`; structured `target_context` has `env=dev`, `project=null`, and no forbidden command shapes.\n\nFINDING (high, correctness): Upgrade drill-down items are not admitted by the dashboard What Now client vocabulary, so `source=\"upgrade\"` is coerced to `source=\"capability\"` and can disappear in project-scoped views. Evidence: `dashboard/lib/what-now-logic.js` omits `upgrade` from `SOURCES`, `SOURCE_LABELS`, and `SOURCE_PRIORITY`; a direct normalization check returned `{\"normalizedSource\":\"capability\",\"projectVisible\":0}` for an `upgrade:r1:req` item. Recommendation: add `upgrade` to the client-side source vocabulary, labels, value-kind labels, sort priority, and regression tests asserting normalize/sort/filter/render preserve `source=\"upgrade\"`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py -q -p no:cacheprovider  \nBlocked by read-only temp environment: pytest could not create a temp file.\n\n$ node --check core.js  \nPassed.\n\n$ node --check lib/health-logic.js  \nPassed.\n\n$ npx vitest run tests/unit/health-logic.test.js  \nBlocked by read-only environment: Vite could not write `node_modules/.vite-temp`.\n\n$ node --input-type=module -e \"import { normalizeEnvelope } from './lib/what-now-logic.js'; const env = normalizeEnvelope({schema_version:'1.0.0',captured",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py -q -p no:cacheprovider",
+      "node --check core.js",
+      "node --check lib/health-logic.js",
+      "npx vitest run tests/unit/health-logic.test.js",
+      "node --input-type=module -e \"import { normalizeEnvelope } from './lib/what-now-logic.js'; const env = normalizeEnvelope({schema_version:'1.0.0',captured_at:'x',items:[{id:'upgrade:r1:req',source:'upgrade',band:'needs_action',title:'t',automatable:false,human_required_reason:'r',dedupe_key:'upgrade:r1:req'}]}); console.log(JSON.stringify(env.items[0]));\"",
+      "node --input-type=module -e \"import { normalizeEnvelope, filterItemsForProject } from './lib/what-now-logic.js'; const env = normalizeEnvelope({items:[{id:'upgrade:r1:req',source:'upgrade',band:'needs_action',title:'t',automatable:false,human_required_reason:'r'}]}); console.log(JSON.stringify({normalizedSource: env.items[0].source, projectVisible: filterItemsForProject(env.items, 'Styln').length}));\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "Upgrade drill-down items are not admitted by the dashboard What Now client vocabulary, so `source=\"upgrade\"` is coerced to `source=\"capability\"` and can disappear in project-scoped views. Evidence: `dashboard/lib/what-now-logic.js` omits `upgrade` from `SOURCES`, `SOURCE_LABELS`, and `SOURCE_PRIORITY`; a direct normalization check returned `{\"normalizedSource\":\"capability\",\"projectVisible\":0}` for an `upgrade:r1:req` item. Recommendation: add `upgrade` to the client-side source vocabulary, label",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

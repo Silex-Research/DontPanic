@@ -225,7 +225,16 @@ _DASHBOARD_SPEC = SubcommandSpec(
     },
 )
 
-# ``projects`` subcommand flags per cli.py:_projects_{add,list,show,remove}.
+# ``projects`` subcommand flags per cli.py:_projects_{add,list,show,remove,
+# discover,backfill-canonical} (dispatch ladder at cli.py:_projects_main, usage
+# at cli.py:_PROJECTS_USAGE). ``discover`` (Plan 2026-06-17-001 F004) and
+# ``backfill-canonical`` (F005) are the canonical-repo-discovery surfaces; the
+# upgrade-readiness manifest (docs/upgrade/releases.json) ships
+# ``dontpanic projects backfill-canonical`` as a required action's APPLY command,
+# so it MUST validate here or the F008 drill-down (upgrade_dashboard._command_fields)
+# parks it on the display-only operator_command field — which what-now-logic.js
+# drops, silently vanishing the apply command from the dashboard
+# (codex-auditor-F008-i2 high).
 _PROJECTS_SPEC = SubcommandSpec(
     subcommands={
         "add": SubcommandSpec(
@@ -246,6 +255,19 @@ _PROJECTS_SPEC = SubcommandSpec(
             positional_min=1,
             positional_max=1,
             bool_flags=frozenset({"--yes", "--json"}),
+        ),
+        # ``discover [--json] [--window-days N] [--min-count N]`` per
+        # cli.py:_projects_discover (no positionals).
+        "discover": SubcommandSpec(
+            value_flags=frozenset({"--window-days", "--min-count"}),
+            bool_flags=frozenset({"--json"}),
+        ),
+        # ``backfill-canonical [--dry-run] [--json] [--ledger PATH] [--evidence PATH]``
+        # per cli.py:_projects_backfill_canonical (no positionals). This is the
+        # upgrade manifest's APPLY command — it must validate as exact_command.
+        "backfill-canonical": SubcommandSpec(
+            value_flags=frozenset({"--ledger", "--evidence"}),
+            bool_flags=frozenset({"--dry-run", "--json"}),
         ),
     },
 )

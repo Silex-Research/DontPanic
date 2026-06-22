@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-22T15:50:45Z",
+  "completed_at": "2026-06-22T15:59:22Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-1uz4g5yj target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3793 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 6090140,
+    "tokens_out": 36042,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F008] I've implemented F008 for plan 2026-06-21-001 (target: dev, host-local, no cloud project). I added two projections fed by the F005 `UpgradeReport`: `upgrade_status_projection` (the always-rendered Tools & Setup / Health status row carrying `status_line`, `update_state`, pending counts, separate `last_seen_commit`/`installed_commit`, `upstream_status`, and `marker_state`) and `provide_upgrade_actions` (the drill-down `ActionItem`s with `source='upgrade'`, mapping probe-pending required → `needs_action` with its first apply-labeled command, undismissed advisory → `advisory`, satisfied/dismissed absent), both in a new `scripts/dontpanic_orchestrate/upgrade_dashboard.py`. I extended the closed source vocabulary in `operator_console.py` (`SOURCE_UPGRADE` added to `_VALID_SOURCES`, `_SOURCE_PRIORITY`, and `__all__`, D052), and wired both projections into the dashboard build path (`_gather_action_items` aggregation + GLOBAL scope, and an always-written `upgrade-status.json` next to `what-now.json`), all read-only with no network fetch. The status line never reads \"up to date\" while upstream is behind (D031), the acknowledgement renders `last_seen_commit` not `installed_commit` (D037), and an absent marker renders \"never acknowledged\" (D042). The new 14-test suite passes and is captured at `evidence/F008-test-output.txt` (D048); related suites stayed green (F005/F006 62 passed; operator_console/render_gate/scope/relevance/action-spine 116 passed; dashboard build-path tests 27 passed)",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py -q",
+      "python3 -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q",
+      "python3 -m pytest dontpanic_orchestrate/tests/test_operator_console_f001.py dontpanic_orchestrate/tests/test_render_gate_f001.py dontpanic_orchestrate/tests/test_scope_lattice_f002.py dontpanic_orchestrate/tests/test_dashboard_relevance_f004.py dontpanic_orchestrate/tests/test_action_spine_f001.py -q",
+      "python3 -m pytest dontpanic_orchestrate/tests/test_dashboard_dir_isolation.py dontpanic_orchestrate/tests/test_dashboard_fixture_contract_f003.py dontpanic_orchestrate/tests/test_dashboard_singleton_f010.py -q",
+      "mkdir -p docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence",
+      "python3 -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py -v  (tee'd to evidence/)"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "parsing",
+      "issue": "shlex parse failed: No closing quotation",
+      "evidence": "Could not parse commands_run entry: \"python3 -m pytest dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py -v  (tee'd to evidence/)\"",
+      "recommendation": "Quote/escape command strings consistently in summaries. Supervisor skipped command_guard checks on this entry."
+    }
+  ],
+  "audit_status": "signed_off"
+}

@@ -927,6 +927,23 @@ def build(
                 _operator_channels.write_channel_view_state(out_dir / "operator-channels.json")
             except Exception as _oc_exc:  # noqa: BLE001
                 warnings.append(f"operator-channels state skipped: {_oc_exc}")
+            # Plan 2026-06-21-001 F008 — write the ALWAYS-shown upgrade-status row
+            # (Tools & Setup / Health, D011) next to what-now.json from the SAME
+            # F005 report the drill-down ActionItems read. Read-only (D015) + no
+            # implicit fetch (D016). Best-effort: a failure here never fails the
+            # build, and the row is emitted in EVERY state incl. up-to-date.
+            try:
+                import json as _json3
+
+                from dontpanic_orchestrate import upgrade_dashboard as _ud3
+
+                _ureport = _ud3.build_dashboard_report()
+                (out_dir / "upgrade-status.json").write_text(
+                    _json3.dumps(_ud3.upgrade_status_projection(_ureport), indent=2) + "\n",
+                    encoding="utf-8",
+                )
+            except Exception as _us_exc:  # noqa: BLE001
+                warnings.append(f"upgrade-status state skipped: {_us_exc}")
             # write_cache merges by default (merge_event_sidecar=True); pass
             # the already-merged list and disable the inner merge to avoid
             # double-application that would be a no-op anyway.
@@ -1157,6 +1174,19 @@ def _gather_action_items(
         plan_dirs_by_id, project_name=project_name
     )
 
+    # Plan 2026-06-21-001 F008: upgrade-readiness drill-down ActionItems
+    # (source='upgrade', D052) projected from the SAME F005 report the persistent
+    # status row reads. Read-only (D015) + no implicit network fetch (D016).
+    # Best-effort: a broken/absent release manifest must never fail the build.
+    upgrade_items: tuple[operator_console.ActionItem, ...] = ()
+    try:
+        from dontpanic_orchestrate import upgrade_dashboard as _ud
+
+        _upgrade_report = _ud.build_dashboard_report()
+        upgrade_items = _ud.provide_upgrade_actions(_upgrade_report)
+    except Exception:  # noqa: BLE001 — degrade like every other provider input
+        upgrade_items = ()
+
     aggregated = operator_console.aggregate(
         gate_items,
         capability_items,
@@ -1166,6 +1196,7 @@ def _gather_action_items(
         operations_items,
         skill_items,
         integration_items,
+        upgrade_items,
     )
     # F002 suppress-at-source: drop any item whose clears_when is already
     # satisfied against live state. Items with clears_when=None are kept
@@ -1213,6 +1244,8 @@ def _gather_action_items(
         operator_console.SOURCE_GATE: _sl.Scope.PROJECT.value,
         operator_console.SOURCE_ARCHITECTURE: _sl.Scope.PROJECT.value,
         operator_console.SOURCE_INTEGRATION: _sl.Scope.GLOBAL.value,
+        # F008: upgrade-readiness is install-level state (like capabilities) — global.
+        operator_console.SOURCE_UPGRADE: _sl.Scope.GLOBAL.value,
     }
     # All sources here were just evaluated at build time → fresh + ok. A source
     # whose producer input was absent (couldn't evaluate) is marked eval_ok=False

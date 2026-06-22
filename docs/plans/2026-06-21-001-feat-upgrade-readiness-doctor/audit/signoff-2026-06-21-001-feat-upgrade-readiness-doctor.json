@@ -7,14 +7,14 @@
     "claude"
   ],
   "audits": [
-    "audit/claude-implementer-F006-i0.json",
-    "audit/codex-auditor-F006-i0.json",
-    "audit/claude-implementer-F006-i1.json",
-    "audit/codex-auditor-F006-i1.json",
-    "audit/claude-implementer-F006-i2.json",
-    "audit/codex-auditor-F006-i2.json",
-    "audit/claude-implementer-F006-i3.json",
-    "audit/codex-auditor-F006-i3.json"
+    "audit/claude-implementer-F008-i0.json",
+    "audit/codex-auditor-F008-i0.json",
+    "audit/claude-implementer-F008-i1.json",
+    "audit/codex-auditor-F008-i1.json",
+    "audit/claude-implementer-F008-i2.json",
+    "audit/codex-auditor-F008-i2.json",
+    "audit/claude-implementer-F008-i3.json",
+    "audit/codex-auditor-F008-i3.json"
   ],
   "vote_summary": {
     "signed_off_count": 5,
@@ -23,7 +23,7 @@
     "inconclusive_count": 0
   },
   "signoff": true,
-  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=3 (3 contested rounds then clean, no findings); terminal was patch-completeness hygiene (untracked test_doctor_upgrade_render_f006.py + ride-along), not a defect. Operator verified the contested integration directly: 34/34 tests (render + invocation_ledger regression); D050 end-to-end no-mutation test genuinely asserts plain doctor + --upgrade write ZERO files anywhere under a tmp HOME (no backfill/migration/config/registry/evidence/ledger/marker); --check-upstream opt-in only, default path does no network fetch. CROSS-PLAN INTERACTION (recorded D061): F006 adds is_zero_write_command({doctor}) to the pre-existing invocation_ledger (shipped #54, plan 2026-06-14-001) so the read-only doctor command writes no ledger line — the correct reconciliation of D050 vs the global cli.main write-seam; the ledger regression test was honestly updated (doctor->ps in one recorder test) not weakened. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=3 (3 contested rounds, no findings); terminal was patch-completeness hygiene (untracked test files + ride-along). Operator verified: Python 99/99 (F008 dashboard + command_validation regression), JS/vitest 93/93 (health-logic + what-now-logic); D052 SOURCE_UPGRADE='upgrade' admitted into the closed ActionItem source vocabulary so upgrade items validate/sort/survive the provider path; no-secret-shapes test present (test_projections_carry_no_secret_shapes + sidecar leak check). CROSS-MODULE FIX (D062): F008 adds discover + backfill-canonical subcommand shapes to command_validation.py because the upgrade manifest ships 'dontpanic projects backfill-canonical' as the canonical-discovery required action's APPLY command — a codex iter2 HIGH finding caught that without it the apply command fails token-validation, parks on display-only, and what-now-logic.js drops it (apply command would silently vanish from the dashboard). Additive, traced to cli.py shapes, regression-tested. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-06-22T15:49:23Z"
+  "decided_at": "2026-06-22T16:22:31Z"
 }

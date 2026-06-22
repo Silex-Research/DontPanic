@@ -42,8 +42,8 @@ describe('what-now: constants', () => {
     }
   });
 
-  it('exposes the five V0 sources with labels', () => {
-    expect(SOURCES).toEqual(['gate', 'capability', 'reconcile', 'supervisor', 'architecture']);
+  it('exposes the V0 sources (incl. upgrade) with labels', () => {
+    expect(SOURCES).toEqual(['gate', 'capability', 'reconcile', 'supervisor', 'architecture', 'upgrade']);
     for (const s of SOURCES) {
       expect(SOURCE_LABELS[s]).toBeTruthy();
     }
@@ -163,6 +163,44 @@ describe('what-now: sortItems', () => {
     const snapshot = JSON.stringify(input);
     sortItems(input);
     expect(JSON.stringify(input)).toBe(snapshot);
+  });
+});
+
+// ── upgrade source vocabulary (F008 / D052) ──
+
+describe('what-now: upgrade source vocabulary', () => {
+  const rawUpgrade = {
+    id: 'upgrade:r1:req',
+    source: 'upgrade',
+    band: 'needs_action',
+    title: 'Apply upgrade action',
+    automatable: false,
+    human_required_reason: 'upgrade action',
+    exact_command: 'dontpanic doctor --upgrade',
+  };
+
+  it('does not coerce source="upgrade" to "capability" on normalize', () => {
+    const env = normalizeEnvelope({ items: [rawUpgrade] });
+    expect(env.items).toHaveLength(1);
+    expect(env.items[0].source).toBe('upgrade');
+    expect(env.items[0].exact_command).toBe('dontpanic doctor --upgrade');
+  });
+
+  it('keeps an upgrade item visible in a project-scoped filter (not dropped)', () => {
+    const env = normalizeEnvelope({ items: [rawUpgrade] });
+    const visible = filterItemsForProject(env.items, 'Styln');
+    expect(visible).toHaveLength(1);
+    expect(visible[0].source).toBe('upgrade');
+  });
+
+  it('labels the upgrade source and sorts it with a stable key after architecture', () => {
+    expect(getSourceLabel('upgrade')).toBe('Upgrade');
+    const sorted = sortItems([
+      { id: 'up1',  source: 'upgrade',      band: 'needs_action' },
+      { id: 'gat1', source: 'gate',         band: 'needs_action' },
+      { id: 'arch1', source: 'architecture', band: 'needs_action' },
+    ]);
+    expect(sorted.map((it) => it.source)).toEqual(['gate', 'architecture', 'upgrade']);
   });
 });
 

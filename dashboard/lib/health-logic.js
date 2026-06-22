@@ -29,6 +29,7 @@ import { renderProvenanceFooterHTML } from './provenance.js';
  *
  * @param {object} state
  * @param {object|null} state.capabilities
+ * @param {object|null} state.upgradeStatus
  * @param {object|null} state.whatNow
  * @param {Array<object>|null} state.security
  * @param {object|null} state.fleetSummary
@@ -44,6 +45,7 @@ export function renderHealthHTML(state) {
   const scope = selected === ALL_PROJECTS_VALUE ? 'fleet' : 'project';
   const sections = [
     renderHeaderHTML(scope, selected, state.fleetSummary),
+    renderUpgradeStatusCardHTML(state.upgradeStatus),
     renderInstallHealthCardHTML(state.capabilities),
     renderSetupDriftCardHTML(state.whatNow, scope),
     renderBuildWarningsCardHTML(state.whatNow, scope),
@@ -150,6 +152,95 @@ function missingDataCardHTML({ kind, headline, sourceFile, fixCommand, scopeLabe
     body: '',
     source: sourceFile,
     fixCommand,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Upgrade status (Plan 2026-06-21-001 F008 — ALWAYS-shown standing signal)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Render the ALWAYS-shown upgrade-readiness status row (D011).
+ *
+ * Consumes the `upgrade_status_projection` written to
+ * `dashboard/state/upgrade-status.json` by the dashboard build. The row is
+ * rendered in EVERY state — including the positive up-to-date case — so the
+ * Health page never silently omits the "is this install current?" signal.
+ *
+ * `update_state` (manifest-action readiness) and `upstream_status` (code-level
+ * freshness) are DISTINCT and both shown (D031); the row never reads green
+ * while the checkout is behind the newest DontPanic. The last-acknowledged line
+ * renders `last_acknowledged` (driven by `last_seen_commit`, D037), and
+ * `installed_commit` is shown separately as the current checkout. An absent
+ * marker renders "never acknowledged" rather than a synthetic acknowledgement
+ * (D042) — the projection already encodes that in `last_acknowledged`.
+ *
+ * @param {object|null} proj the upgrade_status_projection, or null when absent.
+ * @returns {string} innerHTML for the upgrade status card.
+ */
+export function renderUpgradeStatusCardHTML(proj) {
+  if (proj == null || typeof proj !== 'object') {
+    return missingDataCardHTML({
+      kind: 'upgrade',
+      headline: 'Upgrade status — no data yet',
+      sourceFile: 'dashboard/state/upgrade-status.json',
+      fixCommand: 'dontpanic dashboard build',
+      scopeLabel: 'global',
+    });
+  }
+  const statusLine = typeof proj.status_line === 'string' && proj.status_line.length > 0
+    ? proj.status_line
+    : 'DontPanic: upgrade status unknown';
+  const updateState = typeof proj.update_state === 'string' ? proj.update_state : 'unknown';
+  const upstreamStatus = typeof proj.upstream_status === 'string' ? proj.upstream_status : 'unknown';
+  const behind = proj.behind_upstream === true || upstreamStatus === 'behind';
+  const pendingRequired = typeof proj.pending_required === 'number' ? proj.pending_required : 0;
+  const pendingAdvisory = typeof proj.pending_advisory === 'number' ? proj.pending_advisory : 0;
+  // Colour: behind-upstream or a required-pending action is a red signal; pending
+  // advisories are yellow; an unknown state is muted; otherwise up-to-date green.
+  let color = 'green';
+  if (behind || updateState === 'required_pending') {
+    color = 'red';
+  } else if (updateState === 'advisories_pending') {
+    color = 'yellow';
+  } else if (updateState === 'unknown') {
+    color = 'muted';
+  }
+  const impact = behind
+    ? 'This checkout is behind the newest DontPanic. Pull the latest code, then re-check.'
+    : (pendingRequired > 0
+      ? 'Required upgrade actions are pending before this install is current.'
+      : (pendingAdvisory > 0
+        ? 'Optional upgrade advisories are available.'
+        : (updateState === 'unknown'
+          ? 'Upgrade status could not be determined from the release manifest.'
+          : 'This install is up to date with the tracked DontPanic release.')));
+  const installedCommit = typeof proj.installed_commit === 'string' && proj.installed_commit.length > 0
+    ? proj.installed_commit
+    : '—';
+  const lastAcknowledged = typeof proj.last_acknowledged === 'string' && proj.last_acknowledged.length > 0
+    ? proj.last_acknowledged
+    : 'never acknowledged';
+  const body = `
+    <div class="hlth-upgrade-status-line">${esc(statusLine)}</div>
+    <ul class="hlth-card-rows">
+      <li><span class="hlth-row-label">Update state</span> <span class="hlth-row-value">${esc(updateState)}</span></li>
+      <li><span class="hlth-row-label">Upstream</span> <span class="hlth-row-value">${esc(upstreamStatus)}</span></li>
+      <li><span class="hlth-row-label">Required pending</span> <span class="hlth-row-value">${esc(String(pendingRequired))}</span></li>
+      <li><span class="hlth-row-label">Advisory pending</span> <span class="hlth-row-value">${esc(String(pendingAdvisory))}</span></li>
+      <li><span class="hlth-row-label">Installed commit</span> <span class="hlth-row-value">${esc(installedCommit)}</span></li>
+      <li><span class="hlth-row-label">Last acknowledged</span> <span class="hlth-row-value">${esc(lastAcknowledged)}</span></li>
+    </ul>
+  `;
+  return cardHTML({
+    scopeLabel: 'global',
+    kind: 'upgrade',
+    headline: statusLine,
+    impact,
+    color,
+    body,
+    source: 'dashboard/state/upgrade-status.json',
+    fixCommand: behind ? 'git pull' : undefined,
   });
 }
 

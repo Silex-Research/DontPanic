@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-22T16:09:57Z",
+  "completed_at": "2026-06-22T16:14:11Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F008-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-1uz4g5yj target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 462872 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 4069166,
+    "tokens_out": 14946,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: needs_changes. Implementer target declaration is correct (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and their recorded commands contain no forbidden command shapes.\n\nFINDING (high, correctness): Required upgrade action commands can disappear from the dashboard drill-down. Evidence: real manifest apply command is `dontpanic projects backfill-canonical`, but command validation rejects `projects backfill-canonical`, so [upgrade_dashboard.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/upgrade_dashboard.py:165) stores it as `operator_command`; the What Now client normalizes only `exact_command` and renders only `item.exact_command` in [what-now-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/what-now-logic.js:167) and [what-now-logic.js](/Users/bayesian/Documents/GitHub/DontPanic/dashboard/lib/what-now-logic.js:450). Recommendation: either admit `projects backfill-canonical` into the validated exact-command vocabulary, or preserve/render `operator_command` in the dashboard ActionItem path and add an integration-style test using the real upgrade item.\n\nChecks run:\n$ PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py\n$ node --check dashboard/lib/what-now-logic.js\n$ node --check dashboard/lib/health-logic.js\n$ node --check dashboard/core.js\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchest",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts python3 -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py",
+      "node --check dashboard/lib/what-now-logic.js",
+      "node --check dashboard/lib/health-logic.js",
+      "node --check dashboard/core.js",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate import command_validation as cv; r=cv.validate_command_tokens(['projects','backfill-canonical']); print(r.ok, r.reason)\"",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c \"from dontpanic_orchestrate.upgrade_dashboard import _command_fields; print(_command_fields('dontpanic projects backfill-canonical'))\"",
+      "npx vitest run dashboard/tests/unit/health-logic.test.js dashboard/tests/unit/what-now-logic.test.js",
+      "dashboard/node_modules/.bin/vitest run dashboard/tests/unit/health-logic.test.js dashboard/tests/unit/what-now-logic.test.js"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "Required upgrade action commands can disappear from the dashboard drill-down. Evidence: real manifest apply command is `dontpanic projects backfill-canonical`, but command validation rejects `projects backfill-canonical`, so [upgrade_dashboard.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/upgrade_dashboard.py:165) stores it as `operator_command`; the What Now client normalizes only `exact_command` and renders only `item.exact_command` in [what-now-logic.js](/Users/",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

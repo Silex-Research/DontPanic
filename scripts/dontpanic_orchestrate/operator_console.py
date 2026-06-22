@@ -166,6 +166,12 @@ SOURCE_ARCHITECTURE = "architecture"
 # Plan 2026-06-04-003 F001 — operator-owned integration steps (deploy /
 # credentials / smokes) modelled as ActionItems, never executed in-repo.
 SOURCE_INTEGRATION = "integration"
+# Plan 2026-06-21-001 F008 (D052) — upgrade-readiness drill-down items projected
+# from the F005 report (probe-pending required action / undismissed advisory).
+# Explicitly admitted into the closed source vocabulary so upgrade items validate
+# at the ActionItem boundary, are never dropped by aggregate/render, and sort with
+# a stable key alongside every other source.
+SOURCE_UPGRADE = "upgrade"
 
 # Plan 2026-06-04-005 F004 — the lower-priority section uncertainty (demotion)
 # cards render under: never Needs Action, always "Status could not be refreshed".
@@ -179,6 +185,7 @@ _VALID_SOURCES: frozenset[str] = frozenset(
         SOURCE_SUPERVISOR,
         SOURCE_ARCHITECTURE,
         SOURCE_INTEGRATION,
+        SOURCE_UPGRADE,
     }
 )
 
@@ -189,6 +196,7 @@ _SOURCE_PRIORITY: dict[str, int] = {
     SOURCE_SUPERVISOR: 3,
     SOURCE_ARCHITECTURE: 4,
     SOURCE_INTEGRATION: 5,
+    SOURCE_UPGRADE: 6,
 }
 
 
@@ -1557,8 +1565,10 @@ __all__ = [
     "SOURCE_ARCHITECTURE",
     "SOURCE_CAPABILITY",
     "SOURCE_GATE",
+    "SOURCE_INTEGRATION",
     "SOURCE_RECONCILE",
     "SOURCE_SUPERVISOR",
+    "SOURCE_UPGRADE",
     "aggregate",
     "default_cache_path",
     "default_event_sidecar_path",

@@ -1,0 +1,17 @@
+# F008 test output — iteration 1 (auditor-fix round: dashboard consumer path)
+# Captured 2026-06-22T16:04:45Z
+
+## Python: pytest test_upgrade_dashboard_f008.py (projection + provider + build sidecar)
+...............                                                          [100%]
+15 passed in 0.79s
+
+## JS: vitest health-logic.test.js (upgrade status card + always-shown composition)
+
+ RUN  v4.1.8 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+
+ Test Files  1 passed (1)
+      Tests  39 passed (39)
+   Start at  11:04:47
+   Duration  519ms (transform 57ms, setup 0ms, import 73ms, tests 6ms, environment 309ms)
+

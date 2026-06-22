@@ -529,6 +529,36 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
     assert known_subcommands() == expected
 
 
+def test_projects_backfill_canonical_validates() -> None:
+    """The upgrade-readiness manifest ships ``dontpanic projects backfill-canonical``
+    as a required action's APPLY command (docs/upgrade/releases.json). It MUST
+    validate so the F008 dashboard drill-down surfaces it via the rendered
+    exact_command field rather than the display-only operator_command escape hatch
+    (which what-now-logic.js drops). codex-auditor-F008-i2 high regression guard.
+    """
+    assert validate_command_tokens(["projects", "backfill-canonical"]).ok
+    assert validate_command_tokens(["projects", "backfill-canonical", "--dry-run"]).ok
+    assert validate_command_tokens(
+        ["projects", "backfill-canonical", "--json", "--ledger", "/tmp/l.jsonl"]
+    ).ok
+
+
+def test_projects_discover_validates() -> None:
+    """``dontpanic projects discover`` (canonical-repo-discovery verify command) is a
+    real CLI subcommand and must validate alongside backfill-canonical."""
+    assert validate_command_tokens(["projects", "discover"]).ok
+    assert validate_command_tokens(["projects", "discover", "--json"]).ok
+    assert validate_command_tokens(
+        ["projects", "discover", "--window-days", "14", "--min-count", "2"]
+    ).ok
+
+
+def test_projects_unknown_subcommand_still_rejected() -> None:
+    """Adding discover/backfill-canonical must not loosen the nested-subcommand
+    guard — an unknown projects subcommand still fails."""
+    assert not validate_command_tokens(["projects", "nuke-everything"]).ok
+
+
 def test_subcommand_spec_is_frozen() -> None:
     import dataclasses
 

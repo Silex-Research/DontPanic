@@ -1,0 +1,33 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#3",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 3,
+  "started_at": "2026-06-22T16:14:11Z",
+  "completed_at": "2026-06-22T16:17:16Z",
+  "validation_performed": [
+    "claude implementer round (iteration 3)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F008-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-1uz4g5yj target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3502 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3305811,
+    "tokens_out": 10926,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F008] All green. Let me confirm the side-effect commands I ran for the audit trail.\n\n**Target accountability**\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n\nSide-effect commands invoked (test/verification only):\n```\n$ python -m pytest tests/test_upgrade_dashboard_f008.py tests/test_command_validation_f001.py -q\n$ python -m pytest tests/test_projects_backfill_canonical_f005.py -q\n```\n\n**Finding addressed — [high, correctness] Required upgrade action commands can disappear from the dashboard drill-down:** The root cause was that the validator's `_PROJECTS_SPEC` (in `command_validation.py`) only knew `add`/`list`/`show`/`remove`, so the manifest's real APPLY command `dontpanic projects backfill-canonical` failed token validation. `upgrade_dashboard._command_fields` therefore parked it on the display-only `operator_command` escape hatch, and `what-now-logic.js` normalizes/renders only `exact_command` — so the apply command silently vanished from the drill-down. I fixed it at the source by extending `_PROJECTS_SPEC` to admit the two real, already-shipping canonical-repo-discovery subcommands — `backfill-canonical` (bool `--dry-run`/`--json`, value `--ledger`/`--evidence`) and `discover` (bool `--json`, value `--window-days`/`--min-count`) — mirroring their actual argparse shapes in `cli.py` (`_projects_backfill_canonical`/`_projects_discover`, dispatched at `_projects_main` and documented in `_PROJECTS_USAGE`). Now the apply command validates and flows through `exact_command`, the fie",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -m pytest tests/test_upgrade_dashboard_f008.py tests/test_command_validation_f001.py -q",
+      "python -m pytest tests/test_projects_backfill_canonical_f005.py -q"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

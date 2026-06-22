@@ -1,0 +1,8 @@
+ RUN  v4.1.8 /Users/bayesian/Documents/GitHub/DontPanic/dashboard
+
+
+ Test Files  1 passed (1)
+      Tests  54 passed (54)
+   Start at  11:09:24
+   Duration  385ms (transform 38ms, setup 0ms, import 51ms, tests 17ms, environment 198ms)
+

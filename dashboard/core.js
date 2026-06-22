@@ -304,6 +304,13 @@ function JARVIS_LITERAL() { return {
       // the Operator Channels panel. Missing → null so the panel shows an honest
       // "run dashboard build" line rather than a fabricated empty surface.
       { key: 'operatorChannels', file: 'operator-channels.json', nullableMissing: true },
+      // Plan 2026-06-21-001 F008 — the ALWAYS-shown upgrade-status projection
+      // (upgrade_dashboard.upgrade_status_projection) feeds the Tools & Setup /
+      // Health status row (D011). Missing → null so the Health page renders an
+      // honest "run dashboard build" missing-data card instead of fabricating an
+      // up-to-date claim; a fetch failure after a successful load resets to null
+      // so the missing state surfaces on next refresh.
+      { key: 'upgradeStatus', file: 'upgrade-status.json', nullableMissing: true },
     ];
     const loaders = [
       ...simpleFiles.map(name => ({ key: name, file: `${name}.json` })),

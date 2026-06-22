@@ -299,10 +299,21 @@
         "needs_action",
         "last_seen_commit"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-22T16:22:31Z"
     },
     {
       "id": "F009",

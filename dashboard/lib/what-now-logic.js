@@ -38,8 +38,11 @@ function buildWhatNowProvenance(envelope, { fleet = false } = {}) {
 /** Four-band taxonomy emitted by F001 providers — ordering reflects display priority. */
 export const BANDS = Object.freeze(['needs_action', 'advisory', 'info', 'ready']);
 
-/** Sources that surface ActionItems in V0. */
-export const SOURCES = Object.freeze(['gate', 'capability', 'reconcile', 'supervisor', 'architecture']);
+/** Sources that surface ActionItems in V0. `upgrade` (plan 2026-06-21-001
+ *  F008 / D052) admits the upgrade-readiness drill-down items so they
+ *  validate, are never coerced to `capability`, and sort with a stable key —
+ *  mirroring `operator_console._VALID_SOURCES`. */
+export const SOURCES = Object.freeze(['gate', 'capability', 'reconcile', 'supervisor', 'architecture', 'upgrade']);
 
 export const BAND_LABELS = Object.freeze({
   needs_action: 'NEEDS ACTION',
@@ -62,6 +65,7 @@ export const SOURCE_LABELS = Object.freeze({
   reconcile:    'Reconcile',
   supervisor:   'Supervisor',
   architecture: 'Architecture',
+  upgrade:      'Upgrade',
 });
 
 // F003: value-first "kind" labels. Primary Layer-1 text rendered before
@@ -89,6 +93,10 @@ const VALUE_KIND_LABELS = Object.freeze({
   'architecture:advisory':     'Architecture snapshot is stale',
   'architecture:info':         'Architecture snapshot updated',
   'architecture:ready':        'Architecture snapshot fresh',
+  'upgrade:needs_action':      'Upgrade action needed',
+  'upgrade:advisory':          'Upgrade advisory',
+  'upgrade:info':              'Upgrade applied',
+  'upgrade:ready':             'Up to date',
 });
 
 /**
@@ -108,8 +116,12 @@ const BAND_PRIORITY = Object.freeze({
   needs_action: 0, advisory: 1, info: 2, ready: 3,
 });
 
+// Mirrors `operator_console._SOURCE_PRIORITY` (gate < reconcile < capability
+// < supervisor < architecture < integration < upgrade). The integration slot
+// (5) is reserved for parity even though that source isn't rendered here yet,
+// so `upgrade` keeps its stable rank of 6.
 const SOURCE_PRIORITY = Object.freeze({
-  gate: 0, reconcile: 1, capability: 2, supervisor: 3, architecture: 4,
+  gate: 0, reconcile: 1, capability: 2, supervisor: 3, architecture: 4, upgrade: 6,
 });
 
 /**
