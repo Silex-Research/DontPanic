@@ -19,11 +19,11 @@
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F003-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F003-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F003-predicate-registry-tests.txt",
-    "scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py",
-    "scripts/dontpanic_orchestrate/upgrade_predicates.py"
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F004-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F004-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F004-test-output.txt",
+    "scripts/dontpanic_orchestrate/tests/test_upgrade_state_f004.py",
+    "scripts/dontpanic_orchestrate/upgrade_state.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

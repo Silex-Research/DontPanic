@@ -1,25 +1,23 @@
 {
   "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
-  "signoff_id": "2026-06-21-001-feat-upgrade-readiness-doctor#signoff#1",
-  "iteration": 1,
+  "signoff_id": "2026-06-21-001-feat-upgrade-readiness-doctor#signoff#0",
+  "iteration": 0,
   "tier": "cross-cutting",
   "agents_in_panel": [
     "claude"
   ],
   "audits": [
-    "audit/claude-implementer-F003-i0.json",
-    "audit/codex-auditor-F003-i0.json",
-    "audit/claude-implementer-F003-i1.json",
-    "audit/codex-auditor-F003-i1.json"
+    "audit/claude-implementer-F004-i0.json",
+    "audit/codex-auditor-F004-i0.json"
   ],
   "vote_summary": {
-    "signed_off_count": 3,
-    "needs_changes_count": 1,
+    "signed_off_count": 2,
+    "needs_changes_count": 0,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
   "signoff": true,
-  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=1 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_predicates_f003.py + ride-along), not a defect. Operator verified: F003 predicate tests 29/29, registry-loader regression 122/122 across all load_registry consumers, upgrade_predicates.py has zero write-path references (D028 read-only), and the projects_registry.py change is additive (load_registry_strict + RegistryUnreadableError; lenient load_registry wrapper preserves historic warn-and-empty contract). Codex's pytest was blocked by its read-only sandbox tempdir; operator ran the suite live.. See evidence/closeout-memo.md.",
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_state_f004.py + ride-along), not a defect. Operator verified: 20/20 tests; AST check confirms read_upgrade_state has zero write-ish calls (D015 no-silent-write) with writes isolated to write_upgrade_state/advance_marker/dismiss_advisory; dedicated test asserts NO file created after read on absent marker; three marker_state cases (absent|predates|known) covered and never-conflated (D040/D044); releases_since proven pure + non-mutating + never-raises on unknown/stale last_seen (D035); required actions independent of marker (D004). Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-06-22T14:09:20Z"
+  "decided_at": "2026-06-22T14:26:55Z"
 }
