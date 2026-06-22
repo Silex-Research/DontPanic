@@ -2,16 +2,16 @@
 status: operator_finished
 reason_class: operator_verified
 plan_id: 2026-06-21-001-feat-upgrade-readiness-doctor
-feature_id: F008
-closed_at: 2026-06-22T16:22:31Z
+feature_id: F007
+closed_at: 2026-06-22T16:35:16Z
 latest_audit_status: signed_off
 ---
 
-# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F008
+# Closeout memo — 2026-06-21-001-feat-upgrade-readiness-doctor / F007
 
 ## Operator decision
 
-This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=3 (3 contested rounds, no findings); terminal was patch-completeness hygiene (untracked test files + ride-along). Operator verified: Python 99/99 (F008 dashboard + command_validation regression), JS/vitest 93/93 (health-logic + what-now-logic); D052 SOURCE_UPGRADE='upgrade' admitted into the closed ActionItem source vocabulary so upgrade items validate/sort/survive the provider path; no-secret-shapes test present (test_projections_carry_no_secret_shapes + sidecar leak check). CROSS-MODULE FIX (D062): F008 adds discover + backfill-canonical subcommand shapes to command_validation.py because the upgrade manifest ships 'dontpanic projects backfill-canonical' as the canonical-discovery required action's APPLY command — a codex iter2 HIGH finding caught that without it the apply command fails token-validation, parks on display-only, and what-now-logic.js drops it (apply command would silently vanish from the dashboard). Additive, traced to cli.py shapes, regression-tested. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
+This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (clean first pass, no findings); terminal was patch-completeness hygiene (untracked test_doctor_acknowledge_f007.py + ride-along). No stray untracked source modules (D063 check clean). Operator verified the safety-critical invariants: 15/15 tests; D004 test_acknowledge_does_not_clear_probe_failing_required asserts acknowledge silences advisories + advances marker (pending_advisory=0, last_seen=r3) but req3 (failing probe) STAYS pending (pending_required=1, req3 in required[]); control test proves pending-ness comes from the live probe not acknowledge; D015 test_acknowledge_is_the_only_path_that_writes_the_marker confirms acknowledge is the sole writer via write_upgrade_state. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,36 +19,32 @@ This feature was finished under terminal class `operator_verified` via the opera
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 6 (see structured target_context.commands_run)
+- Command: 2 (see structured target_context.commands_run)
 
-[F008] Repo: DontPanic  
-Env: dev  
+[F007] Repo: DontPanic
+Env: dev
 Project: (none)
 
-Verdict: signed_off. No FINDINGs. The implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)` correctly, and `target_context.commands_run` contains only pytest commands with no forbidden shapes. Code inspection matches the F008 acceptance: status projection, Health row, upgrade ActionItems, aggregation wiring, source vocabulary, upstream/last-seen handling, evidence files, and JS rendering are present.
+Overall verdict: signed_off. No findings.
 
-Checks run:
-$ git status --short  
-$ git diff --stat HEAD~1  
-$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_dashboard_f008.py scripts/dontpanic_orchest...
+The implementer’s summary correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)`. `target_context.commands_run` only contains isolated local Python doctor invocations and no forbidden command shapes. The code adds `--acknowledge`, writes only through `write_upgrade_state`, re-renders after commit, and includes dedicated coverage for advisory silencing and probe-failing required actions remaining pending. Evidence file `evidence/F007-test-output.txt` shows 15/15 F007 tests passed.
+
+Tests/checks I ran:
+$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -q -p no...
 
 ## Rationale (operator)
 
-Codex signed off (iter=3 after three contested rounds, no findings); the terminal
-`blocked` was patch-completeness hygiene (untracked test files + ride-along), not a
-defect. Operator verified directly: Python 99/99 (F008 dashboard + command_validation
-regression), JS/vitest 93/93 (health-logic + what-now-logic); D052 `SOURCE_UPGRADE`
-admitted into the closed ActionItem source vocabulary; no-secret-shapes test present
-(projection + sidecar leak check).
+Codex signed off on the first pass (iter=0, no findings); the terminal `blocked`
+was patch-completeness hygiene (untracked test + ride-along), not a defect, and the
+D063 stray-untracked-source check came back clean. F007 is the sole marker-writer,
+so the operator verified the safety invariants directly: 15/15 tests; D004 proven —
+`acknowledge` silences advisories and advances the marker (pending_advisory=0,
+last_seen=r3) but a required action with a still-failing probe (`req3`) stays pending
+(pending_required=1, req3 in required[]); a control test confirms the pending-ness
+comes from the live probe (F003), not the acknowledge; and D015 is upheld —
+`acknowledge` is the only path that writes the marker, via `write_upgrade_state`.
 
-The diff that warranted scrutiny — F008 modifying `command_validation.py` (from plan
-2026-05-24-004) — proved a legitimate, auditor-driven cross-module fix, not scope
-creep: it adds the `discover` + `backfill-canonical` subcommand shapes so the upgrade
-manifest's apply command (`dontpanic projects backfill-canonical`) validates as an
-exact_command. A codex iter-2 HIGH finding caught that without it the apply command
-fails token-validation → parks on display-only → `what-now-logic.js` drops it, so the
-operator's apply command would silently vanish from the dashboard. Additive, traced to
-the cli.py dispatch ladder, regression-tested. Recorded as D062. Follow-up: none.
+Follow-up: none. Recorded as D064.
 
 ## Evidence references
 

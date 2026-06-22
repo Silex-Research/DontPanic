@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 15 items
+
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_advances_and_commits_marker PASSED [  6%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_off_git_stores_no_commit PASSED [ 13%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_preserves_existing_first_initialized_at PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_silences_currently_shown_advisories PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_silencing_survives_a_fresh_read PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_does_not_clear_probe_failing_required PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_clears_required_only_when_probe_passes PASSED [ 46%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_is_the_only_path_that_writes_the_marker PASSED [ 53%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_composes_with_upgrade_human_report PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_composes_with_upgrade_json_report PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_acknowledge_confirmation_mentions_advance_and_pending_required PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_cli_main_acknowledge_alone_prints_confirmation PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_cli_main_acknowledge_upgrade_human PASSED [ 86%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_cli_main_acknowledge_upgrade_json_with_check_upstream PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_doctor_acknowledge_f007.py::test_cli_wrapper_delegates_acknowledge_to_jd_main PASSED [100%]
+
+============================== 15 passed in 0.25s ==============================

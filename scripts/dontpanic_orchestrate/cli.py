@@ -2662,6 +2662,16 @@ def _doctor_main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument(
+        "--acknowledge",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F007 (D015): advance + COMMIT the upgrade marker "
+            "to the latest release and silence currently-shown advisories, then "
+            "re-render. The ONLY doctor path that writes the marker. Does NOT clear "
+            "a probe-failing required action (D004). Composes with --upgrade/--json."
+        ),
+    )
+    parser.add_argument(
         "--channel",
         "--operator-surface",
         dest="channel",
@@ -2722,6 +2732,13 @@ def _doctor_main(argv: list[str]) -> int:
     # --json / --check-upstream render the F005 report through the single
     # read-only path (never writes the marker).
     if args.upgrade:
+        return jd.main(argv)
+
+    # Plan 2026-06-21-001 F007 (D015): the acknowledge path is the SOLE marker
+    # writer and is owned by jd.main. Delegate the raw argv so --acknowledge
+    # (alone, or composed with --upgrade/--json) advances + commits the marker
+    # and re-renders through the single write path.
+    if args.acknowledge:
         return jd.main(argv)
 
     results = jd.run_all_checks(

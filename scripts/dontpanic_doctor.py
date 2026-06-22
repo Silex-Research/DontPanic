@@ -2590,6 +2590,151 @@ def render_upgrade_report_json(report) -> str:
     return json.dumps(report_to_dict(report), indent=2)
 
 
+# ── plan 2026-06-21-001 F007: acknowledge path — the SOLE marker-write surface ─
+#
+# `dontpanic doctor --acknowledge` is the ONLY doctor path that calls F004's
+# write_upgrade_state (D015). It advances the marker to the LATEST release and
+# dismisses the currently-shown advisories, COMMITS the result, then re-renders
+# from the committed marker (D027). CRITICAL INVARIANT (D004): advancing/dismissing
+# changes advisory visibility + acknowledgement ONLY — a required action whose
+# status_probe still fails stays PENDING in the re-rendered report. It can compose
+# with the upgrade report mode (human + JSON) or stand alone (concise confirmation).
+
+
+@dataclass(frozen=True)
+class AcknowledgeResult:
+    """Outcome of the F007 acknowledge path.
+
+    ``report`` is the RE-RENDERED :class:`UpgradeReport` assembled from the freshly
+    COMMITTED marker, so it reflects the advanced acknowledgement (advisories
+    silenced, ``last_seen_release`` / ``last_seen_commit`` updated) while still
+    listing any probe-failing required action as pending (D004). ``silenced``
+    is how many currently-shown advisories were dismissed by this acknowledge."""
+
+    report: object  # UpgradeReport assembled after the committed advance
+    acknowledged_release: str | None
+    acknowledged_commit: str | None
+    silenced: int
+
+
+def _utc_now_iso() -> str:
+    """ISO-8601 UTC instant for the marker's ``first_initialized_at`` consent stamp."""
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def acknowledge_upgrade(
+    *,
+    manifest_path: Path | str | None = None,
+    marker_path: Path | str | None = None,
+    predicate_registry: object | None = None,
+    predicate_ctx: object | None = None,
+    git: object | None = None,
+    git_root: Path | None = None,
+    check_upstream: bool = False,
+    fetch_runner=None,
+    now: str | None = None,
+) -> AcknowledgeResult:
+    """Advance + commit the marker, silence currently-shown advisories, re-render.
+
+    This is the SOLE marker-write surface in doctor (D015): it calls F004's
+    :func:`advance_marker` (to the latest release) and :func:`dismiss_advisory`
+    (for every currently-shown advisory), then commits the result via the sole
+    writer :func:`write_upgrade_state`, and finally RE-READS + re-assembles the
+    report so it reflects the COMMITTED marker (D027).
+
+    CRITICAL INVARIANT (D004): advancing the marker / dismissing advisories changes
+    advisory visibility + acknowledgement ONLY. A required action whose status_probe
+    still fails is NOT cleared — it stays pending in the re-rendered report, because
+    required-action satisfaction is owned solely by the live status_probe (F003),
+    never by the marker. The injectable seams mirror :func:`build_upgrade_report`
+    so tests drive the whole path hermetically.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import upgrade_report as ur
+        from dontpanic_orchestrate.release_manifest import load_release_manifest
+        from dontpanic_orchestrate.upgrade_predicates import PredicateContext
+        from dontpanic_orchestrate.upgrade_state import (
+            advance_marker,
+            dismiss_advisory,
+            read_upgrade_state,
+            write_upgrade_state,
+        )
+    finally:
+        sys.path.pop(0)
+
+    manifest = load_release_manifest(manifest_path)
+    if check_upstream:
+        runner = fetch_runner if fetch_runner is not None else _default_fetch_runner
+        runner(git_root)
+    probe = git if git is not None else ur.GitProbe(root=git_root)
+    ctx = predicate_ctx if predicate_ctx is not None else PredicateContext()
+
+    # Pre-acknowledge read: the EffectiveMarker we advance FROM, and the report
+    # whose advisory[] enumerates exactly what is currently shown (to dismiss).
+    before_marker = read_upgrade_state(manifest, path=marker_path)
+    before = ur.assemble_upgrade_report(
+        manifest, before_marker, predicate_registry, predicate_ctx=ctx, git=probe
+    )
+
+    latest = manifest.releases[-1].id if manifest.releases else None
+    commit = before.summary.installed_commit
+    if commit == ur.UNKNOWN_COMMIT:
+        commit = None  # never persist the off-git sentinel as an acknowledged commit
+
+    new_marker = before_marker.marker
+    if latest is not None:
+        new_marker = advance_marker(new_marker, release_id=latest, commit=commit)
+    # Silence the currently-shown advisories (D027). item_id IS the advisory key.
+    for item in before.advisory:
+        new_marker = dismiss_advisory(new_marker, item.item_id)
+    # Stamp the consent instant on first write; never overwrite an existing stamp.
+    if new_marker.first_initialized_at is None:
+        new_marker = new_marker.model_copy(
+            update={"first_initialized_at": now or _utc_now_iso()}
+        )
+
+    write_upgrade_state(new_marker, path=marker_path)  # SOLE marker writer (D015).
+
+    # Re-read + re-assemble from the COMMITTED marker so the report reflects the
+    # advanced acknowledgement (D027). Required pending stays probe-driven (D004).
+    after_marker = read_upgrade_state(manifest, path=marker_path)
+    after = ur.assemble_upgrade_report(
+        manifest, after_marker, predicate_registry, predicate_ctx=ctx, git=probe
+    )
+    return AcknowledgeResult(
+        report=after,
+        acknowledged_release=latest,
+        acknowledged_commit=commit,
+        silenced=len(before.advisory),
+    )
+
+
+def render_acknowledge_confirmation(result: AcknowledgeResult) -> str:
+    """Concise confirmation for `doctor --acknowledge` WITHOUT the report mode.
+
+    States the advanced acknowledgement and how many advisories were silenced, and
+    — honoring D004 — still calls out any probe-failing required action that remains
+    pending after the acknowledge (with the remediation command)."""
+    ack = result.acknowledged_release or "(no releases)"
+    commit = f" @ {result.acknowledged_commit}" if result.acknowledged_commit else ""
+    pend_req = result.report.summary.pending_required
+    lines = [
+        f"Acknowledged upgrade state — marker advanced to {ack}{commit}.",
+        f"Silenced {result.silenced} advisory update(s).",
+    ]
+    if pend_req > 0:
+        lines.append(
+            f"{pend_req} required action(s) STILL pending (probe failing) — "
+            f"acknowledge does not clear them. {UPGRADE_REMEDIATION}"
+        )
+    else:
+        lines.append("No required actions pending.")
+    return "\n".join(lines)
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -3014,7 +3159,34 @@ def main(argv: list[str] | None = None) -> int:
             "from locally-known refs only (no network)."
         ),
     )
+    parser.add_argument(
+        "--acknowledge",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F007 (D015): the ONLY doctor path that WRITES "
+            "the upgrade marker. Advance the marker to the latest release and "
+            "silence the currently-shown advisories, then commit and re-render. "
+            "Does NOT clear a required action whose status_probe still fails "
+            "(D004). Composes with --upgrade (+ --json) to print the advanced "
+            "report; alone it prints a concise confirmation."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Plan 2026-06-21-001 F007 — acknowledge mode. The SOLE marker-write surface
+    # (D015): advance + dismiss + COMMIT, then re-render from the committed marker
+    # (D027). A probe-failing required action stays pending afterward (D004).
+    # Composes with --upgrade (human/JSON); alone it prints a confirmation.
+    if args.acknowledge:
+        result = acknowledge_upgrade(check_upstream=args.check_upstream)
+        if args.upgrade:
+            if args.json:
+                print(render_upgrade_report_json(result.report))
+            else:
+                print(render_upgrade_report_text(result.report))
+        else:
+            print(render_acknowledge_confirmation(result))
+        return 0
 
     # Plan 2026-06-21-001 F006 — upgrade-readiness report mode. Activated only
     # when --upgrade is supplied; short-circuits the full battery and renders

@@ -1,10 +1,10 @@
 {
   "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
-  "feature_id": "F008",
+  "feature_id": "F007",
   "class": "operator_verified",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-06-22T16:22:31Z",
+  "resolved_at": "2026-06-22T16:35:16Z",
   "terminal_class": "operator_verified",
-  "note": "Codex signed off iter=3 (3 contested rounds, no findings); terminal was patch-completeness hygiene (untracked test files + ride-along). Operator verified: Python 99/99 (F008 dashboard + command_validation regression), JS/vitest 93/93 (health-logic + what-now-logic); D052 SOURCE_UPGRADE='upgrade' admitted into the closed ActionItem source vocabulary so upgrade items validate/sort/survive the provider path; no-secret-shapes test present (test_projections_carry_no_secret_shapes + sidecar leak check). CROSS-MODULE FIX (D062): F008 adds discover + backfill-canonical subcommand shapes to command_validation.py because the upgrade manifest ships 'dontpanic projects backfill-canonical' as the canonical-discovery required action's APPLY command — a codex iter2 HIGH finding caught that without it the apply command fails token-validation, parks on display-only, and what-now-logic.js drops it (apply command would silently vanish from the dashboard). Additive, traced to cli.py shapes, regression-tested. Codex pytest blocked by read-only sandbox; operator ran live."
+  "note": "Codex signed off iter=0 (clean first pass, no findings); terminal was patch-completeness hygiene (untracked test_doctor_acknowledge_f007.py + ride-along). No stray untracked source modules (D063 check clean). Operator verified the safety-critical invariants: 15/15 tests; D004 test_acknowledge_does_not_clear_probe_failing_required asserts acknowledge silences advisories + advances marker (pending_advisory=0, last_seen=r3) but req3 (failing probe) STAYS pending (pending_required=1, req3 in required[]); control test proves pending-ness comes from the live probe not acknowledge; D015 test_acknowledge_is_the_only_path_that_writes_the_marker confirms acknowledge is the sole writer via write_upgrade_state. Codex pytest blocked by read-only sandbox; operator ran live."
 }
