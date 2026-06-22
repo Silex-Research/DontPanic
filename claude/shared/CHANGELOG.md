@@ -5,6 +5,32 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.14.0 — 2026-06-21
+
+### Added
+- `upgrade-releases.schema.json` + `models/upgrade_releases_model.py`
+  (`UpgradeManifest`, `UpgradeRelease`, `UpgradeAction`, `UpgradeCommand`): the
+  release-manifest contract for the upgrade-readiness layer in `dontpanic
+  doctor` (plan `2026-06-21-001-feat-upgrade-readiness-doctor` F001). A manifest
+  carries a top-level baseline (`baseline_release` + `baseline_date`, D018) and
+  an ordered `releases[]` list. Each release declares required/advisory operator
+  actions with closed enums (`kind`, `severity`, command `label`), an ORDERED
+  `commands[]` checklist (preview→apply→verify→run, D017), and the
+  UX-critical per-action fields (`applies_when`, `status_probe`,
+  `success_message`, `failure_message`, `human_next_step`, `docs_url`,
+  `introduced_commands`). The schema is closed (unknown keys/enums rejected).
+- Cross-field invariants live in the Pydantic model (not expressible in plain
+  JSON Schema): required-action probe (D021), required-command apply (D029),
+  ordered apply+verify checklist (D036), id-uniqueness (D030), and non-blank
+  command strings (D047).
+
+### Motivation
+The manifest — not the prose CHANGELOG, not the plan ledger (D002) — is the
+single machine source of truth for upgrade intent. The consumer-side loader
+(`dontpanic_orchestrate/release_manifest.py`) resolves
+`docs/upgrade/releases.json` as a package-relative resource (D045) so it loads
+outside the repo root and off-git.
+
 ## 1.12.0 — 2026-05-22
 
 ### Added

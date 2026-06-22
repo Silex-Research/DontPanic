@@ -1,0 +1,204 @@
+{
+  "captured_at": "2026-06-22T12:20:08Z",
+  "decision_lines": [
+    "D001\u001f297061b9497aafad361be36ef7256d54428b47d8d48487b58e1d39b91e2aa24f",
+    "D002\u001f94647b5a3afff7d32163aa707587e184056dfcbe9fbd326ed231920c57cf8385",
+    "D003\u001fe4d7c0dd7439309e1c462cbb74b44bbb55ce8c66b4eb9d17afa72d080c1523e1",
+    "D004\u001fb08d1ddd1fec8011185f92d2bdb01fa1700f3e3c1b9641f193b2d098b9e32f69",
+    "D005\u001f398aea1b4d050181fa964d84d03597b98fa736a89d873581f08e745410fd0be6",
+    "D006\u001f7229f4657f23123441ca561f88523da67e6ef0aca31dcb98dc564bba50225df9",
+    "D007\u001fa50fc66a466cc086cc7b1d5dced0ae67972364d571d848b8083cf880f382a59f",
+    "D008\u001fbadadfebc616a56118f26960131a3c4607e75080205ed410dc27ea455f52f8c1",
+    "D009\u001fe242e85eae198505e10bf4f57bceda618cbce61e68b1cc6233648f99382e4c8e",
+    "D010\u001f4cbb6a819af3c59be3c3040c6360a2ca75c5c5ce3fa439d4c43c9a991285624c",
+    "D011\u001fcf719868ce2c7fbecbc39e0bcd0f76db7d1db3227a708a84e243026d2a335b96",
+    "D012\u001f12f47cad1f84956863cc2c099830df4b40977a6facf0d11eab49f8305c31ce73",
+    "D013\u001f10eb4ab3a1fabbc23d8abaafbf646f8a0d6751dc0bd3c65f517e982075297d03",
+    "D014\u001fea8088467512dbcf600d409eddcef64b371d5b87ec4cfdd2161bbcf733d75495",
+    "D015\u001f70b0a4f1f73b10170abb4613aada09fe8dc62bdc09b247879b6f421e3e6da57b",
+    "D016\u001f8c45f7d09bb4e5b3961f87c40013f6bc7578d874dbb75ea55e618fe54124f76a",
+    "D017\u001fd492a603b612710618338dfa4ae7f7ada588e728fc55d55acdec2640719c51bd",
+    "D018\u001fd4ac761cd8b03a19c023ef17ce53e8dcea8fa647ad49130b4421955676864c47",
+    "D019\u001fa0b5b095366888749f3703b35531dfb6284fe91ea091633e994b3bd6ce47e299",
+    "D020\u001f3beba9ea90dc69ad4d18336bf908a6aca8fcfde4c570dad7e2935d856e115714",
+    "D021\u001fad47b9f2287673b09b219893b32dcb8400459fdd46551569db82fcd2df157571",
+    "D022\u001f9c5b90b9ac85f8bc77f040411a94b24f69cdebe614dcd1746d5c39473a5e0ed2",
+    "D023\u001fcf0a86ddc2ffae66d0c945f122b2b41c88ca440c4c95ae463d7fc3975ce78938",
+    "D024\u001f5bcefb92143737d38461eeb6405105e78b850814215941417a6942f4259e605d",
+    "D025\u001f263d070aa996c5a78000ad40306c31ad61151025c2fbc72da7932ec5a195447b",
+    "D026\u001f04fb9f7b895b61f5db4387fb97d92f36fec46cf36eb99194e442b5c0659af6a3",
+    "D027\u001f3de88b483960757f1cc32d6e6dd4d55d3c869e9fab177987be4ff141aabea0c2",
+    "D028\u001fda8fca91d07ec2fe28031ec4654bfec128ab8fcc8534997b9dff06640cabfff0",
+    "D029\u001f2d77b0309aabc1bbea96979971ea5aa53c1ae6914688fb5add2174b09bb2a85f",
+    "D030\u001fb2b5ada3395413a179ae146cf5f157266edabf9ba99045712b41698f56488b26",
+    "D031\u001f236980fb41432613d275f3b16a1f032ae706b3ba59d3533146943577da0fb133",
+    "D032\u001fa72ef7c50d6f88bfd604f05c9150fb67d9da040d7e6c2bf2441a417b5d2221c3",
+    "D033\u001f0cd1b6b54ccaa8b42466bccb4d0acb4ca928be4550608413b6620be073a30909",
+    "D034\u001f0b0f1d73de962c24cefd4753929950266f7f09eb89c19b9c42c84ff8c9b370e9",
+    "D035\u001f070affb29dd50898da84d214ca04ffbf0239d135a540910b343abda2ef35f8b6",
+    "D036\u001fc87504aaae85d062f48a064f86b99e46c42055db783742730e1bd4c4603402fa",
+    "D037\u001fced40efea2b353ce8a97e85ed412476674705fcb6cd52c3f78feda2794283224",
+    "D038\u001fd104104e0190025d3ac95e3d1c3821cc7abc8134a42415a7c68f12a7b4df48c5",
+    "D039\u001fe2f0c03e711a1c5d8af1bf16907253360e560298e2b4af8aa09afbfc77958081",
+    "D040\u001f8d001115f38a347df62f3a35a74dd0e2570d475629c9c2976d82168d56413eba",
+    "D041\u001fbf6c5171c0ee109628fe92b5024b78a9d71f507c6bb4a11275387a163bdbc19c",
+    "D042\u001fa27637550ea427e09a4f044c0100413b56ff7edd57896766f7511c30c83685cc",
+    "D043\u001f55b9365cc93bdb8ea45835a58a6b0d5350fc2af0ee73559178d655a514739b0e",
+    "D044\u001f59f8abae0c1c9875902fdb74a1307931608a06f8cc82a9acd46ac0c49ac07523",
+    "D045\u001f9206b6dffa593c96a6eb6fdb2b1e4eded754a51cf32550c895e13952b924902b",
+    "D046\u001f7f4bc2f6c7bd1cca8af6f42c8b1951fcba8ce9178a4a77073b8f5a0d741bc4bd",
+    "D047\u001f34b36f064c72fcd19a442bca13bc3cec0449cf747ce76e170f98f9ea6a2b94ed",
+    "D048\u001f63762ea7028a7627891580f039eefa6d34af73ab9d190a5d3a7baae0df701764",
+    "D049\u001f1a80eecf6f0080c6a1799c2aed03087281a8476bc315b460ca60bc4939e5bdfa",
+    "D050\u001fc8d36f819bfa3a200c805e622cb44e42214db5138b647179ddb4dc338765a926",
+    "D051\u001f876e8c2f21e20c0525e22cd6c766d84f032595e0511ba6addb026bb2511658ae",
+    "D052\u001f66f98603b46e057b3ba925631002783ddb0f81355cac449e6c5af502cb65607f",
+    "D053\u001fb4ae352f36bfa3a24aca02fa6ec781a1cc6bce70bd572cea9c9d5c59b2f11ff6",
+    "D054\u001fc72a1f04bdb229be8250e269fe27a086926b4041d376d3c852e437026e71d0bd"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "upgrade-releases.schema.json + Pydantic model validate a manifest carrying baseline_release + baseline_date and releases[] whose actions carry kind, severity, ordered commands[] with preview|apply|verify|run labels, applies_when, status_probe, success_message, failure_message, human_next_step, docs_url, introduced_commands, and release-level show_on_first_run; load_release_manifest rejects each malformed case (unknown kind/severity/command-label, missing required field, non-date date, unknown key, missing baseline) with a typed error; empty commands[]/null status_probe/null applies_when accepted for advisory actions. Tests cover all cases. A kind=required action with null/empty status_probe is rejected by the loader (required-action invariant, D021); advisory actions may omit it (test covers both). A kind=required action with empty commands[] or no apply-labeled command is rejected (D029); duplicate release ids (manifest-wide) and duplicate action ids within a release are rejected (D030). Tests cover each rejection. A kind=required action missing apply or verify, or with out-of-order labels, is rejected (D036, test). load_release_manifest resolves releases.json as a package-relative resource that loads outside the repo root and off-git (D045, test). A required action with a blank/whitespace-only command string is rejected (D047, test). Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": true
+      },
+      "F002": {
+        "acceptance": "docs/upgrade/releases.json validates under upgrade-releases.schema.json, carries a baseline, and contains the Experience Readiness advisory entry/entries (empty commands/null status_probe, severity optional) plus the canonical-discovery required entry with ordered commands (preview+apply+verify), non-null status_probe, applies_when, success/failure copy, and introduced_commands. A test asserts the seed loads, the baseline is present, and the canonical-discovery action is kind required with a non-null status_probe and a verify-labeled command. The baseline orders strictly below the earliest seeded release so every seeded release is in-scope, not exempt history (D039). Test output for this feature is captured under evidence/ at close (D048). releases.json is included as package data in the wheel and sdist and loads from the installed/packaged location (not only the repo tree) (D049, test).",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F003": {
+        "acceptance": "predicate_registry resolves status_probe and applies_when keys; canonical_discovery_registered_active returns satisfied=true whenever DontPanic reconciles to registered_active INCLUDING when a stale/malformed evidence file is present (dedicated test) and false (with detail) for stale/missing/unresolved/error; evidence validity gates only canonical_backfill_evidence_valid, not the outcome probe. has_tracked_projects reflects registry presence; status_probe error -> not satisfied (fail-closed) while applies_when error -> applies true. Tests cover every state. An unknown status_probe key resolves to satisfied=false with an error detail (never satisfied), and an unknown applies_when key to applies=true with an error detail; neither crashes assembly (dedicated tests). Every predicate is read-only: a dedicated test runs each predicate and asserts NO registry/evidence/config/ledger/state mutation occurs (no-mutation contract, D028); canonical_discovery_registered_active uses only the reconcile read path. Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F004": {
+        "acceptance": "read_upgrade_state on an absent marker returns an in-memory effective marker and creates NO file (dedicated test asserts upgrade-state.json still absent after read). releases_since is pure and order-correct; first_run_advisories honors show_on_first_run; required actions are independent of the marker. advance_marker/dismiss_advisory are pure and cannot satisfy a required action (test proves a probe-failing required action stays pending after advance_marker). Marker values round-trip through a tmp HOME and contain no secret shapes. A marker whose last_seen_release is absent-from-manifest or predates the earliest release yields all releases as new (required actions still probe-driven), with no exception raised; advisory visibility follows marker_state - predates => ALL advisories, absent => show_on_first_run only (D040/D044) - the two are never conflated (test). read_upgrade_state returns marker_state (absent|predates|known): an ABSENT marker shows only show_on_first_run advisories with null/'never acknowledged' display (never implies acknowledged-latest, D042); an EXISTING predating marker shows ALL manifest advisories (show_on_first_run filter NOT applied, D040); an in-manifest marker shows releases_since(last_seen). Dedicated tests for all three. Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F005": {
+        "acceptance": "assemble_upgrade_report returns {summary:{installed_commit, latest_release_id, last_seen_release, update_state, pending_required, pending_advisory, upstream:{fetched_upstream_commit, upstream_status, remediation}}, required[], advisory[], migration_status[]}; required reflects live status_probe results gated by applies_when and carries ordered commands + success/failure copy; update_state is up_to_date|required_pending|advisories_pending|unknown per the count matrix; upstream_status is computed WITHOUT a network fetch in the default path (test asserts no fetch); installed_commit + upstream degrade to 'unknown' off-git. Tests cover summary + upstream computation and the pending logic. The summary carries last_seen_commit distinct from installed_commit (D023); each required[] item carries introduced_commands (D022); migration_status[] items expose release id, action id, applies status, probe key, satisfied flag, detail, and an evidence pointer (D024); an unknown predicate key surfaces an error detail with the required action pending and never crashes assembly (D026). introduced_commands is carried on both required[] AND advisory[] report items (D033), not required-only (test). Every required[] and advisory[] item carries the pinned shape: stable item id (upgrade:<release>:<action>), release id, action id, kind, severity, title, detail, applies, ordered commands, success/failure copy, human_next_step, docs_url, introduced_commands, and satisfied+probe-detail when probed (D041, test asserts the shape for both lists). When marker_state=absent the summary shows last_seen_release/last_seen_commit as 'never acknowledged' (null), not latest (D042, test). Each required[]/advisory[] item carries the original applies_when and status_probe keys (not only the resolved applies/satisfied booleans) so JSON output stays auditable (D046, test). Test output for this feature is captured under evidence/ at close (D048). migration_status[] includes every probe-backed action with its state (pending, satisfied, or not-applicable), not only pending, so a satisfied/not-applicable item still appears (D051, test).",
+        "agents_required": null,
+        "depends_on": [
+          "F002",
+          "F003",
+          "F004"
+        ],
+        "passes": false
+      },
+      "F006": {
+        "acceptance": "Doctor's upgrade report mode emits the F005 report (summary incl upstream + required/advisory/migration_status) in both human and JSON form; plain doctor emits exactly one WARN with the remediation command + counts when pending and writes no marker; the check-upstream opt-in is the only path that may perform a network fetch. Tests cover the three render modes, the no-implicit-fetch default, and the read-only render (no marker write) invariant. Each required action's introduced_commands (new command surfaces) appear in both the human report and the JSON output (test). introduced_commands renders for advisory items too (not only required), in human and JSON (test, D033). Test output for this feature is captured under evidence/ at close (D048). An end-to-end test asserts plain doctor and the upgrade report perform ZERO writes (no backfill/migration/config/registry/evidence/ledger/marker), covering the whole path not just probe/marker sub-checks (D050).",
+        "agents_required": null,
+        "depends_on": [
+          "F005"
+        ],
+        "passes": false
+      },
+      "F007": {
+        "acceptance": "Doctor's acknowledge flag advances and commits the marker and silences currently-shown advisories, but a required action whose status_probe fails is STILL listed as pending afterward (dedicated test); acknowledge is the only doctor path that writes the marker. Tests cover marker advance + commit, advisory silencing, and the acknowledge-does-not-clear-required invariant. Acknowledge composes with the upgrade report mode in human and JSON form; the post-acknowledge report reflects the advanced marker (advisories silenced, last_seen_release/last_seen_commit updated) while a probe-failing required action still shows pending (dedicated tests, D027). Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [
+          "F004",
+          "F006"
+        ],
+        "passes": false
+      },
+      "F008": {
+        "acceptance": "The dashboard exposes an always-shown upgrade-status signal (status line + update_state + counts + last_seen_release + installed_commit) as a Tools & Setup / Health row present in the up-to-date case too; upgrade_action_items are the drill-down (probe-pending required -> needs_action with its command, undismissed advisory -> advisory, dismissed/satisfied absent/info) with stable ids and a stable-key sort. Tests assert the status row across states and that projections contain no secret shapes. The status projection carries upstream_status and the row reflects behind-newest when known; it never shows 'up to date' while upstream_status is behind (D031, test). The projection carries last_seen_commit and the last-acknowledged display renders it (never installed_commit, which is shown separately as the current checkout) (D037, test). With marker_state=absent the row renders 'never acknowledged' (not a synthetic latest acknowledgement) (D042, test). Test output for this feature is captured under evidence/ at close (D048). The ActionItem source vocabulary (+ sort/validation) admits source='upgrade': an upgrade item validates, is not dropped, and sorts with a stable key in the existing provider path (D052, test).",
+        "agents_required": null,
+        "depends_on": [
+          "F005"
+        ],
+        "passes": false
+      },
+      "F009": {
+        "acceptance": "docs/upgrade/README.md documents the manifest + full action field set + baseline scope + first-run policy + no-mutation boundary; CHANGELOG.md links to releases.json and gains an entry for the upgrade-readiness surface; RELEASE_IMPACT.md notes the new surface. If the drift lint is added it is warn-only, baseline-scoped, and does not block. Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [
+          "F006",
+          "F008"
+        ],
+        "passes": false
+      },
+      "F010": {
+        "acceptance": "update_journey_e2e reproduces fresh-update -> doctor WARN -> full report (summary + pending required) -> probe satisfied -> action clears + WARN gone + update_state transition, through the real doctor CLI; a captured live upgrade report (JSON) on the real instance (canonical-discovery item reflecting the actual probe) and the journey transcript are saved under evidence/. The required action is satisfied by running its APPLY-labeled command (the real migration step) and then PROVEN by the verify-labeled command; a broken apply or verify command fails the journey (D032, supersedes D025). The apply-labeled command runs only against a disposable isolated fixture instance (an isolated temp HOME + fixture registry), never the operator's real registry, and is torn down after; the real-instance evidence is the read-only upgrade report only (D043, test/isolation asserted). Test output for this feature is captured under evidence/ at close (D048).",
+        "agents_required": null,
+        "depends_on": [
+          "F006",
+          "F007",
+          "F008"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "7a3ba2e0c482b95a4a3689eaf4c52e7ced2ab048897c18f9c4dffda4b07affb5",
+    "decisions.jsonl": "0dfe48c8b62c4328aa6c18f6acd5f4c60e2faf940ef1f936bf71c7f037e0563a",
+    "features.json": "ddbdc471f1cf2e54cd84641904219370261eb89e7180a122464b9274066885bb",
+    "objective_contract.json": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
+    "plan.md": "b4897ff3d0432cc1ded03be4c35955d1e6b9ca7772729c2e4b3796a39938386f"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1782087438.4475276,
+    "decisions.jsonl": 1782070855.7842035,
+    "features.json": 1782089427.735708,
+    "objective_contract.json": 1782065085.915136,
+    "plan.md": 1782087249.8380733
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "completed_stages": [
+      "pre_impl",
+      "pre_merge"
+    ]
+  },
+  "objective_hash": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
+  "plan_semantics": {
+    "agents_required": [
+      "claude"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-06-17-001-feat-canonical-repo-discovery"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 3
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}

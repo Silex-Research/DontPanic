@@ -1,0 +1,24 @@
+{
+  "baseline_release": "2026-06-21-baseline",
+  "baseline_date": "2026-06-21",
+  "releases": [
+    {
+      "id": "2026-06-21-upgrade-readiness",
+      "date": "2026-06-21",
+      "plan_refs": ["2026-06-21-001-feat-upgrade-readiness-doctor"],
+      "summary": "Adds the upgrade-readiness layer to `dontpanic doctor` (release manifest contract).",
+      "show_on_first_run": false,
+      "actions": [
+        {
+          "id": "review-upgrade-readiness",
+          "kind": "advisory",
+          "severity": "optional",
+          "title": "Upgrade-readiness layer is now available",
+          "detail": "`dontpanic doctor --upgrade` will report required vs advisory operator actions for releases you have pulled. This entry is a placeholder seeded by F001; F002 expands the manifest with the real rollout history.",
+          "human_next_step": "Run `dontpanic doctor --upgrade` after future pulls to see the upgrade checklist.",
+          "docs_url": "docs/upgrade/"
+        }
+      ]
+    }
+  ]
+}

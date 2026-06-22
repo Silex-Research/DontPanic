@@ -1,0 +1,37 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:7113934df44b86087ad9e73277fa3fcfa8ec628e14c28ab58dbfb294dda6fc43",
+  "generated_at": "2026-06-21T19:33:12Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "operator-updates-and-sees-what-to-run",
+      "gap_class": "wiring_gap",
+      "description": "The plan says to add --upgrade, --acknowledge, and --check-upstream to dontpanic_doctor argparse, but the public dontpanic doctor surface is parsed first by the console wrapper before delegating to dontpanic_doctor. If that wrapper is not explicitly updated, the user-facing command in the journey can reject the new flags or bypass the upgrade report path.",
+      "feature_refs": [
+        "F006",
+        "F007",
+        "F010"
+      ],
+      "recommendation": "Pin wrapper updates and tests for the actual console path: cli.py _doctor_main argparse/help/delegation, plus real dontpanic doctor --upgrade, --upgrade --json, --upgrade --acknowledge, and --check-upstream invocations.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "high",
+      "journey_id": "dashboard-shows-persistent-update-status",
+      "gap_class": "integration_gap",
+      "description": "The dashboard ActionItem spine uses exact_command and validates non-null commands against the command_validation vocabulary. F008 describes mapping upgrade items with a generic command field and only calls out source='upgrade' vocabulary extension, so the required-action drill-down can either lose the copyable command or fail validation for the canonical discover/backfill command surfaces.",
+      "feature_refs": [
+        "F002",
+        "F006",
+        "F008"
+      ],
+      "recommendation": "Require upgrade ActionItems to populate exact_command with the first apply-labeled command, extend command_validation for projects discover/backfill-canonical and any doctor upgrade command used by items, and test the existing ActionItem constructor/render path.",
+      "finding_class": "implementation_detail"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}

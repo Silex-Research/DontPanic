@@ -1,0 +1,30 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "claude/shared/CHANGELOG.md",
+      "status": "M"
+    },
+    {
+      "path": "claude/shared/VERSION",
+      "status": "M"
+    },
+    {
+      "path": "pyproject.toml",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "build/",
+    "claude/shared/schemas/v1.0/models/upgrade_releases_model.py",
+    "claude/shared/schemas/v1.0/upgrade-releases.schema.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/",
+    "docs/upgrade/",
+    "scripts/dontpanic_orchestrate/data/",
+    "scripts/dontpanic_orchestrate/release_manifest.py",
+    "scripts/dontpanic_orchestrate/tests/test_release_manifest.py",
+    "scripts/dontpanic_orchestrate/upgrade_releases_model.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

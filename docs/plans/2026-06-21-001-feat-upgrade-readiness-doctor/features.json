@@ -1,0 +1,298 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Release manifest contract with UX-critical fields (pure schema + model + loader module; no CLI). Define upgrade-releases.schema.json (+ Pydantic model in claude/shared/schemas/v1.0/models, with an agent-conventions VERSION bump) and load_release_manifest. The manifest is an object with a top-level baseline (D018: baseline_release id + baseline_date — CHANGELOG sections at/before this baseline are intentionally NOT manifest-seeded; the F009 coverage lint only flags operator-visible sections AFTER the baseline that lack an entry, so the 'covers the changelog' promise is scoped and cannot silently drift) and an ordered releases[] list. Each release has: stable id, date (YYYY-MM-DD string), plan_refs[], summary, show_on_first_run (bool, default false — see F004 first-run policy), and actions[]. Each action carries enough to tell the user WHY, WHETHER IT APPLIES, and WHAT SUCCESS LOOKS LIKE (D004, D013): id, kind (closed enum required|advisory), severity (optional closed enum critical|recommended|optional), title, detail (the why), commands[] (D017: ORDERED list for safe migrations — each {label closed enum preview|apply|verify|run, command string, description optional}; empty/omitted for advisories — replaces a single command field so preview->apply->verify is first-class), introduced_commands (optional array of new CLI surfaces the release adds), applies_when (optional predicate key; null=always applies), status_probe (optional predicate key; null=advisory/no probe — sole authority for required-action satisfaction, D004), success_message (optional), failure_message (optional), human_next_step (optional), docs_url (optional), evidence_uri (optional). The manifest (NOT prose CHANGELOG, NOT the plan ledger; D002) is the single machine source of truth for upgrade intent. Schema is closed: unknown kind/severity/label values and unknown keys are rejected fail-closed. REQUIRED-ACTION INVARIANT (D021): a kind=required action MUST name a non-null, non-empty status_probe; the loader rejects a required action with null/empty status_probe (such an action could never be cleared by a live probe). kind=advisory actions may omit status_probe. REQUIRED-COMMAND INVARIANT (D029): a kind=required action MUST have a non-empty commands[] that includes at least an apply-labeled command (the state-changing operator step); the loader rejects a required action with empty commands or with no apply-labeled command, so a required action always yields an exact copyable command. Advisory actions may have empty commands. ID-UNIQUENESS INVARIANT (D030): the loader rejects duplicate release ids across the manifest and duplicate action ids within a single release, so the stable id upgrade:<release>:<action> can never collide and releases_since is unambiguous. ORDERED-CHECKLIST INVARIANT (D036, refines D029): a kind=required action's commands[] MUST include at least an apply-labeled AND a verify-labeled command, in label order (preview optional, must precede apply); the loader rejects a required action missing apply or verify, or with out-of-order labels, so a required action always presents the ordered preview->apply->verify checklist the operator follows. MANIFEST RESOLUTION (D045): load_release_manifest resolves docs/upgrade/releases.json as a PACKAGE-RELATIVE resource (shipped with the dontpanic distribution), so it loads when the CLI is invoked outside the repo root, from an installed package, and off-git; resolution does not depend on the current working directory or git metadata. The required-command invariant also rejects a blank/whitespace-only command string (D047): every command in a required action's commands[] must be a non-blank exact string, upholding the exact-copyable-command promise.",
+      "steps": [
+        "Add upgrade-releases.schema.json under claude/shared/schemas/v1.0/ with top-level baseline_release + baseline_date + releases[]; closed enums (kind, severity, commands[].label) and the full per-action field set incl commands[], applies_when, status_probe, success_message, failure_message, human_next_step, docs_url, introduced_commands; release-level show_on_first_run",
+        "Add Pydantic models (UpgradeManifest, UpgradeRelease, UpgradeAction, UpgradeCommand) mirroring the schema; bump agent-conventions VERSION",
+        "Write load_release_manifest that parses docs/upgrade/releases.json, validates, returns the typed manifest (baseline + ordered releases)",
+        "Unit tests: valid manifest parses incl baseline + ordered commands[] + all optional fields; malformed (unknown kind/severity/label, missing required field, bad date, unknown key, missing baseline) rejected; empty commands[] + null status_probe + null applies_when accepted for advisories",
+        "Reject a kind=required action whose status_probe is null/empty (required-action invariant); accept null status_probe only for kind=advisory",
+        "Reject a kind=required action with empty commands[] or with no apply-labeled command (required-command invariant); allow empty commands only for advisory",
+        "Reject duplicate release ids (manifest-wide) and duplicate action ids within a release (id-uniqueness invariant)",
+        "Reject a kind=required action missing an apply or a verify command, or with out-of-order command labels (ordered-checklist invariant, D036)",
+        "Resolve releases.json as a package-relative resource (works outside repo root / installed package / off-git; not cwd- or git-dependent)",
+        "Reject a blank/whitespace-only command string in any commands[] entry (D047)"
+      ],
+      "acceptance": "upgrade-releases.schema.json + Pydantic model validate a manifest carrying baseline_release + baseline_date and releases[] whose actions carry kind, severity, ordered commands[] with preview|apply|verify|run labels, applies_when, status_probe, success_message, failure_message, human_next_step, docs_url, introduced_commands, and release-level show_on_first_run; load_release_manifest rejects each malformed case (unknown kind/severity/command-label, missing required field, non-date date, unknown key, missing baseline) with a typed error; empty commands[]/null status_probe/null applies_when accepted for advisory actions. Tests cover all cases. A kind=required action with null/empty status_probe is rejected by the loader (required-action invariant, D021); advisory actions may omit it (test covers both). A kind=required action with empty commands[] or no apply-labeled command is rejected (D029); duplicate release ids (manifest-wide) and duplicate action ids within a release are rejected (D030). Tests cover each rejection. A kind=required action missing apply or verify, or with out-of-order labels, is rejected (D036, test). load_release_manifest resolves releases.json as a package-relative resource that loads outside the repo root and off-git (D045, test). A required action with a blank/whitespace-only command string is rejected (D047, test). Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "upgrade-releases.schema.json",
+        "UpgradeManifest",
+        "UpgradeRelease",
+        "UpgradeAction",
+        "UpgradeCommand",
+        "load_release_manifest",
+        "baseline_release",
+        "baseline_date",
+        "commands",
+        "applies_when",
+        "status_probe",
+        "severity",
+        "show_on_first_run",
+        "introduced_commands",
+        "success_message",
+        "failure_message",
+        "human_next_step",
+        "docs_url"
+      ],
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-22T00:50:27Z"
+    },
+    {
+      "id": "F002",
+      "category": "doc",
+      "phase": 0,
+      "description": "Seed docs/upgrade/releases.json with a baseline + the real rollout entries that exist as of this plan, exercising the full field set. Set the top-level baseline to the cutoff JUST BELOW the earliest seeded release (a pre-2026-06-14 marker) so the seeded releases all sit ABOVE the baseline and inside the seeded set; CHANGELOG sections at/before the baseline are the exempt history (D018, D039): v0 covers the seeded releases plus all FUTURE manifest-authored releases and never claims the pre-baseline history. Seed releases: (a) the Experience Readiness Gate releases (plans 2026-06-15-001 / 2026-06-15-002 / 2026-06-14-002) as ADVISORY actions with empty commands + null status_probe (enforced at plan close), severity optional, summary mirroring CHANGELOG, docs_url to README/CHANGELOG, show_on_first_run false; (b) the canonical-discovery rollout (plan 2026-06-17-001) as a REQUIRED action using ORDERED commands for the safe preview->apply->verify journey (D017): a dry-run preview, the backfill apply, and a discover verify; status_probe canonical_discovery_registered_active, applies_when has_tracked_projects, severity recommended, success_message + failure_message + human_next_step, introduced_commands listing the discover + backfill surfaces. The seed must validate under F001. PACKAGING (D049): docs/upgrade/releases.json is declared as package data shipped in the wheel and sdist (pyproject package-data / MANIFEST.in) so the installed CLI can load it via the D045 package-relative path; a test loads the manifest from the installed/packaged location, not just the repo tree.",
+      "steps": [
+        "Create docs/upgrade/ and docs/upgrade/releases.json with a top-level baseline (baseline_release + baseline_date)",
+        "Add Experience Readiness release entry/entries: kind advisory, severity optional, empty commands/null status_probe, docs_url set, show_on_first_run false",
+        "Add canonical-discovery release entry: kind required, severity recommended, ordered commands (preview/apply/verify) + status_probe + applies_when + success/failure/human_next_step + introduced_commands",
+        "Validate the seed manifest with the F001 loader",
+        "Declare releases.json (and the schema) as package data in the wheel + sdist (pyproject package-data / MANIFEST.in); add a test that loads it from the packaged/installed location"
+      ],
+      "acceptance": "docs/upgrade/releases.json validates under upgrade-releases.schema.json, carries a baseline, and contains the Experience Readiness advisory entry/entries (empty commands/null status_probe, severity optional) plus the canonical-discovery required entry with ordered commands (preview+apply+verify), non-null status_probe, applies_when, success/failure copy, and introduced_commands. A test asserts the seed loads, the baseline is present, and the canonical-discovery action is kind required with a non-null status_probe and a verify-labeled command. The baseline orders strictly below the earliest seeded release so every seeded release is in-scope, not exempt history (D039). Test output for this feature is captured under evidence/ at close (D048). releases.json is included as package data in the wheel and sdist and loads from the installed/packaged location (not only the repo tree) (D049, test).",
+      "introduces": [
+        "docs/upgrade/releases.json"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "description": "Detection predicate registry (status_probes + applies_when) as a pure core module. A predicate maps a key to a callable returning {satisfied, detail, evidence_uri}. status_probe is the ONLY authority for whether a REQUIRED action is satisfied (the marker never satisfies a required action, D004). applies_when keys gate whether an action is shown to THIS instance at all. canonical_discovery_registered_active (status_probe) is an OUTCOME probe — satisfied iff DontPanic resolves to registered_active via the canonical-discovery reconcile path. EVIDENCE-COUPLING RULE (D019): evidence validity does NOT gate an already-proven outcome; if registered_active is true the action is satisfied even with a stale/malformed leftover backfill-evidence file. Evidence validity blocks ONLY a separate evidence-consuming predicate canonical_backfill_evidence_valid, used where remaining work depends on that evidence and the outcome is not yet proven. has_tracked_projects (applies_when) is satisfied iff a non-empty project registry exists. Predicates degrade honestly: status_probe undeterminable -> not satisfied (fail-closed); applies_when undeterminable -> applies true (never silently hide a required action). UNKNOWN-KEY FAIL-CLOSED (D026): resolving an unknown status_probe key yields a fail-closed result (satisfied=false with an explicit error detail) so a typo can never satisfy or silently hide a required action; an unknown applies_when key yields applies=true with an error detail (surface it, never silently drop). Neither crashes report assembly. NO-MUTATION CONTRACT (D028): every predicate is a strictly READ-ONLY observation; it MUST NOT write or modify registry, evidence, config, ledger, or any on-disk state. canonical_discovery_registered_active reuses ONLY the read/reconcile path of canonical-discovery, never a write path. This upholds the user-facing no-mutation invariant during any read-only command.",
+      "steps": [
+        "Define PredicateResult + a predicate_registry (key -> callable) covering status_probes and applies_when",
+        "Implement canonical_discovery_registered_active as an OUTCOME probe reusing canonical_discovery.reconcile; a stale/invalid evidence file does NOT flip an already-registered_active outcome to pending",
+        "Implement has_tracked_projects against the projects registry and canonical_backfill_evidence_valid for the evidence-consuming dependency only",
+        "Fail directions: status_probe undeterminable -> not satisfied; applies_when undeterminable -> applies true",
+        "Unit tests: registered_active -> satisfied EVEN with a stale/malformed evidence file; stale/missing/unresolved/error reconcile -> not satisfied; has_tracked_projects true/false/undeterminable; evidence-consuming predicate gates only when outcome unproven",
+        "Unknown key handling: unknown status_probe -> satisfied=false + error detail; unknown applies_when -> applies=true + error detail; never raise into report assembly",
+        "Assert no-mutation: a test runs every predicate against a fixture HOME/registry and asserts zero writes (no registry/evidence/config/ledger/state mutation)"
+      ],
+      "acceptance": "predicate_registry resolves status_probe and applies_when keys; canonical_discovery_registered_active returns satisfied=true whenever DontPanic reconciles to registered_active INCLUDING when a stale/malformed evidence file is present (dedicated test) and false (with detail) for stale/missing/unresolved/error; evidence validity gates only canonical_backfill_evidence_valid, not the outcome probe. has_tracked_projects reflects registry presence; status_probe error -> not satisfied (fail-closed) while applies_when error -> applies true. Tests cover every state. An unknown status_probe key resolves to satisfied=false with an error detail (never satisfied), and an unknown applies_when key to applies=true with an error detail; neither crashes assembly (dedicated tests). Every predicate is read-only: a dedicated test runs each predicate and asserts NO registry/evidence/config/ledger/state mutation occurs (no-mutation contract, D028); canonical_discovery_registered_active uses only the reconcile read path. Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "PredicateResult",
+        "predicate_registry",
+        "canonical_discovery_registered_active",
+        "has_tracked_projects",
+        "canonical_backfill_evidence_valid"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Per-instance upgrade-state marker + releases-since diff + FIRST-RUN policy as a core/persistence module with a NO-SILENT-WRITE consent invariant (D015). The on-disk marker upgrade-state.json (HOME-resolved under ~/.dontpanic) holds last_seen_release, last_seen_commit, dismissed_advisories[], first_initialized_at. CONSENT INVARIANT: write_upgrade_state is invoked ONLY by the acknowledge/dismiss path (F007); read_upgrade_state, when the file is absent, returns an IN-MEMORY effective marker (anchored to the latest release) WITHOUT persisting it, so a read can never silently suppress advisories. releases_since(marker, manifest) purely computes releases newer than last_seen_release in manifest order. FIRST-RUN POLICY (D012): a fresh in-memory marker shows only first_run_advisories (releases flagged show_on_first_run) — the full advisory history is not replayed — while required actions stay probe-driven regardless of marker. advance_marker and dismiss_advisory are pure transforms over the marker value; persistence happens only on the F007 acknowledge path. MARKER-PREDATES / UNKNOWN-RELEASE (D035, reconciled by D040/D044): when last_seen_release is absent from the manifest OR orders before the earliest manifest release, releases_since treats the marker as positioned before all manifest releases (every manifest release is new); ADVISORY filtering is then governed by marker_state per the three-case rule (an EXISTING predating marker shows ALL advisories; only a truly ABSENT marker applies the show_on_first_run filter). releases_since never raises on an unknown/stale last_seen_release. THREE MARKER CASES (D040/D042), with an explicit marker_state field (absent|predates|known): (a) ABSENT marker (no file ever = fresh install): the in-memory effective marker anchors to the LATEST release so history is NOT replayed; only show_on_first_run advisories are shown; marker_state=absent and the displayed acknowledgement (last_seen_release/last_seen_commit) is NULL / 'never acknowledged' (never implies the operator acknowledged latest). (b) EXISTING marker whose last_seen_release predates the earliest manifest release OR is absent-from-manifest (a real UPGRADE from an old version): treat as before-all so ALL manifest releases are new and ALL their advisories are shown (the show_on_first_run filter does NOT apply here - this is an upgrade, not a fresh install); marker_state=predates. (c) EXISTING in-manifest marker: releases_since(last_seen) newer releases with their advisories; marker_state=known. releases_since/first_run_advisories never raise; marker_state is returned alongside the effective marker.",
+      "steps": [
+        "Implement read_upgrade_state returning a typed marker; when the file is absent return an in-memory effective marker (anchored to latest release) WITHOUT writing",
+        "Implement write_upgrade_state used ONLY by F007's acknowledge/dismiss path",
+        "Implement releases_since(marker, manifest) and first_run_advisories(manifest) (pure); required actions bypass the marker",
+        "Implement advance_marker + dismiss_advisory (pure transforms over the marker)",
+        "Unit tests: absent marker -> in-memory effective marker + NO file created after read; only show_on_first_run advisories shown + required-with-failing-probe still shown; mid-history marker -> only newer advisories; dismiss suppresses a specific advisory; advance updates last_seen_release/last_seen_commit; values carry no secrets",
+        "Define releases_since for a marker whose last_seen_release is absent-from-manifest or predates the earliest release: treat as before-all (all releases new) under the first-run advisory policy; never raise",
+        "Return marker_state (absent|predates|known); absent => anchor-latest + show_on_first_run-only + null acknowledgement; predates => before-all + ALL advisories (no first-run filter); known => releases_since(last_seen)"
+      ],
+      "acceptance": "read_upgrade_state on an absent marker returns an in-memory effective marker and creates NO file (dedicated test asserts upgrade-state.json still absent after read). releases_since is pure and order-correct; first_run_advisories honors show_on_first_run; required actions are independent of the marker. advance_marker/dismiss_advisory are pure and cannot satisfy a required action (test proves a probe-failing required action stays pending after advance_marker). Marker values round-trip through a tmp HOME and contain no secret shapes. A marker whose last_seen_release is absent-from-manifest or predates the earliest release yields all releases as new (required actions still probe-driven), with no exception raised; advisory visibility follows marker_state - predates => ALL advisories, absent => show_on_first_run only (D040/D044) - the two are never conflated (test). read_upgrade_state returns marker_state (absent|predates|known): an ABSENT marker shows only show_on_first_run advisories with null/'never acknowledged' display (never implies acknowledged-latest, D042); an EXISTING predating marker shows ALL manifest advisories (show_on_first_run filter NOT applied, D040); an in-manifest marker shows releases_since(last_seen). Dedicated tests for all three. Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "upgrade-state.json",
+        "read_upgrade_state",
+        "write_upgrade_state",
+        "releases_since",
+        "first_run_advisories",
+        "advance_marker",
+        "dismiss_advisory",
+        "first_initialized_at",
+        "dismissed_advisories",
+        "last_seen_commit",
+        "last_seen_release",
+        "marker_state"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 1,
+      "description": "Upgrade-readiness report assembly with the version/update summary + UPSTREAM availability, as a pure core function (no CLI). assemble_upgrade_report(manifest, marker, predicate_registry) combines releases_since/first-run (F004), evaluates applies_when + status_probe (F003), and returns {summary, required[], advisory[], migration_status[]}. The summary (D010) carries installed_commit (git HEAD short, 'unknown' off-git), latest_release_id (last manifest release), last_seen_release (from marker), pending_required (count), pending_advisory (count), update_state (closed enum up_to_date | required_pending | advisories_pending | unknown), and an UPSTREAM block (D016): fetched_upstream_commit (the tracked upstream ref's commit AS ALREADY KNOWN LOCALLY — read-only, NO network fetch by default) and upstream_status (closed enum up_to_date | behind | ahead | diverged | unknown) plus a remediation hint. upstream_status answers 'am I behind the newest DontPanic?', is 'unknown' off-git/no-upstream/never-fetched, and is computed WITHOUT an implicit network fetch (an opt-in flag in F006 may refresh). A required action is 'pending' iff its status_probe is not satisfied AND applies_when holds — independent of the marker. required[] items carry the action's ordered commands + success/failure copy + human_next_step + docs_url; advisory[] respects first-run + dismissals; migration_status[] is probe-backed. SUMMARY also carries last_seen_commit from the marker (D023) — distinct from installed_commit (current checkout) — so the dashboard can show the ACKNOWLEDGED commit. Each required[] item also carries the action's introduced_commands (D022) so the report can tell operators which new command surfaces landed. migration_status[] items have a PINNED contract (D024): release id, action id, applies status, probe key, satisfied flag, a human detail, and an evidence pointer. Report assembly surfaces unknown-predicate-key error details from F003 rather than crashing (D026). introduced_commands is attached to BOTH required[] and advisory[] report items (D033), so advisory-only releases still tell operators what newly exists. PINNED ITEM SHAPE (D041): every required[] and advisory[] report item carries a stable item id (upgrade:<release>:<action>), release id, action id, kind, severity, title, detail, applies (bool from applies_when), the ordered commands (each label+command), success_message, failure_message, human_next_step, docs_url, introduced_commands, and - when the action has a status_probe - satisfied plus a probe detail. The same shape is used for required[] and advisory[] so renderers and ActionItems read one contract. The summary reflects marker_state from F004: when marker_state=absent, last_seen_release and last_seen_commit render as 'never acknowledged' (null), never as the latest release/commit (D042). Each report item also carries the ORIGINAL applies_when and status_probe keys (D046) alongside the resolved applies/satisfied values, so manifest-sourced upgrade intent stays auditable in the JSON output. migration_status[] INCLUSION RULE (D051): it lists EVERY probe-backed action with its current state (pending, satisfied, or not-applicable), not only pending ones, so a satisfied or not-applicable canonical-discovery item still appears and the migration audit/JSON stays complete across runs.",
+      "steps": [
+        "Implement assemble_upgrade_report returning {summary, required[], advisory[], migration_status[]}",
+        "Compute installed_commit (git HEAD short, 'unknown' off-git), latest_release_id, last_seen_release, pending_required, pending_advisory, update_state per the count matrix",
+        "Compute the upstream block read-only from existing remote-tracking refs: fetched_upstream_commit + upstream_status (up_to_date|behind|ahead|diverged|unknown) + remediation; NO implicit network fetch",
+        "Mark a required action pending iff status_probe unsatisfied AND applies_when holds (marker-independent)",
+        "Unit tests: update_state matrix; off-git installed_commit=unknown; upstream_status matrix with NO network call in the default path; required pending vs satisfied vs not-applicable; advisory shown vs dismissed vs first-run",
+        "Include last_seen_commit in the summary (distinct from installed_commit); attach introduced_commands to each required[] item; emit migration_status[] items with the pinned fields (release id, action id, applies, probe key, satisfied, detail, evidence pointer)",
+        "Assembly test: an unknown status_probe/applies_when key surfaces the F003 error detail (required action pending) and does not crash",
+        "Pin the report item shape (stable item id, release id, action id, kind, severity, title, detail, applies, ordered commands, success/failure copy, human_next_step, docs_url, introduced_commands, satisfied+probe detail) identically for required[] and advisory[]"
+      ],
+      "acceptance": "assemble_upgrade_report returns {summary:{installed_commit, latest_release_id, last_seen_release, update_state, pending_required, pending_advisory, upstream:{fetched_upstream_commit, upstream_status, remediation}}, required[], advisory[], migration_status[]}; required reflects live status_probe results gated by applies_when and carries ordered commands + success/failure copy; update_state is up_to_date|required_pending|advisories_pending|unknown per the count matrix; upstream_status is computed WITHOUT a network fetch in the default path (test asserts no fetch); installed_commit + upstream degrade to 'unknown' off-git. Tests cover summary + upstream computation and the pending logic. The summary carries last_seen_commit distinct from installed_commit (D023); each required[] item carries introduced_commands (D022); migration_status[] items expose release id, action id, applies status, probe key, satisfied flag, detail, and an evidence pointer (D024); an unknown predicate key surfaces an error detail with the required action pending and never crashes assembly (D026). introduced_commands is carried on both required[] AND advisory[] report items (D033), not required-only (test). Every required[] and advisory[] item carries the pinned shape: stable item id (upgrade:<release>:<action>), release id, action id, kind, severity, title, detail, applies, ordered commands, success/failure copy, human_next_step, docs_url, introduced_commands, and satisfied+probe-detail when probed (D041, test asserts the shape for both lists). When marker_state=absent the summary shows last_seen_release/last_seen_commit as 'never acknowledged' (null), not latest (D042, test). Each required[]/advisory[] item carries the original applies_when and status_probe keys (not only the resolved applies/satisfied booleans) so JSON output stays auditable (D046, test). Test output for this feature is captured under evidence/ at close (D048). migration_status[] includes every probe-backed action with its state (pending, satisfied, or not-applicable), not only pending, so a satisfied/not-applicable item still appears (D051, test).",
+      "introduces": [
+        "assemble_upgrade_report",
+        "update_state",
+        "up_to_date",
+        "required_pending",
+        "advisories_pending",
+        "installed_commit",
+        "latest_release_id",
+        "last_seen_release",
+        "pending_required",
+        "pending_advisory",
+        "migration_status",
+        "upstream_status",
+        "fetched_upstream_commit",
+        "last_seen_commit"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F002",
+        "F003",
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 2,
+      "description": "`dontpanic doctor` CLI integration (read-only render). Wire assemble_upgrade_report (F005) into doctor: plain `dontpanic doctor` adds exactly one concise WARN CheckResult summarizing pending_required/pending_advisory (and an upstream-behind note when known) with the remediation command when anything pends; the --upgrade flag prints the full human report led by the version/update + upstream summary; the --upgrade --json flag emits the machine-readable report (summary + upstream + required[]/advisory[]/migration_status[]); an optional --check-upstream flag opts into a network fetch before computing upstream_status. All these render paths are READ-ONLY w.r.t. the marker (they never call write_upgrade_state; F004 D015). The report also surfaces each required action's introduced_commands (D022) — the new command surfaces the release added — in both the human report and the JSON output, so operators see what newly exists. introduced_commands is rendered for advisory items as well as required (D033), in both human and JSON, so advisory releases that add commands are visible. END-TO-END NO-MUTATION (D050): a test runs the full plain doctor and the upgrade report path against a fixture instance and asserts ZERO writes anywhere - no backfill, migration, config, registry, evidence, ledger, or marker write - not only the probe (F003) and marker (D015) sub-checks. The acknowledge path (F007) is the sole writer.",
+      "steps": [
+        "Add the --upgrade, --upgrade --json, and optional --check-upstream flags to dontpanic_doctor argparse",
+        "Plain doctor: emit one WARN CheckResult summarizing pending_required + pending_advisory (+ upstream-behind note when known) with the remediation command",
+        "--upgrade human render leads with the version/update + upstream summary; --upgrade --json emits the full report",
+        "Assert the render paths never write the marker",
+        "Tests: CLI default WARN (count + remediation); --upgrade --json shape incl summary + upstream; --check-upstream opt-in; render-path-makes-no-marker-write",
+        "Render introduced_commands (new command surfaces) per required action in both the human report and the JSON output",
+        "Add an end-to-end no-mutation test: run plain doctor + the upgrade report against a fixture and assert no backfill/migration/config/registry/evidence/ledger/marker write occurs anywhere"
+      ],
+      "acceptance": "Doctor's upgrade report mode emits the F005 report (summary incl upstream + required/advisory/migration_status) in both human and JSON form; plain doctor emits exactly one WARN with the remediation command + counts when pending and writes no marker; the check-upstream opt-in is the only path that may perform a network fetch. Tests cover the three render modes, the no-implicit-fetch default, and the read-only render (no marker write) invariant. Each required action's introduced_commands (new command surfaces) appear in both the human report and the JSON output (test). introduced_commands renders for advisory items too (not only required), in human and JSON (test, D033). Test output for this feature is captured under evidence/ at close (D048). An end-to-end test asserts plain doctor and the upgrade report perform ZERO writes (no backfill/migration/config/registry/evidence/ledger/marker), covering the whole path not just probe/marker sub-checks (D050).",
+      "introduces": [
+        "--upgrade",
+        "--check-upstream",
+        "doctor_upgrade_section"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 2,
+      "description": "Acknowledge path — the ONLY marker-write surface (D015). Add the --acknowledge flag to `dontpanic doctor`: it calls advance_marker (F004) to the latest release and dismiss_advisory for currently-shown advisories, commits the result via F004's write_upgrade_state, then re-renders. CRITICAL INVARIANT (D004): the acknowledge flag advances the marker and silences advisory noise ONLY; it does NOT clear a required action whose status_probe still fails — such an action remains pending after acknowledge. LEGAL COMBINATIONS (D027): the acknowledge flag composes with the upgrade report mode in both human and JSON form; after acknowledging, the re-rendered report (human or JSON) reflects the ADVANCED marker (advisories silenced, last_seen_release/last_seen_commit updated) while any probe-failing required action still shows pending. Acknowledge without the upgrade report mode still advances the marker and prints a concise confirmation.",
+      "steps": [
+        "Add the --acknowledge flag to `dontpanic doctor` argparse",
+        "On acknowledge: advance_marker to latest + dismiss currently-shown advisories, commit via F004's write_upgrade_state, re-render",
+        "Assert a probe-failing required action is STILL pending after acknowledge",
+        "Tests: acknowledge advances + commits the marker; advisories silenced; probe-failing required action remains pending (dedicated test); this is the only path that writes the marker",
+        "Pin legal combinations: acknowledge + upgrade report (human and JSON); after-acknowledge report reflects the advanced marker; acknowledge alone advances + confirms"
+      ],
+      "acceptance": "Doctor's acknowledge flag advances and commits the marker and silences currently-shown advisories, but a required action whose status_probe fails is STILL listed as pending afterward (dedicated test); acknowledge is the only doctor path that writes the marker. Tests cover marker advance + commit, advisory silencing, and the acknowledge-does-not-clear-required invariant. Acknowledge composes with the upgrade report mode in human and JSON form; the post-acknowledge report reflects the advanced marker (advisories silenced, last_seen_release/last_seen_commit updated) while a probe-failing required action still shows pending (dedicated tests, D027). Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "--acknowledge"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F004",
+        "F006"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "observability",
+      "phase": 2,
+      "description": "Dashboard update-status visibility (standing signal) + ActionItem drill-down. From the F005 summary, project an always-rendered upgrade-readiness STATUS signal (upgrade_status_projection) shown as a Tools & Setup / Health row: a single line from update_state + counts + last_seen_release + installed_commit — e.g. 'DontPanic: up to date' / 'DontPanic: 2 upgrade actions pending' / 'Last acknowledged: 2026-06-17 (commit abc1234)'. This row is ALWAYS shown, including the positive up-to-date case (D011). ActionItems remain the DRILL-DOWN (upgrade_action_items): a probe-pending required action -> band=needs_action with its first apply-labeled command; an undismissed advisory -> band=advisory; satisfied/dismissed absent or info. source='upgrade'; ids are stable (upgrade:<release>:<action>) and sorted by a stable key. Both projections go through the existing dashboard state/action_view shape and carry no secret shapes. The status projection ALSO carries upstream_status (D031): the row reflects 'behind the newest DontPanic' when the known upstream is behind, so it never renders 'up to date' while upstream_status is behind. update_state (manifest-action readiness) and upstream_status (code-level freshness) are distinct and both shown. The projection carries last_seen_commit (from the marker) AND installed_commit separately: the LAST-ACKNOWLEDGED display uses last_seen_commit while installed_commit is shown as the current checkout; the two are never conflated (D037). When marker_state=absent the status row shows 'never acknowledged' rather than a last-acknowledged release/commit, so a fresh install is never misreported as having acknowledged the latest release (D042). SOURCE-VOCABULARY EXTENSION (D052): the existing ActionItem source vocabulary (and any sort/validation keyed on it) is explicitly extended to admit source='upgrade' so upgrade drill-down items validate, are never dropped, and sort with a stable key alongside other sources; a test asserts an upgrade ActionItem survives the existing provider/validation/sort path.",
+      "steps": [
+        "Add upgrade_status_projection (update_state, pending counts, last_seen_release, installed_commit) to the dashboard payload",
+        "Render an always-shown Tools & Setup / Health status row from that projection (incl the up-to-date case)",
+        "Add upgrade_action_items mapping report items to ActionItem(source='upgrade', band, title, detail, command, evidence_uri, updated_at) with stable ids + stable-key sort",
+        "Wire both into the operator-console aggregation path",
+        "Tests: status row across up_to_date / pending / last-acknowledged; required-pending -> needs_action with command; advisory -> advisory; dismissed/satisfied absent; projections carry no secrets",
+        "Include upstream_status in the status projection; the row shows behind-newest when upstream is behind (never 'up to date' while upstream_status=behind)",
+        "Include last_seen_commit in the projection; render the last-acknowledged commit from last_seen_commit (not installed_commit)",
+        "Extend the ActionItem source vocabulary (+ sort/validation) to admit source='upgrade'; assert an upgrade item validates, is not dropped, and sorts with a stable key in the existing provider path"
+      ],
+      "acceptance": "The dashboard exposes an always-shown upgrade-status signal (status line + update_state + counts + last_seen_release + installed_commit) as a Tools & Setup / Health row present in the up-to-date case too; upgrade_action_items are the drill-down (probe-pending required -> needs_action with its command, undismissed advisory -> advisory, dismissed/satisfied absent/info) with stable ids and a stable-key sort. Tests assert the status row across states and that projections contain no secret shapes. The status projection carries upstream_status and the row reflects behind-newest when known; it never shows 'up to date' while upstream_status is behind (D031, test). The projection carries last_seen_commit and the last-acknowledged display renders it (never installed_commit, which is shown separately as the current checkout) (D037, test). With marker_state=absent the row renders 'never acknowledged' (not a synthetic latest acknowledgement) (D042, test). Test output for this feature is captured under evidence/ at close (D048). The ActionItem source vocabulary (+ sort/validation) admits source='upgrade': an upgrade item validates, is not dropped, and sorts with a stable key in the existing provider path (D052, test).",
+      "introduces": [
+        "upgrade_status_projection",
+        "upgrade_action_items",
+        "needs_action",
+        "last_seen_commit"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "doc",
+      "phase": 3,
+      "description": "Authoring guide + changelog linkage so future releases stay update-aware. Write docs/upgrade/README.md explaining the manifest contract (when a release needs an entry), the full action field set (why/applies_when/status_probe/commands/success_message/failure_message/human_next_step/docs_url/introduced_commands), show_on_first_run + first-run policy, how to add a predicate, the baseline scope, and the no-mutation v0 boundary. Link CHANGELOG.md to docs/upgrade/releases.json and note the relationship in docs/RELEASE_IMPACT.md. Add a root CHANGELOG entry for the doctor upgrade-readiness surface + dashboard status row. Add an OPTIONAL advisory drift lint (D008, D018): warn-only, asserts every operator-visible CHANGELOG dated section AFTER the manifest baseline has a matching releases.json entry; sections at/before baseline are exempt.",
+      "steps": [
+        "Write docs/upgrade/README.md (manifest + action-field + predicate authoring guide, baseline scope, first-run policy, no-mutation boundary)",
+        "Add a CHANGELOG.md pointer to docs/upgrade/releases.json + RELEASE_IMPACT.md note",
+        "Add the CHANGELOG entry for the doctor upgrade-readiness surface + dashboard status row",
+        "Add the optional warn-only baseline-scoped drift lint (never blocks in v0)"
+      ],
+      "acceptance": "docs/upgrade/README.md documents the manifest + full action field set + baseline scope + first-run policy + no-mutation boundary; CHANGELOG.md links to releases.json and gains an entry for the upgrade-readiness surface; RELEASE_IMPACT.md notes the new surface. If the drift lint is added it is warn-only, baseline-scoped, and does not block. Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "docs/upgrade/README.md"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F006",
+        "F008"
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "test",
+      "phase": 3,
+      "description": "End-to-end 'after git pull' update journey through the real doctor CLI, captured as evidence (D014; operator-outcome QA). update_journey_e2e drives the real `dontpanic doctor` surface: from an instance whose marker predates the seeded releases (or has none) on a known commit, plain doctor surfaces the WARN with pending counts; the upgrade report (JSON) shows the summary + the canonical-discovery required action pending; after the status_probe is made to return satisfied, a re-run clears the required action and plain doctor no longer WARNs for it, with update_state transitioning. The captured upgrade report (real probe on the live instance) and the journey transcript are saved under evidence/. Marker write/no-write assertions live in F004/F007; this feature asserts the CLI journey + update_state transition only. The journey satisfies the required action by running its REAL copyable command path (the verify-labeled command from the manifest), not a direct fixture toggle (D025), so a broken preview/apply/verify command is caught by the e2e rather than masked. CORRECTION (D032, supersedes the D025 narrowing): the journey satisfies the required action by running its APPLY-labeled command (the real state-changing migration step), then the verify-labeled command PROVES the resulting state; satisfaction is never driven by the verify command alone (verify proves, it does not create) nor by a fixture toggle. A broken apply OR verify command fails the journey. SINGLE SATISFYING PATH (D038): the ONLY way the journey clears the required action is run-apply-then-verify; there is no verify-alone or fixture-toggle satisfying path anywhere in this feature. MUTATION ISOLATION (D043): the apply-labeled (state-changing) command runs ONLY against a DISPOSABLE, ISOLATED fixture instance (a temp DONTPANIC_HOME + fixture registry), NEVER the operator's real DontPanic registry; the isolated instance is torn down after the journey. The live read of the real instance is limited to the read-only upgrade report capture (no apply against the real registry).",
+      "steps": [
+        "Write update_journey_e2e driving plain doctor -> upgrade report (JSON) -> satisfy-probe -> re-run, asserting the WARN appears then clears and update_state transitions",
+        "Assert the required action is probe-driven (pending while unsatisfied; cleared when satisfied) and that first run does not flood advisories",
+        "Capture a live doctor upgrade report (JSON) on the real DontPanic instance and save it under evidence/",
+        "Save the journey transcript under evidence/",
+        "Satisfy the required action by running the APPLY-labeled command (state-changing), then run the verify-labeled command to prove state; never satisfy via verify-alone or a fixture toggle",
+        "Run the apply-labeled command only against a disposable isolated fixture (temp DONTPANIC_HOME + fixture registry), tear it down after; keep the real-instance capture read-only"
+      ],
+      "acceptance": "update_journey_e2e reproduces fresh-update -> doctor WARN -> full report (summary + pending required) -> probe satisfied -> action clears + WARN gone + update_state transition, through the real doctor CLI; a captured live upgrade report (JSON) on the real instance (canonical-discovery item reflecting the actual probe) and the journey transcript are saved under evidence/. The required action is satisfied by running its APPLY-labeled command (the real migration step) and then PROVEN by the verify-labeled command; a broken apply or verify command fails the journey (D032, supersedes D025). The apply-labeled command runs only against a disposable isolated fixture instance (an isolated temp HOME + fixture registry), never the operator's real registry, and is torn down after; the real-instance evidence is the read-only upgrade report only (D043, test/isolation asserted). Test output for this feature is captured under evidence/ at close (D048).",
+      "introduces": [
+        "update_journey_e2e"
+      ],
+      "passes": false,
+      "depends_on": [
+        "F006",
+        "F007",
+        "F008"
+      ]
+    }
+  ]
+}

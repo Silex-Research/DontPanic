@@ -119,3 +119,4 @@ docs/architecture/architecture.html
 # 2026-05-19-002 F004). Produced by `dontpanic doctor --profile=<name>
 # --report` or `dontpanic init --report`.
 docs/install-report.html
+build/

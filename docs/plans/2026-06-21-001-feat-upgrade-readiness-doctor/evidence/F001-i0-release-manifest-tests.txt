@@ -1,0 +1,5 @@
+# F001 release-manifest test evidence — iteration 0 (2026-06-22T00:18:40Z)
+# cmd: PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_release_manifest.py -q
+
+.............................                                            [100%]
+29 passed in 0.27s

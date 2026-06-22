@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Silex-Research/DontPanic/schemas/v1.0/upgrade-releases.schema.json",
+  "title": "Upgrade release manifest",
+  "description": "The single MACHINE source of truth for upgrade intent (D002): NOT the prose CHANGELOG, NOT the plan ledger. Declares a baseline (CHANGELOG sections at/before which are intentionally not manifest-seeded, D018) plus an ordered releases[] list. Each release declares required/advisory operator actions carrying enough to tell the user WHY, WHETHER IT APPLIES, and WHAT SUCCESS LOOKS LIKE (D004, D013). Schema is CLOSED: unknown enum values and unknown keys are rejected fail-closed. Cross-field invariants (required-action D021/D029/D036/D047, id-uniqueness D030) are enforced by the loader/Pydantic model, not expressible in plain JSON Schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["baseline_release", "baseline_date", "releases"],
+  "properties": {
+    "baseline_release": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable id of the baseline release (D018). CHANGELOG sections at/before this baseline are intentionally NOT manifest-seeded; the F009 coverage lint only flags operator-visible sections AFTER the baseline."
+    },
+    "baseline_date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Baseline date (YYYY-MM-DD). The loader additionally rejects non-calendar dates."
+    },
+    "releases": {
+      "type": "array",
+      "description": "Ordered list of releases (oldest -> newest by authoring convention).",
+      "items": {"$ref": "#/definitions/release"}
+    }
+  },
+  "definitions": {
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "date", "summary", "actions"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable release id (unique manifest-wide, D030)."
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Release date (YYYY-MM-DD). The loader additionally rejects non-calendar dates."
+        },
+        "plan_refs": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Plan ids this release rolls up. Optional; defaults to empty."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human summary of the release (mirrored by / linked from the prose CHANGELOG)."
+        },
+        "show_on_first_run": {
+          "type": "boolean",
+          "default": false,
+          "description": "First-run policy (F004): if true, this release's advisories are shown on a fresh marker; otherwise advisories are suppressed on first run to avoid a flood as the manifest grows."
+        },
+        "actions": {
+          "type": "array",
+          "description": "Operator actions for this release (may be empty).",
+          "items": {"$ref": "#/definitions/action"}
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "detail"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Action id (unique within its release, D030). Combined with the release id as upgrade:<release>:<action>."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["required", "advisory"],
+          "description": "Closed enum. required actions are gated by a live status_probe and an ordered preview->apply->verify checklist; advisory actions are informational."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "recommended", "optional"],
+          "description": "Optional closed severity enum."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short action title."
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The WHY: why this action exists / what it addresses."
+        },
+        "commands": {
+          "type": "array",
+          "description": "ORDERED list of exact copyable commands (D017). Empty/omitted for advisories. A required action must include at least an apply-labeled AND a verify-labeled command, in label order (D029/D036).",
+          "items": {"$ref": "#/definitions/command"}
+        },
+        "introduced_commands": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Optional: new CLI surfaces this release adds."
+        },
+        "applies_when": {
+          "type": ["string", "null"],
+          "description": "Optional predicate key gating applicability. null = always applies. applies_when fails OPEN (unknown -> show it)."
+        },
+        "status_probe": {
+          "type": ["string", "null"],
+          "description": "Optional predicate key. null = advisory / no probe. SOLE authority for required-action satisfaction (D004). A required action MUST name a non-null, non-empty probe (D021). status_probe fails CLOSED (unknown -> pending)."
+        },
+        "success_message": {
+          "type": "string",
+          "description": "Optional: what success looks like."
+        },
+        "failure_message": {
+          "type": "string",
+          "description": "Optional: what an unsatisfied probe means."
+        },
+        "human_next_step": {
+          "type": "string",
+          "description": "Optional: the next human-facing step."
+        },
+        "docs_url": {
+          "type": "string",
+          "description": "Optional: documentation link."
+        },
+        "evidence_uri": {
+          "type": "string",
+          "description": "Optional: evidence pointer."
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "command"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "enum": ["preview", "apply", "verify", "run"],
+          "description": "Closed label enum establishing checklist order: preview -> apply -> verify (run = generic single step)."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact copyable command string. The loader rejects blank/whitespace-only strings (D047)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human description of the command step."
+        }
+      }
+    }
+  }
+}

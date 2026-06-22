@@ -1,0 +1,6 @@
+# F001 — release manifest contract: final verification (2026-06-21T21:06:58Z)
+## ruff check (new F001 files)
+All checks passed!
+## pytest (targeted)
+.............................                                            [100%]
+29 passed in 0.31s

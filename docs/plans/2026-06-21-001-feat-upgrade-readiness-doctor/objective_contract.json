@@ -1,0 +1,111 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator-stated requirement (2026-06-21): `dontpanic doctor` checks instance health but is not a changelog-aware upgrade assistant \u2014 it cannot tell a user who updated across releases what changed, what operator actions are required vs advisory, whether migrations (canonical-discovery backfill) were needed/completed, or which new CLI surfaces landed. The locked design (decisions D001-D009): a structured release manifest docs/upgrade/releases.json is the machine contract for upgrade intent (NOT prose CHANGELOG, NOT the plan ledger); detection probes are the sole authority for required-action satisfaction; a per-instance marker ~/.dontpanic/upgrade-state.json records last-seen/dismissed; the surface is inside doctor (--upgrade, --upgrade --json, --acknowledge); v0 is detect + explain + copyable commands with NO mutation.",
+  "completion_test": "Done when, on an instance whose marker predates the seeded releases, `dontpanic doctor --upgrade --json` emits required[]/advisory[]/migration_status[] sourced from docs/upgrade/releases.json with exact copyable commands; the canonical-discovery REQUIRED item reflects a live detection probe (the registered_active outcome; a stale/invalid evidence file does not block it, D019) rather than the marker; plain `dontpanic doctor` shows exactly one WARN with the remediation command while actions are pending; and `dontpanic doctor --upgrade --acknowledge` advances the marker and silences advisories but a required action whose probe still fails remains listed as pending.",
+  "user_journeys": [
+    {
+      "name": "operator-updates-and-sees-what-to-run",
+      "description": "An operator pulls a newer DontPanic, runs `dontpanic doctor`, sees a concise WARN that N upgrade actions are pending with the remediation command, then runs `dontpanic doctor --upgrade` and gets a coherent checklist of required vs advisory changes since their last-acknowledged point, each with an exact copyable command and a probe-backed status. Nothing is mutated by doctor.",
+      "surfaces": [
+        "cli_human"
+      ],
+      "states": [
+        "marker_absent_or_behind",
+        "releases_diffed",
+        "probes_run",
+        "report_rendered",
+        "no_mutation"
+      ],
+      "acceptance_signals": [
+        "Plain `dontpanic doctor` emits exactly one WARN CheckResult with 'run: dontpanic doctor --upgrade' and the pending_required/pending_advisory counts when actions pend",
+        "`dontpanic doctor --upgrade` leads with a version/update summary line: installed_commit, latest_release_id, last_seen_release, pending_required, pending_advisory, update_state, plus an upstream block (fetched_upstream_commit, upstream_status, remediation) answering 'am I behind the newest DontPanic?' without a network fetch by default",
+        "Plain doctor and --upgrade are read-only: they never create or mutate ~/.dontpanic/upgrade-state.json (only --acknowledge/dismiss writes)",
+        "Required-action commands are an ordered preview->apply->verify sequence, not a single opaque command",
+        "`dontpanic doctor --upgrade` lists required[] and advisory[] derived from docs/upgrade/releases.json, each with why (detail), whether-it-applies (applies_when), exact command, and success/failure copy",
+        "`dontpanic doctor --upgrade --json` emits {summary:{installed_commit, latest_release_id, last_seen_release, update_state, pending_required, pending_advisory}, required[], advisory[], migration_status[]}",
+        "doctor performs no backfill/migration/config write (no-mutation invariant)"
+      ]
+    },
+    {
+      "name": "required-action-clears-only-when-probe-passes",
+      "description": "The canonical-discovery required action is shown pending while the instance is not yet registered_active (or backfill evidence is missing/invalid). The operator runs the suggested command out-of-band; on the next doctor run the probe passes and the action clears. Acknowledging WITHOUT running the command does not clear it.",
+      "surfaces": [
+        "cli_human"
+      ],
+      "states": [
+        "probe_unsatisfied",
+        "operator_runs_command_out_of_band",
+        "probe_satisfied",
+        "acknowledge_without_fix_keeps_pending"
+      ],
+      "acceptance_signals": [
+        "canonical_discovery_registered_active returns satisfied=true when DontPanic reconciles to registered_active; a stale/invalid evidence file does not block the proven outcome (D019)",
+        "A required action with an unsatisfied probe is reported pending regardless of marker state",
+        "`--acknowledge` advances last_seen_release/commit and silences advisories but the probe-failing required action is STILL pending afterward",
+        "Probe fail-closed: when status cannot be determined the action stays pending with an explanatory detail"
+      ]
+    },
+    {
+      "name": "dashboard-shows-persistent-update-status",
+      "description": "The dashboard shows a persistent version/update-readiness status signal (a Tools & Setup / Health row) so update state is obvious at a glance \u2014 including the positive 'up to date' case \u2014 with ActionItems as the drill-down rather than the only signal.",
+      "surfaces": [
+        "read_only_ui"
+      ],
+      "states": [
+        "status_projected",
+        "status_row_rendered",
+        "action_items_drill_down"
+      ],
+      "acceptance_signals": [
+        "A persistent status row renders update_state + pending counts, e.g. 'DontPanic: up to date' / 'DontPanic: 2 upgrade actions pending' / 'Last acknowledged: 2026-06-17 (commit abc1234)'",
+        "The status row is present in the up-to-date case (positive confirmation), not only when actions pend",
+        "A probe-pending required action emits an ActionItem with band=needs_action and its exact_command (drill-down)",
+        "An undismissed advisory emits band=advisory; dismissed/satisfied items are absent or info",
+        "ActionItem ids are stable (upgrade:<release>:<action>) and deterministically sorted for dedup",
+        "Status projection + action_view projection contain no secret shapes"
+      ]
+    },
+    {
+      "name": "after-git-pull-end-to-end",
+      "description": "The full operator journey after updating: an instance whose marker predates the seeded releases (or has no marker) runs plain `dontpanic doctor` and gets a WARN with pending counts, then `dontpanic doctor --upgrade` for the full report led by the version/update summary; after the required action is satisfied out-of-band the next run clears it and update_state transitions. This journey is captured as required evidence.",
+      "surfaces": [
+        "cli_human"
+      ],
+      "states": [
+        "fresh_update_on_known_commit",
+        "doctor_warns",
+        "full_report_shown",
+        "required_action_satisfied",
+        "action_clears_and_state_transitions"
+      ],
+      "acceptance_signals": [
+        "From a behind/absent marker, plain doctor WARNs with pending_required>0",
+        "--upgrade --json shows the summary + the canonical-discovery required action pending with its exact command",
+        "After the status_probe becomes satisfied, a re-run clears the required action and plain doctor no longer WARNs for it; update_state transitions (e.g. required_pending -> up_to_date/advisories_pending)",
+        "First-run does NOT flood advisories: only show_on_first_run advisories appear on a fresh marker while required actions remain probe-driven",
+        "The captured live --upgrade --json and the journey transcript are persisted under evidence/"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "test_output for manifest schema/loader validation incl the full action field set and show_on_first_run (F001)",
+    "test_output for the canonical-discovery status_probe across registered_active / stale / missing / unresolved / error states + has_tracked_projects applies_when (F003)",
+    "test_output for the first-run policy (no advisory flood; required actions still probe-driven) (F004)",
+    "test_output for the version/update summary contract incl update_state matrix and off-git installed_commit=unknown (F005)",
+    "test_output proving --acknowledge does not clear a probe-failing required action (F004/F005)",
+    "test_output for the dashboard update-status row across up_to_date / pending / last-acknowledged states (F006)",
+    "an end-to-end 'after git pull' journey: fresh-update -> doctor WARN -> full report -> probe satisfied -> action clears + update_state transition, with the journey transcript persisted (F008)",
+    "a live `dontpanic doctor --upgrade --json` capture on the real instance showing the canonical-discovery item reflecting the real probe result (F005/F008)"
+  ],
+  "non_goals": [
+    "Auto-running backfills, migrations, or config writes (no mutation in v0)",
+    "A standalone `dontpanic upgrade` top-level command",
+    "Deriving upgrade actions from the plan ledger or by grepping CHANGELOG prose",
+    "Any semver / version-bump scheme change",
+    "Blocking (hard-gating) on manifest/CHANGELOG drift in v0",
+    "Writing the upgrade-state marker from any path except --acknowledge/dismiss (no silent marker writes on plain doctor)",
+    "Performing a network git fetch by default (upstream_status is read from existing remote-tracking refs; an explicit --check-upstream may opt in)",
+    "Seeding manifest entries for CHANGELOG sections at/before the baseline (v0 coverage = selected seed releases + all future manifest-authored releases)",
+    "Coupling required-action satisfaction to a stale evidence file when the outcome probe already proves completion"
+  ]
+}

@@ -80,6 +80,14 @@ where = ["scripts"]
 include = ["dontpanic_orchestrate*", "jarvis_orchestrate*"]
 exclude = ["dontpanic_orchestrate.tests*"]
 
+[tool.setuptools.package-data]
+# F001 / D045: the upgrade release manifest ships as package data so
+# load_release_manifest resolves it via importlib.resources from an installed
+# wheel, off-git, and from any cwd — not by walking `__file__` to a repo-root
+# layout. `docs/upgrade/releases.json` is authored separately and is NOT the
+# resolved source.
+dontpanic_orchestrate = ["data/*.json"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
