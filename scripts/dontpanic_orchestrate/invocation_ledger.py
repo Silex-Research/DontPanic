@@ -659,6 +659,28 @@ def _dump_json(record: Mapping[str, Any]) -> str:
     return json.dumps(record, sort_keys=True)
 
 
+# Read-only diagnostic commands that must perform ZERO writes — not even the
+# invocation ledger (plan 2026-06-21-001 F006 D050: the `dontpanic doctor` render
+# paths — plain, --upgrade, --upgrade --json, --check-upstream — mutate nothing;
+# the acknowledge path F007 is the sole writer). `start_recording` returns a no-op
+# recorder for these so the public CLI wrapper records nothing for them.
+_ZERO_WRITE_COMMANDS = frozenset({"doctor"})
+
+
+def _first_command(argv: Sequence[str]) -> str | None:
+    """The first non-option token in ``argv`` (the subcommand name), or None."""
+    for tok in argv:
+        if not tok.startswith("-"):
+            return tok
+    return None
+
+
+def is_zero_write_command(argv: Sequence[str]) -> bool:
+    """True when ``argv`` invokes a read-only command that must not write the
+    ledger (D050). Matches the leading subcommand token, e.g. ``doctor``."""
+    return _first_command(argv) in _ZERO_WRITE_COMMANDS
+
+
 def start_recording(
     argv: Sequence[str],
     *,
@@ -667,7 +689,11 @@ def start_recording(
     install_signal: bool = True,
 ) -> InvocationRecorder | _NullRecorder:
     """Begin recording an invocation. NEVER raises — on any bootstrapping error it
-    returns a no-op recorder so the command runs unaffected."""
+    returns a no-op recorder so the command runs unaffected. Read-only diagnostic
+    commands (``_ZERO_WRITE_COMMANDS``, e.g. ``doctor``) get a no-op recorder so
+    they write no ledger line (D050)."""
+    if is_zero_write_command(argv):
+        return _NullRecorder()
     try:
         environ = dict(os.environ if env is None else env)
         cwd = Path.cwd()
@@ -876,6 +902,7 @@ __all__ = [
     "compact_ledger",
     "derive_buckets",
     "hold_ledger_lock",
+    "is_zero_write_command",
     "ledger_path",
     "make_path_pair",
     "redact_command",

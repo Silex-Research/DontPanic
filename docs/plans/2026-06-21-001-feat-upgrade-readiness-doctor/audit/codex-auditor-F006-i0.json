@@ -1,0 +1,60 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-22T15:24:46Z",
+  "completed_at": "2026-06-22T15:26:51Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2539491 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 902817,
+    "tokens_out": 13638,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 1 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic  \nEnv: dev  \nProject: (none)  \nCommand: (none further)\n\nOverall verdict: needs_changes. The implementer’s structured target context is valid (`env=dev`, `project=null`, empty `commands_run`), and I found no forbidden command shapes in their audit.\n\nFINDING (medium, correctness): `--check-upstream` is parsed for plain doctor but ignored unless `--upgrade` is also set. Evidence: `dontpanic_doctor.main()` only passes `args.check_upstream` inside the `if args.upgrade` branch, while `run_all_checks()` always calls `check_upgrade_readiness()` with the default `check_upstream=False` at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2695); the public wrapper similarly delegates only when `args.upgrade` is true at [cli.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/cli.py:2724). Recommendation: add a `check_upstream` parameter to `run_all_checks()`, pass it from both CLI surfaces, and test `doctor --check-upstream` explicitly.\n\nFINDING (medium, correctness): The plain-doctor remediation advertises an unsupported command. Evidence: `UPGRADE_REMEDIATION` tells users to run `dontpanic doctor --upgrade --acknowledge` at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2377), but neither `dontpanic_doctor.py` nor the public wrapper defines `--acknowledge` for this surface. Recommendation: remove that command until F007 lands, or implement the flag before s",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F006",
+      "issue": "`--check-upstream` is parsed for plain doctor but ignored unless `--upgrade` is also set. Evidence: `dontpanic_doctor.main()` only passes `args.check_upstream` inside the `if args.upgrade` branch, while `run_all_checks()` always calls `check_upgrade_readiness()` with the default `check_upstream=False` at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2695); the public wrapper similarly delegates only when `args.upgrade` is true at [cli.py](/Users/bay",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F006",
+      "issue": "The plain-doctor remediation advertises an unsupported command. Evidence: `UPGRADE_REMEDIATION` tells users to run `dontpanic doctor --upgrade --acknowledge` at [dontpanic_doctor.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_doctor.py:2377), but neither `dontpanic_doctor.py` nor the public wrapper defines `--acknowledge` for this surface. Recommendation: remove that command until F007 lands, or implement the flag before surfacing it.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F006",
+      "issue": "The tests do not exercise the real argparse/public CLI path for the new flags, which is why the plain `--check-upstream` no-op escaped. Evidence: `test_doctor_upgrade_render_f006.py` calls helpers like `build_upgrade_report()` and `check_upgrade_readiness()` directly, but has no `main([\"--check-upstream\"])` or wrapper-level `_doctor_main()` assertion. Recommendation: add CLI-level tests for plain doctor, `--upgrade`, `--upgrade --json`, and plain `--check-upstream`.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F006",
+      "issue": "The D050 “zero writes anywhere” test snapshots only `$DONTPANIC_HOME`, not the whole isolated fixture/root or repo evidence/ledger surfaces. Evidence: the end-to-end test compares `_snapshot_tree(home)` before/after at [test_doctor_upgrade_render_f006.py](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py:388), while the acceptance names evidence/ledger and other state paths too. Recommendation: snapshot the full isolated temp state ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

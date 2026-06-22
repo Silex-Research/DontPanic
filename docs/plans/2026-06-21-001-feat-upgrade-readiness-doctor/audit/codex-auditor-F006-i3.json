@@ -1,0 +1,35 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#3",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 3,
+  "started_at": "2026-06-22T15:41:18Z",
+  "completed_at": "2026-06-22T15:43:37Z",
+  "validation_performed": [
+    "codex auditor round (iteration 3)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i3.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 210195 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1677728,
+    "tokens_out": 12469,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: signed_off. No findings. The implementer’s audit correctly declares `Repo: DontPanic`, `Env: dev`, `Project: (none)` in prose and structured `target_context`; their recorded commands are pytest-only and contain no forbidden command shapes. The diff implements the requested doctor upgrade surfaces, JSON/human render paths, introduced command rendering, no implicit fetch default, marker read-only behavior, and D050 public CLI no-ledger coverage. Evidence file shows `34 passed`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dontpanic_orchestrate/tests/test_invocation_ledger.py  \nThis could not start in the read-only sandbox: pytest could not create a temp file in `/tmp` or the workspace.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'import json, dontpanic_doctor as d; report=d.build_upgrade_report(check_upstream=False, fetch_runner=lambda root: (_ for _ in ()).throw(RuntimeError(\"fetch should not run\"))); payload=json.loads(d.render_upgrade_report_json(report)); print(sorted(payload)); print(sorted(payload[\"summary\"])); print(payload[\"summary\"][\"upstream\"][\"upstream_status\"]); r=d.check_upgrade_readiness(check_upstream=False); print(r.name); print(r.warn)'\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import cli; rc=cli.main([\"doctor\",\"--upgrade\",\"--json\"]); pr",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dontpanic_orchestrate/tests/test_invocation_ledger.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'import json, dontpanic_doctor as d; report=d.build_upgrade_report(check_upstream=False, fetch_runner=lambda root: (_ for _ in ()).throw(RuntimeError(\"fetch should not run\"))); payload=json.loads(d.render_upgrade_report_json(report)); print(sorted(payload)); print(sorted(payload[\"summary\"])); print(payload[\"summary\"][\"upstream\"][\"upstream_status\"]); r=d.check_upgrade_readiness(check_upstream=False); print(r.name); print(r.warn)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import cli; rc=cli.main([\"doctor\",\"--upgrade\",\"--json\"]); print(\"RC\", rc)'",
+      "git diff --check -- scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/invocation_ledger.py scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dontpanic_orchestrate/tests/test_invocation_ledger.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import cli; rc=cli.main([\"doctor\",\"--skip-auth\"]); print(\"RC\", rc)'"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

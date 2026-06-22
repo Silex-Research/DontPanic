@@ -98,7 +98,9 @@ def test_recorder_finalize_is_idempotent() -> None:
 
 @pytest.mark.parametrize("result", [il.RESULT_OK, il.RESULT_ERROR, il.RESULT_INTERRUPTED])
 def test_recorder_records_each_result(result: str) -> None:
-    rec = il.start_recording(["doctor"], now=_NOW, install_signal=False)
+    # NB: use a recordable command — `doctor` is a zero-write command (D050) and
+    # would (correctly) return a no-op recorder that appends nothing.
+    rec = il.start_recording(["ps"], now=_NOW, install_signal=False)
     rec.finalize(result, now=_LATER)
     assert _read_ledger()[0]["result"] == result
 

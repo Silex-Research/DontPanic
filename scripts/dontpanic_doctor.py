@@ -2353,6 +2353,243 @@ def check_skill_rubrics_advisory(
     return [_warn(name, advisory.message, advisory.remediation)]
 
 
+# ── plan 2026-06-21-001 F006: upgrade-readiness doctor surface ─────────────
+#
+# Wires the F005 report assembly (assemble_upgrade_report) into doctor as a
+# READ-ONLY render. Three surfaces share one assembly seam:
+#   * plain doctor  -> exactly one WARN summarizing pending_required +
+#                      pending_advisory (+ an upstream-behind note when known)
+#                      with the remediation command, OR an OK when up to date.
+#   * doctor --upgrade        -> full human report led by version/update +
+#                               upstream summary.
+#   * doctor --upgrade --json -> the machine-readable report (summary + upstream
+#                               + required[]/advisory[]/migration_status[]).
+# EVERY path here is READ-ONLY w.r.t. the marker (D015): it calls only
+# read_upgrade_state, never write_upgrade_state. The acknowledge path (F007) is
+# the sole writer. The default path performs NO network fetch (D016); only the
+# explicit --check-upstream opt-in may fetch before computing upstream_status.
+
+# Remediation surfaced by the plain-doctor WARN and the upgrade report footer.
+# Points at the read-only review surface; required actions clear ONLY when their
+# probe passes (D004), so the full report (which carries each action's ordered
+# commands) is the actionable destination. The advisory-silencing acknowledge
+# flag is deliberately NOT advertised here until F007 lands it on this surface
+# (codex-auditor F006-i0): a remediation must never name an unsupported command.
+UPGRADE_REMEDIATION = (
+    "run `dontpanic doctor --upgrade` to see required actions + their commands "
+    "(required actions clear only when their probe passes)"
+)
+
+
+def _default_fetch_runner(git_root: Path | None) -> int:
+    """Run a read-only-ish ``git fetch --prune`` rooted at ``git_root``.
+
+    This is the ONLY network path in the whole upgrade surface and runs ONLY
+    under the explicit ``--check-upstream`` opt-in (D016). Returns the git exit
+    code; never raises (a missing git / offline state degrades to a non-zero
+    code and the subsequent read-only upstream computation reports ``unknown``).
+    """
+    prefix = ["git", *(["-C", str(git_root)] if git_root is not None else [])]
+    try:
+        proc = subprocess.run(  # noqa: S603  # fixed argv, shell=False, opt-in fetch
+            [*prefix, "fetch", "--prune"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 1
+    return proc.returncode
+
+
+def build_upgrade_report(
+    *,
+    manifest_path: Path | str | None = None,
+    marker_path: Path | str | None = None,
+    predicate_registry: object | None = None,
+    predicate_ctx: object | None = None,
+    git: object | None = None,
+    git_root: Path | None = None,
+    check_upstream: bool = False,
+    fetch_runner=None,
+):
+    """Assemble the F005 upgrade report for a doctor render — READ-ONLY (D015).
+
+    Loads the packaged release manifest, reads the per-instance marker WITHOUT
+    writing it (``read_upgrade_state``), optionally refreshes the upstream ref
+    under the ``check_upstream`` opt-in (the sole network path, D016), then
+    returns the assembled :class:`UpgradeReport`. The seams (manifest/marker
+    paths, predicate registry/ctx, git probe, fetch runner) are injectable so
+    tests drive every state hermetically without touching real on-disk state.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import upgrade_report as ur
+        from dontpanic_orchestrate.release_manifest import load_release_manifest
+        from dontpanic_orchestrate.upgrade_predicates import PredicateContext
+        from dontpanic_orchestrate.upgrade_state import read_upgrade_state
+    finally:
+        sys.path.pop(0)
+
+    manifest = load_release_manifest(manifest_path)
+    marker = read_upgrade_state(manifest, path=marker_path)  # NEVER writes (D015).
+    if check_upstream:
+        runner = fetch_runner if fetch_runner is not None else _default_fetch_runner
+        runner(git_root)
+    probe = git if git is not None else ur.GitProbe(root=git_root)
+    ctx = predicate_ctx if predicate_ctx is not None else PredicateContext()
+    return ur.assemble_upgrade_report(
+        manifest, marker, predicate_registry, predicate_ctx=ctx, git=probe
+    )
+
+
+def check_upgrade_readiness(
+    *,
+    manifest_path: Path | str | None = None,
+    marker_path: Path | str | None = None,
+    predicate_registry: object | None = None,
+    predicate_ctx: object | None = None,
+    git: object | None = None,
+    git_root: Path | None = None,
+    check_upstream: bool = False,
+    fetch_runner=None,
+) -> CheckResult:
+    """Plain-doctor upgrade surface: exactly ONE CheckResult, READ-ONLY (D015).
+
+    Emits a WARN summarizing pending_required + pending_advisory (plus an
+    upstream-behind note when the upstream position is known) with the
+    remediation command when anything pends; otherwise an OK summarizing the
+    up-to-date / current state. Never writes the marker and (default) never
+    fetches. A manifest/assembly failure degrades to an advisory OK so a broken
+    or absent manifest can never fail the doctor battery.
+    """
+    name = "upgrade-readiness"
+    try:
+        report = build_upgrade_report(
+            manifest_path=manifest_path,
+            marker_path=marker_path,
+            predicate_registry=predicate_registry,
+            predicate_ctx=predicate_ctx,
+            git=git,
+            git_root=git_root,
+            check_upstream=check_upstream,
+            fetch_runner=fetch_runner,
+        )
+    except Exception as exc:  # noqa: BLE001 — advisory surface, never fail the battery
+        return _ok(name, f"upgrade readiness unavailable: {exc}")
+
+    summary = report.summary
+    pend_req = summary.pending_required
+    pend_adv = summary.pending_advisory
+    upstream_behind = summary.upstream.upstream_status == "behind"
+    behind_note = ""
+    if upstream_behind:
+        behind_note = " — a newer DontPanic is available upstream (git pull)"
+
+    if pend_req == 0 and pend_adv == 0:
+        latest = summary.latest_release_id or "no releases"
+        msg = f"up to date ({latest})"
+        if upstream_behind:
+            # Nothing pends locally, but the checkout itself is behind upstream.
+            return _warn(name, f"up to date with {latest}{behind_note}", UPGRADE_REMEDIATION)
+        return _ok(name, msg)
+
+    msg = (
+        f"{pend_req} required + {pend_adv} advisory upgrade action(s) pending"
+        f"{behind_note}"
+    )
+    return _warn(name, msg, UPGRADE_REMEDIATION)
+
+
+def _render_commands(commands: list, indent: str) -> list[str]:
+    lines: list[str] = []
+    for i, c in enumerate(commands, start=1):
+        desc = f"  ({c.description})" if c.description else ""
+        lines.append(f"{indent}{i}. {c.label:<8}{c.command}{desc}")
+    return lines
+
+
+def _render_report_item(item, *, indent: str = "  ") -> list[str]:
+    """Render one ReportItem (shared shape for required[] and advisory[], D041)."""
+    sev = f"[{item.severity}] " if item.severity else ""
+    lines = [f"{indent}{sev}{item.action_id} — {item.title}  ({item.release_id})"]
+    body = indent + "  "
+    lines.append(f"{body}why: {item.detail}")
+    # introduced_commands — the new CLI surfaces this release adds (D022/D033),
+    # rendered for advisory items as well as required.
+    if item.introduced_commands:
+        lines.append(f"{body}new commands: {', '.join(item.introduced_commands)}")
+    if item.commands:
+        lines.extend(_render_commands(item.commands, body))
+    if item.human_next_step:
+        lines.append(f"{body}next step: {item.human_next_step}")
+    if item.docs_url:
+        lines.append(f"{body}docs: {item.docs_url}")
+    return lines
+
+
+def render_upgrade_report_text(report) -> str:
+    """Human upgrade report led by the version/update + upstream summary (D010/D016).
+
+    Then required[] (with each action's ordered commands + introduced_commands),
+    advisory[] (also with introduced_commands, D033), and the migration status.
+    """
+    s = report.summary
+    ack_release = s.last_seen_release or "never acknowledged"
+    ack_commit = f" @ {s.last_seen_commit}" if s.last_seen_commit else ""
+    lines = [
+        "DontPanic upgrade readiness",
+        "===========================",
+        f"installed commit:   {s.installed_commit}",
+        f"latest release:     {s.latest_release_id or '(none)'}",
+        f"last acknowledged:  {ack_release}{ack_commit}",
+        f"update state:       {s.update_state}",
+        f"pending required:   {s.pending_required}",
+        f"pending advisory:   {s.pending_advisory}",
+    ]
+    up = s.upstream
+    up_ref = f" [{up.upstream_ref}]" if up.upstream_ref else ""
+    up_commit = f" {up.fetched_upstream_commit}" if up.fetched_upstream_commit else ""
+    lines.append("")
+    lines.append(f"Upstream: {up.upstream_status}{up_ref}{up_commit}")
+    lines.append(f"  ↳ {up.remediation}")
+
+    lines.append("")
+    lines.append(f"Required actions ({len(report.required)}):")
+    if report.required:
+        for item in report.required:
+            lines.extend(_render_report_item(item))
+    else:
+        lines.append("  (none pending)")
+
+    lines.append("")
+    lines.append(f"Advisory updates ({len(report.advisory)}):")
+    if report.advisory:
+        for item in report.advisory:
+            lines.extend(_render_report_item(item))
+    else:
+        lines.append("  (none)")
+
+    if report.migration_status:
+        lines.append("")
+        lines.append("Migration status:")
+        for m in report.migration_status:
+            lines.append(f"  {m.release_id}/{m.action_id}: {m.state}")
+
+    return "\n".join(lines)
+
+
+def render_upgrade_report_json(report) -> str:
+    """Machine-readable upgrade report (summary + upstream + required[]/advisory[]/
+    migration_status[]) for ``--upgrade --json`` (D046/D048)."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate.upgrade_report import report_to_dict
+    finally:
+        sys.path.pop(0)
+    return json.dumps(report_to_dict(report), indent=2)
+
+
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
@@ -2364,6 +2601,7 @@ def run_all_checks(
     architecture_drift_strict_mode: bool | None = None,
     plans_root: Path | None = None,
     architecture_json: Path | None = None,
+    check_upstream: bool = False,
 ) -> list[CheckResult]:
     """Execute the full check battery.
 
@@ -2450,6 +2688,16 @@ def run_all_checks(
     # nudge, never a doctor failure, so it is stripped from the strict-exit
     # computation (see cli._doctor_main).
     results.extend(check_skill_rubrics_advisory())
+    # Plan 2026-06-21-001 F006: upgrade-readiness surface. Exactly one
+    # CheckResult — a WARN summarizing pending required/advisory actions (with
+    # the remediation command) when anything pends, else an OK. READ-ONLY
+    # w.r.t. the marker (D015) and NO network fetch in the default path
+    # (D016). The plain-doctor ``--check-upstream`` opt-in threads through here
+    # so the upstream block reflects a fresh fetch even without ``--upgrade``
+    # (codex-auditor F006-i0). Advisory-only: stripped from the strict-exit
+    # computation in both CLI surfaces (a pending upgrade is guidance, never a
+    # readiness blocker).
+    results.append(check_upgrade_readiness(check_upstream=check_upstream))
     return results
 
 
@@ -2745,7 +2993,42 @@ def main(argv: list[str] | None = None) -> int:
             "0/1/2 strict-exit matrix."
         ),
     )
+    parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F006: render the full upgrade-readiness report "
+            "(version/update + upstream summary, required actions + commands, "
+            "advisory updates, migration status) instead of the full battery. "
+            "Read-only — never writes the marker. Combine with --json for the "
+            "machine-readable report."
+        ),
+    )
+    parser.add_argument(
+        "--check-upstream",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F006 (D016): opt into a `git fetch --prune` "
+            "before computing upstream_status, so behind/ahead reflects the "
+            "newest remote. Without this flag the upstream block is computed "
+            "from locally-known refs only (no network)."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Plan 2026-06-21-001 F006 — upgrade-readiness report mode. Activated only
+    # when --upgrade is supplied; short-circuits the full battery and renders
+    # the F005 report (human, or machine-readable under --json). READ-ONLY
+    # w.r.t. the marker (D015); only --check-upstream may fetch (D016).
+    if args.upgrade:
+        report = build_upgrade_report(check_upstream=args.check_upstream)
+        if args.json:
+            print(render_upgrade_report_json(report))
+        else:
+            print(render_upgrade_report_text(report))
+        # Read-only informational view; exit 0 (the plain doctor WARN owns the
+        # pending-state exit signal). Pending actions are surfaced in the body.
+        return 0
 
     # Plan 2026-05-30-001 F005 — agent / project onboarding surfaces. Activated
     # only when --agent or --project is supplied; otherwise the legacy pipeline
@@ -2768,6 +3051,9 @@ def main(argv: list[str] | None = None) -> int:
         architecture_drift_strict_mode=args.architecture_drift_strict,
         plans_root=args.plans_root,
         architecture_json=args.architecture_json,
+        # F006 (codex-auditor F006-i0): --check-upstream opts the plain-doctor
+        # upgrade probe into a fetch too, not only the --upgrade report.
+        check_upstream=args.check_upstream,
     )
     # Plan 2026-05-19-002 F001 — profile-aware path activates ONLY when
     # --profile is supplied. With no --profile, the legacy
@@ -2817,10 +3103,15 @@ def main(argv: list[str] | None = None) -> int:
         # Plan 2026-05-30-001 F016 (AC11): the skill-rubric migration
         # advisory is likewise advisory-only and is dropped here so a
         # metadata-less skill never escalates the exit code.
+        # Plan 2026-06-21-001 F006: the upgrade-readiness probe is advisory —
+        # a pending upgrade is guidance, not a readiness blocker — so it is
+        # stripped here too (its WARN text + remediation still prints above).
         strict_inputs = [
             r
             for r in results
-            if not r.name.startswith("dashboard-") and r.name != "skill-rubrics"
+            if not r.name.startswith("dashboard-")
+            and r.name != "skill-rubrics"
+            and r.name != "upgrade-readiness"
         ]
         return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1

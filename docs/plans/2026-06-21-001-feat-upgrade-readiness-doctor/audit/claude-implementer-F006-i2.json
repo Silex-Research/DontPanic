@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#2",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 2,
+  "started_at": "2026-06-22T15:33:37Z",
+  "completed_at": "2026-06-22T15:37:20Z",
+  "validation_performed": [
+    "claude implementer round (iteration 2)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F006-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3338 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1956248,
+    "tokens_out": 13647,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F006] All green and evidence refreshed. Here's the summary.\n\nThe single high/correctness finding from codex-auditor F006-i1 — that the public `dontpanic doctor` paths still attempt an invocation-ledger write (cli.py:5751-5769 wrapping every CLI invocation in `start_recording(...).finalize(...)`, appending to `invocations.jsonl`), violating D050's \"plain doctor and upgrade report perform ZERO writes (...ledger...)\" invariant — is now fixed at the ledger seam itself. I added a `_ZERO_WRITE_COMMANDS = frozenset({\"doctor\"})` set plus `is_zero_write_command()`/`_first_command()` helpers in `invocation_ledger.py`, and made `start_recording` return the existing `_NullRecorder()` (no-op finalize) for the read-only `doctor` command before any bootstrapping, so the public wrapper records nothing for plain `doctor`, `--upgrade`, `--upgrade --json`, and `--check-upstream` while the `finally: recorder.finalize(...)` in `cli.main` stays untouched for every other command. I verified the live repro the auditor ran — `python -m dontpanic_orchestrate doctor --upgrade --json` and plain `doctor --skip-auth` against an isolated `DONTPANIC_HOME` produce no `invocations.jsonl`, while `ps` still writes one. I added two regression tests in `test_doctor_upgrade_render_f006.py` (`test_invocation_ledger_skips_doctor_command` asserting the no-op recorder and command classification, and `test_cli_main_doctor_writes_no_ledger_line` driving the actual `cli.main([\"doctor\", ...])` wrapper and asserting zero ledger ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -m dontpanic_orchestrate doctor --upgrade --json",
+      "python -m dontpanic_orchestrate doctor --skip-auth",
+      "python -m dontpanic_orchestrate ps"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

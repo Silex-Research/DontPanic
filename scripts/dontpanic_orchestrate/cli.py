@@ -2643,6 +2643,25 @@ def _doctor_main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F006: render the upgrade-readiness report "
+            "(version/update + upstream summary, required actions + commands, "
+            "advisory updates, migration status). Read-only — never writes the "
+            "marker. Combine with --json for the machine-readable report."
+        ),
+    )
+    parser.add_argument(
+        "--check-upstream",
+        action="store_true",
+        help=(
+            "Plan 2026-06-21-001 F006 (D016): opt into a `git fetch --prune` "
+            "before computing upstream_status. Without it, upstream is computed "
+            "from locally-known refs only (no network)."
+        ),
+    )
+    parser.add_argument(
         "--channel",
         "--operator-surface",
         dest="channel",
@@ -2698,6 +2717,13 @@ def _doctor_main(argv: list[str]) -> int:
     if args.agent or args.project is not None:
         return jd.main(argv)
 
+    # Plan 2026-06-21-001 F006 (D053): the upgrade-readiness report mode is
+    # owned by jd.main too. Delegate the raw argv so --upgrade / --upgrade
+    # --json / --check-upstream render the F005 report through the single
+    # read-only path (never writes the marker).
+    if args.upgrade:
+        return jd.main(argv)
+
     results = jd.run_all_checks(
         skip_auth=args.skip_auth,
         include_projects=True,
@@ -2706,6 +2732,9 @@ def _doctor_main(argv: list[str]) -> int:
         architecture_drift_strict_mode=args.architecture_drift_strict,
         plans_root=args.plans_root,
         architecture_json=args.architecture_json,
+        # F006 (codex-auditor F006-i0): plain `dontpanic doctor --check-upstream`
+        # threads the fetch opt-in into the upgrade probe even without --upgrade.
+        check_upstream=args.check_upstream,
     )
     print(jd.render_json(results) if args.json else jd.render_text(results))
     # Plan 4 F003 / Plan 3 F003 acceptance: in advisory mode the
@@ -2737,6 +2766,13 @@ def _doctor_main(argv: list[str]) -> int:
     # blocker, so it must not escalate the canonical exit code either.
     exit_inputs = [
         r for r in exit_inputs if not r.name.startswith("skill-rubrics")
+    ]
+    # 2026-06-21-001 F006: the upgrade-readiness probe is advisory — a pending
+    # upgrade is operator guidance (run `doctor --upgrade`), not a readiness
+    # blocker — so it must not escalate the canonical exit code. Its WARN text
+    # + remediation still renders above.
+    exit_inputs = [
+        r for r in exit_inputs if r.name != "upgrade-readiness"
     ]
     return jd.compute_strict_exit(exit_inputs)
 

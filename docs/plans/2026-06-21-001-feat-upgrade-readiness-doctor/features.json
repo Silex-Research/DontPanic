@@ -239,10 +239,21 @@
         "--check-upstream",
         "doctor_upgrade_section"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-22T15:49:23Z"
     },
     {
       "id": "F007",

@@ -1,0 +1,38 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#0",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 0,
+  "started_at": "2026-06-22T15:16:51Z",
+  "completed_at": "2026-06-22T15:24:46Z",
+  "validation_performed": [
+    "claude implementer round (iteration 0)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=(none)",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3317 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 6973627,
+    "tokens_out": 31609,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 0 (see structured target_context.commands_run)\n\n[F006] I've implemented F006 — the `dontpanic doctor` upgrade-readiness CLI integration as a strictly read-only render. The implementation wires F005's `assemble_upgrade_report` into doctor through a single shared seam (`build_upgrade_report` in `scripts/dontpanic_doctor.py`) that loads the packaged manifest, reads the marker via `read_upgrade_state` (never `write_upgrade_state`, D015), and only fetches under the explicit `--check-upstream` opt-in (D016): plain doctor now appends exactly one `upgrade-readiness` CheckResult (a WARN with pending required/advisory counts + an upstream-behind note + the remediation command when anything pends, else OK), `--upgrade` prints the full human report led by the version/update + upstream summary with each required *and* advisory action's `introduced_commands` (D022/D033), and `--upgrade --json` emits the machine-readable report (`summary` incl. `upstream` + `required[]`/`advisory[]`/`migration_status[]`). I added the `--upgrade`/`--check-upstream` flags to both `dontpanic_doctor.main()` and the public `dontpanic doctor` wrapper in `cli.py` (D053), strapping the advisory `upgrade-readiness` probe out of the strict-exit computation in both surfaces so a pending upgrade never escalates the exit code. A new 11-test file (`test_doctor_upgrade_render_f006.py`) covers the WARN/OK render, JSON shape, no-implicit-fetch default vs `--check-upstream` opt-in, the no-marker-write invariant, introduced_commands on both lists in human+JSON, and an end-to-end ",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": []
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

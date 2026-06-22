@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-22T15:31:29Z",
+  "completed_at": "2026-06-22T15:33:37Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 220412 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1235204,
+    "tokens_out": 9780,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes.\n\nFINDING (high, correctness): Public `dontpanic doctor` paths still attempt an invocation-ledger write, violating D050’s “plain doctor and upgrade report perform ZERO writes” invariant. Evidence: `scripts/dontpanic_orchestrate/cli.py:5751-5769` wraps every public CLI invocation in `invocation_ledger.start_recording(...).finalize(...)`, and `scripts/dontpanic_orchestrate/invocation_ledger.py:637-646` appends to `invocations.jsonl`; running `python -m dontpanic_orchestrate doctor --upgrade --json` and plain `doctor --skip-auth` both emitted `invocation ledger write failed... refusing unlocked append`. The new D050 test does not exercise this path: `test_doctor_upgrade_render_f006.py:399-402` calls `doctor.run_all_checks()` and `doctor.build_upgrade_report()` helpers directly, bypassing `cli.main()`. Recommendation: add a true public-CLI no-mutation test covering plain doctor and `doctor --upgrade`, and exempt these read-only doctor paths from invocation-ledger recording or otherwise provide a no-write CLI path for them.\n\nNo EC5 finding: the implementer declared `Repo: DontPanic`, `Env: dev`, `Project: (none)`, and structured `target_context.env=dev`, `project=null` matches. No forbidden command shapes found in their `target_context.commands_run`.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dont",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python scripts/dontpanic_doctor.py --help >/dev/null && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --help >/dev/null",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --upgrade --json >/tmp/dontpanic-upgrade.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --upgrade --json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m dontpanic_orchestrate doctor --skip-auth"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F006",
+      "issue": "Public `dontpanic doctor` paths still attempt an invocation-ledger write, violating D050’s “plain doctor and upgrade report perform ZERO writes” invariant. Evidence: `scripts/dontpanic_orchestrate/cli.py:5751-5769` wraps every public CLI invocation in `invocation_ledger.start_recording(...).finalize(...)`, and `scripts/dontpanic_orchestrate/invocation_ledger.py:637-646` appends to `invocations.jsonl`; running `python -m dontpanic_orchestrate doctor --upgrade --json` and plain `doctor --skip-auth",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

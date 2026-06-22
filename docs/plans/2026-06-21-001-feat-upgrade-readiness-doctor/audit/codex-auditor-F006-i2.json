@@ -1,0 +1,43 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-06-22T15:37:20Z",
+  "completed_at": "2026-06-22T15:39:19Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-pnf7vjjl target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 229251 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1116299,
+    "tokens_out": 11271,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic\nEnv: dev\nProject: (none)\n\nOverall verdict: needs_changes. Implementer target declaration is correct in the summary (`Repo: DontPanic`, `Env: dev`, `Project: (none)`), and `target_context.commands_run` contains only Python CLI invocations, with no forbidden command shapes.\n\nFINDING (medium, test_coverage): The required D050 end-to-end no-mutation test still does not exercise the full public doctor path.\nEvidence: [test_end_to_end_plain_doctor_and_upgrade_report_write_nothing](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py:368) calls `doctor.run_all_checks()` and `doctor.build_upgrade_report()` directly, bypassing `cli.main()` and the invocation-ledger wrapper; [test_cli_main_doctor_writes_no_ledger_line](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py:540) covers the wrapper but stubs `_run_cli`, so it does not prove the real plain doctor plus upgrade report path performs zero writes across backfill/migration/config/registry/evidence/ledger/marker.\nRecommendation: Add an integrated no-mutation test that snapshots the isolated fixture state, runs the real public `cli.main([\"doctor\", \"--skip-auth\"])` and `cli.main([\"doctor\", \"--upgrade\", \"--json\"])` paths, then asserts no files were created or modified anywhere under the isolated writable roots.\n\nChecks run:\n$ git -C /Users/bayesian/Documents/GitHub/DontPanic status --short\n$ git -C",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic status --short",
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic diff --stat HEAD~1",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py scripts/dontpanic_orchestrate/tests/test_invocation_ledger.py",
+      "python -B -c \"import ast; from pathlib import Path; paths=[Path('scripts/dontpanic_doctor.py'),Path('scripts/dontpanic_orchestrate/cli.py'),Path('scripts/dontpanic_orchestrate/invocation_ledger.py'),Path('scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py')]; [ast.parse(p.read_text(encoding='utf-8'), filename=str(p)) for p in paths]; print('ast ok')\"",
+      "git -C /Users/bayesian/Documents/GitHub/DontPanic diff --check HEAD~1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F006",
+      "issue": "The required D050 end-to-end no-mutation test still does not exercise the full public doctor path. Evidence: [test_end_to_end_plain_doctor_and_upgrade_report_write_nothing](/Users/bayesian/Documents/GitHub/DontPanic/scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py:368) calls `doctor.run_all_checks()` and `doctor.build_upgrade_report()` directly, bypassing `cli.main()` and the invocation-ledger wrapper; [test_cli_main_doctor_writes_no_ledger_line](/Users/bayesian/Documents/G",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

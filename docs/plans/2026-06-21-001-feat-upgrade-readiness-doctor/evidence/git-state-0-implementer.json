@@ -8,14 +8,20 @@
     {
       "path": "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
       "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_doctor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F005-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F005-test-output.txt",
-    "docs/plans/2026-06-22-001-fix-dashboard-live-agents-projection/",
-    "scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py",
-    "scripts/dontpanic_orchestrate/upgrade_report.py"
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F006-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F006-doctor-upgrade-render-pytest.txt",
+    "scripts/dontpanic_orchestrate/tests/test_doctor_upgrade_render_f006.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []
