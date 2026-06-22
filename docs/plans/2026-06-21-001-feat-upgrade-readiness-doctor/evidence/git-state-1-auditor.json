@@ -24,20 +24,17 @@
     {
       "path": "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-1-implementer.json",
       "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/projects_registry.py",
-      "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F003-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F003-i1.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F003-i0.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F003-i1.json",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F003-predicate-registry-tests.txt",
-    "scripts/dontpanic_orchestrate/tests/test_upgrade_predicates_f003.py",
-    "scripts/dontpanic_orchestrate/upgrade_predicates.py"
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F005-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/claude-implementer-F005-i1.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F005-i0.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F005-i1.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F005-test-output.txt",
+    "docs/plans/2026-06-22-001-fix-dashboard-live-agents-projection/",
+    "scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py",
+    "scripts/dontpanic_orchestrate/upgrade_report.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

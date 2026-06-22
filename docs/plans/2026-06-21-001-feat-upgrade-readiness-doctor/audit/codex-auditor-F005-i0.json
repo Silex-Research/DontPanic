@@ -1,0 +1,40 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-06-22T14:59:56Z",
+  "completed_at": "2026-06-22T15:01:53Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F005-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-vd9uqls2 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 260282 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1071247,
+    "tokens_out": 10948,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. Target declaration in the implementer audit is correct, and `target_context.commands_run` contains no forbidden command shapes.\n\nFINDING (high, correctness): Unknown `applies_when` errors are not surfaced in the assembled report. Evidence: `_resolve_applies_when` creates an explicit error detail for unknown keys at `scripts/dontpanic_orchestrate/upgrade_report.py:346`, but `_build_item` only persists `applies` and `applies_when_key` at lines 387-388; no applies detail/error field is emitted. The test at `scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py:654` only checks `applies is True`, not that the F003 error detail appears. Recommendation: add pinned applies predicate detail/error fields, or another auditable error-detail surface, and assert unknown `applies_when` detail appears in JSON.\n\nChecks run:\n$ PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q -p no:cacheprovider\nBlocked before test collection: no usable writable temp directory in this read-only sandbox.\n\n$ ruff check scripts/dontpanic_orchestrate/upgrade_report.py scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py --no-cache\nPassed.",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q -p no:cacheprovider",
+      "ruff check scripts/dontpanic_orchestrate/upgrade_report.py scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py --no-cache"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F005",
+      "issue": "Unknown `applies_when` errors are not surfaced in the assembled report. Evidence: `_resolve_applies_when` creates an explicit error detail for unknown keys at `scripts/dontpanic_orchestrate/upgrade_report.py:346`, but `_build_item` only persists `applies` and `applies_when_key` at lines 387-388; no applies detail/error field is emitted. The test at `scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py:654` only checks `applies is True`, not that the F003 error detail appears. Recommen",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -201,12 +201,23 @@
         "fetched_upstream_commit",
         "last_seen_commit"
       ],
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002",
         "F003",
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-06-22T15:10:59Z"
     },
     {
       "id": "F006",

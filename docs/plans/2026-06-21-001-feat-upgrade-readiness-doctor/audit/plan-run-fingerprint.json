@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-06-22T14:12:37Z",
+  "captured_at": "2026-06-22T14:52:14Z",
   "decision_lines": [
     "D001\u001f297061b9497aafad361be36ef7256d54428b47d8d48487b58e1d39b91e2aa24f",
     "D002\u001f94647b5a3afff7d32163aa707587e184056dfcbe9fbd326ed231920c57cf8385",
@@ -58,7 +58,8 @@
     "D055\u001f51316137e34f44c0faa8c3510b05a2a335db29af472a09152147d03d3eee4eb1",
     "D056\u001fe37e2895f3a8081768f898b628a156f3b29406655ef9d51750846d220f525503",
     "D057\u001f22a227b06afdbf7ba0980b14b632132ee739632a14de5ed1ae424a17b4b786d1",
-    "D058\u001fd85017b3f59d666561e846cf57898399e6d28508794f3a43d5db3d035b056790"
+    "D058\u001fd85017b3f59d666561e846cf57898399e6d28508794f3a43d5db3d035b056790",
+    "D059\u001fd3eb8dc39c84f4ce291bcfc6a97291f5240bfccd25534efed83ee9083634e410"
   ],
   "features_semantics": {
     "by_id": {
@@ -90,7 +91,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F005": {
         "acceptance": "assemble_upgrade_report returns {summary:{installed_commit, latest_release_id, last_seen_release, update_state, pending_required, pending_advisory, upstream:{fetched_upstream_commit, upstream_status, remediation}}, required[], advisory[], migration_status[]}; required reflects live status_probe results gated by applies_when and carries ordered commands + success/failure copy; update_state is up_to_date|required_pending|advisories_pending|unknown per the count matrix; upstream_status is computed WITHOUT a network fetch in the default path (test asserts no fetch); installed_commit + upstream degrade to 'unknown' off-git. Tests cover summary + upstream computation and the pending logic. The summary carries last_seen_commit distinct from installed_commit (D023); each required[] item carries introduced_commands (D022); migration_status[] items expose release id, action id, applies status, probe key, satisfied flag, detail, and an evidence pointer (D024); an unknown predicate key surfaces an error detail with the required action pending and never crashes assembly (D026). introduced_commands is carried on both required[] AND advisory[] report items (D033), not required-only (test). Every required[] and advisory[] item carries the pinned shape: stable item id (upgrade:<release>:<action>), release id, action id, kind, severity, title, detail, applies, ordered commands, success/failure copy, human_next_step, docs_url, introduced_commands, and satisfied+probe-detail when probed (D041, test asserts the shape for both lists). When marker_state=absent the summary shows last_seen_release/last_seen_commit as 'never acknowledged' (null), not latest (D042, test). Each required[]/advisory[] item carries the original applies_when and status_probe keys (not only the resolved applies/satisfied booleans) so JSON output stays auditable (D046, test). Test output for this feature is captured under evidence/ at close (D048). migration_status[] includes every probe-backed action with its state (pending, satisfied, or not-applicable), not only pending, so a satisfied/not-applicable item still appears (D051, test).",
@@ -162,15 +163,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "7a3ba2e0c482b95a4a3689eaf4c52e7ced2ab048897c18f9c4dffda4b07affb5",
-    "decisions.jsonl": "02fa4c979359329928362264ac13cf8f795275b8ddb091d5883cea42b1204253",
-    "features.json": "0198ab0fef96b6e6f7fff7be8c04c3b1d6481a41b46025311e7a70e4c68d9b87",
+    "decisions.jsonl": "923b4f4a72dea36d1f2e11018b3a6ade0146267fc72f599331dfd0543baa6d71",
+    "features.json": "3595f421afaccfcf62b2f472baece84cd4b2e12faf29020c38994e0c96e47aee",
     "objective_contract.json": "16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
     "plan.md": "b4897ff3d0432cc1ded03be4c35955d1e6b9ca7772729c2e4b3796a39938386f"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1782087438.4475276,
-    "decisions.jsonl": 1782137550.759067,
-    "features.json": 1782137360.1855147,
+    "decisions.jsonl": 1782138541.3565125,
+    "features.json": 1782138415.1602955,
     "objective_contract.json": 1782065085.915136,
     "plan.md": 1782087249.8380733
   },

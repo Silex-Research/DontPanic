@@ -1,23 +1,25 @@
 {
   "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
-  "signoff_id": "2026-06-21-001-feat-upgrade-readiness-doctor#signoff#0",
-  "iteration": 0,
+  "signoff_id": "2026-06-21-001-feat-upgrade-readiness-doctor#signoff#1",
+  "iteration": 1,
   "tier": "cross-cutting",
   "agents_in_panel": [
     "claude"
   ],
   "audits": [
-    "audit/claude-implementer-F004-i0.json",
-    "audit/codex-auditor-F004-i0.json"
+    "audit/claude-implementer-F005-i0.json",
+    "audit/codex-auditor-F005-i0.json",
+    "audit/claude-implementer-F005-i1.json",
+    "audit/codex-auditor-F005-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 2,
-    "needs_changes_count": 0,
+    "signed_off_count": 3,
+    "needs_changes_count": 1,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
   "signoff": true,
-  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=0 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_state_f004.py + ride-along), not a defect. Operator verified: 20/20 tests; AST check confirms read_upgrade_state has zero write-ish calls (D015 no-silent-write) with writes isolated to write_upgrade_state/advance_marker/dismiss_advisory; dedicated test asserts NO file created after read on absent marker; three marker_state cases (absent|predates|known) covered and never-conflated (D040/D044); releases_since proven pure + non-mutating + never-raises on unknown/stale last_seen (D035); required actions independent of marker (D004). Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — Codex signed off iter=1 (no findings); terminal was patch-completeness hygiene (untracked test_upgrade_report_f005.py + ride-along), not a defect. Operator verified: 28/28 tests; upgrade_report.py has zero write-path references (read-only report assembly); full summary contract present (installed_commit, latest_release_id, last_seen_release, last_seen_commit, pending_required/advisory, update_state matrix up_to_date|required_pending|advisories_pending), upstream block (upstream_status, fetched_upstream_commit), migration_status[], introduced_commands D022/D033, original applies_when/status_probe keys D046. Codex pytest blocked by read-only sandbox; operator ran live.. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-06-22T14:26:55Z"
+  "decided_at": "2026-06-22T15:10:59Z"
 }

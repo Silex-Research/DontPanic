@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-opus-4-8[1m]",
+  "iteration": 1,
+  "started_at": "2026-06-22T15:01:53Z",
+  "completed_at": "2026-06-22T15:03:23Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/codex-auditor-F005-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-vd9uqls2 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3019 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 769920,
+    "tokens_out": 4833,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F005] The fix is complete and verified. Both the targeted test (28 passed) and ruff pass, and evidence is captured under `evidence/F005-test-output.txt`.\n\n**Finding [high, correctness] — Unknown `applies_when` errors not surfaced in the assembled report:** Addressed. The root cause was that `_resolve_applies_when` produces an explicit F003 error detail for unknown/raising keys, but `_build_item` flattened the result to just `applies` (the resolved bool) and `applies_when_key`, discarding `applies.detail` and `applies.error`. I added two pinned fields to `ReportItem` — `applies_detail` and `applies_error` — mirroring the existing `probe_detail`/`probe_error` surface for `status_probe`, and populated them in `_build_item` from the `applies` `PredicateResult`. Now a fail-OPEN unknown `applies_when` key keeps its error detail auditable in the JSON output (D026/D046) rather than collapsing to a silent `applies=True`. I also strengthened `test_unknown_applies_when_key_fails_open_action_shown` to assert `applies_error is True`, that `\"unknown applies_when key\"` appears in `applies_detail`, that the original key is preserved, and that all of this survives `report_to_dict` serialization — and added the two new fields to the pinned `_ITEM_FIELDS` shape set so the identical-shape test (D041) now enforces them on both `required[]` and `advisory[]`.\n\nSide-effect commands run:\n$ python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q\n$ ruff check scripts/dontpanic_orc",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q",
+      "ruff check scripts/dontpanic_orchestrate/upgrade_report.py scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py",
+      "python -m pytest scripts/dontpanic_orchestrate/tests/test_upgrade_report_f005.py -q > docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F005-test-output.txt 2>&1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}
