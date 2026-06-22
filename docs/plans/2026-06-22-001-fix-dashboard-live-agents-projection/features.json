@@ -1,0 +1,53 @@
+{
+  "task_id": "2026-06-22-001-fix-dashboard-live-agents-projection",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 0,
+      "description": "Pure projection from the loaded supervisors stream into the live-agents view shape the Work board renders. Reads the supervisors stream and returns a list of live-agent entries each carrying a stable id, a display name, a busy-or-idle status, the current plan/feature focus, and a last-updated stamp. Mirrors the existing legacy-precedence rule: derive from the stream only when the stream is present; never clobber a meaningful static value when the stream is absent; a present stream takes precedence. Output carries no secret shapes. Pure and read-only — no on-disk writes.",
+      "steps": [
+        "Add the projection helper alongside the existing plans-and-inbox projection",
+        "Map each supervisors-stream entry to the live-agents view shape (id, name, status, current focus, updated stamp)",
+        "Apply legacy-precedence: present stream wins; absent stream leaves a meaningful static value intact",
+        "Add unit coverage for present, empty, and partial-entry streams plus the no-secret-shape assertion"
+      ],
+      "acceptance": "A pure projection converts a loaded supervisors stream into the live-agents view shape and is covered for present, empty, and partial-entry inputs, with a present stream taking precedence and an absent stream leaving a meaningful static value intact; the projected output carries no secret shapes.",
+      "passes": false,
+      "depends_on": [],
+      "introduces": ["projectSupervisorsToAgents"]
+    },
+    {
+      "id": "F002",
+      "category": "observability",
+      "phase": 1,
+      "description": "Wire the new projection into the existing browser load path so a single load both adapts canonical state and lights up the live-agents lane. The projection runs at the same point the plans-and-inbox projection already runs, reads only the already-loaded supervisors stream, and writes no on-disk state. The Work board's live-agents lane renders from the projected output.",
+      "steps": [
+        "Invoke the new projection from the same load step as the plans-and-inbox projection",
+        "Confirm the live-agents lane in the Work board renders from the projected output",
+        "Confirm the load path performs no on-disk write"
+      ],
+      "acceptance": "The new projection runs inside the existing browser load path alongside the plans-and-inbox projection, the Work board live-agents lane renders from its output, and the load path performs no on-disk write.",
+      "passes": false,
+      "depends_on": ["F001"],
+      "introduces": []
+    },
+    {
+      "id": "F003",
+      "category": "test",
+      "phase": 2,
+      "description": "End-to-end honesty: prove a registered active supervisor surfaces as a live agent rather than via a hand-built fixture. The producer already sources the supervisors stream from the active-supervisor registry. A projection test whose input shape is bound to the producer stream entry contract (guarded so producer-shape drift fails the test) asserts that a registered active supervisor renders as one live agent with a non-zero running count through the real load-and-project path. Distinguishes nothing-running (honest zero) from running-but-not-surfaced (the bug this plan fixes).",
+      "steps": [
+        "Capture a supervisors-stream fixture whose shape is bound to the producer stream entry contract",
+        "Add a drift guard so a change to the producer entry shape fails this test",
+        "Assert a registered active supervisor renders as one live agent with a non-zero running count through the real load-and-project path",
+        "Assert the honest-zero case (empty stream) renders zero live agents"
+      ],
+      "acceptance": "A projection test whose input is bound to the producer stream entry contract (with a drift guard) shows a registered active supervisor rendering as one live agent with a non-zero running count through the real load-and-project path, while an empty stream renders an honest zero.",
+      "passes": false,
+      "depends_on": ["F001", "F002"],
+      "introduces": []
+    }
+  ]
+}

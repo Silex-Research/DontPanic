@@ -1,0 +1,44 @@
+{
+  "goal_type": "parity",
+  "source_of_truth": "Operator-reported (2026-06-22): the dashboard Work board renders zero live agents during an active volley even though a supervisor is registered. Investigation confirmed the producer side is healthy — the supervisors stream is derived from the active-supervisor registry and already carries a live-execution count — and the gap is purely on the dashboard consumer side: the browser projection adapts the plans stream into the legacy tasks shape and the inbox stream into the legacy activity shape, but leaves the legacy agents shape static, and no view consumes the supervisors stream. The fix is a small consumer-side projection from the loaded supervisors stream into the live-agents view shape, wired into the existing load path, and proven end to end.",
+  "completion_test": "Done when, with a registered active supervisor present in the loaded supervisors stream, the dashboard Work board renders that supervisor as one live agent with a non-zero running count through the real load-and-project path (not via a hand-built fixture), while an empty supervisors stream renders an honest zero; the projection is pure, read-only with respect to on-disk state, carries no secret shapes, and honors the legacy-precedence rule (present stream wins, absent stream leaves a meaningful static value intact).",
+  "user_journeys": [
+    {
+      "name": "operator-sees-live-volley-on-work-board",
+      "description": "An operator opens the dashboard while a volley is running. A supervisor is registered, so the loaded supervisors stream is non-empty. The Work board's live-agents lane shows that supervisor as a busy agent with its current plan/feature focus, and the running count is non-zero — instead of the previous always-zero.",
+      "surfaces": ["read_only_ui"],
+      "states": ["supervisors_stream_loaded", "projection_run", "live_agents_rendered", "no_mutation"],
+      "acceptance_signals": [
+        "A registered active supervisor in the loaded supervisors stream renders as one live agent in the Work board live-agents lane",
+        "The running count is non-zero when at least one supervisor is registered",
+        "An empty supervisors stream renders an honest zero (nothing-running is distinguished from running-but-not-surfaced)",
+        "The projection runs inside the existing browser load path alongside the plans-and-inbox projection and performs no on-disk write",
+        "The projected output contains no secret shapes",
+        "Legacy-precedence holds: a present supervisors stream wins; an absent stream leaves a meaningful static value intact"
+      ]
+    },
+    {
+      "name": "producer-bound-end-to-end-proof",
+      "description": "The end-to-end proof enters through the producer stream contract rather than a hand-built fixture: a projection test whose input shape is bound to the active-supervisor-registry-sourced stream entry contract, with a drift guard, proves the lane lights up from real producer shape.",
+      "surfaces": ["read_only_ui"],
+      "states": ["producer_contract_bound", "drift_guarded", "projection_proven"],
+      "acceptance_signals": [
+        "The end-to-end test fixture shape is bound to the producer supervisors-stream entry contract",
+        "A change to the producer entry shape fails the test (drift guard)",
+        "A registered active supervisor renders as one live agent with a non-zero running count through the real load-and-project path"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "test_output for the pure projection across present, empty, and partial-entry streams incl. legacy-precedence and no-secret-shape (F001)",
+    "test_output proving the projection runs in the existing load path with no on-disk write (F002)",
+    "test_output for the producer-contract-bound, drift-guarded end-to-end proof that a registered supervisor renders as a live agent with a non-zero running count, and that an empty stream renders an honest zero (F003)"
+  ],
+  "non_goals": [
+    "Changing the Python producer or the active-supervisor registry (already correct)",
+    "Adding a new dashboard page, tab, or visual redesign",
+    "Realtime/websocket push or any change to the load/refresh cadence",
+    "Mixing the plans-derived tasks shape into the live-agents lane",
+    "Any change to the upgrade-readiness plan or other active plans"
+  ]
+}
