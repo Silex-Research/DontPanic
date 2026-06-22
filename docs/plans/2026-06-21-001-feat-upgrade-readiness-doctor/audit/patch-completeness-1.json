@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "test_file_untracked",
+      "files": [
+        "scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py"
+      ],
+      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
+      "severity": "block",
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py"
+    },
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md",
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/transcript.md",
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-implementer.json",
+        "pyproject.toml",
+        "scripts/dontpanic_orchestrate/data/releases.json"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/transcript.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-auditor.json,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-implementer.json,pyproject.toml,scripts/dontpanic_orchestrate/data/releases.json",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/INBOX.md",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/plan-run-fingerprint.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/audit/transcript.md",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/git-state-0-implementer.json",
+    "pyproject.toml",
+    "scripts/dontpanic_orchestrate/data/releases.json"
+  ]
+}

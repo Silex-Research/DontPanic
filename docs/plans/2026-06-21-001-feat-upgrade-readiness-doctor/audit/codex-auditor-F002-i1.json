@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "audit_id": "2026-06-21-001-feat-upgrade-readiness-doctor#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-06-22T13:34:32Z",
+  "completed_at": "2026-06-22T13:35:47Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F002-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-06-21-001-feat-upgrade-readiness-doctor-803y3nkm target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 101536 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 452143,
+    "tokens_out": 7316,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: signed_off. No findings. The implementer audit declares `Repo: DontPanic`, `Env: dev`, and `Project: (none)` correctly; `target_context.commands_run` contains only a local pytest command and no forbidden command shapes. The seed manifest and packaged mirror validate against the canonical schema, the baseline is below the earliest seeded release, canonical discovery is `required` with preview/apply/verify and a non-null probe, and evidence captures the implementer’s 15 passing tests.\n\nChecks run:\n$ git status --short  \n$ git diff --stat HEAD~1  \n$ PYTHONPATH=../scripts PYTHONDONTWRITEBYTECODE=1 python3 -m pytest ../scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py -q -p no:cacheprovider  \n$ PYTHONPATH=../scripts PYTHONDONTWRITEBYTECODE=1 python3 -c 'import json; from pathlib import Path; import jsonschema; from dontpanic_orchestrate.release_manifest import load_release_manifest; root=Path(\"..\").resolve(); schema=json.loads((root/\"claude/shared/schemas/v1.0/upgrade-releases.schema.json\").read_text()); docs=json.loads((Path(\"upgrade/releases.json\")).read_text()); pkg=json.loads((root/\"scripts/dontpanic_orchestrate/data/releases.json\").read_text()); jsonschema.validate(instance=docs, schema=schema); jsonschema.validate(instance=pkg, schema=schema); m=load_release_manifest(Path(\"upgrade/releases.json\")); assert m.baseline_date == \"2026-06-13\"; rel=next(r for r in m.releases if r.id == \"2026-06-17-001-ca",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short",
+      "git diff --stat HEAD~1",
+      "PYTHONPATH=../scripts PYTHONDONTWRITEBYTECODE=1 python3 -m pytest ../scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py -q -p no:cacheprovider",
+      "PYTHONPATH=../scripts PYTHONDONTWRITEBYTECODE=1 python3 -c 'import json; from pathlib import Path; import jsonschema; from dontpanic_orchestrate.release_manifest import load_release_manifest; root=Path(\"..\").resolve(); schema=json.loads((root/\"claude/shared/schemas/v1.0/upgrade-releases.schema.json\").read_text()); docs=json.loads((Path(\"upgrade/releases.json\")).read_text()); pkg=json.loads((root/\"scripts/dontpanic_orchestrate/data/releases.json\").read_text()); jsonschema.validate(instance=docs, schema=schema); jsonschema.validate(instance=pkg, schema=schema); m=load_release_manifest(Path(\"upgrade/releases.json\")); assert m.baseline_date == \"2026-06-13\"; rel=next(r for r in m.releases if r.id == \"2026-06-17-001-canonical-discovery\"); action=rel.actions[0]; assert action.kind.value == \"required\" and action.status_probe; assert [c.label.value for c in action.commands] == [\"preview\", \"apply\", \"verify\"]; print(\"validated\", m.baseline_release, len(m.releases))'"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

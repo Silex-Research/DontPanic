@@ -1,0 +1,9 @@
+# F002 iteration 1 — release manifest seed + packaging tests (post-audit fixes)
+# Command: PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py -q
+
+...............                                                          [100%]
+15 passed in 2.07s
+
+# Direct JSON Schema validation of the seed (round-i0 high finding):
+schema-valid: docs/upgrade/releases.json
+schema-valid: scripts/dontpanic_orchestrate/data/releases.json

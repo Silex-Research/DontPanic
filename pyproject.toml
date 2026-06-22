@@ -81,11 +81,15 @@ include = ["dontpanic_orchestrate*", "jarvis_orchestrate*"]
 exclude = ["dontpanic_orchestrate.tests*"]
 
 [tool.setuptools.package-data]
-# F001 / D045: the upgrade release manifest ships as package data so
-# load_release_manifest resolves it via importlib.resources from an installed
-# wheel, off-git, and from any cwd — not by walking `__file__` to a repo-root
-# layout. `docs/upgrade/releases.json` is authored separately and is NOT the
-# resolved source.
+# F001 / D045 / D049: the upgrade release manifest (releases.json) AND its JSON
+# Schema (upgrade-releases.schema.json) ship as package data so
+# load_release_manifest resolves the manifest via importlib.resources from an
+# installed wheel, off-git, and from any cwd — not by walking `__file__` to a
+# repo-root layout — and the schema travels alongside it for packaged
+# validation. `docs/upgrade/releases.json` is authored separately and is NOT the
+# resolved source; the canonical schema lives under claude/shared/schemas and is
+# mirrored into data/ (drift-guarded by a test). The `data/*.json` glob covers
+# both files.
 dontpanic_orchestrate = ["data/*.json"]
 
 [tool.ruff]

@@ -1,0 +1,12 @@
+# Ship the upgrade release manifest AND its JSON Schema as package data in the
+# SDIST (D049).
+#
+# The wheel already gets them via [tool.setuptools.package-data] in
+# pyproject.toml (dontpanic_orchestrate = ["data/*.json"]). The sdist, however,
+# is built from the file manifest, so the package-data JSON must be listed here
+# explicitly or it would be omitted from the source distribution — and the D045
+# package-relative loader would then fail to find releases.json when installed
+# from an sdist. The glob also covers upgrade-releases.schema.json so the schema
+# travels with the manifest. Path is relative to the project root (where
+# pyproject.toml is); the package source tree lives under scripts/.
+include scripts/dontpanic_orchestrate/data/*.json

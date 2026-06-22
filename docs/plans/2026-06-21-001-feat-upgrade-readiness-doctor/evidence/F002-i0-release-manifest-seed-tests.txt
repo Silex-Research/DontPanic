@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/bayesian/.pyenv/versions/3.10.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/Documents/GitHub/DontPanic
+configfile: pyproject.toml
+plugins: anyio-4.12.1, typeguard-4.5.1
+collecting ... collected 42 items
+
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_seed_loads_and_validates PASSED [  2%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_seed_carries_baseline PASSED [  4%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_baseline_orders_strictly_below_earliest_seeded_release PASSED [  7%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_releases_authored_oldest_to_newest PASSED [  9%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_experience_readiness_advisories_present PASSED [ 11%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_experience_readiness_summary_mirrors_changelog_plans PASSED [ 14%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_canonical_discovery_is_required_with_non_null_probe PASSED [ 16%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_canonical_discovery_has_ordered_preview_apply_verify PASSED [ 19%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_canonical_discovery_has_verify_labeled_command PASSED [ 21%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_canonical_discovery_rich_fields PASSED [ 23%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_docs_seed_matches_packaged_seed PASSED [ 26%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_releases_json_packaged_in_wheel_and_sdist PASSED [ 28%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest_seed.py::test_loads_from_installed_wheel PASSED [ 30%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_valid_manifest_parses_full_field_set PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_advisory_accepts_empty_commands_and_null_probe PASSED [ 35%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_missing_baseline_rejected PASSED [ 38%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_unknown_kind_rejected PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_unknown_severity_rejected PASSED [ 42%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_unknown_command_label_rejected PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_missing_required_field_rejected PASSED [ 47%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_non_date_date_rejected PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_non_date_baseline_date_rejected PASSED [ 52%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_unknown_key_rejected PASSED [ 54%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_malformed_json_rejected PASSED [ 57%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_missing_file_raises_not_found PASSED [ 59%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_null_status_probe_rejected PASSED [ 61%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_empty_status_probe_rejected PASSED [ 64%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_advisory_action_null_status_probe_accepted PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_empty_commands_rejected PASSED [ 69%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_no_apply_command_rejected PASSED [ 71%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_missing_verify_rejected PASSED [ 73%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_out_of_order_labels_rejected PASSED [ 76%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_required_action_preview_after_apply_rejected PASSED [ 78%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_duplicate_release_ids_rejected PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_duplicate_action_ids_within_release_rejected PASSED [ 83%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_blank_command_string_rejected PASSED [ 85%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_default_manifest_path_resolves_off_cwd_and_git PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_default_manifest_path_does_not_consult_cwd_releases PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_default_manifest_resolves_inside_package PASSED [ 92%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_loads_from_isolated_installed_package PASSED [ 95%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_packaged_manifest_matches_authored_docs_copy PASSED [ 97%]
+scripts/dontpanic_orchestrate/tests/test_release_manifest.py::test_packaged_model_matches_shared_mirror PASSED [100%]
+
+============================== 42 passed in 2.15s ==============================
