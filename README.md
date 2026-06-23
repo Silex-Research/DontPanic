@@ -1,26 +1,34 @@
 # DontPanic
 
+> Rival AI models build, review, and verify each other's code — on your machine.
 > Trust infrastructure for AI coding agents.
+
+> Prompting gives you output. Agent loops give you momentum.
+> **DontPanic gives you governed delivery.**
 
 ![DontPanic social preview](./docs/assets/dontpanic-social-preview.jpg)
 
 AI agents can write real software now. The open question isn't whether they can
 produce code — it's whether you should ship what they produce without looking.
 
-DontPanic is the layer that makes that decision safe. It pins an agent's work to
-a plan it can't quietly rewrite, has a **different** AI model review the result,
-stops and asks a human before anything risky lands, and keeps the receipts.
+**DontPanic is a governed software delivery system where rival AI coding agents
+build, review, and verify each other's work — on your machine.** One model
+builds; a different vendor's model reviews it; the outcome is verified on the
+real surface, not just asserted; risky steps stop at a human gate; and every
+decision leaves a receipt. Nothing leaves your machine unless you send it.
 
 Think of it as code review, CI, and an approval queue — but built for the case
 where the author is an AI.
 
 **Never let the same AI that wrote the code be the only AI that approves it.**
 
-It works with Claude Code, Codex, Gemini, Grok, local models, OpenClaw / Hermes
-workflows, and any MCP-enabled tool.
+Local-first and multi-vendor by design: Claude Code, Codex, Gemini, Grok, local
+models, OpenClaw / Hermes workflows, and any MCP-enabled tool. No vendor lock-in;
+no data egress you didn't ask for.
 
-**Status:** public alpha. Ready for source installs by people comfortable with
-local agent CLIs and command-line work.
+**Status:** public alpha, single-operator. Ready for source installs by people
+comfortable with local agent CLIs. (Team/RBAC governance is not built yet — the
+gates today are *your* gates.)
 
 ## The problem
 
@@ -86,6 +94,22 @@ A plan isn't bureaucracy here. It's the memory anchor that keeps an agent from
 slowly drifting off the objective while still sounding coherent. The cross-model
 audit isn't theater either: a model reviewing its own work tends to rationalize
 its own mistakes, the same way you can't proofread your own typo.
+
+## Capabilities at a glance
+
+Six things DontPanic does, mapped to the controls a senior engineer gets for free:
+
+| | Capability | What it means |
+|---|---|---|
+| **Build** | Plan-driven implementation | An agent implements against a locked plan whose acceptance criteria are the contract the work is graded against. |
+| **Review** | Cross-vendor adversarial audit | A *different vendor's* model audits the code, tests, security assumptions, architecture, and the plan itself. Different model families miss different things. |
+| **Verify** | Outcome demonstrated, not asserted | At close time, a claimed user-facing outcome must be shown on the real surface (screen, API, tool) — not faked with seed data or asserted in prose, or the close is blocked. |
+| **Govern** | Plan lock + sufficiency + human gates | Work can't start until a rival model agrees the plan is complete enough (pre-impl sufficiency gate); scope can't drift silently (scope-change protocol); risky steps stop at a human approve/reject gate; every decision lands in an append-only ledger. |
+| **Contain** | Cost + blast-radius limits | Token budgets and a no-progress breaker stop runaway loops (the "$40 looping on a red test" problem); a global kill-switch sits behind them; runs are sandboxed with forbidden-command-shape blocking and target env/project pinning so an agent can't fire destructive or prod commands. |
+| **Observe** | Receipts + local dashboard | Transcripts, audit JSON, sign-offs, gate state, and an `INBOX.md` log — all on disk. A local, secret-scrubbed dashboard shows what's running, what's blocked, and what needs you. `dontpanic doctor` reports instance health and, after an update, what changed and what to run. |
+
+Everything runs locally and works across model vendors — so you keep data
+sovereignty and avoid model lock-in.
 
 ## See it in action
 
