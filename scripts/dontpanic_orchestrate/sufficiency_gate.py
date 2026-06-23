@@ -161,18 +161,24 @@ def _features_contract_hash(features_json: Path) -> str:
     pre-impl override stale for F002. Contract-bearing fields such as
     description, steps, acceptance, dependencies, and introduces remain
     hash-bound.
+
+    Contract-stripping is a *refinement* for well-formed
+    ``{"features": [...]}`` files, not a validation gate. A features.json that
+    cannot be parsed, is not a JSON object, or lacks a top-level features list
+    falls back to hashing the raw file bytes — the conservative pre-D002
+    behavior. This keeps the sufficiency gate's refusal and override-staleness
+    paths robust on shapeless/placeholder fixtures (which the gate must still be
+    able to *evaluate findings* on) while binding the override to file content.
     """
     try:
         raw = json.loads(features_json.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise SufficiencyGateError(f"{features_json}: malformed features.json: {exc}") from exc
-    if not isinstance(raw, dict):
-        raise SufficiencyGateError(f"{features_json}: features.json must be a JSON object")
-    features = raw.get("features")
-    if not isinstance(features, list):
-        raise SufficiencyGateError(
-            f"{features_json}: features.json must contain a top-level features list"
-        )
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        # Unreadable, non-UTF-8, or unparseable -> bind the override to the raw
+        # file bytes (matches _sha256_hex, which reads bytes and never decodes).
+        return _sha256_hex(features_json)
+    if not isinstance(raw, dict) or not isinstance(raw.get("features"), list):
+        return _sha256_hex(features_json)
+    features = raw["features"]
 
     normalized: dict[str, Any] = {}
     for key, value in raw.items():
