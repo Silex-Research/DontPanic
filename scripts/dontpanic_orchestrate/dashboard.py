@@ -894,7 +894,20 @@ def build(
 
                 _wn = _json.loads((out_dir / "what-now.json").read_text(encoding="utf-8"))
                 _wn_items = _wn.get("items", []) if isinstance(_wn, dict) else _wn
-                _operator_triage.write_triage_state(_wn_items, out_dir / "operator-triage.json")
+                # Join the live active-supervisors registry so the operator
+                # console's run_state (idle/running/conflicted) is live — without
+                # it every item reads "idle" → "0 running" even mid-volley.
+                # Inner guard: a registry IO error degrades to [] so the triage
+                # emission still happens (the outer except would drop it).
+                try:
+                    _live_supervisors = active_supervisors.live_supervisor_rows()
+                except Exception:  # noqa: BLE001 — registry is best-effort
+                    _live_supervisors = []
+                _operator_triage.write_triage_state(
+                    _wn_items,
+                    out_dir / "operator-triage.json",
+                    live_supervisors=_live_supervisors,
+                )
             except Exception as _ot_exc:  # noqa: BLE001
                 warnings.append(f"operator-triage state skipped: {_ot_exc}")
             # Worktree Isolation v0 F007 — write the worktree-status MODEL

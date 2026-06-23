@@ -155,21 +155,16 @@ def load_fleet_items(path: str | os.PathLike[str] | None = None) -> list[dict]:
 
 
 def _live_supervisors() -> list[dict]:
-    """Live SupervisorEntry rows (alive pids), best-effort and read-only."""
+    """Live SupervisorEntry rows (alive pids), best-effort and read-only.
+
+    Delegates to ``active_supervisors.live_supervisor_rows()`` so there is one
+    source of truth for the operator-triage run_state join — the CLI brief and
+    the dashboard build sites read identically shaped rows.
+    """
     try:
         from dontpanic_orchestrate import active_supervisors as asup
 
-        rows = asup._read_all()  # noqa: SLF001 — read-only registry access
-        out: list[dict] = []
-        for e in rows:
-            pid = getattr(e, "pid", None)
-            if pid is not None and asup._is_pid_alive(pid):  # noqa: SLF001
-                out.append(
-                    {"plan_id": getattr(e, "plan_id", None), "pid": pid,
-                     "started_at": getattr(e, "started_at", None),
-                     "agent": getattr(e, "agent", None), "session": getattr(e, "session", None)}
-                )
-        return out
+        return asup.live_supervisor_rows()
     except Exception:
         return []
 

@@ -1168,10 +1168,21 @@ def build_fleet_what_now(
     # so a failure here PROPAGATES (explicit build/state contract). dedupe=False —
     # payload["items"] is already deduped by (scope, dedupe_key); build_triage's
     # bare-key dedupe would over-collapse cross-project same-key items.
+    from dontpanic_orchestrate import active_supervisors as _active_supervisors
     from dontpanic_orchestrate import operator_triage as _operator_triage
 
+    # Join the live active-supervisors registry so the Cockpit / Work board
+    # running count is non-zero during an active volley (derive_run_state
+    # idle/running/conflicted). Without this kwarg the registry defaults to
+    # empty and every item reads "idle" → "0 running" even mid-volley. Degrade
+    # to [] on any registry IO error so the build never fails on the registry.
+    try:
+        _live_supervisors = _active_supervisors.live_supervisor_rows()
+    except Exception:  # noqa: BLE001 — registry is best-effort, never fatal
+        _live_supervisors = []
     _operator_triage.write_triage_state(
         payload["items"], target.parent / FLEET_TRIAGE_FILENAME, dedupe=False,
+        live_supervisors=_live_supervisors,
         generated_at=now_iso,  # F004 — staleness reference for the Cockpit
     )
     # Worktree Isolation v0 F007 (fleet parity) — the worktree registry is

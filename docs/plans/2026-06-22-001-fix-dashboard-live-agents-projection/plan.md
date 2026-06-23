@@ -3,7 +3,7 @@ id: 2026-06-22-001-fix-dashboard-live-agents-projection
 title: Surface live volley/supervisor state in the dashboard Work board
 type: fix
 tier: cross-cutting
-status: draft
+status: abandoned
 date: "2026-06-22"
 goal_type: parity
 description: >

@@ -136,6 +136,28 @@ def list_active(*, prune: bool = True) -> list[SupervisorEntry]:
     return alive
 
 
+def live_supervisor_rows() -> list[dict]:
+    """Live supervisor rows as plain dicts for the operator-triage run_state
+    join (idle/running/conflicted). Alive-pid filtered, best-effort, read-only;
+    a missing/corrupt registry yields []."""
+    try:
+        rows = _read_all()
+    except Exception:
+        return []
+    out: list[dict] = []
+    for e in rows:
+        pid = getattr(e, "pid", None)
+        if pid is not None and _is_pid_alive(pid):
+            out.append({
+                "plan_id": getattr(e, "plan_id", None),
+                "pid": pid,
+                "started_at": getattr(e, "started_at", None),
+                "agent": getattr(e, "agent", None),
+                "session": getattr(e, "session", None),
+            })
+    return out
+
+
 def check_reentrancy(plan_id: str) -> SupervisorEntry | None:
     """Return any live entry sharing this plan_id (any PID), else None.
     Supervisor uses this to warn before launching a parallel run on the same

@@ -1,0 +1,58 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:f2142c5a760ad53f7f8e246a94bd2b5811d838029e8fe8fc445639576b57cdcc",
+  "generated_at": "2026-06-23T05:54:52Z",
+  "findings": [
+    {
+      "severity": "high",
+      "journey_id": "operator-sees-live-volley-on-work-board",
+      "gap_class": "parity_gap",
+      "description": "The proposed projection lists id, name, status, focus, and updated stamp, but does not pin how the producer live-execution count becomes the Work board running count. This leaves room for rendering one supervisor row while the visible running count still stays zero.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Define the deterministic count rule before implementation, including whether the UI count is row count, busy-row count, or the producer live-execution count, and test that a registered supervisor with live executions renders a non-zero running count.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "operator-sees-live-volley-on-work-board",
+      "gap_class": "wiring_gap",
+      "description": "Legacy precedence is covered at the pure helper level, but the load-path feature does not explicitly preserve the distinction between an absent supervisors stream and a present empty stream. If the loader normalizes absence to an empty array, static live-agent state can be incorrectly clobbered.",
+      "feature_refs": [
+        "F001",
+        "F002"
+      ],
+      "recommendation": "Pin a three-state load contract for supervisors: absent leaves meaningful static agents intact, present empty renders honest zero, and present non-empty projects live agents.",
+      "finding_class": "implementation_detail"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "producer-bound-end-to-end-proof",
+      "gap_class": "integration_gap",
+      "description": "F003 requires a producer-contract-bound drift guard, but the plan does not name the contract artifact or generation mechanism. A copied fixture could satisfy the wording while still failing to detect drift in the real active-supervisor-registry-derived stream shape.",
+      "feature_refs": [
+        "F003"
+      ],
+      "recommendation": "Specify the concrete binding point, such as an exported schema, serializer sample, or contract fixture generated from producer code, and make the drift guard fail on field rename, removal, or shape change.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "operator-sees-live-volley-on-work-board",
+      "gap_class": "coverage_gap",
+      "description": "Partial-entry coverage is required, but the proposed features do not define which supervisor fields are required, which are optional, or what fallback values are acceptable for missing focus, timestamps, names, status, or counts.",
+      "feature_refs": [
+        "F001"
+      ],
+      "recommendation": "Add a small field matrix for partial entries before implementation so tests assert deterministic fallbacks instead of merely accepting any non-crashing projection.",
+      "finding_class": "matrix_pin"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}
