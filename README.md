@@ -1,10 +1,7 @@
 # DontPanic
-
-> Rival AI models build, review, and verify each other's code — on your machine.
 > Trust infrastructure for AI coding agents.
-
-> Prompting gives you output. Agent loops give you momentum.
-> **DontPanic gives you governed delivery.**
+> 
+> Rival AI models build, review, and verify each other's code — on your machine.
 
 ![DontPanic platform overview](./docs/assets/dontpanic-platform-overview.png)
 
