@@ -3,7 +3,7 @@ id: 2026-06-21-001-feat-upgrade-readiness-doctor
 title: Upgrade-readiness layer in `dontpanic doctor` (release manifest + probes + marker)
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-06-21"
 goal_type: new_feature
 description: >

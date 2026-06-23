@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "Evidence exists and was verified live, not absent: 187 plan-module tests + 93 JS tests green; F010 e2e journey transcript + live --upgrade --json captured under evidence/; independent whole-change codex audit returned APPROVE after its one finding (drift-lint warn-only, b27beaa) was fixed + re-audited. The completion gate is the v1_evidence_coverage_heuristic substring matcher (D002) which only inspects EvidenceRef uri/note metadata (not artifact bytes) and per its own narrative does not certify journey correctness; the per-feature operator-resolved closes registered closeout-memo refs rather than the matcher strings. Operator override per the plan-close design (override recorded to evidence/goal-governance/post_impl/override.json).",
+  "approved_by": "bayesian",
+  "approved_at": "2026-06-23T05:00:05Z",
+  "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "cluster cli_human/operator-updates-and-sees-what-to-run (9 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:6ef4701a03c95c06fea0553b05b59e1c3f3e4cbaeaa6e52fdcb97095ee6fd7d8",
+  "objective_contract_hash": "sha256:16c8f1fa909a00742a206af0c279b42c4c82e1c02ad9815fac3cec36a4f7e1b0",
+  "completion_findings_hash": "sha256:bb153d95c2ff69761d594dd7181a42d4252d09edefbae36e58789c75a9353a20",
+  "evidence_manifest_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,7 +1,7 @@
 # F010 — after-git-pull update journey (real doctor CLI, out-of-process)
 
-instance home: /Users/bayesian/.dontpanic-f010-e2e-89425/home
-fixture project (cwd): /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project
+instance home: /Users/bayesian/.dontpanic-f010-e2e-74843/home
+fixture project (cwd): /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project
 
 ## 1. Fresh update (no marker): plain `dontpanic doctor --skip-auth --json`
 $ python -m dontpanic_orchestrate doctor --skip-auth --json
@@ -61,7 +61,7 @@ stdout:
     {
       "name": "sa-key-age",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home/.secrets not present (no SA keys to age-check)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/.secrets not present (no SA keys to age-check)",
       "remediation": "",
       "warn": false
     },
@@ -110,14 +110,14 @@ stdout:
     {
       "name": "quota-caps",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
       "remediation": "",
       "warn": false
     },
     {
       "name": "global-config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
       "remediation": "",
       "warn": false
     },
@@ -131,22 +131,22 @@ stdout:
     {
       "name": "project:fixture-project:path",
       "ok": true,
-      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project",
+      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:plans-dir",
       "ok": true,
-      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/docs/plans (parent dir also missing)",
-      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/.dontpanic/dontpanic.json",
+      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/docs/plans (parent dir also missing)",
+      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json",
       "warn": true
     },
     {
@@ -742,7 +742,7 @@ stdout:
           "state": "stale_major",
           "architecture_path": "/Users/bayesian/Documents/GitHub/DontPanic/docs/architecture/architecture.json",
           "stored_fingerprint": "b3dc608f06b214efadeb9b17c1dba1f212100a4f606a7aef3019c39b08d41306",
-          "current_fingerprint": "71da85528a3b62572e167e57d51ddd931e8e3a25be87a228800d3280622344f6",
+          "current_fingerprint": "3b152cb29e0407af6fd93a0c0420e3001ba957997369e42864e0de8f96f8a68e",
           "changed_files": {
             "added": [
               "claude/shared/schemas/v1.0/models/experience_readiness.py",
@@ -856,7 +856,7 @@ stdout:
     {
       "name": "dashboard-cache",
       "ok": true,
-      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-89425/home/dashboard/what-now.json",
+      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-74843/home/dashboard/what-now.json",
       "remediation": "run: dontpanic dashboard build",
       "warn": true
     },
@@ -1082,9 +1082,9 @@ stdout:
   "registered_active": [],
   "registered_stale": [
     {
-      "canonical_repo_key": "b09716a6d8bddeb5",
+      "canonical_repo_key": "21bb34ac465755aa",
       "registry_name": "fixture-project",
-      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-89425/fixture-project",
+      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-74843/fixture-project",
       "observed_count": 0,
       "last_seen": null,
       "registry_conflict": false,
@@ -1179,8 +1179,8 @@ $ python -m dontpanic_orchestrate projects backfill-canonical
 rc=0
 stdout:
 [projects backfill-canonical] mode: write
-  ledger:   /Users/<operator>/.dontpanic-f010-e2e-89425/home/invocations.jsonl
-  evidence: /Users/<operator>/.dontpanic-f010-e2e-89425/home/canonical-backfill-evidence.json
+  ledger:   /Users/<operator>/.dontpanic-f010-e2e-74843/home/invocations.jsonl
+  evidence: /Users/<operator>/.dontpanic-f010-e2e-74843/home/canonical-backfill-evidence.json
   stamped:         3
   already stamped: 1
   would skip:      0
@@ -1193,11 +1193,11 @@ stdout:
   "used_unregistered": [],
   "registered_active": [
     {
-      "canonical_repo_key": "b09716a6d8bddeb5",
+      "canonical_repo_key": "21bb34ac465755aa",
       "registry_name": "fixture-project",
-      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-89425/fixture-project",
+      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-74843/fixture-project",
       "observed_count": 5,
-      "last_seen": "2026-06-22T17:51:20Z",
+      "last_seen": "2026-06-23T04:59:12Z",
       "registry_conflict": false,
       "conflicting_registry_names": []
     }
@@ -1300,7 +1300,7 @@ stdout:
     {
       "name": "sa-key-age",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home/.secrets not present (no SA keys to age-check)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/.secrets not present (no SA keys to age-check)",
       "remediation": "",
       "warn": false
     },
@@ -1349,14 +1349,14 @@ stdout:
     {
       "name": "quota-caps",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
       "remediation": "",
       "warn": false
     },
     {
       "name": "global-config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
       "remediation": "",
       "warn": false
     },
@@ -1370,22 +1370,22 @@ stdout:
     {
       "name": "project:fixture-project:path",
       "ok": true,
-      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project",
+      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:plans-dir",
       "ok": true,
-      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/docs/plans (parent dir also missing)",
-      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-89425/fixture-project/.dontpanic/dontpanic.json",
+      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/docs/plans (parent dir also missing)",
+      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json",
       "warn": true
     },
     {
@@ -1981,7 +1981,7 @@ stdout:
           "state": "stale_major",
           "architecture_path": "/Users/bayesian/Documents/GitHub/DontPanic/docs/architecture/architecture.json",
           "stored_fingerprint": "b3dc608f06b214efadeb9b17c1dba1f212100a4f606a7aef3019c39b08d41306",
-          "current_fingerprint": "71da85528a3b62572e167e57d51ddd931e8e3a25be87a228800d3280622344f6",
+          "current_fingerprint": "3b152cb29e0407af6fd93a0c0420e3001ba957997369e42864e0de8f96f8a68e",
           "changed_files": {
             "added": [
               "claude/shared/schemas/v1.0/models/experience_readiness.py",
@@ -2095,7 +2095,7 @@ stdout:
     {
       "name": "dashboard-cache",
       "ok": true,
-      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-89425/home/dashboard/what-now.json",
+      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-74843/home/dashboard/what-now.json",
       "remediation": "run: dontpanic dashboard build",
       "warn": true
     },
