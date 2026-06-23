@@ -96,12 +96,22 @@ def check_changelog_manifest_drift(
     that date. Sections at/before the baseline are exempt. This function is pure and
     never raises on drift — it only collects findings (warn-only, D008).
     """
-    baseline = date.fromisoformat(manifest.baseline_date)
+    try:
+        baseline = date.fromisoformat(manifest.baseline_date)
+    except ValueError:
+        # Defensive: the manifest model normally guarantees an ISO baseline_date,
+        # but warn-only means we never raise — if it is somehow malformed we
+        # cannot compute drift, so report none (D008).
+        return []
     covered_dates = {release.date for release in manifest.releases}
 
     findings: list[DriftFinding] = []
     for section in parse_changelog_sections(changelog_text):
-        if date.fromisoformat(section.date) <= baseline:
+        try:
+            section_day = date.fromisoformat(section.date)
+        except ValueError:
+            continue  # malformed CHANGELOG date -> skip this section, never raise (D008)
+        if section_day <= baseline:
             continue  # at/before baseline -> intentionally not seeded (D018)
         if section.date in covered_dates:
             continue  # a manifest release shares this date -> covered
@@ -154,8 +164,20 @@ def format_findings(findings: list[DriftFinding]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Warn-only CLI entry point: print the advisory and ALWAYS exit 0 (D008)."""
-    findings = lint_repo()
+    """Warn-only CLI entry point: print the advisory and ALWAYS exit 0 (D008).
+
+    Never raises: any failure loading the manifest or reading the CHANGELOG
+    (missing/unreadable file, malformed JSON) is degraded to an advisory line and
+    a 0 exit, so the lint can never block a build (the F009 warn-only invariant).
+    """
+    try:
+        findings = lint_repo()
+    except Exception as exc:  # noqa: BLE001 — warn-only: degrade, never block (D008)
+        print(
+            "CHANGELOG <-> manifest drift lint: skipped (could not run: "
+            f"{type(exc).__name__}). Advisory-only; not a failure."
+        )
+        return 0
     print(format_findings(findings))
     return 0
 

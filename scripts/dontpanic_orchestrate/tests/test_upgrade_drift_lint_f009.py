@@ -161,3 +161,40 @@ def test_format_findings_is_human_readable_and_empty_safe() -> None:
 
 def test_default_changelog_relpath_points_at_root_changelog() -> None:
     assert DEFAULT_CHANGELOG_RELPATH.name == "CHANGELOG.md"
+
+
+# ────────────  warn-only hardening: never raises on bad input (codex pre-merge)  ────────────
+
+
+def test_malformed_changelog_date_is_skipped_not_raised() -> None:
+    """A malformed CHANGELOG dated section must be skipped, never raise (D008).
+
+    Codex whole-change audit finding: date.fromisoformat() on a bad section date
+    would propagate out of the lint. The pure checker must tolerate it and still
+    report drift for the well-formed post-baseline sections.
+    """
+    manifest = _manifest("2026-06-13", [])  # baseline below; no releases -> all post-baseline drift
+    changelog = (
+        "# Changelog\n\n"
+        "## 2026-13-99 — Not a real date\n\n"   # malformed month/day -> must be skipped
+        "## 2026-06-20 — Real post-baseline section\n\n"
+    )
+    findings = check_changelog_manifest_drift(changelog, manifest)  # must not raise
+    dates = {f.section_date for f in findings}
+    assert "2026-06-20" in dates           # well-formed post-baseline section flagged
+    assert "2026-13-99" not in dates       # malformed section skipped, not crashed
+
+
+def test_main_never_raises_and_exits_zero_when_lint_fails(monkeypatch, capsys) -> None:
+    """main() degrades to an advisory + exit 0 if lint_repo raises (manifest load
+    error, unreadable CHANGELOG, etc.) — the warn-only invariant (D008)."""
+    from dontpanic_orchestrate import upgrade_drift_lint as udl
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("simulated manifest/changelog failure")
+
+    monkeypatch.setattr(udl, "lint_repo", _boom)
+    rc = udl.main([])
+    assert rc == 0                                   # never non-zero
+    out = capsys.readouterr().out.lower()
+    assert "skipped" in out and "not a failure" in out
