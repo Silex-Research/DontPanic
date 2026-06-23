@@ -6,7 +6,7 @@
 > Prompting gives you output. Agent loops give you momentum.
 > **DontPanic gives you governed delivery.**
 
-![DontPanic social preview](./docs/assets/dontpanic-social-preview.jpg)
+![DontPanic platform overview](./docs/assets/dontpanic-platform-overview.png)
 
 AI agents can write real software now. The open question isn't whether they can
 produce code — it's whether you should ship what they produce without looking.
