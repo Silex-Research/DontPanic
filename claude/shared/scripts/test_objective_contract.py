@@ -125,6 +125,45 @@ def main() -> int:
             ["✓ plan.md frontmatter"],
             ["objective_contract"],  # no contract line
         ),
+        (
+            "case 8: schema_version 1.1 + contract WITH delivers dispatches green",
+            "_fixture_v11_with_delivers",
+            0,
+            ["✓ plan.md frontmatter", "✓ objective_contract"],
+            ["✗ objective_contract", "advisory"],
+        ),
+        (
+            "case 9: schema_version 1.1 + contract MISSING delivers MUST fail",
+            "_fixture_v11_no_delivers",
+            1,
+            ["✗ objective_contract", "requires a non-empty delivers[]"],
+            ["✓ objective_contract"],
+        ),
+        (
+            "case 10: schema_version 1.1 substantive + NO contract MUST fail",
+            "_fixture_v11_no_contract",
+            1,
+            [
+                "✗ objective_contract",
+                "schema_version>=1.1 (substantive plan)",
+                "missing or empty",
+            ],
+            ["✓ objective_contract"],
+        ),
+        (
+            "case 11: schema_version 1.1 trivial — carve-out, no contract needed",
+            "_fixture_v11_trivial_no_contract",
+            0,
+            ["✓ plan.md frontmatter"],
+            ["objective_contract"],  # no contract line at all
+        ),
+        (
+            "case 12: v1.0 grandfathering — contract without delivers passes with advisory",
+            "_fixture_parity_with_contract",
+            0,
+            ["✓ objective_contract", "advisory"],
+            ["✗ objective_contract"],
+        ),
     ]
 
     print("validator objective_contract dispatch tests")

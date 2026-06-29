@@ -191,6 +191,50 @@ date: YYYY-MM-DD
 ## References
 ```
 
+## Reporting a plan (audience-first)
+
+When you summarize a plan — at creation, status check, or close-out — answer the
+builder's real first question before any plan topology: **after this succeeds,
+what can a human or agent safely do that they couldn't before?**
+
+Lead in this order. Plan mechanics come last, not first:
+
+1. **What becomes true** — plain-language outcome. No F-ids.
+2. **Who benefits** — name the audience: human user, operator, agent, auditor,
+   implementer.
+3. **What capability** — product, infra, architecture, safety, reliability, or
+   observability. "No new screen" is *not* "no UX": durability, continuity,
+   recoverability, and enforceable controls are operator/agent experience.
+4. **What proves it** — tests, gates, deploy proof, logs, acceptance signal.
+5. **What's out of scope** — prevents false confidence; mirror `non_goals`.
+6. **Plan mechanics** — F-ids, phases, paths, dependencies, schema validation.
+
+The summary is a *projection of the artifact*, not a parallel story: §1–4 read
+from the objective contract's outcomes, §5 from `non_goals`, §6 from
+`features.json`. Don't lead with artifact-integrity facts ("JSON parses,
+depends_on graph consistent, date is quoted") — those say the artifact is
+well-formed, not that the work is worth anything.
+
+Structured identifiers are **references, not nouns**. Don't headline with
+bookkeeping:
+
+- ✗ "F005 is blocked on a verdict_mismatch."
+- ✓ "Staging can't be closed because the narrative verdict and the structured
+  gate disagree on whether it's honest. Reference: 002/F005, verdict_mismatch."
+
+Readable first, traceable second — better for humans and agents both.
+
+§1–4 have a typed home in `objective_contract.json`: a `delivers[]` block, each
+entry `{ audience, kind, capability, proof_refs }` — `audience` ∈ end_user /
+builder / operator / agent / auditor / implementer; `kind` ∈ product /
+architecture / infrastructure / reliability / safety / observability / security
+/ data; `capability` is the plain-language outcome (no F-ids); `proof_refs` point
+*at* the proving features (`{ "type": "feature", "id": "F014" }`, optional
+`"plan"` for cross-plan) rather than restating their verdicts. `user_journeys`
+stays optional and complements `delivers` (a substrate/infra plan may have
+delivers with no journeys). Set the plan's `schema_version: "1.1"` to make a
+non-empty `delivers[]` required (substantive plans); below that it's advisory.
+
 ## Rules
 
 - Always check `docs/solutions/` before planning — a prior solution may apply.

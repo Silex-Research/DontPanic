@@ -54,6 +54,30 @@ _GOAL_TYPES_REQUIRING_CONTRACT = frozenset({
     PlanGoalType.incident,
 })
 
+# Phase 2 (plan 2026-06-28): plans authored at this plan-convention
+# schema_version (or higher) must carry a non-empty delivers[] in their
+# objective contract, and — if substantive (tier != trivial) — must carry a
+# contract at all (the "lite universal contract"). Below this threshold,
+# delivers is advisory: the validator warns inline but never fails. This axis
+# is the per-plan authoring level (plan.md `schema_version`), independent of the
+# agent-conventions package VERSION.
+_DELIVERS_REQUIRED_FROM = (1, 1)
+
+
+def _parse_schema_version(raw: object) -> tuple[int, int]:
+    """Parse plan.schema_version ('1.1') to a (major, minor) tuple.
+
+    Absent / malformed -> (1, 0), i.e. legacy/grandfathered. The Plan model
+    rejects structurally-malformed values upstream; this is defensive.
+    """
+    if not isinstance(raw, str):
+        return (1, 0)
+    parts = raw.split(".")
+    try:
+        return (int(parts[0]), int(parts[1]))
+    except (IndexError, ValueError):
+        return (1, 0)
+
 # v1 known-auxiliary list — files under audit/ that are written by orchestrator
 # subsystems but are NOT audit envelopes. The validator skips them with an
 # info-line instead of false-failing them against the Audit model.
@@ -105,38 +129,61 @@ def _check(name: str, model, data) -> tuple[bool, str]:
 
 
 def _check_objective_contract(plan_dir: Path, plan_data: dict) -> tuple[bool, str | None]:
-    """Goal Governance V1 §4 applicability check.
+    """Objective-contract applicability + delivers[] check.
 
-    Returns (ok, line). When the plan's goal_type doesn't require a contract,
-    returns (True, None) — caller should skip printing.
+    Two requirement axes, both backward-compatible:
+      - Goal Governance V1 §4: goal_type ∈ {parity, new_feature, migration,
+        incident} requires a contract (unchanged for schema_version 1.0).
+      - Phase 2 lite universal contract: at schema_version >= 1.1 every
+        SUBSTANTIVE plan (tier != trivial) requires a contract carrying a
+        non-empty delivers[]. Below 1.1, delivers is advisory (warn, never fail).
+
+    Returns (ok, line). When no contract is required (and none is declared),
+    returns (True, None) — caller skips printing, preserving the silent
+    backward-compat path for legacy/mechanical/infra plans.
     """
+    schema_version = _parse_schema_version(plan_data.get("schema_version"))
+    delivers_required = schema_version >= _DELIVERS_REQUIRED_FROM
+    tier = plan_data.get("tier")
+
+    goal_type = None
     goal_type_raw = plan_data.get("goal_type")
-    if goal_type_raw is None:
-        return True, None  # not opted in; backward-compat path
+    if goal_type_raw is not None:
+        try:
+            goal_type = PlanGoalType(goal_type_raw)
+        except ValueError:
+            # Plan model validation already flagged this; don't double-report.
+            goal_type = None
 
-    try:
-        goal_type = PlanGoalType(goal_type_raw)
-    except ValueError:
-        # Plan model validation already flagged this; don't double-report.
-        return True, None
-
-    if goal_type not in _GOAL_TYPES_REQUIRING_CONTRACT:
-        return True, None  # mechanical / infra / refactor — no contract required
+    goal_requires = goal_type in _GOAL_TYPES_REQUIRING_CONTRACT
+    # Substantive carve-out: trivial plans stay low-ceremony (and are typically
+    # authored as v0 single-file anyway), so the universal requirement skips them.
+    v11_requires = delivers_required and tier != "trivial"
+    contract_required = goal_requires or v11_requires
 
     label = "objective_contract"
     links = plan_data.get("links") or {}
     contract_path_str = links.get("objective_contract") if isinstance(links, dict) else None
 
+    if not contract_required:
+        # Not required → don't validate even if a link exists. Preserves the
+        # exact legacy behavior (no new failures for grandfathered plans).
+        return True, None
+
     if not contract_path_str:
+        reason = (
+            f"goal_type={goal_type.value}" if goal_requires
+            else "schema_version>=1.1 (substantive plan)"
+        )
         return False, (
-            f"  ✗ {label} — required by goal_type={goal_type.value} but "
+            f"  ✗ {label} — required by {reason} but "
             "links.objective_contract is missing or empty"
         )
 
     contract_path = (plan_dir / contract_path_str).resolve()
     if not contract_path.is_file():
         return False, (
-            f"  ✗ {label} — required by goal_type={goal_type.value} but file "
+            f"  ✗ {label} — declared links.objective_contract but file "
             f"at {contract_path_str!r} does not exist"
         )
 
@@ -155,14 +202,29 @@ def _check_objective_contract(plan_dir: Path, plan_data: dict) -> tuple[bool, st
         return False, f"  ✗ {label} — {contract_path_str}: {msg}"
 
     # Cross-check: Plan.goal_type must match ObjectiveContract.goal_type when
-    # both are present. ObjectiveContract.goal_type is the 4-value subset, so
-    # mismatch only happens when the plan declares one of the four required
-    # types and the contract declares a different one of the four.
-    if contract.goal_type.value != goal_type.value:
+    # both are present.
+    if goal_type is not None and contract.goal_type.value != goal_type.value:
         return False, (
             f"  ✗ {label} — goal_type mismatch: plan declares "
             f"{goal_type.value!r}, contract declares "
             f"{contract.goal_type.value!r}"
+        )
+
+    # delivers[] — version-gated. Structure (audience/kind/capability/proof_refs)
+    # is validated by the ObjectiveContract model above; here we only enforce
+    # presence + non-emptiness, gated on the plan's authoring schema_version.
+    delivers = contract_data.get("delivers")
+    has_delivers = isinstance(delivers, list) and len(delivers) > 0
+    if delivers_required and not has_delivers:
+        return False, (
+            f"  ✗ {label} — schema_version>=1.1 requires a non-empty "
+            f"delivers[] (audience/kind/capability/proof_refs) in {contract_path_str}"
+        )
+    if not has_delivers:
+        # Grandfathered: warn inline but keep the ✓ so the plan still passes.
+        return True, (
+            f"  ✓ {label} ({contract_path_str}) — ⚠ no delivers[] "
+            "(advisory; required at schema_version 1.1)"
         )
 
     return True, f"  ✓ {label} ({contract_path_str})"
