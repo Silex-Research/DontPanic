@@ -40,7 +40,6 @@ import hashlib
 import logging
 import os
 import signal
-import subprocess
 import threading
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -119,18 +118,80 @@ def _is_temp_path(path: str | Path) -> bool:
     return False
 
 
-def _run_git(root: str | Path, *args: str) -> str | None:
-    """Single git probe. Returns trimmed stdout, or ``None`` on any failure
-    (non-zero exit, git missing). NEVER raises."""
+def _git_dir_from_worktree(root: str | Path) -> Path | None:
+    """Return the git-dir for a worktree by reading ``.git`` metadata.
+
+    Handles both normal checkouts (``.git`` directory) and linked worktrees
+    (``.git`` file containing ``gitdir: ...``). This is intentionally
+    subprocess-free so CLI invocation recording cannot violate in-process
+    dispatch tests that patch ``subprocess.run``.
+    """
     try:
-        proc = subprocess.run(
-            ["git", "-C", str(root), *args], capture_output=True, text=True
-        )
+        worktree = Path(root)
+        git = worktree / ".git"
+        if git.is_dir():
+            return git.resolve()
+        if not git.is_file():
+            return None
+        text = git.read_text(encoding="utf-8").strip()
+        if not text.startswith("gitdir:"):
+            return None
+        raw = text.split(":", 1)[1].strip()
+        gitdir = Path(raw)
+        if not gitdir.is_absolute():
+            gitdir = worktree / gitdir
+        return gitdir.resolve()
     except (OSError, ValueError):
         return None
-    if proc.returncode != 0:
+
+
+def _common_git_dir_from_worktree(root: str | Path) -> Path | None:
+    """Return the common git dir for ``root`` without invoking ``git``.
+
+    For linked worktrees, ``<gitdir>/commondir`` points back to the main
+    checkout's ``.git`` directory. For a normal checkout, the git dir is already
+    the common dir.
+    """
+    gitdir = _git_dir_from_worktree(root)
+    if gitdir is None:
         return None
-    return proc.stdout.strip()
+    try:
+        common_file = gitdir / "commondir"
+        if not common_file.is_file():
+            return gitdir
+        raw = common_file.read_text(encoding="utf-8").strip()
+        if not raw:
+            return gitdir
+        common = Path(raw)
+        if not common.is_absolute():
+            common = gitdir / common
+        return common.resolve()
+    except (OSError, ValueError):
+        return None
+
+
+def _origin_url_from_common_git_dir(common_git_dir: Path | None) -> str | None:
+    """Read ``remote.origin.url`` from git config without invoking ``git``."""
+    if common_git_dir is None:
+        return None
+    try:
+        config = common_git_dir / "config"
+        current_section: str | None = None
+        for raw_line in config.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith(("#", ";")):
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                current_section = line[1:-1].strip()
+                continue
+            if current_section != 'remote "origin"' or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            if key.strip() == "url":
+                return value.strip() or None
+    except OSError:
+        return None
+    return None
 
 
 def _normalize_origin(url: str) -> str:
@@ -156,12 +217,12 @@ def _origin_key(url: str | None) -> str | None:
 def canonicalize_repo(observed_root: str | Path) -> dict[str, Any]:
     """Resolve the durable canonical repo for ``observed_root`` (C3 three-case rule).
 
-    Pinned algorithm: a single ``git -C <root> rev-parse --path-format=absolute
-    --git-common-dir`` probe. The returned common-dir points at the MAIN
-    worktree's git dir for both a main checkout and a linked worktree, so the
-    canonical root is the parent of that common-dir when it ends in ``/.git`` —
-    this collapses linked worktrees onto their main checkout. A bare repo (no
-    ``.git`` suffix) or a non-git dir is treated as unresolved.
+    Pinned algorithm: read ``.git`` metadata directly to resolve the common git
+    dir. The common-dir points at the MAIN worktree's git dir for both a main
+    checkout and a linked worktree, so the canonical root is the parent of that
+    common-dir when it ends in ``/.git`` — this collapses linked worktrees onto
+    their main checkout. A bare repo (no ``.git`` suffix) or a non-git dir is
+    treated as unresolved. This path is subprocess-free by design.
 
     Returns ``{canonical_root, origin_url, durable_checkout}``:
 
@@ -178,12 +239,11 @@ def canonicalize_repo(observed_root: str | Path) -> dict[str, Any]:
     observed = os.path.abspath(os.path.expanduser(str(observed_root)))
     observed_temp = _is_temp_path(observed)
 
-    common = _run_git(observed, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    common_path = _common_git_dir_from_worktree(observed)
     resolved_root: str | None = None
-    if common:
-        common_norm = common.rstrip("/")
-        if common_norm.endswith("/.git"):
-            resolved_root = os.path.dirname(common_norm)
+    if common_path is not None:
+        if common_path.name == ".git":
+            resolved_root = str(common_path.parent)
         # else: bare repo / no working tree -> unresolved (resolved_root stays None)
 
     if resolved_root is not None:
@@ -191,7 +251,7 @@ def canonicalize_repo(observed_root: str | Path) -> dict[str, Any]:
             # C3-3b: canonical root is itself temp -> stamp nothing.
             return {"canonical_root": None, "origin_url": None, "durable_checkout": False}
         # C3-1 (durable observed) or C3-3a (temp observed -> durable canonical).
-        origin = _run_git(observed, "remote", "get-url", "origin")
+        origin = _origin_url_from_common_git_dir(common_path)
         return {
             "canonical_root": resolved_root,
             "origin_url": origin or None,
