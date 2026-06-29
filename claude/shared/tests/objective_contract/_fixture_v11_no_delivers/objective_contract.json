@@ -1,0 +1,5 @@
+{
+  "goal_type": "infra",
+  "source_of_truth": "Curated fixture reference for the delivers validator test",
+  "completion_test": "The validator rejects this contract because schema_version 1.1 requires a non-empty delivers[]."
+}

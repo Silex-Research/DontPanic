@@ -4,11 +4,11 @@
   "title": "ObjectiveContract",
   "description": "Goal-completion governance contract. Required when Plan.goal_type ∈ {parity, new_feature, migration, incident}. Describes the user-facing outcome the plan must satisfy, separate from the mechanical artifacts produced (which features.json describes). The plan-level validator enforces that goal_type here matches Plan.goal_type when both are present.",
   "type": "object",
-  "required": ["goal_type", "source_of_truth", "user_journeys", "completion_test"],
+  "required": ["goal_type", "source_of_truth", "completion_test"],
   "properties": {
     "goal_type": {
-      "enum": ["parity", "new_feature", "migration", "incident"],
-      "description": "Must match Plan.goal_type at the parent plan when both are present. The four values that require an objective contract per Goal Governance V1 §4."
+      "enum": ["mechanical", "infra", "refactor", "parity", "new_feature", "migration", "incident"],
+      "description": "Must match Plan.goal_type at the parent plan when both are present. Expanded from the original four (parity/new_feature/migration/incident) to the full Plan goal_type set so the lite universal contract (delivers-only, no user_journeys) can attach to infra/refactor/mechanical plans at schema_version >= 1.1."
     },
     "source_of_truth": {
       "type": "string",
@@ -66,6 +66,57 @@
       "type": "string",
       "minLength": 10,
       "description": "One-sentence prose answering 'how do we know this is done?'. The completion test is the operator's stake in the ground; the auditor checks the proposed features against it."
+    },
+    "delivers": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Audience-first outcome statements: what becomes true, for whom, what kind of capability, and which features prove it. Required (non-empty) when the plan declares schema_version >= 1.1; advisory below that (the plan-level validator warns inline rather than failing). Complements user_journeys, which stays optional — a substrate/infra plan may carry delivers[] with no journeys.",
+      "items": {
+        "type": "object",
+        "required": ["audience", "kind", "capability", "proof_refs"],
+        "additionalProperties": false,
+        "properties": {
+          "audience": {
+            "enum": ["end_user", "builder", "operator", "agent", "auditor", "implementer"],
+            "description": "Who can now safely do something they couldn't before."
+          },
+          "kind": {
+            "enum": ["product", "architecture", "infrastructure", "reliability", "safety", "observability", "security", "data"],
+            "description": "The kind of capability delivered. 'No new screen' is not 'no capability' — durability/recoverability/enforceable controls are reliability/safety/infrastructure outcomes."
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Plain-language statement of what this audience can now do. No feature IDs — those belong in proof_refs."
+          },
+          "proof_refs": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Typed references to the evidence that proves the capability. Reference features rather than restating their verdicts, so proof can't drift from features.json.",
+            "items": {
+              "type": "object",
+              "required": ["type", "id"],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": ["feature"],
+                  "description": "Ref kind. v0 supports 'feature'; extend this enum (not a path grammar like '002/F014') for future ref kinds."
+                },
+                "id": {
+                  "type": "string",
+                  "pattern": "^F\\d{3}$",
+                  "description": "Feature id (F001–F999) in the target plan's features.json."
+                },
+                "plan": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$",
+                  "description": "Optional cross-plan target id. Absent = same plan as this contract."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "cluster_overrides": {
       "type": "string",

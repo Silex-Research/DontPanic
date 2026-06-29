@@ -5,6 +5,40 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.15.0 — 2026-06-28
+
+### Added
+- `objective_contract.schema.json` + `models/objective_contract_model.py`: a
+  typed `delivers[]` block (`audience` / `kind` / `capability` / `proof_refs`)
+  encoding audience-first plan outcomes — *what becomes true, for whom, what
+  kind of capability, and which features prove it*. `audience` and `kind` are
+  closed enums; `proof_refs` are typed feature references (`{type:'feature',
+  id:'F014'[, plan:'<plan-id>']}`) rather than overloaded path strings, so proof
+  can't drift from `features.json`.
+- `plan.schema.json` + `models/plan_model.py`: optional plan-authoring
+  `schema_version` (`^\d+\.\d+$`), independent of this package VERSION. Absent /
+  `1.0` = grandfathered.
+
+### Changed
+- `objective_contract` `goal_type` enum expanded from the original four
+  (parity/new_feature/migration/incident) to the full Plan goal_type set
+  (+ mechanical/infra/refactor), and `user_journeys` is now OPTIONAL — together
+  these enable a "lite universal contract" (delivers-only, no journeys) for
+  infra/refactor/mechanical plans.
+- `validate.py`: at plan `schema_version >= 1.1`, a SUBSTANTIVE plan
+  (tier != trivial) must declare an objective contract carrying a non-empty
+  `delivers[]`; below 1.1 the check is advisory (inline ⚠, never a failure).
+  Strictly additive — every plan that validated under 1.0 still validates, and
+  no existing plan declares 1.1.
+
+### Motivation
+Plan reporting defaulted to internal topology (F-ids, phases, verdicts) instead
+of answering the builder's first question: *after this succeeds, what can a
+human or agent safely do that they couldn't before?* The reporting contract
+(plan-artifacts SKILL.md) fixes the prose; `delivers[]` gives future plans an
+outcome-bearing artifact so the summary can be a projection of the contract
+rather than a parallel story that drifts.
+
 ## 1.14.0 — 2026-06-21
 
 ### Added

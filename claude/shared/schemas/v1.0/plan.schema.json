@@ -17,6 +17,11 @@
     "status": { "enum": ["draft", "active", "ready_for_audit", "in_audit", "completed", "abandoned", "blocked"] },
     "date": { "type": "string", "format": "date" },
     "description": { "type": "string", "minLength": 10 },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Plan-authoring convention level (independent of the agent-conventions package VERSION). Absent or '1.0' = legacy/grandfathered. At '1.1'+, a substantive plan (tier != trivial) must declare links.objective_contract pointing at a contract carrying a non-empty delivers[] block; the plan-level validator enforces this. For 1.0 plans the validator emits an inline advisory (never a failure) when delivers[] is absent."
+    },
     "motivation": { "type": "string" },
     "agents_required": {
       "type": "array",

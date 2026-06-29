@@ -338,6 +338,15 @@ class Plan(BaseModel):
     status: Status
     date: date_aliased
     description: constr(min_length=10)
+    schema_version: constr(pattern=r"^\d+\.\d+$") | None = Field(
+        None,
+        description=(
+            "Plan-authoring convention level (independent of the agent-"
+            "conventions package VERSION). Absent/'1.0' = grandfathered; at "
+            "'1.1'+ a substantive plan (tier != trivial) must declare a "
+            "contract with a non-empty delivers[]. Enforced by validate.py."
+        ),
+    )
     motivation: str | None = None
     agents_required: list[AgentsRequiredEnum] | None = None
     human_gates: list[HumanGate] | None = None
