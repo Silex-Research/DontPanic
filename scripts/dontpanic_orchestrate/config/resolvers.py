@@ -164,7 +164,10 @@ def resolve_model(
         v = _model_from_layer_cfg(cfg, role)
         if not v:
             continue
-        if harness is not None and _expected_harness(layers[i:], role) != harness:
+        expected = _dispatch_harness_for(
+            _expected_harness(layers[i:], role), _profiles_from_layers(layers[i:])
+        )
+        if harness is not None and expected != harness:
             # Cross-vendor: this layer paired its model with a different
             # harness than the one being dispatched. Keep scanning — a
             # deeper layer may carry a model for the right vendor.
@@ -174,12 +177,15 @@ def resolve_model(
 
 
 def _expected_harness(layer_suffix: tuple[Any, ...], role: str) -> str:
-    """F012 i2 — the harness a model configured at the FIRST layer of
+    """F012 i2 — the role value a model configured at the FIRST layer of
     ``layer_suffix`` was written against: the name that would resolve if
     that layer were the topmost config layer (its own entry's name, then
     deeper layers, then the goal_auditor→auditor fall-through / hardcoded
     fallback). A model-only entry with no name anywhere is implicitly
-    bound to the fallback harness."""
+    bound to the fallback harness. The value may be a D015 harness alias
+    or an F013 worker-profile id — callers must map it through
+    :func:`_dispatch_harness_for` before comparing against a dispatched
+    harness."""
     for cfg in layer_suffix:
         v = _role_from_layer_cfg(cfg, role)
         if v:
@@ -189,6 +195,44 @@ def _expected_harness(layer_suffix: tuple[Any, ...], role: str) -> str:
     if role == "implementer":
         return _FALLBACK_IMPLEMENTER
     return _FALLBACK_AUDITOR
+
+
+def _profiles_from_layers(layer_suffix: tuple[Any, ...]) -> dict[str, Any]:
+    """F013 i2 (codex audit i1 high finding) — the worker-profile table as
+    visible FROM the first layer of ``layer_suffix``: deeper layers merged
+    first, nearer layers winning per id. A model found at the global layer
+    must resolve profile identity against the global profile table only —
+    a project profile that shadows the same id belongs to a layer the
+    global operator never saw, and routing the global model through it can
+    hand one vendor's model id to another vendor's CLI."""
+    profiles: dict[str, Any] = {}
+    for cfg in reversed(layer_suffix):
+        layer_profiles = getattr(cfg, "worker_profiles", None) if cfg is not None else None
+        if layer_profiles:
+            profiles.update(layer_profiles)
+    return profiles
+
+
+def _dispatch_harness_for(name: str, profiles: dict[str, Any]) -> str:
+    """F013 i1 (codex audit i0 medium finding) — the AGENT_REGISTRY key
+    ``name`` dispatches as: aliases normalize to their registry key, a
+    worker-profile id resolves to its harness via ``profiles`` (the table
+    visible from the model's own layer — see :func:`_profiles_from_layers`;
+    no role/capability gates — this is a vendor comparison, not a dispatch
+    authorization). An unknown name is returned as-is so the harness check
+    fails closed (model suppressed)."""
+    # Lazy import — worker_profiles imports this module inside function
+    # bodies; keep the dependency one-way at import time.
+    from dontpanic_orchestrate.config.worker_profiles import normalize_harness
+    from dontpanic_orchestrate.executors import AGENT_REGISTRY
+
+    normalized = normalize_harness(name)
+    if normalized in AGENT_REGISTRY:
+        return normalized
+    profile = profiles.get(name)
+    if profile is not None:
+        return profile.harness
+    return name
 
 
 def _model_from_layer_cfg(cfg: Any, role: str) -> str | None:

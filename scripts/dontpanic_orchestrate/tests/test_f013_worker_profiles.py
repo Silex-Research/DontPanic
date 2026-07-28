@@ -44,6 +44,7 @@ from dontpanic_orchestrate import global_config as gc  # noqa: E402
 from dontpanic_orchestrate import plan_loader, supervisor  # noqa: E402
 from dontpanic_orchestrate import project_config as pc  # noqa: E402
 from dontpanic_orchestrate import worker_profiles as wp  # noqa: E402
+from dontpanic_orchestrate.config import resolvers  # noqa: E402
 from dontpanic_orchestrate.config.worker_profiles import (  # noqa: E402
     WorkerProfile,
     WorkerProfileCapabilities,
@@ -262,6 +263,86 @@ def test_explicit_goal_auditor_gates_on_goal_auditor_role(project_dir):
     )
     with pytest.raises(wp.ProfileRoleRefusedError, match="'goal_auditor'"):
         wp.resolve_goal_audit_worker(project_dir, "honey")
+
+
+# ── i1 (codex audit i0): resolve_model resolves role values through the ──
+# profile table before the harness/model vendor comparison. A roles entry
+# may name a profile id; the F012 expected-harness check must compare the
+# harness that profile DISPATCHES AS, not the raw configured string.
+
+_HONEY_NO_MODEL = {"harness": "codex", "allowed_roles": ["auditor"]}
+
+
+def test_role_model_applies_when_profile_binds_dispatch_harness(project_dir):
+    # Auditor i0 evidence case: honey has no model of its own, so the
+    # canonical roles.auditor.model must survive — 'honey' resolves to the
+    # codex harness, which IS the dispatched harness.
+    _save_global(
+        {
+            "roles": {"auditor": {"name": "honey", "model": "gpt-role"}},
+            "worker_profiles": {"honey": _HONEY_NO_MODEL},
+        }
+    )
+    worker = wp.resolve_worker(project_dir, "auditor", "honey")
+    assert (worker.harness, worker.model) == ("codex", None)
+    assert resolvers.resolve_model(project_dir, "auditor", harness="codex") == "gpt-role"
+
+
+def test_role_model_suppressed_when_profile_harness_differs(project_dir):
+    # Vendor safety still holds through the profile indirection: a per-call
+    # dispatch to a different harness never inherits the profile-paired model.
+    _save_global(
+        {
+            "roles": {"auditor": {"name": "honey", "model": "gpt-role"}},
+            "worker_profiles": {"honey": _HONEY_NO_MODEL},
+        }
+    )
+    assert resolvers.resolve_model(project_dir, "auditor", harness="claude") is None
+
+
+def test_role_model_applies_through_harness_alias(project_dir):
+    # A D015 alias in the roles entry counts as its registry key, not as a
+    # mismatching literal string.
+    _save_global({"roles": {"auditor": {"name": "codex_cli", "model": "gpt-role"}}})
+    assert resolvers.resolve_model(project_dir, "auditor", harness="codex") == "gpt-role"
+
+
+def test_project_profile_override_still_suppresses_cross_vendor_model(project_dir):
+    # Cross-layer safety is unchanged: global pairs claude + claude model;
+    # the project reassigns the role to a codex-backed profile. The claude
+    # model must not ride along to the codex CLI.
+    _save_global(
+        {
+            "roles": {"auditor": {"name": "claude", "model": "claude-opus-5"}},
+            "worker_profiles": {"honey": _HONEY_NO_MODEL},
+        }
+    )
+    _write_project_cfg(project_dir, {"roles": {"auditor": "honey"}})
+    assert resolvers.resolve_model(project_dir, "auditor", harness="codex") is None
+
+
+def test_project_profile_shadowing_global_id_suppresses_global_model(project_dir):
+    # Codex audit i1 high finding: the GLOBAL layer pairs its model with its
+    # OWN honey profile (→ codex); the project shadows the same profile id
+    # with a claude-backed profile, so dispatch goes to claude. The global
+    # model was never configured against claude — it must be suppressed, not
+    # forwarded through the merged profile table.
+    _save_global(
+        {
+            "roles": {"auditor": {"name": "honey", "model": "gpt-global"}},
+            "worker_profiles": {"honey": _HONEY_NO_MODEL},
+        }
+    )
+    _write_project_cfg(
+        project_dir,
+        {"worker_profiles": {"honey": {"harness": "claude", "allowed_roles": ["auditor"]}}},
+    )
+    worker = wp.resolve_worker(project_dir, "auditor", "honey")
+    assert worker.harness == "claude"
+    assert resolvers.resolve_model(project_dir, "auditor", harness="claude") is None
+    # The pairing stays valid for the vendor it was written against: a
+    # per-call/plan dispatch to codex still gets the global model.
+    assert resolvers.resolve_model(project_dir, "auditor", harness="codex") == "gpt-global"
 
 
 # ── CLI: workers add|set|list|show ────────────────────────────────────────
@@ -503,6 +584,26 @@ def test_run_round_profile_without_model_falls_through_to_role_model(tmp_path):
     ex, audit_path = _run_round_with(loaded, worker, agent_name=worker.harness, role="implementer")
     assert ex.tasks[0].model == "role-model"
     assert "worker: profile_id=impl harness=claude model=role-model" in audit_path.read_text()
+
+
+def test_run_round_role_model_rides_profile_dispatch(tmp_path):
+    # i1 wiring regression (codex audit i0): a model-less profile assigned
+    # through the canonical roles shape still dispatches with the
+    # roles.auditor.model — the expected-harness check resolves the profile
+    # id to its harness instead of suppressing the model.
+    _save_global(
+        {
+            "roles": {"auditor": {"name": "honey", "model": "gpt-role"}},
+            "worker_profiles": {"honey": {"harness": "codex", "allowed_roles": ["auditor"]}},
+        }
+    )
+    plan_dir = _make_plan(tmp_path, "2026-07-28-007-infra-f013-role-model-profile")
+    loaded = plan_loader.load(plan_dir)
+    worker = wp.resolve_worker(plan_dir, "auditor", "honey")
+    assert worker.model is None
+    ex, audit_path = _run_round_with(loaded, worker, agent_name=worker.harness, role="auditor")
+    assert ex.tasks[0].model == "gpt-role"
+    assert "worker: profile_id=honey harness=codex model=gpt-role" in audit_path.read_text()
 
 
 def test_run_round_legacy_worker_records_no_profile(tmp_path):
