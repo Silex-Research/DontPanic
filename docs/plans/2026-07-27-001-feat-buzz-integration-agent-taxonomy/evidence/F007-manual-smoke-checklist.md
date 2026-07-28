@@ -54,6 +54,21 @@ step is read-only / dry-run — nothing here dispatches or clears gates.
   with `paused` / `declared` / `cleared` / `unmet` — the fields the
   recipe's step 6 surfaces to the gates channel.
 
+- [ ] **A6 — The tool map's CLI equivalents execute; `status` has no
+  single CLI command.**
+  ```bash
+  dontpanic ps
+  dontpanic state snapshot --plan "$PLAN" --include gates,supervisors --json --compact --plans-root "$(pwd)/docs/plans"
+  dontpanic status; echo "exit=$?"   # negative check
+  ```
+  Expect `dontpanic ps` (the `active_supervisors` half of MCP `status`)
+  and `state snapshot` to exit 0; the snapshot's `gates` stream lists
+  **unmet** gates only (empty when all declared gates are cleared — the
+  full `declared`/`cleared`/`unmet` shape is MCP-only). The negative
+  check must fail (`plan not found: status`, exit 1): `dontpanic status`
+  is not a command, and the recipe must not claim it as the CLI
+  equivalent.
+
 ## B. Recipe honesty (desk check)
 
 - [ ] **B1** — README's tool map matches A1 (names + which tools mutate).
@@ -82,9 +97,10 @@ step is read-only / dry-run — nothing here dispatches or clears gates.
 
 ## Run log
 
-| Date | Operator | A1 | A2 | A3 | A4 | A5 | B | C | Notes |
-|---|---|---|---|---|---|---|---|---|---|
-| 2026-07-28 | claude-implementer (F007 i0) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | paper | `PLAN=2026-07-27-001-feat-buzz-integration-agent-taxonomy`; outputs below |
+| Date | Operator | A1 | A2 | A3 | A4 | A5 | A6 | B | C | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-07-28 | claude-implementer (F007 i0) | ✅ | ✅ | ✅ | ✅ | ✅ | n/a | ✅ | paper | `PLAN=2026-07-27-001-feat-buzz-integration-agent-taxonomy`; outputs below |
+| 2026-07-28 | claude-implementer (F007 i1) | — | — | — | — | — | ✅ | ✅ | paper | A6 added per codex-auditor-F007-i0 finding (`dontpanic status` is not a command); outputs below |
 
 ### 2026-07-28 captured outputs (abridged)
 
@@ -109,4 +125,20 @@ A4: dry_run=True
 A5: keys=['active_supervisors', 'gate_status']
     gate_status: paused=False declared=['pre_impl','pre_merge']
                  cleared=['pre_impl','pre_merge'] unmet=[]
+```
+
+### 2026-07-28 i1 captured outputs (A6, abridged)
+
+```text
+A6a: dontpanic ps → exit 0
+     73318  2026-07-27-001-feat-buzz-integration-agent-taxonomy  dev  (none)  2026-07-28T07:32:32Z
+
+A6b: dontpanic state snapshot --plan $PLAN --include gates,supervisors \
+       --json --compact --plans-root "$(pwd)/docs/plans" → exit 0
+     streams.supervisors: [{plan_id=$PLAN, pid=73318, started_at=2026-07-28T07:32:32Z}]
+     streams.gates: []   (unmet-only stream; both declared gates are cleared — see A5)
+
+A6c (negative): dontpanic status → "plan not found: status", exit 1
+     (confirms no `dontpanic status` command exists; recipe maps MCP
+      `status` to `dontpanic ps` + `state snapshot` instead)
 ```

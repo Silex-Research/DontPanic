@@ -26,8 +26,9 @@ DontPanic  =  plan lock, volley, evidence, gates, signoff (local delivery)
 DontPanic ships nothing on the Buzz runtime — no SDK, no embedded
 library, no relay client. The Buzz side is a thin agent/workflow
 (`buzz-cli` speaks JSON) that either shells out to the `dontpanic` CLI or
-connects as an MCP client. This recipe uses the MCP surface; every tool
-has a CLI equivalent noted below.
+connects as an MCP client. This recipe uses the MCP surface; CLI
+equivalents are noted below where they exist — `status` has no
+single-command CLI equivalent (see the note under the tool map).
 
 ## Prerequisites
 
@@ -66,9 +67,20 @@ has a CLI equivalent noted below.
 | Validate + preview plan | `validate_plan` | `plan` | No | `python3 claude/shared/schemas/v1.0/validate.py <plan-dir>` |
 | Dry-run preview | `dispatch` | `plan`, `feature` (**no** `confirm`) | No — dry-run is the default | `dontpanic dispatch-from-plan <plan-id>` |
 | Dispatch for real | `dispatch` | `plan`, `feature`, `confirm: true` (optional `implementer`, `auditor`, `max_iterations`, `mode`) | **Yes** | `dontpanic dispatch-from-plan <plan-id> --confirm` |
-| Poll progress + gates | `status` | optional `plan` | No | `dontpanic status` |
+| Poll progress + gates | `status` | optional `plan` | No | `dontpanic ps` + `dontpanic state snapshot` (see note) |
 | Clear a human gate | `approve_gate` | `plan`, `gate`, `confirm: true` | **Yes** | `dontpanic approve <plan-id> <gate>` |
 | Read evidence for the room | `read_evidence` | `plan`, `file` | No | read `<plan-dir>/evidence/<file>` |
+
+> **CLI note for `status`:** there is **no** `dontpanic status` command
+> (it fails with `plan not found: status`) and no single CLI command that
+> reproduces the MCP payload. The two halves map to: `dontpanic ps` for
+> the `active_supervisors` list, and
+> `dontpanic state snapshot --plan <plan-id> --include gates,supervisors --json`
+> for gate state — whose `gates` stream lists **unmet (paused)** gates
+> only; cleared gates do not appear. The full
+> `declared` / `cleared` / `unmet` `gate_status` shape is MCP-only. Run
+> `state snapshot` from the registered repo root or pass
+> `--plans-root <repo>/docs/plans`.
 
 Both mutating tools (`dispatch`, `approve_gate`) default to dry-run and
 return a structured `intent` payload; `confirm: true` is the only
