@@ -74,6 +74,10 @@ class ClaudeCLIExecutor(BaseExecutor):
             "--exclude-dynamic-system-prompt-sections",
         ]
         argv.extend(_permission_flags(task.permission_policy))
+        # F012 — model pass-through: forward the resolved model when set;
+        # unset keeps the harness CLI default (pre-F012 argv unchanged).
+        if task.model:
+            argv.extend(["--model", task.model])
         # F005b — final pre-dispatch assertion that no bypass flag slipped in.
         check_forbidden_flags(argv)
 

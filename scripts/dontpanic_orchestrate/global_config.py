@@ -23,7 +23,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from dontpanic_orchestrate.config.roles import RolesConfig
+from dontpanic_orchestrate.config.roles import RoleModelsConfig, RolesConfig
+from dontpanic_orchestrate.config.worker_profiles import WorkerProfile
 
 _LOG = logging.getLogger(__name__)
 
@@ -77,6 +78,19 @@ class GlobalConfig(BaseModel):
     by :func:`config.resolvers.resolve_role`. D015: this Pydantic model
     intentionally has NO ``runtime_evidence`` field — runtime evidence
     is project-scoped only."""
+
+    models: RoleModelsConfig | None = None
+    """F012 (D1/D011) — per-role vendor model-id overrides without full
+    worker profiles (those land in F013). Resolved by
+    :func:`config.resolvers.resolve_model`; unset roles keep the harness
+    CLI default."""
+
+    worker_profiles: dict[str, WorkerProfile] | None = None
+    """F013 (D2) — named worker profiles ({display_name, harness, model,
+    allowed_roles, capability overrides}). A ``roles.<role>`` entry may
+    name a profile id instead of a harness; resolution + gates live in
+    :mod:`dontpanic_orchestrate.worker_profiles`. Written by the
+    ``dontpanic workers`` CLI. Project-layer profiles win per id."""
 
 
 def dontpanic_home() -> Path:
@@ -215,6 +229,7 @@ __all__ = [
     "GlobalConfig",
     "JARVIS_HOME_ENV",
     "LEGACY_DIRNAME",
+    "RoleModelsConfig",
     "RolesConfig",
     "config_path",
     "dontpanic_home",

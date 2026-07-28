@@ -67,7 +67,12 @@ class CodexCLIExecutor(BaseExecutor):
         # Global flags MUST come before the `exec` subcommand per Codex CLI.
         argv: list[str] = [self.binary]
         argv.extend(_permission_flags(task.permission_policy))
-        argv.extend(["exec", "--json", prompt])
+        argv.extend(["exec", "--json"])
+        # F012 — model pass-through: `--model` is an exec-subcommand option;
+        # unset keeps the harness CLI default (pre-F012 argv unchanged).
+        if task.model:
+            argv.extend(["--model", task.model])
+        argv.append(prompt)
         # F005b — final pre-dispatch assertion that no bypass flag slipped in.
         check_forbidden_flags(argv)
 

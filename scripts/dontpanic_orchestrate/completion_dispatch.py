@@ -54,6 +54,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from dontpanic_orchestrate.codex_stream import (
+    extract_codex_streaming_payload as _extract_codex_streaming_payload,
+)
 from dontpanic_orchestrate.completion_auditor import (
     POST_IMPL_DIR,
     CompletionAuditError,
@@ -63,10 +66,6 @@ from dontpanic_orchestrate.completion_auditor import (
 )
 from dontpanic_orchestrate.executors import get_executor
 from dontpanic_orchestrate.executors.base import DispatchTask
-from dontpanic_orchestrate.codex_stream import (
-    _RECOGNIZED_CODEX_STREAM_TYPES,
-    extract_codex_streaming_payload as _extract_codex_streaming_payload,
-)
 from dontpanic_orchestrate.sufficiency_auditor import (
     SufficiencyAuditError,
     _is_truthy_env,
@@ -560,9 +559,7 @@ def _parse_audit_response(
     # exactly one disposition per v1 finding. Without this check a partial
     # response (grading F-1 but silent on F-2) collapsed to `agree`, letting
     # an auditor — dispatched or externally attached — skip findings.
-    graded = [
-        d.finding_id for d in dispositions if not d.finding_id.startswith("auditor-overlay-")
-    ]
+    graded = [d.finding_id for d in dispositions if not d.finding_id.startswith("auditor-overlay-")]
     duplicated = sorted({fid for fid in graded if graded.count(fid) > 1})
     if duplicated:
         return "dispatch_response_malformed", [
@@ -745,11 +742,27 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
     ``DispatchResult(success=False)``; we still return ``raw_response``
     so the auditor's prose (often an error message) lands in the
     transcript."""
-    executor = get_executor(auditor)
+    # F013 i1 — the resolved auditor may be a worker-profile id (or a D015
+    # alias); map to (harness, model) through the profile gates before
+    # touching the registry. Lazy import mirrors the resolver import below.
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    try:
+        worker = _wp.resolve_goal_audit_worker(plan_dir, auditor)
+    except _wp.WorkerProfileError as exc:
+        raise CompletionDispatchError(str(exc)) from exc
+    executor = get_executor(worker.harness)
     if not executor.is_available():
         raise CompletionDispatchError(
-            f"resolved auditor {auditor!r} is not available — {executor.availability_hint()}"
+            f"resolved auditor {auditor!r} (harness {worker.harness!r}) is not "
+            f"available — {executor.availability_hint()}"
         )
+
+    # F012 i1 (codex audit i0 high finding) — forward the configured
+    # goal-audit model override; None keeps the harness CLI default.
+    # F013: the profile-level model wins over the role-level override.
+    # Lazy import mirrors sufficiency_auditor's F006-package decoupling.
+    from dontpanic_orchestrate.config.resolvers import resolve_goal_audit_model
 
     plan_id = plan_dir.name
     task = DispatchTask(
@@ -763,6 +776,7 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
         iteration=0,
         extra_context={"prompt_override": prompt},
         permission_policy="auditor",
+        model=worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
     )
     result = executor.dispatch(task)
     return result.raw_response or ""
@@ -773,16 +787,26 @@ def _assert_config_ready_for_completion(
     implementer_agent: str | None,
     auditor: str,
     caps_path: Path | None = None,
+    plan_dir: Path | None = None,
 ) -> None:
     """Plan 2026-06-01-001 F009 — raise :class:`ConfigNotReady` if the quota-caps
     config or the resolved role values are not usable, BEFORE the plan-close
     goal-completion audit spends a paid call. Reuses the same readiness module
     as the dispatch-from-plan gate so the actionable message + runnable
-    remediation are identical at both pre-flight sites."""
-    from dontpanic_orchestrate import config_readiness
+    remediation are identical at both pre-flight sites.
+
+    F013 i1: role values may be worker-profile ids or D015 aliases; readiness
+    validates the resolved HARNESS (profiles are validated by their own gates
+    at dispatch), so a valid ``roles.auditor=honey`` no longer fails the
+    registered-executor check."""
+    from dontpanic_orchestrate import config_readiness, worker_profiles
     from dontpanic_orchestrate.executors import AGENT_REGISTRY
 
-    roles = [r for r in (implementer_agent, auditor) if r]
+    def _to_harness(name: str) -> str:
+        peeked = worker_profiles.peek_worker(plan_dir, name)
+        return peeked.harness if peeked is not None else name
+
+    roles = [_to_harness(r) for r in (implementer_agent, auditor) if r]
     result = config_readiness.check_config_readiness(
         roles=roles,
         registered_executors=set(AGENT_REGISTRY),
@@ -838,7 +862,10 @@ def dispatch_completion_audit(
     # and intentionally bypass the gate.
     if dispatch is None and not _offline:
         _assert_config_ready_for_completion(
-            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
+            implementer_agent=implementer_agent,
+            auditor=auditor,
+            caps_path=caps_path,
+            plan_dir=plan_dir,
         )
     _validate_auditor_name(auditor)
 
@@ -854,9 +881,7 @@ def dispatch_completion_audit(
     contract = _load_objective_contract(plan_dir)
     features = _load_features(plan_dir)
     manifest = _build_evidence_manifest(plan_dir)
-    prompt = _build_audit_prompt(
-        contract, features, findings, manifest, plan_dir=plan_dir
-    )
+    prompt = _build_audit_prompt(contract, features, findings, manifest, plan_dir=plan_dir)
 
     if dispatch is not None:
         raw_response = dispatch(auditor, prompt)

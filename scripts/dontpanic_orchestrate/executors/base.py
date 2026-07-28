@@ -76,6 +76,10 @@ class DispatchTask:
     # None = legacy / explicit no-policy (executors emit no permission flags,
     # preserving pre-F005b behavior for synthetic-disagreement mocks etc.).
     permission_policy: Literal["implementer", "auditor"] | None = None
+    # F012 (D1/D011): resolved vendor model-id override. None = harness CLI
+    # default (pre-F012 behavior); when set, executors forward it via the
+    # vendor's model flag. Models are data, never registry keys (D010).
+    model: str | None = None
 
 
 @dataclass

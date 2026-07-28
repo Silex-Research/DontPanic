@@ -30,7 +30,7 @@ doctor checks via :func:`doctor_registry.register_doctor_check`).
 
 from __future__ import annotations
 
-from dontpanic_orchestrate.config.roles import RolesConfig
+from dontpanic_orchestrate.config.roles import RoleModelsConfig, RolesConfig, RoleSpec
 from dontpanic_orchestrate.config.runtime_evidence import (
     AndroidDefaults,
     BackendDefaults,
@@ -43,6 +43,8 @@ __all__ = [
     "AndroidDefaults",
     "BackendDefaults",
     "IosDefaults",
+    "RoleModelsConfig",
+    "RoleSpec",
     "RolesConfig",
     "RuntimeEvidenceConfig",
     "WebDefaults",

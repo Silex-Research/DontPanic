@@ -3118,6 +3118,19 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
     impl = args.implementer or plan_impl or resolved_defaults["implementer"]
     aud = args.auditor or plan_aud or resolved_defaults["auditor"]
+    # F013 i1 — role values may be worker-profile ids or D015 aliases.
+    # Resolve them to harnesses HERE so the preflight readiness/quota check
+    # and the printed defaults match what dispatch_volley will actually run
+    # with. Gate refusals (illegal role, capability gap, unknown name)
+    # surface as an exit-3 refusal before any paid work.
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    try:
+        impl = _wp.resolve_worker(plan_dir, "implementer", impl).harness
+        aud = _wp.resolve_worker(plan_dir, "auditor", aud).harness
+    except _wp.WorkerProfileError as exc:
+        print(f"[dispatch-from-plan] REFUSED: {exc}", file=sys.stderr)
+        return 3
 
     human_gates = [g.value if hasattr(g, "value") else str(g) for g in (plan.human_gates or [])]
     loop_caps = plan.loop_caps
@@ -5603,15 +5616,6 @@ def _roles_main(argv: list[str]) -> int:
 
         is_global = args.is_global or args.project is None
 
-        # Guard FIRST — never touch config for an agent with no executor
-        # (acceptance #5/#6). The message distinguishes operator-only from
-        # worker-capable, identical to `agent register-worker`.
-        try:
-            _ra.assert_assignable(args.executor)
-        except agent_surface.RegisterWorkerError as exc:
-            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
-            return 3
-
         scope = None
         if not is_global:
             scope = _resolve_roles_scope(args.project)
@@ -5622,6 +5626,22 @@ def _roles_main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
                 return 2
+
+        # Guard FIRST — never touch config for an agent with no executor
+        # (acceptance #5/#6). The message distinguishes operator-only from
+        # worker-capable, identical to `agent register-worker`. F013: a
+        # worker-profile id is also assignable when its allowed_roles +
+        # capability gates pass for THIS role slot; scope resolves before
+        # the guard so project-layer profiles are visible to it.
+        try:
+            _ra.assert_assignable(
+                args.executor,
+                role=args.role,
+                project_path=scope.path if scope is not None else None,
+            )
+        except agent_surface.RegisterWorkerError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
 
         preview = _ra.render_set_preview(
             args.role, args.executor, is_global=is_global, scope=scope
@@ -5995,6 +6015,10 @@ def _run_cli(argv: list[str] | None = None) -> int:
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
         return _roles_main(raw[1:])
+    if raw and raw[0] == "workers":
+        from dontpanic_orchestrate.workers_cli import workers_main as _workers_main
+
+        return _workers_main(raw[1:])
     if raw and raw[0] == "operator-roles":
         return _operator_roles_main(raw[1:])
     if raw and raw[0] == "skills":

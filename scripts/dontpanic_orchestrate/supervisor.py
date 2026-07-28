@@ -43,7 +43,9 @@ from dontpanic_orchestrate import (
     signoff_writer,
     sufficiency_gate,
     transcript,
+    worker_profiles,
 )
+from dontpanic_orchestrate.config.resolvers import resolve_model
 from dontpanic_orchestrate.environments_loader import (
     check_firebaserc_consistency,
     find_repo_root_for_plan,
@@ -1113,6 +1115,13 @@ def dispatch_single_agent(
     else:
         plan_pick = str(agents_req[0]).split(".")[-1] if agents_req else None
         agent_name = plan_pick or resolved_defaults["implementer"]
+    # F013 — the configured value may be a worker-profile id. Resolve
+    # profile → harness (+ profile model override) BEFORE the quota gate and
+    # executor resolution so quota, argv, and audits key on the real harness;
+    # role/capability gates refuse clearly here instead of KeyError-ing in
+    # AGENT_REGISTRY. Legacy harness names pass through (profile_id=None).
+    worker = worker_profiles.resolve_worker(loaded.plan_dir, agent_role, agent_name)
+    agent_name = worker.harness
     if project_match is not None:
         # Stamp last_used_at on the resolved registered project so
         # `jarvis projects list` reflects real recency. Best-effort —
@@ -1228,6 +1237,13 @@ def dispatch_single_agent(
             subprocess_env=exec_env.subprocess_env(),
             cwd=registry_repo_root,
             permission_policy=_derive_permission_policy(agent_role),
+            # F013 profile model wins; else F012 role-level model override
+            # (per-call > project > global); None keeps the harness CLI
+            # default. i2: harness threads the actually-dispatched agent so a
+            # model paired with a different vendor in a deeper config layer
+            # is suppressed, not forwarded.
+            model=worker.model
+            or resolve_model(loaded.plan_dir, agent_role, harness=agent_name),
         )
 
         # F003: resolve executor through AGENT_REGISTRY rather than
@@ -1281,9 +1297,7 @@ def dispatch_single_agent(
                 f"{plan_drift.STAGE_IMPLEMENTER}: "
                 f"{', '.join(_drift.report.changed_files)}"
             )
-            raise PausedOnDrift(
-                _drift.pause_reason or _drift.report.headline(loaded.plan_id)
-            )
+            raise PausedOnDrift(_drift.pause_reason or _drift.report.headline(loaded.plan_id))
 
         result = executor.dispatch(task)
 
@@ -1295,6 +1309,10 @@ def dispatch_single_agent(
                 *([nested_marker] if nested_marker else []),
                 f"read ~/.jarvis/quota_state.json ({agent_name} pct={quota_pct})",
                 f"{agent_name} dispatch (binary={getattr(executor, 'binary', None) or '?'})",
+                # F013 — evidence records the resolved dispatch identity.
+                f"worker_profile={worker.profile_id or '(none)'} "
+                f"harness={worker.harness} "
+                f"model={task.model or '(harness default)'}",
                 f"captured stdout {len(result.raw_response)} bytes",
                 f"subprocess exit {0 if result.success else 'nonzero'}",
                 f"execution_env_root={exec_env.root}",
@@ -1435,9 +1453,7 @@ def _emit_volley_terminal(
             # git-state sidecar.
             try:
                 feature_dicts = [f.model_dump() for f in loaded.features.features]
-                git_state_path = (
-                    plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
-                )
+                git_state_path = plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
                 # The dispatch DIFF is the git-state sidecar only (staged ∪
                 # unstaged_modified ∪ untracked). `affected_paths` is a plan
                 # DECLARATION, not what the patch actually touched, so it is
@@ -1614,8 +1630,7 @@ def dispatch_volley(
         return VolleyResult(
             "paused_on_drift",
             0,
-            _dispatch_drift.pause_reason
-            or _dispatch_drift.report.headline(loaded.plan_id),
+            _dispatch_drift.pause_reason or _dispatch_drift.report.headline(loaded.plan_id),
             [],
         )
 
@@ -1679,6 +1694,22 @@ def dispatch_volley(
     plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
     impl_name = implementer_agent or plan_impl or resolved["implementer"]
     aud_name = auditor_agent or plan_aud or resolved["auditor"]
+    # F013 i1 (codex audit i0 high finding): the configured value may be a
+    # worker-profile id (or a D015 harness alias). Resolve BOTH roles through
+    # resolve_worker BEFORE quota, admission, and executor resolution, so the
+    # volley path keys everything on the real harness — parity with the
+    # single-agent path. Gate refusals surface here as WorkerProfileError
+    # with an operator-fixable message instead of a registry KeyError.
+    impl_worker = worker_profiles.resolve_worker(loaded.plan_dir, "implementer", impl_name)
+    aud_worker = worker_profiles.resolve_worker(loaded.plan_dir, "auditor", aud_name)
+    impl_name = impl_worker.harness
+    aud_name = aud_worker.harness
+    if impl_worker.profile_id or aud_worker.profile_id:
+        print(
+            f"[volley] worker profiles: impl={impl_worker.profile_id or '(legacy)'}"
+            f"→{impl_worker.harness} aud={aud_worker.profile_id or '(legacy)'}"
+            f"→{aud_worker.harness}"
+        )
     if project_match is not None:
         # Stamp last_used_at on the resolved registered project so
         # `jarvis projects list` reflects real recency. Best-effort —
@@ -2126,7 +2157,9 @@ def dispatch_volley(
                 # across resume boundaries. Only fires on iteration 0; iteration
                 # 1+ within the same loop has by-construction already passed the
                 # check.
-                if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
+                if iteration == 0 and not gate_pause.is_stage_completed(
+                    loaded.plan_dir, "pre_impl"
+                ):
                     # Plan 2026-05-08-003 F002 — narrow auto-clear carve-out
                     # for direct operator CLI dispatch in eligible dev/test
                     # contexts. On success, the helper records a normal
@@ -2208,9 +2241,7 @@ def dispatch_volley(
                 # Implementer round
                 current_stage = "implementer"
                 # F009 — plan-drift check BEFORE the (paid) implementer call.
-                _drift_pause = _drift_pause_or_none(
-                    plan_drift.STAGE_IMPLEMENTER, iteration
-                )
+                _drift_pause = _drift_pause_or_none(plan_drift.STAGE_IMPLEMENTER, iteration)
                 if _drift_pause is not None:
                     return _drift_pause
                 try:
@@ -2231,7 +2262,9 @@ def dispatch_volley(
                         agents_in_panel=[impl_name, aud_name],
                     )
                 print(impl_quota_line)
-                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id)
+                _maybe_emit_quota_warn(
+                    loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id
+                )
 
                 impl_audit_path = _run_round(
                     loaded=loaded,
@@ -2259,6 +2292,7 @@ def dispatch_volley(
                     target_env=effective_env,
                     target_project=effective_project,
                     cwd=registry_repo_root,
+                    worker=impl_worker,
                 )
                 audit_paths.append(impl_audit_path)
 
@@ -2271,7 +2305,9 @@ def dispatch_volley(
                     impl_envelope = json.loads(impl_audit_path.read_text())
                 except (OSError, json.JSONDecodeError):
                     impl_envelope = None
-                is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(impl_envelope)
+                is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(
+                    impl_envelope
+                )
                 if is_timeout_with_work:
                     transcript.append_note(
                         loaded.plan_dir,
@@ -2287,9 +2323,7 @@ def dispatch_volley(
                 # Auditor round
                 current_stage = "auditor"
                 # F009 — plan-drift check BEFORE the (paid) auditor call.
-                _drift_pause = _drift_pause_or_none(
-                    plan_drift.STAGE_AUDITOR, iteration
-                )
+                _drift_pause = _drift_pause_or_none(plan_drift.STAGE_AUDITOR, iteration)
                 if _drift_pause is not None:
                     return _drift_pause
                 try:
@@ -2310,7 +2344,9 @@ def dispatch_volley(
                         agents_in_panel=[impl_name, aud_name],
                     )
                 print(aud_quota_line)
-                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id)
+                _maybe_emit_quota_warn(
+                    loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id
+                )
 
                 aud_audit_path = _run_round(
                     loaded=loaded,
@@ -2338,6 +2374,7 @@ def dispatch_volley(
                     target_env=effective_env,
                     target_project=effective_project,
                     cwd=registry_repo_root,
+                    worker=aud_worker,
                 )
                 audit_paths.append(aud_audit_path)
 
@@ -2382,9 +2419,7 @@ def dispatch_volley(
                     # produces the rendered DontPanic-branded title via
                     # notify_event.
                     try:
-                        _vm_display_name = (
-                            loaded.feature(feature_id).get("description", "") or None
-                        )
+                        _vm_display_name = loaded.feature(feature_id).get("description", "") or None
                     except KeyError:
                         _vm_display_name = None
                     notify_event.dispatch_event(
@@ -2492,9 +2527,7 @@ def dispatch_volley(
                     # If the plan changed during this volley, do NOT persist a
                     # success signoff against stale context; pause for refresh /
                     # human ack instead (AC2/AC4/AC5).
-                    _drift_pause = _drift_pause_or_none(
-                        plan_drift.STAGE_SIGNOFF, iteration + 1
-                    )
+                    _drift_pause = _drift_pause_or_none(plan_drift.STAGE_SIGNOFF, iteration + 1)
                     if _drift_pause is not None:
                         return _drift_pause
 
@@ -2539,7 +2572,9 @@ def dispatch_volley(
                     except Exception as _arch_exc:  # noqa: BLE001 — never crash terminal
                         print(f"[volley] architecture regen hook skipped: {_arch_exc}")
                     return _emit_volley_terminal(
-                        VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
+                        VolleyResult(
+                            "signed_off", iteration + 1, "auditor signed off", audit_paths
+                        ),
                         loaded=loaded,
                         feature_id=feature_id,
                         agents_in_panel=[impl_name, aud_name],
@@ -2969,9 +3004,7 @@ def dispatch_volley(
                     # Plan 2026-05-24-004 F002 — Discord sink advisory. INBOX
                     # above is the truth-of-record.
                     try:
-                        _np_display_name = (
-                            loaded.feature(feature_id).get("description", "") or None
-                        )
+                        _np_display_name = loaded.feature(feature_id).get("description", "") or None
                     except KeyError:
                         _np_display_name = None
                     # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to
@@ -3180,18 +3213,13 @@ def dispatch_volley(
         )
 
 
-def _format_recovery_command(
-    *, plan_id: str | None, feature_id: str, reason_class: str
-) -> str:
+def _format_recovery_command(*, plan_id: str | None, feature_id: str, reason_class: str) -> str:
     """Render the operator-facing close-out command. Uses the real plan_id
     when supervisor-internal callers can provide it; falls back to ``<id>`` for
     legacy callers (kept so F003 backstop tests stay green when they
     instantiate the helper without a plan_id)."""
     plan_token = plan_id or "<id>"
-    return (
-        f"dontpanic close --operator-resolved {plan_token} {feature_id} "
-        f"--reason {reason_class}"
-    )
+    return f"dontpanic close --operator-resolved {plan_token} {feature_id} --reason {reason_class}"
 
 
 def _write_backstop_checkpoint(
@@ -3491,7 +3519,12 @@ def _run_round(
     target_env: str | None = None,
     target_project: str | None = None,
     cwd: Path | None = None,
+    worker: worker_profiles.ResolvedWorker | None = None,
 ) -> Path:
+    # F013 — profile-level model wins over the F012 role-level override.
+    effective_model = (worker.model if worker is not None else None) or resolve_model(
+        loaded.plan_dir, role, harness=agent_name
+    )
     task = DispatchTask(
         plan_id=loaded.plan_id,
         plan_dir=loaded.plan_dir,
@@ -3505,6 +3538,11 @@ def _run_round(
         subprocess_env=dict(subprocess_env) if subprocess_env else {},
         cwd=cwd,
         permission_policy=_derive_permission_policy(role),
+        # F013 profile model > F012 role-level model override (per-call >
+        # project > global); None keeps the harness CLI default. i2: harness
+        # threads the actually-dispatched agent so a model paired with a
+        # different vendor in a deeper config layer is suppressed.
+        model=effective_model,
     )
     # Override the prompt builder by monkey-patching at task level —
     # cleaner: pass prompt directly. For now, executors build their own;
@@ -3538,6 +3576,9 @@ def _run_round(
         feature_id=feature["id"],
         validation_performed=[
             f"{agent_name} {role} round (iteration {iteration})",
+            # F013 — dispatch identity evidence: profile id, harness, model.
+            f"worker: profile_id={worker.profile_id if worker else None} "
+            f"harness={agent_name} model={effective_model or '(harness default)'}",
             *extra_validation,
             f"captured stdout {len(result.raw_response)} bytes",
         ],

@@ -337,17 +337,44 @@ def render_setup(name: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def assert_registrable(name: str) -> None:
-    """Guard for ``register-worker``: raise :class:`RegisterWorkerError` when
-    ``name`` is not a real executor, so the CLI refuses before writing any
-    config (F002 acceptance #4)."""
-    if not is_worker_capable(name):
-        registered = ", ".join(worker_executors()) or "(none)"
-        raise RegisterWorkerError(
-            f"{name!r} has no executor in DontPanic and cannot be registered as a "
-            f"worker. {name} can operate DontPanic as an interactive agent, but only "
-            f"these agents are dispatchable workers: {registered}."
-        )
+def assert_registrable(
+    name: str, *, role: str | None = None, project_path: Path | None = None
+) -> None:
+    """Guard for ``register-worker`` / ``roles set``: raise
+    :class:`RegisterWorkerError` when ``name`` cannot be dispatched, so the
+    CLI refuses before writing any config (F002 acceptance #4).
+
+    F013: ``name`` may also be a defined worker-profile id. The profile
+    path applies harness membership + ``allowed_roles`` + capability gates
+    (via :mod:`worker_profiles`); gate refusals re-raise as
+    :class:`RegisterWorkerError` so every caller keeps one refusal type.
+    ``role`` scopes the allowed_roles/capability check to the slot being
+    assigned; ``project_path`` includes that project's profile layer.
+    """
+    if is_worker_capable(name):
+        return
+
+    # Lazy import — worker_profiles imports config layers, not this module,
+    # so the lazy edge keeps the dependency acyclic.
+    from dontpanic_orchestrate import worker_profiles as wp
+
+    profile = wp.load_profiles(project_path).get(name)
+    if profile is not None:
+        try:
+            if role is not None:
+                wp.assert_profile_role_allowed(name, profile, role)
+            else:
+                wp.assert_profile_dispatchable(name, profile)
+        except wp.WorkerProfileError as exc:
+            raise RegisterWorkerError(str(exc)) from exc
+        return
+
+    registered = ", ".join(worker_executors()) or "(none)"
+    raise RegisterWorkerError(
+        f"{name!r} has no executor in DontPanic and cannot be registered as a "
+        f"worker. {name} can operate DontPanic as an interactive agent, but only "
+        f"these agents are dispatchable workers: {registered}."
+    )
 
 
 __all__ = [

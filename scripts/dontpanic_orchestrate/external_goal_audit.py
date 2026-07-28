@@ -100,12 +100,21 @@ class ExternalGoalAuditError(ValueError):
 def _effective_implementer(plan_dir: Path, implementer_agent: str | None) -> str:
     """Resolve the implementer the cross-vendor check compares against:
     explicit caller override, else the same D004 precedence walk the
-    dispatched path uses (project config → global config → fallback)."""
+    dispatched path uses (project config → global config → fallback).
+
+    F013 i1: the configured value may be a worker-profile id or a D015
+    alias — the vendor comparison needs the HARNESS, so peek through the
+    profile table (identity-only, no role gates). Unresolvable names fall
+    back to the raw string; the attach path validates them separately."""
     if implementer_agent:
         return implementer_agent.strip().lower()
     project = pc.find_project_for_plan_dir(Path(plan_dir).resolve())
     project_path = project[0] if project is not None else None
-    return str(pc.resolve_dispatch_defaults(project_path)["implementer"]).strip().lower()
+    configured = str(pc.resolve_dispatch_defaults(project_path)["implementer"]).strip().lower()
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    peeked = _wp.peek_worker(Path(plan_dir).resolve(), configured)
+    return peeked.harness if peeked is not None else configured
 
 
 def _validate_vendor(vendor: str) -> str:
