@@ -20,6 +20,7 @@ solved problems in mature systems like
 | Caller | How it reaches DontPanic | Why |
 |---|---|---|
 | OpenClaw | A small DontPanic skill / plugin in the OpenClaw workspace shells out to `dontpanic intake | dispatch | status | approve` | OpenClaw owns the chat / channel / session surface; DontPanic owns plan-locked delivery |
+| OpenCode | Operator / planning surface: the OpenCode session runs the DontPanic CLI directly, or connects as an MCP client to `dontpanic mcp serve` | OpenCode owns the planning and editing session; DontPanic owns plan-locked delivery. OpenCode operates DontPanic and is never dispatched — see the [Agent Capability Matrix](./AGENT_CAPABILITY_MATRIX.md) |
 | Claude Code | Claude reads `~/.dontpanic/agent-manifest.json` and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
 | Codex CLI | Same pattern as Claude Code: read manifest, call CLI or MCP tools | Cross-vendor verification — Codex implements while Claude audits, or vice versa |
 | Cursor / IDE plugins | MCP client → `dontpanic mcp serve` localhost | IDE owns editing UX; DontPanic adds plan/audit/evidence rigor |

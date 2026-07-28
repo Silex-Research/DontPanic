@@ -51,7 +51,7 @@ from dontpanic_orchestrate import agent_manifest
 from dontpanic_orchestrate import executors
 from dontpanic_orchestrate import global_config as gc
 
-GENERATOR_VERSION = "1.1"
+GENERATOR_VERSION = "1.2"
 """Version of the brief generator (renderer + layout), independent of the
 DontPanic runtime version. Stamped into :class:`RenderedBrief` and the F003
 managed-block markers so a layout change forces a managed-block rewrite even
@@ -60,7 +60,8 @@ changes in a way that should re-stamp downstream managed blocks.
 
 History: 1.0 → 1.1 added the MACHINE COMMAND GUIDANCE pointer (plan
 2026-06-03-001 F003) that sends agents to the read-only JSON command-guidance
-surface (`dontpanic agent commands`)."""
+surface (`dontpanic agent commands`). 1.1 → 1.2 added the CAPABILITY MATRIX
+pointer (plan 2026-07-27-001 F003) to docs/AGENT_CAPABILITY_MATRIX.md."""
 
 # ──────────────────────────────  canonical strings  ──────────────────────────────
 
@@ -92,6 +93,19 @@ MACHINE_COMMAND_GUIDANCE = (
     "Run `dontpanic agent commands` for a stable JSON inventory of every\n"
     "command's class, risk, examples, predecessor hints, and human-escalation\n"
     "rule. Inspect it before mutating state or dispatching paid work."
+)
+
+# Pointer to the human-readable capability matrix (plan 2026-07-27-001 F003).
+# The brief never duplicates the matrix rows — the doc maps every known agent
+# onto the three capability axes, and `dontpanic agent status` stays the live
+# machine source of truth. Asserted for presence by tests so the pointer
+# cannot silently drift out of the brief. Deliberately names no specific
+# agent: the operator-only roster lives in agent_surface / the matrix doc.
+CAPABILITY_MATRIX_POINTER = (
+    "The agent capability matrix (docs/AGENT_CAPABILITY_MATRIX.md in the\n"
+    "DontPanic repo) maps every known agent onto can_operate /\n"
+    "can_be_dispatched / can_orchestrate, worker roles, and operator\n"
+    "surfaces. `dontpanic agent status` is the live source of truth."
 )
 
 
@@ -243,6 +257,9 @@ def render_brief(inputs: BriefInputs) -> RenderedBrief:
         "MACHINE COMMAND GUIDANCE",
         MACHINE_COMMAND_GUIDANCE,
         "",
+        "CAPABILITY MATRIX",
+        CAPABILITY_MATRIX_POINTER,
+        "",
         home_status,
     ]
     text = "\n".join(lines) + "\n"
@@ -268,6 +285,7 @@ def to_public_dict(brief: RenderedBrief) -> dict[str, Any]:
 __all__ = [
     "BriefInputs",
     "CANONICAL_WORKFLOW",
+    "CAPABILITY_MATRIX_POINTER",
     "GENERATOR_VERSION",
     "MACHINE_COMMAND_GUIDANCE",
     "NOT_IT_ORCHESTRATION",
