@@ -1,0 +1,210 @@
+{
+  "schema_version": "v1",
+  "auditor": "codex",
+  "implementer": null,
+  "input_fingerprint": "sha256:b9bd69275b960eb5f3f19e1c09547f09baea51f3b4f529de2f4e70b415a31c63",
+  "generated_at": "2026-07-27T10:38:14Z",
+  "findings": [
+    {
+      "severity": "critical",
+      "journey_id": "cost-topology-goal-audit",
+      "gap_class": "wiring_gap",
+      "description": "D001 selects B1 for core delivery, but F004 still permits either branch and does not define the external-evidence command, artifact schema, provenance fields, validation rules, or the goal and experience gate consumers that accept it.",
+      "feature_refs": [
+        "F004"
+      ],
+      "recommendation": "Rewrite F004 around B1, pin the CLI contract and evidence schema, define stale or duplicate handling, identify every consuming gate, and test valid, malformed, missing, and non-Gemini evidence.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "critical",
+      "journey_id": "buzz-like-harness-and-model-selection",
+      "gap_class": "coverage_gap",
+      "description": "The plan lacks an implemented capability source for existing harnesses and does not pin required capabilities or permission policy for auditor and goal_auditor. Narrow-only profile overrides alone cannot make role assignment deterministic or safe.",
+      "feature_refs": [
+        "F011",
+        "F013",
+        "F014"
+      ],
+      "recommendation": "Define immutable capability declarations for every registered harness, a requirement matrix for all three roles, and effective-capability intersection rules. Explicitly map goal_auditor to a read-only permission policy and test each refusal cell.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "critical",
+      "journey_id": "buzz-status-and-gates",
+      "gap_class": "coverage_gap",
+      "description": "The outbound privacy contract remains prose-only: F006 does not specify which NotifyEvent fields may leave the machine or whether bodies, action links, evidence paths, technical metadata, and transcript-derived text are dropped or sanitized.",
+      "feature_refs": [
+        "F005",
+        "F006"
+      ],
+      "recommendation": "Define an allowlisted Buzz payload schema and one sanitizer used before transport. Add adversarial tests for credentials, tokens, home paths, evidence URIs, technical metadata, and transcript fragments.",
+      "finding_class": "scope_guard"
+    },
+    {
+      "severity": "critical",
+      "journey_id": "buzz-status-and-gates",
+      "gap_class": "integration_gap",
+      "description": "F006 introduces a reporter private key but does not pin secure subprocess handling, file-permission checks, environment isolation, or a rule preventing the key from appearing in argv, logs, exceptions, and diagnostic output.",
+      "feature_refs": [
+        "F006",
+        "F009"
+      ],
+      "recommendation": "Require key delivery through a protected file, stdin, or isolated environment rather than argv; validate restrictive file permissions; redact subprocess diagnostics; and add leakage tests covering success and every failure path.",
+      "finding_class": "scope_guard"
+    },
+    {
+      "severity": "high",
+      "journey_id": "new-user-reads-honest-executor-panel",
+      "gap_class": "coverage_gap",
+      "description": "F002 guards only README and the new matrix, while F001 promises honesty across committed operator documentation and the journey depends on ECOSYSTEM, GETTING_STARTED, setup checklists, agent brief, and status remaining consistent.",
+      "feature_refs": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "recommendation": "Guard every authoritative operator-facing path or consolidate executor claims into a generated structured fragment. Include a negative fixture for each guarded document class.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "new-user-reads-honest-executor-panel",
+      "gap_class": "parity_gap",
+      "description": "Profile-aware roles can be rendered incorrectly by agent status, agent brief, doctor, or inventory code that still tests the configured role string directly against AGENT_REGISTRY and therefore treats a valid profile ID as operator-only.",
+      "feature_refs": [
+        "F001",
+        "F003",
+        "F013"
+      ],
+      "recommendation": "Create one resolved capability projection for legacy aliases and profiles, then require status, brief, doctor, role display, and the published matrix to use it with parity tests.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-strongly-recommended-setup",
+      "gap_class": "coverage_gap",
+      "description": "F009 still says setup-checklist and/or doctor and leaves configured status undefined, so implementation could omit a required surface or report OK for malformed config, a missing key, or an unavailable buzz-cli.",
+      "feature_refs": [
+        "F005",
+        "F006",
+        "F009"
+      ],
+      "recommendation": "Pin README, GETTING_STARTED, setup, and doctor requirements plus a state matrix for missing, skipped, malformed, incomplete, locally valid, unavailable transport, and configured states, including exit-code behavior.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-status-and-gates",
+      "gap_class": "integration_gap",
+      "description": "F006 still permits either buzz-cli or a minimal signed-event client, leaving configuration precedence, dependency probing, timeout, acknowledgement, retry behavior, and the meaning of a successful configured post unresolved.",
+      "feature_refs": [
+        "F006",
+        "F009"
+      ],
+      "recommendation": "Select one v0 transport and pin its invocation or protocol contract, bounded timeout, single-attempt or retry policy, acknowledgement rule, and fail-soft outcomes for every local and remote failure.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-status-and-gates",
+      "gap_class": "wiring_gap",
+      "description": "Generic dispatch_event fan-out does not guarantee delivery of the required gate, signoff, and breaker notifications because current routing also depends on sink tuples, notification levels, event dispositions, and legacy fallback branches.",
+      "feature_refs": [
+        "F006"
+      ],
+      "recommendation": "Add a routing matrix and integration tests for gate_hit or gate_paused, signoff, and breaker_tripped across normal and quiet levels, rendered and legacy paths, and narrowed sink tuples.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "medium",
+      "journey_id": "buzz-strongly-recommended-setup",
+      "gap_class": "coverage_gap",
+      "description": "Documentation and example comments steer users toward private communities, but no configured-state rule verifies or records that the selected community is private before gate and status projections are enabled.",
+      "feature_refs": [
+        "F005",
+        "F006",
+        "F009"
+      ],
+      "recommendation": "Record expected community visibility in config and verify it when the transport exposes metadata; otherwise require an explicit private-target acknowledgement and warn before enabling notifications to an unverified target.",
+      "finding_class": "scope_guard"
+    },
+    {
+      "severity": "high",
+      "journey_id": "cost-topology-goal-audit",
+      "gap_class": "wiring_gap",
+      "description": "F012 and F013 do not require profile resolution to replace raw role strings in every execution path. Volley, single-agent, completion audit, sufficiency audit, readiness, doctor, status, and inventory can therefore resolve different workers.",
+      "feature_refs": [
+        "F004",
+        "F012",
+        "F013"
+      ],
+      "recommendation": "Introduce one role-resolution result containing profile, canonical harness, requested model, capabilities, and provider identity, and require every dispatch and diagnostic path to consume it with parity tests.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "cost-topology-goal-audit",
+      "gap_class": "wiring_gap",
+      "description": "The existing cross-vendor invariant compares configured agent strings. Two differently named profiles can resolve to the same harness or provider and incorrectly pass the adversarial goal-auditor separation check.",
+      "feature_refs": [
+        "F004",
+        "F013"
+      ],
+      "recommendation": "Run cross-vendor validation after profile and alias resolution using a canonical provider identity, and test same-provider profiles, legacy aliases, different models on one provider, and the explicit override path.",
+      "finding_class": "scope_guard"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-like-harness-and-model-selection",
+      "gap_class": "integration_gap",
+      "description": "D015 defines harness aliases but neither F013 nor the decision contract defines what happens when a profile ID collides with a registry key or alias, making role strings ambiguous and potentially resolving differently across commands.",
+      "feature_refs": [
+        "F011",
+        "F013",
+        "F014"
+      ],
+      "recommendation": "Reserve harness and alias namespaces or introduce explicit profile references, reject collisions at write time, and test normalization consistently in workers, roles, doctor, status, and dispatch.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-like-harness-and-model-selection",
+      "gap_class": "coverage_gap",
+      "description": "F013 leaves profile storage as global and/or project config, while F012 leaves the role-level model override shape optional. The workers CLI therefore has no deterministic mutation scope, shadowing rule, or inheritance behavior.",
+      "feature_refs": [
+        "F012",
+        "F013"
+      ],
+      "recommendation": "Pin global and project schemas, workers CLI scope flags, duplicate-profile shadowing, unset and null semantics, and the exact role-level model field before implementation.",
+      "finding_class": "matrix_pin"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-like-harness-and-model-selection",
+      "gap_class": "wiring_gap",
+      "description": "F012 and F013 require evidence for harness, model, and profile but do not define the schema migration or distinguish requested model selection from the model version actually reported by the executor.",
+      "feature_refs": [
+        "F012",
+        "F013"
+      ],
+      "recommendation": "Pin profile_id, harness_id, requested_model, and reported_model_version fields; propagate them through DispatchTask and DispatchResult; update audit readers and status projections; and test legacy evidence compatibility.",
+      "finding_class": "plan_contract"
+    },
+    {
+      "severity": "high",
+      "journey_id": "buzz-like-harness-and-model-selection",
+      "gap_class": "parity_gap",
+      "description": "The journey names Claude, Codex, Gemini, OpenRouter, and Ollama as selectable harnesses, while F014 may trail core and requires only one additional adapter. Core completion can pass without delivering the stated harness-selection experience.",
+      "feature_refs": [
+        "F004",
+        "F013",
+        "F014",
+        "F015"
+      ],
+      "recommendation": "Split the journey into core profile selection over currently registered harnesses and deferred adapter expansion, or require every named harness before accepting the existing journey.",
+      "finding_class": "plan_contract"
+    }
+  ],
+  "malformed_findings": [],
+  "parser_notes": []
+}

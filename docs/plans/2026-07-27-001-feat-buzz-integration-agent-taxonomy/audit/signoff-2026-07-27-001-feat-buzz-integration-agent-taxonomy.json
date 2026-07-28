@@ -1,0 +1,24 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "signoff_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#signoff#0",
+  "iteration": 0,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F011-i0.json",
+    "audit/codex-auditor-F011-i0.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 0,
+    "blocked_count": 2,
+    "inconclusive_count": 0
+  },
+  "signoff": false,
+  "signoff_reason": "auditor blocked",
+  "next_action": "blocked_awaiting_human",
+  "decided_at": "2026-07-28T00:58:58Z"
+}

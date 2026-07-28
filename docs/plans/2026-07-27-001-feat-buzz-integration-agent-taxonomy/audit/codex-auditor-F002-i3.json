@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#3",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 3,
+  "started_at": "2026-07-27T11:49:45Z",
+  "completed_at": "2026-07-27T12:05:23Z",
+  "validation_performed": [
+    "codex auditor round (iteration 3)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F002-i3.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-ttvkx83j target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 178996 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 629234,
+    "tokens_out": 15876,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer correctly declared the target, and its command log contains no forbidden or missing-required-flag shapes. Required acceptance probes and Ruff checks pass, but the categorical guard remains bypassable.\n\nFINDING (high, correctness): Same-segment disclaimer keywords can suppress an explicit non-registry executor claim. Evidence: `scan_text` returned no violations for all three statements: `Gemini is a shipped executor for planned workflows.`, `Gemini is a shipped executor available on operator surfaces.`, and `Gemini (operator-only) is a shipped executor.` This occurs because `_segment_class` checks `_DISCLAIMER_RE` before `_CLAIM_RE`, allowing words such as `planned` anywhere in the segment to override an explicit claim. Recommendation: require disclaimers to negate or qualify the agent’s dispatchability directly; explicit shipped-executor claims must win otherwise. Add these probes as regression tests.\n\nThe full pytest suite could not initialize because the read-only auditor environment has no usable temporary directory. Direct acceptance/regression assertions passed; Ruff lint and formatting passed.\n\n$ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py -q -p no:cacheprovider\n\n$ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py -q -s -p no:cacheprovider -k 'not test",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py -q -s -p no:cacheprovider -k 'not test_allowlist_is_fixed_and_missing_paths_are_skipped'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from pathlib import Path; from dontpanic_orchestrate import doc_drift as d; from dontpanic_orchestrate.executors import AGENT_REGISTRY; h={\"claude\",\"codex\"}; pre=\"- [x] Single-agent and volley dispatch (Claude, Codex, Gemini, Grok, Ollama executors)\\n\"; corrected=\"- [x] Single-agent and volley dispatch (registered executors today: Claude and Codex — Gemini and Grok are operator-only runtimes, Ollama support is planned)\\n\"; probes=[\"Gemini is a shipped executor (Grok is operator-only).\\n\",\"Shipped executors — Gemini — Grok is operator-only.\\n\",\"Executors: Gemini; Grok is operator-only.\\n\"]; assert d.registered_worker_names()==sorted(AGENT_REGISTRY); assert {\"gemini\",\"grok\",\"ollama\"}<={v.agent for v in d.scan_text(pre,registered=h)}; assert d.scan_text(corrected,registered=h)==[]; assert all([v.agent for v in d.scan_text(p,registered=h)]==[\"gemini\"] for p in probes); assert d.scan_allowlisted_docs(Path(\".\"))==[]; print(\"direct acceptance/regression assertions passed\")' && ruff check --no-cache scripts/dontpanic_orchestrate/doc_drift.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py && ruff format --check --no-cache scripts/dontpanic_orchestrate/doc_drift.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from dontpanic_orchestrate.doc_drift import scan_text; h={\"claude\",\"codex\"}; probes=[\"Gemini is a shipped executor for planned workflows.\\n\",\"Gemini is a shipped executor available on operator surfaces.\\n\",\"Gemini (operator-only) is a shipped executor.\\n\"]; print([(p.strip(), [v.agent for v in scan_text(p, registered=h)]) for p in probes])'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Same-segment disclaimer keywords can suppress an explicit non-registry executor claim. Evidence: `scan_text` returned no violations for all three statements: `Gemini is a shipped executor for planned workflows.`, `Gemini is a shipped executor available on operator surfaces.`, and `Gemini (operator-only) is a shipped executor.` This occurs because `_segment_class` checks `_DISCLAIMER_RE` before `_CLAIM_RE`, allowing words such as `planned` anywhere in the segment to override an explicit claim. Re",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

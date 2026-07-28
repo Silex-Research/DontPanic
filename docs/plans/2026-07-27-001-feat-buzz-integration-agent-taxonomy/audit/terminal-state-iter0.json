@@ -1,0 +1,18 @@
+{
+  "audit_paths": [
+    "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F002-i0.json",
+    "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F002-i0.json"
+  ],
+  "exception_class": "CrossFeatureEditError",
+  "exception_message": "[patch-completeness] BLOCKED by cross-feature edit detection: the dispatch for F002 touched paths owned by other feature(s):\n  F004 owns:\n    docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/decisions.jsonl\n  remediation \u2014 revert the foreign-owned paths from this dispatch and land them under the owning feature.\n  override \u2014 re-run with `--acknowledge-cross-feature <reason>` (>=8 non-whitespace chars) to record a rationale and pass anyway.",
+  "feature_id": "F002",
+  "iteration": 0,
+  "last_good_audit_path": "/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F002-i0.json",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "recommended_command": "dontpanic close --operator-resolved 2026-07-27-001-feat-buzz-integration-agent-taxonomy F002 --reason environmental_reproduction_failure",
+  "recommended_recovery": "dontpanic close --operator-resolved 2026-07-27-001-feat-buzz-integration-agent-taxonomy F002 --reason environmental_reproduction_failure",
+  "recovery_notes": "F004 broad-Exception backstop fired during stage='post_iter'. The iter loop raised CrossFeatureEditError after 2 audit envelope(s) landed; the last entry in ``audit_paths`` is the most recent successful write (e.g. the orphaned implementer envelope when stage==auditor). Use the recommended close-out command to clear breaker:no_progress and flip features.json.",
+  "schema": "terminal-state.v0",
+  "stage": "post_iter",
+  "written_at": "2026-07-27T12:54:07Z"
+}

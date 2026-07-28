@@ -105,23 +105,31 @@ Reading the topology against the matrix:
 ## Vocabulary: harness vs model vs profile vs role
 
 Track D of plan 2026-07-27-001 (phase D0) splits agent identity into **four
-distinct concepts** so that new model versions never require a new registry
-key. The first three are storage layers; the fourth is an assignment on top
-of them:
+distinct concepts**: three storage layers, plus **role** as an assignment
+overlay on top of them — so that new model versions never require a new
+registry key:
 
 ```text
-1. HARNESS REGISTRY  (code, stable, few)     ← today's AGENT_REGISTRY
-   claude | codex | future: gemini_cli | openrouter | ollama | …
-   = how to invoke (argv, auth, sandbox, output parsing)
+        ┌─ ROLE ASSIGNMENT (overlay, not a layer) ──────────────────┐
+        │  implementer / auditor / goal_auditor                     │
+        │  roles.<slot> → profile id; capability flags gate         │
+        │  which roles a profile may hold                           │
+        └───────────────────────────┬───────────────────────────────┘
+                                    ▼
 
-2. MODEL CATALOG     (data + discovery)      ← high churn; never registry keys
-   vendor ids | openrouter/… slugs | ollama tags | aliases (grok-latest → grok-4.5)
+Layer 3  WORKER PROFILES  (operator config)     ← Buzz-like agent cards
+         display_name + harness + model + allowed_roles + capability overrides
 
-3. WORKER PROFILES   (operator config)       ← Buzz-like agent cards
-   display_name + harness + model + allowed_roles + capability overrides
+                    │ binds one of each ▼
 
-4. ROLES             (assignment)            ← implementer / auditor / goal_auditor
-   roles.<slot> → profile id; capability flags gate which roles a profile may hold
+Layer 2  MODEL CATALOG    (data + discovery)    ← high churn; never registry keys
+         vendor ids | openrouter/… slugs | ollama tags | aliases (grok-latest → grok-4.5)
+
+                                    ▼
+
+Layer 1  HARNESS REGISTRY (code, stable, few)   ← today's AGENT_REGISTRY
+         claude | codex | future: gemini_cli | openrouter | ollama | …
+         = how to invoke (argv, auth, sandbox, output parsing)
 ```
 
 The four concepts, one by one:

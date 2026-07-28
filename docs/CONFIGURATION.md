@@ -120,7 +120,7 @@ duplicate volley orchestration.
 
 | Surface | Default | Configurable | Reference |
 |---|---|---|---|
-| **Agents (models)** | `claude`, `codex` | Yes — agent registry | [Agents](#agents-models) |
+| **Agents (harnesses)** | `claude`, `codex` | Yes — harness registry | [Agents](#agents-harnesses) |
 | **Implementer/auditor pair** | `claude` impl + `codex` aud | Per-plan or global | [Agent pairing](#agent-pairing) |
 | **Notification sinks** | terminal (macOS) | Discord webhook (optional) | [Notifications](#notifications) |
 | **Quota awareness** | per-vendor weekly caps | `~/.dontpanic/quota_caps.json` | [Quota](#quota--caps) |
@@ -159,15 +159,22 @@ The rest of this document explains each knob.
 
 ---
 
-## Agents (models)
+## Agents (harnesses)
 
 The supervisor dispatches **two cross-vendor agents per volley** — one
 implementer, one auditor (per plan 2026-04-19-001 F005 and the cross-vendor
 adversarial design).
 
-**Currently supported agents:**
+The names here are **harnesses**, not models: a harness is the stable code
+adapter that knows how to invoke an agent runtime (argv, auth, sandbox,
+output parsing). Which model runs behind a harness is a separate,
+data-level concern — see the [vocabulary
+section](./AGENT_CAPABILITY_MATRIX.md#vocabulary-harness-vs-model-vs-profile-vs-role)
+of the capability matrix.
 
-| Agent | Vendor | Surface |
+**Currently registered harnesses:**
+
+| Harness | Vendor | Surface |
 |---|---|---|
 | `claude` | Anthropic | Claude Code CLI |
 | `codex` | OpenAI | Codex CLI |
@@ -176,10 +183,17 @@ These are the names used throughout `agents_required:` in plan frontmatter
 and `--implementer / --auditor` flags on `dontpanic dispatch`. The
 canonical source of truth is `scripts/dontpanic_orchestrate/executors/__init__.py:15`.
 
-> **Adding a model:** drop a new executor class under
-> `scripts/dontpanic_orchestrate/executors/` extending `BaseExecutor`,
-> register it in `AGENT_REGISTRY`, and add a quota_caps entry. No
-> agent-conventions schema bump required.
+> **Adding a harness** (a new way to *invoke* an agent runtime — e.g. a
+> future `gemini_cli`, `openrouter`, or `ollama` executor): drop a new
+> executor class under `scripts/dontpanic_orchestrate/executors/`
+> extending `BaseExecutor`, register it in `AGENT_REGISTRY`, and add a
+> quota_caps entry. No agent-conventions schema bump required.
+>
+> **Adopting a new model** (Grok 4.5, the next Claude, an OpenRouter OSS
+> slug, an Ollama tag) is **not** a registry change: model ids are catalog
+> data configured on a worker profile, never `AGENT_REGISTRY` keys. Never
+> add a model version string to the registry — no Python change is
+> involved in switching models behind an existing harness.
 
 ### Agent pairing
 

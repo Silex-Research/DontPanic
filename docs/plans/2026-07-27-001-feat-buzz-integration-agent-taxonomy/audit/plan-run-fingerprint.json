@@ -1,0 +1,231 @@
+{
+  "captured_at": "2026-07-28T00:38:52Z",
+  "decision_lines": [
+    "D001\u001fa4fbe44a01bde9e7f1cd897a1e12e4a7520de47d0ddc649ec32af613ed5b1b89",
+    "D002\u001f3c60a75be1dceb41ef2b08890bac0b62cc59c38b3db1ecec8b9e78ce6ffb7051",
+    "D003\u001ff4511b1a0db1746492fa55212e55432c7c46cfb7620ba751b4d1c3a67948c8fc",
+    "D004\u001f05464242c548e96653f192923658c1dba66910e42471573dded6479e226fd6e4",
+    "D005\u001f0f4efc64b3d7656d25ae6150dcd6c2a0a0ea4b66832defd5671ac85ce838b18c",
+    "D006\u001f09296d743c5ac9687313b01faba202ce44b2ee02fc36875469025f2a0469ff3e",
+    "D007\u001fe20d530c3f1fee89c863cf84e4955f2a7ec4af3bea08e8551f2e497f80a79593",
+    "D008\u001f7dbedfcd6370be83dab5502215ff1dc1f04c43f40edc99746555410e13866822",
+    "D009\u001ffe56453373a42979c3331ff2855e817a093c9e66f615ca6056cb88298842336d",
+    "D010\u001f7e4acf7ecaaf83311acd512a5a5e045024c8b1c070974099397b211ad6d2aff5",
+    "D011\u001f86f2a33d36a5d5a1b44765d586640d36c3133ed6ad4a6809009101a3dbd0ee75",
+    "D012\u001fb428a896e9ffd332e45ba92420a89e58460221067b22eb11bc96021c6efb56b3",
+    "D013\u001f8b228414346eac6b539468d2d3b5a6a5483d19c48ce7cbca8967d8c10ff62b62",
+    "D014\u001f1211f3431e2b5fad42c7a6f20fa2f4bee2340a0b16571938b49036fae5c8867b",
+    "D015\u001fb29e544d17b876283cd1ffc491b512cc03f11d088d2c0a551d6bbb2cd88a6b3b",
+    "D016\u001f92e264ce8a6d8c90637932423823deaf58acd7e280b0dc43639628725660625f",
+    "D017\u001f60883e51c8ade22dc181ad077443a754484a3fd7fcb9bd6add14d46e00f2a24d",
+    "D018\u001f764c0125adc33344d741267def0f3d3b78ba2a30f632a9a4b19e5a6885c5f99a",
+    "D019\u001fd93fbe94771786f6aa7338223f18388c9794819138d8d8970eeaa85926a6f21c",
+    "D020\u001f892c4d77a1d706c65b927504d04d178258069d286017d481fa2173e8c75f0477"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "No remaining committed doc claims Gemini, Grok, or Ollama are registered dispatch executors while they are absent from AGENT_REGISTRY; README onboarding section and agent-status wording agree on worker vs operator.",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": false
+      },
+      "F002": {
+        "acceptance": "A automated check fails when README-style prose claims a non-registry agent is a shipped executor, and passes on the post-F001 corrected docs.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F003": {
+        "acceptance": "Committed matrix + ECOSYSTEM/OpenCode caller row exist; a reader can map the four-agent cost topology onto can_operate vs can_be_dispatched without reading Python source.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F004": {
+        "acceptance": "After D001, either (B1) an operator can attach a Gemini goal/experience audit as first-class evidence without register-worker, or (B2) gemini is in AGENT_REGISTRY and can be assigned goal_auditor with tests; illegal role assignments still refuse with a clear message.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F003"
+        ],
+        "passes": false
+      },
+      "F005": {
+        "acceptance": "docs state Buzz signup+setup is strongly recommended; private community is the default work surface; public communities are optional support only; ECOSYSTEM non-goals and caller sketch present; no text requires joining a maintainer-owned community.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F006": {
+        "acceptance": "dispatch_event fans to buzz when configured; returns False and does not raise when buzz is absent; unit tests cover both; content redaction checks pass; example/config copy steers operators to a private community.",
+        "agents_required": null,
+        "depends_on": [
+          "F005",
+          "F009"
+        ],
+        "passes": false
+      },
+      "F007": {
+        "acceptance": "Committed caller recipe documents the full confirm-gated flow and explicit non-auto-confirm rule; operator can follow it without reading orchestrator source.",
+        "agents_required": null,
+        "depends_on": [
+          "F005",
+          "F006"
+        ],
+        "passes": false
+      },
+      "F008": {
+        "acceptance": "When enabled, an allowlisted human approval in Buzz clears a DontPanic gate with a durable actor record; non-allowlisted actors are refused; feature remains off-by-default.",
+        "agents_required": null,
+        "depends_on": [
+          "F006",
+          "F007"
+        ],
+        "passes": false
+      },
+      "F009": {
+        "acceptance": "Unconfigured Buzz yields advisory WARN with private-community remediation on doctor/setup paths; configured Buzz is ok; hard install does not fail solely because Buzz is absent; no default public community URL is written.",
+        "agents_required": null,
+        "depends_on": [
+          "F005"
+        ],
+        "passes": false
+      },
+      "F010": {
+        "acceptance": "A short committed note records at least one real private-community usage pattern and whether a public DontPanic community is worth running; D007 status updated.",
+        "agents_required": null,
+        "depends_on": [
+          "F006",
+          "F007"
+        ],
+        "passes": false
+      },
+      "F011": {
+        "acceptance": "Committed docs define harness, model, profile, and role as four distinct concepts; no doc instructs operators to add model version strings to AGENT_REGISTRY.",
+        "agents_required": null,
+        "depends_on": [
+          "F001",
+          "F003"
+        ],
+        "passes": false
+      },
+      "F012": {
+        "acceptance": "When a model is configured for a role/harness, dispatch argv includes the vendor model flag; when unset, behavior matches pre-change defaults; tests cover both.",
+        "agents_required": null,
+        "depends_on": [
+          "F011"
+        ],
+        "passes": false
+      },
+      "F013": {
+        "acceptance": "Operator can create a Buzz-like profile (e.g. honey: codex_cli + gpt model + auditor-only), assign it to roles.auditor, and dispatch uses that harness+model; legacy roles.implementer=claude still works; illegal capability/role combos refuse clearly.",
+        "agents_required": null,
+        "depends_on": [
+          "F012"
+        ],
+        "passes": false
+      },
+      "F014": {
+        "acceptance": "At least one of openrouter|ollama|gemini_cli ships as a harness with declared capabilities and tests; implementer remains refused for harnesses that lack coding capabilities; no model version appears as a registry key.",
+        "agents_required": null,
+        "depends_on": [
+          "F013",
+          "F004"
+        ],
+        "passes": false
+      },
+      "F015": {
+        "acceptance": "models list works for at least one discoverable harness; aliases resolve; freeform model does not require a code change; doctor distinguishes unknown vs rejected.",
+        "agents_required": null,
+        "depends_on": [
+          "F013"
+        ],
+        "passes": false
+      },
+      "F016": {
+        "acceptance": "When bindings are configured, docs and status can show Buzz agent \u2192 profile \u2192 harness+model; unbound agents do not gain dispatch; feature off by default.",
+        "agents_required": null,
+        "depends_on": [
+          "F013",
+          "F007"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F009",
+      "F006",
+      "F007",
+      "F008",
+      "F010",
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F016"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "6d98cfadee190e62f2ed6db3391d261045e29407869bcf0b1f1a968e91deb4af",
+    "decisions.jsonl": "ce4dcf5b06117b01ec3355a0abb72b2748a99f1164eeda1c4b9b43c4711da14e",
+    "features.json": "1be3762b2a4f29e1673bab9224d616baf8667ccbdecbeddbcbfcceb616c5811f",
+    "objective_contract.json": "48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
+    "plan.md": "145a9674c7278555b40a1c23bf0347d648cb010c0d6cc5b83f1d45a377617223"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1785154449.2267427,
+    "decisions.jsonl": 1785148192.0995874,
+    "features.json": 1785147165.8436334,
+    "objective_contract.json": 1785147165.8436632,
+    "plan.md": 1785148694.9034703
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "completed_stages": [
+      "pre_impl",
+      "pre_merge"
+    ]
+  },
+  "objective_hash": "48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
+  "plan_semantics": {
+    "agents_required": [
+      "claude",
+      "codex"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-05-01-002-feat-discord-notification-sink",
+      "2026-05-03-003-feat-agent-access-manifest-thin-mcp",
+      "2026-06-14-001-feat-agent-channel-interop-v0"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 4,
+      "no_progress_threshold": 2,
+      "wall_clock_hours": 12
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}
