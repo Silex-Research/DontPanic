@@ -504,6 +504,32 @@ def _write_envelope(
 # ──────────────────────────────  public entrypoint  ──────────────────────────────
 
 
+def _compute_findings(
+    plan_dir: Path,
+) -> tuple[list[EvidenceRef], list[CompletionFinding]]:
+    """Steps 1–4 of the v1 heuristic (contract load, manifest scan,
+    missing_evidence + journey_gap emission). Read-only."""
+    contract = _load_objective_contract(plan_dir)
+    refs = _build_evidence_manifest(plan_dir)
+    findings = list(_emit_missing_evidence(contract, refs))
+    findings.extend(_emit_journey_gaps(contract, refs))
+    return refs, findings
+
+
+def compute_completion_findings(plan_dir: Path) -> list[CompletionFinding]:
+    """Pure form of :func:`run_completion_audit` — same v1 findings,
+    NOTHING written to disk (plan 2026-07-27-001 F004 i1 codex finding).
+
+    Read-only consumers (external-attach prompt rendering, attach-time
+    response validation, the post-completion backstop's external-envelope
+    freshness check) MUST use this instead of :func:`run_completion_audit`
+    so a prompt render can never write ``completion_findings.json`` and a
+    refused attach can never leave evidence behind. Deterministic over
+    plan-dir content: fingerprints computed from these findings match a
+    later :func:`run_completion_audit` over the same tree."""
+    return _compute_findings(plan_dir)[1]
+
+
 def run_completion_audit(plan_dir: Path) -> list[CompletionFinding]:
     """Run the F2 v1 evidence-coverage heuristic against ``plan_dir``.
 
@@ -522,16 +548,13 @@ def run_completion_audit(plan_dir: Path) -> list[CompletionFinding]:
       5. Serialize all findings into a typed envelope at
          ``evidence/goal-governance/post_impl/completion_findings.json``.
 
-    Returns the in-memory findings list.
+    Returns the in-memory findings list. Steps 1–4 without the write are
+    :func:`compute_completion_findings`.
     """
-    contract = _load_objective_contract(plan_dir)
+    refs, findings = _compute_findings(plan_dir)
+
     fm = _read_frontmatter(plan_dir / "plan.md")
     contract_ref = fm["links"]["objective_contract"]
-
-    refs = _build_evidence_manifest(plan_dir)
-    findings = list(_emit_missing_evidence(contract, refs))
-    findings.extend(_emit_journey_gaps(contract, refs))
-
     _write_envelope(plan_dir, contract_ref, refs, findings)
     return findings
 
@@ -600,6 +623,7 @@ __all__ = [
     "EvidenceType",
     "GapClass",
     "cluster_findings",
+    "compute_completion_findings",
     "make_cluster_context",
     "run_completion_audit",
     "to_goal_gap_findings",

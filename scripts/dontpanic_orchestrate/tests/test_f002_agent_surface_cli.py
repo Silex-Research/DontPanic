@@ -99,10 +99,15 @@ def test_agent_status_no_arg_classifies_current_and_lists_operators(tmp_path, mo
     # Current-agent section is always present (here: unknown — no env signal).
     assert "CURRENT AGENT" in out
     # Known operator-only agents are surfaced as non-dispatchable by name.
+    # Derived from the LIVE registry filter (not the static KNOWN_OPERATOR_AGENTS
+    # tuple) so a future promotion of a vendor into AGENT_REGISTRY (D001 B2 /
+    # F014) shrinks the expectation instead of contradicting the output.
     assert "KNOWN OPERATOR-ONLY AGENTS" in out
-    for op in agent_surface.KNOWN_OPERATOR_AGENTS:
+    operator_only = agent_surface.known_operator_only_agents()
+    for op in operator_only:
         assert op in out
-    assert "grok" in out and "gemini" in out
+    # grok has no planned executor and anchors the operator-only section.
+    assert "grok" in operator_only
 
 
 def test_agent_status_no_arg_detects_current_agent_from_env(tmp_path, monkeypatch) -> None:

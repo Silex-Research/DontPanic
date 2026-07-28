@@ -42,6 +42,7 @@ This module is library-only; F003 will add the CLI surface.
 from __future__ import annotations
 
 import getpass
+import hashlib
 import json
 import os
 import re
@@ -89,6 +90,14 @@ operator supplies ``--ignore-completion-findings <reason>``."""
 _PROMPT_TEMPLATE_PATH: Path = Path(__file__).parent / "prompts" / "completion_audit_prompt.md"
 """Path to the auditor prompt markdown template. Embeds ``{contract}``,
 ``{features}``, ``{findings}``, ``{evidence_manifest}`` placeholders."""
+
+_EXPERIENCE_PROMPT_TEMPLATE_PATH: Path = (
+    Path(__file__).parent / "prompts" / "experience_audit_prompt.md"
+)
+"""Plan 2026-07-27-001 F004 — experience-kind sibling of the goal template.
+Same four placeholders, but the review subject is the consumer-journey
+surface (``ObjectiveContract.user_journeys`` + journey_gap findings), not
+goal-contract coverage."""
 
 _AUDIT_DIR_NAME: str = "audit"
 """Subdirectory under ``POST_IMPL_DIR`` for envelope + transcript files.
@@ -194,7 +203,17 @@ class CompletionAuditTranscript(BaseModel):
       :data:`_OFFLINE_ENV` is set; no executor was invoked.
     - ``dispatch_response_malformed``: auditor responded with text the
       parser could not interpret as a JSON disposition list. F003
-      treats this as block; operator overrides or fixes."""
+      treats this as block; operator overrides or fixes.
+
+    Plan 2026-07-27-001 F004 (D001 B1): ``provenance`` distinguishes an
+    operator-attached external audit (``'external'`` — vendor has NO
+    executor; response captured outside DontPanic and attached via
+    ``dontpanic plan attach-goal-audit``) from the dispatched path
+    (``'dispatched'`` or absent on pre-F004 envelopes). ``audit_kind``
+    records whether the external run reviewed the goal contract or the
+    experience surface; ``external_note`` carries the operator's
+    attach-time rationale. All three are optional so historical
+    envelopes still validate."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -207,6 +226,16 @@ class CompletionAuditTranscript(BaseModel):
     envelope_path: str = Field(..., min_length=1)
     generated_at: str = Field(..., min_length=1)
     raw_response: str | None = None
+    provenance: Literal["dispatched", "external"] | None = None
+    audit_kind: Literal["goal", "experience"] | None = None
+    external_note: str | None = None
+    source_fingerprint: str | None = None
+    """Plan 2026-07-27-001 F004 i1 — content hash binding an EXTERNAL
+    envelope to the exact findings/contract/features/evidence it graded (see
+    :func:`external_audit_fingerprint`). Freshness selection requires an
+    exact match, so finding-content drift after attach (same ordinal
+    finding_ids, different substance) stales the envelope instead of
+    silently passing. Absent on dispatched and historical envelopes."""
 
 
 # ──────────────────────────────  test-injection seam  ──────────────────────────────
@@ -273,16 +302,17 @@ def _load_features(plan_dir: Path) -> list[dict]:
     return items
 
 
-def _read_prompt_template() -> str:
-    """Read the markdown template once per call.
+def _read_prompt_template(kind: str = "goal") -> str:
+    """Read the markdown template once per call, selected by audit kind
+    (``'goal'`` → completion template, ``'experience'`` → journey/experience
+    template).
 
     Re-reading is cheap (small file, infrequent call) and avoids the
     test-time hazard of caching a file the test fixture replaced."""
-    if not _PROMPT_TEMPLATE_PATH.is_file():
-        raise CompletionDispatchError(
-            f"completion-audit prompt template missing at {_PROMPT_TEMPLATE_PATH}"
-        )
-    return _PROMPT_TEMPLATE_PATH.read_text()
+    path = _EXPERIENCE_PROMPT_TEMPLATE_PATH if kind == "experience" else _PROMPT_TEMPLATE_PATH
+    if not path.is_file():
+        raise CompletionDispatchError(f"{kind}-audit prompt template missing at {path}")
+    return path.read_text()
 
 
 def _serialize_contract(contract) -> str:
@@ -342,14 +372,16 @@ def _build_audit_prompt(
     manifest,
     *,
     plan_dir: Path | None = None,
+    kind: str = "goal",
 ) -> str:
     """Render the prompt template by substituting the four context
     blocks. Uses ``str.replace`` rather than ``str.format`` so embedded
     ``{`` / ``}`` characters in the JSON payloads do not collide with
     the template's placeholders. When ``plan_dir`` is given, evidence
     uris are rendered repo-root-relative so the auditor (cwd = repo
-    root) can actually open them."""
-    template = _read_prompt_template()
+    root) can actually open them. ``kind`` selects the template (goal
+    completion vs consumer-experience review — F004 i1)."""
+    template = _read_prompt_template(kind)
     uri_prefix = _plan_dir_repo_prefix(plan_dir) if plan_dir is not None else None
     return (
         template.replace("{contract}", _serialize_contract(contract))
@@ -360,6 +392,37 @@ def _build_audit_prompt(
             _serialize_manifest(manifest, uri_prefix=uri_prefix),
         )
     )
+
+
+def external_audit_fingerprint(
+    plan_dir: Path,
+    findings: Iterable[CompletionFinding],
+) -> str:
+    """Plan 2026-07-27-001 F004 i1/i2 — content hash over exactly what an
+    external audit graded: the full serialized findings (content, not just
+    ordinal ids), the objective contract, the features list (i2 — feature
+    descriptions/acceptance are embedded in the reviewed prompt, so their
+    drift must stale the envelope too), and the evidence-manifest
+    ``uri|hash`` signature.
+
+    Stamped onto the envelope at attach time and recomputed at selection
+    time; any drift in finding substance, contract text, feature content,
+    or captured evidence makes the attached envelope stale instead of
+    letting an audit of old content silently vouch for new content."""
+    contract = _load_objective_contract(plan_dir)
+    features = _load_features(plan_dir)
+    manifest = _build_evidence_manifest(plan_dir)
+    pairs = sorted((ref.uri or "", ref.hash or "") for ref in manifest)
+    manifest_signature = "\n".join(f"{uri}|{hsh}" for uri, hsh in pairs)
+    body = "\x00".join(
+        [
+            _serialize_findings(findings),
+            _serialize_contract(contract),
+            _serialize_features(features),
+            manifest_signature,
+        ]
+    )
+    return f"sha256:{hashlib.sha256(body.encode('utf-8')).hexdigest()}"
 
 
 def _strip_code_fence(text: str) -> str:
@@ -492,6 +555,42 @@ def _parse_audit_response(
                 )
             ]
         return "agree", dispositions
+
+    # Plan 2026-07-27-001 F004 — completeness: the prompt contract requires
+    # exactly one disposition per v1 finding. Without this check a partial
+    # response (grading F-1 but silent on F-2) collapsed to `agree`, letting
+    # an auditor — dispatched or externally attached — skip findings.
+    graded = [
+        d.finding_id for d in dispositions if not d.finding_id.startswith("auditor-overlay-")
+    ]
+    duplicated = sorted({fid for fid in graded if graded.count(fid) > 1})
+    if duplicated:
+        return "dispatch_response_malformed", [
+            FindingDisposition(
+                finding_id="dispatch_response_malformed",
+                agree=False,
+                severity_disposition="no_finding",
+                comment=(
+                    f"auditor response grades finding_id(s) more than once: "
+                    f"{', '.join(duplicated)}; expected exactly one disposition "
+                    "per v1 finding"
+                ),
+            )
+        ]
+    missing = sorted({f.finding_id for f in findings} - set(graded))
+    if missing:
+        return "dispatch_response_malformed", [
+            FindingDisposition(
+                finding_id="dispatch_response_malformed",
+                agree=False,
+                severity_disposition="no_finding",
+                comment=(
+                    f"auditor response omits disposition(s) for v1 finding_id(s): "
+                    f"{', '.join(missing)}; expected exactly one disposition "
+                    "per finding"
+                ),
+            )
+        ]
 
     all_agree = all(d.agree for d in dispositions)
     return ("agree" if all_agree else "disagree"), dispositions

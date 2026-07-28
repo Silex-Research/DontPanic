@@ -54,6 +54,7 @@ android,backend,harness}.py session classes.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -69,8 +70,11 @@ from dontpanic_orchestrate.completion_auditor import (
     POST_IMPL_DIR,
     CompletionAuditError,
     CompletionFinding,
+    EvidenceRef,
     _build_evidence_manifest,
+    _load_objective_contract,
     cluster_findings,
+    compute_completion_findings,
     make_cluster_context,
     run_completion_audit,
 )
@@ -79,7 +83,26 @@ from dontpanic_orchestrate.completion_dispatch import (
     CompletionDispatchError,
     DispatchFn,
     SameVendorRefused,
+    _load_features,
     dispatch_completion_audit,
+    external_audit_fingerprint,
+)
+from dontpanic_orchestrate.experience_readiness_gate import (
+    GateResult,
+    JourneyOutcome,
+    OutcomeClass,
+    classify_outcome,
+    evaluate_consumer_outcome_gate,
+    parse_product_metadata,
+)
+from dontpanic_orchestrate.experience_readiness_honesty import (
+    RequiredDataSource,
+    check_degraded_honesty,
+)
+from dontpanic_orchestrate.experience_readiness_typing import (
+    CheckStatus,
+    InvalidConsumerSurfaceTuple,
+    check_journey,
 )
 from dontpanic_orchestrate.nested_orchestration import (
     GoalGapTriage,
@@ -101,6 +124,10 @@ for _candidate in _SCHEMA_CANDIDATES:
         sys.path.insert(0, str(_candidate))
         break
 
+# experience_readiness lives in the same models dir; experience_readiness_typing
+# (imported above) inserts it onto sys.path, so this resolves in every checkout
+# layout the _SCHEMA_CANDIDATES walk supports.
+import experience_readiness as er  # noqa: E402
 from models.plan_model import GoalType  # noqa: E402
 
 # ──────────────────────────────  constants  ──────────────────────────────
@@ -409,17 +436,122 @@ def _load_latest_audit_envelope(
         ]
     if not envelopes:
         return None
-    latest = envelopes[-1]
+    return _load_envelope(envelopes[-1])
+
+
+def _load_envelope(path: Path) -> CompletionAuditTranscript:
+    """Load + schema-validate one envelope file; raises
+    :class:`CompletionGateError` on malformed content."""
     try:
-        raw = json.loads(latest.read_text())
+        raw = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
-        raise CompletionGateError(f"{latest}: malformed audit envelope: {exc}") from exc
+        raise CompletionGateError(f"{path}: malformed audit envelope: {exc}") from exc
     try:
         return CompletionAuditTranscript.model_validate(raw)
     except Exception as exc:
         raise CompletionGateError(
-            f"{latest}: audit envelope failed schema validation: {exc}"
+            f"{path}: audit envelope failed schema validation: {exc}"
         ) from exc
+
+
+def _has_goal_kind_envelope(plan_dir: Path) -> bool:
+    """True iff at least one audit envelope carries goal-gate evidence.
+
+    Plan 2026-07-27-001 F004: an attached external envelope with
+    ``audit_kind='experience'`` reviews the experience surface, not the
+    goal contract — it must never satisfy the goal-gate backstop's
+    evidence requirement. Pre-F004 envelopes have no ``audit_kind``
+    (None) and are always goal evidence.
+
+    F004 i1 (codex finding): an EXTERNAL goal envelope additionally
+    proves content freshness before it counts — its
+    ``source_fingerprint`` and graded finding ids must match the CURRENT
+    v1 findings (via :func:`_latest_fresh_external_envelope` over the
+    pure :func:`compute_completion_findings`, keeping this backstop
+    read-only). A stale attached envelope predates a findings/contract
+    change and cannot vouch for the completed status; dispatched
+    envelopes keep the existence-only check (their staleness is governed
+    at close time by the audit pipeline that produced them)."""
+    has_external_goal = False
+    for path in reversed(_find_audit_envelopes(plan_dir)):
+        transcript = _load_envelope(path)
+        if transcript.audit_kind not in (None, "goal"):
+            continue
+        if transcript.provenance == "external":
+            has_external_goal = True
+            continue
+        return True
+    if not has_external_goal:
+        return False
+    try:
+        findings = compute_completion_findings(plan_dir)
+    except (CompletionAuditError, OSError):
+        # Findings can't be recomputed (contract missing/invalid), so the
+        # external envelope's freshness is unprovable — treat as stale.
+        return False
+    return (
+        _latest_fresh_external_envelope(plan_dir, kind="goal", findings=findings)
+        is not None
+    )
+
+
+def _latest_fresh_external_envelope(
+    plan_dir: Path,
+    *,
+    kind: str,
+    findings: list[CompletionFinding],
+) -> CompletionAuditTranscript | None:
+    """Select the freshest attached external audit envelope of ``kind``
+    that still matches the CURRENT v1 findings (Plan 2026-07-27-001 F004,
+    D001 B1).
+
+    Kind-strict: a ``goal`` envelope never feeds the experience check and
+    vice versa. Freshness is CONTENT-based (F004 i1): the envelope's graded
+    finding_ids (``auditor-overlay-*`` excluded) must exactly equal the
+    current finding-id set AND its recorded ``source_fingerprint`` must
+    match the current :func:`external_audit_fingerprint` over the findings
+    content + contract + features + evidence manifest. Ordinal finding_ids like
+    ``F2C-J001`` are reused across audit runs, so an id-only comparison
+    would keep an envelope "fresh" after the finding substance changed;
+    the fingerprint stales it. Envelopes without a fingerprint (pre-i1)
+    are always stale. Findings drift after attach makes the envelope
+    stale, and a stale envelope is ignored (the dispatched path or a
+    re-attach takes over). Ties rank by mtime then iteration (D028
+    semantics). Envelope files that fail schema validation are skipped
+    here rather than raised: this selector runs on every audit, and a
+    historical junk file must not brick the dispatched path it would
+    otherwise fall back to."""
+    expected = {f.finding_id for f in findings}
+    expected_fingerprint: str | None = None
+    ranked: list[tuple[float, int, CompletionAuditTranscript]] = []
+    for path in _find_audit_envelopes(plan_dir):
+        m = _AUDIT_ENVELOPE_RE.match(path.name)
+        try:
+            transcript = _load_envelope(path)
+        except CompletionGateError:
+            continue
+        if transcript.provenance != "external" or transcript.audit_kind != kind:
+            continue
+        graded = {
+            d.finding_id
+            for d in transcript.findings_dispositions
+            if not d.finding_id.startswith("auditor-overlay-")
+        }
+        if graded != expected:
+            continue
+        if transcript.source_fingerprint is None:
+            continue  # pre-fingerprint envelope: cannot prove content freshness
+        if expected_fingerprint is None:
+            # Lazy: only pay the contract/manifest hash when a candidate
+            # survived the cheap id-set check.
+            expected_fingerprint = external_audit_fingerprint(plan_dir, findings)
+        if transcript.source_fingerprint != expected_fingerprint:
+            continue
+        ranked.append((path.stat().st_mtime, int(m.group(2)), transcript))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: (item[0], item[1]))
+    return ranked[-1][2]
 
 
 # ──────────────────────────────  classification  ──────────────────────────────
@@ -461,6 +593,210 @@ def _classify(
     return out
 
 
+def _typed_evidence_refs(plan_dir: Path) -> list[EvidenceRef]:
+    """Typed :class:`EvidenceRef` rows recorded in ``features.json``
+    (``features[].evidence_refs``) — the only place experience-readiness
+    typing fields (surface_class / availability / consumer_family /
+    data_provenance / evidence_class) are persisted. The filesystem
+    manifest rebuild is untyped by construction, so it can never satisfy
+    the typed checkers; refs that fail schema validation contribute
+    nothing (fail-closed)."""
+    try:
+        features = _load_features(plan_dir)
+    except Exception:  # noqa: BLE001 — features load errors surface on the goal path
+        return []
+    refs: list[EvidenceRef] = []
+    for feature in features:
+        for raw in feature.get("evidence_refs") or []:
+            # Malformed ref contributes no typed signal (fail-closed).
+            with contextlib.suppress(Exception):
+                refs.append(EvidenceRef.model_validate(raw))
+    return refs
+
+
+def _journey_outcome_class(
+    journey,
+    refs: list[EvidenceRef],
+) -> tuple[OutcomeClass, str]:
+    """Plan 2026-07-27-001 F004 i2 — classify ONE consumer journey through
+    the established typed checkers (2a-core :func:`check_journey`, 2a-F004
+    :func:`check_degraded_honesty`, D021 :func:`classify_outcome`).
+
+    ``refs`` are the typed refs BOUND to this journey (uri contains
+    ``/<journey.name>/``, same binding heuristic as the v1 auditor). A
+    journey is ``satisfied`` only when typing is satisfied, honesty is
+    honest, AND a real (non-seeded, available) execution ref exists —
+    seeded, dishonest, wrong-family, or merely-present-but-untyped
+    artifacts all classify as ``unproven`` instead of silently passing.
+    Returns ``(outcome, detail)`` where ``detail`` names the verdicts for
+    the operator-facing blocking reason. Malformed surface declarations
+    fail closed to ``unproven``."""
+    try:
+        requirements = [
+            (er.resolve_surface_token(token), er.ClaimKind.read_only)
+            for token in (journey.surfaces or [])
+        ]
+    except er.UnknownSurfaceToken as exc:
+        return OutcomeClass.unproven, f"unknown surface token ({exc})"
+    if not requirements:
+        return OutcomeClass.unproven, "journey declares no surfaces"
+
+    try:
+        group_results, typing_verdict = check_journey(journey.consumer, requirements, refs)
+    except InvalidConsumerSurfaceTuple as exc:
+        return OutcomeClass.unproven, f"consumer/surface mismatch ({exc})"
+
+    # Honesty contract derived from the journey's own declarations: every
+    # data_source its typed refs claim must be honest across the families the
+    # journey's surfaces span. Allowed degraded modes come from the refs
+    # themselves — the gate has no per-plan mode policy, so honesty here
+    # checks masking/conflict/omission, not mode selection (D004 mode policy
+    # stays with plan-specific honesty contracts).
+    required_families = frozenset(
+        er.surface_family(sc) for sc, _ in requirements
+    )
+    sources = sorted({r.data_source for r in refs if r.data_source})
+    allowed_modes = {
+        ds: {r.degraded_mode for r in refs if r.data_source == ds and r.degraded_mode}
+        for ds in sources
+    }
+    honesty = check_degraded_honesty(
+        [RequiredDataSource(ds, required_families) for ds in sources],
+        allowed_modes,
+        refs,
+    )
+
+    def _family_fully_satisfied(fam) -> bool:
+        fam_results = [
+            r for r in group_results if er.surface_family(r.surface_class) is fam
+        ]
+        return bool(fam_results) and all(
+            r.status is CheckStatus.satisfied for r in fam_results
+        )
+
+    outcome = classify_outcome(
+        journey.consumer,
+        typing_verdict=typing_verdict,
+        honesty_verdict=honesty.verdict,
+        real_execution=honesty.satisfied,
+        other_family_satisfied=(
+            _family_fully_satisfied(er.SurfaceFamily.human)
+            or _family_fully_satisfied(er.SurfaceFamily.agent)
+        ),
+    )
+    detail = (
+        f"typing={typing_verdict.value} honesty={honesty.verdict.value} "
+        f"real_execution={honesty.satisfied}"
+    )
+    return outcome, detail
+
+
+def _experience_gate_decision(
+    plan_dir: Path,
+    plan_data: dict[str, Any],
+    findings: list[CompletionFinding],
+) -> tuple[GateResult | None, CompletionAuditTranscript | None, list[str]]:
+    """Plan 2026-07-27-001 F004 i2 — production consumer of the
+    experience-readiness gate (plan 2026-06-14-002 D021), wired into
+    :func:`audit_plan` independently of the codex F0 cluster triage.
+
+    Builds one :class:`JourneyOutcome` per contract ``user_journey`` that
+    DECLARES a ``consumer`` (D030 opt-in — journeys without a consumer are
+    substrate/legacy and never block here). The outcome class comes from
+    the established typed checkers via :func:`_journey_outcome_class` —
+    NOT from the mere presence of captured artifacts, so a seeded,
+    dishonest, or wrong-family capture classifies as ``unproven`` rather
+    than suppressing the block (codex F004-i1 finding).
+
+    A fresh operator-attached EXPERIENCE envelope (``--kind experience``)
+    is consumed ONLY as a structured disposition overlay: a journey counts
+    as dispositioned when the external auditor explicitly REFUTED every
+    one of its ``journey_gap`` findings (``agree=false`` + ``no_finding``);
+    it never upgrades the typed outcome itself. A structured ``non_goals``
+    entry naming the journey (exact name or ``journey:<name>``) defers it.
+
+    Returns ``(gate_result, experience_envelope, blocking_reasons)``;
+    ``(None, None, [])`` when the contract cannot be loaded — the goal
+    path will already have surfaced that failure."""
+    try:
+        contract = _load_objective_contract(plan_dir)
+    except Exception:  # noqa: BLE001 — goal path owns contract-load errors
+        return None, None, []
+
+    exp_findings = [f for f in findings if f.gap_class == "journey_gap"]
+    gaps_by_journey: dict[str, list[CompletionFinding]] = {}
+    for f in exp_findings:
+        gaps_by_journey.setdefault(f.journey, []).append(f)
+
+    envelope = (
+        _latest_fresh_external_envelope(plan_dir, kind="experience", findings=exp_findings)
+        if exp_findings
+        else None
+    )
+
+    def _refuted(finding: CompletionFinding) -> bool:
+        if envelope is None:
+            return False
+        return any(
+            d.finding_id == finding.finding_id
+            and not d.agree
+            and d.severity_disposition == "no_finding"
+            for d in envelope.findings_dispositions
+        )
+
+    typed_refs = _typed_evidence_refs(plan_dir)
+    non_goals = set(contract.non_goals or [])
+    outcomes: list[JourneyOutcome] = []
+    details: dict[str, str] = {}
+    for journey in contract.user_journeys or []:
+        if journey.consumer is None:
+            continue  # D030: consumer-outcome enforcement is opt-in per journey
+        needle = f"/{journey.name}/"
+        bound = [r for r in typed_refs if needle in (r.uri or "")]
+        outcome, detail = _journey_outcome_class(journey, bound)
+        details[journey.name] = detail
+        gaps = gaps_by_journey.get(journey.name, [])
+        outcomes.append(
+            JourneyOutcome(
+                journey=journey.name,
+                consumer=journey.consumer,
+                outcome=outcome,
+                deferred=(
+                    journey.name in non_goals or f"journey:{journey.name}" in non_goals
+                ),
+                # Disposition overlay only: the envelope refutes the v1
+                # journey_gap findings it graded; it cannot vouch for a
+                # journey whose unproven signal came from the typed checkers
+                # (seeded/dishonest/wrong-family evidence has no journey_gap
+                # finding to refute — defer or override instead).
+                dispositioned=bool(gaps) and all(_refuted(g) for g in gaps),
+            )
+        )
+
+    result = evaluate_consumer_outcome_gate(
+        plan_data.get("goal_type"),
+        opted_in=False,
+        product_metadata=parse_product_metadata(plan_data.get("delivery_class")),
+        journeys=outcomes,
+    )
+    reasons = []
+    for gf in result.findings:
+        if not gf.blocks:
+            continue
+        gap_ids = ", ".join(
+            f.finding_id for f in gaps_by_journey.get(gf.journey, [])
+        ) or "none (typed-evidence verdict)"
+        reasons.append(
+            f"experience gate: journey {gf.journey!r} (consumer={gf.consumer}) outcome "
+            f"unproven — {details.get(gf.journey, 'no typed verdict')}; "
+            f"journey_gap finding(s): {gap_ids}. "
+            "Capture typed real-execution evidence, attach a refuting external "
+            "experience audit (`dontpanic plan attach-goal-audit --kind experience`), "
+            "defer the journey via contract non_goals, or record a close override."
+        )
+    return result, envelope, reasons
+
+
 # ──────────────────────────────  result dataclasses  ──────────────────────────────
 
 
@@ -475,6 +811,8 @@ class AuditPlanResult:
     audit_transcript: CompletionAuditTranscript | None = None
     blocking: bool = False
     reasons: list[str] = field(default_factory=list)
+    experience_gate: GateResult | None = None
+    experience_transcript: CompletionAuditTranscript | None = None
 
 
 @dataclass
@@ -567,15 +905,34 @@ def audit_plan(
         )
 
     findings = run_completion_audit(plan_dir)
-    transcript = dispatch_completion_audit(
-        plan_dir,
-        findings=findings,
-        implementer_agent=implementer_agent,
-        iteration=iteration,
-        dispatch=dispatch,
+    # Plan 2026-07-27-001 F004 (D001 B1): prefer a fresh operator-attached
+    # external goal audit (e.g. Gemini) over a paid dispatch when present.
+    # Kind-strict + content-fresh (see _latest_fresh_external_envelope).
+    # Experience-kind envelopes never satisfy the goal gate.
+    external = _latest_fresh_external_envelope(
+        plan_dir, kind="goal", findings=findings
     )
+    if external is not None:
+        transcript = external
+    else:
+        transcript = dispatch_completion_audit(
+            plan_dir,
+            findings=findings,
+            implementer_agent=implementer_agent,
+            iteration=iteration,
+            dispatch=dispatch,
+        )
     cluster_decisions = _classify(findings)
     blocking, reasons = _decide_blocking(transcript, cluster_decisions, has_override=False)
+    # F004 i1: consumer-experience gate (D021) — runs independently of the
+    # F0 cluster triage. Consumes a fresh --kind experience envelope as the
+    # structured disposition record; unproven consumer journeys block.
+    experience_gate, experience_transcript, experience_reasons = _experience_gate_decision(
+        plan_dir, plan_data, findings
+    )
+    if experience_reasons:
+        blocking = True
+        reasons.extend(experience_reasons)
     return AuditPlanResult(
         plan_id=plan_id,
         findings=findings,
@@ -583,6 +940,8 @@ def audit_plan(
         audit_transcript=transcript,
         blocking=blocking,
         reasons=reasons,
+        experience_gate=experience_gate,
+        experience_transcript=experience_transcript,
     )
 
 
@@ -803,8 +1162,11 @@ def enforce_completion_gate(plan_dir: Path) -> None:
 
     findings_path = _completion_findings_path(plan_dir)
     has_findings = findings_path.is_file()
-    envelope = _load_latest_audit_envelope(plan_dir)
-    has_envelope = envelope is not None
+    # F004 i1: kind-aware — an attached external envelope with
+    # audit_kind='experience' reviews the experience surface and must not
+    # satisfy the GOAL gate's evidence requirement. Only goal-kind (or
+    # pre-F004 kind-less) envelopes count here.
+    has_envelope = _has_goal_kind_envelope(plan_dir)
     override = _load_override(plan_dir)
 
     if override is not None:
@@ -837,7 +1199,12 @@ def enforce_completion_gate(plan_dir: Path) -> None:
     if not has_findings:
         missing.append("completion_findings.json")
     if not has_envelope:
-        missing.append("audit envelope (audit-<auditor>-<iter>.json)")
+        missing.append(
+            "goal-kind audit envelope (audit-<auditor>-<iter>.json; an "
+            "experience-kind envelope does not satisfy the goal gate, and an "
+            "attached external envelope must still match the current findings "
+            "fingerprint — a stale attach does not count)"
+        )
     raise BackstopError(
         f"plan {plan_data.get('id', plan_dir.name)!r} is status='completed' but "
         f"missing F2 audit evidence: {', '.join(missing)}. "

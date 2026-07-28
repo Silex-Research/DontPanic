@@ -102,6 +102,46 @@ Reading the topology against the matrix:
 - **The human gate** is unchanged in every variant: approval and merge stay
   with you.
 
+### Attaching a Gemini goal/experience audit (path B1)
+
+The B1 workflow is three commands, no `register-worker`:
+
+```bash
+# 1. Render the SAME completion-audit prompt the dispatched path sends
+#    and paste it into Gemini's own surface (CLI, AI Studio, …):
+dontpanic plan attach-goal-audit <plan-id> --show-prompt
+
+# 2. Save Gemini's JSON disposition array (fenced ```json is tolerated),
+#    then attach it as a first-class audit envelope:
+dontpanic plan attach-goal-audit <plan-id> --vendor gemini --response gemini.json
+
+# 3. Or review the experience surface instead of the goal contract —
+#    render the experience-specific prompt first (the consumer-journey
+#    prompt, NOT the default goal prompt), then attach with matching kind:
+dontpanic plan attach-goal-audit <plan-id> --show-prompt --kind experience
+dontpanic plan attach-goal-audit <plan-id> --vendor gemini --response - --kind experience
+```
+
+The attach writes the same `audit-<vendor>-<iter>.{json,transcript.txt}`
+pair the dispatched path produces — the plan-close gate and post-completion
+backstop consume it directly, and a fresh `goal`-kind envelope is preferred
+over a paid dispatch. Honesty rules, all refusals (exit 3, nothing written):
+
+- a vendor **with** a registered executor (`claude`, `codex`) is refused —
+  external attach must never fabricate dispatched-shape evidence for a
+  dispatchable agent; use `dontpanic plan audit` there;
+- the cross-vendor invariant still applies — vendor == effective
+  implementer refuses without the same explicit override the dispatched
+  path requires;
+- a malformed or incomplete disposition array is refused — an external
+  audit cannot agree by omission;
+- an `experience`-kind envelope never satisfies the goal gate (and vice
+  versa), and an envelope whose graded findings drift from the current v1
+  findings goes stale and is ignored.
+
+`dontpanic doctor --agent` reports this capability honestly: gemini shows as
+operator-only / NOT dispatchable, with the attach path as its audit surface.
+
 ## Vocabulary: harness vs model vs profile vs role
 
 Track D of plan 2026-07-27-001 (phase D0) splits agent identity into **four

@@ -2791,6 +2791,13 @@ def _doctor_main(argv: list[str]) -> int:
     exit_inputs = [
         r for r in exit_inputs if r.name != "upgrade-readiness"
     ]
+    # 2026-07-27-001 F009: the buzz-config probe is advisory — Buzz is
+    # strongly recommended, never required, so a missing ~/.dontpanic/buzz.json
+    # must not escalate the canonical exit code. Its WARN text + private-
+    # community remediation still renders above.
+    exit_inputs = [
+        r for r in exit_inputs if r.name != "buzz-config"
+    ]
     return jd.compute_strict_exit(exit_inputs)
 
 
@@ -3360,7 +3367,12 @@ def _plan_main(argv: list[str]) -> int:
             "  worktree <create|list>\n"
             "      Per-plan git worktree isolation (plan 2026-06-10-002): create a\n"
             "      bound plan worktree from the repo's default branch, or render\n"
-            "      the worktree-status model (branch, dirty, health, owner).",
+            "      the worktree-status model (branch, dirty, health, owner).\n"
+            "  attach-goal-audit <plan-dir> --vendor <name> --response <file|-> \n"
+            "      Attach an externally-captured goal/experience audit (JSON\n"
+            "      disposition array) from an operator-only vendor with NO executor\n"
+            "      (e.g. gemini) as a first-class audit envelope (D001 B1). Use\n"
+            "      --show-prompt to render the audit prompt for the external run.",
             file=sys.stderr,
         )
         return 2
@@ -3370,6 +3382,8 @@ def _plan_main(argv: list[str]) -> int:
         return _plan_lock_main(rest)
     if sub == "audit":
         return _plan_audit_main(rest)
+    if sub == "attach-goal-audit":
+        return _plan_attach_goal_audit_main(rest)
     if sub == "close":
         return _plan_close_main(rest)
     if sub == "resync":
@@ -4280,6 +4294,148 @@ def _plan_audit_main(argv: list[str]) -> int:
         print("[plan audit] DECISION: blocking", file=sys.stderr)
         return 3
     print("[plan audit] DECISION: non-blocking")
+    return 0
+
+
+def _plan_attach_goal_audit_main(argv: list[str]) -> int:
+    """``dontpanic plan attach-goal-audit`` — Plan 2026-07-27-001 F004
+    (D001 B1): attach an externally-captured goal/experience audit from an
+    operator-only vendor (e.g. gemini) as a first-class audit envelope.
+
+    Two modes:
+      --show-prompt      render the SAME completion-audit prompt the
+                         dispatched path sends, for pasting into the
+                         vendor's own surface (read-only; no --vendor).
+      --vendor/--response validate + write audit-<vendor>-<iter>.{json,
+                         transcript.txt} with provenance='external'.
+
+    Exit-code matrix:
+      0 — prompt rendered / envelope attached
+      2 — usage error / argparse failure
+      3 — refusal (vendor has an executor, malformed vendor name or
+          response, cross-vendor violation, missing plan artifacts).
+          Nothing is written on refusal.
+    """
+    from dontpanic_orchestrate import external_goal_audit as ega
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan attach-goal-audit",
+        description=(
+            "Attach an externally-captured goal/experience audit response "
+            "(JSON disposition array) from an operator-only vendor with NO "
+            "registered executor as a first-class audit envelope (D001 B1). "
+            "Vendors with a registered executor are refused — use "
+            "`dontpanic plan audit` (the dispatched path) for those."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    parser.add_argument(
+        "--show-prompt",
+        action="store_true",
+        help=(
+            "Render the audit prompt for the external run and exit "
+            "(goal-completion prompt, or the consumer-journey experience "
+            "prompt with --kind experience). Read-only."
+        ),
+    )
+    parser.add_argument(
+        "--vendor",
+        default=None,
+        metavar="NAME",
+        help=(
+            "External vendor name (lowercase ascii + dash/underscore; becomes "
+            f"the audit filename). Known B1 vendors: "
+            f"{', '.join(ega.KNOWN_EXTERNAL_AUDIT_VENDORS)}. Any operator-only "
+            "vendor is accepted; registered executors are refused."
+        ),
+    )
+    parser.add_argument(
+        "--response",
+        default=None,
+        metavar="FILE",
+        help=(
+            "Path to the vendor's JSON disposition response, or '-' to read "
+            "stdin. Fenced ```json blocks are tolerated (same parser as the "
+            "dispatched path)."
+        ),
+    )
+    parser.add_argument(
+        "--kind",
+        choices=list(ega.AUDIT_KINDS),
+        default="goal",
+        help="Which surface the external run reviewed (default: goal).",
+    )
+    parser.add_argument(
+        "--note",
+        default=None,
+        help="Optional operator note recorded on the envelope (external_note).",
+    )
+    parser.add_argument(
+        "--implementer",
+        default=None,
+        metavar="AGENT",
+        help=(
+            "Override the effective implementer for the cross-vendor check. "
+            "Default: the layered dispatch-default resolution the dispatched "
+            "path uses."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+
+    if args.show_prompt:
+        try:
+            print(ega.render_external_audit_prompt(plan_dir, kind=args.kind))
+        except ega.ExternalGoalAuditError as exc:
+            print(f"[plan attach-goal-audit] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        return 0
+
+    if not args.vendor or not args.response:
+        print(
+            "[plan attach-goal-audit] usage error: --vendor and --response are "
+            "required (or use --show-prompt to render the audit prompt)",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.response == "-":
+        response_text = sys.stdin.read()
+    else:
+        response_file = Path(args.response)
+        if not response_file.is_file():
+            print(
+                f"[plan attach-goal-audit] usage error: response file does not "
+                f"exist: {response_file}",
+                file=sys.stderr,
+            )
+            return 2
+        response_text = response_file.read_text()
+
+    try:
+        transcript = ega.attach_external_goal_audit(
+            plan_dir,
+            vendor=args.vendor,
+            response_text=response_text,
+            kind=args.kind,
+            implementer_agent=args.implementer,
+            note=args.note,
+        )
+    except ega.ExternalGoalAuditError as exc:
+        print(f"[plan attach-goal-audit] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    disagreements = sum(1 for d in transcript.findings_dispositions if not d.agree)
+    print(f"[plan attach-goal-audit] attached: {transcript.envelope_path}")
+    print(
+        f"  vendor={transcript.auditor_agent} kind={transcript.audit_kind} "
+        f"iteration={transcript.iteration} provenance={transcript.provenance}"
+    )
+    print(
+        f"  status={transcript.status} dispositions="
+        f"{len(transcript.findings_dispositions)} disagreements={disagreements}"
+    )
     return 0
 
 
