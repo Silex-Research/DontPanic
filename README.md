@@ -41,6 +41,21 @@ source of truth for this split; the full agent-by-capability table is in
 comfortable with local agent CLIs. (Team/RBAC governance is not built yet — the
 gates today are *your* gates.)
 
+### Harness · model · profile (quick map)
+
+DontPanic no longer collapses “which agent” into a single registry string:
+
+| Layer | What it is | Where to look |
+|-------|------------|---------------|
+| **Harness** | Stable transport adapter (`claude`, `codex`, `openrouter`, `ollama`) | `dontpanic agent status`, [capability matrix](./docs/AGENT_CAPABILITY_MATRIX.md) |
+| **Model** | Catalog data (vendor id, OpenRouter slug, Ollama tag) — never a registry key | `dontpanic models list --harness <id>` |
+| **Worker profile** | Named harness + model + allowed roles | `dontpanic workers list` |
+| **Role** | implementer / auditor / goal_auditor (capability-gated) | `dontpanic roles show` |
+
+Optional Buzz surfaces (off by default): agent↔profile bindings and a signed
+gate bridge — see [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) and
+[`docs/CONFIGURATION.md`](./docs/CONFIGURATION.md).
+
 ## The problem
 
 An AI coding agent is fast, confident, and tireless. It is also happy to:
@@ -819,7 +834,9 @@ Supervisor and executor panel (shipped):
 - [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
 - [x] Operator caps and Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`)
 - [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)
-- [x] CLI surface: `dispatch-from-plan`, `quota-caps`, `calibrate-claude`, `approve`, `resume`, `ps`, `claude-touch`
+- [x] CLI surface: `dispatch-from-plan`, `roles`, `workers`, `models`, `approve`, `resume`, `ps`, `buzz-gate`, `quota-caps`, `calibrate-claude`, `claude-touch`
+- [x] Worker profiles + model catalog (`dontpanic workers …`, `dontpanic models list|aliases`) — harness adapters stay stable; model ids are data
+- [x] Optional Buzz bridge: `dontpanic buzz-gate --payload|--poll` (signed ceremony, off by default) + `workers buzz-bindings`
 - [x] Goal Governance V1 lock/close gates (`dontpanic plan lock`, `dontpanic plan audit`, `dontpanic plan close`)
 - [x] Runtime evidence collectors for web, iOS, Android, and backend observability
 

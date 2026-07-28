@@ -5969,6 +5969,7 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  workers list|add|set|show|buzz-bindings  Named worker profiles (harness+model+roles; F016 bindings display)
   models list|aliases            Harness model discovery (`list --harness <id>`) + merged model_aliases table
   operator-roles set|list        Operator-role PREFERENCES (intent only; never dispatch authority)
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
@@ -5990,7 +5991,7 @@ Public-alpha command surface:
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
   approve|resume|ps              Clear gates and inspect active supervisors
-  buzz-gate <plan> --payload     Apply one allowlisted Buzz human approval to a pending gate (off-by-default bridge)
+  buzz-gate <plan> --payload|--poll  Signed Buzz human approval → pending gate (off-by-default bridge)
   quota-caps|calibrate-claude    Configure local quota guardrails
   mcp serve                      Start the local MCP server
 
