@@ -1,0 +1,42 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-fable-5",
+  "iteration": 1,
+  "started_at": "2026-07-28T07:07:49Z",
+  "completed_at": "2026-07-28T07:13:25Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F006-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-ckhe2be_ target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 4824 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2838270,
+    "tokens_out": 27006,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F006] Both findings are resolved and all verification is green.\n\n**Finding 1 (high, correctness — unsupported Buzz CLI interface):** Confirmed the official contract against the block/buzz `buzz-cli` README (binary `buzz`; `buzz messages send --channel <uuid> --content -` with the body on stdin; `BUZZ_RELAY_URL` selects the relay/community; `BUZZ_PRIVATE_KEY` signs). Rewrote `scripts/dontpanic_orchestrate/notify_buzz.py` accordingly: `_CLI_NAME` is now `buzz`, the argv is exactly `[cli, \"messages\", \"send\", \"--channel\", <uuid>, \"--content\", \"-\"]`, and the relay URL travels via a new `_RELAY_ENV_FOR_CLI = \"BUZZ_RELAY_URL\"` subprocess env var (never argv), alongside the existing `BUZZ_PRIVATE_KEY` env handoff. The invalid `post --relay --community` interface is gone, `BuzzConfig` and `EXPECTED_KEYS` dropped the unsupported `community` field, and `test_notify_buzz_sink.py` now asserts the exact documented argv, asserts the relay URL appears only in the env and never on argv, and uses channel UUIDs plus the `buzz` binary path in its mocks.\n\n**Finding 2 (medium, documentation — config example misrepresents `relay_url` / introduces unsupported `community` key):** Aligned the whole config surface around the operator's private-community relay URL as the authority. `docs/GETTING_STARTED.md` step 5 now describes `relay_url` as \"your **private** community's relay URL — in Buzz the relay URL *is* the community/workspace authority, handed to the CLI as `BUZZ_RELAY_URL`\", the example JSON drops `c",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_notify_buzz_sink.py scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_notify_discord_sink.py scripts/dontpanic_orchestrate/tests/test_notify_event_f002.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 python3 scripts/sanitization_check.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

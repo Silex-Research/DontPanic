@@ -1,5 +1,242 @@
 {
-  "staged": [],
+  "staged": [
+    {
+      "path": "docs/AGENT_CAPABILITY_MATRIX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/ECOSYSTEM.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/GETTING_STARTED.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F004-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F004-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F004-i2.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F005-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F005-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F009-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F009-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F011-i0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F011-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F004-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F004-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F004-i2.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F005-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F005-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F009-i0.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F009-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F011-i0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F011-i1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/gate-state.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/operator-resolution-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#0.stdout.txt",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#1.stdout.txt",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#2.stdout.txt",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#0.stderr.txt",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#0.stdout.txt",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1.stderr.txt",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1.stdout.txt",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/patch-completeness-0.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/patch-completeness-1.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/terminal-state-iter1.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/closeout-memo.md",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-2-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-2-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/plan-review/cross_feature/F005-cross-feature-ack.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/plan-review/cross_feature/F009-cross-feature-ack.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/plan-review/pre_dispatch/F004-oversize-override.json",
+      "status": "A"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/features.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_doctor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/completion_auditor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/completion_dispatch.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/completion_gate.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/external_goal_audit.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/prompts/experience_audit_prompt.md",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_external_goal_audit_f004.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f002_agent_surface_cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py",
+      "status": "A"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py",
+      "status": "A"
+    }
+  ],
   "unstaged_modified": [
     {
       "path": "README.md",
@@ -10,18 +247,81 @@
       "status": "M"
     },
     {
-      "path": "capabilities/README.md",
+      "path": "docs/ECOSYSTEM.md",
       "status": "M"
     },
     {
-      "path": "docs/USE_CASES.md",
+      "path": "docs/GETTING_STARTED.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-2-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-2-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-3-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_doctor.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/notify_event.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/",
-    "scripts/dontpanic_orchestrate/doc_drift.py",
-    "scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py"
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F006-i0.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F006-i1.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F006-i2.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F006-i3.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F006-i0.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F006-i1.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F006-i2.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F006-i3.json",
+    "scripts/dontpanic_orchestrate/notify_buzz.py",
+    "scripts/dontpanic_orchestrate/tests/test_notify_buzz_sink.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

@@ -1,21 +1,32 @@
 {
   "schema_version": "1.0",
-  "status": "pass",
+  "status": "fail",
   "findings": [
+    {
+      "mode": "test_file_untracked",
+      "files": [
+        "scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py",
+        "scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py"
+      ],
+      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
+      "severity": "block",
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py"
+    },
     {
       "mode": "unstaged_dirty_state",
       "files": [
+        "README.md",
         "USER.md",
+        "docs/ECOSYSTEM.md",
+        "docs/GETTING_STARTED.md",
         "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F002-i0.json",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F002-i0.json",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/patch-completeness-0.json",
         "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/terminal-state-iter0.json",
         "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
         "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
-        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json"
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+        "scripts/dontpanic_doctor.py",
+        "scripts/dontpanic_orchestrate/cli.py",
+        "scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py"
       ],
       "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files.",
       "severity": "info",
@@ -23,16 +34,18 @@
     }
   ],
   "files": [
+    "scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py",
+    "scripts/dontpanic_orchestrate/tests/test_f009_buzz_doctor.py",
+    "README.md",
     "USER.md",
+    "docs/ECOSYSTEM.md",
+    "docs/GETTING_STARTED.md",
     "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F002-i0.json",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/patch-completeness-0.json",
     "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/terminal-state-iter0.json",
     "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
     "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json"
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+    "scripts/dontpanic_doctor.py",
+    "scripts/dontpanic_orchestrate/cli.py"
   ]
 }

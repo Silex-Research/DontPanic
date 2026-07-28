@@ -1,0 +1,41 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-fable-5",
+  "iteration": 1,
+  "started_at": "2026-07-28T01:04:49Z",
+  "completed_at": "2026-07-28T01:09:40Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F011-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-57u8sa97 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3612 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 870828,
+    "tokens_out": 11079,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 2 (see structured target_context.commands_run)\n\n[F011] Both findings are addressed and committed as `32d6aea`.\n\n**High finding (CONFIGURATION.md:162-182):** Renamed the section from \"Agents (models)\" to \"Agents (harnesses)\" and added prose defining a harness as the stable invocation adapter, cross-linked to the capability matrix's vocabulary section. The old \"Adding a model\" callout is now two distinct callouts: \"Adding a harness\" (the only thing that touches `AGENT_REGISTRY`, via a new `BaseExecutor` subclass) and \"Adopting a new model\" (explicitly *not* a registry change — Grok 4.5 / OpenRouter slugs / Ollama tags are catalog data on a worker profile, and the text states model version strings must never be added to the registry). I also fixed the quick-reference table row at line 123 (\"Agents (models)\" → \"Agents (harnesses)\") and its now-stale `#agents-models` anchor. A repo-wide grep confirms no remaining doc instructs registering models in `AGENT_REGISTRY`, satisfying the F011 acceptance criterion.\n\n**Low finding (AGENT_CAPABILITY_MATRIX.md:112-125):** Restructured the vocabulary diagram from four numbered items into an explicit three-layer stack (Layer 1 harness registry, Layer 2 model catalog, Layer 3 worker profiles) with role assignment drawn as a boxed overlay on top, matching the step's \"three-layer diagram\" wording; the intro sentence now reads \"three storage layers, plus role as an assignment overlay.\" The first restructure attempt tripped the F002 doc-drift guard (the single-paragraph diagram merged the \"WORKER\" clai",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git add docs/CONFIGURATION.md docs/AGENT_CAPABILITY_MATRIX.md",
+      "git commit -m \"docs(agent-taxonomy F011 i1): harness-vs-model fix in CONFIGURATION + three-layer diagram\""
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "issue": "Missing `Env: dev` declaration in summary; F023 EC5 requires {repo, env, project, command} declaration before side-effect calls.",
+      "evidence": "Parsed agent summary did not contain a matching `Env:` line.",
+      "recommendation": "Add a line `Env: dev` near the top of the summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-07-28T00:38:52Z",
+  "captured_at": "2026-07-28T06:58:26Z",
   "decision_lines": [
     "D001\u001fa4fbe44a01bde9e7f1cd897a1e12e4a7520de47d0ddc649ec32af613ed5b1b89",
     "D002\u001f3c60a75be1dceb41ef2b08890bac0b62cc59c38b3db1ecec8b9e78ce6ffb7051",
@@ -53,7 +53,7 @@
           "F001",
           "F003"
         ],
-        "passes": false
+        "passes": true
       },
       "F005": {
         "acceptance": "docs state Buzz signup+setup is strongly recommended; private community is the default work surface; public communities are optional support only; ECOSYSTEM non-goals and caller sketch present; no text requires joining a maintainer-owned community.",
@@ -179,16 +179,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "6d98cfadee190e62f2ed6db3391d261045e29407869bcf0b1f1a968e91deb4af",
+    "audit/gate-state.json": "131978bf002599da2b8bc2fdf926cffb726e9b2463e19fc52e019851bd2e34d1",
     "decisions.jsonl": "ce4dcf5b06117b01ec3355a0abb72b2748a99f1164eeda1c4b9b43c4711da14e",
-    "features.json": "1be3762b2a4f29e1673bab9224d616baf8667ccbdecbeddbcbfcceb616c5811f",
+    "features.json": "f38647b1b764f771886133e71c82cf995d05e9505c5c3d1cfd785da29fd8e714",
     "objective_contract.json": "48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
     "plan.md": "145a9674c7278555b40a1c23bf0347d648cb010c0d6cc5b83f1d45a377617223"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1785154449.2267427,
+    "audit/gate-state.json": 1785219648.0636518,
     "decisions.jsonl": 1785148192.0995874,
-    "features.json": 1785147165.8436334,
+    "features.json": 1785219648.816055,
     "objective_contract.json": 1785147165.8436632,
     "plan.md": 1785148694.9034703
   },
