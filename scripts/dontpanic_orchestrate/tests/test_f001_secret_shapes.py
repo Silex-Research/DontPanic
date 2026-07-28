@@ -102,6 +102,13 @@ CASES = [
         ),
         "https://example.invalid/webhook",  # RFC 2606 reserved TLD — no match
     ),
+    (
+        "_NOSTR_NSEC_RE",
+        # Plan 2026-07-27-001 F006 — Nostr bech32 secret key (Buzz agents).
+        # 58+ bech32 chars after nsec1 (synthetic; not a real key).
+        "nsec1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l",
+        "npub1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54",  # public key — must not match
+    ),
 ]
 
 
@@ -126,7 +133,7 @@ def test_secret_regexes_count_and_export() -> None:
     8 from plan 2026-05-01-003 F001 + Discord webhook from
     plan 2026-05-01-002 F004."""
     mod = _load()
-    assert len(mod.SECRET_REGEXES) == 9
+    assert len(mod.SECRET_REGEXES) == 10
     expected_attrs = [c[0] for c in CASES]
     pattern_strs = {rx.pattern for rx in mod.SECRET_REGEXES}
     for attr in expected_attrs:
@@ -143,7 +150,7 @@ def test_scan_line_flags_violation_file_with_one_match_per_pattern(tmp_path) -> 
     assert all(rule is not None for rule in flagged), (
         f"some positives were not flagged: {list(zip(lines, flagged, strict=True))}"
     )
-    assert sum(1 for r in flagged if r is not None) == 9
+    assert sum(1 for r in flagged if r is not None) == 10
 
 
 def test_scan_line_does_not_flag_placeholders() -> None:
