@@ -102,18 +102,56 @@ Reading the topology against the matrix:
 - **The human gate** is unchanged in every variant: approval and merge stay
   with you.
 
-## Vocabulary: harness vs model vs profile
+## Vocabulary: harness vs model vs profile vs role
 
-Track D of plan 2026-07-27-001 splits agent identity into three layers so new
-model versions never require a new registry key:
+Track D of plan 2026-07-27-001 (phase D0) splits agent identity into **four
+distinct concepts** so that new model versions never require a new registry
+key. The first three are storage layers; the fourth is an assignment on top
+of them:
 
-1. **Harness** — the stable code adapter (today's registry keys `claude`,
-   `codex`; future `gemini_cli`, `openrouter`, `ollama`). Dispatchability is
-   earned by harness capabilities.
-2. **Model** — data, not code: vendor model ids, OpenRouter slugs, Ollama
-   tags, aliases. High churn; never a registry key.
+```text
+1. HARNESS REGISTRY  (code, stable, few)     ← today's AGENT_REGISTRY
+   claude | codex | future: gemini_cli | openrouter | ollama | …
+   = how to invoke (argv, auth, sandbox, output parsing)
+
+2. MODEL CATALOG     (data + discovery)      ← high churn; never registry keys
+   vendor ids | openrouter/… slugs | ollama tags | aliases (grok-latest → grok-4.5)
+
+3. WORKER PROFILES   (operator config)       ← Buzz-like agent cards
+   display_name + harness + model + allowed_roles + capability overrides
+
+4. ROLES             (assignment)            ← implementer / auditor / goal_auditor
+   roles.<slot> → profile id; capability flags gate which roles a profile may hold
+```
+
+The four concepts, one by one:
+
+1. **Harness** — the stable code adapter that knows how to invoke an agent
+   runtime. `AGENT_REGISTRY` is the **harness adapter table**: its keys are
+   harnesses (`claude`, `codex` today; `gemini_cli`, `openrouter`, `ollama`
+   are planned), never model names. Dispatchability is earned by harness
+   capabilities, not by what model runs behind the harness.
+2. **Model** — data, not code: vendor model ids, `openrouter/…` slugs, Ollama
+   tags, aliases. High churn; **a model id is a catalog entry, never a
+   registry key**. Grok 4.5, the next Claude, or any OpenRouter OSS model
+   arrive as catalog data — do not add model version strings to
+   `AGENT_REGISTRY` (no Python change is involved in adopting a new model).
 3. **Worker profile** — operator config binding a display name + harness +
-   model + allowed roles.
+   model + allowed roles (+ optional capability overrides). Profiles are the
+   Buzz-style agent cards of D2; until they ship, config names harnesses
+   directly.
+4. **Role** — the slot a profile (or, today, a harness) holds:
+   `implementer`, `auditor`, `goal_auditor` (see [Worker
+   roles](#worker-roles)). **Capability flags gate which roles a
+   harness/profile may hold** — `implementer` requires `file_edit` +
+   `tool_use` + `non_interactive`; a read-only or interactive-only harness
+   can at most hold audit-style roles.
+
+**Legacy shorthand:** `roles.implementer: "claude"` in existing config names
+a registry key directly. Under the Track D vocabulary, read it as shorthand
+for *the default `claude_cli` worker profile* (harness `claude`, vendor
+default model, all roles allowed). Legacy strings stay valid; profile ids
+become an alternative, not a migration burden.
 
 This page tracks the harness layer. Rows relax automatically as harnesses
 land: the doc-drift guard reads `sorted(AGENT_REGISTRY.keys())` at test time,

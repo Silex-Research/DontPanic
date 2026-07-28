@@ -576,6 +576,16 @@ including operator surfaces like OpenCode and the recommended low-cost
 topology — is in
 [`docs/AGENT_CAPABILITY_MATRIX.md`](./docs/AGENT_CAPABILITY_MATRIX.md).
 
+Behind those names, agent identity splits into four distinct concepts —
+**harness** (the stable code adapter behind each registry key), **model**
+(catalog data such as vendor ids and tags; a model id is never a registry
+key), **worker profile** (operator config binding harness + model + allowed
+roles), and **role** (the slot a profile holds: implementer / auditor /
+goal_auditor, gated by capability flags). New model versions never require a
+new registry entry; see the
+[vocabulary section](./docs/AGENT_CAPABILITY_MATRIX.md#vocabulary-harness-vs-model-vs-profile-vs-role)
+of the capability matrix.
+
 See [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) for non-goals and caller patterns,
 [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md) for the publish-readiness
 checklist, and [`docs/AUTHORING_PLANS.md`](./docs/AUTHORING_PLANS.md) for the
